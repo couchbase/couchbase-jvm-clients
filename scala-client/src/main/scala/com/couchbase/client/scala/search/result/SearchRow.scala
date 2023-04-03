@@ -56,7 +56,7 @@ case class SearchRow private (private val internal: CoreSearchRow) {
 
   /** Fragments contain the results of any requested highlighting. */
   def fragments: collection.Map[String, Seq[String]] = {
-    internal.fragments.asScala.map(k => k._1 -> k._2.asScala)
+    internal.fragments.asScala.toMap.map(k => k._1 -> k._2.asScala.toSeq)
   }
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.

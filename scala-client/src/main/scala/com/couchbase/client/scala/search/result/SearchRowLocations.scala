@@ -29,32 +29,32 @@ case class SearchRowLocations private (private val internal: CoreSearchRowLocati
 
   /** Gets all locations, for any field and term. */
   def getAll: Seq[SearchRowLocation] = {
-    internal.getAll.asScala.map(l => SearchRowLocation(l))
+    internal.getAll.asScala.toSeq.map(l => SearchRowLocation(l))
   }
 
   /** Gets all locations for a given field (any term). */
   def get(field: String): Seq[SearchRowLocation] = {
-    internal.get(field).asScala.map(l => SearchRowLocation(l))
+    internal.get(field).asScala.toSeq.map(l => SearchRowLocation(l))
   }
 
   /** Gets all locations for a given field and term. */
   def get(field: String, term: String): Seq[SearchRowLocation] = {
-    internal.get(field, term).asScala.map(l => SearchRowLocation(l))
+    internal.get(field, term).asScala.toSeq.map(l => SearchRowLocation(l))
   }
 
   /** Gets all fields in these locations. */
   def fields: Seq[String] = {
-    internal.fields.asScala
+    internal.fields.asScala.toSeq
   }
 
   /** Gets all terms in these locations. */
   def terms: collection.Set[String] = {
-    internal.terms.asScala
+    internal.terms.asScala.toSet
   }
 
   /** Gets all terms for a given field. */
   def termsFor(field: String): Seq[String] = {
-    internal.termsFor(field).asScala
+    internal.termsFor(field).asScala.toSeq
   }
 }
 

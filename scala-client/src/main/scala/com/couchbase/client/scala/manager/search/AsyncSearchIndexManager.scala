@@ -57,7 +57,7 @@ class AsyncSearchIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps)
       .javaCFToScalaFutureMappingExceptions(
         internal.getAllIndexes(CoreCommonOptions.of(timeout, retryStrategy, null))
       )
-      .map(result => result.asScala.map(v => convert(v)))
+      .map(result => result.asScala.toSeq.map(v => convert(v)))
   }
 
   def upsertIndex(

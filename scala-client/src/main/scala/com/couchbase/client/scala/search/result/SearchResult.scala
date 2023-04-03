@@ -33,7 +33,7 @@ case class SearchResult private (private val internal: CoreSearchResult) {
     *
     * @return either `Success` if all rows could be decoded successfully, or a Failure containing the first error
     */
-  def rows: Seq[SearchRow] = internal.rows.asScala.map(row => SearchRow(row))
+  def rows: Seq[SearchRow] = internal.rows.asScala.toSeq.map(row => SearchRow(row))
 
   /** Any additional information related to the FTS query. */
   def metaData: SearchMetaData = SearchMetaData(internal.metaData)

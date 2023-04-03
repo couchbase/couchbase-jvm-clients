@@ -82,7 +82,7 @@ object SearchFacetResult {
   ) extends SearchFacetResult {
 
     /** The date range results. */
-    def dateRanges: Seq[DateRange] = internal.dateRanges.asScala.map(v => DateRange(v))
+    def dateRanges: Seq[DateRange] = internal.dateRanges.asScala.toSeq.map(v => DateRange(v))
   }
 
   /**
@@ -95,7 +95,8 @@ object SearchFacetResult {
   ) extends SearchFacetResult {
 
     /** The numeric range results. */
-    def numericRanges: Seq[NumericRange] = internal.numericRanges.asScala.map(v => NumericRange(v))
+    def numericRanges: Seq[NumericRange] =
+      internal.numericRanges.asScala.toSeq.map(v => NumericRange(v))
   }
 
   case class NumericRange private (private val internal: CoreSearchNumericRange) {
@@ -117,7 +118,7 @@ object SearchFacetResult {
       extends SearchFacetResult {
 
     /** The term ranges results. */
-    def terms: Seq[TermRange] = internal.terms.asScala.map(v => TermRange(v))
+    def terms: Seq[TermRange] = internal.terms.asScala.toSeq.map(v => TermRange(v))
   }
 
   /**
