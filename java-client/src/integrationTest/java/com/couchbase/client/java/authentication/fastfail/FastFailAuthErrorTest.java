@@ -231,23 +231,35 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     goodCluster.cluster.users().upsertUser(user);
     ConsistencyUtil.waitUntilUserPresent(goodCluster.cluster.core(), AuthDomain.LOCAL.alias(), user.username());
 
-    clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, goodPassword, ClusterType.AVAILABLE_GOOD_CREDENTIALS));
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      // Community Edition does not support TLS
+      clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, goodPassword, ClusterType.AVAILABLE_GOOD_CREDENTIALS));
+    }
 
     clusters.add(createCluster("couchbase://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS));
-    clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS));
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS));
+    }
 
     clusters.add(createCluster("couchbase://" + goodHostname, badUsername, badPassword, ClusterType.AVAILABLE_USER_DOES_NOT_EXIST));
-    clusters.add(createCluster("couchbases://" + goodHostname, badUsername, badPassword, ClusterType.AVAILABLE_USER_DOES_NOT_EXIST));
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      clusters.add(createCluster("couchbases://" + goodHostname, badUsername, badPassword, ClusterType.AVAILABLE_USER_DOES_NOT_EXIST));
+    }
 
     clusters.add(createCluster("couchbase://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS_NO_CUSTOM_RETRY_STRAT, false));
-    clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS_NO_CUSTOM_RETRY_STRAT, false));
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      clusters.add(createCluster("couchbases://" + goodHostname, goodUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS_NO_CUSTOM_RETRY_STRAT, false));
+    }
 
     clusters.add(createCluster("couchbase://unreachable", goodUsername, goodPassword, ClusterType.UNAVAILABLE));
-    clusters.add(createCluster("couchbases://unreachable", goodUsername, goodPassword, ClusterType.UNAVAILABLE));
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      clusters.add(createCluster("couchbases://unreachable", goodUsername, goodPassword, ClusterType.UNAVAILABLE));
+    }
 
     clusters.add(createCluster("couchbase://" + goodHostname, user.username(), goodPassword, ClusterType.AVAILABLE_GOOD_CREDENTIALS_BAD_RBAC));
-    clusters.add(createCluster("couchbases://" + goodHostname, user.username(), goodPassword, ClusterType.AVAILABLE_GOOD_CREDENTIALS_BAD_RBAC));
-
+    if (config().capabilities().contains(Capabilities.ENTERPRISE_EDITION)) {
+      clusters.add(createCluster("couchbases://" + goodHostname, user.username(), goodPassword, ClusterType.AVAILABLE_GOOD_CREDENTIALS_BAD_RBAC));
+    }
 
     config().nodes().get(0).protostellarPort().ifPresent(protostellarPort -> {
       clusters.add(createCluster("protostellar://" + goodHostname + ":" + protostellarPort, badUsername, badPassword, ClusterType.AVAILABLE_BAD_CREDENTIALS));
