@@ -59,8 +59,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -177,7 +177,7 @@ public class CoreEnvironment implements AutoCloseable {
 
     this.executor = new OwnedSupplier<>(new ThreadPoolExecutor(0, maxThreadCount,
       60L, TimeUnit.SECONDS,
-      new SynchronousQueue<>(),
+      new LinkedBlockingQueue<>(),
       new CouchbaseThreadFactory("cb-exec")));
 
     this.eventBus = Optional
