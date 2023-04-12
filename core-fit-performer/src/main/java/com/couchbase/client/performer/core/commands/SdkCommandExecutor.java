@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
+
 // A useful abstraction layer between the core performer and the per-SDK performers.  Allows refactoring most of the logic
 // into the core performer.
 // Note it's tempting to put shared things from core-io here, such as RequestSpans, but for technical reasons
@@ -40,6 +42,8 @@ public abstract class SdkCommandExecutor extends Executor {
     abstract protected com.couchbase.client.protocol.shared.Exception convertException(Throwable raw);
 
     public void run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
+        var timeInitiated = getTimeNow(); // only used for error results
+
         try {
             performOperation(command, perRun);
         } catch (RuntimeException err) {
@@ -54,6 +58,7 @@ public abstract class SdkCommandExecutor extends Executor {
             }
 
             perRun.resultsStream().enqueue(com.couchbase.client.protocol.run.Result.newBuilder()
+                    .setInitiated(timeInitiated)
                     .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                             .setException(convertException(err)))
                     .build());
