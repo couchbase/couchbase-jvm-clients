@@ -34,7 +34,6 @@ import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
 import com.couchbase.client.kotlin.kv.KvScanConsistency
-import com.couchbase.client.kotlin.kv.ScanSort
 // [end:1.1.1]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
@@ -43,8 +42,6 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
-import com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_ASCENDING
-import com.couchbase.client.protocol.sdk.kv.rangescan.ScanSort.KV_RANGE_SCAN_SORT_NONE
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
 import com.couchbase.client.protocol.shared.Exception
 import com.couchbase.client.protocol.shared.ExceptionOther
@@ -268,7 +265,6 @@ class KotlinSdkCommandExecutor(
                     if (idsOnly) collection.scanIds(
                         type = request.scanType.toKotlin(),
                         common = options.ktCommon(),
-                        sort = options.ktSort(),
                         consistency = options.ktConsistency(),
                         batchItemLimit = options.ktBatchItemLimit(),
                         batchSizeLimit = options.ktBatchSizeLimit(),
@@ -276,7 +272,6 @@ class KotlinSdkCommandExecutor(
                     else collection.scanDocuments(
                         type = request.scanType.toKotlin(),
                         common = options.ktCommon(),
-                        sort = options.ktSort(),
                         consistency = options.ktConsistency(),
                         batchItemLimit = options.ktBatchItemLimit(),
                         batchSizeLimit = options.ktBatchSizeLimit(),
