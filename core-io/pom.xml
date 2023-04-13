@@ -48,13 +48,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>${log4j-slf4j-impl.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
             <groupId>io.projectreactor.tools</groupId>
             <artifactId>blockhound</artifactId>
             <optional>true</optional>
