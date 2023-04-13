@@ -119,18 +119,18 @@ Also to have maximum service coverage use a cluster which has all services enabl
 ### Building Documentation
 Documentation will be built automatically by the `mvn install` command above.
 
-According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.4.4-javadoc.jar).
+According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.4.5-javadoc.jar).
 
 This file can be extracted (jars are like zip files) with the following command:
 
 ```
-jar xvf java-client-3.4.4-javadoc.jar
+jar xvf java-client-3.4.5-javadoc.jar
 ```
 
 This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
 
 The location of the javadoc files depends on where you get it from. The easiest is, once published, from Maven central.
-For example, look it up on Maven central: https://search.maven.org/artifact/com.couchbase.client/java-client/3.0.4/jar and download the javadoc jar: https://search.maven.org/remotecontent?filepath=com/couchbase/client/java-client/3.0.4/java-client-3.0.4-javadoc.jar
+For example, look it up on Maven central: https://search.maven.org/artifact/com.couchbase.client/java-client/3.4.5/jar and download the javadoc jar: https://search.maven.org/remotecontent?filepath=com/couchbase/client/java-client/3.0.4/java-client-3.4.5-javadoc.jar
 
 The exact same approach can be used for any artifact, including Scala.
 The Scala documentation can also be built with this command:
