@@ -38,7 +38,7 @@ import kotlin.time.toJavaDuration
  * @sample com.couchbase.client.kotlin.samples.copyScope
  */
 public class CollectionManager internal constructor(bucket: Bucket) {
-    private val core: CoreCollectionManager = bucket.core.collectionManager(bucket.name);
+    private val core: CoreCollectionManager = bucket.couchbaseOps.collectionManager(bucket.name);
 
     /**
      * Creates a collection in an existing scope. Equivalent to:

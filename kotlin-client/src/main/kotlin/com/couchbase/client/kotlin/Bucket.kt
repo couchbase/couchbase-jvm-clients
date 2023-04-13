@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.config.BucketConfig
 import com.couchbase.client.core.diagnostics.ClusterState
@@ -34,7 +35,6 @@ import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.diagnostics.PingResult
-import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.internal.toStringUtf8
 import com.couchbase.client.kotlin.manager.collection.CollectionManager
@@ -67,14 +67,18 @@ import kotlin.time.toJavaDuration
 public class Bucket internal constructor(
     public val name: String,
     public val cluster: Cluster,
-    internal val core: Core,
+    internal val couchbaseOps: CoreCouchbaseOps,
 ) {
-    internal val env = core.context().environment() as ClusterEnvironment
+    internal val env = cluster.env
+
+    internal val core: Core
+        get() = couchbaseOps.asCore()
 
     private val scopeCache = ConcurrentHashMap<String, Scope>()
 
     @Deprecated(level = WARNING, message = viewsDeprecationMessage)
-    public val viewIndexes: ViewIndexManager = ViewIndexManager(this)
+    public val viewIndexes: ViewIndexManager
+        get() = ViewIndexManager(this)
 
     /**
      * A manager for administering Scopes and Collections within this bucket.
@@ -212,7 +216,7 @@ public class Bucket internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Bucket {
-        core.waitUntilReady(services, timeout.toJavaDuration(), desiredState, name)
+        couchbaseOps.waitUntilReady(services, timeout.toJavaDuration(), desiredState, name)
             .await()
         return this
     }

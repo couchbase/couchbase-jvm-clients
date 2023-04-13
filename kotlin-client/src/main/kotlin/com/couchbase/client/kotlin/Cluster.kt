@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core
 import com.couchbase.client.core.CoreLimiter
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics
@@ -46,7 +47,6 @@ import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
 import com.couchbase.client.kotlin.diagnostics.PingResult
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
-import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.internal.putIfNotEmpty
@@ -121,28 +121,29 @@ import kotlin.time.toKotlinDuration
  * @sample com.couchbase.client.kotlin.samples.configureTlsUsingBuilder
  */
 public class Cluster internal constructor(
-    environment: ClusterEnvironment,
+    internal val env: ClusterEnvironment,
     private val ownsEnvironment: Boolean,
     private val authenticator: Authenticator,
     connectionString: ConnectionString,
 ) {
-    internal val core: Core = Core.create(environment, authenticator, connectionString)
+    private val couchbaseOps = CoreCouchbaseOps.create(env, authenticator, connectionString)
 
-    internal val env: ClusterEnvironment
-        get() = core.env
+    internal val core: Core
+        get() = couchbaseOps.asCore()
 
     private val bucketCache = ConcurrentHashMap<String, Bucket>()
 
     private val queryExecutor = QueryExecutor(
-        core.queryOps(),
+        couchbaseOps.queryOps(),
         queryContext = null,
-        core.env.jsonSerializer,
+        env.jsonSerializer,
     )
 
-    private val analyticsExecutor = AnalyticsExecutor(core)
+    private val analyticsExecutor: AnalyticsExecutor
+        get() = AnalyticsExecutor(core)
 
     init {
-        core.initGlobalConfig()
+        couchbaseOps.ifCore { initGlobalConfig() }
     }
 
     /**
@@ -162,7 +163,7 @@ public class Cluster internal constructor(
         services: Set<ServiceType> = emptySet(),
         desiredState: ClusterState = ClusterState.ONLINE,
     ): Cluster {
-        core.waitUntilReady(services, timeout.toJavaDuration(), desiredState, null)
+        couchbaseOps.waitUntilReady(services, timeout.toJavaDuration(), desiredState, null)
             .await()
         return this
     }
@@ -173,8 +174,8 @@ public class Cluster internal constructor(
      * @see Bucket.waitUntilReady
      */
     public fun bucket(name: String): Bucket = bucketCache.computeIfAbsent(name) { key ->
-        core.openBucket(key)
-        Bucket(key, this, core)
+        couchbaseOps.ifCore { openBucket(key) }
+        Bucket(key, this, couchbaseOps)
     }
 
     /**
@@ -189,17 +190,20 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.httpClientPostWithJsonBody
      */
     @Stability.Volatile
-    public val httpClient: CouchbaseHttpClient = CouchbaseHttpClient(this)
+    public val httpClient: CouchbaseHttpClient
+        get() = CouchbaseHttpClient(this)
 
     /**
      * A manager for administering buckets (create, update, drop, flush, list, etc.)
      */
-    public val buckets: BucketManager = BucketManager(core)
+    public val buckets: BucketManager
+        get() = BucketManager(core)
 
     /**
      * A manager for administering users (create, update, drop, etc.)
      */
-    public val users: UserManager = UserManager(core, httpClient)
+    public val users: UserManager
+        get() = UserManager(core, httpClient)
 
     /**
      * A manager for administering N1QL indexes.
@@ -368,7 +372,7 @@ public class Cluster internal constructor(
             putIfNotEmpty("collections", collections)
         }
 
-        val timeout = with(core.env) { common.actualSearchTimeout() }
+        val timeout = with(env) { common.actualSearchTimeout() }
 
         val control = mutableMapOf<String, Any?>("timeout" to timeout.toMillis())
         rootJson["ctl"] = control
@@ -376,11 +380,11 @@ public class Cluster internal constructor(
 
         rootJson.putAll(raw)
 
-        val actualSerializer = serializer ?: core.env.jsonSerializer
+        val actualSerializer = serializer ?: env.jsonSerializer
         val queryBytes = Mapper.encodeAsBytes(rootJson)
 
         return flow {
-            val request = with(core.env) {
+            val request = with(env) {
                 SearchRequest(
                     timeout,
                     core.context(),
@@ -574,11 +578,11 @@ public class Cluster internal constructor(
      * or when you are done using the cluster.
      */
     public suspend fun disconnect(
-        timeout: Duration = core.context().environment().timeoutConfig().disconnectTimeout().toKotlinDuration(),
+        timeout: Duration = env.timeoutConfig().disconnectTimeout().toKotlinDuration(),
     ) {
-        core.shutdown(timeout.toJavaDuration()).await()
+        couchbaseOps.shutdown(timeout.toJavaDuration()).await()
         if (ownsEnvironment) {
-            core.context().environment().shutdownReactive(timeout.toJavaDuration()).await()
+            env.shutdownSuspend(timeout)
         }
     }
 
@@ -704,4 +708,8 @@ public class Cluster internal constructor(
             return Cluster(env, ownsEnv, authenticator, connStr)
         }
     }
+}
+
+internal fun CoreCouchbaseOps.ifCore(block: Core.() -> Unit) {
+    if (this is Core) this.block()
 }

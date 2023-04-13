@@ -25,9 +25,9 @@ import com.couchbase.client.core.manager.CoreBucketManager
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
-import com.couchbase.client.kotlin.kv.internal.levelIfSynchronous
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 import kotlinx.coroutines.future.await
@@ -213,3 +213,6 @@ public class BucketManager(core: Core) {
         return params.mapValues { (_, v) -> v.toString() }
     }
 }
+
+internal fun Durability.levelIfSynchronous() =
+    (this as? Durability.Synchronous)?.level.toOptional()

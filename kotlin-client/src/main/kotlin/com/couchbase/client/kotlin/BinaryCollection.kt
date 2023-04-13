@@ -28,7 +28,7 @@ import java.util.Optional
 public class BinaryCollection internal constructor(
     collection: Collection
 ) {
-    private val ops = collection.core.kvBinaryOps(CoreKeyspace.from(collection.collectionId))
+    private val ops = collection.couchbaseOps.kvBinaryOps(CoreKeyspace.from(collection.collectionId))
 
     /**
      * Appends binary content to a document.

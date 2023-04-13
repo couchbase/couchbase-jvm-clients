@@ -16,8 +16,8 @@
 
 package com.couchbase.client.kotlin
 
-import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
@@ -28,7 +28,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.codec.JsonSerializer
-import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
@@ -46,17 +45,18 @@ public class Scope(
     public val name: String,
     public val bucket: Bucket,
 ) {
-    internal val core: Core = bucket.core
+    internal val couchbaseOps: CoreCouchbaseOps = bucket.couchbaseOps
 
     private val collectionCache = ConcurrentHashMap<String, Collection>()
 
     private val queryExecutor = QueryExecutor(
-        core.queryOps(),
+        couchbaseOps.queryOps(),
         CoreQueryContext.of(bucket.name, name),
-        core.env.jsonSerializer,
+        bucket.env.jsonSerializer,
     )
 
-    private val analyticsExecutor = AnalyticsExecutor(core, this)
+    private val analyticsExecutor
+        get() = AnalyticsExecutor(couchbaseOps.asCore(), this)
 
     /**
      * Opens a collection for this scope.
@@ -69,9 +69,11 @@ public class Scope(
         return collectionCache.computeIfAbsent(name) {
             val defaultScopeAndCollection = collectionName == DEFAULT_COLLECTION && scopeName == DEFAULT_SCOPE
             if (!defaultScopeAndCollection) {
-                core.configurationProvider().refreshCollectionId(
-                    CollectionIdentifier(bucket.name, scopeName.toOptional(), collectionName.toOptional())
-                )
+                couchbaseOps.ifCore {
+                    configurationProvider().refreshCollectionId(
+                        CollectionIdentifier(bucket.name, scopeName.toOptional(), collectionName.toOptional())
+                    )
+                }
             }
             Collection(collectionName, this)
         }

@@ -16,15 +16,13 @@
 
 package com.couchbase.client.kotlin
 
-import com.couchbase.client.core.Core
 import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
-import com.couchbase.client.core.env.TimeoutConfig
 import com.couchbase.client.core.error.CasMismatchException
-import com.couchbase.client.core.error.DefaultErrorUtil
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
@@ -35,7 +33,6 @@ import com.couchbase.client.core.kv.*
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
-import com.couchbase.client.core.msg.kv.KeyValueRequest
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -74,7 +71,6 @@ import reactor.core.publisher.Flux
 import java.util.*
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
-import kotlin.time.toKotlinDuration
 
 /**
  * Operations that act on a Couchbase collection.
@@ -89,9 +85,10 @@ public class Collection internal constructor(
     internal val collectionId: CollectionIdentifier =
         CollectionIdentifier(scope.bucket.name, scope.name.toOptional(), name.toOptional())
 
-    internal val core: Core = scope.bucket.core
+    internal val couchbaseOps: CoreCouchbaseOps = scope.couchbaseOps
     internal val env: ClusterEnvironment = scope.bucket.env
-    internal val rangeScanOrchestrator = RangeScanOrchestrator(core, collectionId)
+    internal val rangeScanOrchestrator
+        get() = RangeScanOrchestrator(couchbaseOps.asCore(), collectionId)
 
     internal val defaultJsonSerializer: JsonSerializer = env.jsonSerializer
     internal val defaultTranscoder: Transcoder = env.transcoder
@@ -113,22 +110,13 @@ public class Collection internal constructor(
     @VolatileCouchbaseApi
     public val queryIndexes: CollectionQueryIndexManager = CollectionQueryIndexManager(
         CoreCollectionQueryIndexManager(
-            core.queryOps(),
-            core.environment().requestTracer(),
+            couchbaseOps.queryOps(),
+            env.requestTracer(),
             CoreKeyspace.from(collectionId),
         )
     )
 
-    private fun TimeoutConfig.kvTimeout(durability: Durability): Duration =
-        (if (durability.isPersistent()) kvDurableTimeout() else kvTimeout()).toKotlinDuration()
-
-    internal fun CommonOptions.actualKvTimeout(durability: Durability): java.time.Duration =
-        (timeout ?: env.timeoutConfig().kvTimeout(durability)).toJavaDuration()
-
-    internal fun CommonOptions.actualRetryStrategy() = retryStrategy ?: env.retryStrategy()
-    internal fun CommonOptions.actualSpan(name: String) = env.requestTracer().requestSpan(name, parentSpan)
-
-    private val kvOps = core.kvOps(CoreKeyspace.from(collectionId))
+    private val kvOps = couchbaseOps.kvOps(CoreKeyspace.from(collectionId))
 
     /**
      * Gets a document from this collection.
@@ -681,26 +669,6 @@ public class Collection internal constructor(
         durability: Durability = Durability.none(),
         expiry: Expiry = Expiry.none()
     ): Counter = Counter(this, documentId, common, durability, expiry)
-
-    internal suspend inline fun <RESPONSE : Response, RESULT> exec(
-        request: KeyValueRequest<RESPONSE>,
-        common: CommonOptions,
-        resultExtractor: (RESPONSE) -> RESULT,
-    ): RESULT {
-        try {
-            val response = core.exec(request, common)
-            if (response.status().success()) return resultExtractor(response)
-            throw DefaultErrorUtil.keyValueStatusToException(request, response)
-        } finally {
-            request.logicallyComplete()
-        }
-    }
-
-    internal suspend fun <R : Response> Core.exec(request: Request<R>, common: CommonOptions): R {
-        request.context().clientContext(common.clientContext)
-        send(request)
-        return request.response().await()
-    }
 }
 
 internal fun <R : Response> Request<R>.logicallyComplete() = context().logicallyComplete()
