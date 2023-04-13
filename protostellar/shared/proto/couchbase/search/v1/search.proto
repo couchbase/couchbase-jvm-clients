@@ -9,43 +9,42 @@ option java_multiple_files = true;
 package couchbase.search.v1;
 
 import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
 
 message BooleanFieldQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   bool value = 6;
 }
 
 message BooleanQuery {
-  float boost = 1;
-  Query must = 2;
-  Query must_not = 3;
-  Query should = 4;
-  uint32 should_min = 5;
+  optional float boost = 1;
+  optional ConjunctionQuery must = 2;
+  optional DisjunctionQuery must_not = 3;
+  optional DisjunctionQuery should = 4;
 }
 
 message ConjunctionQuery {
-  float boost = 1;
+  optional float boost = 1;
   repeated Query queries = 2;
 }
 
 message DateRangeQuery {
-  float boost = 1;
-  string field = 2;
-  string date_time_parser = 3;
-  string start_date = 4;
-  string end_date = 5;
+  optional float boost = 1;
+  optional string field = 2;
+  optional string date_time_parser = 3;
+  optional string start_date = 4;
+  optional string end_date = 5;
 }
 
 message DisjunctionQuery {
-  float boost = 1;
+  optional float boost = 1;
   repeated Query queries = 2;
-  uint32 minimum = 3;
+  optional uint32 minimum = 3;
 }
 
 message DocIdQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
   repeated string ids = 3;
 }
 
@@ -55,22 +54,22 @@ message LatLng {
 }
 
 message GeoBoundingBoxQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   LatLng top_left = 3;
   LatLng bottom_right = 4;
 }
 
 message GeoDistanceQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   LatLng center = 3;
   string distance = 4;
 }
 
 message GeoPolygonQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   repeated LatLng vertices = 3;
 }
 
@@ -79,10 +78,10 @@ message MatchAllQuery {}
 message MatchNoneQuery {}
 
 message MatchPhraseQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string phrase = 3;
-  string analyzer = 4;
+  optional string analyzer = 4;
 }
 
 message MatchQuery {
@@ -91,70 +90,67 @@ message MatchQuery {
     OPERATOR_AND = 1;
   }
 
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string value = 3;
-  string analyzer = 4;
-  uint64 fuzziness = 5;
-  Operator operator = 6;
-  uint64 prefix_length = 7;
+  optional string analyzer = 4;
+  optional uint64 fuzziness = 5;
+  optional Operator operator = 6;
+  optional uint64 prefix_length = 7;
 }
 
 message NumericRangeQuery {
-  float boost = 1;
-  string field = 2;
-  float min = 3;
-  float max = 4;
-  bool inclusive_min = 5;
-  bool inclusive_max = 6;
+  optional float boost = 1;
+  optional string field = 2;
+  optional float min = 3;
+  optional float max = 4;
+  optional bool inclusive_min = 5;
+  optional bool inclusive_max = 6;
 }
 
 message PhraseQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   repeated string terms = 3;
 }
 
 message PrefixQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string prefix = 3;
 }
 
 message QueryStringQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
   string query_string = 3;
 }
 
 message RegexpQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string regexp = 3;
 }
 
 message TermQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string term = 3;
-  uint64 fuzziness = 4;
-  uint64 prefix_length = 5;
+  optional uint64 fuzziness = 4;
+  optional uint64 prefix_length = 5;
 }
 
 message TermRangeQuery {
-  float boost = 1;
-  string field = 2;
-  string term = 3;
-  uint64 fuzziness = 4;
-  string min = 5;
-  string max = 6;
-  bool inclusive_min = 7;
-  bool inclusive_max = 8;
+  optional float boost = 1;
+  optional string field = 2;
+  optional string min = 5;
+  optional string max = 6;
+  optional bool inclusive_min = 7;
+  optional bool inclusive_max = 8;
 }
 
 message WildcardQuery {
-  float boost = 1;
-  string field = 2;
+  optional float boost = 1;
+  optional string field = 2;
   string wildcard = 3;
 }
 
@@ -212,6 +208,43 @@ message Sorting {
   }
 }
 
+message DateRange {
+  string name = 1;
+  optional string start = 2;
+  optional string end = 3;
+}
+
+message DateRangeFacet {
+  string field = 1;
+  uint32 size = 2;
+  repeated DateRange date_ranges = 3;
+}
+
+message NumericRange {
+  string name = 1;
+  optional float min = 2;
+  optional float max = 3;
+}
+
+message NumericRangeFacet {
+  string field = 1;
+  uint32 size = 2;
+  repeated NumericRange numeric_ranges = 3;
+}
+
+message TermFacet {
+  string field = 1;
+  uint32 size = 2;
+}
+
+message Facet {
+  oneof facet {
+    DateRangeFacet date_range_facet = 1;
+    NumericRangeFacet numeric_range_facet = 2;
+    TermFacet term_facet = 3;
+  }
+}
+
 service SearchService {
   rpc SearchQuery(SearchQueryRequest) returns (stream SearchQueryResponse) {}
 }
@@ -238,21 +271,103 @@ message SearchQueryRequest {
   bool disable_scoring = 11;
   repeated string collections = 12;
   bool include_locations = 13;
+  map<string, Facet> facets = 14;
 }
 
 message SearchQueryResponse {
-  repeated bytes hits = 1;
+  message SearchQueryRow {
+    string id = 1;
+    double score = 2;
+    string index = 3;
+    bytes explanation = 4;
+    repeated Location locations = 5;
+    map<string, Fragment> fragments = 6;
+    map<string, bytes> fields = 7;
+  }
+
+  message Location {
+    string field = 1;
+    string term = 2;
+    uint32 position = 3;
+    uint32 start = 4;
+    uint32 end = 5;
+    repeated uint32 array_positions = 6; 
+  }
+
+  message Fragment {
+    repeated string content = 1;
+  }
+
+  message FacetResult {
+    oneof search_facet {
+      TermFacetResult term_facet = 1;
+      DateRangeFacetResult date_range_facet = 2;
+      NumericRangeFacetResult numeric_range_facet = 3;
+    }
+  }
+
+  message TermResult {
+    string name = 1;
+    string field = 2;
+    uint64 size = 3;
+  }
+
+  message TermFacetResult {
+    string name = 1;
+    string field = 2;
+    int64 total = 3;
+    int64 missing = 4;
+    int64 other = 5;
+    repeated TermResult terms = 6;
+  }
+
+  message DateRangeResult {
+    string name = 1;
+    uint64 size = 2;
+    google.protobuf.Timestamp start = 3;
+    google.protobuf.Timestamp end = 4;
+  }
+
+  message DateRangeFacetResult {
+    string name = 1;
+    string field = 2;
+    int64 total = 3;
+    int64 missing = 4;
+    int64 other = 5;
+    repeated DateRangeResult date_ranges = 6;
+  }
+
+  message NumericRangeResult{
+    string name = 1;
+    uint64 size = 2;
+    uint64 min = 3;
+    uint64 max = 4;
+  }
+
+  message NumericRangeFacetResult{
+    string name = 1;
+    string field = 2;
+    int64 total = 3;
+    int64 missing = 4;
+    int64 other = 5;
+    repeated NumericRangeResult numeric_ranges = 6;
+  }
 
   message MetaData {
+    SearchMetrics metrics = 1;
+    map<string, string> errors = 2;
+  }
+
+  message SearchMetrics {
     google.protobuf.Duration execution_time = 1;
     uint64 total_rows = 2;
     double max_score = 3;
     uint64 total_partition_count = 4;
     uint64 success_partition_count = 5;
     uint64 error_partition_count = 6;
-
-    // errors
-    // facets
   }
-  optional MetaData meta_data = 2;
+
+  repeated SearchQueryRow hits = 1;
+  map<string, FacetResult> facets = 2;
+  optional MetaData meta_data = 3;
 }

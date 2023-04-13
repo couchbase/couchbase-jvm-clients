@@ -51,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
+import static com.couchbase.client.core.util.ProtostellarUtil.convert;
 import static java.util.Objects.requireNonNull;
 
 
@@ -98,11 +99,14 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
           if (r.hasMetaData()) {
             SearchQueryResponse.MetaData md = r.getMetaData();
             // errors require ING-381
-            metaData = new CoreSearchMetaData(Collections.emptyMap(), new CoreSearchMetrics(Duration.ofSeconds(md.getExecutionTime().getSeconds()),
-                    md.getTotalRows(),
-                    md.getMaxScore(),
-                    md.getSuccessPartitionCount(),
-                    md.getErrorPartitionCount()));
+            SearchQueryResponse.SearchMetrics metrics = md.getMetrics();
+            metaData = new CoreSearchMetaData(Collections.emptyMap(), new CoreSearchMetrics(
+              convert(metrics.getExecutionTime()),
+              metrics.getTotalRows(),
+              metrics.getMaxScore(),
+              metrics.getSuccessPartitionCount(),
+              metrics.getErrorPartitionCount())
+            );
           }
 
           r.getHitsList()
@@ -149,11 +153,14 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
           if (response.hasMetaData()) {
             SearchQueryResponse.MetaData md = response.getMetaData();
-            CoreSearchMetaData cmd = new CoreSearchMetaData(Collections.emptyMap(), new CoreSearchMetrics(Duration.ofSeconds(md.getExecutionTime().getSeconds()),
-                    md.getTotalRows(),
-                    md.getMaxScore(),
-                    md.getSuccessPartitionCount(),
-                    md.getErrorPartitionCount()));
+            SearchQueryResponse.SearchMetrics metrics = md.getMetrics();
+            CoreSearchMetaData cmd = new CoreSearchMetaData(Collections.emptyMap(), new CoreSearchMetrics(
+              convert(metrics.getExecutionTime()),
+              metrics.getTotalRows(),
+              metrics.getMaxScore(),
+              metrics.getSuccessPartitionCount(),
+              metrics.getErrorPartitionCount()
+            ));
             metaData.tryEmitValue(cmd).orThrow();
           }
         }
