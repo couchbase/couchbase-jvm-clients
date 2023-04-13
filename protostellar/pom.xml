@@ -8,6 +8,7 @@
     <artifactId>protostellar</artifactId>
     <groupId>com.couchbase.client</groupId>
     <packaging>jar</packaging>
+    <!-- Should always be a SNAPSHOT release -->
     <version>1.0-SNAPSHOT</version>
 
     <properties>
