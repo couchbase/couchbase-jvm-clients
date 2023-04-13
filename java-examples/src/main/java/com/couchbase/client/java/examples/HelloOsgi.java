@@ -48,11 +48,11 @@ public class HelloOsgi implements BundleActivator {
 
     try {
       InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
-      String configFilename = System.getenv("HOME") + "/log4j.properties";
+      String configFilename = System.getenv("HOME") + "/log4j2.xml";
       File logConfig = new File(configFilename);
       if (logConfig.exists()) {
-        System.out.println("log4j.configuration " + configFilename);
-        System.setProperty("log4j.configuration",
+        System.out.println("log4j2.configurationFile " + configFilename);
+        System.setProperty("log4j2.configurationFile",
             "file://" + configFilename);
       } else {
         System.out.println("logging configuration file " + configFilename + " not found, continuing without");
