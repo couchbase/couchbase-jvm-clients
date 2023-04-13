@@ -17,8 +17,6 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 
-import java.util.concurrent.TimeUnit;
-
 @Stability.Internal
 // JVMCBC-1192: candidate for removal: will probably not be required when everything is moved to Core*Ops
 public class ProtostellarUtil {
@@ -32,6 +30,6 @@ public class ProtostellarUtil {
   }
 
   public static java.time.Duration convert(com.couchbase.client.core.deps.com.google.protobuf.Duration input) {
-    return java.time.Duration.ofNanos(TimeUnit.SECONDS.toNanos(input.getSeconds()) + input.getNanos());
+    return java.time.Duration.ofSeconds(input.getSeconds(), input.getNanos());
   }
 }
