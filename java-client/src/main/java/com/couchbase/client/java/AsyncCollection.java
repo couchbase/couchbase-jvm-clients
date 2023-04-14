@@ -26,6 +26,7 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.service.kv.ReplicaHelper;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.env.ClusterEnvironment;
@@ -122,13 +123,20 @@ public class AsyncCollection {
    */
   private final AsyncCollectionQueryIndexManager queryIndexManager;
 
-  AsyncCollection(final CoreKeyspace keyspace,
-                  final CoreCouchbaseOps couchbaseOps,
-                  final ClusterEnvironment environment) {
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
+  AsyncCollection(
+    final CoreKeyspace keyspace,
+    final CoreCouchbaseOps couchbaseOps,
+    final ClusterEnvironment environment,
+    final AsyncCluster cluster
+  ) {
     this.keyspace = requireNonNull(keyspace);
     this.couchbaseOps = requireNonNull(couchbaseOps);
     this.environment = requireNonNull(environment);
-    this.asyncBinaryCollection = new AsyncBinaryCollection(keyspace, couchbaseOps);
+    this.cluster = requireNonNull(cluster);
+    this.asyncBinaryCollection = new AsyncBinaryCollection(keyspace, couchbaseOps, cluster);
 
     this.kvOps = couchbaseOps.kvOps(keyspace);
     this.queryIndexManager = new AsyncCollectionQueryIndexManager(couchbaseOps.queryOps(), couchbaseOps.environment().requestTracer(), keyspace);

@@ -23,7 +23,9 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncBucket;
+import com.couchbase.client.java.AsyncCluster;
 
 import java.time.Duration;
 import java.util.List;
@@ -52,6 +54,9 @@ public class AsyncCollectionManager {
    */
   private final CoreCollectionManager coreCollectionManager;
 
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
   /**
    * Creates a new {@link AsyncCollectionManager}.
    * <p>
@@ -59,8 +64,12 @@ public class AsyncCollectionManager {
    * instead.
    */
   @Stability.Internal
-  public AsyncCollectionManager(final CoreCollectionManager coreCollectionManager) {
+  public AsyncCollectionManager(
+    final CoreCollectionManager coreCollectionManager,
+    final AsyncCluster cluster
+  ) {
       this.coreCollectionManager = requireNonNull(coreCollectionManager);
+      this.cluster = requireNonNull(cluster);
    }
 
   /**

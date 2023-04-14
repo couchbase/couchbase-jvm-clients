@@ -21,8 +21,10 @@ import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
 import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
 import static com.couchbase.client.java.BinaryCollection.DEFAULT_INCREMENT_OPTIONS;
 import static com.couchbase.client.java.BinaryCollection.DEFAULT_PREPEND_OPTIONS;
+import static java.util.Objects.requireNonNull;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import reactor.core.publisher.Mono;
 
 import com.couchbase.client.core.Core;
@@ -48,9 +50,13 @@ public class ReactiveBinaryCollection {
   private final CollectionIdentifier collectionIdentifier;
   private final CoreKvBinaryOps coreKvBinaryOps;
 
+  @PreventsGarbageCollection
+  private final AsyncBinaryCollection async;
+
   ReactiveBinaryCollection(final AsyncBinaryCollection async) {
     this.collectionIdentifier = async.collectionIdentifier();
     this.coreKvBinaryOps = async.coreKvBinaryOps;
+    this.async = requireNonNull(async);
   }
 
   /**

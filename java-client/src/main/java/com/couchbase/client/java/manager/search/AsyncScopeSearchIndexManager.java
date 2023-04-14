@@ -23,6 +23,8 @@ import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
+import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.AsyncScope;
 import com.couchbase.client.java.json.JsonObject;
 
@@ -43,6 +45,7 @@ import static com.couchbase.client.java.manager.search.PauseIngestSearchIndexOpt
 import static com.couchbase.client.java.manager.search.ResumeIngestSearchIndexOptions.resumeIngestSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UnfreezePlanSearchIndexOptions.unfreezePlanSearchIndexOptions;
 import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.upsertSearchIndexOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link AsyncScopeSearchIndexManager} allows to manage scope level search indexes.
@@ -53,8 +56,16 @@ import static com.couchbase.client.java.manager.search.UpsertSearchIndexOptions.
 public class AsyncScopeSearchIndexManager {
   private final CoreSearchIndexManager internal;
 
-  public AsyncScopeSearchIndexManager(CoreCouchbaseOps couchbaseOps, AsyncScope scope) {
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
+  public AsyncScopeSearchIndexManager(
+    CoreCouchbaseOps couchbaseOps,
+    AsyncScope scope,
+    AsyncCluster cluster
+  ) {
     this.internal = couchbaseOps.scopeSearchIndexManager(new CoreBucketAndScope(scope.bucketName(), scope.name()));
+    this.cluster = requireNonNull(cluster);
   }
 
   /**

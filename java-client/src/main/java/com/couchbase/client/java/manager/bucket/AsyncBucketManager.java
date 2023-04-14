@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
 import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncCluster;
 
 import java.util.Map;
@@ -37,6 +38,7 @@ import static com.couchbase.client.java.manager.bucket.FlushBucketOptions.flushB
 import static com.couchbase.client.java.manager.bucket.GetAllBucketOptions.getAllBucketOptions;
 import static com.couchbase.client.java.manager.bucket.GetBucketOptions.getBucketOptions;
 import static com.couchbase.client.java.manager.bucket.UpdateBucketOptions.updateBucketOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs (async) management operations on Buckets.
@@ -52,6 +54,9 @@ public class AsyncBucketManager {
    */
   private final CoreBucketManagerOps coreBucketManager;
 
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
   /**
    * Creates a new {@link AsyncBucketManager}.
    * <p>
@@ -59,8 +64,12 @@ public class AsyncBucketManager {
    * instead.
    */
   @Stability.Internal
-  public AsyncBucketManager(final CoreCouchbaseOps ops) {
+  public AsyncBucketManager(
+    final CoreCouchbaseOps ops,
+    final AsyncCluster cluster
+  ) {
     this.coreBucketManager = ops.bucketManager();
+    this.cluster = requireNonNull(cluster);
   }
 
   /**

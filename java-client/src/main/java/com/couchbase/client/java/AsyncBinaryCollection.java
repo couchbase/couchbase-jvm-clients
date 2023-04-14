@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
@@ -49,12 +50,17 @@ public class AsyncBinaryCollection {
   final CoreKvBinaryOps coreKvBinaryOps;
   private final CoreKeyspace keyspace;
 
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
   AsyncBinaryCollection(
     final CoreKeyspace keyspace,
-    final CoreCouchbaseOps couchbaseOps
+    final CoreCouchbaseOps couchbaseOps,
+    final AsyncCluster cluster
   ) {
     this.keyspace = requireNonNull(keyspace);
     this.coreKvBinaryOps = couchbaseOps.kvBinaryOps(keyspace);
+    this.cluster = requireNonNull(cluster);
   }
 
   /**

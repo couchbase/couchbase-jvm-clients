@@ -36,6 +36,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -107,8 +108,16 @@ public class AsyncScope {
    */
   final CoreSearchOps searchOps;
 
-  AsyncScope(final String scopeName, final String bucketName, final CoreCouchbaseOps couchbaseOps,
-             final ClusterEnvironment environment) {
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
+  AsyncScope(
+    final String scopeName,
+    final String bucketName,
+    final CoreCouchbaseOps couchbaseOps,
+    final ClusterEnvironment environment,
+    final AsyncCluster cluster
+  ) {
     this.scopeName = requireNonNull(scopeName);
     this.bucketName = requireNonNull(bucketName);
     this.couchbaseOps = requireNonNull(couchbaseOps);
@@ -116,6 +125,7 @@ public class AsyncScope {
     this.queryOps = couchbaseOps.queryOps();
     queryContext = CoreQueryContext.of(bucketName, scopeName);
     this.searchOps = couchbaseOps.searchOps(new CoreBucketAndScope(bucketName, name()));
+    this.cluster = requireNonNull(cluster);
   }
 
   /**
@@ -194,7 +204,7 @@ public class AsyncScope {
             .refreshCollectionId(keyspace.toCollectionIdentifier());
         }
       }
-      return new AsyncCollection(keyspace, couchbaseOps, environment);
+      return new AsyncCollection(keyspace, couchbaseOps, environment, cluster);
     });
   }
 
@@ -312,6 +322,6 @@ public class AsyncScope {
    */
   @Stability.Volatile
   public AsyncScopeSearchIndexManager searchIndexes() {
-    return new AsyncScopeSearchIndexManager(couchbaseOps, this);
+    return new AsyncScopeSearchIndexManager(couchbaseOps, this, cluster);
   }
 }

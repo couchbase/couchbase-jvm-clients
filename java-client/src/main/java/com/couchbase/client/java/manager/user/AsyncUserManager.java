@@ -28,7 +28,9 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
+import com.couchbase.client.java.AsyncCluster;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +53,7 @@ import static com.couchbase.client.java.manager.user.GetRolesOptions.getRolesOpt
 import static com.couchbase.client.java.manager.user.GetUserOptions.getUserOptions;
 import static com.couchbase.client.java.manager.user.UpsertGroupOptions.upsertGroupOptions;
 import static com.couchbase.client.java.manager.user.UpsertUserOptions.upsertUserOptions;
+import static java.util.Objects.requireNonNull;
 
 public class AsyncUserManager {
   // https://docs.couchbase.com/server/5.5/rest-api/rbac.html
@@ -58,9 +61,13 @@ public class AsyncUserManager {
   private final Core core;
   private final CoreHttpClient httpClient;
 
-  public AsyncUserManager(Core core) {
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
+  public AsyncUserManager(Core core, AsyncCluster cluster) {
     this.core = core;
     this.httpClient = core.httpClient(RequestTarget.manager());
+    this.cluster = requireNonNull(cluster);
   }
 
   private static CoreHttpPath pathForUsers() {

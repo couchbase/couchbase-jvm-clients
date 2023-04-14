@@ -31,6 +31,7 @@ import com.couchbase.client.core.error.EventingFunctionNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreEventingFunctionManager;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.query.QueryScanConsistency;
 
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.manager.eventing.GetAllFunctionsOptions.getAllFunctionsOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs management operations on {@link EventingFunction EventingFunctions}.
@@ -56,6 +58,9 @@ public class AsyncEventingFunctionManager {
    */
   private final CoreEventingFunctionManager coreManager;
 
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
   /**
    * Creates a new {@link AsyncEventingFunctionManager}.
    * <p>
@@ -65,8 +70,12 @@ public class AsyncEventingFunctionManager {
    * @param core the internal core reference.
    */
   @Stability.Internal
-  public AsyncEventingFunctionManager(final Core core) {
+  public AsyncEventingFunctionManager(
+    final Core core,
+    final AsyncCluster cluster
+  ) {
     this.coreManager = new CoreEventingFunctionManager(core);
+    this.cluster = requireNonNull(cluster);
   }
 
   /**

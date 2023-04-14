@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.kv.AppendOptions;
 import com.couchbase.client.java.kv.CounterResult;
 import com.couchbase.client.java.kv.DecrementOptions;
@@ -37,6 +38,7 @@ import static com.couchbase.client.java.kv.AppendOptions.appendOptions;
 import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.PrependOptions.prependOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Allows to perform certain operations on non-JSON documents.
@@ -54,9 +56,13 @@ public class BinaryCollection {
   private final CollectionIdentifier collectionIdentifier;
   private final CoreKvBinaryOps coreKvBinaryOps;
 
+  @PreventsGarbageCollection
+  private final AsyncBinaryCollection async;
+
   BinaryCollection(final AsyncBinaryCollection asyncBinaryCollection) {
     this.collectionIdentifier = asyncBinaryCollection.collectionIdentifier();
     this.coreKvBinaryOps = asyncBinaryCollection.coreKvBinaryOps;
+    this.async = requireNonNull(asyncBinaryCollection);
   }
 
   /**

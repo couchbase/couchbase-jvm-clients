@@ -31,6 +31,7 @@ import com.couchbase.client.core.diagnostics.HealthPinger;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.OwnedSupplier;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -38,9 +39,10 @@ import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
-import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.ClusterCleanupTask;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.Jdk8Cleaner;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -73,6 +75,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -235,6 +238,15 @@ public class AsyncCluster {
     if (couchbaseOps instanceof Core) {
       ((Core) couchbaseOps).initGlobalConfig();
     }
+
+    Duration autoDisconnectTimeout = environment().timeoutConfig().disconnectTimeout()
+      .plus(Duration.ofSeconds(15)); // Give it more time than a user-initiated timeout, since we *really* want it to succeed.
+
+    Jdk8Cleaner.registerWithOneShotCleaner(this, new ClusterCleanupTask(
+      disconnectInternal(autoDisconnectTimeout),
+      environment().eventBus(),
+      disconnected
+    ));
   }
 
   /**
@@ -271,14 +283,14 @@ public class AsyncCluster {
    * Provides access to the user management services.
    */
   public AsyncUserManager users() {
-    return new AsyncUserManager(core());
+    return new AsyncUserManager(core(), this);
   }
 
   /**
    * Provides access to the bucket management services.
    */
   public AsyncBucketManager buckets() {
-    return new AsyncBucketManager(couchbaseOps);
+    return new AsyncBucketManager(couchbaseOps, this);
   }
 
   /**
@@ -292,14 +304,14 @@ public class AsyncCluster {
    * Provides access to the N1QL index management services.
    */
   public AsyncQueryIndexManager queryIndexes() {
-    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().environment().requestTracer());
+    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().environment().requestTracer(), this);
   }
 
   /**
    * Provides access to the Full Text Search index management services.
    */
   public AsyncSearchIndexManager searchIndexes() {
-    return new AsyncSearchIndexManager(core());
+    return new AsyncSearchIndexManager(core(), this);
   }
 
   /**
@@ -307,7 +319,7 @@ public class AsyncCluster {
    */
   @Stability.Uncommitted
   public AsyncEventingFunctionManager eventingFunctions() {
-    return new AsyncEventingFunctionManager(core());
+    return new AsyncEventingFunctionManager(core(), this);
   }
 
   /**
@@ -428,7 +440,7 @@ public class AsyncCluster {
       if (couchbaseOps instanceof Core) {
         ((Core) couchbaseOps).openBucket(n);
       }
-      return new AsyncBucket(n, couchbaseOps, environment.get());
+      return new AsyncBucket(n, couchbaseOps, environment.get(), this);
     });
   }
 
@@ -458,19 +470,42 @@ public class AsyncCluster {
   }
 
   /**
+   * Remembers whether {@link #disconnectInternal} was called.
+   */
+  private final AtomicBoolean disconnected = new AtomicBoolean();
+
+  /**
    * Can be called from other cluster instances so that code is not duplicated.
    *
    * @param timeout the timeout for the environment to shut down if owned.
    * @return a mono once complete.
    */
   Mono<Void> disconnectInternal(final Duration timeout) {
-    return couchbaseOps.shutdown(timeout).then(Mono.defer(() -> {
-      if (environment instanceof OwnedSupplier) {
-        return environment.get().shutdownReactive(timeout);
-      } else {
-        return Mono.empty();
-      }
-    }));
+    return disconnectInternal(
+      disconnected,
+      timeout,
+      couchbaseOps,
+      environment.get(),
+      environment instanceof OwnedSupplier
+    );
+  }
+
+  /**
+   * Central place for cluster/core disconnect logic.
+   * <p>
+   * This method is static and does not reference the cluster,
+   * so it can be called after the cluster becomes unreachable.
+   */
+  static Mono<Void> disconnectInternal(
+    final AtomicBoolean disconnected,
+    final Duration timeout,
+    final CoreCouchbaseOps couchbaseOps,
+    final CoreEnvironment environment,
+    final boolean ownsEnvironment
+    ) {
+    return couchbaseOps.shutdown(timeout)
+      .then(ownsEnvironment ? environment.shutdownReactive(timeout) : Mono.empty())
+      .then(Mono.fromRunnable(() -> disconnected.set(true)));
   }
 
   /**

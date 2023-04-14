@@ -28,6 +28,7 @@ import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.diagnostics.PingOptions;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
@@ -69,15 +70,24 @@ public class AsyncBucket {
 
   private final CoreCouchbaseOps couchbaseOps;
 
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
   /**
    * Stores already opened scopes for reuse.
    */
   private final Map<String, AsyncScope> scopeCache = new ConcurrentHashMap<>();
 
-  AsyncBucket(final String name, final CoreCouchbaseOps couchbaseOps, final ClusterEnvironment environment) {
+  AsyncBucket(
+    final String name,
+    final CoreCouchbaseOps couchbaseOps,
+    final ClusterEnvironment environment,
+    final AsyncCluster cluster
+  ) {
     this.couchbaseOps = requireNonNull(couchbaseOps);
     this.environment = requireNonNull(environment);
     this.name = requireNonNull(name);
+    this.cluster = requireNonNull(cluster);
   }
 
   /**
@@ -105,11 +115,11 @@ public class AsyncBucket {
   }
 
   public AsyncCollectionManager collections() {
-    return new AsyncCollectionManager(couchbaseOps.collectionManager(name));
+    return new AsyncCollectionManager(couchbaseOps.collectionManager(name), cluster);
   }
 
   public AsyncViewIndexManager viewIndexes() {
-    return new AsyncViewIndexManager(core(), name);
+    return new AsyncViewIndexManager(core(), name, cluster);
   }
 
   /**
@@ -138,7 +148,7 @@ public class AsyncBucket {
    * @return the created or cached scope.
    */
   private AsyncScope maybeCreateAsyncScope(final String scopeName) {
-    return scopeCache.computeIfAbsent(scopeName, ignored -> new AsyncScope(scopeName, name, couchbaseOps, environment));
+    return scopeCache.computeIfAbsent(scopeName, ignored -> new AsyncScope(scopeName, name, couchbaseOps, environment, cluster));
   }
 
   /**

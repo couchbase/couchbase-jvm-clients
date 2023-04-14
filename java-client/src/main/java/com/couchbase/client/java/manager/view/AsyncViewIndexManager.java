@@ -24,6 +24,8 @@ import com.couchbase.client.core.error.DesignDocumentNotFoundException;
 import com.couchbase.client.core.error.context.ReducedViewErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreViewIndexManager;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
+import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 
 import java.util.ArrayList;
@@ -47,9 +49,17 @@ public class AsyncViewIndexManager {
   private final CoreViewIndexManager coreManager;
   private final String bucket;
 
-  public AsyncViewIndexManager(Core core, String bucket) {
-    coreManager = new CoreViewIndexManager(core, bucket);
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
+
+  public AsyncViewIndexManager(
+    Core core,
+    String bucket,
+    AsyncCluster cluster
+  ) {
+    this.coreManager = new CoreViewIndexManager(core, bucket);
     this.bucket = requireNonNull(bucket);
+    this.cluster = requireNonNull(cluster);
   }
 
   /**

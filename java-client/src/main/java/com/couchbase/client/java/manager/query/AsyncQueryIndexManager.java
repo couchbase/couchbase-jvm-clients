@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.manager.CoreQueryIndexManager;
+import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncCluster;
 
 import java.time.Duration;
@@ -39,6 +40,7 @@ import static com.couchbase.client.java.manager.query.DropPrimaryQueryIndexOptio
 import static com.couchbase.client.java.manager.query.DropQueryIndexOptions.dropQueryIndexOptions;
 import static com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions.getAllQueryIndexesOptions;
 import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.watchQueryIndexesOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs management operations on query indexes.
@@ -46,6 +48,9 @@ import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.w
 public class AsyncQueryIndexManager {
 
   private final CoreQueryIndexManager internal;
+
+  @PreventsGarbageCollection
+  private final AsyncCluster cluster;
 
   /**
    * Creates a new {@link AsyncQueryIndexManager}.
@@ -56,9 +61,11 @@ public class AsyncQueryIndexManager {
   @Stability.Internal
   public AsyncQueryIndexManager(
     final CoreQueryOps queryOps,
-    final RequestTracer requestTracer
+    final RequestTracer requestTracer,
+    final AsyncCluster cluster
   ) {
     this.internal = new CoreQueryIndexManager(queryOps, requestTracer);
+    this.cluster = requireNonNull(cluster);
   }
 
   /**
