@@ -50,9 +50,9 @@ public class CoreTermQuery extends CoreSearchQuery {
     if (field != null) {
       input.put("field", field);
     }
-    if (fuzziness > 0) {
+    if (fuzziness != null && fuzziness > 0) {
       input.put("fuzziness", fuzziness);
-      if (prefixLength > 0) {
+      if (prefixLength != null && prefixLength > 0) {
         input.put("prefix_length", prefixLength);
       }
     }
