@@ -46,7 +46,7 @@ public class ReplicaGetRequest extends GetRequest {
     this.replica = replica;
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA);
     }
   }
 

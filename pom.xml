@@ -185,6 +185,7 @@
         <module>scala-client</module>
         <module>kotlin-client</module>
         <module>test-utils</module>
+        <module>tracing-observation</module>
         <module>tracing-opentracing</module>
         <module>tracing-opentelemetry</module>
         <module>metrics-opentelemetry</module>

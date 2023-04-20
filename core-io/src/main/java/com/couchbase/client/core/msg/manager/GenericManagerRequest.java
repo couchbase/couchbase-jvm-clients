@@ -56,7 +56,7 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
     this.idempotent = idempotent;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
 
       FullHttpRequest request = requestSupplier.get();
       span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());

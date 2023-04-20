@@ -92,7 +92,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.bypassExceptionTranslation = builder.bypassExceptionTranslation;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
       span.attribute(TracingIdentifiers.ATTR_OPERATION, builder.method + " " + builder.path.format());
     }
   }
@@ -306,7 +306,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
 
       if (span != null && !CbTracing.isInternalSpan(span)) {
         if (target.bucketName() != null) {
-          span.attribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
+          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
         }
         CbTracing.setAttributes(span, spanAttributes);
       }

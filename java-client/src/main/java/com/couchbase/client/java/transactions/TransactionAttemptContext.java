@@ -110,7 +110,7 @@ public class TransactionAttemptContext {
      */
     public TransactionGetResult replace(TransactionGetResult doc, Object content) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
-        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
+        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
         byte[] encoded = encode(content, span, serializer, internal.core().context());
         return internal.replace(doc.internal(), encoded, new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer()))
@@ -141,7 +141,7 @@ public class TransactionAttemptContext {
      */
     public TransactionGetResult insert(Collection collection, String id, Object content) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span());
-        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
+        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
         byte[] encoded = encode(content, span, serializer, internal.core().context());
         return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded, new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer()))
@@ -166,7 +166,7 @@ public class TransactionAttemptContext {
      */
     public void remove(TransactionGetResult doc) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
-        span.attribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE);
+        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE);
         internal.remove(doc.internal(), new SpanWrapper(span))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())

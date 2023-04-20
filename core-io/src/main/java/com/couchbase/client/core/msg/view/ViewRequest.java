@@ -72,7 +72,7 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     this.keysJson = requireNonNull(keysJson);
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
       span.attribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
       span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
     }

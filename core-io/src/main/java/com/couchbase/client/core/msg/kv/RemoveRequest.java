@@ -53,7 +53,7 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

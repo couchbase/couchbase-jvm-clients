@@ -395,7 +395,7 @@ public class TransactionsCleaner {
                 .attribute(TracingIdentifiers.ATTR_TRANSACTION_STATE, req.state());
 
         req.durabilityLevel().ifPresent(v -> {
-            span.attribute(TracingIdentifiers.ATTR_DURABILITY, DurabilityLevelUtil.convertDurabilityLevel(v));
+            span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, DurabilityLevelUtil.convertDurabilityLevel(v));
         });
 
         return Mono.defer(() -> {

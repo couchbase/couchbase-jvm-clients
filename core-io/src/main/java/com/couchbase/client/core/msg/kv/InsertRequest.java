@@ -65,7 +65,7 @@ public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INSERT);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INSERT);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

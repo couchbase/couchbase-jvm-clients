@@ -24,6 +24,9 @@ import java.time.Duration;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+import org.awaitility.core.ThrowingRunnable;
+import org.junit.jupiter.api.function.ThrowingSupplier;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.awaitility.Awaitility.with;
 
@@ -42,6 +45,14 @@ public class Util {
    */
   public static void waitUntilCondition(final BooleanSupplier supplier) {
     waitUntilCondition(supplier, Duration.ofMinutes(1));
+  }
+
+  public static void waitUntilCondition(final ThrowingRunnable runnable) {
+    waitUntilCondition(runnable, Duration.ofMinutes(1));
+  }
+
+  public static void waitUntilCondition(final ThrowingRunnable runnable, Duration atMost) {
+    with().pollInterval(Duration.ofMillis(1)).await().atMost(atMost).untilAsserted(runnable);
   }
 
   public static void waitUntilCondition(final BooleanSupplier supplier, Duration atMost) {

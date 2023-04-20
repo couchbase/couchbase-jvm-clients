@@ -74,6 +74,13 @@ public class SpanWrapper {
         return this;
     }
 
+    public <T> SpanWrapper lowCardinalityAttribute(String key, T value) {
+        if (!isInternal) {
+            span.lowCardinalityAttribute(key, String.valueOf(value));
+        }
+        return this;
+    }
+
     public RequestSpan span() {
         return span;
     }

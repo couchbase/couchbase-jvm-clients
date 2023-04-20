@@ -110,7 +110,7 @@ public abstract class BaseKeyValueRequest<R extends Response>
     this.opaque = nextOpaque();
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_KV);
       setCommonKVSpanAttributes(span, (KeyValueRequest<Response>) this);
     }
   }

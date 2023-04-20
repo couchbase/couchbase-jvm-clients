@@ -46,7 +46,7 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
     this.expiry = expiry;
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_TOUCH);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_TOUCH);
     }
   }
 
