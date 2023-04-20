@@ -54,7 +54,7 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_PREPEND);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

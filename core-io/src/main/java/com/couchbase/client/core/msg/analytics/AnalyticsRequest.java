@@ -90,7 +90,7 @@ public class AnalyticsRequest
     this.scope = scope;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
       span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
       if (bucket != null) {
         span.attribute(TracingIdentifiers.ATTR_NAME, bucket);

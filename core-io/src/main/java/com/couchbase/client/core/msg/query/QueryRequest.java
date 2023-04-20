@@ -82,7 +82,7 @@ public class QueryRequest
     this.target = target;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
       span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
       if (bucket != null) {
         span.attribute(TracingIdentifiers.ATTR_NAME, bucket);

@@ -55,7 +55,7 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET);
     }
   }
 

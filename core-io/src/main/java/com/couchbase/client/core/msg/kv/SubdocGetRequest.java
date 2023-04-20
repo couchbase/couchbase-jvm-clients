@@ -85,7 +85,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     this.origKey = key;
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN);
     }
   }
 

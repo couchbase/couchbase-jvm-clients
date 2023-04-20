@@ -142,7 +142,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
       requestSpan.requestContext(this.ctx);
 
       if (!CbTracing.isInternalSpan(requestSpan)) {
-        requestSpan.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+        requestSpan.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
       }
     }
 
