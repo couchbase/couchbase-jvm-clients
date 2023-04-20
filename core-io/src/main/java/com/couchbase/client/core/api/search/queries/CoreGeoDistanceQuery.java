@@ -17,49 +17,55 @@ package com.couchbase.client.core.api.search.queries;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.protostellar.search.v1.GeoDistanceQuery;
 import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Query;
 import reactor.util.annotation.Nullable;
 
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.requireCoordinates;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreGeoDistanceQuery extends CoreSearchQuery {
 
-    private final double locationLon;
-    private final double locationLat;
-    private final String distance;
-    private final @Nullable String field;
+  private final CoreGeoPoint location;
+  private final String distance;
+  private final @Nullable String field;
 
-    public CoreGeoDistanceQuery(double locationLon, double locationLat, String distance, @Nullable String field, @Nullable Double boost) {
-      super(boost);
-        this.locationLon = locationLon;
-        this.locationLat = locationLat;
-        this.distance = notNullOrEmpty(distance, "Distance");
-        this.field = field;
-    }
+  public CoreGeoDistanceQuery(double locationLon, double locationLat, String distance, @Nullable String field, @Nullable Double boost) {
+    this(
+        CoreGeoCoordinates.lon(locationLon).lat(locationLat),
+        distance,
+        field,
+        boost
+    );
+  }
 
-    @Override
-    protected void injectParams(ObjectNode input) {
-      ArrayNode location = Mapper.createArrayNode();
-      location.add(locationLon);
-      location.add(locationLat);
-        input.set("location", location);
-        input.put("distance", distance);
-        if (field != null) {
-            input.put("field", field);
-        }
+  public CoreGeoDistanceQuery(CoreGeoPoint location, String distance, @Nullable String field, @Nullable Double boost) {
+    super(boost);
+    this.location = requireNonNull(location);
+    this.distance = notNullOrEmpty(distance, "Distance");
+    this.field = field;
+  }
+
+  @Override
+  protected void injectParams(ObjectNode input) {
+    input.set("location", location.toJson());
+    input.put("distance", distance);
+    if (field != null) {
+      input.put("field", field);
     }
+  }
 
   @Override
   public Query asProtostellar() {
+    CoreGeoCoordinates location = requireCoordinates(this.location);
+
     GeoDistanceQuery.Builder builder = GeoDistanceQuery.newBuilder()
-            .setCenter(LatLng.newBuilder().setLongitude(locationLon).setLatitude(locationLat))
-            .setDistance(distance);
+        .setCenter(LatLng.newBuilder().setLongitude(location.lon()).setLatitude(location.lat()))
+        .setDistance(distance);
 
     if (field != null) {
       builder.setField(field);

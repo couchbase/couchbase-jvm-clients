@@ -22,6 +22,7 @@ import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.protostellar.search.v1.GeoPolygonQuery;
 import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Query;
@@ -36,40 +37,42 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Internal
 public class CoreGeoPolygonQuery extends CoreSearchQuery {
 
-    private final List<CoreCoordinate> coordinates;
-    private final @Nullable String field;
+  private final List<? extends CoreGeoPoint> coordinates;
+  private final @Nullable String field;
 
-    public CoreGeoPolygonQuery(final List<CoreCoordinate> coordinates,
-                               @Nullable String field,
-                               @Nullable Double boost) {
-      super(boost);
-        this.coordinates = notNullOrEmpty(coordinates, "GeoPolygonQuery Coordinates");
-        this.field = field;
+  public CoreGeoPolygonQuery(
+      List<? extends CoreGeoPoint> coordinates,
+      @Nullable String field,
+      @Nullable Double boost
+  ) {
+    super(boost);
+    this.coordinates = notNullOrEmpty(coordinates, "GeoPolygonQuery Coordinates");
+    this.field = field;
+  }
+
+  @Override
+  protected void injectParams(final ObjectNode input) {
+    ArrayNode points = Mapper.createArrayNode();
+    coordinates.forEach(c -> {
+      ArrayNode coords = Mapper.createArrayNode();
+      coords.add(c.toJson());
+      points.add(coords);
+    });
+
+    input.set("polygon_points", points);
+
+    if (field != null) {
+      input.put("field", field);
     }
-
-    @Override
-    protected void injectParams(final ObjectNode input) {
-        ArrayNode points = Mapper.createArrayNode();
-        coordinates.forEach(c -> {
-          ArrayNode coords = Mapper.createArrayNode();
-          coords.add(c.lon());
-          coords.add(c.lat());
-          points.add(coords);
-        });
-
-        input.set("polygon_points", points);
-
-        if (field != null) {
-            input.put("field", field);
-        }
-    }
+  }
 
   @Override
   public Query asProtostellar() {
     GeoPolygonQuery.Builder builder = GeoPolygonQuery.newBuilder()
-            .addAllVertices(coordinates.stream()
-                    .map(c -> LatLng.newBuilder().setLongitude(c.lon()).setLatitude(c.lat()).build())
-                    .collect(Collectors.toList()));
+        .addAllVertices(coordinates.stream()
+            .map(CoreProtostellarUtil::requireCoordinates)
+            .map(c -> LatLng.newBuilder().setLongitude(c.lon()).setLatitude(c.lat()).build())
+            .collect(Collectors.toList()));
 
     if (field != null) {
       builder.setField(field);

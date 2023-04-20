@@ -18,6 +18,8 @@ package com.couchbase.client.core.protostellar;
 import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
+import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates;
+import com.couchbase.client.core.api.search.queries.CoreGeoPoint;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -191,6 +193,14 @@ public class CoreProtostellarUtil {
     }
 
     return span;
+  }
+
+  public static CoreGeoCoordinates requireCoordinates(CoreGeoPoint point) {
+    if (!(point instanceof CoreGeoCoordinates)) {
+      // requires https://couchbasecloud.atlassian.net/browse/ING-405
+      throw unsupportedInProtostellar("using geohash to specify geographic points");
+    }
+    return (CoreGeoCoordinates) point;
   }
 
   public static RuntimeException unsupportedInProtostellar(String feature) {

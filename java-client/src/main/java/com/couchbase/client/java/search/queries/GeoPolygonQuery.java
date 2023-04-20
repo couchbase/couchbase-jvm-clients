@@ -18,14 +18,14 @@ package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
-import com.couchbase.client.core.api.search.queries.CoreCoordinate;
+import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates;
 import com.couchbase.client.core.api.search.queries.CoreGeoPolygonQuery;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.util.Coordinate;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
@@ -61,7 +61,8 @@ public class GeoPolygonQuery extends SearchQuery {
 
     @Override
     public CoreSearchQuery toCore() {
-        return new CoreGeoPolygonQuery(coordinates.stream().map(v -> new CoreCoordinate(v.lon(), v.lat())).collect(Collectors.toList()),
+        return new CoreGeoPolygonQuery(
+                transform(coordinates, it -> CoreGeoCoordinates.lat(it.lat()).lon(it.lon())),
                 field,
                 boost);
     }
