@@ -17,8 +17,9 @@
 package com.couchbase.client.kotlin.kv
 
 import com.couchbase.client.core.kv.RangeScanOrchestrator
+import com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING
+import com.couchbase.client.core.util.CbStrings.MIN_CODE_POINT_AS_STRING
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import com.couchbase.client.kotlin.internal.hexContentToString
 import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.KvScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.kv.KvScanConsistency.Companion.notBounded
@@ -76,7 +77,7 @@ public sealed class ScanType {
             prefix: String,
         ): Range = Range(
             from = ScanTerm(prefix),
-            to = ScanTerm(prefix.toByteArray() + 0xff.toByte(), exclusive = true)
+            to = ScanTerm(prefix + MAX_CODE_POINT_AS_STRING, exclusive = true)
         )
 
         /**
@@ -101,36 +102,23 @@ public sealed class ScanType {
  */
 @VolatileCouchbaseApi
 public class ScanTerm(
-    term: ByteArray,
+    public val term: String,
     public val exclusive: Boolean = false,
 ) {
-    // Defensive copies to make this class fully immutable
-    private val privateTerm = term.clone();
-    public val term: ByteArray
-        get() = privateTerm.clone()
-
-    public constructor(
-        term: String,
-        exclusive: Boolean = false,
-    ) : this(term.toByteArray(), exclusive)
-
     public companion object {
         /**
          * Before the "lowest" possible document ID.
          */
-        public val Minimum: ScanTerm = ScanTerm(byteArrayOf(0x00))
+        public val Minimum: ScanTerm = ScanTerm(MIN_CODE_POINT_AS_STRING)
 
         /**
          * After the "highest" possible document ID.
          */
-        public val Maximum: ScanTerm = ScanTerm(byteArrayOf(0xff.toByte()))
+        public val Maximum: ScanTerm = ScanTerm(MAX_CODE_POINT_AS_STRING)
     }
 
     override fun toString(): String {
-        return "ScanTerm(exclusive=$exclusive" +
-                ", termAsString=\"${String(privateTerm)}\"" +
-                ", termBytes=${privateTerm.hexContentToString()}" +
-                ")"
+        return "ScanTerm(term='$term', exclusive=$exclusive)"
     }
 }
 

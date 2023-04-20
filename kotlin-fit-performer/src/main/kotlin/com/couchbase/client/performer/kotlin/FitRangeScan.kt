@@ -73,7 +73,6 @@ fun FitScanTermChoice.toKotlin(): ScanTerm? = when {
         val exclusive = hasExclusive() && exclusive
         when {
             hasAsString() -> ScanTerm(asString, exclusive)
-            hasAsBytes() -> ScanTerm(asBytes.toByteArray(), exclusive)
             else -> throw UnsupportedOperationException("Unsupported ScanTermChoice $this")
         }
     }

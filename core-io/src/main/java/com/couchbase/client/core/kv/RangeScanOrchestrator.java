@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Main entry point from higher level languages to perform KV range scans.
@@ -131,7 +132,7 @@ public class RangeScanOrchestrator {
       }
       Map<Short, MutationToken> consistencyMap=options.consistencyMap();
       return streamForPartitions((partition, start) -> {
-        byte[] actualStartTerm = start == null ? rangeScan.from().id() : start;
+        byte[] actualStartTerm = start == null ? rangeScan.from().id().getBytes(UTF_8) : start;
         return RangeScanCreateRequest.forRangeScan(actualStartTerm, rangeScan, options, partition, core.context(),
             collectionIdentifier, consistencyMap);
       }, options);

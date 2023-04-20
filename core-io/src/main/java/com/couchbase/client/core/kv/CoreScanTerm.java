@@ -25,21 +25,20 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Internal
 public class CoreScanTerm {
 
-  private final byte[] id;
+  private final String id;
   private final boolean exclusive;
 
-  public CoreScanTerm(byte[] id, boolean exclusive){
-    this.id = notNullOrEmpty(id, "ScanTerm ID").clone();
+  public CoreScanTerm(String id, boolean exclusive) {
+    this.id = notNullOrEmpty(id, "ScanTerm ID");
     this.exclusive = exclusive;
   }
 
-  public byte[] id(){
-    return id.clone();
+  public String id() {
+    return id;
   }
 
-  public boolean exclusive(){
+  public boolean exclusive() {
     return exclusive;
   }
-
 }
 

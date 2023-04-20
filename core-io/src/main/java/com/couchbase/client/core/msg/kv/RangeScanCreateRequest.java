@@ -54,6 +54,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeScanCreateResponse> {
 
@@ -79,7 +80,7 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
     return new RangeScanCreateRequest(
       startTerm,
       rangeScan.from().exclusive(),
-      rangeScan.to().id(),
+      rangeScan.to().id().getBytes(UTF_8),
       rangeScan.to().exclusive(),
       0,
       Optional.empty(),

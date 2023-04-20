@@ -298,16 +298,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 if (stt.hasAsString()) {
                     return Optional.of(com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getAsString()));
                 }
-                else if (stt.hasAsBytes()) {
-                    return Optional.of(com.couchbase.client.java.kv.ScanTerm.exclusive(stt.getAsBytes().toByteArray()));
-                }
                 else throw new UnsupportedOperationException();
             }
             if (stt.hasAsString()) {
                 return Optional.of(com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getAsString()));
-            }
-            else if (stt.hasAsBytes()) {
-                return Optional.of(com.couchbase.client.java.kv.ScanTerm.inclusive(stt.getAsBytes().toByteArray()));
             }
             else throw new UnsupportedOperationException();
         }

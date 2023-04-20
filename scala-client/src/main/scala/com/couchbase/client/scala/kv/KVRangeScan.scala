@@ -1,9 +1,9 @@
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.util.CbStrings.{MAX_CODE_POINT_AS_STRING, MIN_CODE_POINT_AS_STRING}
 import com.couchbase.client.scala.codec.{
   JsonDeserializer,
   Transcoder,
@@ -11,7 +11,6 @@ import com.couchbase.client.scala.codec.{
   TranscoderWithoutSerializer
 }
 
-import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
@@ -25,30 +24,21 @@ import scala.util.{Failure, Random, Try}
   *                  companion object.
   * @param exclusive controls whether this term is inclusive or exclusive - defaults to false.
   */
-case class ScanTerm(term: Array[Byte], exclusive: Boolean = false)
+case class ScanTerm(term: String, exclusive: Boolean = false)
 
 object ScanTerm {
-  private val min = collection.immutable.Seq.apply(0x00.toByte)
-  private val max = collection.immutable.Seq.apply(0xFF.toByte)
 
   /** Creates a ScanTerm representing the absolute minimum pattern - e.g. before the first document. */
-  def minimum(): ScanTerm = inclusive(min.toArray)
+  def minimum(): ScanTerm = inclusive(MIN_CODE_POINT_AS_STRING)
 
   /** Creates a ScanTerm representing the absolute maximum pattern - e.g. after the last document. */
-  def maximum(): ScanTerm = inclusive(max.toArray)
+  def maximum(): ScanTerm = inclusive(MAX_CODE_POINT_AS_STRING)
 
   /** Creates a ScanTerm including `term`. */
-  def inclusive(term: String): ScanTerm = ScanTerm(term.getBytes(StandardCharsets.UTF_8))
-
-  /** Creates a ScanTerm including `term`. */
-  def inclusive(term: Array[Byte]): ScanTerm = ScanTerm(term)
+  def inclusive(term: String): ScanTerm = ScanTerm(term)
 
   /** Creates a ScanTerm excluding `term`. */
-  def exclusive(term: String): ScanTerm =
-    ScanTerm(term.getBytes(StandardCharsets.UTF_8), exclusive = true)
-
-  /** Creates a ScanTerm excluding `term`. */
-  def exclusive(term: Array[Byte]): ScanTerm = ScanTerm(term, exclusive = true)
+  def exclusive(term: String): ScanTerm = ScanTerm(term, exclusive = true)
 }
 
 /** Controls what type of scan is performed. */
@@ -72,8 +62,7 @@ object ScanType {
   case class SamplingScan(limit: Long, seed: Long = Random.nextLong()) extends ScanType
 
   def prefixScan(documentIdPrefix: String) = {
-    val to: Array[Byte] = documentIdPrefix.getBytes(StandardCharsets.UTF_8) :+ 0xff
-      .asInstanceOf[Byte]
+    val to: String = documentIdPrefix + MAX_CODE_POINT_AS_STRING
     RangeScan(ScanTerm.inclusive(documentIdPrefix), ScanTerm.exclusive(to))
   }
 }

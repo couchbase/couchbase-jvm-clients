@@ -21,7 +21,7 @@ import com.couchbase.client.core.kv.CoreScanType;
 
 import java.util.Optional;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
 
 /**
  * Specifies which documents to include in a KV scan.
@@ -65,15 +65,8 @@ public abstract class ScanType {
   public static RangeScan prefixScan(final String documentIdPrefix) {
     return new RangeScan(
       ScanTerm.inclusive(documentIdPrefix),
-      ScanTerm.exclusive(concat(documentIdPrefix.getBytes(UTF_8), (byte) 0xff))
+      ScanTerm.exclusive(documentIdPrefix + MAX_CODE_POINT_AS_STRING)
     );
-  }
-
-  private static byte[] concat(byte[] first, byte second) {
-    byte[] result = new byte[first.length + 1];
-    System.arraycopy(first, 0, result, 0, first.length);
-    result[first.length] = second;
-    return result;
   }
 
   /**

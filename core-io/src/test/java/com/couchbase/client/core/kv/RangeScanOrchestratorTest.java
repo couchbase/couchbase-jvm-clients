@@ -16,17 +16,17 @@
 
 package com.couchbase.client.core.kv;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import com.couchbase.client.core.Core;
-import org.junit.jupiter.api.Disabled;
+import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -34,18 +34,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.api.shared.CoreMutationState;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.msg.kv.MutationToken;
-import com.couchbase.client.core.retry.RetryStrategy;
+import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
+import static com.couchbase.client.core.util.CbStrings.MIN_CODE_POINT_AS_STRING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for the range scan orchestrator to simulate errors and correct behavior from downstream components.
@@ -166,12 +158,12 @@ class RangeScanOrchestratorTest {
 
     @Override
     public CoreScanTerm from() {
-      return new CoreScanTerm(new byte[]{(byte) 0x00}, false);
+      return new CoreScanTerm(MIN_CODE_POINT_AS_STRING, false);
     }
 
     @Override
     public CoreScanTerm to() {
-      return new CoreScanTerm(new byte[]{(byte) 0xff}, false);
+      return new CoreScanTerm(MAX_CODE_POINT_AS_STRING, false);
     }
   }
 

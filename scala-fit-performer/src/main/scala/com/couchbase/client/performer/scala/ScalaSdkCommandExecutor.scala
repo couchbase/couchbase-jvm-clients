@@ -333,14 +333,10 @@ object ScalaSdkCommandExecutor {
       if (stt.hasExclusive && stt.getExclusive) {
         if (stt.hasAsString) {
           Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
-        } else if (stt.hasAsBytes) {
-          Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsBytes.toByteArray))
         } else throw new UnsupportedOperationException();
       }
       if (stt.hasAsString) {
         Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
-      } else if (stt.hasAsBytes) {
-        Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsBytes.toByteArray))
       } else throw new UnsupportedOperationException();
     } else throw new UnsupportedOperationException("Unknown scan term")
   }

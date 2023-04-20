@@ -24,6 +24,16 @@ public class CbStrings {
     throw new AssertionError("not instantiable");
   }
 
+  public static final String MIN_CODE_POINT_AS_STRING = codePointToString(Character.MIN_CODE_POINT);
+  public static final String MAX_CODE_POINT_AS_STRING = codePointToString(Character.MAX_CODE_POINT);
+
+  /**
+   * Backport of Java 11's {@code Character.toString(int codePoint)}.
+   */
+  public static String codePointToString(int codePoint) {
+    return new String(Character.toChars(codePoint));
+  }
+
   public static String nullToEmpty(String s) {
     return s == null ? "" : s;
   }

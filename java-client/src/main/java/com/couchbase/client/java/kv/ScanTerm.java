@@ -17,12 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanTerm;
-import com.couchbase.client.java.CommonOptions;
 
-import java.nio.charset.StandardCharsets;
-
+import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
+import static com.couchbase.client.core.util.CbStrings.MIN_CODE_POINT_AS_STRING;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 /**
@@ -31,13 +29,13 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Volatile
 public class ScanTerm {
 
-  static private final ScanTerm MINIMUM = inclusive(new byte[]{(byte) 0x00});
-  static private final ScanTerm MAXIMUM = inclusive(new byte[]{(byte) 0xff});
+  static private final ScanTerm MINIMUM = inclusive(MIN_CODE_POINT_AS_STRING);
+  static private final ScanTerm MAXIMUM = inclusive(MAX_CODE_POINT_AS_STRING);
 
   /**
    * Contains the key pattern of this term.
    */
-  private final byte[] id;
+  private final String id;
 
   /**
    * If the pattern in the scan is considered exclusive or inclusive.
@@ -50,22 +48,16 @@ public class ScanTerm {
    * @param id the key pattern of this term.
    * @param exclusive if the term is exclusive while scanning.
    */
-  private ScanTerm(final byte[] id, final boolean exclusive) {
-    this.id = notNullOrEmpty(id, "ScanTerm ID")
-        .clone();
-    this.exclusive = exclusive;
-  }
-
   private ScanTerm(final String id, final boolean exclusive) {
-    this.id = notNullOrEmpty(id, "ScanTerm ID").getBytes(StandardCharsets.UTF_8);
+    this.id = notNullOrEmpty(id, "ScanTerm ID");
     this.exclusive = exclusive;
   }
 
   /**
-   * Returns a new byte array containing the key pattern of this term.
+   * Returns the key pattern of this term.
    */
-  public byte[] id() {
-    return id.clone();
+  public String id() {
+    return id;
   }
 
   public boolean exclusive() {
@@ -83,16 +75,6 @@ public class ScanTerm {
   }
 
   /**
-   * Creates an inclusive {@link ScanTerm} from a byte array.
-   *
-   * @param id the document ID / pattern to use as the scan term.
-   * @return the created {@link ScanTerm}.
-   */
-  public static ScanTerm inclusive(final byte[] id) {
-    return new ScanTerm(id, false);
-  }
-
-  /**
    * Creates an exclusive {@link ScanTerm} from a UTF-8 string.
    *
    * @param id the document ID / pattern to use as the scan term.
@@ -103,19 +85,9 @@ public class ScanTerm {
   }
 
   /**
-   * Creates an exclusive {@link ScanTerm} from a byte array.
-   *
-   * @param id the document ID / pattern to use as the scan term.
-   * @return the created {@link ScanTerm}.
-   */
-  public static ScanTerm exclusive(final byte[] id) {
-    return new ScanTerm(id, true);
-  }
-
-  /**
    * Returns a scan term representing the absolute minimum pattern (starting point).
    * <p>
-   * Equivalent to {@code ScanTerm.inclusive(new byte[]{(byte) 0x00})}
+   * Equivalent to {@code ScanTerm.inclusive(Character.toString(Character.MIN_CODE_POINT))}
    *
    * @return the absolute minimum {@link ScanTerm}.
    */
@@ -126,7 +98,7 @@ public class ScanTerm {
   /**
    * Returns a scan term representing the absolute maximum pattern (end point).
    * <p>
-   * Equivalent to {@code ScanTerm.inclusive(new byte[]{(byte) 0xFF})}
+   * Equivalent to {@code ScanTerm.inclusive(Character.toString(Character.MAX_CODE_POINT))}
    *
    * @return the absolute maximum {@link ScanTerm}.
    */
