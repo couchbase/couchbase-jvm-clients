@@ -321,7 +321,7 @@ public interface CoreKvOps {
       List<CoreSubdocGetCommand> commands,
       boolean accessDeleted
   ) {
-    return Mono.defer(() -> subdocGetReactive(common, key, commands, accessDeleted));
+    return Mono.defer(() -> subdocGetAsync(common, key, commands, accessDeleted).toMono());
   }
 
   Flux<CoreGetResult> getAllReplicasReactive(

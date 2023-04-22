@@ -62,6 +62,7 @@ import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -578,5 +579,19 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     // just like `get` or `count`.
     // Java SDK diverges from spec; it treats all errors as "does not exit".
     assertFalse(result.exists(0));
+  }
+
+  @Test
+  void reactiveSmokeTest() {
+    String id = UUID.randomUUID().toString();
+
+    collection.upsert(id, mapOf());
+
+    MutateInResult mutate = collection.reactive().mutateIn(id, listOf(MutateInSpec.upsert("foo", "bar"))).block();
+    assertNotNull(mutate);
+
+    LookupInResult lookup = collection.reactive().lookupIn(id, listOf(LookupInSpec.get("foo"))).block();
+    assertNotNull(lookup);
+    assertEquals("bar", lookup.contentAs(0, String.class));
   }
 }
