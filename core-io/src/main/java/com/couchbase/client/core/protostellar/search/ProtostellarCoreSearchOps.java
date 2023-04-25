@@ -51,6 +51,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
 import static com.couchbase.client.core.util.ProtostellarUtil.convert;
 import static java.util.Objects.requireNonNull;
 
@@ -70,6 +71,8 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName,
                                                               CoreSearchQuery search,
                                                               CoreSearchOptions options) {
+    options.validate();
+
     ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, search, options);
     CompletableFuture<CoreSearchResult> ret = new CompletableFuture<>();
     CoreAsyncResponse<CoreSearchResult> out = new CoreAsyncResponse<>(ret, () -> {
@@ -132,6 +135,8 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName,
                                                             CoreSearchQuery query,
                                                             CoreSearchOptions options) {
+    options.validate();
+
     return Mono.defer(() -> {
       ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, query, options);
       Mono<CoreReactiveSearchResult> err = handleShutdownReactive(core, request);
@@ -215,6 +220,10 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     if (opts.skip() != null) {
       request.setSkip(opts.skip());
+    }
+
+    if (opts.searchBefore() != null || opts.searchAfter() != null) {
+      throw unsupportedInProtostellar("keyset pagination with searchBefore/After");
     }
 
     if (opts.explain() != null) {

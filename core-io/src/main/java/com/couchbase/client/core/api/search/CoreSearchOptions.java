@@ -21,8 +21,8 @@ import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.util.annotation.Nullable;
 
 import java.util.List;
@@ -64,10 +64,39 @@ interface CoreSearchOptions {
   @Nullable
   Integer skip();
 
+  @Nullable
+  default CoreSearchKeyset searchBefore() {
+    return null;
+  }
+
+  @Nullable
+  default CoreSearchKeyset searchAfter() {
+    return null;
+  }
+
   List<CoreSearchSort> sort();
 
   @Nullable
   Boolean includeLocations();
 
   CoreCommonOptions commonOptions();
+
+  default void validate() {
+    int pageOptions = 0;
+    if (skip() != null) {
+      pageOptions++;
+    }
+    if (searchBefore() != null) {
+      pageOptions++;
+    }
+    if (searchAfter() != null) {
+      pageOptions++;
+    }
+    if (pageOptions > 1) {
+      throw InvalidArgumentException.fromMessage(
+          "Must specify no more than one of 'skip', 'searchBefore', or 'searchAfter'."
+      );
+    }
+  }
+
 }

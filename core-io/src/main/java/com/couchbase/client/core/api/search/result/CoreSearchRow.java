@@ -15,7 +15,9 @@
  */
 package com.couchbase.client.core.api.search.result;
 
+import com.couchbase.client.core.api.search.CoreSearchKeyset;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
@@ -27,13 +29,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 public class CoreSearchRow {
   private final String index;
@@ -44,8 +49,19 @@ public class CoreSearchRow {
   private final Map<String, List<String>> fragments;
   private final byte[] fields;
 
-  public CoreSearchRow(String index, String id, double score, ObjectNode explanation, Optional<CoreSearchRowLocations> locations,
-                       Map<String, List<String>> fragments, byte[] fields) {
+  // Supplier == Don't pay the cost of parsing a keyset unless it's accessed.
+  private final Supplier<CoreSearchKeyset> keyset;
+
+  public CoreSearchRow(
+      String index,
+      String id,
+      double score,
+      ObjectNode explanation,
+      Optional<CoreSearchRowLocations> locations,
+      Map<String, List<String>> fragments,
+      byte[] fields,
+      Supplier<CoreSearchKeyset> keyset
+  ) {
     this.index = index;
     this.id = id;
     this.score = score;
@@ -53,6 +69,7 @@ public class CoreSearchRow {
     this.locations = locations;
     this.fragments = fragments;
     this.fields = fields;
+    this.keyset = requireNonNull(keyset);
   }
 
   public String index() {
@@ -82,6 +99,10 @@ public class CoreSearchRow {
   @Nullable
   public byte[] fields() {
     return fields;
+  }
+
+  public CoreSearchKeyset keyset() {
+    return keyset.get();
   }
 
   @Override
@@ -138,7 +159,40 @@ public class CoreSearchRow {
     if (hit.has("fields")) {
       fields = hit.get("fields").toString().getBytes(UTF_8);
     }
-    return new CoreSearchRow(index, id, score, explanationJson, locations, fragments, fields);
+
+    Supplier<CoreSearchKeyset> keyset = lazyParseKeyset(hit);
+
+    return new CoreSearchRow(index, id, score, explanationJson, locations, fragments, fields, keyset);
+  }
+
+  private static Supplier<CoreSearchKeyset> lazyParseKeyset(ObjectNode hit) {
+    // Pluck out the "sort" and "score" nodes so the lambda doesn't
+    // capture the whole row. Defer the rest of the parsing until
+    // the user requests it.
+
+    JsonNode keysetNode = hit.get("sort");
+    if (keysetNode == null) {
+      // Unexpected, but let's not explode.
+      return () -> CoreSearchKeyset.EMPTY;
+    }
+
+    // Use original score node to preserve exact representation.
+    JsonNode scoreNode = hit.path("score");
+
+    return () -> {
+      List<String> keys = new ArrayList<>(keysetNode.size());
+      keysetNode.forEach(it -> keys.add(it.asText())); // faster than Mapper.convert
+
+      // replace "_score" with actual score
+      for (ListIterator<String> i = keys.listIterator(); i.hasNext(); ) {
+        if ("_score".equals(i.next())) {
+          i.set(scoreNode.asText());
+          break;
+        }
+      }
+
+      return new CoreSearchKeyset(keys);
+    };
   }
 
   @Override

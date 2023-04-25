@@ -73,6 +73,8 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
 
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
+    options.validate();
+
     SearchRequest request = searchRequest(indexName, query, options);
     core.send(request);
     return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
@@ -92,6 +94,8 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
 
   @Override
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
+    options.validate();
+
     SearchRequest request = searchRequest(indexName, query, options);
     core.send(request);
     return Mono.fromFuture(request.response())
@@ -172,6 +176,14 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     return request;
   }
 
+  private static void inject(ObjectNode queryJson, String field, @Nullable CoreSearchKeyset keyset) {
+    if (keyset != null) {
+      ArrayNode array = Mapper.createArrayNode();
+      keyset.keys().forEach(array::add);
+      queryJson.set(field, array);
+    }
+  }
+
   @Stability.Internal
   public static void injectOptions(String indexName, ObjectNode queryJson, Duration timeout, CoreSearchOptions opts) {
     if (opts.limit() != null && opts.limit() >= 0) {
@@ -180,6 +192,8 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     if (opts.skip() != null && opts.skip() >= 0) {
       queryJson.put("from", opts.skip());
     }
+    inject(queryJson, "search_before", opts.searchBefore());
+    inject(queryJson, "search_after", opts.searchAfter());
     if (opts.explain() != null) {
       queryJson.put("explain", opts.explain());
     }
