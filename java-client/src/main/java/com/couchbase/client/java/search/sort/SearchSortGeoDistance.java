@@ -15,11 +15,12 @@
  */
 package com.couchbase.client.java.search.sort;
 
+import com.couchbase.client.core.api.search.queries.CoreGeoPoint;
 import com.couchbase.client.core.api.search.sort.CoreSearchGeoDistanceUnits;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
 import com.couchbase.client.core.api.search.sort.CoreSearchSortGeoDistance;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Sort by a location and unit in the rows.
@@ -30,14 +31,12 @@ import com.couchbase.client.java.json.JsonObject;
 public class SearchSortGeoDistance extends SearchSort {
 
     private final String field;
-    private final double locationLon;
-    private final double locationLat;
+    private final CoreGeoPoint location;
     private CoreSearchGeoDistanceUnits unit;
 
-    SearchSortGeoDistance(double locationLon, double locationLat, String field) {
+    SearchSortGeoDistance(CoreGeoPoint location, String field) {
         this.field = field;
-        this.locationLon = locationLon;
-        this.locationLat = locationLat;
+        this.location = requireNonNull(location);
     }
 
     @Override
@@ -53,6 +52,6 @@ public class SearchSortGeoDistance extends SearchSort {
 
     @Override
     public CoreSearchSort toCore() {
-        return new CoreSearchSortGeoDistance(locationLon, locationLat, field, unit, descending);
+        return new CoreSearchSortGeoDistance(location, field, unit, descending);
     }
 }

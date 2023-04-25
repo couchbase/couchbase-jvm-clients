@@ -28,6 +28,7 @@ import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
+import com.couchbase.client.protostellar.search.v1.LatLng;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
@@ -195,12 +196,20 @@ public class CoreProtostellarUtil {
     return span;
   }
 
-  public static CoreGeoCoordinates requireCoordinates(CoreGeoPoint point) {
+  private static CoreGeoCoordinates requireCoordinates(CoreGeoPoint point) {
     if (!(point instanceof CoreGeoCoordinates)) {
       // requires https://couchbasecloud.atlassian.net/browse/ING-405
       throw unsupportedInProtostellar("using geohash to specify geographic points");
     }
     return (CoreGeoCoordinates) point;
+  }
+
+  public static LatLng toLatLng(CoreGeoPoint point) {
+    CoreGeoCoordinates coordinates = requireCoordinates(point);
+    return LatLng.newBuilder()
+      .setLongitude(coordinates.lon())
+      .setLatitude(coordinates.lat())
+      .build();
   }
 
   public static RuntimeException unsupportedInProtostellar(String feature) {

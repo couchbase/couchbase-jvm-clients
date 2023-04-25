@@ -19,11 +19,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.protostellar.search.v1.GeoBoundingBoxQuery;
-import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Query;
 import reactor.util.annotation.Nullable;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.requireCoordinates;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -70,12 +69,9 @@ public class CoreGeoBoundingBoxQuery extends CoreSearchQuery {
 
   @Override
   public Query asProtostellar() {
-    CoreGeoCoordinates topLeft = requireCoordinates(this.topLeft);
-    CoreGeoCoordinates bottomRight = requireCoordinates(this.bottomRight);
-
     GeoBoundingBoxQuery.Builder builder = GeoBoundingBoxQuery.newBuilder()
-            .setTopLeft(LatLng.newBuilder().setLongitude(topLeft.lon()).setLatitude(topLeft.lat()))
-            .setBottomRight(LatLng.newBuilder().setLongitude(bottomRight.lon()).setLatitude(bottomRight.lat()));
+            .setTopLeft(toLatLng(topLeft))
+            .setBottomRight(toLatLng(bottomRight));
 
     if (field != null) {
       builder.setField(field);

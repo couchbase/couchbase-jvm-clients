@@ -16,33 +16,29 @@
 package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
+import com.couchbase.client.core.api.search.queries.CoreGeoPoint;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.protostellar.search.v1.GeoDistanceSorting;
-import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Sorting;
 import reactor.util.annotation.Nullable;
 
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreSearchSortGeoDistance extends CoreSearchSort {
 
     private final String field;
-    private final double locationLon;
-    private final double locationLat;
+    private final CoreGeoPoint location;
     private final @Nullable CoreSearchGeoDistanceUnits unit;
 
-    public CoreSearchSortGeoDistance(double locationLon,
-                                     double locationLat,
+    public CoreSearchSortGeoDistance(CoreGeoPoint location,
                                      String field,
                                      @Nullable CoreSearchGeoDistanceUnits unit,
                                      boolean descending) {
         super(descending);
         this.field = notNull(field, "Field");
-        this.locationLon = locationLon;
-        this.locationLat = locationLat;
+        this.location = notNull(location, "Location");
         this.unit = unit;
     }
 
@@ -54,10 +50,7 @@ public class CoreSearchSortGeoDistance extends CoreSearchSort {
     @Override
     public void injectParams(ObjectNode queryJson) {
         super.injectParams(queryJson);
-        ArrayNode location = Mapper.createArrayNode();
-        location.add(locationLon);
-        location.add(locationLat);
-        queryJson.set("location", location);
+        queryJson.set("location", location.toJson());
         queryJson.put("field", field);
         if (unit != null) {
             queryJson.put("unit", unit.identifier());
@@ -69,7 +62,7 @@ public class CoreSearchSortGeoDistance extends CoreSearchSort {
         GeoDistanceSorting.Builder builder = GeoDistanceSorting.newBuilder()
                 .setField(field)
                 .setDescending(descending)
-                .setCenter(LatLng.newBuilder().setLongitude(locationLon).setLatitude(locationLat));
+                .setCenter(toLatLng(location));
 
         if (unit != null) {
             builder.setUnit(unit.identifier());

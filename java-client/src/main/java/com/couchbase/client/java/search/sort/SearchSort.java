@@ -16,8 +16,8 @@
 package com.couchbase.client.java.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
-import com.couchbase.client.java.json.JsonObject;
 
 /**
  * Base class for all FTS sort options in querying.
@@ -65,14 +65,14 @@ public abstract class SearchSort {
     }
 
     /**
-     * Sort by geo location.
+     * Sort by distance from a geographic location.
      *
      * @param locationLon longitude of the location.
      * @param locationLat latitude of the location.
      * @param field the field name.
      */
     public static SearchSortGeoDistance byGeoDistance(double locationLon, double locationLat, String field) {
-        return new SearchSortGeoDistance(locationLon, locationLat, field);
+        return new SearchSortGeoDistance(CoreGeoCoordinates.lon(locationLon).lat(locationLat), field);
     }
 
 }

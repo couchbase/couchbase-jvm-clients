@@ -24,7 +24,6 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.Object
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.protostellar.search.v1.GeoPolygonQuery;
-import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Query;
 import reactor.util.annotation.Nullable;
 
@@ -70,8 +69,7 @@ public class CoreGeoPolygonQuery extends CoreSearchQuery {
   public Query asProtostellar() {
     GeoPolygonQuery.Builder builder = GeoPolygonQuery.newBuilder()
         .addAllVertices(coordinates.stream()
-            .map(CoreProtostellarUtil::requireCoordinates)
-            .map(c -> LatLng.newBuilder().setLongitude(c.lon()).setLatitude(c.lat()).build())
+            .map(CoreProtostellarUtil::toLatLng)
             .collect(Collectors.toList()));
 
     if (field != null) {

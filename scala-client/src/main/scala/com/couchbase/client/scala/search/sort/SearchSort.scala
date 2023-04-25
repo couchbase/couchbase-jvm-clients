@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.search.sort
 
+import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates
 import com.couchbase.client.core.api.search.sort._
 
 /** Base class for all FTS sort options in querying.
@@ -130,8 +131,7 @@ object SearchSort {
 
     override private[scala] def toCore =
       new CoreSearchSortGeoDistance(
-        location.head,
-        location(1),
+        CoreGeoCoordinates.lon(location.head).lat(location(1)),
         field,
         unit
           .map(

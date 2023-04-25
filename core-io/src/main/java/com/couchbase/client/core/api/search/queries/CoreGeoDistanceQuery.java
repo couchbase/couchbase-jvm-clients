@@ -19,11 +19,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.protostellar.search.v1.GeoDistanceQuery;
-import com.couchbase.client.protostellar.search.v1.LatLng;
 import com.couchbase.client.protostellar.search.v1.Query;
 import reactor.util.annotation.Nullable;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.requireCoordinates;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
@@ -61,10 +60,9 @@ public class CoreGeoDistanceQuery extends CoreSearchQuery {
 
   @Override
   public Query asProtostellar() {
-    CoreGeoCoordinates location = requireCoordinates(this.location);
 
     GeoDistanceQuery.Builder builder = GeoDistanceQuery.newBuilder()
-        .setCenter(LatLng.newBuilder().setLongitude(location.lon()).setLatitude(location.lat()))
+        .setCenter(toLatLng(location))
         .setDistance(distance);
 
     if (field != null) {
