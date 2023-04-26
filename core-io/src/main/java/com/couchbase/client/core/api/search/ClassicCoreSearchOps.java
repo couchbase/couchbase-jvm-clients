@@ -204,14 +204,9 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
       }
       queryJson.set("fields", fields);
     }
-    if (!opts.sort().isEmpty() || !opts.sortString().isEmpty()) {
+    if (!opts.sort().isEmpty()) {
       ArrayNode sort = Mapper.createArrayNode();
-      opts.sort().forEach(s -> {
-        ObjectNode so = Mapper.createObjectNode();
-        s.injectParams(so);
-        sort.add(so);
-      });
-      opts.sortString().forEach(sort::add);
+      opts.sort().forEach(s -> sort.add(s.toJsonNode()));
       queryJson.set("sort", sort);
     }
     if (opts.disableScoring()) {

@@ -245,11 +245,6 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     opts.sort().forEach(sort -> request.addSort(sort.asProtostellar()));
 
-    if (!opts.sortString().isEmpty()) {
-      // Requires ING-381
-      throw new UnsupportedOperationException("Sorting with strings is not currently supported in Protostellar");
-    }
-
     if (opts.disableScoring() != null) {
       request.setDisableScoring(opts.disableScoring());
     }

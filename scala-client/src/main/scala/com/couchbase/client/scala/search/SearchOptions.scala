@@ -296,8 +296,6 @@ case class SearchOptions(
 
       override def sort(): util.List[CoreSearchSort] = x.sort.getOrElse(Seq()).map(_.toCore).asJava
 
-      override def sortString(): util.List[String] = Seq().asJava
-
       override def includeLocations(): lang.Boolean = x.includeLocations
 
       override def commonOptions(): CoreCommonOptions = common

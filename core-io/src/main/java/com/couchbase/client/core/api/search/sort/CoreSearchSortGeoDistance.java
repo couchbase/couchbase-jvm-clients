@@ -48,7 +48,7 @@ public class CoreSearchSortGeoDistance extends CoreSearchSort {
     }
 
     @Override
-    public void injectParams(ObjectNode queryJson) {
+    protected void injectParams(ObjectNode queryJson) {
         super.injectParams(queryJson);
         queryJson.set("location", location.toJson());
         queryJson.put("field", field);

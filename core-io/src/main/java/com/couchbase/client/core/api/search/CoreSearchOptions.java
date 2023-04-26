@@ -66,8 +66,6 @@ interface CoreSearchOptions {
 
   List<CoreSearchSort> sort();
 
-  List<String> sortString();
-
   @Nullable
   Boolean includeLocations();
 

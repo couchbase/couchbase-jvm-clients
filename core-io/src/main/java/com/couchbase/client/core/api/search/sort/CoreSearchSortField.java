@@ -50,7 +50,7 @@ public class CoreSearchSortField extends CoreSearchSort {
     }
 
     @Override
-    public void injectParams(ObjectNode queryJson) {
+    protected void injectParams(ObjectNode queryJson) {
         super.injectParams(queryJson);
 
         queryJson.put("field", field);

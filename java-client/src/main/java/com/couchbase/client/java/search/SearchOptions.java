@@ -22,12 +22,11 @@ import com.couchbase.client.core.api.search.CoreSearchOptions;
 import com.couchbase.client.core.api.search.CoreSearchScanConsistency;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
+import com.couchbase.client.core.api.search.sort.CoreSearchSortString;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
@@ -66,7 +65,6 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private JsonSerializer serializer;
   private Integer skip;
   private @Nullable List<CoreSearchSort> sort;
-  private @Nullable List<String> sortString;
   private Boolean includeLocations;
 
   public static SearchOptions searchOptions() {
@@ -251,15 +249,12 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   public SearchOptions sort(Object... sort) {
     if (sort != null) {
       for (Object o : sort) {
+        if (this.sort == null) {
+          this.sort = new ArrayList<>();
+        }
         if (o instanceof String) {
-          if (this.sortString == null) {
-            this.sortString = new ArrayList<>();
-          }
-          this.sortString.add((String) o);
+          this.sort.add(new CoreSearchSortString((String) o));
         } else if (o instanceof SearchSort) {
-          if (this.sort == null) {
-            this.sort = new ArrayList<>();
-          }
           this.sort.add(((SearchSort) o).toCore());
         } else {
           throw InvalidArgumentException.fromMessage("Only String or SearchSort " +
@@ -419,11 +414,6 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     @Override
     public List<CoreSearchSort> sort() {
       return sort == null ? Collections.emptyList() : sort;
-    }
-
-    @Override
-    public List<String> sortString() {
-      return sortString == null ? Collections.emptyList() : sortString;
     }
 
     @Override
