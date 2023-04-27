@@ -67,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
@@ -99,8 +100,9 @@ public class OptionsUtil {
             }
             // [end:3.3.0]
 
-            if (cc.getUseTls()) {
-                clusterEnvironment.securityConfig(SecurityConfig.enableTls(cc.getUseTls()));
+            if (cc.getUseTls() || cc.hasCertPath()) {
+                clusterEnvironment.securityConfig(sec -> sec.enableTls(cc.getUseTls())
+                        .trustCertificate(Path.of(cc.getCertPath())));
             }
 
             applyClusterConfig(clusterEnvironment, cc);
