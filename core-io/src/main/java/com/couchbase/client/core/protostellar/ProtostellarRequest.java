@@ -86,10 +86,6 @@ public class ProtostellarRequest<TGrpcRequest> {
    */
   private volatile State state = State.INCOMPLETE;
 
-  /** Has this request been sent on the wire.  Note we set this just before trying to send it - it doesn't guarantee
-   * that it actually was sent. */
-  private volatile boolean maybeSent;
-
   /**
    * Allows more specialised requests with more context, to fill in extra information to the
    * ErrorContext.
@@ -209,14 +205,6 @@ public class ProtostellarRequest<TGrpcRequest> {
     retryReasons.add(reason);
   }
 
-  public void markAsSent() {
-    maybeSent = true;
-  }
-
-  public boolean maybeSent() {
-    return maybeSent;
-  }
-
   public GenericErrorContext context() {
     Map<String, Object> input = new HashMap<>();
 
@@ -229,7 +217,6 @@ public class ProtostellarRequest<TGrpcRequest> {
     input.put("retried", retryAttempts);
     input.put("completed", completed());
     input.put("timeoutMs", timeout.toMillis());
-    input.put("maybeSent", maybeSent);
     if (cancellationReason != null) {
       input.put("cancelled", true);
       input.put("reason", cancellationReason);

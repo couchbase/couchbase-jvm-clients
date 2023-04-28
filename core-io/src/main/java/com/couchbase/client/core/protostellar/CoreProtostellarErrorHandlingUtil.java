@@ -207,9 +207,7 @@ public class CoreProtostellarErrorHandlingUtil {
       case DEADLINE_EXCEEDED:
         CancellationErrorContext ec = new CancellationErrorContext(context);
         TimeoutException e;
-        if (!request.maybeSent()) {
-          e = new UnambiguousTimeoutException("The operation timed out before being sent.  Possible explanations include that a Protostellar connection could not be established in time, or that this client is presently overloaded.", ec);
-        } else if (request.readonly()) {
+        if (request.readonly()) {
           e = new UnambiguousTimeoutException("The operation timed out possibly after being sent, and is read-only", ec);
         } else {
           e = new AmbiguousTimeoutException("The operation timed out possibly after being sent, and state could have been changed on the server as a result", ec);
