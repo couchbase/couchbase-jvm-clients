@@ -87,8 +87,8 @@ public class CoreProtostellarKeyValueRequests {
     validateGetParams(opts, key, projections, withExpiry);
 
     // Needs ING-369
-    if (!projections.isEmpty() || withExpiry) {
-      throw new UnsupportedOperationException("Projections and withExpiry are not yet supported with Protostellar, but will be");
+    if (!projections.isEmpty()) {
+      throw new UnsupportedOperationException("Projections are not yet supported with Protostellar, but will be");
     }
 
     GetRequest request = com.couchbase.client.protostellar.kv.v1.GetRequest.newBuilder()
@@ -526,6 +526,10 @@ public class CoreProtostellarKeyValueRequests {
               break;
             case SET_DOC:
               operation = MutateInRequest.Spec.Operation.OPERATION_REPLACE;
+              path = "";
+              break;
+            case DELETE_DOC:
+              operation = MutateInRequest.Spec.Operation.OPERATION_REMOVE;
               path = "";
               break;
             default:
