@@ -17,24 +17,33 @@
 package com.couchbase.client.kotlin.search
 
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.search.CoreSearchKeyset
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference
 import com.couchbase.client.core.json.Mapper
 
 /**
  * Specifies the page to be returned by a search query.
  */
-public class SearchPage internal constructor(
-    internal val map: Map<String, Any?>,
-) {
+public sealed class SearchPage {
+
+    internal class StartAt(val offset: Int) : SearchPage() {
+        override fun toString(): String = "StartAt(offset=$offset)"
+    }
+
+    internal class SearchBefore(val keyset: SearchKeyset) : SearchPage() {
+        override fun toString(): String = "SearchBefore(keyset=$keyset)"
+    }
+
+    internal class SearchAfter(val keyset: SearchKeyset) : SearchPage() {
+        override fun toString(): String = "SearchAfter(keyset=$keyset)"
+    }
+
     public companion object {
 
         /**
          * Offset pagination: return the page starting at row [offset].
          */
-        public fun startAt(offset: Int): SearchPage =
-            SearchPage(
-                if (offset == 0) emptyMap() else mapOf("from" to offset)
-            )
+        public fun startAt(offset: Int): SearchPage = StartAt(offset);
 
         /**
          * Keyset pagination: return the page starting after [row].
@@ -53,10 +62,7 @@ public class SearchPage internal constructor(
          * on the result set, typically by adding `byId()` as the final sort tier.
          */
         @SinceCouchbase("6.6.1")
-        public fun searchAfter(keyset: SearchKeyset): SearchPage =
-            SearchPage(mapOf(
-                "search_after" to keyset.components,
-            ))
+        public fun searchAfter(keyset: SearchKeyset): SearchPage = SearchAfter(keyset)
 
         /**
          * Keyset pagination: return the page ending before [row].
@@ -74,10 +80,7 @@ public class SearchPage internal constructor(
          * on the result set, typically by adding `byId()` as the final sort tier.
          */
         @SinceCouchbase("6.6.1")
-        public fun searchBefore(keyset: SearchKeyset): SearchPage =
-            SearchPage(mapOf(
-                "search_before" to keyset.components,
-            ))
+        public fun searchBefore(keyset: SearchKeyset): SearchPage = SearchBefore(keyset)
     }
 }
 
@@ -100,4 +103,7 @@ public class SearchKeyset internal constructor(internal val components: List<Str
     public fun serialize(): String = Mapper.encodeAsString(components)
 
     override fun toString(): String = serialize()
+
+    internal val core: CoreSearchKeyset
+        get() = CoreSearchKeyset(components)
 }

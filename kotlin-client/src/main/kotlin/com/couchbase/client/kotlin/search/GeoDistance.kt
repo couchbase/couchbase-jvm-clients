@@ -1,19 +1,23 @@
 package com.couchbase.client.kotlin.search
 
+import com.couchbase.client.core.api.search.sort.CoreSearchGeoDistanceUnits
+
 public enum class GeoDistanceUnit(
     internal val value: String,
+    internal val core: CoreSearchGeoDistanceUnits
 ) {
-    MILLIMETERS("mm"),
-    CENTIMETERS("cm"),
-    METERS("m"),
-    KILOMETERS("km"),
+    MILLIMETERS("mm", CoreSearchGeoDistanceUnits.MILLIMETERS),
+    CENTIMETERS("cm", CoreSearchGeoDistanceUnits.CENTIMETERS),
+    METERS("m", CoreSearchGeoDistanceUnits.METERS),
+    KILOMETERS("km", CoreSearchGeoDistanceUnits.KILOMETERS),
 
-    INCHES("in"),
-    FEET("ft"),
-    YARDS("yd"),
-    MILES("mi"),
+    INCHES("in", CoreSearchGeoDistanceUnits.INCH),
+    FEET("ft", CoreSearchGeoDistanceUnits.FEET),
+    YARDS("yd", CoreSearchGeoDistanceUnits.YARDS),
+    MILES("mi", CoreSearchGeoDistanceUnits.MILES),
 
-    NAUTICAL_MILES("nm"),
+    NAUTICAL_MILES("nm", CoreSearchGeoDistanceUnits.NAUTICAL_MILES),
+    ;
 }
 
 /**

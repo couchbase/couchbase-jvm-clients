@@ -1,6 +1,9 @@
 package com.couchbase.client.kotlin.search
 
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates
+import com.couchbase.client.core.api.search.queries.CoreGeoPoint
+import com.couchbase.client.core.api.search.queries.CoreGeohash
 import com.couchbase.client.kotlin.internal.MustUseNamedArguments
 import com.couchbase.client.kotlin.search.GeoPoint.Companion.coordinates
 import com.couchbase.client.kotlin.search.GeoPoint.Companion.geohash
@@ -13,6 +16,7 @@ import com.couchbase.client.kotlin.search.GeoPoint.Companion.geohash
 public sealed class GeoPoint {
     internal abstract fun serialize(): Any
     override fun toString(): String = serialize().toString()
+    internal abstract val core : CoreGeoPoint
 
     public companion object {
         /**
@@ -47,6 +51,7 @@ public class GeoHash internal constructor(
     public val value: String,
 ) : GeoPoint() {
     override fun serialize(): Any = value
+    override val core = CoreGeohash(value)
 }
 
 public class GeoCoordinates internal constructor(
@@ -54,4 +59,5 @@ public class GeoCoordinates internal constructor(
     public val lat: Double,
 ) : GeoPoint() {
     override fun serialize(): Any = listOf(lon, lat)
+    override val core = CoreGeoCoordinates.lon(lon).lat(lat)
 }

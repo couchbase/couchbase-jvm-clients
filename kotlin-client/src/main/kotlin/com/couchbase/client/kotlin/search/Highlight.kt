@@ -52,8 +52,6 @@ public class HighlightStyle internal constructor(
 
 public sealed class Highlight {
 
-    internal abstract fun inject(params: MutableMap<String, Any?>)
-
     public companion object {
         /**
          * No highlighting.
@@ -76,24 +74,13 @@ public sealed class Highlight {
         ): Highlight = Specific(style, fields)
 
         internal object None : Highlight() {
-            override fun inject(params: MutableMap<String, Any?>) {
-                // noop
-            }
-
             override fun toString(): String = "DefaultHighlight"
         }
 
         internal class Specific internal constructor(
-            private val style: HighlightStyle? = null,
-            private val fields: List<String> = emptyList(),
+            internal val style: HighlightStyle? = null,
+            internal val fields: List<String> = emptyList(),
         ) : Highlight() {
-            override fun inject(params: MutableMap<String, Any?>) {
-                val highlightJson = mutableMapOf<String, Any?>()
-                style?.let { style -> highlightJson["style"] = style.name }
-                if (fields.isNotEmpty()) highlightJson["fields"] = fields
-                params["highlight"] = highlightJson
-            }
-
             override fun toString(): String =
                 "Highlight(style=$style, fields=$fields)"
         }

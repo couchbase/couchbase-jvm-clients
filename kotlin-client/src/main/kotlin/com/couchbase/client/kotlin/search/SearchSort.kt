@@ -16,33 +16,38 @@
 
 package com.couchbase.client.kotlin.search
 
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldMissing
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldMode
+import com.couchbase.client.core.api.search.sort.CoreSearchFieldType
+import com.couchbase.client.core.api.search.sort.CoreSearchSort
+import com.couchbase.client.core.api.search.sort.CoreSearchSortField
+import com.couchbase.client.core.api.search.sort.CoreSearchSortGeoDistance
+import com.couchbase.client.core.api.search.sort.CoreSearchSortId
+import com.couchbase.client.core.api.search.sort.CoreSearchSortScore
+import com.couchbase.client.core.api.search.sort.CoreSearchSortString
+import com.couchbase.client.kotlin.search.SearchSort.Companion.of
+
 public enum class Direction { ASCENDING, DESCENDING }
 
-public enum class FieldType {
-    AUTO,
-    STRING,
-    NUMBER,
-    DATE,
+public enum class FieldType(internal val core: CoreSearchFieldType) {
+    AUTO(CoreSearchFieldType.AUTO),
+    STRING(CoreSearchFieldType.STRING),
+    NUMBER(CoreSearchFieldType.NUMBER),
+    DATE(CoreSearchFieldType.DATE),
     ;
-
-    internal val value = name.lowercase()
 }
 
-public enum class Mode {
-    DEFAULT,
-    MIN,
-    MAX,
+public enum class Mode(internal val core: CoreSearchFieldMode) {
+    DEFAULT(CoreSearchFieldMode.DEFAULT),
+    MIN(CoreSearchFieldMode.MIN),
+    MAX(CoreSearchFieldMode.MAX),
     ;
-
-    internal val value = name.lowercase()
 }
 
-public enum class Missing {
-    FIRST,
-    LAST,
+public enum class Missing(internal val core: CoreSearchFieldMissing) {
+    FIRST(CoreSearchFieldMissing.FIRST),
+    LAST(CoreSearchFieldMissing.LAST),
     ;
-
-    internal val value = name.lowercase()
 }
 
 /**
@@ -57,11 +62,8 @@ public enum class Missing {
 public class SearchSort internal constructor(private val components: List<SearchSortComponent>) {
     internal constructor(e: SearchSortComponent) : this(listOf(e))
 
-    internal fun inject(params: MutableMap<String, Any?>) {
-        if (components.isNotEmpty()) {
-            params["sort"] = components.map { it.encode() }
-        }
-    }
+    internal val core : List<CoreSearchSort> = components.map { it.core }
+
 
     /**
      * Returns a tiered sort consisting of this sort followed by [other].
@@ -142,50 +144,36 @@ public class SearchSort internal constructor(private val components: List<Search
 }
 
 internal sealed class SearchSortComponent {
-    internal abstract fun encode(): Any
-    override fun toString(): String = encode().toString()
+    internal abstract val core: CoreSearchSort
+    override fun toString(): String = core.toString()
 }
 
-internal class SearchSortFromString internal constructor(private val sort: String) : SearchSortComponent() {
-    override fun encode(): Any = sort
+internal class SearchSortFromString internal constructor(sort: String) : SearchSortComponent() {
+    override val core = CoreSearchSortString(sort)
 }
 
-internal class SearchSortScore internal constructor(private val direction: Direction) : SearchSortComponent() {
-    override fun encode(): Any {
-        val result = mutableMapOf<String, Any?>("by" to "score")
-        if (direction == Direction.DESCENDING) result["desc"] = true
-        return result
-    }
+internal class SearchSortScore internal constructor(direction: Direction) : SearchSortComponent() {
+    override val core = CoreSearchSortScore(direction == Direction.DESCENDING)
 }
 
-internal class SearchSortId internal constructor(private val direction: Direction) : SearchSortComponent() {
-    override fun encode(): Any {
-        val result = mutableMapOf<String, Any?>("by" to "id")
-        if (direction == Direction.DESCENDING) result["desc"] = true
-        return result
-    }
+internal class SearchSortId internal constructor(direction: Direction) : SearchSortComponent() {
+    override val core = CoreSearchSortId(direction == Direction.DESCENDING)
 }
 
 internal class SearchSortField internal constructor(
-    private val field: String,
-    private val type: FieldType,
-    private val mode: Mode,
-    private val missing: Missing,
-    private val direction: Direction,
+    field: String,
+    type: FieldType,
+    mode: Mode,
+    missing: Missing,
+    direction: Direction,
 ) : SearchSortComponent() {
-    override fun encode(): Any {
-        val result = mutableMapOf<String, Any?>(
-            "by" to "field",
-            "field" to field,
-        )
-
-        if (direction == Direction.DESCENDING) result["desc"] = true
-        if (type != FieldType.AUTO) result["type"] = type.value
-        if (mode != Mode.DEFAULT) result["mode"] = mode.value
-        if (missing != Missing.LAST) result["missing"] = missing.value
-
-        return result
-    }
+    override val core = CoreSearchSortField(
+        field,
+        type.core,
+        mode.core,
+        missing.core,
+        direction == Direction.DESCENDING
+    )
 }
 
 internal class SearchSortGeoDistance internal constructor(
@@ -194,16 +182,10 @@ internal class SearchSortGeoDistance internal constructor(
     private val unit: GeoDistanceUnit,
     private val direction: Direction,
 ) : SearchSortComponent() {
-    override fun encode(): Any {
-        val result = mutableMapOf<String, Any?>(
-            "by" to "geo_distance",
-            "field" to field,
-            "location" to location.serialize(),
-        )
-
-        if (direction == Direction.DESCENDING) result["desc"] = true
-        if (unit != GeoDistanceUnit.METERS) result["unit"] = unit.value
-
-        return result
-    }
+    override val core = CoreSearchSortGeoDistance(
+        location.core,
+        field,
+        unit.core,
+        direction == Direction.DESCENDING,
+    )
 }

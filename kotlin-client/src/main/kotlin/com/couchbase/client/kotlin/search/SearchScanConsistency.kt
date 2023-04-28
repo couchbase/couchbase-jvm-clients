@@ -50,12 +50,12 @@ public sealed class SearchScanConsistency {
             if (tokens.isEmpty()) NotBounded else ConsistentWith(tokens)
     }
 
-    private object NotBounded : SearchScanConsistency() {
+    internal object NotBounded : SearchScanConsistency() {
         override fun toString(): String = "NotBounded"
     }
 
-    private class ConsistentWith internal constructor(
-        private val tokens: MutationState,
+    internal class ConsistentWith internal constructor(
+        internal val tokens: MutationState,
     ) : SearchScanConsistency() {
         override fun inject(indexName: String, searchJson: MutableMap<String, Any?>): Unit {
             searchJson["consistency"] = mapOf(

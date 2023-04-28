@@ -37,6 +37,16 @@ internal fun Long.toSaturatedInt(): Int {
 
 internal fun Iterable<*>.isEmpty() = !iterator().hasNext()
 
+internal inline fun <T> requireUnique(values: Iterable<T>, lazyMessage: (T) -> Any): Unit {
+    val seen = mutableSetOf<T>()
+    values.forEach {
+        if (!seen.add(it)) {
+            val message = lazyMessage(it)
+            throw IllegalArgumentException(message.toString())
+        }
+    }
+}
+
 internal fun <T> T?.toOptional() = java.util.Optional.ofNullable(this)
 
 internal suspend fun Mono<Void>.await() = toFuture().await()

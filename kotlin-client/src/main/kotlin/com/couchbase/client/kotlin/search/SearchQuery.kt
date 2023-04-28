@@ -16,11 +16,30 @@
 
 package com.couchbase.client.kotlin.search
 
-import com.couchbase.client.core.json.Mapper
-import com.couchbase.client.kotlin.internal.putIfFalse
-import com.couchbase.client.kotlin.internal.putIfNotNull
-import com.couchbase.client.kotlin.internal.putIfNotZero
-import com.couchbase.client.kotlin.internal.putIfTrue
+import com.couchbase.client.core.api.search.CoreSearchQuery
+import com.couchbase.client.core.api.search.queries.CoreBooleanFieldQuery
+import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
+import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery
+import com.couchbase.client.core.api.search.queries.CoreCustomQuery
+import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery
+import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery
+import com.couchbase.client.core.api.search.queries.CoreDocIdQuery
+import com.couchbase.client.core.api.search.queries.CoreGeoBoundingBoxQuery
+import com.couchbase.client.core.api.search.queries.CoreGeoDistanceQuery
+import com.couchbase.client.core.api.search.queries.CoreGeoPolygonQuery
+import com.couchbase.client.core.api.search.queries.CoreMatchAllQuery
+import com.couchbase.client.core.api.search.queries.CoreMatchNoneQuery
+import com.couchbase.client.core.api.search.queries.CoreMatchOperator
+import com.couchbase.client.core.api.search.queries.CoreMatchPhraseQuery
+import com.couchbase.client.core.api.search.queries.CoreMatchQuery
+import com.couchbase.client.core.api.search.queries.CoreNumericRangeQuery
+import com.couchbase.client.core.api.search.queries.CorePhraseQuery
+import com.couchbase.client.core.api.search.queries.CorePrefixQuery
+import com.couchbase.client.core.api.search.queries.CoreQueryStringQuery
+import com.couchbase.client.core.api.search.queries.CoreRegexpQuery
+import com.couchbase.client.core.api.search.queries.CoreTermQuery
+import com.couchbase.client.core.api.search.queries.CoreTermRangeQuery
+import com.couchbase.client.core.api.search.queries.CoreWildcardQuery
 import com.couchbase.client.kotlin.search.GeoShape.Companion.circle
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.matchPhrase
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.term
@@ -30,36 +49,25 @@ import java.time.Instant
  * A [Full-Text Search query](https://docs.couchbase.com/server/current/fts/fts-supported-queries.html)
  */
 public sealed class SearchQuery {
+    internal abstract val core: CoreSearchQuery
+    internal abstract fun withBoost(boost: Double?): SearchQuery
 
     /**
      * Returns a new query that decorates this one with the given boost multiplier.
      * Has no effect unless this query is used in a disjunction or conjunction.
      */
-    public infix fun boost(boost: Number): SearchQuery = build {
-        inject(this)
-        put("boost", boost)
-    }
+    public infix fun boost(boost: Number): SearchQuery = this.withBoost(boost.toDouble())
 
     /**
      * Returns the JSON representation of this query condition.
      */
-    public override fun toString(): String = Mapper.encodeAsString(toMap())
-
-    internal fun toMap(): Map<String, Any?> {
-        val map = mutableMapOf<String, Any?>()
-        inject(map)
-        return map
-    }
-
-    internal abstract fun inject(json: MutableMap<String, Any?>)
+    public override fun toString(): String = core.export().toString()
 
     public companion object {
-        public enum class MatchOperator {
-            AND,
-            OR,
+        public enum class MatchOperator(internal val core: CoreMatchOperator) {
+            AND(CoreMatchOperator.AND),
+            OR(CoreMatchOperator.OR),
             ;
-
-            internal val wireName: String = name.lowercase()
         }
 
         /**
@@ -104,13 +112,19 @@ public sealed class SearchQuery {
             operator: MatchOperator = MatchOperator.OR,
             fuzziness: Int = 0,
             prefixLength: Int = 0,
-        ): SearchQuery = build {
-            putField(field)
-            put("match", match)
-            putIfNotNull("analyzer", analyzer)
-            putIfNotZero("fuzziness", fuzziness)
-            putIfNotZero("prefix_length", prefixLength)
-            if (operator != MatchOperator.OR) put("operator", operator.wireName)
+        ): SearchQuery = MatchQuery(match, field, analyzer, operator, fuzziness, prefixLength)
+
+        internal data class MatchQuery(
+            val match: String,
+            val field: String,
+            val analyzer: String?,
+            val operator: MatchOperator,
+            val fuzziness: Int,
+            val prefixLength: Int,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreMatchQuery(match, field, analyzer, prefixLength, fuzziness, operator.core, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -139,10 +153,16 @@ public sealed class SearchQuery {
             matchPhrase: String,
             field: String = "_all",
             analyzer: String? = null,
-        ): SearchQuery = build {
-            putField(field)
-            put("match_phrase", matchPhrase)
-            putIfNotNull("analyzer", analyzer)
+        ): SearchQuery = MatchPhraseQuery(matchPhrase, field, analyzer)
+
+        internal data class MatchPhraseQuery(
+            val matchPhrase: String,
+            val field: String = "_all",
+            val analyzer: String? = null,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreMatchPhraseQuery(matchPhrase, field, analyzer, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -175,11 +195,17 @@ public sealed class SearchQuery {
             field: String = "_all",
             fuzziness: Int = 0,
             prefixLength: Int = 0,
-        ): SearchQuery = build {
-            putField(field)
-            put("term", term)
-            putIfNotZero("fuzziness", fuzziness)
-            putIfNotZero("prefix_length", prefixLength)
+        ): SearchQuery = TermQuery(term, field, fuzziness, prefixLength)
+
+        internal data class TermQuery(
+            val term: String,
+            val field: String,
+            val fuzziness: Int,
+            val prefixLength: Int,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreTermQuery(term, field, fuzziness, prefixLength, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -206,12 +232,15 @@ public sealed class SearchQuery {
         public fun phrase(
             terms: List<String>,
             field: String = "_all",
-        ): SearchQuery {
-            require(terms.isNotEmpty()) { "Phrase query 'terms' must not be empty." }
-            return build {
-                putField(field)
-                put("terms", terms)
-            }
+        ): SearchQuery = PhraseQuery(terms, field)
+
+        internal data class PhraseQuery(
+            val terms: List<String>,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CorePhraseQuery(terms, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -227,9 +256,15 @@ public sealed class SearchQuery {
         public fun prefix(
             prefix: String,
             field: String = "_all",
-        ): SearchQuery = build {
-            putField(field)
-            put("prefix", prefix)
+        ): SearchQuery = PrefixQuery(prefix, field)
+
+        internal data class PrefixQuery(
+            val prefix: String,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CorePrefixQuery(prefix, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -247,9 +282,15 @@ public sealed class SearchQuery {
         public fun regexp(
             regexp: String,
             field: String = "_all",
-        ): SearchQuery = build {
-            putField(field)
-            put("regexp", regexp)
+        ): SearchQuery = RegexpQuery(regexp, field)
+
+        internal data class RegexpQuery(
+            val regexp: String,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreRegexpQuery(regexp, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -266,9 +307,15 @@ public sealed class SearchQuery {
         public fun wildcard(
             term: String,
             field: String = "_all",
-        ): SearchQuery = build {
-            put("wildcard", term)
-            putField(field)
+        ): SearchQuery = WildcardQuery(term, field)
+
+        internal data class WildcardQuery(
+            val term: String,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreWildcardQuery(term, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -281,7 +328,15 @@ public sealed class SearchQuery {
          */
         public fun queryString(
             queryString: String,
-        ): SearchQuery = build { put("query", queryString) }
+        ): SearchQuery = QueryStringQuery(queryString)
+
+        internal data class QueryStringQuery(
+            val queryString: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreQueryStringQuery(queryString, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
+        }
 
         /**
          * A [Boolean Field query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-field-query.html).
@@ -290,9 +345,15 @@ public sealed class SearchQuery {
         public fun booleanField(
             bool: Boolean,
             field: String,
-        ): SearchQuery = build {
-            put("bool", bool)
-            putField(field)
+        ): SearchQuery = BooleanFieldQuery(bool, field)
+
+        internal data class BooleanFieldQuery(
+            val bool: Boolean,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreBooleanFieldQuery(bool, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -301,9 +362,14 @@ public sealed class SearchQuery {
          */
         public fun documentId(
             ids: List<String>,
-        ): SearchQuery {
-            require(ids.isNotEmpty()) { "Document ID query 'ids' must not be empty." }
-            return build { put("ids", ids) }
+        ): SearchQuery = DocumentIdQuery(ids)
+
+        internal data class DocumentIdQuery(
+            val ids: List<String>,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreDocIdQuery(boost, ids)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -315,15 +381,18 @@ public sealed class SearchQuery {
             inclusiveMin: Boolean = true,
             max: String? = null,
             inclusiveMax: Boolean = false,
-        ): SearchQuery {
-            require(min != null || max != null) { "Term range query needs at least one of 'min' or 'max'." }
-            return build {
-                putIfNotNull("min", min)
-                putIfFalse("inclusive_min", inclusiveMin)
-                putIfNotNull("max", max)
-                putIfTrue("inclusive_max", inclusiveMax)
-                putField(field)
-            }
+        ): SearchQuery = TermRangeQuery(field, min, inclusiveMin, max, inclusiveMax)
+
+        internal data class TermRangeQuery(
+            val field: String,
+            val min: String?,
+            val inclusiveMin: Boolean,
+            val max: String?,
+            val inclusiveMax: Boolean,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreTermRangeQuery(min, max, inclusiveMin, inclusiveMax, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -335,15 +404,18 @@ public sealed class SearchQuery {
             inclusiveMin: Boolean = true,
             max: Number? = null,
             inclusiveMax: Boolean = false,
-        ): SearchQuery {
-            require(min != null || max != null) { "Numeric range query needs at least one of 'min' or 'max'." }
-            return build {
-                putIfNotNull("min", min)
-                putIfFalse("inclusive_min", inclusiveMin)
-                putIfNotNull("max", max)
-                putIfTrue("inclusive_max", inclusiveMax)
-                putField(field)
-            }
+        ): SearchQuery = NumericRangeQuery(field, min, inclusiveMin, max, inclusiveMax)
+
+        internal data class NumericRangeQuery(
+            val field: String,
+            val min: Number?,
+            val inclusiveMin: Boolean,
+            val max: Number?,
+            val inclusiveMax: Boolean,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreNumericRangeQuery(min?.toDouble(), max?.toDouble(), inclusiveMin, inclusiveMax, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -355,15 +427,18 @@ public sealed class SearchQuery {
             inclusiveStart: Boolean = true,
             end: Instant? = null,
             inclusiveEnd: Boolean = false,
-        ): SearchQuery {
-            require(start != null || end != null) { "Date range query needs at least one of 'start' or 'end'." }
-            return build {
-                putIfNotNull("start", start?.toString())
-                putIfFalse("inclusive_start", inclusiveStart)
-                putIfNotNull("end", end?.toString())
-                putIfTrue("inclusive_end", inclusiveEnd)
-                putField(field)
-            }
+        ): SearchQuery = DateRangeQuery(field, start, inclusiveStart, end, inclusiveEnd)
+
+        internal data class DateRangeQuery(
+            val field: String,
+            val start: Instant?,
+            val inclusiveStart: Boolean,
+            val end: Instant?,
+            val inclusiveEnd: Boolean,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreDateRangeQuery(start?.toString(), end?.toString(), inclusiveStart, inclusiveEnd, null, field, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -387,9 +462,20 @@ public sealed class SearchQuery {
         public fun geoShape(
             shape: GeoShape,
             field: String = "_all",
-        ): SearchQuery = build {
-            shape.inject(this)
-            putField(field)
+        ): SearchQuery = GeoShapeQuery(shape, field)
+
+        internal data class GeoShapeQuery(
+            val shape: GeoShape,
+            val field: String,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = when (shape) {
+                is GeoCircle -> CoreGeoDistanceQuery(shape.center.core, shape.radius.serialize(), field, boost)
+                is GeoPolygon -> CoreGeoPolygonQuery(shape.vertices.map { it.core }, field, boost)
+                is GeoRectangle -> CoreGeoBoundingBoxQuery(shape.topLeft.core, shape.bottomRight.core, field, boost)
+            }
+
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -448,13 +534,16 @@ public sealed class SearchQuery {
             must: ConjunctionQuery? = null,
             should: DisjunctionQuery? = null,
             mustNot: DisjunctionQuery? = null,
-        ): SearchQuery {
-            require(must != null || should != null || mustNot != null) { "Boolean query must have at least one of 'must', 'should', or 'mustNot'." }
-            return build {
-                putIfNotNull("must", must?.toMap())
-                putIfNotNull("should", should?.toMap())
-                putIfNotNull("must_not", mustNot?.toMap())
-            }
+        ): SearchQuery = BooleanQuery(must, should, mustNot)
+
+        internal data class BooleanQuery(
+            val must: ConjunctionQuery?,
+            val should: DisjunctionQuery?,
+            val mustNot: DisjunctionQuery?,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreBooleanQuery(must?.core, mustNot?.core, should?.core, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
         }
 
         /**
@@ -462,14 +551,28 @@ public sealed class SearchQuery {
          *
          * A query that matches all indexed documents.
          */
-        public fun matchAll(): SearchQuery = build { put("match_all", null) }
+        public fun matchAll(): SearchQuery = MatchAllQuery()
+
+        internal data class MatchAllQuery(
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreMatchAllQuery(boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
+        }
 
         /**
          * [A Match None query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-match-none.html)
          *
          * A query that matches nothing.
          */
-        public fun matchNone(): SearchQuery = build { put("match_none", null) }
+        public fun matchNone(): SearchQuery = MatchNoneQuery()
+
+        internal data class MatchNoneQuery(
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreMatchNoneQuery(boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
+        }
 
         /**
          * Escape hatch for specifying a custom query condition supported
@@ -492,19 +595,19 @@ public sealed class SearchQuery {
          * }
          * ```
          */
-        public fun custom(customizer: MutableMap<String, Any?>.() -> Unit): SearchQuery = build(customizer)
-
-        private fun build(customizer: MutableMap<String, Any?>.() -> Unit): SearchQuery {
-            return BuiltQuery(customizer)
+        public fun custom(customizer: MutableMap<String, Any?>.() -> Unit): SearchQuery {
+            val params: MutableMap<String, Any?> = mutableMapOf()
+            params.customizer()
+            return CustomQuery(params)
         }
-    }
-}
 
-internal class BuiltQuery(
-    private val customizer: MutableMap<String, Any?>.() -> Unit,
-) : SearchQuery() {
-    override fun inject(json: MutableMap<String, Any?>) {
-        json.customizer()
+        internal data class CustomQuery(
+            val params: Map<String, Any?>,
+            val boost: Double? = null,
+        ) : SearchQuery() {
+            override val core = CoreCustomQuery(params, boost)
+            override fun withBoost(boost: Double?) = copy(boost = boost)
+        }
     }
 }
 
@@ -513,17 +616,10 @@ internal class BuiltQuery(
  */
 public class ConjunctionQuery internal constructor(
     private val conjuncts: List<SearchQuery>,
+    boost: Double? = null,
 ) : SearchQuery() {
-
-    init {
-        require(conjuncts.isNotEmpty()) { "Conjunction query must have at least 1 conjunct." }
-    }
-
-    override fun inject(json: MutableMap<String, Any?>) {
-        with(json) {
-            put("conjuncts", conjuncts.map { it.toMap() })
-        }
-    }
+    override val core = CoreConjunctionQuery(conjuncts.map { it.core }, boost)
+    override fun withBoost(boost: Double?) = ConjunctionQuery(conjuncts, boost)
 }
 
 /**
@@ -532,21 +628,8 @@ public class ConjunctionQuery internal constructor(
 public class DisjunctionQuery internal constructor(
     private val disjuncts: List<SearchQuery>,
     private val min: Int = 1,
+    boost: Double? = null,
 ) : SearchQuery() {
-
-    init {
-        require(min > 0) { "Disjunction query 'min' must be > 0." }
-        require(disjuncts.size >= min) { "Disjunction query must have at least $min disjuncts when 'min' is $min." }
-    }
-
-    override fun inject(json: MutableMap<String, Any?>) {
-        with(json) {
-            if (min > 1) put("min", min)
-            put("disjuncts", disjuncts.map { it.toMap() })
-        }
-    }
-}
-
-private fun MutableMap<String, Any?>.putField(field: String) {
-    if (field != "_all") put("field", field)
+    override val core = CoreDisjunctionQuery(disjuncts.map { it.core }, min, boost)
+    override fun withBoost(boost: Double?) = DisjunctionQuery(disjuncts, min, boost)
 }

@@ -16,20 +16,19 @@
 
 package com.couchbase.client.kotlin.search
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
+import com.couchbase.client.core.api.search.CoreSearchMetaData
+import com.couchbase.client.core.api.search.result.CoreDateRangeSearchFacetResult
+import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult
+import com.couchbase.client.core.api.search.result.CoreSearchFacetResult
+import com.couchbase.client.core.api.search.result.CoreSearchMetrics
+import com.couchbase.client.core.api.search.result.CoreSearchRow
+import com.couchbase.client.core.api.search.result.CoreSearchRowLocations
+import com.couchbase.client.core.api.search.result.CoreTermSearchFacetResult
 import com.couchbase.client.core.json.Mapper
-import com.couchbase.client.core.msg.search.SearchChunkHeader
-import com.couchbase.client.core.msg.search.SearchChunkTrailer
-import com.couchbase.client.core.util.Bytes.EMPTY_BYTE_ARRAY
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.internal.toStringUtf8
-import java.time.Instant
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.nanoseconds
+import kotlin.time.toKotlinDuration
 
 public sealed class SearchFlowItem
 
@@ -41,8 +40,6 @@ public sealed class SearchFlowItem
  * @property fragments A multimap from field name to snippets of the field content with search terms highlighted.
  */
 public class SearchRow internal constructor(
-    internal val raw: ByteArray,
-
     /**
      * Name of this index this row came from.
      */
@@ -102,65 +99,28 @@ public class SearchRow internal constructor(
 ) : SearchFlowItem() {
 
     public companion object {
-        internal fun from(data: ByteArray, defaultSerializer: JsonSerializer): SearchRow {
-            val json = Mapper.decodeIntoTree(data) as ObjectNode
-            val scoreNode = json.path("score")
-
+        internal fun from(core: CoreSearchRow, defaultSerializer: JsonSerializer): SearchRow {
             return SearchRow(
-                raw = data,
-                index = json.path("index").asText(),
-                id = json.path("id").asText(),
+                index = core.index(),
+                id = core.id(),
 
-                score = scoreNode.asDouble(),
-                explanation = json.get("explanation")?.let { Mapper.encodeAsBytes(it) } ?: EMPTY_BYTE_ARRAY,
+                score = core.score(),
+                explanation = Mapper.encodeAsBytes(core.explanation()),
 
-                locations = parseLocations(json.path("locations")),
+                locations = parseLocations(core.locations().orElse(null)),
 
-                keyset = SearchKeyset(json.get("sort")
-                    ?.let { Mapper.convertValue(it, LIST_OF_STRINGS) }
-                    ?.map { if (it == "_score") scoreNode.asText() else it }
-                    ?: emptyList()), // shouldn't happen
+                keyset = SearchKeyset(core.keyset().keys()),
 
-                fragments = json.get("fragments")
-                    ?.let { Mapper.convertValue(it, MULTIMAP_FROM_STRING_TO_STRING) }
-                    ?: emptyMap(), // expected if no highlighting, or field term vectors weren't stored
+                fragments = core.fragments(),
 
-                fields = json.get("fields")?.let { Mapper.encodeAsBytes(it) },
+                fields = core.fields(),
                 defaultSerializer = defaultSerializer,
             )
         }
 
-        private fun JsonNode.forEachField(consumer: (name: String, value: JsonNode) -> Unit) {
-            fields().forEachRemaining { (key, value): Map.Entry<String, JsonNode> -> consumer(key, value) }
-        }
-
-        private fun parseLocations(root: JsonNode): List<SearchRowLocation> {
-            if (root.isMissingNode) return emptyList()
-
-            val result = mutableListOf<SearchRowLocation>()
-
-            root.forEachField { field, value ->
-                value.forEachField { term, locations ->
-                    locations.forEach {
-                        result.add(parseLocation(field, term, it as ObjectNode))
-                    }
-                }
-            }
-
-            return result
-        }
-
-        private fun ArrayNode.toIntList(): List<Int> = map { element -> element.intValue() }
-
-        private fun parseLocation(field: String, term: String, node: ObjectNode): SearchRowLocation {
-            return SearchRowLocation(
-                field = field,
-                term = term,
-                position = node.get("pos").intValue(),
-                start = node.get("start").intValue(),
-                end = node.get("end").intValue(),
-                arrayPositions = (node.get("array_positions") as? ArrayNode)?.toIntList() ?: emptyList()
-            )
+        private fun parseLocations(core: CoreSearchRowLocations?): List<SearchRowLocation> {
+            if (core == null) return emptyList()
+            return core.all.map { SearchRowLocation(it) }
         }
     }
 
@@ -177,108 +137,29 @@ public class SearchRow internal constructor(
     }
 
     override fun toString(): String {
-        return "SearchRow(content=${raw.toStringUtf8()})"
+        return "SearchRow(" +
+                "index='$index'" +
+                ", id='$id'" +
+                ", score=$score" +
+                ", explanation=${String(explanation)}" +
+                ", locations=$locations" +
+                ", keyset=$keyset" +
+                ", fragments=$fragments" +
+                ", fields=${fields?.let { String(fields) } ?: "null"}" +
+                ")"
     }
 }
-
-internal data class ParsedSearchHeader(
-    val failedPartitions: Int,
-    val successfulPartitions: Int,
-    val errors: Map<String, String>,
-) {
-    val totalPartitions: Int = failedPartitions + successfulPartitions
-}
-
-internal fun SearchChunkHeader.parse(): ParsedSearchHeader {
-    val json = Mapper.decodeIntoTree(status)
-    return ParsedSearchHeader(
-        failedPartitions = json.path("failed").asInt(),
-        successfulPartitions = json.path("successful").asInt(),
-        errors = json.get("errors")
-            ?.let { errorsNode -> Mapper.convertValue(errorsNode, MAP_FROM_STRING_TO_STRING) }
-            ?: emptyMap()
-    )
-}
-
-internal fun SearchChunkTrailer.parseFacets(): List<FacetResult<*>> {
-    if (facets() == null || facets().isEmpty()) return emptyList()
-
-    val json = Mapper.decodeIntoTree(facets()) as? ObjectNode ?: return emptyList()
-
-    val result = mutableListOf<FacetResult<*>>()
-
-    json.fields().forEach { (facetName, facetJson) ->
-        val field = facetJson.path("field").asText()
-        val total = facetJson.path("total").asLong()
-        val missing = facetJson.path("missing").asLong()
-        val other = facetJson.path("other").asLong()
-
-        if (facetJson.has("terms")) {
-            val categories = mutableListOf<CategoryResult<FrequentTerm>>()
-            val terms = facetJson.get("terms") as ArrayNode
-            terms.forEach {
-                categories.add(
-                    CategoryResult(
-                        category = FrequentTerm(it.path("term").asText()),
-                        count = it.path("count").asLong()),
-                )
-            }
-
-            result.add(TermFacetResult(BaseFacetResult(facetName, field, total, missing, other, categories)))
-
-        } else if (facetJson.has("numeric_ranges")) {
-            val categories = mutableListOf<CategoryResult<NumericRange>>()
-            val ranges = facetJson.get("numeric_ranges") as ArrayNode
-            ranges.forEach {
-                categories.add(
-                    CategoryResult(
-                        // server echoes the range from the request
-                        category = NumericRange(
-                            name = it.path("name").asText(),
-                            min = it.get("min")?.asDouble(),
-                            max = it.get("max")?.asDouble(),
-                        ),
-                        count = it.path("count").asLong()),
-                )
-            }
-
-            result.add(NumericFacetResult(BaseFacetResult(facetName, field, total, missing, other, categories)))
-
-        } else if (facetJson.has("date_ranges")) {
-            val categories = mutableListOf<CategoryResult<DateRange>>()
-            val ranges = facetJson.get("date_ranges") as ArrayNode
-            ranges.forEach {
-                categories.add(
-                    CategoryResult(
-                        // server echoes the range from the request
-                        category = DateRange(
-                            name = it.path("name").asText(),
-                            start = it.get("start")?.textValue()?.let { timestamp -> Instant.parse(timestamp) },
-                            end = it.get("end")?.textValue()?.let { timestamp -> Instant.parse(timestamp) },
-                        ),
-                        count = it.path("count").asLong()),
-                )
-            }
-
-            result.add(DateFacetResult(BaseFacetResult(facetName, field, total, missing, other, categories)))
-        }
-    }
-
-    return result
-}
-
 
 public class SearchMetrics internal constructor(
-    header: ParsedSearchHeader,
-    trailer: SearchChunkTrailer,
+    core: CoreSearchMetrics,
 ) {
-    public val took: Duration = trailer.took().nanoseconds
-    public val totalRows: Long = trailer.totalRows()
-    public val maxScore: Double = trailer.maxScore()
+    public val took: Duration = core.took().toKotlinDuration()
+    public val totalRows: Long = core.totalRows()
+    public val maxScore: Double = core.maxScore()
 
-    public val successfulPartitions: Int = header.successfulPartitions
-    public val failedPartitions: Int = header.failedPartitions
-    public val totalPartitions: Int = header.totalPartitions
+    public val successfulPartitions: Int = core.successPartitionCount().toInt()
+    public val failedPartitions: Int = core.errorPartitionCount().toInt()
+    public val totalPartitions: Int = core.totalPartitionCount().toInt()
 
     override fun toString(): String {
         return "SearchMetrics(took=$took, totalRows=$totalRows, maxScore=$maxScore, successfulPartitions=$successfulPartitions, failedPartitions=$failedPartitions, totalPartitions=$totalPartitions)"
@@ -289,20 +170,37 @@ public class SearchMetrics internal constructor(
  * Metadata about query execution. Always the last item in the flow.
  */
 public class SearchMetadata(
-    private val header: SearchChunkHeader,
-    private val trailer: SearchChunkTrailer,
+    meta: CoreSearchMetaData,
+    coreFacets: Map<String, CoreSearchFacetResult>,
 ) : SearchFlowItem(), FacetResultAccessor {
 
-    private val parsedHeader = header.parse()
-
-    public val metrics: SearchMetrics = SearchMetrics(parsedHeader, trailer)
+    public val metrics: SearchMetrics = SearchMetrics(meta.metrics())
 
     /**
      * Map from failed partition name to error message.
      */
-    public val errors: Map<String, String> = parsedHeader.errors
+    public val errors: Map<String, String> = meta.errors()
 
-    public override val facets: List<FacetResult<*>> = trailer.parseFacets()
+    public override val facets: List<FacetResult<*>> = coreFacets.values.map { core ->
+        when (core) {
+            is CoreDateRangeSearchFacetResult -> DateFacetResult(BaseFacetResult(
+                core,
+                core.dateRanges().map { CategoryResult(DateRange(it.start(), it.end(), it.name()), it.count()) }
+            ))
+
+            is CoreNumericRangeSearchFacetResult -> NumericFacetResult(BaseFacetResult(
+                core,
+                core.numericRanges().map { CategoryResult(NumericRange(it.min(), it.max(), it.name()), it.count()) }
+            ))
+
+            is CoreTermSearchFacetResult -> TermFacetResult(BaseFacetResult(
+                core,
+                core.terms().map { CategoryResult(FrequentTerm(it.name()), it.count()) }
+            ))
+
+            else -> throw RuntimeException("Unexpected facet result type: $core")
+        }
+    }
 
     public override operator fun get(facet: TermFacet): TermFacetResult? =
         facets.find { it.name == facet.name } as? TermFacetResult
@@ -314,10 +212,6 @@ public class SearchMetadata(
         facets.find { it.name == facet.name } as? DateFacetResult
 
     override fun toString(): String {
-        return "SearchMetadata(metrics=$metrics, errors=$errors, facets=$facets, rawHeader=$header, rawTrailer=$trailer)"
+        return "SearchMetadata(metrics=$metrics, errors=$errors, facets=$facets)"
     }
 }
-
-private val LIST_OF_STRINGS = object : TypeReference<List<String>>() {}
-private val MAP_FROM_STRING_TO_STRING = object : TypeReference<Map<String, String>>() {}
-private val MULTIMAP_FROM_STRING_TO_STRING = object : TypeReference<Map<String, List<String>>>() {}

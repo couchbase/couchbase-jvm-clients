@@ -16,8 +16,13 @@
 
 package com.couchbase.client.kotlin.search
 
-import com.couchbase.client.core.json.Mapper
-import com.couchbase.client.kotlin.internal.putIfNotNull
+import com.couchbase.client.core.api.search.facet.CoreDateRange
+import com.couchbase.client.core.api.search.facet.CoreDateRangeFacet
+import com.couchbase.client.core.api.search.facet.CoreNumericRange
+import com.couchbase.client.core.api.search.facet.CoreNumericRangeFacet
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.facet.CoreTermFacet
+import com.couchbase.client.core.api.search.result.CoreSearchFacetResult
 import com.couchbase.client.kotlin.search.SearchFacet.Companion.date
 import com.couchbase.client.kotlin.search.SearchFacet.Companion.numeric
 import com.couchbase.client.kotlin.search.SearchFacet.Companion.term
@@ -75,18 +80,7 @@ public sealed class SearchFacet(
     internal val size: Int,
 ) {
 
-    /**
-     * Returns the JSON representation of this search facet.
-     */
-    public override fun toString(): String = Mapper.encodeAsString(toMap())
-
-    internal fun toMap(): Map<String, Any?> {
-        val map = mutableMapOf<String, Any?>()
-        inject(map)
-        return map
-    }
-
-    internal abstract fun inject(json: MutableMap<String, Any?>)
+    internal abstract val core: CoreSearchFacet
 
     public companion object {
 
@@ -214,14 +208,6 @@ public class DateRange internal constructor(
     override fun toString(): String {
         return "DateRange(name='$name', start=$start, end=$end)"
     }
-
-    internal fun toMap(): Map<String, Any?> {
-        return mutableMapOf<String, Any?>().apply {
-            put("name", name)
-            putIfNotNull("start", start?.toString())
-            putIfNotNull("end", end?.toString())
-        }
-    }
 }
 
 /**
@@ -274,14 +260,6 @@ public class NumericRange internal constructor(
         ): NumericRange = NumericRange(min = min, max = max, name = name)
     }
 
-    internal fun toMap(): Map<String, Any?> {
-        return mutableMapOf<String, Any?>().apply {
-            put("name", name)
-            putIfNotNull("min", min)
-            putIfNotNull("max", max)
-        }
-    }
-
     override fun toString(): String = "NumericRange(name='$name', min=$min, max=$max)"
 }
 
@@ -290,10 +268,10 @@ public class TermFacet internal constructor(
     size: Int,
     name: String,
 ) : SearchFacet(name, field, size) {
-    override fun inject(json: MutableMap<String, Any?>) {
-        json["field"] = field
-        json["size"] = size
-    }
+    override val core: CoreTermFacet = CoreTermFacet(
+        field,
+        size,
+    )
 }
 
 public class NumericFacet internal constructor(
@@ -306,11 +284,11 @@ public class NumericFacet internal constructor(
         require(categories.isNotEmpty()) { "Range facet must specify at least one range." }
     }
 
-    override fun inject(json: MutableMap<String, Any?>) {
-        json["field"] = field
-        json["size"] = size
-        json["numeric_ranges"] = categories.map { it.toMap() }
-    }
+    override val core: CoreNumericRangeFacet = CoreNumericRangeFacet(
+        field,
+        size,
+        categories.map { CoreNumericRange(it.name, it.min, it.max) },
+    )
 }
 
 public class DateFacet internal constructor(
@@ -323,11 +301,11 @@ public class DateFacet internal constructor(
         require(categories.isNotEmpty()) { "Range facet must specify at least one range." }
     }
 
-    override fun inject(json: MutableMap<String, Any?>) {
-        json["field"] = field
-        json["size"] = size
-        json["date_ranges"] = categories.map { it.toMap() }
-    }
+    override val core: CoreDateRangeFacet = CoreDateRangeFacet(
+        field,
+        size,
+        categories.map { CoreDateRange(it.name, it.start?.toString(), it.end?.toString()) },
+    )
 }
 
 public sealed interface Category {
@@ -406,6 +384,16 @@ internal class BaseFacetResult<T : Category>(
     override val other: Long,
     override val categories: List<CategoryResult<T>>,
 ) : FacetResult<T> {
+
+    constructor(core: CoreSearchFacetResult, categories: List<CategoryResult<T>>) : this(
+        core.name(),
+        core.field(),
+        core.total(),
+        core.missing(),
+        core.other(),
+        categories
+    )
+
     override fun toString(): String {
         return "FacetResult(name='$name', field='$field', total=$total, missing=$missing, other=$other, categories=$categories)"
     }

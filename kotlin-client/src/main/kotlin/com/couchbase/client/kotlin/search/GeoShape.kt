@@ -20,8 +20,6 @@ import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 public sealed class GeoShape {
-    internal abstract fun inject(params: MutableMap<String, Any?>)
-
     public companion object {
         public fun circle(center: GeoPoint, radius: GeoDistance): GeoCircle = GeoCircle(center, radius)
         public fun rectangle(topLeft: GeoPoint, bottomRight: GeoPoint): GeoRectangle =
@@ -36,11 +34,6 @@ public class GeoCircle(
     public val center: GeoPoint,
     public val radius: GeoDistance,
 ) : GeoShape() {
-    override fun inject(params: MutableMap<String, Any?>) {
-        params["location"] = center.serialize()
-        params["distance"] = radius.serialize()
-    }
-
     public companion object {
         @VolatileCouchbaseApi
         public infix fun GeoDistance.from(point: GeoPoint): GeoCircle = GeoCircle(point, this)
@@ -53,11 +46,6 @@ public class GeoRectangle(
     public val topLeft: GeoPoint,
     public val bottomRight: GeoPoint,
 ) : GeoShape() {
-    override fun inject(params: MutableMap<String, Any?>) {
-        params["top_left"] = topLeft.serialize()
-        params["bottom_right"] = bottomRight.serialize()
-    }
-
     override fun toString(): String = "GeoRectangle(topLeft=$topLeft, bottomRight=$bottomRight)"
 }
 
@@ -68,10 +56,5 @@ public class GeoPolygon(
     init {
         require(vertices.size >= 3) { "GeoPolygon must have at least 3 vertices." }
     }
-
-    override fun inject(params: MutableMap<String, Any?>) {
-        params["polygon_points"] = vertices.map { it.serialize() }
-    }
-
     override fun toString(): String = "GeoPolygon(vertices=$vertices)"
 }

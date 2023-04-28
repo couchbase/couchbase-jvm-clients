@@ -16,6 +16,8 @@
 
 package com.couchbase.client.kotlin.search
 
+import com.couchbase.client.core.api.search.result.CoreSearchRowLocation
+
 public class SearchRowLocation internal constructor(
     public val field: String,
     public val term: String,
@@ -24,7 +26,18 @@ public class SearchRowLocation internal constructor(
     public val end: Int,
     public val arrayPositions: List<Int>,
 ) {
+    internal constructor(core: CoreSearchRowLocation) : this(
+        field = core.field(),
+        term = core.term(),
+        position = core.pos().toInt(),
+        start = core.start().toInt(),
+        end = core.end().toInt(),
+        arrayPositions = core.arrayPositions()?.toIntList() ?: emptyList(),
+    )
+
     override fun toString(): String {
         return "SearchRowLocation(field='$field', term='$term', position=$position, start=$start, end=$end, arrayPositions=$arrayPositions)"
     }
 }
+
+private fun LongArray.toIntList(): List<Int> = asSequence().map { it.toInt() }.toList()

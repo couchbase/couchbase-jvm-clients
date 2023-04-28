@@ -21,17 +21,26 @@ import com.couchbase.client.core.CoreLimiter
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.api.search.CoreHighlightStyle
+import com.couchbase.client.core.api.search.CoreSearchKeyset
+import com.couchbase.client.core.api.search.CoreSearchOptions
+import com.couchbase.client.core.api.search.CoreSearchScanConsistency
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.sort.CoreSearchSort
+import com.couchbase.client.core.api.shared.CoreMutationState
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics
 import com.couchbase.client.core.diagnostics.HealthPinger
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
 import com.couchbase.client.core.env.PasswordAuthenticator
+import com.couchbase.client.core.error.FeatureNotAvailableException
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.json.Mapper
-import com.couchbase.client.core.msg.search.SearchRequest
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString
@@ -49,9 +58,7 @@ import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.ClusterEnvironmentConfigBlock
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.internal.await
-import com.couchbase.client.kotlin.internal.putIfNotEmpty
-import com.couchbase.client.kotlin.internal.putIfNotNull
-import com.couchbase.client.kotlin.internal.putIfTrue
+import com.couchbase.client.kotlin.internal.requireUnique
 import com.couchbase.client.kotlin.manager.bucket.BucketManager
 import com.couchbase.client.kotlin.manager.query.QueryIndexManager
 import com.couchbase.client.kotlin.manager.user.UserManager
@@ -127,6 +134,7 @@ public class Cluster internal constructor(
     connectionString: ConnectionString,
 ) {
     private val couchbaseOps = CoreCouchbaseOps.create(env, authenticator, connectionString)
+    private val searchOps = couchbaseOps.searchOps(null)
 
     internal val core: Core
         get() = couchbaseOps.asCore()
@@ -344,74 +352,89 @@ public class Cluster internal constructor(
         raw: Map<String, Any?> = emptyMap(),
     ): Flow<SearchFlowItem> {
 
-        // use interface type so less capable serializers don't freak out
-        val rootJson: MutableMap<String, Any?> = HashMap<String, Any?>()
+        requireUnique(facets.map { it.name }) { duplicate ->
+            "Each facet used in a request must have a unique name, but got multiple facts named '$duplicate'."
+        }
 
-        rootJson["query"] = query.toMap()
+        val opts = object : CoreSearchOptions {
+            override fun collections() = collections
 
-        highlight.inject(rootJson)
-        score.inject(rootJson)
-        sort.inject(rootJson)
+            override fun consistency(): CoreSearchScanConsistency? =
+                when (consistency) {
+                    is SearchScanConsistency.NotBounded -> CoreSearchScanConsistency.NOT_BOUNDED
+                    is SearchScanConsistency.ConsistentWith -> null
+                }
 
-        val facetMap = facets.groupBy { it.name }.mapValues { (name, facets) ->
-            require(facets.size == 1) {
-                "Facet names must be unique within a request, but found found multiple facts named '$name'." +
-                        " Specify a unique name when creating the facet using the optional 'name' parameter." +
-                        " Facets with the duplicate name: $facets"
+            override fun consistentWith(): CoreMutationState? =
+                when (consistency) {
+                    is SearchScanConsistency.NotBounded -> null
+                    is SearchScanConsistency.ConsistentWith -> CoreMutationState(consistency.tokens)
+                }
+
+            override fun disableScoring(): Boolean = score is Score.None
+
+            override fun explain(): Boolean? = explain
+
+            override fun facets(): Map<String, CoreSearchFacet> {
+                if (facets.isEmpty()) return emptyMap()
+                val map = mutableMapOf<String, CoreSearchFacet>()
+                facets.forEach { map[it.name] = it.core }
+                return map
             }
-            facets.single().toMap()
+
+            override fun fields(): List<String> = fields
+
+            override fun highlightFields(): List<String> = when (highlight) {
+                is Highlight.Companion.None -> emptyList()
+                is Highlight.Companion.Specific -> highlight.fields
+            }
+
+            override fun highlightStyle(): CoreHighlightStyle? = when (highlight) {
+                is Highlight.Companion.None -> null
+                is Highlight.Companion.Specific -> {
+                    when (highlight.style?.name?.uppercase()) {
+                        null -> CoreHighlightStyle.SERVER_DEFAULT
+                        "HTML" -> CoreHighlightStyle.HTML
+                        "ANSI" -> CoreHighlightStyle.ANSI
+                        else -> throw FeatureNotAvailableException("Highlight style '${highlight.style}' not supported")
+                    }
+                }
+            }
+
+            override fun limit(): Int? = limit
+
+            override fun raw(): JsonNode? {
+                return if (raw.isEmpty()) null else Mapper.convertValue(raw, ObjectNode::class.java)
+            }
+
+            override fun skip(): Int? = (page as? SearchPage.StartAt)?.offset
+            override fun searchBefore(): CoreSearchKeyset? = (page as? SearchPage.SearchBefore)?.keyset?.core
+            override fun searchAfter(): CoreSearchKeyset? = (page as? SearchPage.SearchAfter)?.keyset?.core
+
+            override fun sort(): List<CoreSearchSort> = sort.core
+
+            override fun includeLocations(): Boolean? = includeLocations
+
+            override fun commonOptions(): CoreCommonOptions = common.toCore()
         }
 
-        with(rootJson) {
-            putIfNotNull("size", limit)
-            putAll(page.map)
-            putIfTrue("explain", explain)
-            putIfTrue("includeLocations", includeLocations)
-            putIfNotEmpty("fields", fields)
-            putIfNotEmpty("facets", facetMap)
-            putIfNotEmpty("collections", collections)
-        }
-
-        val timeout = with(env) { common.actualSearchTimeout() }
-
-        val control = mutableMapOf<String, Any?>("timeout" to timeout.toMillis())
-        rootJson["ctl"] = control
-        consistency.inject(indexName, control)
-
-        rootJson.putAll(raw)
 
         val actualSerializer = serializer ?: env.jsonSerializer
-        val queryBytes = Mapper.encodeAsBytes(rootJson)
 
         return flow {
-            val request = with(env) {
-                SearchRequest(
-                    timeout,
-                    core.context(),
-                    common.actualRetryStrategy(),
-                    core.context().authenticator(),
-                    indexName,
-                    queryBytes,
-                    common.actualSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH),
-                    null
-                )
-            }
-            request.context().clientContext(common.clientContext)
+            val response = searchOps.searchQueryReactive(
+                indexName,
+                query.core,
+                opts,
+            ).awaitSingle()
 
-            try {
-                core.send(request)
+            emitAll(response.rows().asFlow()
+                .map { SearchRow.from(it, actualSerializer) })
 
-                val response = request.response().await()
+            val coreMetadata = response.metaData().awaitSingle()
+            val coreFacets = response.facets().awaitSingle()
 
-                emitAll(response.rows().asFlow()
-                    .map { SearchRow.from(it.data(), actualSerializer) })
-
-                emitAll(response.trailer().asFlow()
-                    .map { SearchMetadata(response.header(), it) })
-
-            } finally {
-                request.logicallyComplete()
-            }
+            emit(SearchMetadata(coreMetadata, coreFacets))
         }
     }
 
