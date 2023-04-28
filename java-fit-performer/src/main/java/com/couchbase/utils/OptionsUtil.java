@@ -27,8 +27,6 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -46,7 +44,6 @@ import com.couchbase.client.java.transactions.config.TransactionsConfig;
 // [end:3.3.0]
 import com.couchbase.client.metrics.opentelemetry.OpenTelemetryMeter;
 import com.couchbase.client.protocol.observability.Attribute;
-import com.couchbase.client.protocol.observability.Config;
 import com.couchbase.client.protocol.shared.ClusterConfig;
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
 import com.couchbase.client.protocol.transactions.CommandQuery;
@@ -80,6 +77,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -581,4 +579,9 @@ public class OptionsUtil {
         return ptcb;
     }
     // [end:3.3.0]
+
+  public static Duration convertDuration(com.google.protobuf.Duration duration) {
+      var nanos = duration.getNanos() + TimeUnit.SECONDS.toNanos(duration.getSeconds());
+      return Duration.ofNanos(nanos);
+  }
 }

@@ -16,6 +16,8 @@
 
 package com.couchbase.client.performer.scala.search
 
+// [skip:<1.2.4]
+
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{

@@ -41,6 +41,7 @@ import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
+import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
 import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
@@ -321,6 +322,10 @@ class KotlinSdkCommandExecutor(
                         connection.cluster.waitUntilReady(timeout)
                     }
                     setSuccess(result)
+
+                } else if (clc.hasBucketManager()) {
+                    handleBucketManager(connection.cluster, op, result)
+
                 } else {
                     throw UnsupportedOperationException(IllegalArgumentException("Unknown cluster-level operation"))
                 }

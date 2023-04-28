@@ -26,8 +26,12 @@ import reactor.core.scala.publisher.SMono
 import scala.concurrent.duration.DurationInt
 import scala.runtime.Nothing$
 import scala.util.Try
+// [start:1.2.4]
+import com.couchbase.client.performer.scala.eventing.EventingHelper
+// [end:1.2.4]
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
+import com.couchbase.client.performer.scala.manager.BucketManagerHelper
 // [end:1.4.1]
 import com.couchbase.client.scala.kv._
 
@@ -192,7 +196,16 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
                 result.build()
             }).block()
 
+        } else if (clc.hasBucketManager) {
+            return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
         }
+        // [end:1.4.1]
+        // [start:1.2.4]
+        else if (clc.hasEventingFunctionManager) {
+            return EventingHelper.handleEventingFunctionManagerReactive(cluster, op).block()
+        }
+        // [end:1.2.4]
+        // [start:1.4.1]
 
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
@@ -211,6 +224,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
             } else {
                 response = bucket.waitUntilReady(timeout)
             }
+
             response.`then`[Result](SMono.fromCallable[Result](() => {
                 setSuccess(result)
                 result.build()

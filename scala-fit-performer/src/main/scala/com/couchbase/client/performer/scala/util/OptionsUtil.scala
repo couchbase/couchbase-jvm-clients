@@ -1,13 +1,20 @@
 package com.couchbase.client.performer.scala.util
 
+import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.protocol.shared.{ClusterConfig, ClusterConnectionCreateRequest, Durability}
 import com.couchbase.client.scala.codec.{JsonTranscoder, LegacyTranscoder, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder, Transcoder}
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig, TimeoutConfig}
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 
 object OptionsUtil {
+
+    // Have to hardcode these.  The earliest versions of the Scala SDK do not give access to the environment.
+    val DefaultManagementTimeout: FiniteDuration = Duration(75, TimeUnit.SECONDS)
+    val DefaultRetryStrategy: BestEffortRetryStrategy = BestEffortRetryStrategy.INSTANCE
+
+    private val secondsToNanos = 1000000000
   def convertClusterConfig(request: ClusterConnectionCreateRequest): Option[ClusterEnvironment.Builder] = {
     var clusterEnvironment: ClusterEnvironment.Builder = null
     if (request.hasClusterConfig) {
@@ -156,5 +163,10 @@ object OptionsUtil {
     else if (transcoder.hasRawBinary) RawBinaryTranscoder.Instance
     else throw new UnsupportedOperationException("Unknown transcoder")
   }
+
+    def convertDuration(duration: com.google.protobuf.Duration): FiniteDuration = {
+        val nanos = duration.getNanos + TimeUnit.SECONDS.toNanos(duration.getSeconds)
+        Duration(nanos, "nanosecond")
+    }
 
 }

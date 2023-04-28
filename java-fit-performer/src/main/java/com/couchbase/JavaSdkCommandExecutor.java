@@ -39,6 +39,12 @@ import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
+// [start:3.2.1]
+import com.couchbase.eventing.EventingHelper;
+// [end:3.2.1]
+// [start:3.2.4]
+import com.couchbase.manager.BucketManagerHelper;
+// [end:3.2.4]
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
@@ -211,7 +217,18 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             }
 
             setSuccess(result);
+
           }
+          // [start:3.2.4]
+          else if (clc.hasBucketManager()) {
+            BucketManagerHelper.handleBucketManger(connection.cluster(), spans, op, result);
+          }
+          // [end:3.2.4]
+          // [start:3.2.1]
+          else if (clc.hasEventingFunctionManager()) {
+            EventingHelper.handleEventingFunctionManager(connection.cluster(), spans, op, result);
+          }
+          // [end:3.2.1]
 
             // [start:3.4.3]
             if (clc.hasQueryIndexManager()) {

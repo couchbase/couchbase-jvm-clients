@@ -25,7 +25,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
-import com.couchbase.client.performer.scala.search.SearchHelper
+
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
@@ -38,8 +38,13 @@ import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo
 import com.couchbase.client.scala.json.JsonObject
 
 import scala.concurrent.duration.DurationInt
+// [start:1.2.4]
+import com.couchbase.client.performer.scala.eventing.EventingHelper
+import com.couchbase.client.performer.scala.search.SearchHelper
+// [end:1.2.4]
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
+import com.couchbase.client.performer.scala.manager.BucketManagerHelper
 // [end:1.4.1]
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.transformers.JacksonTransformers
@@ -200,11 +205,15 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 
         if (clc.hasQueryIndexManager) {
             result = QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster, op)
-        } else if (clc.hasSearch) {
+        }
+        // [start:1.2.4]
+        else if (clc.hasSearch) {
             result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearch)
         } else if (clc.hasSearchIndexManager) {
             result = SearchHelper.handleClusterSearchIndexManager(connection.cluster, op)
-        } else if (clc.hasWaitUntilReady) {
+        }
+        // [end:1.2.4]
+        else if (clc.hasWaitUntilReady) {
             val request = clc.getWaitUntilReady
             logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis + " milliseconds.")
             val timeout = request.getTimeoutMillis.milliseconds
@@ -218,8 +227,18 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 
             setSuccess(result)
 
-
-        } else throw new UnsupportedOperationException()
+        }
+        // [start:1.4.1]
+        else if (clc.hasBucketManager) {
+            result = BucketManagerHelper.handleBucketManager(connection.cluster, op)
+        }
+        // [end:1.4.1]
+        // [start:1.2.4]
+        else if (clc.hasEventingFunctionManager) {
+            result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
+        }
+        // [end:1.2.4]
+        else throw new UnsupportedOperationException()
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
         val bucket = connection.cluster.bucket(blc.getBucketName)

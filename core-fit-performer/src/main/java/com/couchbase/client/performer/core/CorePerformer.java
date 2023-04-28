@@ -64,7 +64,9 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
                 .addPerformerCaps(Caps.GRPC_TESTING)
                 .addPerformerCaps(Caps.KV_SUPPORT_1)
                 .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.WAIT_UNTIL_READY)
-                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.PROTOSTELLAR);
+                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.PROTOSTELLAR)
+                //TODO: Fully implement bucket manager - JVM performers only support getBucket currently
+                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.SDK_BUCKET_MANAGEMENT);
 
         customisePerformerCaps(builder);
 

@@ -18,6 +18,12 @@ package com.couchbase;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+// [start:3.2.1]
+import com.couchbase.eventing.EventingHelper;
+// [end:3.2.1]
+// [start:3.2.4]
+import com.couchbase.manager.BucketManagerHelper;
+// [end:3.2.4]
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanResult;
 import static com.couchbase.JavaSdkCommandExecutor.convertScanType;
@@ -208,7 +214,18 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                   setSuccess(result);
                   return result.build();
                 }));
+
               }
+              // [start:3.2.4]
+              else if (clc.hasBucketManager()) {
+                return BucketManagerHelper.handleBucketManagerReactive(cluster, spans, op, result);
+              }
+              // [end:3.2.4]
+              // [start:3.2.1]
+              else if (clc.hasEventingFunctionManager()) {
+                return EventingHelper.handleEventingFunctionManagerReactive(cluster, spans, op, result);
+              }
+              // [end:3.2.1]
 
                 // [start:3.4.3]
                 if (clc.hasQueryIndexManager()) {

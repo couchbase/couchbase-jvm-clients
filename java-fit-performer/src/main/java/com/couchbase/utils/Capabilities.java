@@ -48,6 +48,9 @@ public class Capabilities {
         out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT);
         // [end:3.4.5]
 
+        //TODO: fully implement eventing function manager - Java performer only supports getFunction currently
+        out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER);
+
         return out;
     }
 }
