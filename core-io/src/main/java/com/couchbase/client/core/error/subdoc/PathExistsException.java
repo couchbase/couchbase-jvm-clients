@@ -16,23 +16,15 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when a path already exists and it shouldn't
  */
 public class PathExistsException extends CouchbaseException {
 
-    public PathExistsException(final SubDocumentErrorContext ctx) {
+    public PathExistsException(final ErrorContext ctx) {
         super("Path already exists in document", ctx);
     }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
-    }
-
 }

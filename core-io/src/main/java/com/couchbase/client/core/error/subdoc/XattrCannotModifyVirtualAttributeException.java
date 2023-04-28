@@ -16,22 +16,15 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when the virtual attribute cannot be modified.
  */
 public class XattrCannotModifyVirtualAttributeException extends CouchbaseException {
 
-    public XattrCannotModifyVirtualAttributeException(final SubDocumentErrorContext ctx) {
+    public XattrCannotModifyVirtualAttributeException(final ErrorContext ctx) {
         super("The extended attribute virtual attribute cannot be modified", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when path has a syntax error, or path syntax is incorrect for the operation
@@ -26,17 +25,11 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class PathInvalidException extends CouchbaseException {
 
-    public PathInvalidException(SubDocumentErrorContext ctx) {
+    public PathInvalidException(ErrorContext ctx) {
         this("The path has a syntax error or is not appropriate for the operation.", ctx);
     }
 
-    public PathInvalidException(final String message, final SubDocumentErrorContext ctx) {
+    public PathInvalidException(final String message, final ErrorContext ctx) {
         super(message, ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

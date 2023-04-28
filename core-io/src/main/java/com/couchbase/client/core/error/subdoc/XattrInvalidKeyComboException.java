@@ -16,22 +16,15 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when more than one xattr key has been requested.
  */
 public class XattrInvalidKeyComboException extends CouchbaseException {
 
-    public XattrInvalidKeyComboException(final SubDocumentErrorContext ctx) {
+    public XattrInvalidKeyComboException(final ErrorContext ctx) {
         super("Only a single xattr key can be requested at a time", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

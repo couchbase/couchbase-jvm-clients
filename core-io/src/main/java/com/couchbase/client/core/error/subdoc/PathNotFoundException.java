@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when a path does not exist in the document.
@@ -26,13 +25,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class PathNotFoundException extends CouchbaseException {
 
-    public PathNotFoundException(final SubDocumentErrorContext ctx) {
+    public PathNotFoundException(final ErrorContext ctx) {
         super("Subdoc path not found in the document", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

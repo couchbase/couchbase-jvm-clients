@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when a macro has been requested when not using extended attributes.
@@ -29,13 +28,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 @Deprecated
 public class XattrInvalidFlagComboException extends CouchbaseException {
 
-    public XattrInvalidFlagComboException(final SubDocumentErrorContext ctx) {
+    public XattrInvalidFlagComboException(final ErrorContext ctx) {
         super("Need to specify xattr flag when requesting macro for path", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

@@ -889,7 +889,8 @@ public enum MemcacheProtocol {
       KeyValueErrorContext.completedRequest(request, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
       index,
       path,
-      status
+      status,
+      null
     );
 
     switch(status) {

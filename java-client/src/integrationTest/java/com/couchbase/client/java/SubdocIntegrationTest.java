@@ -70,7 +70,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 class BooleanTypeRef extends TypeRef<Boolean> {
 }
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class SubdocIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -185,7 +184,9 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     String docId = UUID.randomUUID().toString();
     collection.upsert(docId, emptyMap());
 
-    assertThrows(PathInvalidException.class, () ->
+    Class<? extends Throwable> expected = config().isProtostellar() ? InvalidArgumentException.class : PathInvalidException.class;
+
+    assertThrows(expected, () ->
       collection.lookupIn(
         docId,
         listOf(LookupInSpec.get("x[")) // syntax error
@@ -194,7 +195,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-383
   void tooManyCommands() {
     String docId = UUID.randomUUID().toString();
 
@@ -214,6 +215,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void xattrOrder() {
     String docId = UUID.randomUUID().toString();
     collection.upsert(docId, mapOf("magicWord", "xyzzy"));

@@ -17,7 +17,9 @@
 package com.couchbase.client.core.error.context;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import reactor.util.annotation.Nullable;
 
 import java.util.Map;
 
@@ -30,14 +32,16 @@ public class SubDocumentErrorContext extends ErrorContext {
   private final int index;
   private final String path;
   private final SubDocumentOpResponseStatus status;
+  private final AbstractContext context;
 
   public SubDocumentErrorContext(final KeyValueErrorContext kvContext, final int index, final String path,
-                                 final SubDocumentOpResponseStatus status) {
-    super(kvContext.responseStatus());
+                                 final SubDocumentOpResponseStatus status, @Nullable final AbstractContext context) {
+    super(kvContext == null ? null : kvContext.responseStatus());
     this.kvContext = kvContext;
     this.index = index;
     this.path = path;
     this.status = status;
+    this.context = context;
   }
 
   /**
@@ -52,6 +56,9 @@ public class SubDocumentErrorContext extends ErrorContext {
     super.injectExportableParams(input);
     if (kvContext != null) {
       kvContext.injectExportableParams(input);
+    }
+    if (context != null) {
+      context.injectExportableParams(input);
     }
     input.put("index", index);
     if (path != null) {

@@ -25,6 +25,8 @@ import java.util.Objects;
  * Determines what to do with a request.
  *
  * This is an Either - if retryDuration is null, RuntimeException must not be.
+ *
+ * Both can be null, in which case the operation succeeded (used for LookupIn).
  */
 @Stability.Internal
 public class ProtostellarRequestBehaviour {
@@ -39,10 +41,6 @@ public class ProtostellarRequestBehaviour {
   private final @Nullable RuntimeException exception;
 
   public ProtostellarRequestBehaviour(@Nullable Duration retryDuration, @Nullable RuntimeException exception) {
-    if (retryDuration == null) {
-      Objects.requireNonNull(exception, "Internal error - exception must not be null if retryDuration is");
-    }
-
     this.retryDuration = retryDuration;
     this.exception = exception;
   }
@@ -53,6 +51,10 @@ public class ProtostellarRequestBehaviour {
 
   public static ProtostellarRequestBehaviour fail(RuntimeException err) {
     return new ProtostellarRequestBehaviour(null, err);
+  }
+
+  public static ProtostellarRequestBehaviour success() {
+    return new ProtostellarRequestBehaviour(null, null);
   }
 
   @Nullable

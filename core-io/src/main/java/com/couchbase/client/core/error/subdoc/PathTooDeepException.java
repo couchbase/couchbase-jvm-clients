@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when path is too deep to parse. Depth of a path is determined by how
@@ -30,13 +29,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class PathTooDeepException extends CouchbaseException {
 
-    public PathTooDeepException(final SubDocumentErrorContext ctx) {
+    public PathTooDeepException(final ErrorContext ctx) {
         super("Subdoc path too deep", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

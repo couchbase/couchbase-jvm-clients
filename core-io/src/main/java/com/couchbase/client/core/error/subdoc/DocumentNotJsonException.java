@@ -16,23 +16,15 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when the targeted enclosing document itself is not JSON.
  */
 public class DocumentNotJsonException extends CouchbaseException {
 
-    public DocumentNotJsonException(final SubDocumentErrorContext ctx) {
+    public DocumentNotJsonException(final ErrorContext ctx) {
         super("Document content is not JSON", ctx);
     }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
-    }
-
 }

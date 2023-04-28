@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when the path structure conflicts with the document structure
@@ -26,13 +25,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class PathMismatchException extends CouchbaseException {
 
-    public PathMismatchException(final SubDocumentErrorContext ctx) {
+    public PathMismatchException(final ErrorContext ctx) {
         super("Path mismatch identified", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

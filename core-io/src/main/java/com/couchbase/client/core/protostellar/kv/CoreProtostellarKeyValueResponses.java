@@ -16,22 +16,32 @@
 package com.couchbase.client.core.protostellar.kv;
 
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.msg.kv.SubdocCommandType;
+import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
+import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.protostellar.kv.v1.ExistsResponse;
 import com.couchbase.client.protostellar.kv.v1.GetAndLockResponse;
 import com.couchbase.client.protostellar.kv.v1.GetAndTouchResponse;
 import com.couchbase.client.protostellar.kv.v1.GetResponse;
 import com.couchbase.client.protostellar.kv.v1.InsertResponse;
+import com.couchbase.client.protostellar.kv.v1.LookupInResponse;
 import com.couchbase.client.protostellar.kv.v1.MutateInResponse;
 import com.couchbase.client.protostellar.kv.v1.RemoveResponse;
 import com.couchbase.client.protostellar.kv.v1.ReplaceResponse;
@@ -141,12 +151,47 @@ public class CoreProtostellarKeyValueResponses {
         original.type()));
     }
 
-
     return new CoreSubdocMutateResult(keyspace,
       key,
       null,
       response.getCas(),
       response.hasMutationToken() ? convertMutationToken(response.getMutationToken()) : Optional.empty(),
       responses);
+  }
+
+  public static CoreSubdocGetResult convertResponse(CoreProtostellar core, ProtostellarRequest<?> request, CoreKeyspace keyspace, String key, LookupInResponse response, List<CoreSubdocGetCommand> specs) {
+    List<SubDocumentField> responses = new ArrayList<>(response.getSpecsCount());
+
+    for (int i = 0; i < response.getSpecsList().size(); i++) {
+      CoreSubdocGetCommand original = specs.get(i);
+      LookupInResponse.Spec resp = response.getSpecsList().get(i);
+      com.couchbase.client.core.deps.com.google.rpc.Status status = resp.getStatus();
+      ProtostellarRequestBehaviour behaviour = CoreProtostellarErrorHandlingUtil.convertStatus(core, request, null, status);
+
+      boolean isFailedExists = original.type() == SubdocCommandType.EXISTS && resp.getContent().toStringUtf8().equalsIgnoreCase("false");
+
+      CouchbaseException exception = behaviour.exception() == null
+              ? (isFailedExists ? new PathNotFoundException(null) : null)
+              : behaviour.exception() instanceof CouchbaseException ? (CouchbaseException) behaviour.exception()
+              : new CouchbaseException(behaviour.exception());
+
+      SubDocumentOpResponseStatus stat = exception == null ? SubDocumentOpResponseStatus.SUCCESS : SubDocumentOpResponseStatus.UNKNOWN;
+
+      responses.add(new SubDocumentField(stat,
+              Optional.ofNullable(exception),
+              resp.getContent().toByteArray(),
+              original.path(),
+              original.type()));
+    }
+
+    return new CoreSubdocGetResult(keyspace,
+            key,
+            null,
+            responses,
+            response.getCas(),
+            // Protostellar does not indicate whether the document was a tombstone - but, that is only used by transactions,
+            // which will use Protostellar directly.
+            false
+            );
   }
 }

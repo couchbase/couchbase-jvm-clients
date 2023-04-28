@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when the delta in an arithmetic operation (eg counter) is invalid. In this
@@ -29,14 +28,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class DeltaInvalidException extends CouchbaseException {
 
-    public DeltaInvalidException(final SubDocumentErrorContext ctx) {
+    public DeltaInvalidException(final ErrorContext ctx) {
         super("Delta must not be zero, or is otherwise invalid", ctx);
     }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
-    }
-
 }

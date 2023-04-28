@@ -52,6 +52,7 @@ import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValue
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getAndTouchRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.getRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.insertRequest;
+import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.lookupInRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.mutateInRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.removeRequest;
 import static com.couchbase.client.core.protostellar.kv.CoreProtostellarKeyValueRequests.replaceRequest;
@@ -277,13 +278,30 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(
-    CoreCommonOptions common,
-    String key,
-    List<CoreSubdocGetCommand> commands,
-    boolean accessDeleted
-  ) {
-    throw unsupported();
+  public CoreSubdocGetResult subdocGetBlocking(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
+    return CoreProtostellarAccessors.blocking(core,
+            request,
+            (endpoint) -> endpoint.kvBlockingStub().withDeadline(request.deadline()).lookupIn(request.request()),
+            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
+    return CoreProtostellarAccessors.async(core,
+            request,
+            (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
+            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+  }
+
+  @Override
+  public Mono<CoreSubdocGetResult> subdocGetReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
+    ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
+    return CoreProtostellarAccessors.reactive(core,
+            request,
+            (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
+            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
   }
 
   @Override

@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when the provided value cannot be inserted at the given path.
@@ -28,14 +27,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class ValueInvalidException extends CouchbaseException {
 
-    public ValueInvalidException(final SubDocumentErrorContext ctx) {
+    public ValueInvalidException(final ErrorContext ctx) {
         super("Cannot insert the subdoc value", ctx);
     }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
-    }
-
 }

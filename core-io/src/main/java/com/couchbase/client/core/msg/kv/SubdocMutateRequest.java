@@ -358,7 +358,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
             KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
             0,
             null,
-            status
+            status,
+            null
     );
   }
 

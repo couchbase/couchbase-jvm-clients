@@ -22,6 +22,7 @@ import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
 import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -36,6 +37,7 @@ import com.couchbase.client.protostellar.kv.v1.GetAndLockRequest;
 import com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest;
 import com.couchbase.client.protostellar.kv.v1.GetRequest;
 import com.couchbase.client.protostellar.kv.v1.InsertRequest;
+import com.couchbase.client.protostellar.kv.v1.LookupInRequest;
 import com.couchbase.client.protostellar.kv.v1.MutateInRequest;
 import com.couchbase.client.protostellar.kv.v1.ReplaceRequest;
 import com.couchbase.client.protostellar.kv.v1.TouchRequest;
@@ -56,6 +58,7 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGet
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateUnlockParams;
@@ -491,6 +494,7 @@ public class CoreProtostellarKeyValueRequests {
       .addAllSpecs(commands.stream()
         .map(command -> {
           MutateInRequest.Spec.Operation operation;
+          String path = command.path();
 
           switch (command.type()) {
             case COUNTER:
@@ -520,13 +524,17 @@ public class CoreProtostellarKeyValueRequests {
             case DELETE:
               operation = MutateInRequest.Spec.Operation.OPERATION_REMOVE;
               break;
+            case SET_DOC:
+              operation = MutateInRequest.Spec.Operation.OPERATION_REPLACE;
+              path = "";
+              break;
             default:
               throw new IllegalArgumentException("Sub-Document mutateIn command " + command.type() + " is not supported in Protostellar");
           }
 
           MutateInRequest.Spec.Builder builder = MutateInRequest.Spec.newBuilder()
             .setOperation(operation)
-            .setPath(command.path())
+            .setPath(path)
             .setContent(ByteString.copyFrom(command.fragment()));
 
           if (command.xattr() || command.expandMacro() || command.createParent()) {
@@ -586,14 +594,88 @@ public class CoreProtostellarKeyValueRequests {
       );
     }
 
+    Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
+    return new ProtostellarKeyValueRequest<>(request.build(),
+      core,
+      keyspace,
+      key,
+      durability,
+      TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, durability, opts.parentSpan().orElse(null)),
+      timeout,
+      false,
+      opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
+      opts.clientContext(),
+      0);
+  }
+
+  public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> lookupInRequest(CoreProtostellar core,
+                                                                                                             CoreKeyspace keyspace,
+                                                                                                             CoreCommonOptions opts,
+                                                                                                             String key,
+                                                                                                             List<CoreSubdocGetCommand> commands,
+                                                                                                             boolean accessDeleted) {
+    validateSubdocGetParams(opts, key, commands);
+
+    com.couchbase.client.protostellar.kv.v1.LookupInRequest.Builder request = com.couchbase.client.protostellar.kv.v1.LookupInRequest.newBuilder()
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setKey(key)
+      .addAllSpecs(commands.stream()
+        .map(command -> {
+          LookupInRequest.Spec.Operation operation;
+          String path = command.path();
+
+          switch (command.type()) {
+            case GET:
+              operation = LookupInRequest.Spec.Operation.OPERATION_GET;
+              break;
+            case EXISTS:
+              operation = LookupInRequest.Spec.Operation.OPERATION_EXISTS;
+              break;
+            case COUNT:
+              operation = LookupInRequest.Spec.Operation.OPERATION_COUNT;
+              break;
+            case GET_DOC:
+              operation = LookupInRequest.Spec.Operation.OPERATION_GET;
+              path = "";
+              break;
+            default:
+              throw new IllegalArgumentException("Sub-Document lookupIn command " + command.type() + " is not supported in Protostellar");
+          }
+
+          LookupInRequest.Spec.Builder builder = LookupInRequest.Spec.newBuilder()
+            .setOperation(operation)
+            .setPath(path);
+
+          if (command.xattr()) {
+            LookupInRequest.Spec.Flags.Builder flagsBuilder = LookupInRequest.Spec.Flags.newBuilder();
+
+            if (command.xattr()) {
+              flagsBuilder.setXattr(command.xattr());
+            }
+
+            builder.setFlags(flagsBuilder);
+          }
+
+          return builder.build();
+        })
+        .collect(Collectors.toList()));
+
+    if (accessDeleted) {
+      request.setFlags(LookupInRequest.Flags.newBuilder()
+        .setAccessDeleted(accessDeleted));
+    }
+
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
     return new ProtostellarKeyValueRequest<>(request.build(),
       core,
       keyspace,
       key,
       CoreDurability.NONE,
-      TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN,
-      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, durability, opts.parentSpan().orElse(null)),
+      TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN,
+      createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, CoreDurability.NONE, opts.parentSpan().orElse(null)),
       timeout,
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),

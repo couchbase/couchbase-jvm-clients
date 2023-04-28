@@ -272,7 +272,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
       0,
       null,
-      status
+      status,
+      null
     );
   }
 

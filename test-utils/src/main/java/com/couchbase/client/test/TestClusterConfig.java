@@ -90,6 +90,10 @@ public class TestClusterConfig {
     return runWithTLS;
   }
 
+  public boolean isProtostellar() {
+    return nodes.stream().anyMatch(node -> node.protostellarPort().isPresent());
+  }
+
   /**
    * Finds the first node with a given service enabled in the config.
    *

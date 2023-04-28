@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when an extended attribute cannot be accessed.
@@ -26,16 +25,10 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class XattrNoAccessException extends CouchbaseException {
 
-  public XattrNoAccessException(final SubDocumentErrorContext ctx) {
+  public XattrNoAccessException(final ErrorContext ctx) {
     super("The user does not have permission to access this attribute." +
         " If the attribute name starts with an underscore, it is considered a 'system' attribute" +
         " and the 'Data Reader / Writer' role is not sufficient;" +
         " to access a system attribute, the user must have a role that grants the 'SystemXattrRead' / `SystemXattrWrite' permission.", ctx);
-  }
-
-  @Override
-  @Stability.Uncommitted
-  public SubDocumentErrorContext context() {
-    return (SubDocumentErrorContext) super.context();
   }
 }

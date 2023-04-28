@@ -16,22 +16,15 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when a virtual attribute has been requested which is not recognised by the server.
  */
 public class XattrUnknownVirtualAttributeException extends CouchbaseException {
 
-    public XattrUnknownVirtualAttributeException(final SubDocumentErrorContext ctx) {
+    public XattrUnknownVirtualAttributeException(final ErrorContext ctx) {
         super("The requested virtual attribute was not known for path", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }

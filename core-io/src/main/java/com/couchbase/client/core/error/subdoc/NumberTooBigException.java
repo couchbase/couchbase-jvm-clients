@@ -16,9 +16,8 @@
 
 package com.couchbase.client.core.error.subdoc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Subdocument exception thrown when existing number value in document is too big.
@@ -28,14 +27,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
  */
 public class NumberTooBigException extends CouchbaseException {
 
-    public NumberTooBigException(final SubDocumentErrorContext ctx) {
+    public NumberTooBigException(final ErrorContext ctx) {
         super("Stored numeric value is too big", ctx);
     }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
-    }
-
 }

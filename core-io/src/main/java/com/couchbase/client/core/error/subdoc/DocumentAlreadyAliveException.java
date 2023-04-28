@@ -18,7 +18,7 @@ package com.couchbase.client.core.error.subdoc;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
  * Sub-Document exception thrown when ReviveDocument has been used with a document that already exists
@@ -26,13 +26,7 @@ import com.couchbase.client.core.error.context.SubDocumentErrorContext;
 @Stability.Internal
 public class DocumentAlreadyAliveException extends CouchbaseException {
 
-    public DocumentAlreadyAliveException(final SubDocumentErrorContext ctx) {
+    public DocumentAlreadyAliveException(final ErrorContext ctx) {
         super("The ReviveDocument flag cannot be used on a document that already exists", ctx);
-    }
-
-    @Override
-    @Stability.Uncommitted
-    public SubDocumentErrorContext context() {
-        return (SubDocumentErrorContext) super.context();
     }
 }
