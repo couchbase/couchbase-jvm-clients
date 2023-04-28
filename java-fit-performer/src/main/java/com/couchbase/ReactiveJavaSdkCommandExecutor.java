@@ -33,6 +33,8 @@ import com.couchbase.query.QueryIndexManagerHelper;
 // [end:3.4.3]
 // [start:3.4.5]
 import com.couchbase.search.SearchHelper;
+
+import static com.couchbase.JavaSdkCommandExecutor.waitUntilReadyOptions;
 import static com.couchbase.search.SearchHelper.handleSearchReactive;
 // [end:3.4.5]
 import com.couchbase.stream.FluxStreamer;
@@ -40,6 +42,7 @@ import com.couchbase.utils.ClusterConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.JavaSdkCommandExecutor.content;
@@ -186,6 +189,27 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 var clc = op.getClusterCommand();
                 var cluster = connection.cluster().reactive();
 
+              if (clc.hasWaitUntilReady()) {
+                var request = clc.getWaitUntilReady();
+                logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
+                var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+                Mono<Void> response;
+
+                if (request.hasOptions()) {
+                  var options = waitUntilReadyOptions(request);
+                  response = cluster.waitUntilReady(timeout, options);
+
+                } else {
+                  response = cluster.waitUntilReady(timeout);
+                }
+
+                return response.then(Mono.fromCallable(() -> {
+                  setSuccess(result);
+                  return result.build();
+                }));
+              }
+
                 // [start:3.4.3]
                 if (clc.hasQueryIndexManager()) {
                   return QueryIndexManagerHelper.handleClusterQueryIndexManagerReactive(cluster, spans, op, result);
@@ -203,6 +227,33 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                   return Mono.fromSupplier(() -> SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op));
                 }
                 // [end:3.4.5]
+
+            } else if (op.hasBucketCommand()) {
+              var blc = op.getBucketCommand();
+              var bucket = connection.cluster().reactive().bucket(blc.getBucketName());
+
+              if (blc.hasWaitUntilReady()) {
+                var request = blc.getWaitUntilReady();
+
+                logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
+
+                var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+                Mono<Void> response;
+
+                if (request.hasOptions()) {
+                  var options = waitUntilReadyOptions(request);
+                  response = bucket.waitUntilReady(timeout, options);
+                } else {
+                  response = bucket.waitUntilReady(timeout);
+                }
+
+                return response.then(Mono.fromCallable(() -> {
+                  setSuccess(result);
+                  return result.build();
+                }));
+              }
+
             } else if (op.hasScopeCommand()) {
                 var slc = op.getScopeCommand();
                 var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());

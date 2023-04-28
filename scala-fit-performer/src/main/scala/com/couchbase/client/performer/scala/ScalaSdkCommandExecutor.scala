@@ -15,8 +15,10 @@
  */
 package com.couchbase.client.performer.scala
 
+import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.kv.MutationToken
+import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.ErrorUtil
@@ -26,16 +28,16 @@ import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
 import com.couchbase.client.performer.scala.search.SearchHelper
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
+import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
 import com.couchbase.client.protocol.sdk.kv.rangescan.{Scan, ScanTermChoice}
 import com.couchbase.client.protocol.shared
-import com.couchbase.client.protocol.shared.{
-  CouchbaseExceptionEx,
-  CouchbaseExceptionType,
-  ExceptionOther
-}
+import com.couchbase.client.protocol.shared.{CouchbaseExceptionEx, CouchbaseExceptionType, ExceptionOther}
 import com.couchbase.client.scala.codec._
+import com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
 import com.couchbase.client.scala.json.JsonObject
+
+import scala.concurrent.duration.DurationInt
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
 // [end:1.4.1]
@@ -194,15 +196,50 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       )
     // [end:1.4.1]
     } else if (op.hasClusterCommand) {
-      val clc = op.getClusterCommand
+        val clc = op.getClusterCommand
 
-      if (clc.hasQueryIndexManager) {
-        result = QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster, op)
-      } else if (clc.hasSearch) {
-        result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearch)
-      } else if (clc.hasSearchIndexManager) {
-        result = SearchHelper.handleClusterSearchIndexManager(connection.cluster, op)
-      } else throw new UnsupportedOperationException()
+        if (clc.hasQueryIndexManager) {
+            result = QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster, op)
+        } else if (clc.hasSearch) {
+            result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearch)
+        } else if (clc.hasSearchIndexManager) {
+            result = SearchHelper.handleClusterSearchIndexManager(connection.cluster, op)
+        } else if (clc.hasWaitUntilReady) {
+            val request = clc.getWaitUntilReady
+            logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis + " milliseconds.")
+            val timeout = request.getTimeoutMillis.milliseconds
+
+            if (request.hasOptions) {
+                val options = waitUntilReadyOptions(request)
+                connection.cluster.waitUntilReady(timeout, options)
+            } else {
+                connection.cluster.waitUntilReady(timeout)
+            }
+
+            setSuccess(result)
+
+
+        } else throw new UnsupportedOperationException()
+    } else if (op.hasBucketCommand) {
+        val blc = op.getBucketCommand
+        val bucket = connection.cluster.bucket(blc.getBucketName)
+
+        if (blc.hasWaitUntilReady) {
+            val request = blc.getWaitUntilReady
+            logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis + " milliseconds.")
+            val timeout = request.getTimeoutMillis.milliseconds
+
+            if (request.hasOptions) {
+                val options = waitUntilReadyOptions(request)
+                bucket.waitUntilReady(timeout, options)
+            } else {
+                bucket.waitUntilReady(timeout)
+            }
+
+            setSuccess(result)
+
+        }
+
     } else if (op.hasCollectionCommand) {
       val clc  = op.getCollectionCommand
       val coll = clc.getCollection
@@ -600,4 +637,24 @@ object ScalaSdkCommandExecutor {
 
     ret.build
   }
+
+    def waitUntilReadyOptions(request: WaitUntilReadyRequest): WaitUntilReadyOptions = {
+        var options = WaitUntilReadyOptions()
+
+        if (request.getOptions.hasDesiredState) {
+            options = options.desiredState(ClusterState.valueOf(request.getOptions.getDesiredState.toString))
+        }
+
+        if (request.getOptions.getServiceTypesList.size() > 0) {
+            val serviceTypes = request.getOptions.getServiceTypesList
+
+            var services: Set[ServiceType] = Set()
+            for (service <- serviceTypes) {
+                services = services.++(Set(ServiceType.valueOf(service.toString)))
+            }
+            options = options.serviceTypes(services)
+        }
+
+        options
+    }
 }

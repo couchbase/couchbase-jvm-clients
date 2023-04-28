@@ -57,10 +57,6 @@ public class ClusterConnection {
         }
 
         this.cluster = Cluster.connect(hostname, co);
-        if (!hostname.startsWith("protostellar://")) {
-          // Needs JVMCBC-1240
-          cluster.waitUntilReady(Duration.ofSeconds(30));
-        }
     }
 
     public Cluster cluster(){

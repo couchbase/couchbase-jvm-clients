@@ -16,8 +16,10 @@
 package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.LegacyTranscoder;
@@ -25,6 +27,7 @@ import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.codec.RawJsonTranscoder;
 import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
+import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.client.java.kv.GetOptions;
@@ -48,6 +51,7 @@ import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.performer.core.stream.StreamStreamer;
 import com.couchbase.client.performer.core.util.ErrorUtil;
 import com.couchbase.client.protocol.run.Result;
+import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest;
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
 import com.couchbase.client.protocol.shared.Content;
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx;
@@ -68,6 +72,7 @@ import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
@@ -193,6 +198,22 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         } else if (op.hasClusterCommand()) {
             var clc = op.getClusterCommand();
 
+          if (clc.hasWaitUntilReady()) {
+            var request = clc.getWaitUntilReady();
+            logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
+            var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+            if (request.hasOptions()) {
+              var options = waitUntilReadyOptions(request);
+              connection.cluster().waitUntilReady(timeout, options);
+
+            } else {
+              connection.cluster().waitUntilReady(timeout);
+            }
+
+            setSuccess(result);
+          }
+
             // [start:3.4.3]
             if (clc.hasQueryIndexManager()) {
               QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster(), spans, op, result);
@@ -208,6 +229,29 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
             }
             // [end:3.4.5]
+
+        } else if (op.hasBucketCommand()) {
+          var blc = op.getBucketCommand();
+          var bucket = connection.cluster().bucket(blc.getBucketName());
+
+          if (blc.hasWaitUntilReady()) {
+            var request = blc.getWaitUntilReady();
+
+            logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
+
+            var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+            if (request.hasOptions()) {
+              var options = waitUntilReadyOptions(request);
+              bucket.waitUntilReady(timeout, options);
+
+            } else {
+              bucket.waitUntilReady(timeout);
+            }
+
+            setSuccess(result);
+          }
+
         } else if (op.hasScopeCommand()) {
           var slc = op.getScopeCommand();
           var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
@@ -625,4 +669,29 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .toList();
         return MutationState.from(mutationTokens.toArray(new com.couchbase.client.core.msg.kv.MutationToken[0]));
     }
+
+  public static WaitUntilReadyOptions waitUntilReadyOptions(WaitUntilReadyRequest request) {
+
+    var options = WaitUntilReadyOptions.waitUntilReadyOptions();
+
+    if (request.getOptions().hasDesiredState()) {
+      options.desiredState(ClusterState.valueOf(request.getOptions().getDesiredState().toString()));
+    }
+
+    if (request.getOptions().getServiceTypesList().size() > 0) {
+
+      var serviceTypes = request.getOptions().getServiceTypesList();
+
+      var services = new HashSet<ServiceType>();
+      for (com.couchbase.client.protocol.sdk.cluster.waituntilready.ServiceType service : serviceTypes) {
+        var newService = com.couchbase.client.core.service.ServiceType.valueOf(service.toString());
+        services.add(newService);
+
+      }
+
+      options.serviceTypes(services);
+    }
+
+    return options;
+  }
 }

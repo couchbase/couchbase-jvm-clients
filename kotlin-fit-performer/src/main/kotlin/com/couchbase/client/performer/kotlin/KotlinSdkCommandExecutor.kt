@@ -16,6 +16,7 @@
 
 package com.couchbase.client.performer.kotlin
 
+import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
@@ -41,6 +42,7 @@ import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
+import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
 import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
 import com.couchbase.client.protocol.shared.Exception
@@ -300,6 +302,54 @@ class KotlinSdkCommandExecutor(
                         )
                 )
             // [end:1.1.1]
+            } else if (op.hasClusterCommand()) {
+                val clc = op.clusterCommand
+
+                if (clc.hasWaitUntilReady()) {
+                    val request = clc.waitUntilReady;
+                    logger.info("Calling waitUntilReady with timeout " + request.timeoutMillis + " milliseconds.")
+                    val timeout = request.timeoutMillis.milliseconds
+
+                    if (request.hasOptions()) {
+                        if (request.options.hasDesiredState()) {
+                            val desiredState = ClusterState.valueOf(request.options.desiredState.toString())
+                            connection.cluster.waitUntilReady(timeout, waitUntilReadyServiceTypes(request), desiredState)
+                        } else {
+                            connection.cluster.waitUntilReady(timeout, waitUntilReadyServiceTypes(request))
+                        }
+                    } else {
+                        connection.cluster.waitUntilReady(timeout)
+                    }
+                    setSuccess(result)
+                } else {
+                    throw UnsupportedOperationException(IllegalArgumentException("Unknown cluster-level operation"))
+                }
+
+
+            } else if (op.hasBucketCommand()) {
+                val blc = op.bucketCommand
+                val bucket = connection.cluster.bucket(op.bucketCommand.bucketName)
+
+                if (blc.hasWaitUntilReady()) {
+                    val request = blc.waitUntilReady;
+                    logger.info("Calling waitUntilReady on bucket " + bucket.name + " with timeout " + request.timeoutMillis + " milliseconds.")
+                    val timeout = request.timeoutMillis.milliseconds
+
+                    if (request.hasOptions()) {
+                        if (request.options.hasDesiredState()) {
+                            val desiredState = ClusterState.valueOf(request.options.desiredState.toString())
+                            bucket.waitUntilReady(timeout, waitUntilReadyServiceTypes(request), desiredState)
+                        } else {
+                            bucket.waitUntilReady(timeout, waitUntilReadyServiceTypes(request))
+                        }
+                    } else {
+                        bucket.waitUntilReady(timeout)
+                    }
+                    setSuccess(result)
+                } else {
+                    throw UnsupportedOperationException(IllegalArgumentException("Unknown bucket-level operation"))
+                }
+
             } else {
                 throw UnsupportedOperationException(IllegalArgumentException("Unknown operation"))
             }
@@ -409,4 +459,15 @@ fun convertExceptionKt(raw: Throwable): Exception {
                 .setName(raw.javaClass.simpleName)
                 .setSerialized(raw.toString())
         ).build()
+}
+
+fun waitUntilReadyServiceTypes (request: WaitUntilReadyRequest): Set<com.couchbase.client.core.service.ServiceType> {
+    val serviceTypes = request.options.serviceTypesList;
+
+    val services = mutableSetOf<com.couchbase.client.core.service.ServiceType>()
+    for (service in serviceTypes) {
+        services.add(com.couchbase.client.core.service.ServiceType.valueOf(service.toString()))
+    }
+
+    return services
 }

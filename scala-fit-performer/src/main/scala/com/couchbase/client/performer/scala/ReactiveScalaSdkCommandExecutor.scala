@@ -20,6 +20,12 @@ import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
+import com.couchbase.client.protocol.run.Result
+import reactor.core.scala.publisher.SMono
+
+import scala.concurrent.duration.DurationInt
+import scala.runtime.Nothing$
+import scala.util.Try
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
 // [end:1.4.1]
@@ -163,6 +169,54 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
               .setStreamId(streamer.streamId)
           )
       )
+    } else if (op.hasClusterCommand) {
+        val clc = op.getClusterCommand
+        val cluster = connection.cluster.reactive
+
+        if (clc.hasWaitUntilReady) {
+            val request = clc.getWaitUntilReady
+            logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis + " milliseconds.")
+            val timeout = request.getTimeoutMillis.milliseconds
+
+            var response: SMono[Unit] = null
+
+            if (request.hasOptions) {
+                val options = waitUntilReadyOptions(request)
+                response = cluster.waitUntilReady(timeout, options)
+            } else {
+                response = cluster.waitUntilReady(timeout)
+            }
+
+            response.doOnSuccess(_ => {
+                setSuccess(result)
+                result.build()
+            }).block()
+
+        }
+
+    } else if (op.hasBucketCommand) {
+        val blc = op.getBucketCommand
+        val bucket = connection.cluster.reactive.bucket(blc.getBucketName)
+
+        if (blc.hasWaitUntilReady) {
+            val request = blc.getWaitUntilReady
+            logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis + " milliseconds.")
+            val timeout = request.getTimeoutMillis.milliseconds
+
+            var response: SMono[Unit] = null
+
+            if (request.hasOptions) {
+                val options = waitUntilReadyOptions(request)
+                response = bucket.waitUntilReady(timeout, options)
+            } else {
+                response = bucket.waitUntilReady(timeout)
+            }
+            response.`then`[Result](SMono.fromCallable[Result](() => {
+                setSuccess(result)
+                result.build()
+            })).block()
+        }
+
     }
     // [end:1.4.1]
     else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
