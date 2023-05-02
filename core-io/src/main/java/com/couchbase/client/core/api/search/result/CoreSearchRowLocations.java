@@ -124,14 +124,15 @@ public class CoreSearchRowLocations {
                     long start = loc.get("start").longValue();
                     long end = loc.get("end").asLong();
                     JsonNode positions = loc.get("array_positions");
+                    long[] arrayPositions = null;
                     if (positions != null && positions.isArray()) {
                         ArrayNode arrayPositionsJson = (ArrayNode) positions;
-                        long[] arrayPositions = new long[arrayPositionsJson.size()];
+                        arrayPositions = new long[arrayPositionsJson.size()];
                         for (int j = 0; j < arrayPositionsJson.size(); j++) {
                             arrayPositions[j] = arrayPositionsJson.get(j).longValue();
                         }
-                        hitLocations.add(new CoreSearchRowLocation(field, term, pos, start, end, arrayPositions));
                     }
+                    hitLocations.add(new CoreSearchRowLocation(field, term, pos, start, end, arrayPositions));
                 }
             });
         });
