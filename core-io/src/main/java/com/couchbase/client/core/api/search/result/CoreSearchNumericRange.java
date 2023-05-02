@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
 
@@ -27,15 +28,15 @@ import java.util.Objects;
 public class CoreSearchNumericRange {
 
     private final String name;
-    private final double min;
-    private final double max;
+    @Nullable private final Double min;
+    @Nullable private final Double max;
     private final long count;
 
     @JsonCreator
     public CoreSearchNumericRange(
       @JsonProperty("name") String name,
-      @JsonProperty("min") double min,
-      @JsonProperty("max") double max,
+      @Nullable @JsonProperty("min") Double min,
+      @Nullable @JsonProperty("max") Double max,
       @JsonProperty("count") long count) {
         this.name = name;
         this.min = min;
@@ -47,10 +48,12 @@ public class CoreSearchNumericRange {
         return name;
     }
 
+    @Nullable
     public Double min() {
         return min;
     }
 
+    @Nullable
     public Double max() {
         return max;
     }
@@ -74,10 +77,7 @@ public class CoreSearchNumericRange {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CoreSearchNumericRange that = (CoreSearchNumericRange) o;
-        return Double.compare(that.min, min) == 0 &&
-          Double.compare(that.max, max) == 0 &&
-          count == that.count &&
-          Objects.equals(name, that.name);
+        return count == that.count && name.equals(that.name) && Objects.equals(min, that.min) && Objects.equals(max, that.max);
     }
 
     @Override

@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import reactor.util.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -36,8 +37,8 @@ import java.util.Objects;
 public class CoreSearchDateRange {
 
     private final String name;
-    private final Instant start;
-    private final Instant end;
+    @Nullable private final Instant start;
+    @Nullable private final Instant end;
     private final long count;
 
     @JsonCreator
@@ -57,10 +58,12 @@ public class CoreSearchDateRange {
         return name;
     }
 
+    @Nullable
     public Instant start() {
         return start;
     }
 
+    @Nullable
     public Instant end() {
         return end;
     }
