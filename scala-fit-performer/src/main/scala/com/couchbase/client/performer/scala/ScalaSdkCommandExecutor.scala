@@ -193,6 +193,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
               .setStreamId(streamer.streamId)
           )
       )
+    // [end:1.4.1]
     } else if (op.hasClusterCommand) {
       val clc = op.getClusterCommand
 
