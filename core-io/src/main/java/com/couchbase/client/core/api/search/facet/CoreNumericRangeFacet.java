@@ -32,6 +32,10 @@ public class CoreNumericRangeFacet extends CoreSearchFacet {
     this.ranges = ranges;
   }
 
+  public List<CoreNumericRange> ranges() {
+    return ranges;
+  }
+
   @Override
   public void injectParams(ObjectNode queryJson) {
     super.injectParams(queryJson);

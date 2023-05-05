@@ -35,7 +35,7 @@ public class CoreSearchRowLocation {
     @Nullable
     private final long[] arrayPositions;
 
-    CoreSearchRowLocation(String field, String term, long pos, long start, long end, @Nullable long[] arrayPositions) {
+    public CoreSearchRowLocation(String field, String term, long pos, long start, long end, @Nullable long[] arrayPositions) {
         this.field = notNull(field, "Field");
         this.term = notNull(term, "Term");
         this.pos = pos;

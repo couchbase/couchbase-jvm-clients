@@ -32,6 +32,15 @@ public abstract class CoreSearchFacet {
     this.size = size;
   }
 
+  public String field() {
+    return field;
+  }
+
+  @Nullable
+  public Integer size() {
+    return size;
+  }
+
   public void injectParams(final ObjectNode queryJson) {
     if (size != null) {
       queryJson.put("size", size);

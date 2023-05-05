@@ -43,15 +43,29 @@ public class CoreSearchDateRange {
 
     @JsonCreator
     public CoreSearchDateRange(
-      @JsonProperty("name") String name,
-      @JsonProperty("start") String start,
-      @JsonProperty("end") String end,
-      @JsonProperty("count") long count) {
+        @JsonProperty("name") String name,
+        @JsonProperty("start") String start,
+        @JsonProperty("end") String end,
+        @JsonProperty("count") long count
+    ) {
+        this(
+            name,
+            start == null ? null : Instant.parse(start),
+            end == null ? null : Instant.parse(end),
+            count
+        );
+    }
+
+    public CoreSearchDateRange(
+        String name,
+        Instant start,
+        Instant end,
+        long count
+    ) {
         this.name = name;
         this.count = count;
-
-        this.start = start == null ? null : Instant.parse(start);
-        this.end = end == null ? null : Instant.parse(end);
+        this.start = start;
+        this.end = end;
     }
 
     public String name() {

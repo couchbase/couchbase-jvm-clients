@@ -34,6 +34,10 @@ public class CoreDateRangeFacet extends CoreSearchFacet {
     this.dateRanges = notNullOrEmpty(dateRanges, "Date Ranges");
   }
 
+  public List<CoreDateRange> dateRanges() {
+    return dateRanges;
+  }
+
   @Override
   public void injectParams(ObjectNode queryJson) {
     super.injectParams(queryJson);

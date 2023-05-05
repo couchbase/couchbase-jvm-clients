@@ -103,6 +103,12 @@ public class CoreSearchRowLocations {
         return termSet;
     }
 
+   public static CoreSearchRowLocations from(List<CoreSearchRowLocation> locations) {
+      CoreSearchRowLocations result = new CoreSearchRowLocations();
+      locations.forEach(result::add);
+      return result;
+   }
+
     /**
      * Parses a FTS JSON representation of a {@link CoreSearchRowLocations}.
      */
