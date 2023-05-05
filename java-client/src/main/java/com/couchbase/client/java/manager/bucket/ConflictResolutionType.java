@@ -38,7 +38,6 @@ public enum ConflictResolutionType {
    * updates of source and target documents are compared. The document whose update has the more recent
    * timestamp prevails.
    */
-  @JsonProperty("lww")
   TIMESTAMP("lww"),
 
   /**
@@ -48,7 +47,6 @@ public enum ConflictResolutionType {
    * per document, and are incremented on every document-update. The sequence numbers of source and
    * target documents are compared; and the document with the higher sequence number prevails.
    */
-  @JsonProperty("seqno")
   SEQUENCE_NUMBER("seqno"),
 
   /**
@@ -57,7 +55,6 @@ public enum ConflictResolutionType {
    * In Couchbase Server 7.1, this feature is only available in "developer-preview" mode. See the UI XDCR settings
    * for the custom conflict resolution properties.
    */
-  @JsonProperty("custom")
   @Stability.Volatile
   CUSTOM("custom");
 

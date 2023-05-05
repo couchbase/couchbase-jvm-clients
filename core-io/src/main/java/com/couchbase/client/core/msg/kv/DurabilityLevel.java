@@ -101,5 +101,4 @@ public enum DurabilityLevel {
         throw InvalidArgumentException.fromMessage("The provided durability level is not supported: " + this);
     }
   }
-
 }

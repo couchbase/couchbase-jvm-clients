@@ -30,6 +30,7 @@ import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.callbacks.BeforeSendRequestCallback;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
+import com.couchbase.client.core.classic.manager.ClassicCoreBucketManager;
 import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
 import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.Event;
@@ -71,6 +72,7 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
+import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
@@ -86,6 +88,7 @@ import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketManager;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.service.ServiceScope;
@@ -1030,13 +1033,20 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   public CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope) {
     return new ClassicCoreSearchOps(this, scope);
   }
-
   @Stability.Internal
   @Override
   public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
     return isProtostellar()
       ? new ProtostellarCoreKvBinaryOps(protostellar, keyspace)
       : new ClassicCoreKvBinaryOps(this, keyspace);
+  }
+
+  @Stability.Internal
+  @Override
+  public CoreBucketManagerOps bucketManager() {
+    return isProtostellar()
+      ? new ProtostellarCoreBucketManager(protostellar)
+      : new ClassicCoreBucketManager(this);
   }
 
   @Stability.Internal

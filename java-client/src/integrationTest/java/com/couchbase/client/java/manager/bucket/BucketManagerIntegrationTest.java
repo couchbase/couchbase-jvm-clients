@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
@@ -61,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the functionality of the bucket manager.
  */
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
-  isProtostellarWillWorkLater = true
+  isProtostellarWillWorkLater = true // Needs ING-495
 )
 @Execution(ExecutionMode.CONCURRENT)
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
@@ -260,6 +261,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertFalse(buckets.getAllBuckets().containsKey(name));
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-491
   @Test
   void flushBucket() {
     Bucket bucket = cluster.bucket(config().bucketname());
@@ -273,6 +275,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     waitUntilCondition(() -> !collection.exists(id).exists());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-491
   @Test
   void failIfBucketFlushDisabled() {
     String bucketName = UUID.randomUUID().toString();
@@ -336,7 +339,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
       BucketSettings bucket = buckets.getBucket(bucketName);
       assertEquals(ConflictResolutionType.CUSTOM, bucket.conflictResolutionType());
-    } catch (HttpStatusCodeException ex) {
+    } catch (InvalidArgumentException ex) {
       assertTrue(ex.getMessage().contains("Conflict resolution type 'custom' is supported only with developer preview enabled"));
     }
   }

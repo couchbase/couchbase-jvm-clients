@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
@@ -219,5 +220,9 @@ public class CoreProtostellarUtil {
   // JVMCBC-1187: This and everything using it will be fixed and removed before GA.
   public static RuntimeException unsupportedCurrentlyInProtostellar() {
     return new FeatureNotAvailableException("Feature is not supported when using protostellar:// to connect (but will be before GA)");
+  }
+
+  public static RuntimeException incompatibleProtostellar(String error) {
+    return new CouchbaseException("Encountered error '" + error + "', indicating that a value is being returned from a future version of Protostellar that this SDK does not understand.  Please update your SDK.");
   }
 }

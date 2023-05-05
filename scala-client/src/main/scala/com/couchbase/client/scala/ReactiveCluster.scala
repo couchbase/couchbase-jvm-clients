@@ -73,7 +73,7 @@ class ReactiveCluster(val async: AsyncCluster) {
   lazy val users = new ReactiveUserManager(async.core)
 
   /** The ReactiveBucketManager provides access to creating and getting buckets. */
-  lazy val buckets = new ReactiveBucketManager(async.core)
+  lazy val buckets = new ReactiveBucketManager(async.core, async.couchbaseOps)
 
   /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)

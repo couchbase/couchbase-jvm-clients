@@ -77,12 +77,6 @@ class BucketManagerSpec extends ScalaIntegrationTest {
 
   private def waitUntilHealthy(bucket: String): Unit = {
     ConsistencyUtil.waitUntilBucketPresent(cluster.async.core, bucket)
-    Util.waitUntilCondition(() => {
-      buckets.getBucket(bucket) match {
-        case Success(value) => value.healthy
-        case _              => false
-      }
-    })
   }
 
   private def waitUntilDropped(bucket: String): Unit = {

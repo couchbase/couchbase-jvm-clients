@@ -32,20 +32,20 @@ public enum CompressionMode {
    * Compressed documents are accepted but actively decompressed for storage in memory
    * and for streaming. Not advised!
    */
-  @JsonProperty("off") OFF,
+  OFF,
   /**
    * Compression mode Passive.
    * <p>
    * Compressed documents can be stored and streamed from the server, but the server does
    * not try to actively compress documents (client-initiated).
    */
-  @JsonProperty("passive") PASSIVE,
+  PASSIVE,
   /**
    * Compression mode Active.
    * <p>
    * The server will try to actively compress documents in memory.
    */
-  @JsonProperty("active") ACTIVE;
+  ACTIVE;
 
   @Stability.Internal
   public String alias() {

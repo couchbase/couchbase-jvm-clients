@@ -16,24 +16,21 @@
 
 package com.couchbase.client.java.manager.bucket;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.manager.CoreBucketManager;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.manager.CoreBucketManagerOps;
+import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
+import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.java.AsyncCluster;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static com.couchbase.client.core.util.CbCollections.transformValues;
-import static com.couchbase.client.java.manager.bucket.BucketType.MEMCACHED;
 import static com.couchbase.client.java.manager.bucket.CreateBucketOptions.createBucketOptions;
 import static com.couchbase.client.java.manager.bucket.DropBucketOptions.dropBucketOptions;
 import static com.couchbase.client.java.manager.bucket.FlushBucketOptions.flushBucketOptions;
@@ -53,19 +50,17 @@ public class AsyncBucketManager {
   /**
    * References the core-io bucket manager which abstracts common I/O functionality.
    */
-  private final CoreBucketManager coreBucketManager;
+  private final CoreBucketManagerOps coreBucketManager;
 
   /**
    * Creates a new {@link AsyncBucketManager}.
    * <p>
    * This API is not intended to be called by the user directly, use {@link AsyncCluster#buckets()}
    * instead.
-   *
-   * @param core the internal core reference.
    */
   @Stability.Internal
-  public AsyncBucketManager(final Core core) {
-    this.coreBucketManager = new CoreBucketManager(core);
+  public AsyncBucketManager(final CoreCouchbaseOps ops) {
+    this.coreBucketManager = ops.bucketManager();
   }
 
   /**
@@ -98,7 +93,25 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return coreBucketManager.createBucket(toMap(settings), options.build());
+    return coreBucketManager.createBucket(settings.toCore(), new CoreCreateBucketSettings() {
+      @Override
+      public CoreConflictResolutionType conflictResolutionType() {
+        if (settings.conflictResolutionType() == null) {
+          return null;
+        }
+
+        switch (settings.conflictResolutionType()) {
+          case TIMESTAMP:
+            return CoreConflictResolutionType.TIMESTAMP;
+          case SEQUENCE_NUMBER:
+            return CoreConflictResolutionType.SEQUENCE_NUMBER;
+          case CUSTOM:
+            return CoreConflictResolutionType.CUSTOM;
+          default:
+            throw new CouchbaseException("Unknown conflict resolution type");
+        }
+      }
+    }, options.build());
   }
 
   /**
@@ -151,7 +164,7 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
-    return coreBucketManager.updateBucket(toMap(settings), options.build());
+    return coreBucketManager.updateBucket(settings.toCore(), options.build());
   }
 
   /**
@@ -201,8 +214,7 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    return coreBucketManager.getBucket(bucketName, options.build())
-        .thenApply(parseBucketSettings());
+    return coreBucketManager.getBucket(bucketName, options.build()).thenApply(BucketSettings::new);
   }
 
   /**
@@ -225,7 +237,7 @@ public class AsyncBucketManager {
   public CompletableFuture<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
     return coreBucketManager
         .getAllBuckets(options.build())
-        .thenApply(bucketNameToBytes -> transformValues(bucketNameToBytes, parseBucketSettings()));
+        .thenApply(buckets -> transformValues(buckets, BucketSettings::new));
   }
 
   /**
@@ -268,57 +280,4 @@ public class AsyncBucketManager {
   public CompletableFuture<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
     return coreBucketManager.flushBucket(bucketName, options.build());
   }
-
-  /**
-   * Returns a function that turns raw encoded bytes into {@link BucketSettings}.
-   */
-  private static Function<byte[], BucketSettings> parseBucketSettings() {
-    return bucketBytes -> BucketSettings.create(Mapper.decodeIntoTree(bucketBytes));
-  }
-
-  /**
-   * Turns {@link BucketSettings} into a map that represents the wire format of the server.
-   *
-   * @param settings the settings to encode.
-   * @return the encoded settings in a map.
-   */
-  private static Map<String, String> toMap(final BucketSettings settings) {
-    Map<String, String> params = new HashMap<>();
-
-    params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB()));
-    if (settings.bucketType() != MEMCACHED) {
-      params.put("replicaNumber", String.valueOf(settings.numReplicas()));
-    }
-    params.put("flushEnabled", String.valueOf(settings.flushEnabled() ? 1 : 0));
-    long maxTTL = settings.maxExpiry().getSeconds();
-    // Do not send if it's been left at default, else will get an error on CE
-    if (maxTTL != 0) {
-      params.put("maxTTL", String.valueOf(maxTTL));
-    }
-    if (settings.evictionPolicy() != null) {
-      // let server assign the default policy for this bucket type
-      params.put("evictionPolicy", settings.evictionPolicy().alias());
-    }
-    // Do not send if it's been left at default, else will get an error on CE
-    if (settings.compressionMode != null) {
-      params.put("compressionMode", settings.compressionMode().alias());
-    }
-
-    if (settings.minimumDurabilityLevel() != DurabilityLevel.NONE) {
-      params.put("durabilityMinLevel", settings.minimumDurabilityLevel().encodeForManagementApi());
-    }
-    if(settings.storageBackend() != null) {
-      params.put("storageBackend",settings.storageBackend().alias());
-    }
-
-    params.put("name", settings.name());
-    params.put("bucketType", settings.bucketType().alias());
-    params.put("conflictResolutionType", settings.conflictResolutionType().alias());
-    if (settings.bucketType() != BucketType.EPHEMERAL) {
-      params.put("replicaIndex", String.valueOf(settings.replicaIndexes() ? 1 : 0));
-    }
-
-    return params;
-  }
-
 }

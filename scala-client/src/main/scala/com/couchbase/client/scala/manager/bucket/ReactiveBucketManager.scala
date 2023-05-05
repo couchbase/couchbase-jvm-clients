@@ -17,50 +17,37 @@ package com.couchbase.client.scala.manager.bucket
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
-import com.couchbase.client.core.error.InvalidArgumentException
-import com.couchbase.client.core.manager.CoreBucketManager
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral}
-import com.couchbase.client.scala.manager.bucket.EjectionMethod.{
-  FullEviction,
-  NoEviction,
-  NotRecentlyUsed,
-  ValueOnly
-}
-import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager.{toCommonOptions, toMap}
+import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager.toCommonOptions
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import java.time
 import java.util.Optional
-import java.{time, util}
 import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success, Try}
 
 @Volatile
-class ReactiveBucketManager(core: Core) {
+class ReactiveBucketManager(core: Core, couchbaseOps: CoreCouchbaseOps) {
   private[scala] val defaultManagerTimeout =
     core.context().environment().timeoutConfig().managementTimeout()
   private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
-  private[scala] val coreBucketManager    = new CoreBucketManager(core)
+  private[scala] val coreBucketManager    = couchbaseOps.bucketManager()
 
   def create(
       settings: CreateBucketSettings,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
-    toMap(settings) match {
-      case Success(params) =>
-        FutureConversions
-          .javaCFToScalaMono(
-            coreBucketManager.createBucket(params, toCommonOptions(timeout, retryStrategy))
-          )
-          .`then`()
-      case Failure(err) => SMono.error(err)
-    }
+    FutureConversions
+      .javaCFToScalaMono(
+        coreBucketManager
+          .createBucket(settings.toCore, null, toCommonOptions(timeout, retryStrategy))
+      )
+      .`then`()
   }
 
   def updateBucket(
@@ -68,15 +55,11 @@ class ReactiveBucketManager(core: Core) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
-    toMap(settings) match {
-      case Success(params) =>
-        FutureConversions
-          .javaCFToScalaMono(
-            coreBucketManager.updateBucket(params, toCommonOptions(timeout, retryStrategy))
-          )
-          .`then`()
-      case Failure(err) => SMono.error(err)
-    }
+    FutureConversions
+      .javaCFToScalaMono(
+        coreBucketManager.updateBucket(settings.toCore, toCommonOptions(timeout, retryStrategy))
+      )
+      .`then`()
   }
 
   def dropBucket(
@@ -100,9 +83,7 @@ class ReactiveBucketManager(core: Core) {
       .javaCFToScalaMono(
         coreBucketManager.getBucket(bucketName, toCommonOptions(timeout, retryStrategy))
       )
-      .map(response => {
-        BucketSettings.parseFrom(response)
-      })
+      .map(response => BucketSettings.fromCore(response))
   }
 
   def getAllBuckets(
@@ -114,9 +95,7 @@ class ReactiveBucketManager(core: Core) {
     FutureConversions
       .javaCFToScalaMono(coreBucketManager.getAllBuckets(toCommonOptions(timeout, retryStrategy)))
       .flatMapMany(response => SFlux.fromIterable(response.asScala))
-      .map(response => {
-        BucketSettings.parseFrom(response._2)
-      })
+      .map(response => BucketSettings.fromCore(response._2))
   }
 
   def flushBucket(
@@ -133,48 +112,6 @@ class ReactiveBucketManager(core: Core) {
 }
 
 object ReactiveBucketManager {
-  private[scala] def toMap(settings: CreateBucketSettings): Try[util.HashMap[String, String]] = {
-    checkValidEjectionMethod(settings)
-      .map(_ => {
-        val params = new java.util.HashMap[String, String]
-        params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB))
-        if (!settings.bucketType.contains(BucketType.Memcached)) {
-          // "The replica number must be specified and must be a non-negative integer."
-          params.put("replicaNumber", String.valueOf(settings.numReplicas.getOrElse(1)))
-        }
-        settings.flushEnabled.foreach(
-          fe => params.put("flushEnabled", String.valueOf(if (fe) 1 else 0))
-        )
-        // Do not send if it's been left at default, else will get an error on CE
-        settings.maxTTL.foreach(maxTTL => params.put("maxTTL", String.valueOf(maxTTL)))
-        settings.ejectionMethod.foreach(em => params.put("evictionPolicy", em.alias))
-        settings.compressionMode.foreach(cm => params.put("compressionMode", cm.alias))
-        settings.minimumDurabilityLevel match {
-          case Some(Durability.Majority) => params.put("durabilityMinLevel", "majority")
-          case Some(Durability.MajorityAndPersistToActive) =>
-            params.put("durabilityMinLevel", "majorityAndPersistActive")
-          case Some(Durability.PersistToMajority) =>
-            params.put("durabilityMinLevel", "persistToMajority")
-          case _ =>
-        }
-        settings.storageBackend match {
-          case Some(StorageBackend.Couchstore) => params.put("storageBackend", "couchstore")
-          case Some(StorageBackend.Magma)      => params.put("storageBackend", "magma")
-          case None                            =>
-        }
-        params.put("name", settings.name)
-        settings.bucketType.foreach(bt => {
-          params.put("bucketType", bt.alias)
-          if (bt != BucketType.Ephemeral && settings.replicaIndexes.isDefined) {
-            params.put("replicaIndex", String.valueOf(if (settings.replicaIndexes.get) 1 else 0))
-          }
-        })
-        //    if (settings.bucketType != BucketType.Ephemeral) {
-        //
-        //    }
-        params
-      })
-  }
 
   private[scala] def toCommonOptions(to: Duration, rs: RetryStrategy): CoreCommonOptions = {
     new CoreCommonOptions {
@@ -183,35 +120,6 @@ object ReactiveBucketManager {
       override def retryStrategy(): Optional[RetryStrategy] = Optional.of(rs)
 
       override def parentSpan(): Optional[RequestSpan] = Optional.empty()
-    }
-  }
-
-  private[scala] def checkValidEjectionMethod(settings: CreateBucketSettings): Try[Unit] = {
-    val validEjectionType = settings.ejectionMethod match {
-      case Some(FullEviction) | Some(ValueOnly) =>
-        settings.bucketType match {
-          case Some(Couchbase) | None => true
-          case _                      => false
-        }
-      case Some(NoEviction) | Some(NotRecentlyUsed) =>
-        settings.bucketType match {
-          case Some(Ephemeral) => true
-          case _               => false
-        }
-      case None => true
-    }
-
-    if (!validEjectionType) {
-      Failure(
-        new InvalidArgumentException(
-          s"Cannot use ejection policy ${settings.ejectionMethod} together with bucket type ${settings.bucketType
-            .getOrElse(Couchbase)}",
-          null,
-          null
-        )
-      );
-    } else {
-      Success(())
     }
   }
 }

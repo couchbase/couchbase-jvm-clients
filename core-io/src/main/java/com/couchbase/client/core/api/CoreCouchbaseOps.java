@@ -23,16 +23,15 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
-import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
-import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
@@ -55,6 +54,8 @@ public interface CoreCouchbaseOps {
   CoreQueryOps queryOps();
 
   CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope);
+
+  CoreBucketManagerOps bucketManager();
 
   CoreCollectionManager collectionManager(String bucketName);
 

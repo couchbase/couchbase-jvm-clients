@@ -106,7 +106,7 @@ class AsyncCluster(
   private[scala] val analyticsHandler           = new AnalyticsHandler(hp)
   private[scala] val searchOps                  = core.searchOps(null)
   private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
-  private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core)
+  private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core, couchbaseOps)
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
     new ReactiveCluster(this),
     analyticsIndexes

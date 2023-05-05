@@ -278,7 +278,7 @@ public class AsyncCluster {
    * Provides access to the bucket management services.
    */
   public AsyncBucketManager buckets() {
-    return new AsyncBucketManager(core());
+    return new AsyncBucketManager(couchbaseOps);
   }
 
   /**

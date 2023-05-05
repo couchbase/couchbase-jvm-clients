@@ -15,24 +15,17 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import java.nio.charset.StandardCharsets
-import com.couchbase.client.core.annotation.Stability.{Internal, Uncommitted, Volatile}
+import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
+import com.couchbase.client.core.config
+import com.couchbase.client.core.error.CouchbaseException
+import com.couchbase.client.core.manager.bucket.{CoreBucketSettings, CoreCompressionMode, CoreEvictionPolicyType, CoreStorageBackend}
+import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.durability.Durability.{
-  Disabled,
-  Majority,
-  MajorityAndPersistToActive,
-  PersistToMajority
-}
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
-import com.couchbase.client.scala.manager.bucket.ConflictResolutionType.{SequenceNumber, Timestamp}
-import com.couchbase.client.scala.manager.bucket.EjectionMethod.{FullEviction, ValueOnly}
-import com.couchbase.client.scala.manager.user.AuthDomain.{External, Local}
-import com.couchbase.client.scala.manager.user._
 import com.couchbase.client.scala.util.CouchbasePickler
 
-import scala.util.Try
+import java.lang
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 @Volatile
 sealed trait BucketType {
@@ -274,31 +267,75 @@ case class CreateBucketSettings(
   def storageBackend(value: StorageBackend): CreateBucketSettings = {
     copy(storageBackend = Some(value))
   }
-}
 
-object CreateBucketSettings {
-  implicit val rw: CouchbasePickler.ReadWriter[CreateBucketSettings] = CouchbasePickler.macroRW
+  private[scala] def toCore: CoreBucketSettings = {
+    val x = this
+    new CoreBucketSettings {
+      override def name(): String = x.name
 
-  implicit val rwd: CouchbasePickler.ReadWriter[Durability] = BucketSettings.rw
+      override def flushEnabled(): lang.Boolean = x.flushEnabled.map(lang.Boolean.valueOf).orNull
+
+      override def ramQuotaMB(): Long = x.ramQuotaMB
+
+      override def numReplicas(): Integer = x.numReplicas.map(Integer.valueOf).orNull
+
+      override def replicaIndexes(): lang.Boolean =
+        x.replicaIndexes.map(lang.Boolean.valueOf).orNull
+
+      override def bucketType(): config.BucketType =
+        x.bucketType.map {
+          case BucketType.Couchbase => config.BucketType.COUCHBASE
+          case BucketType.Memcached => config.BucketType.MEMCACHED
+          case BucketType.Ephemeral => config.BucketType.EPHEMERAL
+        }.orNull
+
+      override def evictionPolicy(): CoreEvictionPolicyType =
+        x.ejectionMethod.map {
+          case EjectionMethod.FullEviction    => CoreEvictionPolicyType.FULL
+          case EjectionMethod.ValueOnly       => CoreEvictionPolicyType.VALUE_ONLY
+          case EjectionMethod.NoEviction      => CoreEvictionPolicyType.NO_EVICTION
+          case EjectionMethod.NotRecentlyUsed => CoreEvictionPolicyType.NOT_RECENTLY_USED
+        }.orNull
+
+      override def maxExpiry(): Duration = x.maxTTL.map(v => Duration.ofSeconds(v)).orNull
+
+      override def compressionMode(): CoreCompressionMode =
+        x.compressionMode.map {
+          case CompressionMode.Off     => CoreCompressionMode.OFF
+          case CompressionMode.Passive => CoreCompressionMode.PASSIVE
+          case CompressionMode.Active  => CoreCompressionMode.ACTIVE
+        }.orNull
+
+      override def minimumDurabilityLevel(): DurabilityLevel =
+        x.minimumDurabilityLevel.map {
+          case Durability.Disabled             => DurabilityLevel.NONE
+          case Durability.ClientVerified(_, _) => DurabilityLevel.NONE
+          case Durability.Majority             => DurabilityLevel.MAJORITY
+          case Durability.MajorityAndPersistToActive =>
+            DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
+          case Durability.PersistToMajority => DurabilityLevel.PERSIST_TO_MAJORITY
+        }.orNull
+
+      override def storageBackend(): CoreStorageBackend =
+        x.storageBackend.map {
+          case StorageBackend.Couchstore => CoreStorageBackend.COUCHSTORE
+          case StorageBackend.Magma      => CoreStorageBackend.MAGMA
+        }.orNull
+    }
+  }
 }
 
 @Volatile
 case class BucketSettings(
     name: String,
-    @upickle.implicits.key("flush")
     flushEnabled: Boolean,
-    @upickle.implicits.key("quota")
     ramQuotaMB: Int,
-    @upickle.implicits.key("replicaNumber")
     numReplicas: Int,
-    @upickle.implicits.key("replicaIndex")
     replicaIndexes: Boolean,
     bucketType: BucketType,
-    @upickle.implicits.key("evictionPolicy")
     ejectionMethod: EjectionMethod,
     maxTTL: Option[Int],
     compressionMode: Option[CompressionMode],
-    @upickle.implicits.key("durabilityMinLevel")
     minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean,
     storageBackend: Option[StorageBackend] = None
@@ -320,75 +357,51 @@ case class BucketSettings(
   }
 }
 
-object BucketSettings {
-  def parseFrom(raw: Array[Byte]): BucketSettings = {
-    val json = JsonObject.fromJson(new String(raw, StandardCharsets.UTF_8))
-    parseFrom(json)
-  }
-
-  def parseFrom(json: JsonObject): BucketSettings = {
-    val flushEnabled = Try(json.bool("flush")).toOption.getOrElse(false)
-    val rawRAM       = json.obj("quota").num("rawRAM")
-    val ramMB        = rawRAM / (1024 * 1024)
-    val numReplicas  = json.num("replicaNumber")
-    val nodes        = json.arr("nodes")
-    var isHealthy    = nodes.nonEmpty
-    import scala.jdk.CollectionConverters._
-    for (v <- nodes.values.asScala) {
-      val j = v.asInstanceOf[JsonObject]
-      if (j.str("status") != "healthy") {
-        isHealthy = false
-      }
-    }
-    // Next two parameters only available post 5.X
-    val maxTTL = Try(json.num("maxTTL")).toOption
-    val compressionMode = Try("\"" + json.str("compressionMode") + "\"")
-      .map(v => CouchbasePickler.read[CompressionMode](v))
-      .toOption
-
-    val minimumDurabilityLevel = Try("\"" + json.str("durabilityMinLevel") + "\"")
-      .map(v => CouchbasePickler.read[Durability](v))
-      .getOrElse(Durability.Disabled)
-
-    val storageBackend: Option[StorageBackend] = Try(json.str("storageBackend")).toOption match {
-      case Some("magma")      => Some(StorageBackend.Magma)
-      case Some("couchstore") => Some(StorageBackend.Couchstore)
-      case _                  => None
-    }
-
+private[scala] object BucketSettings {
+  def fromCore(core: CoreBucketSettings): BucketSettings = {
     BucketSettings(
-      json.str("name"),
-      flushEnabled,
-      ramMB,
-      numReplicas,
-      Try(json.bool("replicaIndex")).toOption.getOrElse(false),
-      CouchbasePickler.read[BucketType]("\"" + json.str("bucketType") + "\""),
-      CouchbasePickler.read[EjectionMethod]("\"" + json.str("evictionPolicy") + "\""),
-      maxTTL,
-      compressionMode,
-      minimumDurabilityLevel,
-      isHealthy,
-      storageBackend
-    )
-  }
-
-  implicit val rw: CouchbasePickler.ReadWriter[Durability] = CouchbasePickler
-    .readwriter[String]
-    .bimap[Durability](
-      {
-        case Disabled                   => "none"
-        case Majority                   => "majority"
-        case MajorityAndPersistToActive => "majorityAndPersistActive"
-        case PersistToMajority          => "persistToMajority"
-        case _                          => throw new IllegalStateException("Unknown durability")
-      }, {
-        case "none"                     => Disabled
-        case "majority"                 => Majority
-        case "majorityAndPersistActive" => MajorityAndPersistToActive
-        case "persistToMajority"        => PersistToMajority
-        case _                          => throw new IllegalStateException("Unknown durability")
+      core.name,
+      core.flushEnabled,
+      core.ramQuotaMB.toInt,
+      core.numReplicas,
+      core.replicaIndexes,
+      core.bucketType match {
+        case com.couchbase.client.core.config.BucketType.COUCHBASE => BucketType.Couchbase
+        case com.couchbase.client.core.config.BucketType.EPHEMERAL => BucketType.Ephemeral
+        case com.couchbase.client.core.config.BucketType.MEMCACHED => BucketType.Memcached
+        case _                                                     => throw new CouchbaseException(s"Unknown bucket type ${core.bucketType}")
+      },
+      core.evictionPolicy match {
+        case CoreEvictionPolicyType.FULL              => EjectionMethod.FullEviction
+        case CoreEvictionPolicyType.VALUE_ONLY        => EjectionMethod.ValueOnly
+        case CoreEvictionPolicyType.NOT_RECENTLY_USED => EjectionMethod.NotRecentlyUsed
+        case CoreEvictionPolicyType.NO_EVICTION       => EjectionMethod.NoEviction
+        case _                                        => throw new CouchbaseException(s"Unknown eviction type ${core.evictionPolicy}")
+      },
+      Option(core.maxExpiry).map(v => TimeUnit.NANOSECONDS.toSeconds(v.toNanos).toInt),
+      Option(core.compressionMode).map {
+        case CoreCompressionMode.OFF     => CompressionMode.Off
+        case CoreCompressionMode.PASSIVE => CompressionMode.Passive
+        case CoreCompressionMode.ACTIVE  => CompressionMode.Active
+        case _                           => throw new CouchbaseException(s"Unknown compression type ${core.compressionMode}")
+      },
+      core.minimumDurabilityLevel match {
+        case DurabilityLevel.NONE                           => Durability.Disabled
+        case DurabilityLevel.MAJORITY                       => Durability.Majority
+        case DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
+        case DurabilityLevel.PERSIST_TO_MAJORITY            => Durability.PersistToMajority
+        case _ =>
+          throw new CouchbaseException(s"Unknown durability type ${core.minimumDurabilityLevel}")
+      },
+      false,
+      // The server can return string "undefined"
+      Option(core.storageBackend).filterNot(_.alias == "undefined").map {
+        case CoreStorageBackend.COUCHSTORE => StorageBackend.Couchstore
+        case CoreStorageBackend.MAGMA      => StorageBackend.Magma
+        case _                             => throw new CouchbaseException(s"Unknown storage type ${core.storageBackend}")
       }
     )
+  }
 }
 
 /** Specifies the underlying storage backend.
@@ -401,19 +414,4 @@ object StorageBackend {
   /** The Magma storage backend is an Enterprise Edition feature.
     */
   case object Magma extends StorageBackend
-  @Internal
-  implicit val rw: CouchbasePickler.ReadWriter[StorageBackend] = CouchbasePickler
-    .readwriter[String]
-    .bimap[StorageBackend](
-      x =>
-        x match {
-          case Couchstore => "couchstore"
-          case Magma      => "magma"
-        },
-      str =>
-        str match {
-          case "couchstore" => Couchstore
-          case "magma"      => Magma
-        }
-    )
 }

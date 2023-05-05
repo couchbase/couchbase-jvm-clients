@@ -21,10 +21,8 @@ import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
-import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
-import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
@@ -34,10 +32,12 @@ import com.couchbase.client.core.endpoint.ProtostellarPool;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketManager;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
@@ -135,6 +135,11 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
     return new ProtostellarCoreKvBinaryOps(this, keyspace);
+  }
+
+  @Override
+  public CoreBucketManagerOps bucketManager() {
+    return new ProtostellarCoreBucketManager(this);
   }
 
   @Override

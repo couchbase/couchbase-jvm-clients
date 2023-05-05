@@ -18,22 +18,21 @@ package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
+import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
+import com.couchbase.client.core.manager.bucket.CoreEvictionPolicyType;
+import com.couchbase.client.core.manager.bucket.CoreStorageBackend;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Map;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.manager.bucket.CoreStorageBackend.COUCHSTORE;
 import static com.couchbase.client.core.util.Validators.notNull;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Represents all properties of a Couchbase Server Bucket.
@@ -42,7 +41,6 @@ import static java.util.Objects.requireNonNull;
  * and {@link AsyncBucketManager}, which can be obtained through {@link Cluster#buckets()}, {@link ReactiveCluster#buckets()}
  * and {@link AsyncCluster#buckets()}.
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class BucketSettings {
 
   private final String name;
@@ -52,8 +50,7 @@ public class BucketSettings {
   private int numReplicas = 1;
   private boolean replicaIndexes = false;
   private Duration maxExpiry = Duration.ZERO;
-  // Package-private to allow access to the raw, nullable value for passthrough purposes
-  @Nullable CompressionMode compressionMode = null;
+  private CompressionMode compressionMode;
   private BucketType bucketType = BucketType.COUCHBASE;
   private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
   private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
@@ -61,62 +58,60 @@ public class BucketSettings {
   private StorageBackend storageBackend = null; // null means default for the bucket type
   private boolean healthy = true;
 
-  /**
-   * Creates {@link BucketSettings} from a raw JSON payload.
-   * <p>
-   * Do not use this API directly, it's internal! Instead use {@link #BucketSettings(String)} and then apply
-   * the customizations through its setters.
-   *
-   * @param name the name of the bucket.
-   * @param controllers the configured controllers.
-   * @param quota the current bucket quota.
-   * @param numReplicas the number of replicas configured.
-   * @param replicaIndex the replica index.
-   * @param maxTTL the maximum TTL currently configured.
-   * @param compressionMode which compression mode is used, if any.
-   * @param bucketType which bucket type is used.
-   * @param conflictResolutionType which conflict resolution type is currently in use.
-   * @param evictionPolicy the eviction policy in use.
-   * @param durabilityMinLevel the minimum durability level configured, if any.
-   * @param storageBackend the storage backend in use.
-   */
   @Stability.Internal
-  @JsonCreator
-  public BucketSettings(
-    @JsonProperty("name") final String name,
-    @JsonProperty("controllers") final Map<String, String> controllers,
-    @JsonProperty("quota") final Map<String, Long> quota,
-    @JsonProperty("replicaNumber") final int numReplicas,
-    @JsonProperty("replicaIndex") final boolean replicaIndex,
-    @JsonProperty("maxTTL") final int maxTTL,
-    @JsonProperty("compressionMode") final CompressionMode compressionMode,
-    @JsonProperty("bucketType") final BucketType bucketType,
-    @JsonProperty("conflictResolutionType") final ConflictResolutionType conflictResolutionType,
-    @JsonProperty("evictionPolicy") final EvictionPolicyType evictionPolicy,
-    @JsonProperty("durabilityMinLevel") final String durabilityMinLevel,
-    @JsonProperty("storageBackend") final StorageBackend storageBackend
-  ) {
-    this.name = name;
-    this.flushEnabled = controllers.containsKey("flush");
-    this.ramQuotaMB = ramQuotaToMB(quota.get("rawRAM"));
-    this.numReplicas = numReplicas;
-    this.replicaIndexes = replicaIndex;
-    this.maxExpiry = Duration.ofSeconds(maxTTL);
-    // Couchbase 5.0 and CE doesn't send a compressionMode
-    this.compressionMode = compressionMode;
-    this.bucketType = bucketType;
-    this.conflictResolutionType = conflictResolutionType;
-    this.evictionPolicy = evictionPolicy;
-    this.minimumDurabilityLevel = DurabilityLevel.decodeFromManagementApi(durabilityMinLevel);
-    this.storageBackend = storageBackend;
+  public BucketSettings(CoreBucketSettings internal) {
+    this.name = internal.name();
+    this.flushEnabled = internal.flushEnabled();
+    this.ramQuotaMB = internal.ramQuotaMB();
+    this.replicaIndexes = internal.replicaIndexes();
+    this.maxExpiry = internal.maxExpiry();
+    switch (internal.compressionMode()) {
+      case OFF:
+        this.compressionMode = CompressionMode.OFF;
+        break;
+      case PASSIVE:
+        this.compressionMode = CompressionMode.PASSIVE;
+        break;
+      case ACTIVE:
+        this.compressionMode = CompressionMode.ACTIVE;
+        break;
+      default:
+        throw new CouchbaseException("Unknown compression mode");
+    }
+    switch (internal.bucketType()) {
+      case COUCHBASE:
+        this.bucketType = BucketType.COUCHBASE;
+        break;
+      case EPHEMERAL:
+        this.bucketType = BucketType.EPHEMERAL;
+        break;
+      case MEMCACHED:
+        this.bucketType = BucketType.MEMCACHED;
+        break;
+    }
+    switch (internal.evictionPolicy()) {
+      case FULL:
+        this.evictionPolicy = EvictionPolicyType.FULL;
+        break;
+      case VALUE_ONLY:
+        this.evictionPolicy = EvictionPolicyType.VALUE_ONLY;
+        break;
+      case NOT_RECENTLY_USED:
+        this.evictionPolicy = EvictionPolicyType.NOT_RECENTLY_USED;
+        break;
+      case NO_EVICTION:
+        this.evictionPolicy = EvictionPolicyType.NO_EVICTION;
+        break;
+    }
+    this.minimumDurabilityLevel = internal.minimumDurabilityLevel();
+    if (internal.storageBackend() == COUCHSTORE) {
+      this.storageBackend = StorageBackend.COUCHSTORE;
+    } else if (internal.storageBackend() == COUCHSTORE) {
+      this.storageBackend = StorageBackend.MAGMA;
+    }
   }
 
-  /**
-   * Creates {@link BucketSettings} with just the name and default settings.
-   *
-   * @param name the name of the bucket.
-   */
-  private BucketSettings(final String name) {
+  BucketSettings(String name) {
     this.name = name;
   }
 
@@ -128,29 +123,6 @@ public class BucketSettings {
    */
   public static BucketSettings create(final String name) {
     return new BucketSettings(name);
-  }
-
-  /**
-   * Helper method to create {@link BucketSettings} from a Jackson JsonNode.
-   *
-   * @param tree the node tree to evaluate.
-   * @return the decoded {@link BucketSettings}.
-   */
-  static BucketSettings create(final JsonNode tree) {
-    BucketSettings settings = Mapper.convertValue(tree, BucketSettings.class);
-    JsonNode nodes = tree.get("nodes");
-    if (nodes.isArray() && !nodes.isEmpty()) {
-      for (final JsonNode node : nodes) {
-        String status = node.get("status").asText();
-        if (!status.equals("healthy")) {
-          settings.healthy = false;
-        }
-      }
-    }
-    else {
-      settings.healthy = false;
-    }
-    return settings;
   }
 
   /**
@@ -435,6 +407,94 @@ public class BucketSettings {
   public BucketSettings ejectionPolicy(EjectionPolicy ejectionPolicy) {
     this.evictionPolicy = ejectionPolicy == null ? null : ejectionPolicy.toEvictionPolicy();
     return this;
+  }
+
+  @Stability.Internal
+  public CoreBucketSettings toCore() {
+    return new CoreBucketSettings() {
+      @Override
+      public String name() {
+        return name;
+      }
+
+      @Override
+      public Boolean flushEnabled() {
+        return flushEnabled;
+      }
+
+      @Override
+      public long ramQuotaMB() {
+        return ramQuotaMB;
+      }
+
+      @Override
+      public Integer numReplicas() {
+        return numReplicas;
+      }
+
+      @Override
+      public Boolean replicaIndexes() {
+        return replicaIndexes;
+      }
+
+      @Override
+      public com.couchbase.client.core.config.BucketType bucketType() {
+        switch (bucketType) {
+          case COUCHBASE: return com.couchbase.client.core.config.BucketType.COUCHBASE;
+          case MEMCACHED: return com.couchbase.client.core.config.BucketType.MEMCACHED;
+          case EPHEMERAL: return com.couchbase.client.core.config.BucketType.EPHEMERAL;
+          default: throw new CouchbaseException("Unknown bucket type " + bucketType);
+        }
+      }
+
+      @Override
+      public CoreEvictionPolicyType evictionPolicy() {
+        if (evictionPolicy == null) {
+          return null;
+        }
+
+        switch (evictionPolicy) {
+          case FULL: return CoreEvictionPolicyType.FULL;
+          case VALUE_ONLY: return CoreEvictionPolicyType.VALUE_ONLY;
+          case NOT_RECENTLY_USED: return CoreEvictionPolicyType.NOT_RECENTLY_USED;
+          case NO_EVICTION: return CoreEvictionPolicyType.NO_EVICTION;
+          default: throw new CouchbaseException("Unknown eviction policy " + evictionPolicy);
+        }
+      }
+
+      @Override
+      public Duration maxExpiry() {
+        return maxExpiry;
+      }
+
+      @Override
+      public CoreCompressionMode compressionMode() {
+        if (compressionMode == null) {
+          return null;
+        }
+
+        switch (compressionMode) {
+          case OFF: return CoreCompressionMode.OFF;
+          case PASSIVE: return CoreCompressionMode.PASSIVE;
+          case ACTIVE: return CoreCompressionMode.ACTIVE;
+          default: throw new CouchbaseException("Unknown compression mode " + compressionMode);
+        }
+      }
+
+      @Override
+      public DurabilityLevel minimumDurabilityLevel() {
+        return minimumDurabilityLevel;
+      }
+
+      @Override
+      public CoreStorageBackend storageBackend() {
+        if (storageBackend == null) {
+          return null;
+        }
+
+        return storageBackend.alias().equals(StorageBackend.MAGMA) ? CoreStorageBackend.MAGMA : CoreStorageBackend.COUCHSTORE;
+      }
+    };
   }
 
   @Override
