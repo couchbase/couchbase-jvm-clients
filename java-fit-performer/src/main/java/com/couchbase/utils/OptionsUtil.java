@@ -100,9 +100,12 @@ public class OptionsUtil {
             }
             // [end:3.3.0]
 
-            if (cc.getUseTls() || cc.hasCertPath()) {
-                clusterEnvironment.securityConfig(sec -> sec.enableTls(cc.getUseTls())
-                        .trustCertificate(Path.of(cc.getCertPath())));
+            if (cc.getUseTls()) {
+                clusterEnvironment.securityConfig(sec -> sec.enableTls(cc.getUseTls()));
+            }
+
+            if (cc.hasCertPath()) {
+              clusterEnvironment.securityConfig(sec -> sec.trustCertificate(Path.of(cc.getCertPath())));
             }
 
             applyClusterConfig(clusterEnvironment, cc);
