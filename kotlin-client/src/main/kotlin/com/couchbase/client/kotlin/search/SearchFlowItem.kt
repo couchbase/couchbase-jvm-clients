@@ -24,7 +24,6 @@ import com.couchbase.client.core.api.search.result.CoreSearchMetrics
 import com.couchbase.client.core.api.search.result.CoreSearchRow
 import com.couchbase.client.core.api.search.result.CoreSearchRowLocations
 import com.couchbase.client.core.api.search.result.CoreTermSearchFacetResult
-import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 import kotlin.time.Duration
@@ -56,8 +55,11 @@ public class SearchRow internal constructor(
     public val score: Double,
 
     /**
-     * Bytes of JSON Object explaining how the score was calculated,
+     * Bytes of a JSON Object explaining how the score was calculated,
      * or an empty array if the `explain` parameter was false.
+     *
+     * The structure of the explanation JSON is unspecified,
+     * and is not part of the public committed API.
      */
     public val explanation: ByteArray,
 
@@ -105,7 +107,7 @@ public class SearchRow internal constructor(
                 id = core.id(),
 
                 score = core.score(),
-                explanation = Mapper.encodeAsBytes(core.explanation()),
+                explanation = core.explanation(),
 
                 locations = parseLocations(core.locations().orElse(null)),
 

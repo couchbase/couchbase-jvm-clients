@@ -47,7 +47,6 @@ import com.couchbase.client.core.api.search.result.CoreSearchTermRange;
 import com.couchbase.client.core.api.search.result.CoreTermSearchFacetResult;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
 import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
@@ -299,18 +298,12 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
       row.getIndex(),
       row.getId(),
       row.getScore(),
-      parseExplanation(row),
+      row.getExplanation().toByteArray(),
       parseLocations(row),
       parseFragments(row),
       parseFields(row),
       () -> CoreSearchKeyset.EMPTY // pending ING-476
     );
-  }
-
-  private static ObjectNode parseExplanation(SearchQueryResponse.SearchQueryRow hit) {
-    return hit.getExplanation().isEmpty()
-      ? Mapper.createObjectNode()
-      : (ObjectNode) Mapper.decodeIntoTree(hit.getExplanation().toByteArray());
   }
 
   private static byte[] parseFields(SearchQueryResponse.SearchQueryRow hit) {

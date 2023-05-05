@@ -61,10 +61,13 @@ case class SearchRow private (private val internal: CoreSearchRow) {
 
   /** If `explain` was set on the `SearchQuery` this will return an explanation of the match.
     *
+    * The structure of the returned JSON is unspecified, and is not part of the public committed API.
+    *
     * It can be returned in any supported JSON type, e.g. `com.couchbase.client.scala.json.JsonObject`.
     * See a full list at [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
     */
   def explanationAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
-    deserializer.deserialize(internal.explanation.toString.getBytes(StandardCharsets.UTF_8))
+    val bytes = if (internal.explanation.isEmpty) "{}".getBytes(StandardCharsets.UTF_8) else internal.explanation()
+    deserializer.deserialize(bytes)
   }
 }

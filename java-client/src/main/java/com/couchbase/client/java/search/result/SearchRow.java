@@ -64,10 +64,13 @@ public class SearchRow {
     }
 
     /**
-     * If {@link SearchOptions#explain(boolean)} () requested in the query}, an explanation of the match, in JSON form.
+     * If {@link SearchOptions#explain(boolean)} was set to true, returns an explanation of the match.
+     * Otherwise, returns an empty object. Intended for diagnostic use only;
+     * the structure of the JSON is unspecified, and not part of the public committed API.
      */
     public JsonObject explanation() {
-        return JsonObject.fromJson(internal.explanation().toString());
+        byte[] bytes = internal.explanation();
+        return bytes.length == 0 ? JsonObject.create() : JsonObject.fromJson(bytes);
     }
 
     /**

@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayN
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
+import com.couchbase.client.core.util.Bytes;
 import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class CoreSearchRow {
   private final String index;
   private final String id;
   private final double score;
-  private final ObjectNode explanation;
+  private final byte[] explanation;
   private final Optional<CoreSearchRowLocations> locations;
   private final Map<String, List<String>> fragments;
   private final byte[] fields;
@@ -56,7 +57,7 @@ public class CoreSearchRow {
       String index,
       String id,
       double score,
-      ObjectNode explanation,
+      @Nullable byte[] explanation,
       Optional<CoreSearchRowLocations> locations,
       Map<String, List<String>> fragments,
       byte[] fields,
@@ -65,7 +66,7 @@ public class CoreSearchRow {
     this.index = index;
     this.id = id;
     this.score = score;
-    this.explanation = explanation;
+    this.explanation = explanation == null ? Bytes.EMPTY_BYTE_ARRAY : explanation;
     this.locations = locations;
     this.fragments = fragments;
     this.fields = fields;
@@ -84,8 +85,8 @@ public class CoreSearchRow {
     return score;
   }
 
-  public ObjectNode explanation() {
-    return explanation == null ? Mapper.createObjectNode() : null;
+  public byte[] explanation() {
+    return explanation;
   }
 
   public Optional<CoreSearchRowLocations> locations() {
@@ -113,7 +114,7 @@ public class CoreSearchRow {
     return Double.compare(searchRow.score, score) == 0 &&
             Objects.equals(index, searchRow.index) &&
             Objects.equals(id, searchRow.id) &&
-            Objects.equals(explanation, searchRow.explanation) &&
+            Arrays.equals(explanation, searchRow.explanation) &&
             Objects.equals(locations, searchRow.locations) &&
             Objects.equals(fragments, searchRow.fragments) &&
             Arrays.equals(fields, searchRow.fields);
@@ -135,7 +136,7 @@ public class CoreSearchRow {
     String index = hit.get("index").textValue();
     String id = hit.get("id").textValue();
     double score = hit.get("score").doubleValue();
-    ObjectNode explanationJson = (ObjectNode) hit.get("explanation");
+    byte[] explanation = parseExplanation(hit);
 
     Optional<CoreSearchRowLocations> locations = Optional.ofNullable(hit.get("locations"))
             .map(v -> CoreSearchRowLocations.from((ObjectNode) v));
@@ -162,7 +163,13 @@ public class CoreSearchRow {
 
     Supplier<CoreSearchKeyset> keyset = lazyParseKeyset(hit);
 
-    return new CoreSearchRow(index, id, score, explanationJson, locations, fragments, fields, keyset);
+    return new CoreSearchRow(index, id, score, explanation, locations, fragments, fields, keyset);
+  }
+
+  @Nullable
+  private static byte[] parseExplanation(ObjectNode hit) {
+    JsonNode node = hit.get("explanation");
+    return node == null ? null : Mapper.encodeAsBytes(node);
   }
 
   private static Supplier<CoreSearchKeyset> lazyParseKeyset(ObjectNode hit) {
@@ -201,7 +208,7 @@ public class CoreSearchRow {
             "index='" + redactMeta(index) + '\'' +
             ", id='" + id + '\'' +
             ", score=" + score +
-            ", explanation=" + explanation +
+            ", explanation=" + new String(explanation, UTF_8) +
             ", locations=" + redactUser(locations) +
             ", fragments=" + redactUser(fragments) +
             '}';
