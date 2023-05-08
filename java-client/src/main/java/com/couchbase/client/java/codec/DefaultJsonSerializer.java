@@ -18,11 +18,12 @@ package com.couchbase.client.java.codec;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JavaType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
+import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
-import com.couchbase.client.java.json.RepackagedJsonValueModule;
-import com.couchbase.client.core.encryption.CryptoManager;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.java.encryption.databind.jackson.repackaged.RepackagedEncryptionModule;
+import com.couchbase.client.java.json.RepackagedJsonValueModule;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -38,7 +39,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class DefaultJsonSerializer implements JsonSerializer {
 
-  private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = Mapper.newObjectMapper();
 
   /**
    * Creates an instance without encryption support.

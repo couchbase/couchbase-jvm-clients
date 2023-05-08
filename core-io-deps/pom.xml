@@ -19,7 +19,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <netty.version>4.1.91.Final</netty.version>
-        <jackson.version>2.14.2</jackson.version>
+        <jackson.version>2.15.0</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
         <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
@@ -319,6 +319,13 @@
                                 <!-- Workaround for Shade plugin bug that causes module-info.class files in META-INF/versions
                                      to be retained. -->
                                 <exclude>**/module-info.class</exclude>
+
+                                <!-- Workaround for https://issues.apache.org/jira/browse/MSHADE-406
+                                     Shade plugin doesn't fully relocate classes that live here.
+                                     (The bytecode gets rewritten, but the filename does not.)
+                                     Assume these classes are just optimizations that take advantage of
+                                     features in newer version of Java; exclude them for now. -->
+                                <exclude>META-INF/versions/**</exclude>
                             </excludes>
                         </filter>
                     </filters>

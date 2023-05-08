@@ -17,6 +17,7 @@
 package com.couchbase.client.core.json;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.StreamReadConstraints;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,7 +43,17 @@ public class Mapper {
 
   // ObjectMapper is mutable. To prevent it from being accidentally (or maliciously) reconfigured,
   // don't expose the ObjectMapper outside this class.
-  private static final ObjectMapper mapper = new ObjectMapper();
+  private static final ObjectMapper mapper = newObjectMapper();
+
+  public static ObjectMapper newObjectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.getFactory().setStreamReadConstraints(
+      StreamReadConstraints.defaults().rebuild()
+        .maxStringLength(20 * 1024 * 1024) // increase from 5 MB to 20 MiB
+        .build()
+    );
+    return mapper;
+  }
 
   // Instead, expose immutable reader and writer for advanced use cases.
   private static final ObjectReader reader = mapper.reader();
