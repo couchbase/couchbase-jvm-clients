@@ -315,6 +315,10 @@
                                 <exclude>google/</exclude>
 
                                 <resource>META-INF/services/reactor.blockhound.integration.BlockHoundIntegration</resource>
+
+                                <!-- Workaround for Shade plugin bug that causes module-info.class files in META-INF/versions
+                                     to be retained. -->
+                                <exclude>**/module-info.class</exclude>
                             </excludes>
                         </filter>
                     </filters>
