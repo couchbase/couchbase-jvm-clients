@@ -70,9 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES,
-  // Failing only if the query already exists - Protostellar does not handle returning this error currently
-  isProtostellarWillWorkLater = true
+  clusterTypes = ClusterType.CAVES
 )
 class QueryIntegrationTest extends JavaIntegrationTest {
 
@@ -436,7 +434,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(missesCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY, isProtostellarWillWorkLater = true)
+    @IgnoreWhen(missesCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY)
     void preserveExpiry() {
         String id = UUID.randomUUID().toString();
         collection.insert(id, FOO_CONTENT, InsertOptions.insertOptions()

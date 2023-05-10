@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.java.codec.RawBinaryTranscoder;
 import com.couchbase.client.java.json.JsonObject;
@@ -25,12 +24,10 @@ import com.couchbase.client.java.kv.MutateInResult;
 import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,10 +36,9 @@ import static com.couchbase.client.java.kv.DecrementOptions.decrementOptions;
 import static com.couchbase.client.java.kv.IncrementOptions.incrementOptions;
 import static com.couchbase.client.java.kv.UpsertOptions.upsertOptions;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
   private Cluster cluster;
@@ -50,7 +46,7 @@ class MutationTokenIntegrationTest extends JavaIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(true)));
+    cluster = createCluster(env -> env.ioConfig(io -> io.enableMutationTokens(true)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 
