@@ -163,9 +163,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
     // [start:1.4.1]
-    else if (op.hasRangeScan) {
+    } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection)
       val options    = createOptions(request)
