@@ -214,7 +214,16 @@ object SearchHelper {
         .toMap
       opts = opts.facets(facets)
     }
-    if (o.hasTimeoutMillis) opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
+    if (o.hasTimeoutMillis) {
+      // [start:1.4.5]
+      opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
+      // [end:1.4.5]
+      // [start:<1.4.5]
+/*
+      throw new UnsupportedOperationException()
+      // [end:<1.4.5]
+*/
+    }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
     if (o.getRawCount > 0) opts = opts.raw(o.getRawMap.asScala.toMap)
     if (o.hasIncludeLocations) opts = opts.includeLocations(o.getIncludeLocations)
@@ -590,6 +599,7 @@ object SearchHelper {
     } else if (command.hasUpsertIndex) {
       val req = command.getUpsertIndex
 
+      // [start:1.4.5]
       val converted = SearchIndex.fromJson(req.getIndexDefinition.toStringUtf8).get
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
@@ -604,6 +614,12 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
+      // [end:1.4.5]
+      // [start:<1.4.5]
+/*
+      throw new UnsupportedOperationException()
+      // [end:<1.4.5]
+*/
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
 
