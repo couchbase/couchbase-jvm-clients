@@ -504,7 +504,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * which time we can remove the restriction on not running this test when mocked.
    */
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true) // Needs ING-502
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void checkExpiryBeyond2038() {
     // The server interprets the 32-bit expiry field as an unsigned
     // integer. This means the maximum value is 4294967295 seconds,
@@ -534,7 +534,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * ensures we're shielding the user from that surprising behavior.
    */
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true) // Needs ING-502
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void checkExpiryBeyond30Days() {
     checkExpiry(Duration.ofDays(31));
   }
