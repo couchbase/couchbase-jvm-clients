@@ -923,7 +923,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void incrementThrowsDocumentNotFoundWhenInitialValueNotSupplied() throws Exception {
     String id = UUID.randomUUID().toString();
     assertThrows(DocumentNotFoundException.class, () -> collection.binary().increment(id));
@@ -999,7 +999,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void decrementThrowsDocumentNotFoundWhenInitialValueNotSupplied() throws Exception {
     String id = UUID.randomUUID().toString();
     assertThrows(DocumentNotFoundException.class, () -> collection.binary().decrement(id));

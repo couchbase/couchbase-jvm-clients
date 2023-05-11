@@ -118,8 +118,13 @@ public class CoreProtoStellarKvBinaryRequests {
     Duration timeout = CoreProtostellarUtil.kvDurableTimeout(opts.timeout(), durability, core);
 
     IncrementRequest.Builder request = com.couchbase.client.protostellar.kv.v1.IncrementRequest.newBuilder()
-      .setBucketName(keyspace.bucket()).setScopeName(keyspace.scope()).setCollectionName(keyspace.collection())
-      .setKey(key).setDelta(delta).setInitial(initial.orElse(0L));
+      .setBucketName(keyspace.bucket())
+      .setScopeName(keyspace.scope())
+      .setCollectionName(keyspace.collection())
+      .setKey(key)
+      .setDelta(delta);
+
+    initial.ifPresent(request::setInitial);
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
@@ -156,8 +161,9 @@ public class CoreProtoStellarKvBinaryRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setDelta(delta)
-      .setInitial(initial.orElse(0L));
+      .setDelta(delta);
+
+    initial.ifPresent(request::setInitial);
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
