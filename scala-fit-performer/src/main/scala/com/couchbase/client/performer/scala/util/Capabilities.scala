@@ -37,7 +37,10 @@ object Capabilities {
     out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT)
     // [end:1.4.4]
 
+    // SearchIndex.fromJson only added here and is crucial for testing
+    // [start:1.4.5]
     out.add(Caps.SDK_SEARCH)
+    // [end:1.4.5]
 
     out
   }
