@@ -40,10 +40,10 @@ class ExpiryTest {
 
     // almost certainly a programming error, and the epoch seconds would be misinterpreted as durations (< 30 day, give or take)
     assertInvalid(Instant.ofEpochSecond(1));
-    assertInvalid(Instant.ofEpochSecond((Duration.ofDays(31).getSeconds() - 1)));
+    assertInvalid(Instant.ofEpochSecond((Duration.ofDays(30).getSeconds())));
 
-    // first valid expiry instant ...ish.. the true value is 30 days (plus one second?) but it's fine to err on the side of caution.
-    assertValid(Instant.ofEpochSecond(Duration.ofDays(31).getSeconds()));
+    // first valid expiry instant
+    assertValid(Instant.ofEpochSecond(Duration.ofDays(30).getSeconds() + 1));
 
     // max value for 32-bit unsigned integer
     assertValid(Instant.ofEpochSecond(4294967295L));

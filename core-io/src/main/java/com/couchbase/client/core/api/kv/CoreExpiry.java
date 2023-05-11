@@ -42,7 +42,7 @@ public final class CoreExpiry {
    * integer. This means the maximum value is 4294967295 seconds,
    * which corresponds to 2106-02-07T06:28:15Z.
    */
-  public static final Instant LATEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(4294967295L);
+  public static final Instant LATEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(0xffffffffL);
 
   /**
    * Earliest expiry instant that can be represented in the Memcached binary protocol.
@@ -53,7 +53,7 @@ public final class CoreExpiry {
    * Fortunately, setting a document's expiry this far in the past is almost certainly a
    * programming error, so it's fine for the SDK to throw an exception.
    */
-  public static final Instant EARLIEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(DAYS.toSeconds(31));
+  public static final Instant EARLIEST_VALID_EXPIRY_INSTANT = Instant.ofEpochSecond(DAYS.toSeconds(30) + 1);
 
   @Nullable private final Duration relative;
   @Nullable private final Instant absolute;

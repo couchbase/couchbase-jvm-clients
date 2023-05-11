@@ -23,7 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 import static com.couchbase.client.core.classic.ClassicExpiryHelper.encode;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ClassicExpiryHelperTest {
 
@@ -32,13 +32,13 @@ class ClassicExpiryHelperTest {
     // this behavior isn't *critical*, but it does mitigate clock drift for very short durations
     assertEncodedAsSecondsFromNow(Duration.ofSeconds(1));
     assertEncodedAsSecondsFromNow(Duration.ofDays(30).minusSeconds(1));
+    assertEncodedAsSecondsFromNow(Duration.ofDays(30));
   }
 
   @Test
   void longDurationsAreConvertedToEpochSecond() {
-    // if duration is exactly 30 days, err on the side of caution and convert to epoch second
-    assertEncodedAsEpochSecond(Duration.ofDays(30));
     assertEncodedAsEpochSecond(Duration.ofDays(30).plusSeconds(1));
+    assertEncodedAsEpochSecond(Duration.ofDays(31));
   }
 
   @Test

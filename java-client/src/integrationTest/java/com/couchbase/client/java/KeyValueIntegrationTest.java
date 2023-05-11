@@ -529,14 +529,14 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   /**
-   * 30 days is the cutoff where the server starts interpreting
+   * 30 days is the threshold after which the server starts interpreting
    * the expiry value as an epoch second instead of a duration. This test
    * ensures we're shielding the user from that surprising behavior.
    */
   @Test
   @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   void checkExpiryBeyond30Days() {
-    checkExpiry(Duration.ofDays(31));
+    checkExpiry(Duration.ofDays(30).plus(1, SECONDS));
   }
 
   void checkExpiry(Duration expiryDuration) {

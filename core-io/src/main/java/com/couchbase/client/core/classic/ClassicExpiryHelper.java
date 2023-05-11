@@ -33,7 +33,7 @@ public class ClassicExpiryHelper {
    * Durations longer than this must be converted to an
    * epoch second before being passed to the server.
    */
-  private static final int RELATIVE_EXPIRY_CUTOFF_SECONDS = (int) DAYS.toSeconds(30);
+  private static final int MAXIMUM_RELATIVE_EXPIRY_SECONDS = (int) DAYS.toSeconds(30);
 
   private ClassicExpiryHelper() {
     throw new AssertionError("not instantiable");
@@ -59,7 +59,7 @@ public class ClassicExpiryHelper {
 
   private static long encode(Duration duration, Supplier<Long> millisClock) {
     long seconds = duration.getSeconds();
-    if (seconds < RELATIVE_EXPIRY_CUTOFF_SECONDS) {
+    if (seconds <= MAXIMUM_RELATIVE_EXPIRY_SECONDS) {
       return seconds;
     }
 
