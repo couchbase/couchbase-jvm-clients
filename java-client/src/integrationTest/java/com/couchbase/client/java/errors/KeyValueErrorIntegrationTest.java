@@ -233,7 +233,7 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @IgnoreWhen(isProtostellarWillWorkLater = true, clusterVersionEquals = "7.5.0") //Requires ING-514 fix
   void verifyUnlockExceptions() {
     assertThrows(InvalidArgumentException.class, () -> collection.unlock(null, 0));
     assertThrows(InvalidArgumentException.class, () -> collection.unlock("foo", 0));

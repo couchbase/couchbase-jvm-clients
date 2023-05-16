@@ -152,7 +152,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstone() {
-    String id = "test";
+    String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
   }
 

@@ -94,6 +94,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   }
 
   @Test
+  @IgnoreWhen(clusterVersionEquals = "7.5.0") // Disabled until JCBC-2066 is fixed
   void fullRangeScanOnCollectionWithContent() {
     AtomicLong count = new AtomicLong(0);
     collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),

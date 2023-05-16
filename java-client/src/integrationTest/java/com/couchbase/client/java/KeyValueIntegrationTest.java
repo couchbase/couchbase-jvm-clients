@@ -595,7 +595,10 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   private static final Instant NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS);
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Need ING-369
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY,
+    clusterTypes = ClusterType.CAVES,
+    isProtostellarWillWorkLater = true, // Need ING-369
+    clusterVersionEquals = "7.5.0") // Need ING-434
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions()

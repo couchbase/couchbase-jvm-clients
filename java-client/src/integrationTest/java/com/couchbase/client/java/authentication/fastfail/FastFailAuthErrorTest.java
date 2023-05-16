@@ -38,6 +38,7 @@ import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
+import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,7 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * - various operations (KV, waitUntilReady, query, etc.)
  * - AuthenticationStatus in EndpointDiagnostic is correct
  */
-@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED}, missesCapabilities = {Capabilities.COLLECTIONS})
+@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED, ClusterType.CAPELLA}, missesCapabilities = {Capabilities.COLLECTIONS})
 class FastFailAuthErrorTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(FastFailAuthErrorTest.class);
 
