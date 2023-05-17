@@ -100,12 +100,19 @@ public class OptionsUtil {
             }
             // [end:3.3.0]
 
+            SecurityConfig.Builder secBuilder = null;
             if (cc.getUseTls()) {
-                clusterEnvironment.securityConfig(SecurityConfig.enableTls(cc.getUseTls()));
+                secBuilder = SecurityConfig.builder();
+                secBuilder.enableTls(cc.getUseTls());
             }
 
             if (cc.hasCertPath()) {
-              clusterEnvironment.securityConfig(SecurityConfig.trustCertificate(Path.of(cc.getCertPath())));
+              if (secBuilder == null) secBuilder = SecurityConfig.builder();
+              secBuilder.trustCertificate(Path.of(cc.getCertPath()));
+            }
+
+            if (secBuilder != null) {
+              clusterEnvironment.securityConfig(secBuilder);
             }
 
             applyClusterConfig(clusterEnvironment, cc);
