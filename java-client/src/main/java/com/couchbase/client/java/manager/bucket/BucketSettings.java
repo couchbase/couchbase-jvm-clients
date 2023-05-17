@@ -32,6 +32,7 @@ import java.time.Duration;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.manager.bucket.CoreStorageBackend.COUCHSTORE;
+import static com.couchbase.client.core.manager.bucket.CoreStorageBackend.MAGMA;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -64,19 +65,23 @@ public class BucketSettings {
     this.flushEnabled = internal.flushEnabled();
     this.ramQuotaMB = internal.ramQuotaMB();
     this.replicaIndexes = internal.replicaIndexes();
+    this.numReplicas = internal.numReplicas();
     this.maxExpiry = internal.maxExpiry();
-    switch (internal.compressionMode()) {
-      case OFF:
-        this.compressionMode = CompressionMode.OFF;
-        break;
-      case PASSIVE:
-        this.compressionMode = CompressionMode.PASSIVE;
-        break;
-      case ACTIVE:
-        this.compressionMode = CompressionMode.ACTIVE;
-        break;
-      default:
-        throw new CouchbaseException("Unknown compression mode");
+    // Will be null for CE
+    if (internal.compressionMode() != null) {
+      switch (internal.compressionMode()) {
+        case OFF:
+          this.compressionMode = CompressionMode.OFF;
+          break;
+        case PASSIVE:
+          this.compressionMode = CompressionMode.PASSIVE;
+          break;
+        case ACTIVE:
+          this.compressionMode = CompressionMode.ACTIVE;
+          break;
+        default:
+          throw new CouchbaseException("Unknown compression mode");
+      }
     }
     switch (internal.bucketType()) {
       case COUCHBASE:
@@ -106,7 +111,7 @@ public class BucketSettings {
     this.minimumDurabilityLevel = internal.minimumDurabilityLevel();
     if (internal.storageBackend() == COUCHSTORE) {
       this.storageBackend = StorageBackend.COUCHSTORE;
-    } else if (internal.storageBackend() == COUCHSTORE) {
+    } else if (internal.storageBackend() == MAGMA) {
       this.storageBackend = StorageBackend.MAGMA;
     }
   }
@@ -492,7 +497,7 @@ public class BucketSettings {
           return null;
         }
 
-        return storageBackend.alias().equals(StorageBackend.MAGMA) ? CoreStorageBackend.MAGMA : CoreStorageBackend.COUCHSTORE;
+        return storageBackend.alias().equals(StorageBackend.MAGMA.alias()) ? CoreStorageBackend.MAGMA : CoreStorageBackend.COUCHSTORE;
       }
     };
   }
