@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -27,6 +28,9 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ConnectionStringPropertyLoaderTest {
@@ -85,6 +89,27 @@ class ConnectionStringPropertyLoaderTest {
     } finally {
       Files.delete(Paths.get(certPath));
     }
+  }
+
+  @Test
+  void shouldSupportInsecureTlsWithCompatName() {
+    parse(
+      "couchbases://127.0.0.1?tls_verify=none",
+      env -> assertSame(env.securityConfig().trustManagerFactory(), InsecureTrustManagerFactory.INSTANCE)
+    );
+
+    parse(
+      "couchbases://127.0.0.1?tls_verify=peer",
+      env -> assertNull(env.securityConfig().trustManagerFactory())
+    );
+
+    assertThrows(IllegalArgumentException.class, () ->
+      parse(
+        "couchbases://127.0.0.1?tls_verify=bogus",
+        env -> {
+        }
+      )
+    );
   }
 
   @Test

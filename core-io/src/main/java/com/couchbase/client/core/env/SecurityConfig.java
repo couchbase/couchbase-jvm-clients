@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
@@ -348,6 +349,43 @@ public class SecurityConfig {
      */
     public Builder enableHostnameVerification(boolean hostnameVerificationEnabled) {
       this.hostnameVerificationEnabled = hostnameVerificationEnabled;
+      return this;
+    }
+
+    /**
+     * Pass false to bypass all TLS certificate verification checks.
+     * This is equivalent to calling {@link #trustManagerFactory(TrustManagerFactory)}
+     * with an argument of {@link InsecureTrustManagerFactory#INSTANCE}.
+     * <p>
+     * Certificate verification is enabled by default. Passing true has no effect, unless a TrustManagerFactory
+     * has already been specified, in which case this method throws {@link IllegalStateException}.
+     * <p>
+     * Certificate verification <b>must never be disabled in a production environment</b>, and should be disabled in
+     * development only if there is no better solution. The better solution is almost always to specify
+     * the CA certificate(s) to trust, by calling {@link #trustCertificate(Path)} or some variant.
+     * <p>
+     * See also {@link #enableHostnameVerification}, which can selectively disable just hostname verification.
+     *
+     * @param certificateVerificationEnabled Pass false to set the trust manager factory to {@link InsecureTrustManagerFactory#INSTANCE},
+     * and bypass all TLS certificate verification checks.
+     * Passing true has no effect.
+     * @return this {@link Builder} for chaining purposes.
+     * @throws IllegalStateException if a {@link TrustManagerFactory} has already been specified, and {@code certificateVerificationEnabled} is true.
+     */
+    @Stability.Volatile
+    public Builder enableCertificateVerification(final boolean certificateVerificationEnabled) {
+      if (certificateVerificationEnabled && this.trustManagerFactory != null) {
+        // Fail here for safety. We *could* unset the factory if it's an instance of InsecureTrustManagerFactory,
+        // but it's possible the user previously set some other factory that disables verification,
+        // like the InsecureTrustManagerFactory from an un-shaded version of Netty.
+        // Having this setting be a one-way switch from secure to insecure rules out that possibility.
+        throw new IllegalStateException("Can't call enableCertificateVerification(true), because a TrustManagerFactory has already been specified.");
+      }
+
+      if (!certificateVerificationEnabled) {
+        trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
+      }
+
       return this;
     }
 

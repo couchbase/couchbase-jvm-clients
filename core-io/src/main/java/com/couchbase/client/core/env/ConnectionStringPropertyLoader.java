@@ -91,7 +91,29 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
       properties.put("security.enableTls", "true");
     }
 
+    translateTlsVerify(properties);
+
     return properties;
+  }
+
+  private static void translateTlsVerify(Map<String, String> properties) {
+    String tlsVerify = properties.remove("tls_verify");
+    if (tlsVerify == null) {
+      return;
+    }
+
+    String javaName = "security.enableCertificateVerification";
+    switch (tlsVerify) {
+        case "none":
+          properties.put(javaName, "false");
+          break;
+        case "peer":
+          properties.put(javaName, "true");
+          break;
+        default:
+          throw new IllegalArgumentException(
+            "Unexpected value for connection string parameter 'tls_verify'; expected 'none' or 'peer', but got: '" + tlsVerify + "'");
+      }
   }
 
 }
