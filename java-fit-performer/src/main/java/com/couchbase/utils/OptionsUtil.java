@@ -27,6 +27,8 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.java.Cluster;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -67,9 +69,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -103,15 +111,31 @@ public class OptionsUtil {
             SecurityConfig.Builder secBuilder = null;
             if (cc.getUseTls()) {
                 secBuilder = SecurityConfig.builder();
-                secBuilder.enableTls(cc.getUseTls());
+                secBuilder.enableTls(true);
             }
 
             if (cc.hasCertPath()) {
               if (secBuilder == null) secBuilder = SecurityConfig.builder();
+              logger.info("Using certificate from file {}", cc.getCertPath());
               secBuilder.trustCertificate(Path.of(cc.getCertPath()));
             }
 
-            if (secBuilder != null) {
+          if (cc.hasCert()) {
+            if (secBuilder == null) secBuilder = SecurityConfig.builder();
+            try {
+              CertificateFactory cFactory = CertificateFactory.getInstance("X.509");
+              var file = new ByteArrayInputStream(cc.getCert().getBytes(StandardCharsets.UTF_8));
+              logger.info("Using certificate {}", cc.getCert());
+              X509Certificate cert = (X509Certificate) cFactory.generateCertificate(file);
+
+              secBuilder.trustCertificates(List.of(cert));
+            }
+            catch (CertificateException err) {
+              throw new RuntimeException(err);
+            }
+          }
+
+          if (secBuilder != null) {
               clusterEnvironment.securityConfig(secBuilder);
             }
 
