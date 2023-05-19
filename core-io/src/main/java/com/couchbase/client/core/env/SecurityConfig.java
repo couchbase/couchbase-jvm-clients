@@ -72,6 +72,11 @@ public class SecurityConfig {
      * By default, hostname verification for TLS connections is enabled.
      */
     public static final boolean DEFAULT_HOSTNAME_VERIFICATION_ENABLED = true;
+
+    /**
+     * By default, certificate verification for TLS connections is enabled.
+     */
+    public static final boolean DEFAULT_CERTIFICATE_VERIFICATION_ENABLED = true;
   }
 
   @Stability.Internal
@@ -216,26 +221,35 @@ public class SecurityConfig {
   private SecurityConfig(final Builder builder) {
     tlsEnabled = builder.tlsEnabled;
     nativeTlsEnabled = builder.nativeTlsEnabled;
-    trustManagerFactory = builder.trustManagerFactory;
+    trustManagerFactory = builder.certificateVerificationEnabled
+      ? builder.trustManagerFactory
+      : InsecureTrustManagerFactory.INSTANCE;
     hostnameVerificationEnabled = builder.hostnameVerificationEnabled;
     ciphers = builder.ciphers;
 
     if (!tlsEnabled) {
       trustCertificates = builder.trustCertificates;
       userSpecifiedTrustSource = true; // well, they specified not to use TLS!
-    } else {
-      if (builder.trustCertificates != null && builder.trustManagerFactory != null) {
-        throw InvalidArgumentException.fromMessage("Either trust certificates or a trust manager factory" +
-          " can be provided, but not both!");
-      }
-
-      userSpecifiedTrustSource = builder.trustCertificates != null || builder.trustManagerFactory != null;
-
-      // If no trust settings have been specified, trust the default CA certificates.
-      trustCertificates = userSpecifiedTrustSource
-          ? builder.trustCertificates
-          : defaultCaCertificates();
+      return;
     }
+
+    if (builder.trustCertificates != null && builder.trustManagerFactory != null) {
+      throw InvalidArgumentException.fromMessage("Either trust certificates or a trust manager factory" +
+        " can be provided, but not both!");
+    }
+
+    if (!builder.certificateVerificationEnabled) {
+      userSpecifiedTrustSource = true; // well, they specified to trust any certificate!
+      trustCertificates = null;
+      return;
+    }
+
+    userSpecifiedTrustSource = builder.trustCertificates != null || builder.trustManagerFactory != null;
+
+    // If no trust settings have been specified, trust the default CA certificates.
+    trustCertificates = userSpecifiedTrustSource
+      ? builder.trustCertificates
+      : defaultCaCertificates();
   }
 
   /**
@@ -313,6 +327,8 @@ public class SecurityConfig {
     private boolean tlsEnabled = Defaults.DEFAULT_TLS_ENABLED;
     private boolean nativeTlsEnabled = Defaults.DEFAULT_NATIVE_TLS_ENABLED;
     private boolean hostnameVerificationEnabled = Defaults.DEFAULT_HOSTNAME_VERIFICATION_ENABLED;
+    private boolean certificateVerificationEnabled = Defaults.DEFAULT_CERTIFICATE_VERIFICATION_ENABLED;
+
     private List<X509Certificate> trustCertificates = null;
     private TrustManagerFactory trustManagerFactory = null;
     private List<String> ciphers = Collections.emptyList();
@@ -357,8 +373,7 @@ public class SecurityConfig {
      * This is equivalent to calling {@link #trustManagerFactory(TrustManagerFactory)}
      * with an argument of {@link InsecureTrustManagerFactory#INSTANCE}.
      * <p>
-     * Certificate verification is enabled by default. Passing true has no effect, unless a TrustManagerFactory
-     * has already been specified, in which case this method throws {@link IllegalStateException}.
+     * Certificate verification is enabled by default.
      * <p>
      * Certificate verification <b>must never be disabled in a production environment</b>, and should be disabled in
      * development only if there is no better solution. The better solution is almost always to specify
@@ -368,24 +383,11 @@ public class SecurityConfig {
      *
      * @param certificateVerificationEnabled Pass false to set the trust manager factory to {@link InsecureTrustManagerFactory#INSTANCE},
      * and bypass all TLS certificate verification checks.
-     * Passing true has no effect.
      * @return this {@link Builder} for chaining purposes.
-     * @throws IllegalStateException if a {@link TrustManagerFactory} has already been specified, and {@code certificateVerificationEnabled} is true.
      */
     @Stability.Volatile
     public Builder enableCertificateVerification(final boolean certificateVerificationEnabled) {
-      if (certificateVerificationEnabled && this.trustManagerFactory != null) {
-        // Fail here for safety. We *could* unset the factory if it's an instance of InsecureTrustManagerFactory,
-        // but it's possible the user previously set some other factory that disables verification,
-        // like the InsecureTrustManagerFactory from an un-shaded version of Netty.
-        // Having this setting be a one-way switch from secure to insecure rules out that possibility.
-        throw new IllegalStateException("Can't call enableCertificateVerification(true), because a TrustManagerFactory has already been specified.");
-      }
-
-      if (!certificateVerificationEnabled) {
-        trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
-      }
-
+      this.certificateVerificationEnabled = certificateVerificationEnabled;
       return this;
     }
 
