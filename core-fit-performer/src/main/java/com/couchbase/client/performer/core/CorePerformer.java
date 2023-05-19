@@ -63,7 +63,8 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
                 .addSupportedApis(API.DEFAULT) // blocking only for now
                 .addPerformerCaps(Caps.GRPC_TESTING)
                 .addPerformerCaps(Caps.KV_SUPPORT_1)
-                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.WAIT_UNTIL_READY);
+                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.WAIT_UNTIL_READY)
+                .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.PROTOSTELLAR);
 
         customisePerformerCaps(builder);
 

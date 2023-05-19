@@ -41,8 +41,6 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
   private var lastCollectionGrpc: com.couchbase.client.protocol.shared.Collection = _
   private var lastCollection: Collection = _
 
-  cluster.waitUntilReady(30.seconds)
-
   def collection(loc: DocLocation): Collection = {
     val coll = {
       if (loc.hasPool) loc.getPool.getCollection
