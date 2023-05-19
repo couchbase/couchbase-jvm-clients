@@ -76,31 +76,31 @@ public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchInd
   }
 
   String analyzeDocumentPath(String indexName) {
-    return globalIndexPath(indexName) + "/analyzeDoc";
+    return indexPath(indexName) + "/analyzeDoc";
   }
 
   String pauseIngestPath(String indexName) {
-    return globalIndexPath(indexName) + "/ingestControl/pause";
+    return indexPath(indexName) + "/ingestControl/pause";
   }
 
   String resumeIngestPath(String indexName) {
-    return globalIndexPath(indexName) + "/ingestControl/resume";
+    return indexPath(indexName) + "/ingestControl/resume";
   }
 
   String allowQueryingPath(String indexName) {
-    return globalIndexPath(indexName) + "/queryControl/allow";
+    return indexPath(indexName) + "/queryControl/allow";
   }
 
   String disallowQueryingPath(String indexName) {
-    return globalIndexPath(indexName) + "/queryControl/disallow";
+    return indexPath(indexName) + "/queryControl/disallow";
   }
 
   String freezePlanPath(String indexName) {
-    return globalIndexPath(indexName) + "/planFreezeControl/freeze";
+    return indexPath(indexName) + "/planFreezeControl/freeze";
   }
 
   String unfreezePlanPath(String indexName) {
-    return globalIndexPath(indexName) + "/planFreezeControl/unfreeze";
+    return indexPath(indexName) + "/planFreezeControl/unfreeze";
   }
 
   public CompletableFuture<CoreSearchIndex> getIndex(String name, CoreCommonOptions options) {
