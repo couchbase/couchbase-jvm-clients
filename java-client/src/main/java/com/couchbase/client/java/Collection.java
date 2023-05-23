@@ -68,9 +68,9 @@ import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.query.CollectionQueryIndexManager;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -317,11 +317,44 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
+    return getAndTouch(id, Expiry.relative(expiry), options);
+  }
+
+  /**
+   * Fetches a full document and resets its expiration time to the expiry provided.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiration time for the document.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public GetResult getAndTouch(final String id, final Instant expiry) {
+    return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
+  }
+
+  /**
+   * Fetches a full document and resets its expiration time to the expiry provided with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiration time for the document.
+   * @param options options to customize the get and touch request.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public GetResult getAndTouch(final String id, final Instant expiry, final GetAndTouchOptions options) {
+    return getAndTouch(id, Expiry.absolute(expiry), options);
+  }
+
+  private GetResult getAndTouch(final String id, final Expiry expiry, final GetAndTouchOptions options) {
     notNull(expiry, "expiry");
     GetAndTouchOptions.Built opts = notNull(options, "options").build();
 
     return new GetResult(
-      kvOps.getAndTouchBlocking(opts, id, Expiry.relative(expiry).encode()),
+      kvOps.getAndTouchBlocking(opts, id, expiry.encode()),
       opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
     );
   }

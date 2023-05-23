@@ -359,6 +359,25 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
   }
 
+  @Test
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}) // Mock doesn't support get withExpiry=true
+  void getAndTouchWithInstant() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", true);
+    collection.insert(id, content);
+
+    Instant expiry = Instant.now().plus(5, DAYS);
+
+    GetResult getResult = collection.getAndTouch(id, expiry);
+    assertEquals(content, getResult.contentAsObject());
+
+    assertEquals(
+      Optional.of(expiry.truncatedTo(SECONDS)),
+      collection.get(id, getOptions().withExpiry(true)).expiryTime()
+    );
+  }
+
   /**
    * This test is ignored against the mock because right now it does not bump the CAS like
    * the server does when getAndTouch is called.

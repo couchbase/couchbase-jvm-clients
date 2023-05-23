@@ -56,6 +56,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -274,10 +275,39 @@ public class ReactiveCollection {
    * @return a {@link Mono} completing once loaded or failed.
    */
   public Mono<GetResult> getAndTouch(final String id, final Duration expiry, final GetAndTouchOptions options) {
+    return getAndTouch(id, Expiry.relative(expiry), options);
+  }
+
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with default
+   * options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiration time for the document.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
+  public Mono<GetResult> getAndTouch(final String id, final Instant expiry) {
+    return getAndTouch(id, expiry, DEFAULT_GET_AND_TOUCH_OPTIONS);
+  }
+
+  /**
+   * Fetches a full document and resets its expiration time to the value provided with custom
+   * options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiration time for the document.
+   * @param options custom options to change the default behavior.
+   * @return a {@link Mono} completing once loaded or failed.
+   */
+  public Mono<GetResult> getAndTouch(final String id, final Instant expiry, final GetAndTouchOptions options) {
+    return getAndTouch(id, Expiry.absolute(expiry), options);
+  }
+
+  private Mono<GetResult> getAndTouch(final String id, final Expiry expiry, final GetAndTouchOptions options) {
     GetAndTouchOptions.Built opts = options.build();
     Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
 
-    return kvOps.getAndTouchReactive(opts, id, Expiry.relative(expiry).encode())
+    return kvOps.getAndTouchReactive(opts, id, expiry.encode())
       .map(it -> new GetResult(it, transcoder));
   }
 

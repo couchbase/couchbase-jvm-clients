@@ -23,8 +23,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import java.time.Duration;
 import java.time.Instant;
 
-import static com.couchbase.client.core.api.kv.CoreExpiry.EARLIEST_VALID_EXPIRY_INSTANT;
-import static com.couchbase.client.core.api.kv.CoreExpiry.LATEST_VALID_EXPIRY_INSTANT;
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
 
@@ -50,7 +49,7 @@ public class Expiry {
    * @throws InvalidArgumentException if the Duration is non-zero and less than 1 second, or greater than 18,250 days (~50 years)
    */
   public static Expiry relative(Duration expiry) {
-    requireNonNull(expiry);
+    notNull(expiry, "expiry");
 
     // Perhaps not ideal, but there's code in the wild that depends on this behavior.
     // This is also consistent with how Instant.EPOCH (zero) means "no expiry".
@@ -85,7 +84,7 @@ public class Expiry {
    * @throws InvalidArgumentException if the Instant is after 2106-02-07T06:28:15Z, or is non-zero and before 1970-02-01T00:00:00Z
    */
   public static Expiry absolute(Instant expiry) {
-    requireNonNull(expiry);
+    notNull(expiry, "expiry");
     return new Expiry(CoreExpiry.of(expiry));
   }
 

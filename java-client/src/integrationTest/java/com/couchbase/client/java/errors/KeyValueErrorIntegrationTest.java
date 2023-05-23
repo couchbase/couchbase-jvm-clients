@@ -38,6 +38,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -138,7 +139,8 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch("foo", Duration.ofSeconds(1), null));
     assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch("", Duration.ofSeconds(1)));
     assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch(null, Duration.ofSeconds(1)));
-    assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch("foo", (Duration) null));
+    assertThrows(InvalidArgumentException.class, () -> collection.getAndTouch("foo", (Instant) null));
   }
 
   /**
