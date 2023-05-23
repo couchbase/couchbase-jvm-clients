@@ -2,6 +2,7 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.InvalidArgumentException
+import com.couchbase.client.core.kv.CoreRangeScanItem
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.CbStrings.{MAX_CODE_POINT_AS_STRING, MIN_CODE_POINT_AS_STRING}
 import com.couchbase.client.scala.codec.{
@@ -197,27 +198,29 @@ case class ScanOptions(
 
 /** A KV range scan operation will return a stream of these.
   *
-  * @param id         the unique identifier of the document
-  * @param idOnly     whether the scan was initiated with `idsOnly` set.  If so, only the `id` field is present.
-  * @param cas        the document's CAS value at the time of the lookup.
-  *                   Will not be present if the scan was performed with `idsOnly` set.
-  * @param expiryTime the document's expiration time, if it was fetched without the `idsOnly` flag set.  If that flag
-  *                   was not set, this will be None.  The time is the point in time when the document expires.
-  *
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list
   *                        of types that are supported 'out of the box' is available at
   *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
   */
-case class ScanResult(
-    id: String,
-    idOnly: Boolean,
-    private val content: Option[Array[Byte]],
-    private[scala] val flags: Int,
-    cas: Option[Long],
-    expiryTime: Option[Instant],
-    transcoder: Transcoder
-) {
+case class ScanResult private (private val internal: CoreRangeScanItem, transcoder: Transcoder) {
+
+  /** The unique identifier of the document. */
+  def id: String = internal.key
+
+  /** Whether the scan was initiated with `idsOnly` set.  If so, only the `id` field is present. */
+  def idOnly: Boolean = internal.value.length == 0
+
+  /** The document's CAS value at the time of the lookup.
+    * Will not be present if the scan was performed with `idsOnly` set. */
+  def cas: Option[Long] = internal.cas() match {
+    case 0 => None
+    case _ => Some(internal.cas())
+  }
+
+  /** The document's expiration time, if it was fetched without the `idsOnly` flag set.  If that flag
+    * was not set, this will be None.  The time is the point in time when the document expires. */
+  def expiryTime: Option[Instant] = Option(internal.expiry())
 
   /** If the scan was initiated without the `idsOnly` flag set then this will contain the
     * document's expiration value.  Otherwise it will be None.
@@ -234,21 +237,11 @@ case class ScanResult(
     * @tparam T $SupportedTypes
     */
   def contentAs[T](implicit deserializer: JsonDeserializer[T], tag: ClassTag[T]): Try[T] = {
-    content match {
-      case Some(bytes) =>
-        transcoder match {
-          case t: TranscoderWithSerializer    => t.decode(bytes, flags, deserializer)
-          case t: TranscoderWithoutSerializer => t.decode(bytes, flags)
-        }
-
-      case _ =>
-        Failure(
-          new InvalidArgumentException(
-            "The content cannot be fetched as the scan was initiated with the 'idsOnly' flag set",
-            null,
-            null
-          )
-        )
+    val bytes = internal.value()
+    val flags = internal.flags()
+    transcoder match {
+      case t: TranscoderWithSerializer    => t.decode(bytes, flags, deserializer)
+      case t: TranscoderWithoutSerializer => t.decode(bytes, flags)
     }
   }
 }

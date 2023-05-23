@@ -178,7 +178,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
       val streamer = new ScalaIteratorStreamer[ScanResult](
-        iterator,
+        iterator.get,
         perRun,
         request.getStreamConfig.getStreamId,
         request.getStreamConfig,

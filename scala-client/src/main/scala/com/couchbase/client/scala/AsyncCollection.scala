@@ -610,8 +610,10 @@ class AsyncCollection(
       .map(result => convert(result))
   }
 
-  private[scala] def scanRequest(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
-    import scala.compat.java8.OptionConverters._
+  private[scala] def scanRequest(
+      scanType: ScanType,
+      opts: ScanOptions
+  ): SFlux[ScanResult] = {
 
     val timeoutActual: java.time.Duration =
       if (opts.timeout == Duration.MinusInf) environment.timeoutConfig.kvScanTimeout()
@@ -648,62 +650,24 @@ class AsyncCollection(
           .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT)
     }
 
-    val flux = scanType match {
+    val rangeScan = scanType match {
       case scan: ScanType.RangeScan =>
-        val rangeScan = new CoreRangeScan() {
+        new CoreRangeScan() {
           override def from(): CoreScanTerm = new CoreScanTerm(scan.from.term, scan.from.exclusive)
 
           override def to(): CoreScanTerm = new CoreScanTerm(scan.to.term, scan.to.exclusive)
         }
 
-        FutureConversions.javaFluxToScalaFlux(
-          rangeScanOrchestrator.rangeScan(
-            rangeScan,
-            options
-          )
-        )
       case scan: ScanType.SamplingScan =>
-        val samplingScan = new CoreSamplingScan {
+        new CoreSamplingScan {
           override def limit(): Long = scan.limit
 
           override def seed(): Optional[lang.Long] = Optional.ofNullable(scan.seed)
         }
-        if (scan.limit <= 0) {
-          SFlux.error(new InvalidArgumentException("Limit must be > 0", null, null))
-        } else {
-          FutureConversions.javaFluxToScalaFlux(
-            rangeScanOrchestrator.samplingScan(
-              samplingScan,
-              options
-            )
-          )
-        }
     }
 
-    flux.map(
-      item =>
-        if (_idsOnly) {
-          ScanResult(
-            item.key(),
-            idOnly = true,
-            None,
-            item.flags(),
-            None,
-            None,
-            opts.transcoder.getOrElse(environment.transcoder)
-          )
-        } else {
-          ScanResult(
-            item.key(),
-            idOnly = false,
-            Some(item.value()),
-            item.flags(),
-            Some(item.cas()),
-            Option(item.expiry()),
-            opts.transcoder.getOrElse(environment.transcoder)
-          )
-        }
-    )
+    SFlux(kvOps.scanRequestReactive(rangeScan, options))
+      .map(item => ScanResult(item, opts.transcoder.getOrElse(environment.transcoder)))
   }
 
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
@@ -719,7 +683,9 @@ class AsyncCollection(
     */
   @Volatile
   def scan(scanType: ScanType, opts: ScanOptions): Future[Iterator[ScanResult]] = {
-    Future(scanRequest(scanType, opts).toStream().iterator)
+    scanRequest(scanType, opts).collectSeq
+      .map(v => v.iterator)
+      .toFuture
   }
 }
 

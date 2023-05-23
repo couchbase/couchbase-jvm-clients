@@ -868,14 +868,14 @@ class Collection(
     * Uses default options.
     */
   @Volatile
-  def scan(scanType: ScanType): Iterator[ScanResult] = {
+  def scan(scanType: ScanType): Try[Iterator[ScanResult]] = {
     scan(scanType, ScanOptions())
   }
 
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
     */
   @Volatile
-  def scan(scanType: ScanType, opts: ScanOptions): Iterator[ScanResult] = {
-    async.scanRequest(scanType, opts).toStream().iterator
+  def scan(scanType: ScanType, opts: ScanOptions): Try[Iterator[ScanResult]] = {
+    block(async.scan(scanType, opts))
   }
 }
