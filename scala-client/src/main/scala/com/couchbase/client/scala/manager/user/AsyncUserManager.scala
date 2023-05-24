@@ -16,16 +16,30 @@
 
 package com.couchbase.client.scala.manager.user
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.util.DurationConversions._
 
-import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ExecutionContext, Future}
+
 @Volatile
-class AsyncUserManager(val reactive: ReactiveUserManager) {
-  private[scala] val defaultManagerTimeout = reactive.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy  = reactive.defaultRetryStrategy
+class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
+    implicit val ec: ExecutionContext
+) {
+  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
+
+  private def reactive: Future[ReactiveUserManager] = {
+    couchbaseOps match {
+      case core: Core => Future.successful(new ReactiveUserManager(core))
+      case _          => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
+
+  }
 
   def getUser(
       username: String,
@@ -33,7 +47,7 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[UserAndMetadata] = {
-    reactive.getUser(username, domain, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.getUser(username, domain, timeout, retryStrategy).toFuture)
   }
 
   def getAllUsers(
@@ -41,7 +55,7 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Seq[UserAndMetadata]] = {
-    reactive.getAllUsers(domain, timeout, retryStrategy).collectSeq().toFuture
+    reactive.flatMap(_.getAllUsers(domain, timeout, retryStrategy).collectSeq().toFuture)
   }
 
   def upsertUser(
@@ -50,7 +64,7 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.upsertUser(user, domain, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.upsertUser(user, domain, timeout, retryStrategy).toFuture)
   }
 
   def dropUser(
@@ -59,7 +73,7 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.dropUser(username, domain, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.dropUser(username, domain, timeout, retryStrategy).toFuture)
   }
 
   def changePassword(
@@ -67,14 +81,14 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.changePassword(newPassword, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.changePassword(newPassword, timeout, retryStrategy).toFuture)
   }
 
   def availableRoles(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Seq[RoleAndDescription]] = {
-    reactive.availableRoles(timeout, retryStrategy).collectSeq().toFuture
+    reactive.flatMap(_.availableRoles(timeout, retryStrategy).collectSeq().toFuture)
   }
 
   def getGroup(
@@ -82,14 +96,14 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Group] = {
-    reactive.getGroup(groupName, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.getGroup(groupName, timeout, retryStrategy).toFuture)
   }
 
   def getAllGroups(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Seq[Group]] = {
-    reactive.getAllGroups(timeout, retryStrategy).collectSeq().toFuture
+    reactive.flatMap(_.getAllGroups(timeout, retryStrategy).collectSeq().toFuture)
   }
 
   def upsertGroup(
@@ -97,7 +111,7 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.upsertGroup(group, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.upsertGroup(group, timeout, retryStrategy).toFuture)
   }
 
   def dropGroup(
@@ -105,6 +119,6 @@ class AsyncUserManager(val reactive: ReactiveUserManager) {
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    reactive.dropGroup(groupName, timeout, retryStrategy).toFuture
+    reactive.flatMap(_.dropGroup(groupName, timeout, retryStrategy).toFuture)
   }
 }

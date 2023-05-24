@@ -72,7 +72,7 @@ class Cluster private[scala] (
   lazy val reactive = new ReactiveCluster(async)
 
   /** The UserManager provides programmatic access to and creation of users and groups. */
-  lazy val users = new UserManager(async.users, reactive.users)
+  lazy val users = new UserManager(async.users)
 
   /** The BucketManager provides access to creating and getting buckets. */
   lazy val buckets = new BucketManager(async.buckets)

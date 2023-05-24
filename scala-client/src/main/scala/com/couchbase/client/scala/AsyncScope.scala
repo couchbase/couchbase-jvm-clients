@@ -16,7 +16,9 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
@@ -43,13 +45,11 @@ import scala.util.{Failure, Success}
 class AsyncScope private[scala] (
     scopeName: String,
     bucketName: String,
-    private val core: Core,
+    private[scala] val couchbaseOps: CoreCouchbaseOps,
     private[scala] val environment: ClusterEnvironment
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  private[scala] val hp                            = HandlerBasicParams(core, environment)
-  private[scala] val analyticsHandler              = new AnalyticsHandler(hp)
-  private[scala] val queryOps                      = core.queryOps()
+  private[scala] val queryOps                      = couchbaseOps.queryOps()
 
   /** The name of this scope. */
   def name = scopeName
@@ -60,16 +60,24 @@ class AsyncScope private[scala] (
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): AsyncCollection = {
-    val defaultScopeAndCollection = collectionName.equals(DefaultResources.DefaultCollection) &&
-      scopeName.equals(DefaultResources.DefaultScope)
+    couchbaseOps match {
+      case core: Core =>
+        val defaultScopeAndCollection = collectionName.equals(DefaultResources.DefaultCollection) &&
+          scopeName.equals(DefaultResources.DefaultScope)
 
-    if (!defaultScopeAndCollection) {
-      core.configurationProvider.refreshCollectionId(
-        new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(collectionName))
-      )
+        if (!defaultScopeAndCollection) {
+          core.configurationProvider.refreshCollectionId(
+            new CollectionIdentifier(
+              bucketName,
+              Optional.of(scopeName),
+              Optional.of(collectionName)
+            )
+          )
+        }
+      case _ =>
     }
 
-    new AsyncCollection(collectionName, bucketName, scopeName, core, environment)
+    new AsyncCollection(collectionName, bucketName, scopeName, couchbaseOps, environment)
   }
 
   /** Performs a N1QL query against the cluster.
@@ -111,18 +119,23 @@ class AsyncScope private[scala] (
       statement: String,
       options: AnalyticsOptions = AnalyticsOptions.Default
   ): Future[AnalyticsResult] = {
+    couchbaseOps match {
+      case core: Core =>
+        val hp               = HandlerBasicParams(core)
+        val analyticsHandler = new AnalyticsHandler(hp)
 
-    analyticsHandler.request(
-      statement,
-      options,
-      core,
-      environment,
-      Some(bucketName),
-      Some(scopeName)
-    ) match {
-      case Success(request) => analyticsHandler.queryAsync(request)
-      case Failure(err)     => Future.failed(err)
+        analyticsHandler.request(
+          statement,
+          options,
+          core,
+          environment,
+          Some(bucketName),
+          Some(scopeName)
+        ) match {
+          case Success(request) => analyticsHandler.queryAsync(request)
+          case Failure(err)     => Future.failed(err)
+        }
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
-
 }

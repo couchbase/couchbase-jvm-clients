@@ -15,7 +15,10 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.Core
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.SMono
@@ -90,16 +93,23 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: AnalyticsOptions = AnalyticsOptions.Default
   ): SMono[ReactiveAnalyticsResult] = {
-    async.analyticsHandler.request(
-      statement,
-      options,
-      async.defaultCollection.core,
-      async.environment,
-      Some(bucketName),
-      Some(name)
-    ) match {
-      case Success(request) => async.analyticsHandler.queryReactive(request)
-      case Failure(err)     => SMono.error(err)
+    async.couchbaseOps match {
+      case core: Core =>
+        val hp               = HandlerBasicParams(core)
+        val analyticsHandler = new AnalyticsHandler(hp)
+
+        analyticsHandler.request(
+          statement,
+          options,
+          core,
+          async.environment,
+          Some(bucketName),
+          Some(name)
+        ) match {
+          case Success(request) => analyticsHandler.queryReactive(request)
+          case Failure(err)     => SMono.error(err)
+        }
+      case _ => SMono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
 }

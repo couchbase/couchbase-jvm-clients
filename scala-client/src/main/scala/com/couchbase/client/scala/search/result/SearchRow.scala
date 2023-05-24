@@ -67,7 +67,9 @@ case class SearchRow private (private val internal: CoreSearchRow) {
     * See a full list at [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
     */
   def explanationAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
-    val bytes = if (internal.explanation.isEmpty) "{}".getBytes(StandardCharsets.UTF_8) else internal.explanation()
+    val bytes =
+      if (internal.explanation.isEmpty) "{}".getBytes(StandardCharsets.UTF_8)
+      else internal.explanation()
     deserializer.deserialize(bytes)
   }
 }

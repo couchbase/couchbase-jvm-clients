@@ -15,10 +15,10 @@
  */
 package com.couchbase.client.scala
 
-import java.util.Optional
-
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.diagnostics.{HealthPinger, PingResult}
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.manager.collection.AsyncCollectionManager
@@ -27,6 +27,7 @@ import com.couchbase.client.scala.util.DurationConversions.{scalaDurationToJava,
 import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.view.{ViewOptions, ViewResult}
 
+import java.util.Optional
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,7 +46,7 @@ import scala.jdk.CollectionConverters._
   */
 class AsyncBucket private[scala] (
     val name: String,
-    private[scala] val core: Core,
+    private[scala] val couchbaseOps: CoreCouchbaseOps,
     private[scala] val environment: ClusterEnvironment
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
@@ -60,7 +61,7 @@ class AsyncBucket private[scala] (
     * @param scopeName the name of the scope
     */
   def scope(scopeName: String): AsyncScope = {
-    new AsyncScope(scopeName, name, core, environment)
+    new AsyncScope(scopeName, name, couchbaseOps, environment)
   }
 
   /** Opens and returns the default Couchbase scope. */
@@ -163,19 +164,23 @@ class AsyncBucket private[scala] (
     * @return the `PingResult` once complete.
     */
   def ping(options: PingOptions): Future[PingResult] = {
+    couchbaseOps match {
+      case core: Core =>
+        val future = HealthPinger
+          .ping(
+            core,
+            options.timeout.map(scalaDurationToJava).asJava,
+            options.retryStrategy.getOrElse(environment.retryStrategy),
+            if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+            options.reportId.asJava,
+            Optional.of(name)
+          )
+          .toFuture
 
-    val future = HealthPinger
-      .ping(
-        core,
-        options.timeout.map(scalaDurationToJava).asJava,
-        options.retryStrategy.getOrElse(environment.retryStrategy),
-        if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
-        options.reportId.asJava,
-        Optional.of(name)
-      )
-      .toFuture
+        FutureConversions.javaCFToScalaFuture(future)
 
-    FutureConversions.javaCFToScalaFuture(future)
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
   }
 
   /** Waits until the desired `ClusterState` is reached.
@@ -203,15 +208,20 @@ class AsyncBucket private[scala] (
     * @param options options to customize the wait
     */
   def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFuture(
-        core.waitUntilReady(
-          if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
-          timeout,
-          options.desiredState,
-          name
-        )
-      )
-      .map(_ => ())
+    couchbaseOps match {
+      case core: Core =>
+        FutureConversions
+          .javaCFToScalaFuture(
+            core.waitUntilReady(
+              if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+              timeout,
+              options.desiredState,
+              name
+            )
+          )
+          .map(_ => ())
+
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
   }
 }

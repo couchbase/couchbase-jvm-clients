@@ -16,22 +16,16 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
-import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.kv.{CoreExpiry, CoreSubdocGetCommand, CoreSubdocGetResult}
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
-import com.couchbase.client.core.error._
-import com.couchbase.client.core.error.context.KeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.kv.{
-  CoreRangeScan,
-  CoreSamplingScan,
-  CoreScanOptions,
-  CoreScanTerm,
-  RangeScanOrchestrator
-}
+import com.couchbase.client.core.kv._
 import com.couchbase.client.core.msg.Response
 import com.couchbase.client.core.msg.kv._
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.service.kv.{Observe, ObserveContext}
 import com.couchbase.client.core.{Core, CoreKeyspace}
@@ -40,19 +34,14 @@ import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.kv.handlers._
 import com.couchbase.client.scala.manager.query.AsyncCollectionQueryIndexManager
-import com.couchbase.client.scala.util.CoreCommonConverters.{
-  convert,
-  convertExpiry,
-  convertReplica,
-  encoder,
-  makeCommonOptions
-}
+import com.couchbase.client.scala.util.CoreCommonConverters._
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.scala.publisher.SFlux
 
 import java.lang
+import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util.Optional
 import scala.compat.java8.FutureConverters
 import scala.compat.java8.OptionConverters._
@@ -71,8 +60,8 @@ private[scala] case class HandlerParams(
   def tracer = env.coreEnv.requestTracer()
 }
 
-private[scala] case class HandlerBasicParams(core: Core, env: ClusterEnvironment) {
-  def tracer = env.coreEnv.requestTracer()
+private[scala] case class HandlerBasicParams(core: Core) {
+  def tracer = core.context.environment.requestTracer
 }
 
 /** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point
@@ -90,7 +79,7 @@ class AsyncCollection(
     val name: String,
     val bucketName: String,
     val scopeName: String,
-    val core: Core,
+    val couchbaseOps: CoreCouchbaseOps,
     val environment: ClusterEnvironment
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
@@ -101,47 +90,20 @@ class AsyncCollection(
   private[scala] val kvReadTimeout: Duration           = environment.timeoutConfig.kvTimeout()
   private[scala] val collectionIdentifier =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
-  private[scala] val hp                    = HandlerParams(core, bucketName, collectionIdentifier, environment)
-  private[scala] val getSubDocHandler      = new GetSubDocumentHandler(hp)
-  private[scala] val getFromReplicaHandler = new GetFromReplicaHandler(hp)
-  private[scala] val rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier)
-  private[scala] val keyspace              = CoreKeyspace.from(collectionIdentifier)
-  private[scala] val kvOps                 = core.kvOps(keyspace)
+  private[scala] val keyspace = CoreKeyspace.from(collectionIdentifier)
+  private[scala] val kvOps    = couchbaseOps.kvOps(keyspace)
+
+  // Would remove, but has been part of public AsyncCollection API
+  def core: Core = couchbaseOps match {
+    case core: Core => core
+    case _          => throw CoreProtostellarUtil.unsupportedCurrentlyInProtostellar()
+  }
 
   /** Manage query indexes for this collection */
   @Volatile
   lazy val queryIndexes = new AsyncCollectionQueryIndexManager(this, keyspace)
 
   val binary = new AsyncBinaryCollection(this)
-
-  private[scala] def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandler[Resp, Res]
-  ): Future[Res] = {
-    AsyncCollection.wrap(in, id, handler, core)
-  }
-
-  private[scala] def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandler[Resp, Res],
-      durability: Durability,
-      remove: Boolean,
-      timeout: java.time.Duration
-  ): Future[Res] = {
-    AsyncCollection.wrapWithDurability(
-      in,
-      id,
-      handler,
-      durability,
-      remove,
-      timeout,
-      core,
-      bucketName,
-      collectionIdentifier
-    )
-  }
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
@@ -322,27 +284,58 @@ class AsyncCollection(
       transcoder: Transcoder,
       parentSpan: Option[RequestSpan]
   ): Future[LookupInResult] = {
-    val req = getSubDocHandler.request(id, spec, withExpiry, timeout, retryStrategy, parentSpan)
-    req match {
-      case Success(request) =>
-        core.send(request)
-
-        val out = FutureConverters
-          .toScala(request.response())
-          .map(response => {
-            getSubDocHandler.response(request, id, response, withExpiry, transcoder)
-          })
-
-        out onComplete {
-          case Success(_)                              => request.context.logicallyComplete()
-          case Failure(err: DocumentNotFoundException) => request.context.logicallyComplete()
-          case Failure(err)                            => request.context.logicallyComplete(err)
-        }
-
-        out
-
-      case Failure(err) => Future.failed(err)
+    var commands = spec.map {
+      case Get("", _xattr)      => new CoreSubdocGetCommand(SubdocCommandType.GET_DOC, "", _xattr)
+      case Get(path, _xattr)    => new CoreSubdocGetCommand(SubdocCommandType.GET, path, _xattr)
+      case Exists(path, _xattr) => new CoreSubdocGetCommand(SubdocCommandType.EXISTS, path, _xattr)
+      case Count(path, _xattr)  => new CoreSubdocGetCommand(SubdocCommandType.COUNT, path, _xattr)
     }
+
+    if (withExpiry) {
+      commands = commands :+ new CoreSubdocGetCommand(
+        SubdocCommandType.GET,
+        "$document.exptime",
+        true
+      )
+    }
+
+    convert(
+      kvOps
+        .subdocGetAsync(
+          makeCommonOptions(timeout, retryStrategy, parentSpan.orNull),
+          id,
+          commands.asJava,
+          false
+        )
+    ).flatMap(result => {
+      val (fieldsWithoutExp, expTime) = if (withExpiry) {
+        val fields        = result.fields().asScala
+        val expField      = fields.last
+        val expTime       = new String(expField.value(), StandardCharsets.UTF_8)
+        val fieldsWithout = fields.dropRight(1).asJava
+        (fieldsWithout, Some(Instant.ofEpochSecond(expTime.toLong)))
+      } else {
+        (result.fields(), None)
+      }
+
+      val modified = new CoreSubdocGetResult(
+        result.keyspace,
+        result.key,
+        result.meta,
+        fieldsWithoutExp,
+        result.cas,
+        result.tombstone
+      )
+
+      if (modified.fields().size() == 1
+              && modified.fields().get(0).`type`() != SubdocCommandType.EXISTS
+              && modified.fields().get(0).error().isPresent) {
+        // The Scala SDK deviates from the RFC, returning an error if there's a single-operation lookupIn that fails.  To preserve behavioural compatibility, cannot change it.
+        Future.failed(modified.fields().get(0).error().get())
+      } else {
+        Future.successful(LookupInResult(modified, expTime, transcoder))
+      }
+    })
   }
 
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
@@ -691,69 +684,4 @@ class AsyncCollection(
 
 object AsyncCollection {
   private[scala] val EmptyList = new java.util.ArrayList[String]()
-
-  private def wrap[Resp <: Response, Res](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandler[Resp, Res],
-      core: Core
-  )(implicit ec: ExecutionContext): Future[Res] = {
-    in match {
-      case Success(request) =>
-        core.send[Resp](request)
-
-        val out = FutureConverters
-          .toScala(request.response())
-          .map(response => handler.response(request, id, response))
-
-        out onComplete {
-          case Success(_)   => request.context.logicallyComplete()
-          case Failure(err) => request.context.logicallyComplete(err)
-        }
-
-        out
-
-      case Failure(err) => Future.failed(err)
-    }
-  }
-
-  private def wrapWithDurability[Resp <: Response, Res <: HasDurabilityTokens](
-      in: Try[KeyValueRequest[Resp]],
-      id: String,
-      handler: KeyValueRequestHandler[Resp, Res],
-      durability: Durability,
-      remove: Boolean,
-      timeout: java.time.Duration,
-      core: Core,
-      bucketName: String,
-      collectionidentifier: CollectionIdentifier
-  )(implicit ec: ExecutionContext): Future[Res] = {
-    val initial: Future[Res] = wrap(in, id, handler, core)
-
-    durability match {
-      case ClientVerified(replicateTo, persistTo) =>
-        initial.flatMap(response => {
-
-          val observeCtx = new ObserveContext(
-            core.context(),
-            PersistTo.asCore(persistTo),
-            ReplicateTo.asCore(replicateTo),
-            response.mutationToken.asJava,
-            response.cas,
-            collectionidentifier,
-            id,
-            remove,
-            timeout,
-            in.get.requestSpan()
-          )
-
-          FutureConversions
-            .javaMonoToScalaFuture(Observe.poll(observeCtx))
-            // After the observe return the original response
-            .map(_ => response)
-        })
-
-      case _ => initial
-    }
-  }
 }

@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.RequestSpan
@@ -31,11 +30,10 @@ import java.util.Optional
 import scala.concurrent.duration.Duration
 
 @Volatile
-class ReactiveBucketManager(core: Core, couchbaseOps: CoreCouchbaseOps) {
-  private[scala] val defaultManagerTimeout =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
-  private[scala] val coreBucketManager    = couchbaseOps.bucketManager()
+class ReactiveBucketManager(couchbaseOps: CoreCouchbaseOps) {
+  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
+  private[scala] val coreBucketManager = couchbaseOps.bucketManager()
 
   def create(
       settings: CreateBucketSettings,

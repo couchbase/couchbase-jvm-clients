@@ -28,12 +28,10 @@ import scala.jdk.CollectionConverters._
 class AsyncCollectionManager(private val bucket: AsyncBucket)(
     implicit val ec: ExecutionContext
 ) {
-  private val core = bucket.core
-  private[scala] val defaultManagerTimeout = javaDurationToScala(
-    core.context().environment().timeoutConfig().managementTimeout()
-  )
-  private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
-  private val coreCollectionManager       = core.collectionManager(bucket.name)
+  private[scala] val defaultManagerTimeout: Duration = bucket.couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultRetryStrategy =  bucket.couchbaseOps.environment.retryStrategy
+
+  private def coreCollectionManager = bucket.couchbaseOps.collectionManager(bucket.name)
 
   @deprecated(message = "use getAllScopes instead", since = "1.1.2")
   def getScope(

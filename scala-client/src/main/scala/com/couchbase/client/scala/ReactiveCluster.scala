@@ -16,9 +16,11 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.AsyncCluster.extractClusterEnvironment
@@ -36,6 +38,7 @@ import com.couchbase.client.scala.manager.query.ReactiveQueryIndexManager
 import com.couchbase.client.scala.manager.search.ReactiveSearchIndexManager
 import com.couchbase.client.scala.manager.user.ReactiveUserManager
 import com.couchbase.client.scala.query._
+import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.ReactiveSearchResult
@@ -70,10 +73,10 @@ class ReactiveCluster(val async: AsyncCluster) {
   val env: ClusterEnvironment = async.env
 
   /** The ReactiveUserManager provides programmatic access to and creation of users and groups. */
-  lazy val users = new ReactiveUserManager(async.core)
+  lazy val users = new ReactiveUserManager(async.couchbaseOps)
 
   /** The ReactiveBucketManager provides access to creating and getting buckets. */
-  lazy val buckets = new ReactiveBucketManager(async.core, async.couchbaseOps)
+  lazy val buckets = new ReactiveBucketManager(async.couchbaseOps)
 
   /** The ReactiveQueryIndexManager provides access to creating and managing query indexes. */
   lazy val queryIndexes = new ReactiveQueryIndexManager(async.queryIndexes, this)
@@ -157,9 +160,16 @@ class ReactiveCluster(val async: AsyncCluster) {
       statement: String,
       options: AnalyticsOptions
   ): SMono[ReactiveAnalyticsResult] = {
-    async.analyticsHandler.request(statement, options, async.core, async.env, None, None) match {
-      case Success(request) => async.analyticsHandler.queryReactive(request)
-      case Failure(err)     => SMono.error(err)
+    async.couchbaseOps match {
+      case core: Core =>
+        val hp               = HandlerBasicParams(core)
+        val analyticsHandler = new AnalyticsHandler(hp)
+
+        analyticsHandler.request(statement, options, core, async.env, None, None) match {
+          case Success(request) => analyticsHandler.queryReactive(request)
+          case Failure(err)     => SMono.error(err)
+        }
+      case _ => SMono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
 
@@ -247,15 +257,8 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
     */
   def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): SMono[Unit] = {
-    FutureConversions
-      .javaMonoToScalaMono(async.core.shutdown(timeout))
-      .`then`(SMono.defer(() => {
-        if (env.owned) {
-          env.shutdownInternal(timeout)
-        } else {
-          SMono.empty[Unit]
-        }
-      }))
+    // Take care not to use the implicit ExecutionContext `ec`, which is based on an executor that's about to be destroyed
+    SMono.fromFuture(async.disconnect(timeout))(ExecutionContext.global)
   }
 
   /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the

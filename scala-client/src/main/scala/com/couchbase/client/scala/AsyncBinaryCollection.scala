@@ -40,7 +40,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
 
   private[scala] val environment                       = async.environment
   private[scala] val kvTimeout: Durability => Duration = async.kvTimeout
-  private[scala] val kvBinaryOps                       = async.core.kvBinaryOps(async.keyspace)
+  private[scala] val kvBinaryOps                       = async.couchbaseOps.kvBinaryOps(async.keyspace)
 
   /** Add bytes to the end of a Couchbase binary document.
     *

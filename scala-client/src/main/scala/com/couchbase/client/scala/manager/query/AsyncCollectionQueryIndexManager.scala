@@ -15,12 +15,12 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.CoreKeyspace
+import com.couchbase.client.core.{Core, CoreKeyspace}
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.manager._
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
-import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.scala.AsyncCollection
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
@@ -46,16 +46,13 @@ class AsyncCollectionQueryIndexManager(
 )(
     implicit val ec: ExecutionContext
 ) {
-  private val core = collection.core
   private[scala] val internal = new CoreCollectionQueryIndexManager(
-    core.queryOps(),
-    core.context().environment().requestTracer(),
+    collection.couchbaseOps.queryOps(),
+    collection.environment.core.requestTracer,
     keyspace
   )
-  private[scala] val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private[scala] val DefaultRetryStrategy: RetryStrategy =
-    core.context().environment().retryStrategy()
+  private[scala] val DefaultTimeout: Duration = collection.couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val DefaultRetryStrategy = collection.couchbaseOps.environment.retryStrategy
 
   /** Gets all indexes on this collection.
     *

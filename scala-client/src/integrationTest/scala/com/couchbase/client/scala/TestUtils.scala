@@ -1,7 +1,8 @@
 package com.couchbase.client.scala
 
-import java.util.UUID
+import com.couchbase.client.core.CoreProtostellar
 
+import java.util.UUID
 import com.couchbase.client.core.diagnostics.PingState
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.diagnostics.PingOptions
@@ -19,7 +20,7 @@ object TestUtils {
 
   /** Wait until ping result for the service returns success */
   def waitForService(bucket: Bucket, serviceType: ServiceType): Unit = {
-    if (bucket.async.core.isProtostellar) {
+    if (bucket.async.couchbaseOps.isInstanceOf[CoreProtostellar]) {
       // Protostellar ping support will be implemented under JVMCBC-1189
       return
     }

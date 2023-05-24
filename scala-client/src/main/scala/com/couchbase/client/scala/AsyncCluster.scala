@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.core.msg.search.SearchRequest
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.{
@@ -42,12 +42,12 @@ import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBu
 import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
-import com.couchbase.client.scala.manager.user.{AsyncUserManager, ReactiveUserManager}
+import com.couchbase.client.scala.manager.user.AsyncUserManager
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
-import com.couchbase.client.scala.search.result.{SearchResult, SearchRow}
+import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, _}
 import com.couchbase.client.scala.util.FutureConversions
@@ -85,12 +85,6 @@ class AsyncCluster(
   /** The environment used to create this cluster */
   val env: ClusterEnvironment = environment
 
-  private[couchbase] val core =
-    Core.create(
-      environment.coreEnv,
-      authenticator,
-      connectionString
-    )
   private[scala] val couchbaseOps =
     CoreCouchbaseOps.create(environment.coreEnv, authenticator, connectionString)
 
@@ -99,42 +93,47 @@ class AsyncCluster(
     case _          =>
   }
 
-  private[scala] val hp                         = HandlerBasicParams(core, env)
+  // Only used by tests now
+  private[couchbase] def core: Core = couchbaseOps match {
+    case core: Core => core
+    case _          => throw CoreProtostellarUtil.unsupportedCurrentlyInProtostellar()
+  }
+
   private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
   private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
   private[scala] val retryStrategy              = env.retryStrategy
-  private[scala] val analyticsHandler           = new AnalyticsHandler(hp)
-  private[scala] val searchOps                  = core.searchOps(null)
-  private[scala] lazy val reactiveUserManager   = new ReactiveUserManager(core)
-  private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(core, couchbaseOps)
+  private[scala] val searchOps                  = couchbaseOps.searchOps(null)
+  private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(couchbaseOps)
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
     new ReactiveCluster(this),
     analyticsIndexes
   )
-  private[scala] val queryOps = core.queryOps()
+  private[scala] val queryOps = couchbaseOps.queryOps()
 
   /** The AsyncBucketManager provides access to creating and getting buckets. */
   lazy val buckets = new AsyncBucketManager(reactiveBucketManager)
 
   /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
-  lazy val users = new AsyncUserManager(reactiveUserManager)
+  lazy val users = new AsyncUserManager(couchbaseOps)
 
   lazy val queryIndexes  = new AsyncQueryIndexManager(this)
   lazy val searchIndexes = new AsyncSearchIndexManager(couchbaseOps)
-  lazy val analyticsIndexes: AsyncAnalyticsIndexManager = new AsyncAnalyticsIndexManager(
-    reactiveAnalyticsIndexManager
-  )
+  lazy val analyticsIndexes: AsyncAnalyticsIndexManager =
+    new AsyncAnalyticsIndexManager(reactiveAnalyticsIndexManager, couchbaseOps)
 
   @Stability.Uncommitted
-  lazy val eventingFunctions = new AsyncEventingFunctionManager(env, core)
+  lazy val eventingFunctions = new AsyncEventingFunctionManager(env, couchbaseOps)
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): AsyncBucket = {
-    core.openBucket(bucketName)
-    new AsyncBucket(bucketName, core, environment)
+    couchbaseOps match {
+      case core: Core => core.openBucket(bucketName)
+      case _          =>
+    }
+    new AsyncBucket(bucketName, couchbaseOps, environment)
   }
 
   /** Performs a N1QL query against the cluster.
@@ -207,10 +206,16 @@ class AsyncCluster(
       statement: String,
       options: AnalyticsOptions
   ): Future[AnalyticsResult] = {
+    couchbaseOps match {
+      case core: Core =>
+        val hp               = HandlerBasicParams(core)
+        val analyticsHandler = new AnalyticsHandler(hp)
 
-    analyticsHandler.request(statement, options, core, environment, None, None) match {
-      case Success(request) => analyticsHandler.queryAsync(request)
-      case Failure(err)     => Future.failed(err)
+        analyticsHandler.request(statement, options, core, environment, None, None) match {
+          case Success(request) => analyticsHandler.queryAsync(request)
+          case Failure(err)     => Future.failed(err)
+        }
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
 
@@ -291,7 +296,7 @@ class AsyncCluster(
     */
   def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Future[Unit] = {
     FutureConversions
-      .javaMonoToScalaMono(core.shutdown(timeout))
+      .javaMonoToScalaMono(couchbaseOps.shutdown(timeout))
       .`then`(SMono.defer(() => {
         if (env.owned) {
           env.shutdownInternal(timeout)
@@ -321,16 +326,24 @@ class AsyncCluster(
     * @return a `DiagnosticsResult`
     */
   def diagnostics(options: DiagnosticsOptions): Future[DiagnosticsResult] = {
-    Future(
-      new DiagnosticsResult(
-        core.diagnostics.collect(
-          Collectors
-            .groupingBy[EndpointDiagnostics, ServiceType]((v1: EndpointDiagnostics) => v1.`type`())
-        ),
-        core.context().environment().userAgent().formattedShort(),
-        options.reportId.getOrElse(UUID.randomUUID.toString)
-      )
-    )
+    couchbaseOps match {
+      case core: Core =>
+        Future(
+          new DiagnosticsResult(
+            core.diagnostics.collect(
+              Collectors
+                .groupingBy[EndpointDiagnostics, ServiceType](
+                  (v1: EndpointDiagnostics) => v1.`type`()
+                )
+            ),
+            core.context().environment().userAgent().formattedShort(),
+            options.reportId.getOrElse(UUID.randomUUID.toString)
+          )
+        )
+
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
+
   }
 
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
@@ -361,19 +374,23 @@ class AsyncCluster(
     * @return the `PingResult` once complete.
     */
   def ping(options: PingOptions): Future[PingResult] = {
+    couchbaseOps match {
+      case core: Core =>
+        val future = HealthPinger
+          .ping(
+            core,
+            options.timeout.map(scalaDurationToJava).asJava,
+            options.retryStrategy.getOrElse(env.retryStrategy),
+            if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+            options.reportId.asJava,
+            Optional.empty()
+          )
+          .toFuture
 
-    val future = HealthPinger
-      .ping(
-        core,
-        options.timeout.map(scalaDurationToJava).asJava,
-        options.retryStrategy.getOrElse(env.retryStrategy),
-        if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
-        options.reportId.asJava,
-        Optional.empty()
-      )
-      .toFuture
+        FutureConversions.javaCFToScalaFuture(future)
 
-    FutureConversions.javaCFToScalaFuture(future)
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
   }
 
   /** Waits until the desired `ClusterState` is reached.
@@ -403,7 +420,7 @@ class AsyncCluster(
   def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFuture(
-        core.waitUntilReady(
+        couchbaseOps.waitUntilReady(
           if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
           timeout,
           options.desiredState,

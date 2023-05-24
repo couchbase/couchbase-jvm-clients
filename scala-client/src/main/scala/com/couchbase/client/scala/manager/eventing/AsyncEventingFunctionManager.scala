@@ -16,12 +16,14 @@
 
 package com.couchbase.client.scala.manager.eventing
 
-import com.couchbase.client.core.Core
+import com.couchbase.client.core.{Core, CoreProtostellar}
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.error.DecodingFailureException
 import com.couchbase.client.core.manager.CoreEventingFunctionManager
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
@@ -36,12 +38,24 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @Stability.Uncommitted
-class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private val core: Core)(
+class AsyncEventingFunctionManager(
+    private val env: ClusterEnvironment,
+    private val couchbaseOps: CoreCouchbaseOps
+)(
     implicit ec: ExecutionContext
 ) {
   private[scala] val DefaultTimeout       = env.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = env.retryStrategy
-  private val coreManager                 = new CoreEventingFunctionManager(core)
+
+  private def coreManagerTry: Future[CoreEventingFunctionManager] = {
+    couchbaseOps match {
+      case core: Core => Future.successful(new CoreEventingFunctionManager(core))
+      case _ =>
+        Future.failed(
+          CoreProtostellarUtil.unsupportedInProtostellar("eventing function management")
+        )
+    }
+  }
 
   def upsertFunction(
       function: EventingFunction,
@@ -49,15 +63,18 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.upsertFunction(
-          function.name,
-          AsyncEventingFunctionManager.encodeFunction(function),
-          makeOptions(timeout, retryStrategy, parentSpan)
-        )
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.upsertFunction(
+              function.name,
+              AsyncEventingFunctionManager.encodeFunction(function),
+              makeOptions(timeout, retryStrategy, parentSpan)
+            )
+          )
+          .map(_ => ())
+    )
   }
 
   def getFunction(
@@ -66,17 +83,20 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[EventingFunction] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.getFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .flatMap(
-        v =>
-          AsyncEventingFunctionManager.decodeFunction(v) match {
-            case Success(x)   => Future.successful(x)
-            case Failure(err) => Future.failed(err)
-          }
-      )
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.getFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .flatMap(
+            v =>
+              AsyncEventingFunctionManager.decodeFunction(v) match {
+                case Success(x)   => Future.successful(x)
+                case Failure(err) => Future.failed(err)
+              }
+          )
+    )
   }
 
   def dropFunction(
@@ -85,11 +105,14 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.dropFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.dropFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .map(_ => ())
+    )
   }
 
   private def makeOptions(
@@ -106,11 +129,14 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.deployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.deployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .map(_ => ())
+    )
   }
 
   def getAllFunctions(
@@ -118,18 +144,21 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Seq[EventingFunction]] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager
-          .getAllFunctions(makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .flatMap(
-        v =>
-          AsyncEventingFunctionManager.decodeFunctions(v) match {
-            case Success(x)   => Future.successful(x)
-            case Failure(err) => Future.failed(err)
-          }
-      )
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager
+              .getAllFunctions(makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .flatMap(
+            v =>
+              AsyncEventingFunctionManager.decodeFunctions(v) match {
+                case Success(x)   => Future.successful(x)
+                case Failure(err) => Future.failed(err)
+              }
+          )
+    )
   }
 
   def pauseFunction(
@@ -138,11 +167,14 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.pauseFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.pauseFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .map(_ => ())
+    )
   }
 
   def resumeFunction(
@@ -151,11 +183,14 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.resumeFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.resumeFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .map(_ => ())
+    )
   }
 
   def undeployFunction(
@@ -164,11 +199,14 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager.undeployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .map(_ => ())
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager.undeployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .map(_ => ())
+    )
   }
 
   def functionsStatus(
@@ -176,20 +214,23 @@ class AsyncEventingFunctionManager(private val env: ClusterEnvironment, private 
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[EventingStatus] = {
-    FutureConversions
-      .javaCFToScalaFutureMappingExceptions(
-        coreManager
-          .functionsStatus(makeOptions(timeout, retryStrategy, parentSpan))
-      )
-      .flatMap(
-        bytes =>
-          JsonObjectSafe
-            .fromJsonSafe(new String(bytes, StandardCharsets.UTF_8))
-            .flatMap(json => AsyncEventingFunctionManager.decodeStatus(json)) match {
-            case Success(x)   => Future.successful(x)
-            case Failure(err) => Future.failed(err)
-          }
-      )
+    coreManagerTry.flatMap(
+      coreManager =>
+        FutureConversions
+          .javaCFToScalaFutureMappingExceptions(
+            coreManager
+              .functionsStatus(makeOptions(timeout, retryStrategy, parentSpan))
+          )
+          .flatMap(
+            bytes =>
+              JsonObjectSafe
+                .fromJsonSafe(new String(bytes, StandardCharsets.UTF_8))
+                .flatMap(json => AsyncEventingFunctionManager.decodeStatus(json)) match {
+                case Success(x)   => Future.successful(x)
+                case Failure(err) => Future.failed(err)
+              }
+          )
+    )
   }
 }
 

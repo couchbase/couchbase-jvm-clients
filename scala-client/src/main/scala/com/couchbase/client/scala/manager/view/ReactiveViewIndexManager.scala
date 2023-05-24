@@ -16,11 +16,13 @@
 package com.couchbase.client.scala.manager.view
 
 import java.nio.charset.StandardCharsets.UTF_8
-import com.couchbase.client.core.Core
+import com.couchbase.client.core.{Core, CoreProtostellar}
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.deps.io.netty.handler.codec.http._
 import com.couchbase.client.core.endpoint.http.{
   CoreCommonOptions,
+  CoreHttpClient,
   CoreHttpPath,
   CoreHttpRequest,
   CoreHttpResponse
@@ -33,7 +35,8 @@ import com.couchbase.client.core.error.{
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.msg.{RequestTarget, ResponseStatus}
-import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
+import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.manager.ManagerUtil
 import com.couchbase.client.scala.transformers.JacksonTransformers
@@ -46,11 +49,14 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
-class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
-  private val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
-  private val httpClient                          = core.httpClient(RequestTarget.views(bucket))
+class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps, bucket: String) {
+  private[scala] val DefaultTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val DefaultRetryStrategy = couchbaseOps.environment.retryStrategy
+
+  private def httpClientTry: SMono[CoreHttpClient] = couchbaseOps match {
+    case core: Core => SMono.just(core.httpClient(RequestTarget.views(bucket)))
+    case _          => SMono.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+  }
 
   def getDesignDocument(
       designDocName: String,
@@ -58,34 +64,38 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[DesignDocument] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    pathForDesignDocument(designDocName, namespace) match {
-      case Success(path) =>
-        sendRequest(httpClient.get(CoreHttpPath.path(path), options).build())
-          .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
-          .flatMap(response => {
-            response.status match {
-              case ResponseStatus.SUCCESS =>
-                val parsed: Try[DesignDocument] = Try {
-                  upickle.default.read[ujson.Obj](response.content)
-                }.flatMap(json => ReactiveViewIndexManager.parseDesignDocument(designDocName, json))
-
-                parsed match {
-                  case Success(designDoc) => SMono.just(designDoc)
-                  case Failure(err)       => SMono.error(err)
-                }
-              case _ =>
-                SMono.error(
-                  new CouchbaseException(
-                    "Failed to drop design document [" +
-                      redactMeta(designDocName) + "] from namespace " + namespace
+    httpClientTry.flatMap(httpClient => {
+      val options = CoreCommonOptions.of(timeout, retryStrategy, null)
+      pathForDesignDocument(designDocName, namespace) match {
+        case Success(path) =>
+          sendRequest(httpClient.get(CoreHttpPath.path(path), options).build())
+            .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
+            .flatMap(response => {
+              response.status match {
+                case ResponseStatus.SUCCESS =>
+                  val parsed: Try[DesignDocument] = Try {
+                    upickle.default.read[ujson.Obj](response.content)
+                  }.flatMap(
+                    json => ReactiveViewIndexManager.parseDesignDocument(designDocName, json)
                   )
-                )
-            }
-          })
-      case Failure(err) =>
-        SMono.error(err)
-    }
+
+                  parsed match {
+                    case Success(designDoc) => SMono.just(designDoc)
+                    case Failure(err)       => SMono.error(err)
+                  }
+                case _ =>
+                  SMono.error(
+                    new CouchbaseException(
+                      "Failed to drop design document [" +
+                        redactMeta(designDocName) + "] from namespace " + namespace
+                    )
+                  )
+              }
+            })
+        case Failure(err) =>
+          SMono.error(err)
+      }
+    })
   }
 
   def getAllDesignDocuments(
@@ -93,29 +103,34 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SFlux[DesignDocument] = {
-    // This particular request goes to port 8091 not 8092, hence use of ManagerUtil.getRequest
-    ManagerUtil
-      .sendRequest(core, HttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
-      .flatMapMany(response => {
-        response.status match {
-          case ResponseStatus.SUCCESS =>
-            ReactiveViewIndexManager
-              .parseAllDesignDocuments(new String(response.content(), UTF_8), namespace) match {
-              case Success(docs) => SFlux.fromIterable(docs)
-              case Failure(err)  => SFlux.error(err)
-            }
-          case _ =>
-            SFlux.error(
-              new CouchbaseException(
-                "Failed to get all design documents; response status=" + response.status + "; response body=" + new String(
-                  response.content,
-                  UTF_8
+    couchbaseOps match {
+      case core: Core =>
+        // This particular request goes to port 8091 not 8092, hence use of ManagerUtil.getRequest
+        ManagerUtil
+          .sendRequest(core, HttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
+          .flatMapMany(response => {
+            response.status match {
+              case ResponseStatus.SUCCESS =>
+                ReactiveViewIndexManager
+                  .parseAllDesignDocuments(new String(response.content(), UTF_8), namespace) match {
+                  case Success(docs) => SFlux.fromIterable(docs)
+                  case Failure(err)  => SFlux.error(err)
+                }
+              case _ =>
+                SFlux.error(
+                  new CouchbaseException(
+                    "Failed to get all design documents; response status=" + response.status + "; response body=" + new String(
+                      response.content,
+                      UTF_8
+                    )
+                  )
                 )
-              )
-            )
 
-        }
-      })
+            }
+          })
+
+      case _ => SFlux.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+    }
   }
 
   def upsertDesignDocument(
@@ -124,26 +139,33 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    pathForDesignDocument(indexData.name, namespace) match {
-      case Success(path) =>
-        val body = toJson(indexData)
-        val request = httpClient
-          .put(CoreHttpPath.path(path), options)
-          .json(Mapper.encodeAsBytes(body))
-          .build()
+    httpClientTry.flatMap(httpClient => {
+      val options = CoreCommonOptions.of(timeout, retryStrategy, null)
+      pathForDesignDocument(indexData.name, namespace) match {
+        case Success(path) =>
+          val body = toJson(indexData)
+          val request = httpClient
+            .put(CoreHttpPath.path(path), options)
+            .json(Mapper.encodeAsBytes(body))
+            .build()
 
-        SMono.defer(() => {
-          core.send(request)
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-            .doOnNext(_ => request.context.logicallyComplete)
-            .doOnError(err => request.context().logicallyComplete(err))
-            .map(_ => ())
-        })
-      case Failure(err) =>
-        SMono.error(err)
-    }
+          SMono.defer(() => {
+            couchbaseOps match {
+              case core: Core =>
+                core.send(request)
+                FutureConversions
+                  .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+                  .doOnNext(_ => request.context.logicallyComplete)
+                  .doOnError(err => request.context().logicallyComplete(err))
+                  .map(_ => ())
+
+              case _ => SMono.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+            }
+          })
+        case Failure(err) =>
+          SMono.error(err)
+      }
+    })
   }
 
   def dropDesignDocument(
@@ -152,26 +174,28 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
-    val options = CoreCommonOptions.of(timeout, retryStrategy, null)
-    pathForDesignDocument(designDocName, namespace) match {
-      case Success(path) =>
-        sendRequest(httpClient.delete(CoreHttpPath.path(path), options).build())
-          .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
-          .flatMap(response => {
-            response.status match {
-              case ResponseStatus.SUCCESS => SMono.just(())
-              case _ =>
-                SMono.error(
-                  new CouchbaseException(
-                    "Failed to drop design document [" +
-                      redactMeta(designDocName) + "] from namespace " + namespace
+    httpClientTry.flatMap(httpClient => {
+      val options = CoreCommonOptions.of(timeout, retryStrategy, null)
+      pathForDesignDocument(designDocName, namespace) match {
+        case Success(path) =>
+          sendRequest(httpClient.delete(CoreHttpPath.path(path), options).build())
+            .onErrorResume(err => SMono.error(mapNotFoundError(err, designDocName, namespace)))
+            .flatMap(response => {
+              response.status match {
+                case ResponseStatus.SUCCESS => SMono.just(())
+                case _ =>
+                  SMono.error(
+                    new CouchbaseException(
+                      "Failed to drop design document [" +
+                        redactMeta(designDocName) + "] from namespace " + namespace
+                    )
                   )
-                )
-            }
-          })
-      case Failure(err) =>
-        SMono.error(err)
-    }
+              }
+            })
+        case Failure(err) =>
+          SMono.error(err)
+      }
+    })
   }
 
   def mapNotFoundError(
@@ -237,13 +261,18 @@ class ReactiveViewIndexManager(private[scala] val core: Core, bucket: String) {
   }
 
   private def sendRequest(request: CoreHttpRequest): SMono[CoreHttpResponse] = {
-    SMono.defer(() => {
-      core.send(request)
-      FutureConversions
-        .wrap(request, request.response, propagateCancellation = true)
-        .doOnNext(_ => request.context.logicallyComplete)
-        .doOnError(err => request.context().logicallyComplete(err))
-    })
+    couchbaseOps match {
+      case core: Core =>
+        SMono.defer(() => {
+          core.send(request)
+          FutureConversions
+            .wrap(request, request.response, propagateCancellation = true)
+            .doOnNext(_ => request.context.logicallyComplete)
+            .doOnError(err => request.context().logicallyComplete(err))
+        })
+
+      case _ => SMono.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+    }
   }
 }
 

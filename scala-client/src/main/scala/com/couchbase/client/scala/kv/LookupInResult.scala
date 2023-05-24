@@ -1,6 +1,7 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -17,17 +18,15 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+import scala.jdk.CollectionConverters._
 
 /** The results of a SubDocument 'lookupIn' operation.
   *
   * When doing a `lookupIn` the application provides a sequence of [[LookupInSpec]].  The indexes into this sequence
   * are used when retrieving the results.
   *
-  * @param id  the unique identifier of the document
-  * @param cas the document's CAS value at the time of the lookup
   * @param expiryTime the document's expiration time, if it was fetched with the `withExpiry` flag set.  If that flag
   *                   was not set, this will be None.  The time is the point in time when the document expires.
-  *
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list
@@ -36,14 +35,17 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   **/
-case class LookupInResult(
-    id: String,
-    private val content: collection.Seq[SubDocumentField],
-    private[scala] val flags: Int,
-    cas: Long,
+case class LookupInResult private (
+    private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
     transcoder: Transcoder
 ) {
+
+  /** The unique identifier of the document. */
+  def id: String = internal.key
+
+  /** The document's CAS value at the time of the lookup. */
+  def cas: Long = internal.cas
 
   /** If the document was fetched with the `withExpiry` flag set then this will contain the
     * document's expiration value.  Otherwise it will be None.
@@ -55,6 +57,8 @@ case class LookupInResult(
     */
   def expiry: Option[Duration] = expiryTime.map(i => Duration(i.getEpochSecond, TimeUnit.SECONDS))
 
+  private val content = internal.fields.asScala
+
   /** Retrieve the content returned for a particular `LookupInSpec`, converted into the application's preferred
     * representation.
     *
@@ -64,37 +68,29 @@ case class LookupInResult(
   def contentAs[T](
       index: Int
   )(implicit deserializer: JsonDeserializer[T], tag: ClassTag[T]): Try[T] = {
-    if (index < 0 || index >= content.size) {
-      Failure(
-        new InvalidArgumentException(
-          s"$index is out of bounds",
-          null,
-          ReducedKeyValueErrorContext.create(id)
-        )
-      )
-    } else {
-      val field = content(index)
-      field.error().asScala match {
-        case Some(err) => Failure(err)
-        case _ =>
-          field.`type` match {
-            case SubdocCommandType.EXISTS =>
-              if (tag.runtimeClass.isAssignableFrom(classOf[Boolean])) {
-                val exists = field.status == SubDocumentOpResponseStatus.SUCCESS
-                Success(exists.asInstanceOf[T])
-              } else {
-                Failure(
-                  new InvalidArgumentException(
-                    "Exists results can only be returned as Boolean",
-                    null,
-                    ReducedKeyValueErrorContext.create(id)
+    Try(internal.field(index))
+      .flatMap(field => {
+        field.error().asScala match {
+          case Some(err) => Failure(err)
+          case _ =>
+            field.`type` match {
+              case SubdocCommandType.EXISTS =>
+                if (tag.runtimeClass.isAssignableFrom(classOf[Boolean])) {
+                  val exists = field.status == SubDocumentOpResponseStatus.SUCCESS
+                  Success(exists.asInstanceOf[T])
+                } else {
+                  Failure(
+                    new InvalidArgumentException(
+                      "Exists results can only be returned as Boolean",
+                      null,
+                      ReducedKeyValueErrorContext.create(id)
+                    )
                   )
-                )
-              }
-            case _ => deserializer.deserialize(field.value)
-          }
-      }
-    }
+                }
+              case _ => deserializer.deserialize(field.value)
+            }
+        }
+      })
   }
 
   /** Returns the raw JSON bytes of the content at the given index.

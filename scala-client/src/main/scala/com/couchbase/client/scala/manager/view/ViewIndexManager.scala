@@ -23,10 +23,8 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 class ViewIndexManager(private[scala] val reactive: ReactiveViewIndexManager) {
-  private val core = reactive.core
-  private val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private val DefaultRetryStrategy: RetryStrategy = core.context().environment().retryStrategy()
+  private val DefaultTimeout: Duration            = reactive.DefaultTimeout
+  private val DefaultRetryStrategy: RetryStrategy = reactive.DefaultRetryStrategy
 
   def getDesignDocument(
       designDocName: String,

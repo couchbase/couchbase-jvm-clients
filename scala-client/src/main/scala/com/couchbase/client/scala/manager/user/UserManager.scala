@@ -23,8 +23,9 @@ import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
+
 @Volatile
-class UserManager(val async: AsyncUserManager, val reactive: ReactiveUserManager) {
+class UserManager private[scala] (val async: AsyncUserManager) {
   private val defaultManagerTimeout = async.defaultManagerTimeout
   private val defaultRetryStrategy  = async.defaultRetryStrategy
 

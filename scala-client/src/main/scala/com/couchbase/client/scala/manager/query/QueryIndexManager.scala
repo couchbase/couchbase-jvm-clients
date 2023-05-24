@@ -42,11 +42,8 @@ import scala.util.Try
   *                        [[com.couchbase.client.scala.Collection]].  If specified, `scopeName` must also be specified.
   */
 class QueryIndexManager(async: AsyncQueryIndexManager)(implicit val ec: ExecutionContext) {
-  private val core = async.cluster.core
-  private[client] val DefaultTimeout: Duration =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private[client] val DefaultRetryStrategy: RetryStrategy =
-    core.context().environment().retryStrategy()
+  private[client] val DefaultTimeout: Duration            = async.DefaultTimeout
+  private[client] val DefaultRetryStrategy: RetryStrategy = async.DefaultRetryStrategy
 
   /** Gets all indexes.
     *

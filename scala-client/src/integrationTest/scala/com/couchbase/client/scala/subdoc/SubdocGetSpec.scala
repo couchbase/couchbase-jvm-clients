@@ -51,7 +51,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     coll.lookupIn(docId, Array[LookupInSpec]()) match {
       case Success(result)                        => assert(false, s"unexpected success")
-      case Failure(err: IllegalArgumentException) =>
+      case Failure(err: InvalidArgumentException) =>
       case Failure(err) =>
         assert(false, s"unexpected error $err")
     }

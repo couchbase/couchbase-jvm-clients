@@ -18,7 +18,12 @@ package com.couchbase.client.scala.manager.bucket
 import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
 import com.couchbase.client.core.config
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.manager.bucket.{CoreBucketSettings, CoreCompressionMode, CoreEvictionPolicyType, CoreStorageBackend}
+import com.couchbase.client.core.manager.bucket.{
+  CoreBucketSettings,
+  CoreCompressionMode,
+  CoreEvictionPolicyType,
+  CoreStorageBackend
+}
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.util.CouchbasePickler

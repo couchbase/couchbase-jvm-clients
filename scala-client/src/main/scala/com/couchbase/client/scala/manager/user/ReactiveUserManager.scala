@@ -18,13 +18,15 @@ package com.couchbase.client.scala.manager.user
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
 import com.couchbase.client.core.error.{GroupNotFoundException, UserNotFoundException}
 import com.couchbase.client.core.logging.RedactableArgument.{redactMeta, redactSystem, redactUser}
 import com.couchbase.client.core.msg.ResponseStatus
 import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
-import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
+import com.couchbase.client.core.retry.{BestEffortRetryStrategy, RetryStrategy}
 import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode
 import com.couchbase.client.scala.manager.ManagerUtil
@@ -46,10 +48,9 @@ object ReactiveUserManager {
 }
 
 @Volatile
-class ReactiveUserManager(private val core: Core) {
-  private[scala] val defaultManagerTimeout =
-    core.context().environment().timeoutConfig().managementTimeout()
-  private[scala] val defaultRetryStrategy = core.context().environment().retryStrategy()
+class ReactiveUserManager(private val couchbaseOps: CoreCouchbaseOps) {
+  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
 
   private def pathForUsers = "/settings/rbac/users"
 
@@ -65,8 +66,11 @@ class ReactiveUserManager(private val core: Core) {
 
   private def pathForPassword = "/controller/changePassword"
 
-  private def sendRequest(request: GenericManagerRequest): SMono[GenericManagerResponse] = {
-    ManagerUtil.sendRequest(core, request)
+  private def coreTry: SMono[Core] = {
+    couchbaseOps match {
+      case core: Core => SMono.just(core)
+      case _          => SMono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
   }
 
   private def sendRequest(
@@ -75,7 +79,7 @@ class ReactiveUserManager(private val core: Core) {
       timeout: Duration,
       retryStrategy: RetryStrategy
   ): SMono[GenericManagerResponse] = {
-    ManagerUtil.sendRequest(core, method, path, timeout, retryStrategy)
+    coreTry.flatMap(core => ManagerUtil.sendRequest(core, method, path, timeout, retryStrategy))
   }
 
   private def sendRequest(
@@ -85,7 +89,9 @@ class ReactiveUserManager(private val core: Core) {
       timeout: Duration,
       retryStrategy: RetryStrategy
   ): SMono[GenericManagerResponse] = {
-    ManagerUtil.sendRequest(core, method, path, body, timeout, retryStrategy)
+    coreTry.flatMap(
+      core => ManagerUtil.sendRequest(core, method, path, body, timeout, retryStrategy)
+    )
   }
 
   protected def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {

@@ -15,8 +15,10 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.Core
 import com.couchbase.client.core.diagnostics.PingResult
 import com.couchbase.client.core.msg.view.ViewRequest
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.diagnostics.{PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.manager.collection.ReactiveCollectionManager
 import com.couchbase.client.scala.manager.view.ReactiveViewIndexManager
@@ -46,12 +48,10 @@ import scala.util.{Failure, Success, Try}
   */
 class ReactiveBucket private[scala] (val async: AsyncBucket) {
   private[scala] implicit val ec: ExecutionContext = async.ec
-  private[scala] val hp                            = HandlerBasicParams(async.core, async.environment)
-  private[scala] val viewHandler                   = new ViewHandler(hp)
 
   lazy val collections = new ReactiveCollectionManager(async.collections)
 
-  lazy val viewIndexes = new ReactiveViewIndexManager(async.core, async.name)
+  lazy val viewIndexes = new ReactiveViewIndexManager(async.couchbaseOps, async.name)
 
   /** Opens and returns a Couchbase scope resource.
     *
@@ -97,9 +97,16 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
       viewName: String,
       options: ViewOptions
   ): SMono[ReactiveViewResult] = {
-    val req =
-      viewHandler.request(designDoc, viewName, options, async.core, async.environment, async.name)
-    viewQuery(req)
+    async.couchbaseOps match {
+      case core: Core =>
+        val hp          = HandlerBasicParams(core)
+        val viewHandler = new ViewHandler(hp)
+
+        val req =
+          viewHandler.request(designDoc, viewName, options, core, async.environment, async.name)
+        viewQuery(req)
+      case _ => SMono.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+    }
   }
 
   /** Performs a view query against the cluster.
@@ -131,25 +138,30 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
 
       case Success(request) =>
         SMono.defer(() => {
-          async.core.send(request)
+          async.couchbaseOps match {
+            case core: Core =>
+              core.send(request)
 
-          FutureConversions
-            .javaCFToScalaMono(request, request.response(), false)
-            .map(response => {
+              FutureConversions
+                .javaCFToScalaMono(request, request.response(), false)
+                .map(response => {
 
-              val rows: SFlux[ViewRow] = FutureConversions
-                .javaFluxToScalaFlux(response.rows())
-                .map[ViewRow](bytes => ViewRow(bytes.data()))
+                  val rows: SFlux[ViewRow] = FutureConversions
+                    .javaFluxToScalaFlux(response.rows())
+                    .map[ViewRow](bytes => ViewRow(bytes.data()))
 
-              val meta = ViewMetaData(
-                response.header().debug().asScala,
-                response.header().totalRows()
-              )
+                  val meta = ViewMetaData(
+                    response.header().debug().asScala,
+                    response.header().totalRows()
+                  )
 
-              ReactiveViewResult(SMono.just(meta), rows)
-            })
-            .doOnNext(_ => request.context.logicallyComplete)
-            .doOnError(err => request.context().logicallyComplete(err))
+                  ReactiveViewResult(SMono.just(meta), rows)
+                })
+                .doOnNext(_ => request.context.logicallyComplete)
+                .doOnError(err => request.context().logicallyComplete(err))
+
+            case _ => SMono.error(CoreProtostellarUtil.unsupportedInProtostellar("views"))
+          }
         })
     }
   }

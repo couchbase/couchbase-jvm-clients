@@ -82,13 +82,14 @@ private[scala] object CoreCommonConverters {
 
   def makeCommonOptions(
       timeout: Duration,
-      retryStrategy: RetryStrategy = null
+      retryStrategy: RetryStrategy = null,
+      parentSpan: RequestSpan = null
   ): CoreCommonOptions = {
     CoreCommonOptions.of(
       if (timeout == Duration.MinusInf) null
       else java.time.Duration.ofNanos(timeout.toNanos),
       retryStrategy,
-      null
+      parentSpan
     )
   }
 
@@ -275,8 +276,13 @@ private[scala] object CoreCommonConverters {
     CoreSearchIndex.fromJson(in.toJson)
   }
 
-  def convert[T](in: CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
-    FutureConversions.javaCFToScalaFutureMappingExceptions(in.toFuture)
+  def convert[T](in: => CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
+    // Argument validation can cause this to throw immediately
+    try {
+      FutureConversions.javaCFToScalaFutureMappingExceptions(in.toFuture)
+    } catch {
+      case err: Throwable => Future.failed(err)
+    }
   }
 
   def convert[T](in: Mono[T]): SMono[T] = {

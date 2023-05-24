@@ -15,8 +15,11 @@
  */
 package com.couchbase.client.scala.manager.analytics
 
+import com.couchbase.client.core.Core
+import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.manager.CoreAnalyticsLinkManager
+import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager.makeCoreOptions
 import com.couchbase.client.scala.util.{CouchbasePickler, FutureConversions}
@@ -26,12 +29,18 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
-class AsyncAnalyticsIndexManager(reactive: => ReactiveAnalyticsIndexManager)(
+class AsyncAnalyticsIndexManager private[scala] (
+    reactive: => ReactiveAnalyticsIndexManager,
+    private val couchbaseOps: CoreCouchbaseOps
+)(
     implicit val ec: ExecutionContext
 ) {
   private val DefaultTimeout       = reactive.DefaultTimeout
   private val DefaultRetryStrategy = reactive.DefaultRetryStrategy
-  private val linkManager          = new CoreAnalyticsLinkManager(reactive.cluster.async.core)
+  private def linkManagerTry: Future[CoreAnalyticsLinkManager] = couchbaseOps match {
+    case core: Core => Future.successful(new CoreAnalyticsLinkManager(core))
+    case _          => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+  }
 
   def createDataverse(
       dataverseName: String,
@@ -147,13 +156,15 @@ class AsyncAnalyticsIndexManager(reactive: => ReactiveAnalyticsIndexManager)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Void] = {
-    link.toMap match {
-      case Success(v) =>
-        val jf =
-          linkManager.createLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
-        FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
-      case Failure(err) => Future.failed(err)
-    }
+    linkManagerTry.flatMap(linkManager => {
+      link.toMap match {
+        case Success(v) =>
+          val jf =
+            linkManager.createLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
+          FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
+        case Failure(err) => Future.failed(err)
+      }
+    })
   }
 
   /** Replaces an existing analytics link.
@@ -169,13 +180,16 @@ class AsyncAnalyticsIndexManager(reactive: => ReactiveAnalyticsIndexManager)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Void] = {
-    link.toMap match {
-      case Success(v) =>
-        val jf =
-          linkManager.replaceLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
-        FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
-      case Failure(err) => Future.failed(err)
-    }
+    linkManagerTry.flatMap(
+      linkManager =>
+        link.toMap match {
+          case Success(v) =>
+            val jf =
+              linkManager.replaceLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
+            FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
+          case Failure(err) => Future.failed(err)
+        }
+    )
   }
 
   /** Drops (deletes) an existing analytics link.
@@ -188,9 +202,12 @@ class AsyncAnalyticsIndexManager(reactive: => ReactiveAnalyticsIndexManager)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Void] = {
-    val jf =
-      linkManager.dropLink(linkName, dataverse, makeCoreOptions(timeout, retryStrategy, parentSpan))
-    FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
+    linkManagerTry.flatMap(linkManager => {
+      val jf =
+        linkManager
+          .dropLink(linkName, dataverse, makeCoreOptions(timeout, retryStrategy, parentSpan))
+      FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
+    })
   }
 
   /** Gets analytics links.
@@ -211,18 +228,20 @@ class AsyncAnalyticsIndexManager(reactive: => ReactiveAnalyticsIndexManager)(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Seq[AnalyticsLink]] = {
-    val opts                  = makeCoreOptions(timeout, retryStrategy, parentSpan)
-    val dataverseName: String = dataverse.getOrElse(null)
-    val linkTypeStr: String   = linkType.map(v => v.encode).getOrElse(null)
-    Try(linkManager.getLinks(dataverseName, linkTypeStr, name.getOrElse(null), opts)) match {
-      case Success(jf) =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(jf)
-          .map((responseBytes: Array[Byte]) => {
-            val links = CouchbasePickler.read[Seq[AnalyticsLink]](responseBytes)
-            links
-          })
-      case Failure(err) => Future.failed(err)
-    }
+    linkManagerTry.flatMap(linkManager => {
+      val opts                  = makeCoreOptions(timeout, retryStrategy, parentSpan)
+      val dataverseName: String = dataverse.getOrElse(null)
+      val linkTypeStr: String   = linkType.map(v => v.encode).getOrElse(null)
+      Try(linkManager.getLinks(dataverseName, linkTypeStr, name.getOrElse(null), opts)) match {
+        case Success(jf) =>
+          FutureConversions
+            .javaCFToScalaFutureMappingExceptions(jf)
+            .map((responseBytes: Array[Byte]) => {
+              val links = CouchbasePickler.read[Seq[AnalyticsLink]](responseBytes)
+              links
+            })
+        case Failure(err) => Future.failed(err)
+      }
+    })
   }
 }
