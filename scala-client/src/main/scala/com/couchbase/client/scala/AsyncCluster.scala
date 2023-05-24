@@ -88,11 +88,6 @@ class AsyncCluster(
   private[scala] val couchbaseOps =
     CoreCouchbaseOps.create(environment.coreEnv, authenticator, connectionString)
 
-  couchbaseOps match {
-    case core: Core => core.initGlobalConfig()
-    case _          =>
-  }
-
   // Only used by tests now
   private[couchbase] def core: Core = couchbaseOps match {
     case core: Core => core
@@ -431,7 +426,10 @@ class AsyncCluster(
   }
 
   private[scala] def performGlobalConnect(): Unit = {
-    core.initGlobalConfig()
+    couchbaseOps match {
+      case core: Core => core.initGlobalConfig()
+      case _ =>
+    }
   }
 }
 
