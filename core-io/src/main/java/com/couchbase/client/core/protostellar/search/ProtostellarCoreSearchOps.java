@@ -229,11 +229,11 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     return transformValues(response.getFacetsMap(), ProtostellarCoreSearchOps::convertFacetResult);
   }
 
-  private static CoreSearchFacetResult convertFacetResult(SearchQueryResponse.FacetResult facet) {
+  private static CoreSearchFacetResult convertFacetResult(String facetName, SearchQueryResponse.FacetResult facet) {
     if (facet.hasTermFacet()) {
       SearchQueryResponse.TermFacetResult result = facet.getTermFacet();
       return new CoreTermSearchFacetResult(
-        result.getName(),
+        facetName,
         result.getField(),
         result.getTotal(),
         result.getMissing(),
@@ -248,7 +248,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     if (facet.hasNumericRangeFacet()) {
       SearchQueryResponse.NumericRangeFacetResult result = facet.getNumericRangeFacet();
       return new CoreNumericRangeSearchFacetResult(
-        result.getName(),
+        facetName,
         result.getField(),
         result.getTotal(),
         result.getMissing(),
@@ -265,7 +265,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     if (facet.hasDateRangeFacet()) {
       SearchQueryResponse.DateRangeFacetResult result = facet.getDateRangeFacet();
       return new CoreDateRangeSearchFacetResult(
-        result.getName(),
+        facetName,
         result.getField(),
         result.getTotal(),
         result.getMissing(),

@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -318,6 +319,12 @@ public class CbCollections {
     return map.entrySet()
         .stream()
         .collect(toMap(Map.Entry::getKey, entry -> transformer.apply(entry.getValue())));
+  }
+
+  public static <K, V1, V2> Map<K, V2> transformValues(Map<K, V1> map, BiFunction<K, V1, V2> transformer) {
+    return map.entrySet()
+        .stream()
+        .collect(toMap(Map.Entry::getKey, entry -> transformer.apply(entry.getKey(), entry.getValue())));
   }
 
   /**
