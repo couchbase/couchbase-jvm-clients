@@ -36,7 +36,7 @@ import java.time.Instant
  * For [numeric] and [date] facets, you specify the categories up front as
  * value ranges. Common use cases include counting the number of documents in
  * certain price ranges, like: $1 to $5, $5 to $20, $20+, or time ranges like:
- * "today", "yesterday", or "more than a week ago".
+ * "today", "yesterday", and "before yesterday".
  *
  * Unlike a histogram, it's okay if the ranges overlap. If a field value
  * matches more than one range, each matching range has its count incremented.
