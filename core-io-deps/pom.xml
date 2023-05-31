@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.1.91.Final</netty.version>
+        <netty.version>4.1.93.Final</netty.version>
         <jackson.version>2.15.2</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
