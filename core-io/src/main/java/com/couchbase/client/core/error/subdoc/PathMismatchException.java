@@ -22,6 +22,9 @@ import com.couchbase.client.core.error.context.ErrorContext;
 /**
  * Subdocument exception thrown when the path structure conflicts with the document structure
  * (for example, if a path mentions foo.bar[0].baz, but foo.bar is actually a JSON object).
+ * <p>
+ * Also thrown if the path for a subdocument counter operation refers to a field whose value
+ * is not an integral number.
  */
 public class PathMismatchException extends CouchbaseException {
 

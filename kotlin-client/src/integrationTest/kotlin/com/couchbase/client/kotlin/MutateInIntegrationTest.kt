@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin
 
+import com.couchbase.client.core.error.subdoc.PathMismatchException
 import com.couchbase.client.core.error.subdoc.ValueInvalidException
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.kv.LookupInSpec
@@ -37,7 +38,7 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
     @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
     fun `can decrement counter below zero`(): Unit = runBlocking {
         val id = nextId()
-        collection.upsert(id, Content.json("{}"));
+        collection.upsert(id, Content.json("{}"))
 
         val spec = MutateInSpec()
         val counter = spec.decrementAndGet("foo.bar")
@@ -56,8 +57,18 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
         val id = nextId()
         collection.upsert(id, mapOf("foo" to 1))
         val spec = MutateInSpec()
-        spec.incrementAndGet("foo", delta = Long.MAX_VALUE)
+        spec.addAndGet("foo", delta = Long.MAX_VALUE)
         assertThrows<ValueInvalidException> { collection.mutateIn(id, spec) }
+    }
+
+    @Test
+    @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
+    fun `fails on counter not integer`(): Unit = runBlocking {
+        val id = nextId()
+        collection.upsert(id, Content.json("""{"foo":1.0}"""))
+        val spec = MutateInSpec()
+        spec.incrementAndGet("foo")
+        assertThrows<PathMismatchException> { collection.mutateIn(id, spec) }
     }
 
     @Test

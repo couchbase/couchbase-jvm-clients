@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin.kv
 
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand
 import com.couchbase.client.core.error.subdoc.PathExistsException
+import com.couchbase.client.core.error.subdoc.ValueInvalidException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMPAT_FLAGS
 import com.couchbase.client.core.msg.kv.SubdocCommandType
@@ -26,6 +27,7 @@ import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import java.io.ByteArrayOutputStream
+import kotlin.DeprecationLevel.WARNING
 
 public class SubdocLong internal constructor(
     public val path: String,
@@ -239,9 +241,18 @@ public class MutateInSpec {
         typeRef()
     )
 
-    public fun incrementAndGet(
+    /**
+     * Adds [delta] to an integral number field. If the field does not exist,
+     * creates it with a value of [delta].
+     *
+     * **Note** `mutateIn` throws [ValueInvalidException] if this operation
+     * would overflow or underflow a signed 64-bit integer.
+     *
+     * @return A handle for getting the new value from the [MutateInResult].
+     */
+    public fun addAndGet(
         path: String,
-        delta: Long = 1,
+        delta: Long,
         xattr: Boolean = false,
     ): SubdocLong {
         val subdoc = SubdocLong(path, xattr, this, commands.size)
@@ -249,11 +260,43 @@ public class MutateInSpec {
         return subdoc
     }
 
+    /**
+     * Convenience method equivalent to [addAndGet] with a delta of 1.
+     */
+    public fun incrementAndGet(
+        path: String,
+        xattr: Boolean = false,
+    ): SubdocLong = addAndGet(path, 1, xattr)
+
+    /**
+     * Convenience method equivalent to [addAndGet] with a delta of -1.
+     */
+    public fun decrementAndGet(
+        path: String,
+        xattr: Boolean = false,
+    ): SubdocLong = addAndGet(path, -1, xattr)
+
+    @Deprecated(
+        level = WARNING,
+        message = "Please call addAndGet instead of passing a custom delta to incrementAndGet",
+        replaceWith = ReplaceWith("addAndGet(path, delta, xattr)")
+    )
+    public fun incrementAndGet(
+        path: String,
+        delta: Long = 1,
+        xattr: Boolean = false,
+    ): SubdocLong = addAndGet(path, delta, xattr)
+
+    @Deprecated(
+        level = WARNING,
+        message = "Please call addAndGet with a negative delta instead of passing a custom delta to decrementAndGet. Note that negating Long.MIN_VALUE has no effect.",
+        replaceWith = ReplaceWith("addAndGet(path, -delta, xattr)")
+    )
     public fun decrementAndGet(
         path: String,
         delta: Long = 1,
         xattr: Boolean = false,
-    ): SubdocLong = incrementAndGet(path, -delta, xattr)
+    ): SubdocLong = addAndGet(path, -delta, xattr)
 }
 
 private fun <T> serializeArrayFragment(

@@ -274,13 +274,13 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `counter add`(): Unit = runBlocking {
-        val updatedContent = checkSingleOpSuccess(mapOf("foo" to 10)) { incrementAndGet("foo", 5) }
+        val updatedContent = checkSingleOpSuccess(mapOf("foo" to 10)) { addAndGet("foo", 5 ) }
         assertEquals(15, updatedContent.getInt("foo"))
     }
 
     @Test
     fun `counter minus`(): Unit = runBlocking {
-        val updatedContent = checkSingleOpSuccess(mapOf("foo" to 10)) { decrementAndGet("foo", 3) }
+        val updatedContent = checkSingleOpSuccess(mapOf("foo" to 10)) { addAndGet("foo", -3 ) }
         assertEquals(7, updatedContent.getInt("foo"))
     }
 
@@ -370,7 +370,7 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `counter add xattr`(): Unit = runBlocking {
-        val updatedContent = checkSingleOpSuccessXattr(mapOf("foo" to 10)) { incrementAndGet("x.foo", 5, xattr = true) }
+        val updatedContent = checkSingleOpSuccessXattr(mapOf("foo" to 10)) { addAndGet("x.foo", 5, xattr = true) }
         assertEquals(15, updatedContent.getInt("foo"))
     }
 
@@ -380,7 +380,7 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
 
         val spec = MutateInSpec()
         spec.insert("foo2", "bar2")
-        val count = spec.incrementAndGet("x.foo", 5, xattr = true)
+        val count = spec.addAndGet("x.foo", 5, xattr = true)
 
         val result = collection.mutateIn(docId, spec)
         assertEquals(5, count.get(result))
@@ -388,7 +388,7 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
 
     @Test
     fun `counter minus xattr`(): Unit = runBlocking {
-        val updatedContent = checkSingleOpSuccessXattr(mapOf("foo" to 10)) { decrementAndGet("x.foo", 3, xattr = true) }
+        val updatedContent = checkSingleOpSuccessXattr(mapOf("foo" to 10)) { addAndGet("x.foo", -3, xattr = true) }
         assertEquals(7, updatedContent.getInt("foo"))
     }
 
