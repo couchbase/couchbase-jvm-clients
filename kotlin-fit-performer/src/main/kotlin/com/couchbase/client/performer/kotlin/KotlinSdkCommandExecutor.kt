@@ -31,11 +31,11 @@ import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
-// [start:1.1.1]
+// [start:1.1.6]
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
 import com.couchbase.client.kotlin.kv.KvScanConsistency
-// [end:1.1.1]
+// [end:1.1.6]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
@@ -243,7 +243,7 @@ class KotlinSdkCommandExecutor(
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
-            // [start:1.1.1]
+            // [start:1.1.6]
             } else if (op.hasRangeScan()) {
                 val request = op.rangeScan
                 val collection = connection.collection(request.collection)
@@ -301,7 +301,7 @@ class KotlinSdkCommandExecutor(
                                 .setStreamId(streamer.streamId())
                         )
                 )
-            // [end:1.1.1]
+            // [end:1.1.6]
             } else if (op.hasClusterCommand()) {
                 val clc = op.clusterCommand
 
