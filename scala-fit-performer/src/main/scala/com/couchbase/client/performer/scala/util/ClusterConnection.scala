@@ -26,12 +26,12 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
   private val hostname = req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
-  val cluster: Cluster = OptionsUtil.convertClusterConfig(req) match {
+  val (cluster, env) = OptionsUtil.convertClusterConfig(req) match {
     case Some(env) =>
       val built = env.build.get
       val opts = ClusterOptions.create(req.getClusterUsername, req.getClusterPassword).environment(built)
-      Cluster.connect(hostname, opts).get
-    case _ => Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get
+      (Cluster.connect(hostname, opts).get, Some(built))
+    case _ => (Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get, None)
   }
   private val bucketCache = scala.collection.mutable.Map.empty[String, Bucket]
 
@@ -66,5 +66,10 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
       lastCollection = out
       out
     }
+  }
+
+  def close(): Unit = {
+    cluster.disconnect()
+    env.foreach(e => e.shutdown())
   }
 }

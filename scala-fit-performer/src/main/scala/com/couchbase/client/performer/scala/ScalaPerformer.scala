@@ -100,7 +100,7 @@ class ScalaPerformer extends CorePerformer {
       responseObserver: StreamObserver[ClusterConnectionCloseResponse]
   ): Unit = {
     try {
-      clusterConnections(request.getClusterConnectionId).cluster.disconnect()
+      clusterConnections(request.getClusterConnectionId).close()
       clusterConnections.remove(request.getClusterConnectionId)
       ClusterConnectionCreateRequest.getDefaultInstance.newBuilderForType
       responseObserver.onNext(
