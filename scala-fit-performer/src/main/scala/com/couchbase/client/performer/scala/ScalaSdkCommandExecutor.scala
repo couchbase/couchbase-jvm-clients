@@ -589,7 +589,7 @@ object ScalaSdkCommandExecutor {
   ): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
-      .setContent(ByteString.copyFrom(value.contentAs[JsonObject].toString.getBytes))
+      .setContent(ByteString.copyFrom(value.contentAs[JsonObject].get.toString.getBytes))
     // [start:1.1.0]
     value.expiryTime.foreach(et => builder.setExpiryTime(et.getEpochSecond))
     // [end:1.1.0]
