@@ -116,6 +116,14 @@ public class CoreProtostellarUtil {
     return false;
   }
 
+  public static <TSdkResult> boolean handleShutdownReactive(Sinks.Many<TSdkResult> ret, CoreProtostellar core, ProtostellarRequest<?> request) {
+    if (core.endpoint().isShutdown()) {
+      ret.tryEmitError(RequestCanceledException.shuttingDown(request.context())).orThrow();
+      return true;
+    }
+    return false;
+  }
+
   public static <T> @Nullable Mono<T> handleShutdownReactive(CoreProtostellar core, ProtostellarRequest<?> request) {
     if (core.endpoint().isShutdown()) {
       return Mono.error(RequestCanceledException.shuttingDown(request.context()));

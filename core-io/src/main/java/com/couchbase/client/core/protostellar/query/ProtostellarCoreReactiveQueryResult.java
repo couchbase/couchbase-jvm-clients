@@ -20,30 +20,26 @@ import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.protostellar.query.v1.QueryResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class ProtostellarCoreReactiveQueryResult extends CoreReactiveQueryResult {
 
-  private final Flux<QueryResponse> responses;
+  private final Flux<QueryChunkRow> rows;
+  private final  Mono<CoreQueryMetaData> metaData;
 
-  public ProtostellarCoreReactiveQueryResult(Flux<QueryResponse> responses) {
-    this.responses = notNull(responses, "responses");
+  public ProtostellarCoreReactiveQueryResult(Flux<QueryChunkRow> rows, Mono<CoreQueryMetaData> metaData) {
+    this.rows = rows;
+    this.metaData = metaData;
   }
 
   public Flux<QueryChunkRow> rows() {
-    return responses.flatMap(response -> Flux.fromIterable(response.getRowsList())
-      .map(row -> new QueryChunkRow(row.toByteArray())));
+    return rows;
   }
 
   public Mono<CoreQueryMetaData> metaData() {
-    return responses.takeUntil(response -> response.hasMetaData())
-      .single()
-      .map(response -> new ProtostellarCoreQueryMetaData(response.getMetaData()));
+    return metaData;
   }
 
   @Override

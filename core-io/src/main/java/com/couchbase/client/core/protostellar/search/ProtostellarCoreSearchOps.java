@@ -49,9 +49,12 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
-import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.protostellar.CoreProtostellarAccessorsStreaming;
+import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.protostellar.search.v1.DateRange;
 import com.couchbase.client.protostellar.search.v1.DateRangeFacet;
@@ -61,6 +64,7 @@ import com.couchbase.client.protostellar.search.v1.NumericRangeFacet;
 import com.couchbase.client.protostellar.search.v1.SearchQueryRequest;
 import com.couchbase.client.protostellar.search.v1.SearchQueryResponse;
 import com.couchbase.client.protostellar.search.v1.TermFacet;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.NonNull;
@@ -78,15 +82,12 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static com.couchbase.client.core.util.ProtostellarUtil.convert;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
-
 
 @Stability.Internal
 public class ProtostellarCoreSearchOps implements CoreSearchOps {
@@ -103,53 +104,37 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName,
                                                               CoreSearchQuery search,
                                                               CoreSearchOptions options) {
-    options.validate();
 
     ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, search, options);
-    CompletableFuture<CoreSearchResult> ret = new CompletableFuture<>();
-    CoreAsyncResponse<CoreSearchResult> out = new CoreAsyncResponse<>(ret, () -> {
-    });
-    if (handleShutdownAsync(core, ret, request)) {
-      return out;
-    }
-    List<SearchQueryResponse> responses = new ArrayList<>();
 
-    StreamObserver<SearchQueryResponse> response = new StreamObserver<SearchQueryResponse>() {
-      @Override
-      public void onNext(SearchQueryResponse response) {
-        responses.add(response);
-      }
+    CoreAsyncResponse<List<SearchQueryResponse>> responses = CoreProtostellarAccessorsStreaming.async(core,
+      request,
+      (endpoint, stream) -> {
+        endpoint.searchStub()
+          .withDeadline(request.deadline())
+          .searchQuery(request.request(), stream);
+        return null;
+      },
+      (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+    );
 
-      @Override
-      public void onError(Throwable throwable) {
-        ret.completeExceptionally(convertException(throwable));
-      }
+    return responses.map(results -> {
+      List<CoreSearchRow> rows = new ArrayList<>();
+      CoreSearchMetaData metaData = null;
+      Map<String, CoreSearchFacetResult> facets = emptyMap();
 
-      @Override
-      public void onCompleted() {
-        List<CoreSearchRow> rows = new ArrayList<>();
-        CoreSearchMetaData metaData = null;
-        Map<String, CoreSearchFacetResult> facets = emptyMap();
-
-        for (SearchQueryResponse r : responses) {
-          if (r.hasMetaData()) {
-            metaData = parseMetadata(r);
-            facets = parseFacets(r);
-          }
-
-          r.getHitsList()
-            .forEach(hit -> rows.add(parse(hit)));
+      for (SearchQueryResponse r : results) {
+        if (r.hasMetaData()) {
+          metaData = parseMetadata(r);
+          facets = parseFacets(r);
         }
 
-        ret.complete(new CoreSearchResult(rows, facets, metaData));
+        r.getHitsList()
+          .forEach(hit -> rows.add(parse(hit)));
       }
-    };
 
-    core.endpoint().searchStub()
-      .withDeadline(request.deadline())
-      .searchQuery(request.request(), response);
-
-    return out;
+      return new CoreSearchResult(rows, facets, metaData);
+    });
   }
 
   private static CoreSearchMetaData parseMetadata(SearchQueryResponse response) {
@@ -172,56 +157,55 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName,
                                                             CoreSearchQuery query,
                                                             CoreSearchOptions options) {
-    options.validate();
-
     return Mono.defer(() -> {
-      ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, query, options);
-      Mono<CoreReactiveSearchResult> err = handleShutdownReactive(core, request);
-      if (err != null) {
-        return err;
-      }
+      try {
+        ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, query, options);
 
-      Sinks.Many<CoreSearchRow> rows = Sinks.many().replay().latest();
-      Sinks.One<CoreSearchMetaData> metaData = Sinks.one();
-      Sinks.One<Map<String, CoreSearchFacetResult>> facets = Sinks.one();
+        Sinks.One<CoreReactiveSearchResult> out = Sinks.one();
 
-      StreamObserver<SearchQueryResponse> response = new StreamObserver<SearchQueryResponse>() {
-        @Override
-        public void onNext(SearchQueryResponse response) {
-          response.getHitsList().forEach(hit -> {
-            CoreSearchRow row = parse(hit);
-            rows.tryEmitNext(row).orThrow();
-          });
-
-          if (response.hasMetaData()) {
-            CoreSearchMetaData cmd = parseMetadata(response);
-            metaData.tryEmitValue(cmd).orThrow();
-
-            if (response.getFacetsCount() > 0) {
-              Map<String, CoreSearchFacetResult> coreFacets = parseFacets(response);
-              facets.tryEmitValue(coreFacets).orThrow();
-            } else {
-              facets.tryEmitValue(emptyMap()).orThrow();
-            }
-          }
-        }
-
-        @Override
-        public void onError(Throwable throwable) {
-          rows.tryEmitError(convertException(throwable)).orThrow();
-        }
-
-        @Override
-        public void onCompleted() {
-          rows.tryEmitComplete().orThrow();
-        }
-      };
-
-      core.endpoint().searchStub()
+        Flux<SearchQueryResponse> responses = CoreProtostellarAccessorsStreaming.reactive(core,
+          request,
+          (endpoint, stream) -> {
+            endpoint.searchStub()
               .withDeadline(request.deadline())
-              .searchQuery(request.request(), response);
+              .searchQuery(request.request(), stream);
+            return null;
+          },
+          (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+        );
 
-      return Mono.just(new CoreReactiveSearchResult(rows.asFlux(), facets.asMono(), metaData.asMono()));
+        Sinks.Many<CoreSearchRow> rows = Sinks.many().unicast().onBackpressureBuffer();
+        Sinks.One<CoreSearchMetaData> metaData = Sinks.one();
+        Sinks.One<Map<String, CoreSearchFacetResult>> facets = Sinks.one();
+
+        responses.publishOn(core.context().environment().scheduler())
+          .subscribe(response -> {
+              response.getHitsList().forEach(hit -> {
+                CoreSearchRow row = parse(hit);
+                rows.tryEmitNext(row).orThrow();
+              });
+
+              if (response.hasMetaData()) {
+                CoreSearchMetaData cmd = parseMetadata(response);
+                metaData.tryEmitValue(cmd).orThrow();
+
+                if (response.getFacetsCount() > 0) {
+                  Map<String, CoreSearchFacetResult> coreFacets = parseFacets(response);
+                  facets.tryEmitValue(coreFacets).orThrow();
+                } else {
+                  facets.tryEmitValue(emptyMap()).orThrow();
+                }
+              }
+            },
+            // Error has already been passed through CoreProtostellarErrorHandlingUtil in CoreProtostellarAccessorsStreaming
+            throwable -> rows.tryEmitError(throwable).orThrow(),
+            () -> rows.tryEmitComplete().orThrow());
+
+        return Mono.just(new CoreReactiveSearchResult(rows.asFlux(), facets.asMono(), metaData.asMono()));
+      } catch (Throwable err) {
+        // Any errors from initial option validation
+        return Mono.error(err);
+      }
     });
   }
 
@@ -364,24 +348,18 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     return result;
   }
 
-  private static RuntimeException convertException(Throwable throwable) {
-    // STG does not currently implement most search errors.  Once it does, will want to pass throwable through CoreProtostellarErrorHandlingUtil.
-    if (throwable instanceof RuntimeException) {
-      return (RuntimeException) throwable;
-    }
-    return new RuntimeException(throwable);
-  }
-
   private static ProtostellarRequest<SearchQueryRequest> request(CoreProtostellar core,
                                                                  String indexName,
                                                                  CoreSearchQuery query,
                                                                  CoreSearchOptions opts) {
+    opts.validate();
+
     Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_SEARCH, CoreDurability.NONE, opts.commonOptions().parentSpan().orElse(null));
 
     SearchQueryRequest.Builder request = SearchQueryRequest.newBuilder()
-            .setIndexName(indexName)
-            .setQuery(query.asProtostellar());
+      .setIndexName(indexName)
+      .setQuery(query.asProtostellar());
 
     if (opts.consistency() != null) {
       if (opts.consistency() == CoreSearchScanConsistency.NOT_BOUNDED) {

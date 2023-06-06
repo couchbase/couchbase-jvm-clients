@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryProfile;
@@ -31,39 +32,32 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
-import com.couchbase.client.core.deps.io.grpc.stub.StreamObserver;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.protostellar.CoreProtostellarAccessorsStreaming;
 import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
-import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.protostellar.query.v1.QueryRequest;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownBlocking;
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedCurrentlyInProtostellar;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
@@ -82,53 +76,21 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                        CoreQueryOptions options,
                                        @Nullable CoreQueryContext queryContext,
                                        @Nullable NodeIdentifier target,
+                                       // errorConverter is unused, as it's only used for converting transactions
+                                       // errors, which will be handled differently with Protostellar.
                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (target != null) {
-      throw unsupportedInProtostellar("Targetting a specific query node");
-    }
+    ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext, target);
 
-    if (options.asTransaction()) {
-      // Will be pushed down to QueryRequest eventually.
-      throw unsupportedInProtostellar("Single query transactions");
-    }
-
-    ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext);
-    handleShutdownBlocking(core, request);
-    List<QueryResponse> responses = new ArrayList<>();
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicReference<RuntimeException> err = new AtomicReference<>();
-
-    StreamObserver<QueryResponse> response = new StreamObserver<QueryResponse>() {
-      @Override
-      public void onNext(QueryResponse response) {
-        responses.add(response);
-      }
-
-      @Override
-      public void onError(Throwable throwable) {
-        err.set(convertException(core, request, errorConverter, throwable));
-        latch.countDown();
-      }
-
-      @Override
-      public void onCompleted() {
-        latch.countDown();
-      }
-    };
-
-    core.endpoint().queryStub()
-      .withDeadline(request.deadline())
-      .query(request.request(), response);
-
-    try {
-      latch.await();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-
-    if (err.get() != null) {
-      throw err.get();
-    }
+    List<QueryResponse> responses = CoreProtostellarAccessorsStreaming.blocking(core,
+            request,
+            (endpoint, stream) -> {
+              endpoint.queryStub()
+                      .withDeadline(request.deadline())
+                      .query(request.request(), stream);
+              return null;
+            },
+            (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+    );
 
     return new ProtostellarCoreQueryResult(responses);
   }
@@ -139,46 +101,20 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                                        @Nullable CoreQueryContext queryContext,
                                                        @Nullable NodeIdentifier target,
                                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (target != null) {
-      throw unsupportedInProtostellar("Targetting a specific query node");
-    }
+    ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext, target);
 
-    if (options.asTransaction()) {
-      // Will be pushed down to QueryRequest eventually.
-      throw unsupportedInProtostellar("Single query transactions");
-    }
+    CoreAsyncResponse<List<QueryResponse>> responses = CoreProtostellarAccessorsStreaming.async(core,
+      request,
+      (endpoint, stream) -> {
+        endpoint.queryStub()
+          .withDeadline(request.deadline())
+          .query(request.request(), stream);
+        return null;
+      },
+      (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+    );
 
-    ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext);
-    CompletableFuture<CoreQueryResult> ret = new CompletableFuture<>();
-    CoreAsyncResponse<CoreQueryResult> out = new CoreAsyncResponse<>(ret, () -> {
-    });
-    if (handleShutdownAsync(core, ret, request)) {
-      return out;
-    }
-    List<QueryResponse> responses = new ArrayList<>();
-
-    StreamObserver<QueryResponse> response = new StreamObserver<QueryResponse>() {
-      @Override
-      public void onNext(QueryResponse response) {
-        responses.add(response);
-      }
-
-      @Override
-      public void onError(Throwable throwable) {
-        ret.completeExceptionally(convertException(core, request, errorConverter, throwable));
-      }
-
-      @Override
-      public void onCompleted() {
-        ret.complete(new ProtostellarCoreQueryResult(responses));
-      }
-    };
-
-    core.endpoint().queryStub()
-      .withDeadline(request.deadline())
-      .query(request.request(), response);
-
-    return out;
+    return responses.map(ProtostellarCoreQueryResult::new);
   }
 
   @Override
@@ -188,72 +124,59 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
                                                      @Nullable NodeIdentifier target,
                                                      @Nullable Function<Throwable, RuntimeException> errorConverter) {
     return Mono.defer(() -> {
-      if (target != null) {
-        throw unsupportedInProtostellar("Targetting a specific query node");
-      }
+      try {
+        ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext, target);
 
-      if (options.asTransaction()) {
-        throw new IllegalStateException("Internal bug - calling code should have used singleQueryTransactionReactive instead");
-      }
+        Sinks.Many<QueryChunkRow> rows = Sinks.many().unicast().onBackpressureBuffer();
+        Sinks.One<CoreQueryMetaData> metaData = Sinks.one();
 
-      ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext);
-      Mono<CoreReactiveQueryResult> err = handleShutdownReactive(core, request);
-      if (err != null) {
-        return err;
-      }
-
-      Sinks.Many<QueryResponse> responses = Sinks.many().replay().latest();
-
-      StreamObserver<QueryResponse> response = new StreamObserver<QueryResponse>() {
-        @Override
-        public void onNext(QueryResponse response) {
-          responses.tryEmitNext(response).orThrow();
-        }
-
-        @Override
-        public void onError(Throwable throwable) {
-          responses.tryEmitError(convertException(core, request, errorConverter, throwable)).orThrow();
-        }
-
-        @Override
-        public void onCompleted() {
-          responses.tryEmitComplete().orThrow();
-        }
-      };
-
-      core.endpoint().queryStub()
+        Flux<QueryResponse> responses = CoreProtostellarAccessorsStreaming.reactive(core,
+          request,
+          (endpoint, stream) -> {
+            endpoint.queryStub()
               .withDeadline(request.deadline())
-              .query(request.request(), response);
+              .query(request.request(), stream);
+            return null;
+          },
+          (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+        );
 
-      return Mono.just(new ProtostellarCoreReactiveQueryResult(responses.asFlux()));
+        responses.publishOn(core.context().environment().scheduler())
+          .subscribe(response -> {
+              response.getRowsList().forEach(row -> {
+                rows.tryEmitNext(new QueryChunkRow(row.toByteArray())).orThrow();
+              });
+
+              if (response.hasMetaData()) {
+                metaData.tryEmitValue(new ProtostellarCoreQueryMetaData(response.getMetaData())).orThrow();
+              }
+            },
+            // Error has already been passed through CoreProtostellarErrorHandlingUtil in CoreProtostellarAccessorsStreaming
+            throwable -> rows.tryEmitError(throwable).orThrow(),
+            () -> rows.tryEmitComplete().orThrow());
+
+        return Mono.just(new ProtostellarCoreReactiveQueryResult(rows.asFlux(), metaData.asMono()));
+      } catch (Throwable err) {
+        // Any errors from initial option validation.
+        return Mono.error(err);
+      }
     });
-  }
-
-  private static RuntimeException convertException(CoreProtostellar core,
-                                                   ProtostellarRequest<?> request,
-                                                   @Nullable Function<Throwable, RuntimeException> errorConverter,
-                                                   Throwable throwable) {
-
-    ProtostellarRequestBehaviour behaviour;
-
-    if (errorConverter != null) {
-      behaviour = CoreProtostellarErrorHandlingUtil.convertException(core, request, errorConverter.apply(throwable));
-    }
-    else {
-      behaviour = CoreProtostellarErrorHandlingUtil.convertException(core, request, throwable);
-    }
-
-    if (behaviour.retryDuration() != null) {
-      throw new CouchbaseException("Internal bug - Protostellar query support does not yet handle retries");
-    }
-
-    return behaviour.exception();
   }
 
   private static ProtostellarRequest<QueryRequest> request(CoreProtostellar core,
                                                            String statement,
                                                            CoreQueryOptions opts,
-                                                           @Nullable CoreQueryContext queryContext) {
+                                                           @Nullable CoreQueryContext queryContext,
+                                                           @Nullable NodeIdentifier target) {
+    if (target != null) {
+      throw unsupportedInProtostellar("Targetting a specific query node");
+    }
+
+    if (opts.asTransaction()) {
+      // Will be pushed down to GRPC QueryRequest eventually.
+      throw unsupportedCurrentlyInProtostellar();
+    }
+
     notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
 
     QueryRequest.Builder request = convertOptions(opts);

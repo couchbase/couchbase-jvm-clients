@@ -64,4 +64,8 @@ public final class CoreAsyncResponse<T> {
   public <U> CompletableFuture<U> thenApply(Function<? super T,? extends U> fn) {
     return toFuture().thenApply(fn);
   }
+
+  public <U> CoreAsyncResponse<U> map(Function<? super T, ? extends U> fn) {
+    return new CoreAsyncResponse<>(thenApply(fn), cancellationTask);
+  }
 }

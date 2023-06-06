@@ -45,7 +45,7 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handle
  * <p>
  * Can handle any single-request-single-response setup, e.g. KV, collection management, etc.
  * <p>
- * Does not handle streaming.
+ * Does not handle streaming.  {@see CoreProtostellarAccessorsStreaming} for that.
  */
 public class CoreProtostellarAccessors {
 
