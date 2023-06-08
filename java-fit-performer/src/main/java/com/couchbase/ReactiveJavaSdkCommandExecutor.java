@@ -34,13 +34,13 @@ import com.couchbase.query.QueryIndexManagerHelper;
 // [start:3.4.5]
 import com.couchbase.search.SearchHelper;
 
-import static com.couchbase.JavaSdkCommandExecutor.waitUntilReadyOptions;
 import static com.couchbase.search.SearchHelper.handleSearchReactive;
 // [end:3.4.5]
 import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import static com.couchbase.JavaSdkCommandExecutor.waitUntilReadyOptions;
 
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
