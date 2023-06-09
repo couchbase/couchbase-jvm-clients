@@ -64,6 +64,7 @@ public sealed class StoreSemantics {
          * * `arrayAppend`
          * * `arrayPrepend`
          * * `arrayAddUnique`
+         * * `addAndGet`
          * * `incrementAndGet`
          * * `decrementAndGet`
          */
