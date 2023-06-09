@@ -51,9 +51,17 @@ public class ArrayInsert extends MutateInSpec {
     }
 
     /**
-     * Sets that this parent fields should be created automatically.
+     * Requests that any absent parent objects be created automatically.
+     *
      * @return this, for chaining
+     * @deprecated Couchbase Server does not support the "create path" option for `ArrayInsert`
+     * sub-document operations. Calling this method causes `mutateIn` to throw
+     * {@link com.couchbase.client.core.error.CouchbaseException}. Please do not call this method.
+     * <p>
+     * If you want to create missing parent objects, please use {@link MutateInSpec#arrayPrepend}
+     * or {@link MutateInSpec#arrayAppend} instead of {@link MutateInSpec#arrayInsert}.
      */
+    @Deprecated
     public ArrayInsert createPath() {
         createPath = true;
         return this;
