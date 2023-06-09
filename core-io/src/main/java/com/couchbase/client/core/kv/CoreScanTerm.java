@@ -16,6 +16,7 @@
 package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.CbStrings;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -24,6 +25,9 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  */
 @Stability.Internal
 public class CoreScanTerm {
+
+  public static final CoreScanTerm MIN = new CoreScanTerm(CbStrings.MIN_CODE_POINT_AS_STRING, false);
+  public static final CoreScanTerm MAX = new CoreScanTerm(CbStrings.MAX_CODE_POINT_AS_STRING, true);
 
   private final String id;
   private final boolean exclusive;

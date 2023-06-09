@@ -75,6 +75,12 @@ public class SamplingScan extends ScanType {
     }
 
   }
-  
-  
+
+  @Override
+  public String toString() {
+    return "SamplingScan{" +
+      "limit=" + limit +
+      ", seed=" + seed +
+      '}';
+  }
 }

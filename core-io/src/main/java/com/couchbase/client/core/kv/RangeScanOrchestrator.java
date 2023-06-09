@@ -29,13 +29,13 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InternalServerFailureException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.MutationTokenOutdatedException;
-import com.couchbase.client.core.error.RangeScanCanceledException;
-import com.couchbase.client.core.error.RangeScanIdFailureException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RangeScanCancelRequest;
@@ -265,13 +265,13 @@ public class RangeScanOrchestrator {
             final KeyValueErrorContext errorContext = KeyValueErrorContext.completedRequest(request, res);
             switch (res.status()) {
               case NOT_FOUND:
-                return Flux.error(new RangeScanIdFailureException(errorContext));
+                return Flux.error(new CouchbaseException("The range scan internal partition UUID could not be found on the server", errorContext));
               case INVALID_REQUEST:
                 return Flux.error(new InvalidArgumentException("The request failed the server-side input validation check.", null, errorContext));
               case NO_ACCESS:
                 return Flux.error(new AuthenticationFailureException("The user is no longer authorized to perform this operation", errorContext, null));
               case CANCELED:
-                return Flux.error(new RangeScanCanceledException(errorContext));
+                return Flux.error(new RequestCanceledException("The range scan was cancelled.", CancellationReason.OTHER, new CancellationErrorContext(errorContext)));
               case NOT_MY_VBUCKET:
                 // The NMVB will not bubble up tho the user, it will be caught at a higher level to perform retry logic.
                 return Flux.error(new RangeScanPartitionFailedException("Received \"Not My VBucket\" for the continue response", res.status()));

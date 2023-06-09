@@ -16,11 +16,12 @@
 
 package com.couchbase.client.java.kv;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreScanTerm;
+import reactor.util.annotation.Nullable;
+
+import java.util.Optional;
 
 /**
  * Performs a KV range scan to scan between two {@link ScanTerm ScanTerms}.
@@ -30,12 +31,15 @@ import com.couchbase.client.core.kv.CoreScanTerm;
 @Stability.Volatile
 public class RangeScan extends ScanType {
 
-  private final ScanTerm from;
-  private final ScanTerm to;
+  @Nullable private final ScanTerm from;
+  @Nullable private final ScanTerm to;
 
-  RangeScan(final ScanTerm from, final ScanTerm to) {
-    this.from = notNull(from, "From ScanTerm");
-    this.to = notNull(to, "To ScanTerm");
+  RangeScan(
+    @Nullable final ScanTerm from,
+    @Nullable final ScanTerm to
+  ) {
+    this.from = from;
+    this.to = to;
   }
 
   /**
@@ -43,8 +47,8 @@ public class RangeScan extends ScanType {
    *
    * @return the {@link ScanTerm} used to start scanning from.
    */
-  public ScanTerm from() {
-    return from;
+  public Optional<ScanTerm> from() {
+    return Optional.ofNullable(from);
   }
 
   /**
@@ -52,8 +56,8 @@ public class RangeScan extends ScanType {
    *
    * @return the {@link ScanTerm} to scan to.
    */
-  public ScanTerm to() {
-    return to;
+  public Optional<ScanTerm> to() {
+    return Optional.ofNullable(to);
   }
 
   @Stability.Internal
@@ -63,14 +67,12 @@ public class RangeScan extends ScanType {
 
   @Stability.Internal
   public class Built implements CoreRangeScan {
-
     public CoreScanTerm from() {
-      return from.toCore();
+      return from == null ? CoreScanTerm.MIN : from.toCore();
     }
 
     public CoreScanTerm to() {
-      return to.toCore();
+      return to == null ? CoreScanTerm.MAX : to.toCore();
     }
-
   }
 }

@@ -67,8 +67,8 @@ fun FitRange.toKotlin(): ScanType {
 
 fun FitScanTermChoice.toKotlin(): ScanTerm? = when {
     hasDefault() -> null
-    hasMaximum() -> ScanTerm.Maximum
-    hasMinimum() -> ScanTerm.Minimum
+    hasMaximum() -> null
+    hasMinimum() -> null
     hasTerm() -> with(term) {
         val exclusive = hasExclusive() && exclusive
         when {

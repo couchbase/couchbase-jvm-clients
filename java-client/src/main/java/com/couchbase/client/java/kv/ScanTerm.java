@@ -29,9 +29,6 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Volatile
 public class ScanTerm {
 
-  static private final ScanTerm MINIMUM = inclusive(MIN_CODE_POINT_AS_STRING);
-  static private final ScanTerm MAXIMUM = inclusive(MAX_CODE_POINT_AS_STRING);
-
   /**
    * Contains the key pattern of this term.
    */
@@ -84,31 +81,16 @@ public class ScanTerm {
     return new ScanTerm(id, true);
   }
 
-  /**
-   * Returns a scan term representing the absolute minimum pattern (starting point).
-   * <p>
-   * Equivalent to {@code ScanTerm.inclusive(Character.toString(Character.MIN_CODE_POINT))}
-   *
-   * @return the absolute minimum {@link ScanTerm}.
-   */
-  public static ScanTerm minimum() {
-    return MINIMUM;
-  }
-
-  /**
-   * Returns a scan term representing the absolute maximum pattern (end point).
-   * <p>
-   * Equivalent to {@code ScanTerm.inclusive(Character.toString(Character.MAX_CODE_POINT))}
-   *
-   * @return the absolute maximum {@link ScanTerm}.
-   */
-  public static ScanTerm maximum() {
-    return MAXIMUM;
-  }
-
   @Stability.Internal
   public CoreScanTerm toCore() {
     return new CoreScanTerm(id, exclusive);
   }
 
+  @Override
+  public String toString() {
+    return "ScanTerm{" +
+      "id='" + id + '\'' +
+      ", exclusive=" + exclusive +
+      '}';
+  }
 }

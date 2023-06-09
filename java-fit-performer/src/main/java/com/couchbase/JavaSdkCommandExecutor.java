@@ -42,7 +42,6 @@ import com.couchbase.client.java.kv.ReplicateTo;
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
-import com.couchbase.client.java.kv.ScanTerm;
 // [end:3.4.1]
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
@@ -331,10 +330,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             return Optional.empty();
         }
         else if (st.hasMaximum()) {
-            return Optional.of(com.couchbase.client.java.kv.ScanTerm.maximum());
+            return Optional.empty();
         }
         else if (st.hasMinimum()) {
-            return Optional.of(com.couchbase.client.java.kv.ScanTerm.minimum());
+            return Optional.empty();
         }
         else if (st.hasTerm()) {
             var stt = st.getTerm();
@@ -362,10 +361,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     return com.couchbase.client.java.kv.ScanType.rangeScan(from.get(), to.get());
                 }
                 else if (from.isPresent()) {
-                    return com.couchbase.client.java.kv.ScanType.rangeScan(from.get(), ScanTerm.maximum());
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(from.get(), null);
                 }
                 else if (to.isPresent()) {
-                    return com.couchbase.client.java.kv.ScanType.rangeScan(ScanTerm.minimum(), to.get());
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(null, to.get());
                 }
                 else {
                     return com.couchbase.client.java.kv.ScanType.rangeScan();

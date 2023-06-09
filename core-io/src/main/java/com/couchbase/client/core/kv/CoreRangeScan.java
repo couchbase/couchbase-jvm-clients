@@ -17,6 +17,7 @@
 package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.CbStrings;
 
 /**
  * Performs a KV range scan to scan between two {@link CoreScanTerm CoreScanTerms}.
@@ -24,8 +25,22 @@ import com.couchbase.client.core.annotation.Stability;
 @Stability.Internal
 public interface CoreRangeScan extends CoreScanType {
 
-  CoreScanTerm from() ;
+  CoreScanTerm from();
 
   CoreScanTerm to();
+
+  static CoreRangeScan forPrefix(String prefix) {
+    return new CoreRangeScan() {
+      @Override
+      public CoreScanTerm from() {
+        return new CoreScanTerm(prefix, false);
+      }
+
+      @Override
+      public CoreScanTerm to() {
+        return new CoreScanTerm(prefix + CbStrings.MAX_CODE_POINT_AS_STRING, true);
+      }
+    };
+  }
 
 }

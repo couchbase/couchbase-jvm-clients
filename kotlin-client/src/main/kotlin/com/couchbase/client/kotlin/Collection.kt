@@ -272,10 +272,14 @@ public class Collection internal constructor(
 
             is ScanType.Range -> {
                 val rangeScan = object : CoreRangeScan {
-                    override fun from(): CoreScanTerm = CoreScanTerm(type.from.term, type.from.exclusive)
-                    override fun to(): CoreScanTerm  = CoreScanTerm(type.to.term, type.to.exclusive)
+                    override fun from(): CoreScanTerm = if (type.from == null) CoreScanTerm.MIN else CoreScanTerm(type.from.term, type.from.exclusive)
+                    override fun to(): CoreScanTerm = if (type.to == null) CoreScanTerm.MAX else CoreScanTerm(type.to.term, type.to.exclusive)
                 }
                 rangeScanOrchestrator.rangeScan(rangeScan, options)
+            }
+
+            is ScanType.Prefix -> {
+                rangeScanOrchestrator.rangeScan(CoreRangeScan.forPrefix(type.prefix), options)
             }
         }
     }

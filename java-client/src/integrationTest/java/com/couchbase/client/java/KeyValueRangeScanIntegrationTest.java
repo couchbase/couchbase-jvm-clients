@@ -97,7 +97,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   @IgnoreWhen(clusterVersionEquals = "7.5.0") // Disabled until JCBC-2066 is fixed
   void fullRangeScanOnCollectionWithContent() {
     AtomicLong count = new AtomicLong(0);
-    collection.scan(ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+    collection.scan(ScanType.rangeScan(),
         scanOptions().timeout(TIMEOUT)).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.contentAsBytes().length > 0);
@@ -110,7 +110,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   void fullRangeScanOnCollectionIdsOnly() {
     AtomicLong count = new AtomicLong(0);
     collection.scan(
-      ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+      ScanType.rangeScan(),
       scanOptions().idsOnly(true)
     ).forEach(item -> {
       count.incrementAndGet();
@@ -124,7 +124,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   void partialRangeScan() {
     List<String> results = collection
       .scan(
-        ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.inclusive("c-ba5ff9da-bb87-4dd0-be8e-6d24010062a1")),
+        ScanType.rangeScan(null, ScanTerm.inclusive("c-ba5ff9da-bb87-4dd0-be8e-6d24010062a1")),
         scanOptions().timeout(TIMEOUT)
       )
       .map(ScanResult::id)
@@ -200,9 +200,6 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   @Test
   void checkScanTypeMustNotBeNull() {
     assertThrows(InvalidArgumentException.class, () -> collection.scan(null));
-    assertThrows(InvalidArgumentException.class, () -> collection.scan(ScanType.rangeScan(null, null)));
-    assertThrows(InvalidArgumentException.class, () -> collection.scan(ScanType.rangeScan(ScanTerm.minimum(), null)));
-    assertThrows(InvalidArgumentException.class, () -> collection.scan(ScanType.rangeScan(null, ScanTerm.maximum())));
   }
 
   @Test
@@ -218,7 +215,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     UnambiguousTimeoutException ex = assertThrows(
       UnambiguousTimeoutException.class,
       () -> collection.scan(
-        ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+        ScanType.rangeScan(),
         scanOptions().timeout(Duration.ofMillis(1))
       ).forEach(r -> {})
     );
@@ -234,7 +231,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
     AtomicBoolean idFound = new AtomicBoolean(false);
     collection.scan(
-      ScanType.rangeScan(ScanTerm.minimum(), ScanTerm.maximum()),
+      ScanType.rangeScan(),
       scanOptions().consistentWith(mutationState).timeout(Duration.ofSeconds(1))
     ).forEach(item -> {
       if (item.id().equals(id)) {

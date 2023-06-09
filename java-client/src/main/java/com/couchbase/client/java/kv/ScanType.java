@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.kv.CoreScanType;
+import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
 
@@ -43,17 +44,17 @@ public abstract class ScanType {
    * @return a newly created {@link RangeScan} to be passed into the Collection API.
    */
   public static RangeScan rangeScan() {
-    return rangeScan(ScanTerm.minimum(), ScanTerm.maximum());
+    return rangeScan(null, null);
   }
 
   /**
    * Specifies a range scan that includes all documents whose IDs are between two {@link ScanTerm ScanTerms}.
    *
-   * @param from the start of the range
-   * @param to the end of the range
+   * @param from the start of the range, or null for unbounded
+   * @param to the end of the range, or null for unbounded
    * @return a newly created {@link RangeScan} to be passed into the Collection API.
    */
-  public static RangeScan rangeScan(final ScanTerm from, final ScanTerm to) {
+  public static RangeScan rangeScan(@Nullable final ScanTerm from, @Nullable final ScanTerm to) {
     return new RangeScan(from, to);
   }
 
@@ -62,11 +63,8 @@ public abstract class ScanType {
    *
    * @return a newly created {@link RangeScan} to be passed into the Collection API.
    */
-  public static RangeScan prefixScan(final String documentIdPrefix) {
-    return new RangeScan(
-      ScanTerm.inclusive(documentIdPrefix),
-      ScanTerm.exclusive(documentIdPrefix + MAX_CODE_POINT_AS_STRING)
-    );
+  public static PrefixScan prefixScan(final String documentIdPrefix) {
+    return new PrefixScan(documentIdPrefix);
   }
 
   /**

@@ -17,8 +17,6 @@
 package com.couchbase.client.kotlin.kv
 
 import com.couchbase.client.core.kv.RangeScanOrchestrator
-import com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING
-import com.couchbase.client.core.util.CbStrings.MIN_CODE_POINT_AS_STRING
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.KvScanConsistency.Companion.consistentWith
@@ -42,8 +40,8 @@ public const val DEFAULT_SCAN_BATCH_ITEM_LIMIT: Int = RangeScanOrchestrator.RANG
 @VolatileCouchbaseApi
 public sealed class ScanType {
     public class Range internal constructor(
-        public val from: ScanTerm,
-        public val to: ScanTerm,
+        public val from: ScanTerm?,
+        public val to: ScanTerm?,
     ) : ScanType()
 
     public class Sample internal constructor(
@@ -55,16 +53,20 @@ public sealed class ScanType {
         }
     }
 
+    public class Prefix internal constructor(
+        public val prefix: String
+    ) : ScanType()
+
     public companion object {
         /**
          * Selects all document IDs in a range.
          *
-         * @param from Start of the range (lower bound).
-         * @param to End of the range (upper bound).
+         * @param from Start of the range (lower bound) or null for unbounded.
+         * @param to End of the range (upper bound) or null for unbounded.
          */
         public fun range(
-            from: ScanTerm = ScanTerm.Minimum,
-            to: ScanTerm = ScanTerm.Maximum,
+            from: ScanTerm? = null,
+            to: ScanTerm? = null,
         ): Range = Range(
             from = from,
             to = to,
@@ -73,12 +75,7 @@ public sealed class ScanType {
         /**
          * Selects all document IDs with the given [prefix].
          */
-        public fun prefix(
-            prefix: String,
-        ): Range = Range(
-            from = ScanTerm(prefix),
-            to = ScanTerm(prefix + MAX_CODE_POINT_AS_STRING, exclusive = true)
-        )
+        public fun prefix(prefix: String): Prefix = Prefix(prefix)
 
         /**
          * Selects random documents.
@@ -99,26 +96,21 @@ public sealed class ScanType {
 
 /**
  * A lower or upper bound of a KV range scan.
+ *
+ * For a convenient way to create a ScanTerm, see [String.inclusive] and [String.exclusive].
  */
 @VolatileCouchbaseApi
 public class ScanTerm(
     public val term: String,
     public val exclusive: Boolean = false,
 ) {
-    public companion object {
-        /**
-         * Before the "lowest" possible document ID.
-         */
-        public val Minimum: ScanTerm = ScanTerm(MIN_CODE_POINT_AS_STRING)
-
-        /**
-         * After the "highest" possible document ID.
-         */
-        public val Maximum: ScanTerm = ScanTerm(MAX_CODE_POINT_AS_STRING)
-    }
-
     override fun toString(): String {
         return "ScanTerm(term='$term', exclusive=$exclusive)"
+    }
+
+    public companion object {
+        public inline val String.inclusive: ScanTerm get() = ScanTerm(this, false)
+        public inline val String.exclusive: ScanTerm get() = ScanTerm(this, true)
     }
 }
 
