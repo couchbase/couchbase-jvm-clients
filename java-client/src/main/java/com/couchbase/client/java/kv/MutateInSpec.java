@@ -140,7 +140,7 @@ public abstract class MutateInSpec {
      * <p>
      * Will error if the last element of the path does not exist or is not an array.
      *
-     * @param path the path identifying an array to which to append the value, and an index.  E.g. "foo.bar[3]"
+     * @param path the path identifying an array to which to append the value. For example: "foo.bar"
      * @param value the value to insert.
      * @return the created {@link MutateInSpec}.
      */
