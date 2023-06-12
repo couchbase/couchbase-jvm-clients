@@ -97,7 +97,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   @IgnoreWhen(clusterVersionEquals = "7.5.0") // Disabled until JCBC-2066 is fixed
   void fullRangeScanOnCollectionWithContent() {
     AtomicLong count = new AtomicLong(0);
-    collection.scan(ScanType.rangeScan(),
+    collection.scan(ScanType.rangeScan(null, null),
         scanOptions().timeout(TIMEOUT)).forEach(item -> {
       count.incrementAndGet();
       assertTrue(item.contentAsBytes().length > 0);
@@ -110,7 +110,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   void fullRangeScanOnCollectionIdsOnly() {
     AtomicLong count = new AtomicLong(0);
     collection.scan(
-      ScanType.rangeScan(),
+      ScanType.rangeScan(null, null),
       scanOptions().idsOnly(true)
     ).forEach(item -> {
       count.incrementAndGet();
@@ -215,7 +215,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     UnambiguousTimeoutException ex = assertThrows(
       UnambiguousTimeoutException.class,
       () -> collection.scan(
-        ScanType.rangeScan(),
+        ScanType.rangeScan(null, null),
         scanOptions().timeout(Duration.ofMillis(1))
       ).forEach(r -> {})
     );
@@ -231,7 +231,7 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
 
     AtomicBoolean idFound = new AtomicBoolean(false);
     collection.scan(
-      ScanType.rangeScan(),
+      ScanType.rangeScan(null, null),
       scanOptions().consistentWith(mutationState).timeout(Duration.ofSeconds(1))
     ).forEach(item -> {
       if (item.id().equals(id)) {

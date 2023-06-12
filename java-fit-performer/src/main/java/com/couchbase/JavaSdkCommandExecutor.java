@@ -367,7 +367,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     return com.couchbase.client.java.kv.ScanType.rangeScan(null, to.get());
                 }
                 else {
-                    return com.couchbase.client.java.kv.ScanType.rangeScan();
+                    return com.couchbase.client.java.kv.ScanType.rangeScan(null, null);
                 }
             }
             else if (rs.hasDocIdPrefix()) {

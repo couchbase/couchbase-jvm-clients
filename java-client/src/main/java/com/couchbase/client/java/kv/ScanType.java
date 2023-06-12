@@ -29,7 +29,6 @@ import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
  * <p>
  * Create an instance using one of the static factory methods:
  * <ul>
- *   <li>{@link #rangeScan()} - All documents.</li>
  *   <li>{@link #rangeScan(ScanTerm, ScanTerm)} - All documents whose IDs are in a certain range.</li>
  *   <li>{@link #prefixScan(String)} - All documents whose IDs have a certain prefix.</li>
  *   <li>{@link #samplingScan(long)} - A random sample of documents.</li>
@@ -37,15 +36,6 @@ import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
  */
 @Stability.Volatile
 public abstract class ScanType {
-
-  /**
-   * Specifies a range scan that includes all documents in the collection.
-   *
-   * @return a newly created {@link RangeScan} to be passed into the Collection API.
-   */
-  public static RangeScan rangeScan() {
-    return rangeScan(null, null);
-  }
 
   /**
    * Specifies a range scan that includes all documents whose IDs are between two {@link ScanTerm ScanTerms}.
