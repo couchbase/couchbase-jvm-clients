@@ -256,28 +256,6 @@ pipeline {
         // When removing tests for an older cluster version, if it's a JDK/Cluster test please
         // make sure that JDK is still tested.
 
-        // 5.5 is EOL, we do one sanity test against it
-        stage('JDK/Cluster testing  (Linux, cbdyncluster 5.5-release, openjdk 8)') {
-             agent { label "sdkqe" }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
-                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
-             }
-             when {
-                 beforeAgent true;
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                 test(OPENJDK, OPENJDK_8, "5.5-release", includeAnalytics : false, REFSPEC)
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
-
         // 7.5 is dedicated to serverless
         // Temporarily disabled as MB-54250 is creating a large number of failed tests.
 //         stage('Serverless testing (Linux, cbdyncluster 7.5-stable Serverless mode, Oracle JDK 8)') {
@@ -302,11 +280,11 @@ pipeline {
 //         }
 
         // Cannot use 7.1-stable, it maps to 7.1.3 and there is no 7.1.3 CE release.  7.1.1 is current latest (Nov '22).
-        stage("CE testing (Linux, cbdyncluster 7.1.1, OpenJDK JDK 17)") {
+        stage("CE testing (Linux, cbdyncluster 7.1.1, OpenJDK 8)") {
             agent { label "sdkqe" }
             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
             }
             when {
                 beforeAgent true;
@@ -314,7 +292,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(OPENJDK, OPENJDK_17, "7.1.1", ceMode : true, REFSPEC)
+                test(OPENJDK, OPENJDK_8, "7.1.1", ceMode : true, REFSPEC)
             }
             post {
                 always {
