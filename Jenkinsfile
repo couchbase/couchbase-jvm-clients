@@ -380,34 +380,35 @@ pipeline {
             }
         }
 
-        stage('Platform testing (Alpine, mock, openjdk 11)') {
-            agent { label 'alpine' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                 catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                    cleanupWorkspace()
-                    installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
-                    dir('couchbase-jvm-clients') {
-                        doCheckout(REFSPEC)
-                        // Mock testing only, with native IO disabled - check JVMCBC-942 for details
-                        script { testAgainstMock(true) }
-                    }
-                 }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
+// Temporarily disabling until JVMCBC-1227 is resolved
+//         stage('Platform testing (Alpine, mock, openjdk 11)') {
+//             agent { label 'alpine' }
+//             environment {
+//                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
+//                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
+//             }
+//             when {
+//                 beforeAgent true;
+//                 expression
+//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//             }
+//             steps {
+//                  catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+//                     cleanupWorkspace()
+//                     installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
+//                     dir('couchbase-jvm-clients') {
+//                         doCheckout(REFSPEC)
+//                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
+//                         script { testAgainstMock(true) }
+//                     }
+//                  }
+//             }
+//             post {
+//                 always {
+//                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                 }
+//             }
+//         }
 
         stage('Platform testing (ARM Ubuntu 20, mock, openjdk 17)') {
             agent { label 'qe-ubuntu20-arm64' }
