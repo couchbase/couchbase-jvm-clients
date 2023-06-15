@@ -21,6 +21,7 @@ import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
@@ -34,6 +35,7 @@ import com.couchbase.client.core.msg.kv.KvPingResponse;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.CbThrowables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -56,29 +58,58 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 @Stability.Internal
 public class HealthPinger {
 
+  @Stability.Internal
+  public static Mono<PingResult> ping(
+    final Core core,
+    final Optional<Duration> timeout,
+    final RetryStrategy retryStrategy,
+    final Set<ServiceType> serviceTypes,
+    final Optional<String> reportId,
+    final Optional<String> bucketName
+  ) {
+    return ping(
+      core,
+      timeout,
+      retryStrategy,
+      serviceTypes,
+      reportId,
+      bucketName,
+      WaitUntilReadyHelper.WaitUntilReadyLogger.dummy
+    );
+  }
+
   /**
    * Performs a service ping against all or (if given) the services provided.
    *
-   * @param core     the core instance against to check.
-   * @param timeout  the timeout for each individual and total ping report.
+   * @param core the core instance against to check.
+   * @param timeout the timeout for each individual and total ping report.
    * @param retryStrategy the retry strategy to use for each ping.
-   * @param serviceTypes    if present, limits the queried services for the given types.
+   * @param serviceTypes if present, limits the queried services for the given types.
    * @return a mono that completes once all pings have been completed as well.
    */
   @Stability.Internal
-  public static Mono<PingResult> ping(final Core core, final Optional<Duration> timeout, final RetryStrategy retryStrategy,
-                                final Set<ServiceType> serviceTypes, final Optional<String> reportId, final Optional<String> bucketName) {
+  public static Mono<PingResult> ping(
+    final Core core,
+    final Optional<Duration> timeout,
+    final RetryStrategy retryStrategy,
+    final Set<ServiceType> serviceTypes,
+    final Optional<String> reportId,
+    final Optional<String> bucketName,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     return Mono.defer(() -> {
       if (core.isProtostellar()) {
         return Mono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar());
       }
 
-      Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), bucketName);
+      Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), bucketName, log);
       if (!isNullOrEmpty(serviceTypes)) {
         targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType())).collect(Collectors.toSet());
       }
 
-      return pingTargets(core, targets, timeout, retryStrategy).collectList().map(reports -> new PingResult(
+      log.message("ping: narrowed targets: " + targets);
+
+      return pingTargets(core, targets, timeout, retryStrategy, log).collectList().map(reports -> new PingResult(
         reports.stream().collect(Collectors.groupingBy(EndpointPingReport::type)),
         core.context().environment().userAgent().formattedShort(),
         reportId.orElse(UUID.randomUUID().toString())
@@ -87,28 +118,45 @@ public class HealthPinger {
   }
 
   @Stability.Internal
-  static Set<RequestTarget> extractPingTargets(final ClusterConfig clusterConfig, final Optional<String> bucketName) {
+  static Set<RequestTarget> extractPingTargets(
+    final ClusterConfig clusterConfig,
+    final Optional<String> bucketName,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     final Set<RequestTarget> targets = new HashSet<>();
+    log.message("extractPingTargets: starting ping target extraction");
 
     if (!bucketName.isPresent()) {
       if (clusterConfig.globalConfig() != null) {
-        for (PortInfo portInfo : clusterConfig.globalConfig().portInfos()) {
+        GlobalConfig globalConfig = clusterConfig.globalConfig();
+
+        log.message("extractPingTargets: getting ping targets from global config portInfos: " + globalConfig.portInfos());
+        for (PortInfo portInfo : globalConfig.portInfos()) {
           for (ServiceType serviceType : portInfo.ports().keySet()) {
             if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
-            targets.add(new RequestTarget(serviceType, portInfo.identifier(), null));
+            RequestTarget target = new RequestTarget(serviceType, portInfo.identifier(), null);
+            log.message("extractPingTargets: adding target from global config: " + target);
+            targets.add(target);
           }
         }
+        log.message("extractPingTargets: ping targets after scanning global config: " + targets);
+      } else {
+        log.message("extractPingTargets: globalConfig is absent");
       }
       for (Map.Entry<String, BucketConfig> bucketConfig : clusterConfig.bucketConfigs().entrySet()) {
+        log.message("extractPingTargets: getting targets from bucket config via global config for bucket " + bucketConfig.getKey() + " : " + bucketConfig.getValue());
+
         for (NodeInfo nodeInfo : bucketConfig.getValue().nodes()) {
-          for (ServiceType serviceType: nodeInfo.services().keySet()) {
+          for (ServiceType serviceType : nodeInfo.services().keySet()) {
             if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
+            RequestTarget target = new RequestTarget(serviceType, nodeInfo.identifier(), null);
+            log.message("extractPingTargets: adding target from bucket config via global config: " + target);
             targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), null));
           }
         }
@@ -116,34 +164,55 @@ public class HealthPinger {
     } else {
       BucketConfig bucketConfig = clusterConfig.bucketConfig(bucketName.get());
       if (bucketConfig !=  null) {
+        log.message("extractPingTargets: Getting targets from bucket config: " + bucketConfig);
         for (NodeInfo nodeInfo : bucketConfig.nodes()) {
           for (ServiceType serviceType : nodeInfo.services().keySet()) {
+            RequestTarget target;
             if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
-              targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), null));
+              target = new RequestTarget(serviceType, nodeInfo.identifier(), null);
             } else {
-              targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), bucketName.get()));
+              target = new RequestTarget(serviceType, nodeInfo.identifier(), bucketName.get());
             }
+
+            log.message("extractPingTargets: adding target from bucket config: " + target);
+            targets.add(target);
           }
         }
+      } else {
+        log.message("extractPingTargets: Bucket name was present, but clusterConfig has no config for bucket " + bucketName);
       }
     }
 
+    log.message("extractPingTargets: Finished. Returning targets (grouped by node): " + targets.stream().collect(Collectors.groupingBy(it -> it.nodeIdentifier().address() + ":" + it.nodeIdentifier().managerPort())));
     return targets;
   }
 
-  private static Flux<EndpointPingReport> pingTargets(final Core core, final Set<RequestTarget> targets,
-                                                      final Optional<Duration> timeout, final RetryStrategy retryStrategy) {
+  private static Flux<EndpointPingReport> pingTargets(
+    final Core core,
+    final Set<RequestTarget> targets,
+    final Optional<Duration> timeout,
+    final RetryStrategy retryStrategy,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     final CoreCommonOptions options = CoreCommonOptions.of(timeout.orElse(null), retryStrategy, null);
-    return Flux.fromIterable(targets).flatMap(target -> pingTarget(core, target, options));
+    return Flux.fromIterable(targets).flatMap(target -> pingTarget(core, target, options, log));
   }
 
-  private static Mono<EndpointPingReport> pingTarget(final Core core, final RequestTarget target,
-                                                     final CoreCommonOptions options) {
+  private static Mono<EndpointPingReport> pingTarget(
+    final Core core,
+    final RequestTarget target,
+    final CoreCommonOptions options,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     switch (target.serviceType()) {
-      case QUERY: return pingHttpEndpoint(core, target, options, "/admin/ping");
-      case KV: return pingKv(core, target, options);
-      case VIEWS: return pingHttpEndpoint(core, target, options, "/");
-      case SEARCH: return pingHttpEndpoint(core, target, options, "/api/ping");
+      case QUERY:
+        return pingHttpEndpoint(core, target, options, "/admin/ping", log);
+      case KV:
+        return pingKv(core, target, options, log);
+      case VIEWS:
+        return pingHttpEndpoint(core, target, options, "/", log);
+      case SEARCH:
+        return pingHttpEndpoint(core, target, options, "/api/ping", log);
       case MANAGER:
       case EVENTING:
       case BACKUP:
@@ -151,8 +220,10 @@ public class HealthPinger {
         // right now we are not pinging the eventing service
         // right now we are not pinging the backup service
         return Mono.empty();
-      case ANALYTICS: return pingHttpEndpoint(core, target, options, "/admin/ping");
-      default: return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
+      case ANALYTICS:
+        return pingHttpEndpoint(core, target, options, "/admin/ping", log);
+      default:
+        return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
     }
   }
 
@@ -201,8 +272,12 @@ public class HealthPinger {
     );
   }
 
-  private static Mono<EndpointPingReport> pingKv(final Core core, final RequestTarget target,
-                                                 final CoreCommonOptions options) {
+  private static Mono<EndpointPingReport> pingKv(
+    final Core core,
+    final RequestTarget target,
+    final CoreCommonOptions options,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     return Mono.defer(() -> {
       Duration timeout = options.timeout().orElse(core.context().environment().timeoutConfig().kvTimeout());
       CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault(target.bucketName());
@@ -212,35 +287,50 @@ public class HealthPinger {
         .wrap(request, request.response(), true)
         .map(response -> {
           request.context().logicallyComplete();
-          return assembleSuccessReport(
+          EndpointPingReport report = assembleSuccessReport(
             request.context(),
             ((KvPingResponse) response).channelId(),
             Optional.ofNullable(target.bucketName())
           );
+          log.message("ping: Ping succeeded for " + target + " ; " + report);
+          return report;
         }).onErrorResume(throwable -> {
           request.context().logicallyComplete(throwable);
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName())));
+          EndpointPingReport report = assembleFailureReport(throwable, request.context(), Optional.ofNullable(target.bucketName()));
+          log.message("ping: Ping failed for " + target + " ; " + report + " ; " + CbThrowables.getStackTraceAsString(throwable));
+          return Mono.just(report);
         });
     });
   }
 
-  private static Mono<EndpointPingReport> pingHttpEndpoint(final Core core, final RequestTarget target,
-                                                           final CoreCommonOptions options, final String path) {
+  private static Mono<EndpointPingReport> pingHttpEndpoint(
+    final Core core,
+    final RequestTarget target,
+    final CoreCommonOptions options,
+    final String path,
+    final WaitUntilReadyHelper.WaitUntilReadyLogger log
+  ) {
     return Mono.defer(() -> {
+      log.message("ping: Pinging " + target);
+
       CoreHttpRequest request = core.httpClient(target).get(path(path), options).build();
       core.send(request);
       return Reactor
         .wrap(request, request.response(), true)
         .map(response -> {
           request.context().logicallyComplete();
-          return assembleSuccessReport(
+          EndpointPingReport report = assembleSuccessReport(
             request.context(),
             response.channelId(),
             Optional.empty()
           );
+          log.message("ping: Ping succeeded for " + target + " ; " + report);
+          return report;
         }).onErrorResume(throwable -> {
           request.context().logicallyComplete(throwable);
-          return Mono.just(assembleFailureReport(throwable, request.context(), Optional.empty()));
+          EndpointPingReport report = assembleFailureReport(throwable, request.context(), Optional.empty());
+          log.message("ping: Ping failed for " + target + " ; " + report + " ; " + CbThrowables.getStackTraceAsString(throwable));
+          return Mono.just(report);
         });
     });
   }

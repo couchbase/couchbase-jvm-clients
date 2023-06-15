@@ -97,11 +97,8 @@ public class RequestTarget {
 
   @Override
   public String toString() {
-    return "RequestTarget{" +
-        "serviceType=" + serviceType +
-        ", nodeIdentifier=" + redactSystem(nodeIdentifier) +
-        ", bucketName='" + redactMeta(bucketName) + '\'' +
-        '}';
+    String base = serviceType + "@" + redactSystem(nodeIdentifier.address() + ":" + nodeIdentifier.managerPort());
+    return bucketName == null ? base : base + "/" + redactMeta(bucketName);
   }
 
   @Override
