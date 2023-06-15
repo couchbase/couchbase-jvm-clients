@@ -33,12 +33,14 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownBlocking;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownReactive;
+import static com.couchbase.client.core.util.ProtostellarUtil.activateSpan;
 
 /**
  * Used to generically handle the core functionality of sending a GRPC request over Protostellar and handling the response.
@@ -75,21 +77,22 @@ public class CoreProtostellarAccessors {
       ProtostellarEndpoint endpoint = core.endpoint();
       long start = System.nanoTime();
       RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
+
+      AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+
       try {
         // Make the Protostellar call.
         TGrpcResponse response = executeBlockingGrpcCall.apply(endpoint);
 
         request.dispatchDuration(System.nanoTime() - start);
-        if (dispatchSpan != null) {
-          dispatchSpan.end();
-        }
+        handleDispatchSpan(null, dispatchSpan, scope);
         TSdkResult result = convertResponse.apply(response);
         request.raisedResponseToUser(null);
         return result;
       } catch (Throwable t) {
         request.dispatchDuration(System.nanoTime() - start);
         ProtostellarRequestBehaviour behaviour = convertException.apply(t);
-        handleDispatchSpan(behaviour, dispatchSpan);
+        handleDispatchSpan(behaviour, dispatchSpan, scope);
         if (behaviour.retryDuration() != null) {
           try {
             Thread.sleep(behaviour.retryDuration().toMillis());
@@ -143,6 +146,8 @@ public class CoreProtostellarAccessors {
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
+    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+
     // Make the Protostellar call.
     ListenableFuture<TGrpcResponse> response = executeFutureGrpcCall.apply(endpoint);
 
@@ -150,9 +155,7 @@ public class CoreProtostellarAccessors {
       @Override
       public void onSuccess(TGrpcResponse response) {
         request.dispatchDuration(System.nanoTime() - start);
-        if (dispatchSpan != null) {
-          dispatchSpan.end();
-        }
+        handleDispatchSpan(null, dispatchSpan, scope);
 
         TSdkResult result = convertResponse.apply(response);
 
@@ -169,7 +172,7 @@ public class CoreProtostellarAccessors {
       public void onFailure(Throwable t) {
         request.dispatchDuration(System.nanoTime() - start);
         ProtostellarRequestBehaviour behaviour = convertException.apply(t);
-        handleDispatchSpan(behaviour, dispatchSpan);
+        handleDispatchSpan(behaviour, dispatchSpan, scope);
         if (behaviour.retryDuration() != null) {
           boolean unableToSchedule = core.context().environment().timer().schedule(() -> {
             asyncInternal(ret, core, request, executeFutureGrpcCall, convertResponse, convertException);
@@ -241,6 +244,8 @@ public class CoreProtostellarAccessors {
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
+    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+
     // Make the Protostellar call.
     ListenableFuture<TGrpcResponse> response = executeFutureGrpcCall.apply(endpoint);
 
@@ -252,9 +257,7 @@ public class CoreProtostellarAccessors {
         }
         else {
           request.dispatchDuration(System.nanoTime() - start);
-          if (dispatchSpan != null) {
-            dispatchSpan.end();
-          }
+          handleDispatchSpan(null, dispatchSpan, scope);
           TSdkResult result = convertResponse.apply(response);
           request.raisedResponseToUser(null);
           ret.tryEmitValue(result).orThrow();
@@ -265,7 +268,7 @@ public class CoreProtostellarAccessors {
       public void onFailure(Throwable t) {
         request.dispatchDuration(System.nanoTime() - start);
         ProtostellarRequestBehaviour behaviour = convertException.apply(t);
-        handleDispatchSpan(behaviour, dispatchSpan);
+        handleDispatchSpan(behaviour, dispatchSpan, scope);
         if (behaviour.retryDuration() != null) {
           boolean unableToSchedule = core.context().environment().timer().schedule(() -> {
             reactiveInternal(ret, core, request, executeFutureGrpcCall, convertResponse, convertException);
@@ -291,13 +294,23 @@ public class CoreProtostellarAccessors {
     }, core.context().environment().executor());
   }
 
-  private static void handleDispatchSpan(ProtostellarRequestBehaviour behaviour, @Nullable RequestSpan dispatchSpan) {
+  private static void handleDispatchSpan(@Nullable ProtostellarRequestBehaviour behaviour, @Nullable RequestSpan dispatchSpan, @Nullable AutoCloseable scope) {
     if (dispatchSpan != null) {
-      if (behaviour.exception() != null) {
-        dispatchSpan.recordException(behaviour.exception());
+      if (behaviour != null) {
+        dispatchSpan.status(RequestSpan.StatusCode.ERROR);
+        if (behaviour.exception() != null) {
+          dispatchSpan.recordException(behaviour.exception());
+        }
       }
-      dispatchSpan.status(RequestSpan.StatusCode.ERROR);
       dispatchSpan.end();
+    }
+    // Note that closing the scope doesn't end the span it owns, it just removes it from ThreadLocalStorage
+    if (scope != null) {
+      try {
+        scope.close();
+      } catch (Exception e) {
+        // Silently swallow - OTel should never throw anyway
+      }
     }
   }
 

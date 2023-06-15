@@ -47,6 +47,7 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
 import com.couchbase.client.core.util.Deadline;
@@ -227,6 +228,11 @@ public class ProtostellarEndpoint {
       .withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) env.timeoutConfig().connectTimeout().toMillis())
       // Retry strategies to be determined, but presumably we will need something custom rather than what GRPC provides
       .disableRetry();
+
+    if (ctx.environment().requestTracer() != null
+      && ctx.environment().requestTracer() instanceof GrpcAwareRequestTracer) {
+      ((GrpcAwareRequestTracer) ctx.environment().requestTracer()).registerGrpc(builder);
+    }
 
     // JVMCBC-1187: experimental code for performance testing that will be removed pre-GA.
     // Testing anyway indicates this load balancing makes zero difference - always end up with one channel and one subchannel per ManagedChannel regardless.

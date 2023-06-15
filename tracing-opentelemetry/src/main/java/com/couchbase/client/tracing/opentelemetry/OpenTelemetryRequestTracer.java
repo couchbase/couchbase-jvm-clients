@@ -18,8 +18,12 @@ package com.couchbase.client.tracing.opentelemetry;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.deps.io.grpc.ClientInterceptor;
+import com.couchbase.client.core.deps.io.grpc.ManagedChannelBuilder;
+import com.couchbase.client.core.deps.io.opentelemetry.instrumentation.grpc.v1_6.GrpcTelemetry;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.TracerException;
+import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
@@ -28,6 +32,7 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.api.trace.TracerProvider;
 import io.opentelemetry.context.Context;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.net.URL;
 import java.time.Duration;
@@ -42,7 +47,7 @@ import java.util.jar.Manifest;
  * Wraps the OpenTelemetry tracer so it is suitable to be passed in into the couchbase environment and picked up
  * by the rest of the SDK as a result.
  */
-public class OpenTelemetryRequestTracer implements RequestTracer {
+public class OpenTelemetryRequestTracer implements RequestTracer, GrpcAwareRequestTracer {
 
   public static final String INSTRUMENTATION_NAME = "com.couchbase.client.jvm";
 
@@ -75,6 +80,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
    * Holds the actual OTel tracer.
    */
   private final Tracer tracer;
+  private final @Nullable OpenTelemetry openTelemetry;
 
   /**
    * Wraps OpenTelemetry and returns a datatype that can be passed into the requestTracer method of the
@@ -84,7 +90,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
    * @return the wrapped OpenTelemetry ready to be passed in.
    */
   public static OpenTelemetryRequestTracer wrap(final OpenTelemetry openTelemetry) {
-    return wrap(openTelemetry.getTracerProvider());
+    return new OpenTelemetryRequestTracer(openTelemetry.getTracerProvider(), openTelemetry);
   }
 
   /**
@@ -95,10 +101,10 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
    * @return the wrapped OpenTelemetry ready to be passed in.
    */
   public static OpenTelemetryRequestTracer wrap(final TracerProvider tracerProvider) {
-    return new OpenTelemetryRequestTracer(tracerProvider);
+    return new OpenTelemetryRequestTracer(tracerProvider, null);
   }
 
-  private OpenTelemetryRequestTracer(TracerProvider tracerProvider) {
+  private OpenTelemetryRequestTracer(TracerProvider tracerProvider, @Nullable OpenTelemetry openTelemetry) {
     String version = null;
     try {
       version = MANIFEST_INFOS.get("couchbase-java-tracing-opentelemetry").getValue("Impl-Version");
@@ -109,6 +115,7 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
     this.tracer = version != null
       ? tracerProvider.get(INSTRUMENTATION_NAME, version)
       : tracerProvider.get(INSTRUMENTATION_NAME);
+    this.openTelemetry = openTelemetry;
   }
 
   private Span castSpan(final RequestSpan requestSpan) {
@@ -158,4 +165,19 @@ public class OpenTelemetryRequestTracer implements RequestTracer {
     return Mono.empty(); // Tracer should not be stopped by us
   }
 
+  @Override
+  public void registerGrpc(ManagedChannelBuilder<?> builder) {
+    if (openTelemetry != null) {
+      GrpcTelemetry grpcTelemetry =
+        GrpcTelemetry.create(openTelemetry);
+      ClientInterceptor interceptor = grpcTelemetry.newClientInterceptor();
+
+      builder.intercept(interceptor);
+    }
+  }
+
+  @Override
+  public AutoCloseable activateSpan(RequestSpan span) {
+    return castSpan(span).makeCurrent();
+  }
 }

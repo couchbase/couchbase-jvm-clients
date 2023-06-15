@@ -16,6 +16,12 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
+import reactor.util.annotation.Nullable;
+
+import java.util.Optional;
 
 @Stability.Internal
 // JVMCBC-1192: candidate for removal: will probably not be required when everything is moved to Core*Ops
@@ -31,5 +37,15 @@ public class ProtostellarUtil {
 
   public static java.time.Duration convert(com.couchbase.client.core.deps.com.google.protobuf.Duration input) {
     return java.time.Duration.ofSeconds(input.getSeconds(), input.getNanos());
+  }
+
+  public static @Nullable AutoCloseable activateSpan(Optional<RequestSpan> parentSpan, @Nullable RequestSpan span, @Nullable RequestTracer tracer) {
+    if (tracer != null && tracer instanceof GrpcAwareRequestTracer) {
+      if (span != null) {
+        return ((GrpcAwareRequestTracer) tracer).activateSpan(span);
+      }
+    }
+
+    return null;
   }
 }

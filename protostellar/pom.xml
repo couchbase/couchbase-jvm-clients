@@ -56,6 +56,14 @@
             <version>${grpc.version}</version>
         </dependency>
 
+        <!-- See comment in core-io-deps/pom.xml for why this dependency is here -->
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-grpc-1.6</artifactId>
+            <!-- Older versions of Maven (certainly 3.6.3) cannot support "${opentelemetry.version}-alpha" -->
+            <version>1.19.0-alpha</version>
+        </dependency>
+
         <!--Needed on Windows for annotations-->
         <dependency>
             <groupId>javax.annotation</groupId>
