@@ -627,12 +627,45 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public MutationResult touch(final String id, Duration expiry, final TouchOptions options) {
+    return touch(id, Expiry.relative(expiry), options);
+  }
+
+  /**
+   * Updates the expiry of the document with the given id.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiry for the document.
+   * @return a {@link MutationResult} once the operation completes.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public MutationResult touch(final String id, Instant expiry) {
+    return touch(id, expiry, DEFAULT_TOUCH_OPTIONS);
+  }
+
+  /**
+   * Updates the expiry of the document with the given id with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return a {@link MutationResult} once the operation completes.
+   * @throws DocumentNotFoundException the given document id is not found in the collection.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public MutationResult touch(final String id, Instant expiry, final TouchOptions options) {
+    return touch(id, Expiry.absolute(expiry), options);
+  }
+
+  private MutationResult touch(final String id, Expiry expiry, final TouchOptions options) {
     notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
 
     TouchOptions.Built opts = options.build();
     return new MutationResult(
-      kvOps.touchBlocking(opts, id, Expiry.relative(expiry).encode())
+      kvOps.touchBlocking(opts, id, expiry.encode())
     );
   }
 

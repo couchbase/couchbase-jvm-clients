@@ -558,11 +558,38 @@ public class ReactiveCollection {
    * @return a {@link MutationResult} once the operation completes.
    */
   public Mono<MutationResult> touch(final String id, final Duration expiry, final TouchOptions options) {
+    return touch(id, Expiry.relative(expiry), options);
+  }
+
+  /**
+   * Updates the expiry of the document with the given id with default options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @return a {@link MutationResult} once the operation completes.
+   */
+  public Mono<MutationResult> touch(final String id, final Instant expiry) {
+    return touch(id, expiry, DEFAULT_TOUCH_OPTIONS);
+  }
+
+  /**
+   * Updates the expiry of the document with the given id with custom options.
+   *
+   * @param id the id of the document to update.
+   * @param expiry the new expiry for the document.
+   * @param options the custom options.
+   * @return a {@link MutationResult} once the operation completes.
+   */
+  public Mono<MutationResult> touch(final String id, final Instant expiry, final TouchOptions options) {
+    return touch(id, Expiry.absolute(expiry), options);
+  }
+
+  private Mono<MutationResult> touch(final String id, final Expiry expiry, final TouchOptions options) {
     notNull(options, "TouchOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     notNull(expiry, "Expiry", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
 
     TouchOptions.Built opts = options.build();
-    return kvOps.touchReactive(opts, id, Expiry.relative(expiry).encode())
+    return kvOps.touchReactive(opts, id, expiry.encode())
       .map(MutationResult::new);
   }
 

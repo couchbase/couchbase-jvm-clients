@@ -223,9 +223,11 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(isProtostellarWillWorkLater = true)
   void verifyTouchExceptions() {
-    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", null));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", (Instant) null));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", (Duration) null));
     assertThrows(InvalidArgumentException.class, () -> collection.touch(null, Duration.ofSeconds(1), null));
-    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", null, touchOptions()));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", (Instant) null, touchOptions()));
+    assertThrows(InvalidArgumentException.class, () -> collection.touch("foo", (Duration) null, touchOptions()));
 
     DocumentNotFoundException thrown = assertThrows(
       DocumentNotFoundException.class,

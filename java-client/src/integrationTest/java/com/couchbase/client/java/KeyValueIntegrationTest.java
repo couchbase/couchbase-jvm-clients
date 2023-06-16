@@ -723,6 +723,24 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     });
   }
 
+  @Test
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}) // Mock doesn't support get withExpiry=true
+  void touchWithInstant() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", true);
+    collection.insert(id, content);
+
+    Instant expiry = Instant.now().plus(5, DAYS);
+
+    collection.touch(id, expiry);
+
+    assertEquals(
+      Optional.of(expiry.truncatedTo(SECONDS)),
+      collection.get(id, getOptions().withExpiry(true)).expiryTime()
+    );
+  }
+
   /**
    * The mock returns TMPFAIL instead of LOCKED, so this test is ignored on the mock.
    */
