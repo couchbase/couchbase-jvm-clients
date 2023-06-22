@@ -18,10 +18,12 @@ package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryProfile;
 import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.shared.CoreMutationState;
+import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -45,6 +47,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -573,6 +576,15 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
       }
 
       return QueryOptionsUtil.convert(raw);
+    }
+
+    @UsedBy(SPRING_DATA_COUCHBASE) // SDC 4 uses this
+    @Stability.Internal
+    public void injectParams(final JsonObject queryJson) {
+      ObjectNode params = ClassicCoreQueryOps.convertOptions(this);
+      @SuppressWarnings("unchecked")
+      Map<String, Object> map = Mapper.convertValue(params, Map.class);
+      map.forEach(queryJson::put);
     }
 
     public boolean asTransaction() {
