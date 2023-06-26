@@ -646,10 +646,13 @@ class AsyncCollection(
     val rangeScan = scanType match {
       case scan: ScanType.RangeScan =>
         new CoreRangeScan() {
-          override def from(): CoreScanTerm = new CoreScanTerm(scan.from.term, scan.from.exclusive)
+          override def from(): CoreScanTerm = scan.from.map(_.toCore).getOrElse(CoreScanTerm.MIN)
 
-          override def to(): CoreScanTerm = new CoreScanTerm(scan.to.term, scan.to.exclusive)
+          override def to(): CoreScanTerm = scan.to.map(_.toCore).getOrElse(CoreScanTerm.MAX)
         }
+
+      case scan: ScanType.PrefixScan =>
+          CoreRangeScan.forPrefix(scan.prefix)
 
       case scan: ScanType.SamplingScan =>
         new CoreSamplingScan {

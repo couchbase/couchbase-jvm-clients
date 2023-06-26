@@ -1,22 +1,15 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.error.InvalidArgumentException
-import com.couchbase.client.core.kv.CoreRangeScanItem
+import com.couchbase.client.core.kv.{CoreRangeScanItem, CoreScanTerm}
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.core.util.CbStrings.{MAX_CODE_POINT_AS_STRING, MIN_CODE_POINT_AS_STRING}
-import com.couchbase.client.scala.codec.{
-  JsonDeserializer,
-  Transcoder,
-  TranscoderWithSerializer,
-  TranscoderWithoutSerializer
-}
+import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
-import scala.util.{Failure, Random, Try}
+import scala.util.{Random, Try}
 
 /** A scan term identifies a point to scan from or to scan to.
   *
@@ -25,15 +18,13 @@ import scala.util.{Failure, Random, Try}
   *                  companion object.
   * @param exclusive controls whether this term is inclusive or exclusive - defaults to false.
   */
-case class ScanTerm(term: String, exclusive: Boolean = false)
+case class ScanTerm(term: String, exclusive: Boolean = false) {
+  private[scala] def toCore: CoreScanTerm = {
+    new CoreScanTerm(term, exclusive)
+  }
+}
 
 object ScanTerm {
-
-  /** Creates a ScanTerm representing the absolute minimum pattern - e.g. before the first document. */
-  def minimum(): ScanTerm = inclusive(MIN_CODE_POINT_AS_STRING)
-
-  /** Creates a ScanTerm representing the absolute maximum pattern - e.g. after the last document. */
-  def maximum(): ScanTerm = inclusive(MAX_CODE_POINT_AS_STRING)
 
   /** Creates a ScanTerm including `term`. */
   def inclusive(term: String): ScanTerm = ScanTerm(term)
@@ -49,9 +40,10 @@ object ScanType {
 
   /** Scans documents, from document `from` to document `to`.
     *
-    * Defaults to returning all documents in the collection.
+    * If `None` is specified for `from`, it indicates to scan from the start of the collection.
+    * If `None` is specified for `to`, it indicates to scan to the start of the collection.
     */
-  case class RangeScan(from: ScanTerm = ScanTerm.minimum(), to: ScanTerm = ScanTerm.maximum())
+  case class RangeScan(from: Option[ScanTerm], to: Option[ScanTerm])
       extends ScanType
 
   /** Samples documents randomly from the collection until reaching `limit` documents.
@@ -62,22 +54,7 @@ object ScanType {
     */
   case class SamplingScan(limit: Long, seed: Long = Random.nextLong()) extends ScanType
 
-  def prefixScan(documentIdPrefix: String) = {
-    val to: String = documentIdPrefix + MAX_CODE_POINT_AS_STRING
-    RangeScan(ScanTerm.inclusive(documentIdPrefix), ScanTerm.exclusive(to))
-  }
-}
-
-/** Controls if and how KV range scan results are sorted. */
-sealed trait ScanSort
-
-object ScanSort {
-
-  /** KV range scan results are not sorted. */
-  case object None extends ScanSort
-
-  /** KV range scan results are sorted in ascending order. */
-  case object Ascending extends ScanSort
+  case class PrefixScan(prefix: String) extends ScanType
 }
 
 /** Provides control over how a KV range scan is performed.
@@ -89,7 +66,6 @@ case class ScanOptions(
     private[scala] val transcoder: Option[Transcoder] = None,
     private[scala] val idsOnly: Option[Boolean] = None,
     private[scala] val consistentWith: Option[MutationState] = None,
-    private[scala] val scanSort: Option[ScanSort] = None,
     private[scala] val batchByteLimit: Option[Int] = None,
     private[scala] val batchItemLimit: Option[Int] = None
 ) {
@@ -165,14 +141,6 @@ case class ScanOptions(
     */
   def consistentWith(value: MutationState): ScanOptions = {
     copy(consistentWith = Some(value))
-  }
-
-  /** Controls if and how the scan results are sorted.
-    *
-    * @return a copy of this with the change applied, for chaining.
-    */
-  def scanSort(value: ScanSort): ScanOptions = {
-    copy(scanSort = Some(value))
   }
 
   /** Controls how many bytes are sent from the server to the client on each partition batch.

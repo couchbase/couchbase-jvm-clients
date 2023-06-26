@@ -381,9 +381,9 @@ object ScalaSdkCommandExecutor {
     if (st.hasDefault) {
       None
     } else if (st.hasMaximum) {
-      Some(ScanTerm.maximum())
+      None
     } else if (st.hasMinimum) {
-      Some(ScanTerm.minimum())
+      None
     } else if (st.hasTerm) {
       val stt = st.getTerm
       if (stt.hasExclusive && stt.getExclusive) {
@@ -403,15 +403,9 @@ object ScalaSdkCommandExecutor {
       if (scan.hasFromTo) {
         val from = convertScanTerm(scan.getFromTo.getFrom)
         val to   = convertScanTerm(scan.getFromTo.getTo)
-        if (from.isDefined && to.isDefined) {
-          RangeScan(from.get, to.get)
-        } else if (from.isDefined) {
-          RangeScan(from.get)
-        } else if (to.isDefined) {
-          RangeScan(to = to.get)
-        } else RangeScan()
+        RangeScan(from, to)
       } else if (scan.hasDocIdPrefix) {
-        com.couchbase.client.scala.kv.ScanType.prefixScan(scan.getDocIdPrefix)
+        com.couchbase.client.scala.kv.ScanType.PrefixScan(scan.getDocIdPrefix)
       } else throw new UnsupportedOperationException()
     } else if (request.getScanType.hasSampling) {
       val scan = request.getScanType.getSampling
