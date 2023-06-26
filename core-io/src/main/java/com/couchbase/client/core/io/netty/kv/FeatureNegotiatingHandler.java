@@ -221,7 +221,7 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
 
     while (body.get().isReadable()) {
       try {
-        short featureRaw = body.get().readShort();
+        int featureRaw = body.get().readUnsignedShort();
         ServerFeature feature = ServerFeature.from(featureRaw);
         if (features.contains(feature)) {
           negotiated.add(feature);

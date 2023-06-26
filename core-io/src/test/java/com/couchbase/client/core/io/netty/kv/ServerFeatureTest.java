@@ -27,7 +27,7 @@ class ServerFeatureTest {
     for (ServerFeature f : ServerFeature.values()) {
       assertEquals(f, ServerFeature.from(f.value()));
     }
-    short someUnknownValue = (short) 0xffff;
+    int someUnknownValue = 0xffff;
     assertNull(ServerFeature.from(someUnknownValue));
   }
 }

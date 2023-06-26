@@ -21,7 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.EnumLookupTable;
 
 /**
- * The {@link ServerFeature} enum describes all the different negotiation modes
+ * Describes all the different negotiation modes
  * between the server and the SDK.
  *
  * @since 2.0.0
@@ -36,7 +36,7 @@ public enum ServerFeature {
    */
   @SinceCouchbase("4.0")
   @Deprecated
-  DATATYPE((short) 0x01),
+  DATATYPE(0x01),
 
   /**
    * The TLS feature.
@@ -47,87 +47,87 @@ public enum ServerFeature {
    * Enables TCP Nodelay.
    */
   @SinceCouchbase("4.0")
-  TCPNODELAY((short) 0x03),
+  TCPNODELAY(0x03),
 
   /**
    * Returns the sequence number on every mutation.
    */
   @SinceCouchbase("4.0")
-  MUTATION_SEQNO((short) 0x04),
+  MUTATION_SEQNO(0x04),
 
   /**
    * Disable TCP Nodelay.
    */
   @SinceCouchbase("4.0")
-  TCPDELAY((short) 0x05),
+  TCPDELAY(0x05),
 
   /**
    * Enable xattr support.
    */
   @SinceCouchbase("5.0")
-  XATTR((short) 0x06),
+  XATTR(0x06),
 
   /**
    * Enable extended error map support.
    */
   @SinceCouchbase("5.0")
-  XERROR((short) 0x07),
+  XERROR(0x07),
 
   /**
    * Enable select_bucket support.
    */
   @SinceCouchbase("5.0")
-  SELECT_BUCKET((short) 0x08),
+  SELECT_BUCKET(0x08),
 
   /**
    * Enable snappy-based compression support.
    */
   @SinceCouchbase("5.5")
-  SNAPPY((short) 0x0a),
+  SNAPPY(0x0a),
 
   /**
    * Enables JSON data identification support.
    */
   @SinceCouchbase("5.5")
-  JSON((short) 0x0b),
+  JSON(0x0b),
 
   /**
    * Enables Duplex mode support.
    */
   @SinceCouchbase("5.5")
-  DUPLEX((short) 0x0c),
+  DUPLEX(0x0c),
 
   /**
    * Request the server to push any cluster maps stored by ns_server into
    * one of the buckets the client have access to.
    */
   @SinceCouchbase("5.5")
-  CLUSTERMAP_CHANGE_NOTIFICATION((short) 0x0d),
+  CLUSTERMAP_CHANGE_NOTIFICATION(0x0d),
 
   /**
    * Tell the server that we're ok with the server reordering the execution
    * of commands.
    */
   @SinceCouchbase("5.5")
-  UNORDERED_EXECUTION((short) 0x0e),
+  UNORDERED_EXECUTION(0x0e),
 
   /**
    * Enable tracing support.
    */
   @SinceCouchbase("5.5")
-  TRACING((short) 0x0f),
+  TRACING(0x0f),
 
   /**
    * Allows the server to accept requests with flexible extras.
    */
   @SinceCouchbase("6.5")
-  ALT_REQUEST((short) 0x10),
+  ALT_REQUEST(0x10),
 
   /**
    * Specify durability requirements for mutations.
    */
   @SinceCouchbase("6.5")
-  SYNC_REPLICATION((short) 0x11),
+  SYNC_REPLICATION(0x11),
 
   /**
    * Enables the collections feature.
@@ -135,65 +135,78 @@ public enum ServerFeature {
    * History note: There was a "collections" feature in Couchbase in 5.0,
    * but it had a different code (0x09) that has since been retired.
    */
-  @SinceCouchbase("6.5") // GA in 7.0
-  COLLECTIONS((short) 0x12),
+  @SinceCouchbase("7.0")
+  COLLECTIONS(0x12),
 
   /**
    * Enables preserving expiry when updating document.
    */
   @SinceCouchbase("7.0")
-  PRESERVE_TTL((short) 0x14),
+  PRESERVE_TTL(0x14),
 
   /**
    * Enables the vattr feature.
-   *
+   * <p>
    * Note that vattrs (such as $document) were available before this, but this flag signifies that if a vattr is
    * requested that the server does not recognise, it will be rejected with the correct XATTR_UNKNOWN_VATTR error,
    * rather than the connection being disconnected.
    */
   @SinceCouchbase("6.5.1")
-  VATTR((short) 0x15),
+  VATTR(0x15),
 
   /**
    * Enables the "create as deleted" flag, allowing a document to be created in a tombstoned state.
    */
   @SinceCouchbase("6.6")
-  CREATE_AS_DELETED((short) 0x17),
+  CREATE_AS_DELETED(0x17),
 
+  /**
+   * When enabled, the server will insert frame info field(s) in the response
+   * containing the amount of read and write units the command used on the
+   * server, and the time the command spent throttled on the server. The
+   * fields will only be inserted if non-zero.
+   */
   @SinceCouchbase("7.2")
-  REPORT_UNIT_USAGE((short) 0x1a)
+  REPORT_UNIT_USAGE(0x1a),
   ;
 
   private static final EnumLookupTable<ServerFeature> lookupTable =
-      EnumLookupTable.create(ServerFeature.class, e -> Short.toUnsignedInt(e.value()));
+    EnumLookupTable.create(ServerFeature.class, ServerFeature::value);
 
   /**
    * The actual byte representation on the wire.
    */
-  private final short value;
+  private final int value;
 
   /**
    * Creates a new server feature.
    *
    * @param value the hex value from the wire protocol.
    */
-  ServerFeature(short value) {
-    this.value = value;
+  ServerFeature(int value) {
+    this.value = require16Bit(value);
   }
 
   /**
-   * Returns the actual byte value for the wire protocol.
+   * Returns an int whose low 16 bits contain the feature's value in the wire protocol.
    *
    * @return the actual wire value.
    */
-  public short value() {
+  public int value() {
+    return value;
+  }
+
+  private static int require16Bit(int value) {
+    if ((value & 0xffff) != value) {
+      throw new IllegalArgumentException("Expected a value that fits in 16 bits, but got: 0x" + Integer.toHexString(value));
+    }
     return value;
   }
 
   /**
    * Returns the server feature associated with the raw short value, or null if not found.
    */
-  static ServerFeature from(final short input) {
-    return lookupTable.getOrDefault(Short.toUnsignedInt(input), null);
+  static ServerFeature from(final int input) {
+    return lookupTable.getOrDefault(input, null);
   }
 }
