@@ -116,8 +116,8 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
       sb.append("Extras Length      | 4      | 0x").append(String.format("%02X (%d)\n", extrasLength, extrasLength));
 
       byte datatype = MemcacheProtocol.datatype(msg);
-      sb.append("Datatype           | 5      | 0x").append(String.format("%02X %s\n", datatype,
-        emptyIfNull(MemcacheProtocol.Datatype.of(datatype))));
+      sb.append("Datatype           | 5      | 0x").append(String.format("%02X (%s)\n", datatype,
+        MemcacheProtocol.Datatype.decode(datatype)));
 
       short status = MemcacheProtocol.status(msg);
       if (MemcacheProtocol.isRequest(msg)) {

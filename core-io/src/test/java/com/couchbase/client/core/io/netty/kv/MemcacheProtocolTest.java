@@ -26,12 +26,17 @@ import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Datatype;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.EnumSet;
+import java.util.Set;
 
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
@@ -153,6 +158,30 @@ class MemcacheProtocolTest {
         status,
         MemcacheProtocol.Status.of(status.status()),
         "Unexpected result for Status.of(0x" + Integer.toHexString(status.status()) + ")");
+    }
+  }
+
+  @Test
+  void canParseDatatypes() {
+    Set<Datatype> allValues = EnumSet.allOf(Datatype.class);
+    assertEquals(allValues, Datatype.decode(Datatype.encode(allValues)));
+    assertEquals(allValues, Datatype.decode(-1)); // assert ignores unrecognized bits
+    assertEquals(emptySet(), Datatype.decode(0));
+
+    for (Datatype d : allValues) {
+      int encoded = Datatype.encode(setOf(d));
+      assertEquals(d.datatype(), encoded);
+      assertEquals(setOf(d), Datatype.decode(encoded));
+
+      for (Datatype v : allValues) {
+        assertEquals(d == v, Datatype.contains(encoded, v));
+      }
+    }
+
+    for (int i = 0; i < 0xff; i++) {
+      Set<Datatype> set = Datatype.decode(i);
+      int encoded = Datatype.encode(set);
+      assertEquals((encoded & i), encoded);
     }
   }
 }

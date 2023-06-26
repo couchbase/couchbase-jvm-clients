@@ -54,8 +54,16 @@ import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+
+import static com.couchbase.client.core.util.CbCollections.listCopyOf;
+import static java.util.Collections.unmodifiableSet;
 
 /**
  * The {@link MemcacheProtocol} class holds static helpers that deal with the encoding
@@ -957,7 +965,7 @@ public enum MemcacheProtocol {
    * @return the byte array, either decoded or the input straight.
    */
   public static byte[] tryDecompression(byte[] input, byte datatype) {
-    if ((datatype & Datatype.SNAPPY.datatype()) == Datatype.SNAPPY.datatype()) {
+    if (Datatype.isSnappy(datatype)) {
       return Snappy.uncompress(input, 0, input.length);
     }
     return input;
@@ -1710,22 +1718,30 @@ public enum MemcacheProtocol {
     /**
      * The JSON datatype.
      */
-    JSON((byte) 0x01),
+    JSON(0x01),
 
     /**
      * Snappy datatype used to signal compression.
      */
-    SNAPPY((byte) 0x02),
+    SNAPPY(0x02),
 
     /**
      * Extended attributes (XATTR)
      */
-    XATTR((byte) 0x04);
+    XATTR(0x04),
+    ;
 
-    private final byte datatype;
+    private final byte bitmask;
 
-    Datatype(byte datatype) {
-      this.datatype = datatype;
+    Datatype(int bitmask) {
+      this.bitmask = (byte) require8Bit(bitmask);
+    }
+
+    private static int require8Bit(int value) {
+      if ((value & 0xff) != value) {
+        throw new IllegalArgumentException("Expected a value that fits in 8 bits, but got: 0x" + Integer.toHexString(value));
+      }
+      return value;
     }
 
     /**
@@ -1734,17 +1750,51 @@ public enum MemcacheProtocol {
      * @return the datatype.
      */
     public byte datatype() {
-      return datatype;
+      return bitmask;
     }
 
-    public static Datatype of(byte input) {
-      switch (input) {
-        case 0x02:
-          return SNAPPY;
-        case 0x04:
-          return XATTR;
+    public static Set<Datatype> decode(int bitfield) {
+      // ANDing with allBits ignores any unrecognized bits,
+      // and ensures the index is in bounds.
+      return precomputed.get(bitfield & allBits);
+    }
+
+    public static int encode(Set<Datatype> type) {
+      int bitfield = 0;
+      for (Datatype it : type) {
+        bitfield |= it.bitmask;
       }
-      return null;
+      return bitfield;
+    }
+
+    private static final List<Datatype> valueList = listCopyOf(Arrays.asList(values()));
+
+    // Precompute the values where at least one recognized bit is set.
+    private static final int allBits = encode(EnumSet.allOf(Datatype.class));
+    private static final List<Set<Datatype>> precomputed = new ArrayList<>(allBits + 1);
+
+    static {
+      for (int i = 0; i <= allBits; i++) {
+        precomputed.add(unmodifiableSet(doDecode(i)));
+      }
+    }
+
+    private static Set<Datatype> doDecode(int bitfield) {
+      Set<Datatype> result = EnumSet.noneOf(Datatype.class);
+      for (Datatype type : valueList) {
+        if (contains(bitfield, type)) {
+          result.add(type);
+        }
+      }
+      return result;
+    }
+
+    public static boolean isSnappy(int bitfield) {
+      return contains(bitfield, SNAPPY);
+    }
+
+    public static boolean contains(int bitfield, Datatype type) {
+      return (bitfield & type.bitmask) != 0;
     }
   }
 }
