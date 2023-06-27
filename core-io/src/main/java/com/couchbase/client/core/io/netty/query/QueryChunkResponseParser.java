@@ -181,6 +181,9 @@ public class QueryChunkResponseParser
         if (message.contains("preserve_expiry")) {
           return FeatureNotAvailableException.queryPreserveExpiry();
         }
+        if (message.contains("use_replica")) {
+          return FeatureNotAvailableException.queryUseReplica(message);
+        }
       } else if (code == 1080) {
         // This can happen when the server starts streaming responses - at this point our timeout is already
         // canceled. But then the streaming takes longer than the configured timeout, in which case the query

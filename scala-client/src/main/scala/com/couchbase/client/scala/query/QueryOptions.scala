@@ -67,7 +67,8 @@ case class QueryOptions(
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None,
     private[scala] val flexIndex: Boolean = false,
-    @SinceCouchbase("7.1") private[scala] val preserveExpiry: Option[Boolean] = None
+    @SinceCouchbase("7.1") private[scala] val preserveExpiry: Option[Boolean] = None,
+    @SinceCouchbase("7.6") private[scala] val useReplica: Option[Boolean] = None,
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -283,6 +284,19 @@ case class QueryOptions(
     copy(preserveExpiry = Some(preserveExpiry))
   }
 
+  /** Tells the query engine that replicas can be used.
+   *
+   * The default is not set
+   *
+   * This feature works from Couchbase Server 7.1.0 onwards.
+   *
+   * @return a copy of this with the change applied, for chaining.
+   */
+  @SinceCouchbase("7.6")
+  def useReplica(useReplica: Boolean): QueryOptions = {
+      copy(useReplica = Some(useReplica))
+  }
+
   private[scala] def toCore: CoreQueryOptions = {
     val x = this
 
@@ -380,6 +394,11 @@ case class QueryOptions(
       override def asTransactionOptions(): CoreSingleQueryTransactionOptions = null
 
       override def commonOptions(): CoreCommonOptions = common
+
+      override def useReplica(): lang.Boolean = x.useReplica match {
+          case Some(value) => value
+          case _ => null
+      }
     }
   }
 }

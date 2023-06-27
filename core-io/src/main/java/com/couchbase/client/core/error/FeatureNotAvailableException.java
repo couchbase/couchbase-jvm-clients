@@ -70,4 +70,8 @@ public class FeatureNotAvailableException extends CouchbaseException {
       "(Only supported with Couchbase Server 7.5 and later).");
   }
 
+  public static CouchbaseException queryUseReplica(String message) {
+    return new FeatureNotAvailableException("The cluster does not support the option use_replica " +
+      "(Only supported with Couchbase Server 7.6 and later). "+message);
+  }
 }

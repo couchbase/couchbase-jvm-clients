@@ -471,6 +471,11 @@ public class CoreCollectionQueryIndexManager {
       }
 
       @Override
+      public Boolean useReplica() {
+        return null;
+      }
+
+      @Override
       public CoreSingleQueryTransactionOptions asTransactionOptions() {
         return null;
       }

@@ -73,6 +73,7 @@ internal class QueryExecutor(
 
         clientContextId: String?,
         raw: Map<String, Any?>,
+        useReplica: Boolean?,
     ): Flow<QueryFlowItem> {
         val actualSerializer = serializer ?: defaultSerializer
 
@@ -124,6 +125,7 @@ internal class QueryExecutor(
             override fun preserveExpiry(): Boolean? = if (preserveExpiry) true else null
             override fun asTransactionOptions(): CoreSingleQueryTransactionOptions? = null
             override fun commonOptions(): CoreCommonOptions = common.toCore()
+            override fun useReplica(): Boolean? = useReplica
         }
 
         return flow {

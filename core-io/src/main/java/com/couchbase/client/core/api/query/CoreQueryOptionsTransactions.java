@@ -250,6 +250,11 @@ public class CoreQueryOptionsTransactions implements CoreQueryOptions {
   }
 
   @Override
+  public Boolean useReplica() {
+    return original == null ? null : original.useReplica();
+  }
+
+  @Override
   public CoreSingleQueryTransactionOptions asTransactionOptions() {
     switch (passthroughFor(QueryOptionsParameter.AS_TRANSACTION_OPTIONS)) {
       case ALWAYS_SHADOWED:

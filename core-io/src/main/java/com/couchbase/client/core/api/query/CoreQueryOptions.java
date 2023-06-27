@@ -88,6 +88,9 @@ public interface CoreQueryOptions {
   CoreSingleQueryTransactionOptions asTransactionOptions();
 
   CoreCommonOptions commonOptions();
+
+  @Nullable
+  Boolean useReplica();
 }
 
 

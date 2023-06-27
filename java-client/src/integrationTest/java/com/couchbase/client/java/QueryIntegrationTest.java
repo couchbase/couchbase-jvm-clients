@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -451,6 +452,60 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertEquals("updated", result.contentAsObject().get("foo"));
         assertEquals(expectedExpiry, result.expiryTime().get());
     }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow="7.6")
+  void useReplica() {
+    String id = UUID.randomUUID().toString();
+    try {
+      collection.insert(id, FOO_CONTENT);
+
+      QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
+      assertEquals(null, ClassicCoreQueryOps.convertOptions(options.build()).get("use_replica"));
+      QueryResult queryResultNone = cluster.query(
+        "SELECT * from " + bucketName + " where meta().id = \"" + id + "\"",
+        options
+      );
+      assertEquals(1, queryResultNone.rowsAsObject().size());
+
+      options.useReplica(false);
+      assertEquals("off", ClassicCoreQueryOps.convertOptions(options.build()).get("use_replica").asText());
+      QueryResult queryResultFalse = cluster.query(
+        "SELECT * from " + bucketName + " where meta().id = \"" + id + "\"",
+        options
+      );
+      assertEquals(1, queryResultFalse.rowsAsObject().size());
+
+      options.useReplica(true);
+      assertEquals("on", ClassicCoreQueryOps.convertOptions(options.build()).get("use_replica").asText());
+      QueryResult queryResultTrue = cluster.query(
+        "SELECT * from " + bucketName + " where meta().id = \"" + id + "\"",
+        options
+      );
+      assertEquals(1, queryResultTrue.rowsAsObject().size());
+    } finally {
+      collection.remove(id);
+    }
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsEqualToOrAbove="7.1")
+  void useReplicaThrowsFeatureNotAvailable() {
+    String id = UUID.randomUUID().toString();
+    try {
+      collection.insert(id, FOO_CONTENT);
+
+      QueryOptions options = queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
+      options.useReplica(true);
+      assertEquals("on", ClassicCoreQueryOps.convertOptions(options.build()).get("use_replica").asText());
+      assertThrows( FeatureNotAvailableException.class, () -> cluster.query(
+        "SELECT * from " + bucketName + " where meta().id = \"" + id + "\"",
+        options
+      ));
+    } finally {
+      collection.remove(id);
+    }
+  }
 
     @Test
     @IgnoreWhen(hasCapabilities = Capabilities.QUERY_PRESERVE_EXPIRY)

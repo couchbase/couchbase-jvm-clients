@@ -176,6 +176,7 @@ public class Scope(
 
         clientContextId: String? = UUID.randomUUID().toString(),
         raw: Map<String, Any?> = emptyMap(),
+        @SinceCouchbase("7.6") useReplica : Boolean? = null
 
         ): Flow<QueryFlowItem> {
 
@@ -197,6 +198,56 @@ public class Scope(
             pipelineCap,
             clientContextId,
             raw,
+            useReplica
+        )
+    }
+
+    @Deprecated(level = DeprecationLevel.HIDDEN, message="Use similar method with additional useReplica parameter.")
+    public fun query(
+        statement: String,
+        common: CommonOptions = CommonOptions.Default,
+        parameters: QueryParameters = QueryParameters.None,
+        @SinceCouchbase("7.1") preserveExpiry: Boolean = false,
+
+        serializer: JsonSerializer? = null,
+
+        consistency: QueryScanConsistency = QueryScanConsistency.notBounded(),
+        readonly: Boolean = false,
+        adhoc: Boolean = true,
+        flexIndex: Boolean = false,
+
+        metrics: Boolean = false,
+        profile: QueryProfile = QueryProfile.OFF,
+
+        maxParallelism: Int? = null,
+        scanCap: Int? = null,
+        pipelineBatch: Int? = null,
+        pipelineCap: Int? = null,
+
+        clientContextId: String? = UUID.randomUUID().toString(),
+        raw: Map<String, Any?> = emptyMap()
+
+    ): Flow<QueryFlowItem> {
+
+        return queryExecutor.query(
+            statement,
+            common,
+            parameters,
+            preserveExpiry,
+            serializer,
+            consistency,
+            readonly,
+            adhoc,
+            flexIndex,
+            metrics,
+            profile,
+            maxParallelism,
+            scanCap,
+            pipelineBatch,
+            pipelineCap,
+            clientContextId,
+            raw,
+            null
         )
     }
 

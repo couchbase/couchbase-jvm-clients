@@ -367,6 +367,10 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("preserve_expiry", opts.preserveExpiry());
     }
 
+    if (opts.useReplica() != null) {
+      json.put("use_replica", opts.useReplica() ? "on" : "off");
+    }
+
     JsonNode raw = opts.raw();
     if (raw != null) {
       for (Iterator<String> it = raw.fieldNames(); it.hasNext(); ) {

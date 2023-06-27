@@ -42,6 +42,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.transactions.config.SingleQueryTransactionOptions;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -81,6 +82,7 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   private Boolean preserveExpiry = null;
   private boolean asTransaction = false;
   private CoreSingleQueryTransactionOptions asTransactionOptions;
+  private Boolean useReplica = null;
 
   /**
    * The options should only be instantiated through the {@link #queryOptions()} static method.
@@ -459,6 +461,23 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     return this;
   }
 
+  /**
+   * Allows returning results from replicas.
+   * <p>
+   * If true, the server is allowed to use data from replicas (which may be stale) when executing the query.
+   * If false, the server must use up-to-date data from primaries.
+   * If null (the default), honor the server-side configuration for this setting.
+   *
+   * @param useReplica if true this query will possible return results from replicas; if false, from primary.
+   * if not set, then according to the server.
+   * @return the same {@link QueryOptions} for chaining purposes.
+   */
+  @SinceCouchbase("7.6")
+  public QueryOptions useReplica(@Nullable final Boolean useReplica) {
+    this.useReplica = useReplica;
+    return this;
+  }
+
   @Stability.Internal
   public class Built extends BuiltCommonOptions implements CoreQueryOptions {
     private final CoreCommonOptions common;
@@ -598,6 +617,11 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
     @Override
     public CoreCommonOptions commonOptions() {
       return common;
+    }
+
+    @Override
+    public Boolean useReplica() {
+      return useReplica;
     }
   }
 
