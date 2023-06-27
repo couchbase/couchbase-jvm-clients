@@ -21,7 +21,6 @@ import com.couchbase.client.core.cnc.events.io.ErrorMapLoadedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapLoadingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.ErrorMapUndecodableEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -38,7 +37,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
@@ -188,9 +187,8 @@ public class ErrorMapLoadingHandler extends ChannelDuplexHandler {
    * @return the parsed error map or none if an error happened.
    */
   private Optional<ErrorMap> extractErrorMap(final ByteBuf msg) {
-    Optional<ByteBuf> body = body(msg);
-    if (body.isPresent()) {
-      byte[] input = ByteBufUtil.getBytes(body.get());
+    byte[] input = bodyAsBytes(msg);
+    if (input.length != 0) {
       try {
         return Optional.of(ErrorMap.fromJson(input));
       } catch (IOException e) {

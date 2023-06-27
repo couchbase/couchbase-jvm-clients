@@ -17,11 +17,10 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.events.io.SaslMechanismsListingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsListedEvent;
+import com.couchbase.client.core.cnc.events.io.SaslMechanismsListingFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownSaslMechanismDetectedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -44,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -53,7 +52,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * The {@link SaslListMechanismsHandler} asks the server KV engine which SASL mechanism it supports.
@@ -188,14 +186,12 @@ public class SaslListMechanismsHandler extends ChannelDuplexHandler {
       Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
       if (successful((ByteBuf) msg)) {
-        String[] rawMechansisms = body((ByteBuf) msg)
-          .orElse(Unpooled.EMPTY_BUFFER)
-          .toString(UTF_8)
+        String[] rawMechanisms = bodyAsString((ByteBuf) msg)
           .split(" ");
 
-        boolean isEmpty = rawMechansisms.length == 1 && rawMechansisms[0].isEmpty();
-        if (rawMechansisms.length > 0 && !isEmpty) {
-          final Set<SaslMechanism> serverMechanisms = decodeMechanisms(rawMechansisms);
+        boolean isEmpty = rawMechanisms.length == 1 && rawMechanisms[0].isEmpty();
+        if (rawMechanisms.length > 0 && !isEmpty) {
+          final Set<SaslMechanism> serverMechanisms = decodeMechanisms(rawMechanisms);
           ioContext.environment().eventBus().publish(
             new SaslMechanismsListedEvent(ioContext, serverMechanisms, latency.orElse(Duration.ZERO))
           );

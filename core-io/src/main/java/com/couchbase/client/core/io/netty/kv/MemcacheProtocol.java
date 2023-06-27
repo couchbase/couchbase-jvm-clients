@@ -51,6 +51,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
+import com.couchbase.client.core.util.Bytes;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -63,6 +64,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.listCopyOf;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.unmodifiableSet;
 
 /**
@@ -327,15 +329,21 @@ public enum MemcacheProtocol {
   }
 
   /**
-   * Returns the body of the message if available.
-   *
-   * @param message the message of the body or empty if none found.
-   * @return an optional either containing the body of the message or none.
+   * Returns the decompressed body of the message, or an empty Optional
+   * if the body length is zero.
    */
   public static Optional<ByteBuf> body(final ByteBuf message) {
-    if (message == null) {
-      return Optional.empty();
-    }
+    return Datatype.isSnappy(datatype(message))
+      ? Optional.of(Unpooled.wrappedBuffer(bodyAsBytes(message)))
+      : rawBody(message);
+  }
+
+  /**
+   * Returns the raw (possibly compressed) content of the message,
+   * or an empty Optional if the raw content length is zero.
+   */
+  // visible for testing
+  public static Optional<ByteBuf> rawBody(final ByteBuf message) {
     boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
 
     int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
@@ -355,10 +363,6 @@ public enum MemcacheProtocol {
   }
 
   public static Optional<ByteBuf> key(final ByteBuf message) {
-    if (message == null) {
-      return Optional.empty();
-    }
-
     int keyLength = keyLength(message);
     if (keyLength > 0) {
       return Optional.of(message.slice(
@@ -370,11 +374,10 @@ public enum MemcacheProtocol {
     }
   }
 
+  /**
+   * Returns the decompressed body of this message as a byte array.
+   */
   public static byte[] bodyAsBytes(final ByteBuf message) {
-    if (message == null) {
-      return null;
-    }
-
     boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
 
     int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
@@ -384,14 +387,23 @@ public enum MemcacheProtocol {
     int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
 
     if (bodyLength > 0) {
-      return ByteBufUtil.getBytes(
+      byte[] bytes = ByteBufUtil.getBytes(
         message,
         MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
         bodyLength
       );
+
+      return tryDecompression(bytes, datatype(message));
     }
 
-    return null;
+    return Bytes.EMPTY_BYTE_ARRAY;
+  }
+
+  /**
+   * Returns the decompressed body of this message as a UTF-8 string.
+   */
+  public static String bodyAsString(final ByteBuf message) {
+    return new String(bodyAsBytes(message), UTF_8);
   }
 
   public static Optional<ByteBuf> extras(final ByteBuf message) {

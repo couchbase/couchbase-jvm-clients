@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.io.SaslAuthenticationRestartedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslMechanismsSelectedEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -56,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
@@ -378,8 +377,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
       return;
     }
 
-    ByteBuf responseBody = body(response).orElse(Unpooled.EMPTY_BUFFER);
-    byte[] payload = ByteBufUtil.getBytes(responseBody);
+    byte[] payload = bodyAsBytes(response);
 
     try {
       byte[] evaluatedBytes = saslClient.evaluateChallenge(payload);
@@ -429,8 +427,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
   private void completeAuth(final ChannelHandlerContext ctx, ByteBuf msg) throws SaslException {
     if (!saslClient.isComplete()) {
       // validate final server response
-      ByteBuf responseBody = body(msg).orElse(Unpooled.EMPTY_BUFFER);
-      byte[] payload = ByteBufUtil.getBytes(responseBody);
+      byte[] payload = bodyAsBytes(msg);
       saslClient.evaluateChallenge(payload);
 
       if (!saslClient.isComplete()) {
@@ -469,9 +466,8 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     if (lastPacket != null) {
       if (MemcacheProtocol.verifyResponse(lastPacket)) {
         // This is a proper response, try to extract server context
-        Optional<ByteBuf> body = MemcacheProtocol.body(lastPacket);
-        if (body.isPresent()) {
-          byte[] content = ByteBufUtil.getBytes(body.get());
+        byte[] content = bodyAsBytes(lastPacket);
+        if (content.length != 0) {
           try {
             serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
           } catch (Exception ex) {

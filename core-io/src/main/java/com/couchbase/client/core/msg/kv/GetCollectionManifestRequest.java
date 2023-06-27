@@ -19,19 +19,16 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.util.Bytes;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -55,14 +52,9 @@ public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollect
   @Override
   public GetCollectionManifestResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
-    Optional<String> manifest = Optional.empty();
-    if (status.success()) {
-      manifest = Optional
-        .of(body(response)
-        .map(ByteBufUtil::getBytes)
-        .orElse(Bytes.EMPTY_BYTE_ARRAY))
-        .map(b -> new String(b, StandardCharsets.UTF_8));
-    }
+    Optional<String> manifest = status.success()
+      ? Optional.of(bodyAsString(response))
+      : Optional.empty();
     return new GetCollectionManifestResponse(status, manifest);
   }
 

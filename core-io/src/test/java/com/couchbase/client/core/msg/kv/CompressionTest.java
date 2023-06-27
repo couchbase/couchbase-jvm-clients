@@ -17,6 +17,10 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -25,17 +29,13 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.rawBody;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,7 +72,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(longContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -83,7 +83,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(shortContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -94,7 +94,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
-    assertTrue(body(encoded).get().readableBytes() < longContent.length);
+    assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
     ReferenceCountUtil.release(encoded);
   }
@@ -105,7 +105,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(longContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -116,7 +116,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(shortContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -127,7 +127,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
-    assertTrue(body(encoded).get().readableBytes() < longContent.length);
+    assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
     ReferenceCountUtil.release(encoded);
   }
@@ -139,7 +139,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(longContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -151,7 +151,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(shortContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -163,7 +163,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
-    assertTrue(body(encoded).get().readableBytes() < longContent.length);
+    assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
     ReferenceCountUtil.release(encoded);
   }
@@ -175,7 +175,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(longContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -187,7 +187,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(shortContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -199,7 +199,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
-    assertTrue(body(encoded).get().readableBytes() < longContent.length);
+    assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
     ReferenceCountUtil.release(encoded);
   }
@@ -211,7 +211,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(false));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(longContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -223,7 +223,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(0, datatype(encoded));
-    assertEquals(Unpooled.wrappedBuffer(shortContent), body(encoded).get());
+    assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
     ReferenceCountUtil.release(encoded);
   }
@@ -235,7 +235,7 @@ class CompressionTest {
 
     ByteBuf encoded = request.encode(allocator, 0, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
-    assertTrue(body(encoded).get().readableBytes() < longContent.length);
+    assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
     ReferenceCountUtil.release(encoded);
   }

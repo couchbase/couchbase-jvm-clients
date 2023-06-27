@@ -19,21 +19,18 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
@@ -41,7 +38,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 /**
@@ -75,10 +71,7 @@ public class CarrierGlobalConfigRequest
 
   @Override
   public CarrierGlobalConfigResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    byte[] content = body(response)
-      .map(ByteBufUtil::getBytes)
-      .map(bytes -> tryDecompression(bytes, datatype(response)))
-      .orElse(Bytes.EMPTY_BYTE_ARRAY);
+    byte[] content = bodyAsBytes(response);
     return new CarrierGlobalConfigResponse(decodeStatus(response), content);
   }
 

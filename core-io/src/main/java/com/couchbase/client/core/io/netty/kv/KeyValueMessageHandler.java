@@ -80,8 +80,7 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_LATER;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
 
 /**
  * This handler is responsible for writing KV requests and completing their associated responses
@@ -580,12 +579,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     final String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().host() : null;
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
-    body(response)
-      .map(b -> b.toString(UTF_8).trim())
-      .filter(c -> c.startsWith("{"))
-      .ifPresent(c -> ioContext.core().configurationProvider().proposeBucketConfig(
-        new ProposedBucketConfigContext(request.bucket(), c, origin)
-      ));
+    String body = bodyAsString(response).trim();
+    if (body.startsWith("{")) {
+      ioContext.core().configurationProvider().proposeBucketConfig(
+        new ProposedBucketConfigContext(request.bucket(), body, origin)
+      );
+    }
   }
 
   /**

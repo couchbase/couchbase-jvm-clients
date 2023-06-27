@@ -75,8 +75,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
     ResponseStatus status = decodeStatus(response);
     long cas = cas(response);
     if (status.success()) {
-      byte[] bytes = bodyAsBytes(response);
-      byte[] content = bytes != null ? tryDecompression(bytes, datatype(response)) : Bytes.EMPTY_BYTE_ARRAY;
+      byte[] content = bodyAsBytes(response);
       int flags = extrasAsInt(response, 0, 0);
       return new GetAndTouchResponse(status, content, cas, flags);
     } else {
