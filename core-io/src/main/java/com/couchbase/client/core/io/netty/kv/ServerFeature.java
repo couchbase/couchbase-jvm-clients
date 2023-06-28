@@ -80,7 +80,12 @@ public enum ServerFeature {
   SELECT_BUCKET(0x08),
 
   /**
-   * Enable snappy-based compression support.
+   * Enable snappy-based compression support for CRUD operations.
+   * <p>
+   * History note: Due to incorrect implementations in some clients,
+   * this feature enables Snappy compression only for CRUD operations.
+   *
+   * @see #SNAPPY_EVERYWHERE
    */
   @SinceCouchbase("5.5")
   SNAPPY(0x0a),
@@ -137,6 +142,15 @@ public enum ServerFeature {
    */
   @SinceCouchbase("7.0")
   COLLECTIONS(0x12),
+
+  /**
+   * Notify the server that the client honors the Snappy datatype bit on
+   * all response packets, regardless of request opcode.
+   *
+   * @see #SNAPPY
+   */
+  @SinceCouchbase("7.6")
+  SNAPPY_EVERYWHERE(0x13),
 
   /**
    * Enables preserving expiry when updating document.

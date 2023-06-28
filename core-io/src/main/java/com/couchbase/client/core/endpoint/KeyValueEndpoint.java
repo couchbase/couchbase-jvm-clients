@@ -128,6 +128,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
       if (ctx.environment().compressionConfig().enabled()) {
         features.add(ServerFeature.SNAPPY);
+        features.add(ServerFeature.SNAPPY_EVERYWHERE);
       }
 
       boolean unorderedExecutionEnabled = Boolean.parseBoolean(
