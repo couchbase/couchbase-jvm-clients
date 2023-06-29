@@ -38,6 +38,7 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.IndexesNotReadyException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
@@ -116,7 +117,7 @@ public class CoreQueryIndexManager {
           @Nullable String collection) {
 
     if (collection != null && scope == null) {
-      throw new IllegalArgumentException("When collection is non-null, scope must also be non-null.");
+      throw new InvalidArgumentException("When collection is non-null, scope must also be non-null.", null, null);
     }
 
     String bucketCondition = "(bucket_id = $bucketName)";

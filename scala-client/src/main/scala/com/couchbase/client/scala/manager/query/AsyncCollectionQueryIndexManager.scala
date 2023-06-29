@@ -311,17 +311,6 @@ class AsyncCollectionQueryIndexManager(
       .map(_ => ())
   }
 
-  def makeScopeAndCollection(
-      scopeName: Option[String] = None,
-      collectionName: Option[String] = None
-  ): CoreScopeAndCollection = {
-    if (scopeName.isDefined && collectionName.isDefined) {
-      new CoreScopeAndCollection(scopeName.get, collectionName.get)
-    } else {
-      null
-    }
-  }
-
   def makeCommonOptions(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
