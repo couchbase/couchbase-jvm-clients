@@ -143,9 +143,8 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    }
     // [start:1.4.1]
-    else if (op.hasRangeScan) {
+    } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection)
       val options    = createOptions(request)
@@ -173,6 +172,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
               .setStreamId(streamer.streamId)
           )
       )
+    // [end:1.4.1]
     } else if (op.hasClusterCommand) {
         val clc = op.getClusterCommand
         val cluster = connection.cluster.reactive
@@ -195,8 +195,9 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
                 setSuccess(result)
                 result.build()
             }).block()
-
-        } else if (clc.hasBucketManager) {
+        }
+        // [start:1.4.1]
+        else if (clc.hasBucketManager) {
             return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
         }
         // [end:1.4.1]
@@ -205,8 +206,6 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
             return EventingHelper.handleEventingFunctionManagerReactive(cluster, op).block()
         }
         // [end:1.2.4]
-        // [start:1.4.1]
-
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
         val bucket = connection.cluster.reactive.bucket(blc.getBucketName)
