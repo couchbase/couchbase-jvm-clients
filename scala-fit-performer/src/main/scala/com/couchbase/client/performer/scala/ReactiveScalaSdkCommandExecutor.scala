@@ -231,7 +231,6 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
         }
 
     }
-    // [end:1.4.1]
     else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
     result.build
