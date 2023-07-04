@@ -51,8 +51,10 @@ object QueryIndexManagerHelper {
     handleQueryIndexManagerShared(Right(collection), op)
     // [end:1.4.3]
     // [start:<1.4.3]
+/*
         throw new UnsupportedOperationException();
     // [end:<1.4.3]
+*/
   }
 
   private def handleQueryIndexManagerShared(
@@ -208,8 +210,10 @@ object QueryIndexManagerHelper {
             .get
         // [end:1.4.4]
         // [start:<1.4.4]
+/*
           throw new UnsupportedOperationException()
           // [end:<1.4.4]
+*/
       }
       result.setSdk(
         com.couchbase.client.protocol.sdk.Result.newBuilder

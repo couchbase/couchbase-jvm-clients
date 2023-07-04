@@ -441,10 +441,12 @@ object ScalaSdkCommandExecutor {
           out.expiry(expiry)
           // [end:1.1.0]
           // [start:<1.1.0]
+/*
           throw new UnsupportedOperationException(
             "This SDK version does not support this form of expiry"
           );
         // [end:<1.1.0]
+*/
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
@@ -491,10 +493,12 @@ object ScalaSdkCommandExecutor {
           out.expiry(expiry)
           // [end:1.1.0]
           // [start:<1.1.0]
+/*
           throw new UnsupportedOperationException(
             "This SDK version does not support this form of expiry"
           );
         // [end:<1.1.0]
+*/
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasPreserveExpiry) {
@@ -502,8 +506,10 @@ object ScalaSdkCommandExecutor {
         out.preserveExpiry(opts.getPreserveExpiry)
         // [end:1.1.5]
         // [start:<1.1.5]
+/*
         throw new UnsupportedOperationException()
         // [end:<1.1.5]
+*/
       }
       if (opts.hasCas) out = out.cas(opts.getCas)
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
@@ -524,10 +530,12 @@ object ScalaSdkCommandExecutor {
           out.expiry(expiry)
           // [end:1.1.0]
           // [start:<1.1.0]
+/*
           throw new UnsupportedOperationException(
             "This SDK version does not support this form of expiry"
           );
         // [end:<1.1.0]
+*/
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasPreserveExpiry) {
@@ -535,8 +543,10 @@ object ScalaSdkCommandExecutor {
         out.preserveExpiry(opts.getPreserveExpiry)
         // [end:1.1.5]
         // [start:<1.1.5]
+/*
         throw new UnsupportedOperationException()
         // [end:<1.1.5]
+*/
       }
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
       out
