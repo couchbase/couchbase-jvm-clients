@@ -110,8 +110,8 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>protostellar</artifactId>
-            <!-- Should always be a SNAPSHOT release -->
-            <version>1.0-SNAPSHOT</version>
+            <!-- This version number never changes. -->
+            <version>9999.0-SNAPSHOT</version>
             <exclusions>
                 <!-- Ditch annotations that come in via gRPC and Guava,
                      but aren't required at runtime.
