@@ -19,6 +19,7 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,7 +36,24 @@ public class Deadline {
     return new Deadline(duration);
   }
 
+  public static Deadline of(Duration duration, double scale) {
+    return new Deadline(Duration.ofNanos((long) (duration.toNanos() * scale)));
+  }
+
   public boolean exceeded() {
     return start.hasElapsed(duration);
+  }
+
+  public Optional<Duration> remaining() {
+    Duration d = duration.minus(start.elapsed());
+    return d.isZero() || d.isNegative() ? Optional.empty() : Optional.of(d);
+  }
+
+  @Override
+  public String toString() {
+    return "Deadline{" +
+      "duration=" + duration +
+      ", remaining=" + remaining() +
+      '}';
   }
 }

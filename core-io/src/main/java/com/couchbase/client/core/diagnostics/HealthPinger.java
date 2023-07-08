@@ -32,15 +32,21 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbThrowables;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -48,7 +54,18 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.service.ServiceType.ANALYTICS;
+import static com.couchbase.client.core.service.ServiceType.KV;
+import static com.couchbase.client.core.service.ServiceType.QUERY;
+import static com.couchbase.client.core.service.ServiceType.SEARCH;
+import static com.couchbase.client.core.service.ServiceType.VIEWS;
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+import static com.couchbase.client.core.util.CbCollections.transform;
+import static com.couchbase.client.core.util.CbCollections.transformValues;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * The {@link HealthPinger} allows to "ping" individual services with real operations for their health.
@@ -57,6 +74,17 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  */
 @Stability.Internal
 public class HealthPinger {
+
+  /**
+   * @see #pingTarget
+   */
+  private static final Set<ServiceType> pingableServices = unmodifiableSet(EnumSet.of(
+    QUERY,
+    KV,
+    VIEWS,
+    SEARCH,
+    ANALYTICS
+  ));
 
   @Stability.Internal
   public static Mono<PingResult> ping(
@@ -102,15 +130,10 @@ public class HealthPinger {
         return Mono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar());
       }
 
-      Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), bucketName, log);
-      if (!isNullOrEmpty(serviceTypes)) {
-        targets = targets.stream().filter(t -> serviceTypes.contains(t.serviceType())).collect(Collectors.toSet());
-      }
-
-      log.message("ping: narrowed targets: " + targets);
+      Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), serviceTypes, bucketName, log);
 
       return pingTargets(core, targets, timeout, retryStrategy, log).collectList().map(reports -> new PingResult(
-        reports.stream().collect(Collectors.groupingBy(EndpointPingReport::type)),
+        reports.stream().collect(groupingBy(EndpointPingReport::type)),
         core.context().environment().userAgent().formattedShort(),
         reportId.orElse(UUID.randomUUID().toString())
       ));
@@ -120,11 +143,17 @@ public class HealthPinger {
   @Stability.Internal
   static Set<RequestTarget> extractPingTargets(
     final ClusterConfig clusterConfig,
+    @Nullable final Set<ServiceType> serviceTypesOrEmpty,
     final Optional<String> bucketName,
     final WaitUntilReadyHelper.WaitUntilReadyLogger log
   ) {
-    final Set<RequestTarget> targets = new HashSet<>();
-    log.message("extractPingTargets: starting ping target extraction");
+    final Set<ServiceType> serviceTypes = isNullOrEmpty(serviceTypesOrEmpty)
+      ? EnumSet.allOf(ServiceType.class)
+      : EnumSet.copyOf(serviceTypesOrEmpty);
+    serviceTypes.retainAll(pingableServices); // narrow to the ones we can actually ping
+
+    Set<RequestTarget> targets = new HashSet<>();
+    log.message("extractPingTargets: starting ping target extraction with candidate services: " + serviceTypes);
 
     if (!bucketName.isPresent()) {
       if (clusterConfig.globalConfig() != null) {
@@ -163,7 +192,7 @@ public class HealthPinger {
       }
     } else {
       BucketConfig bucketConfig = clusterConfig.bucketConfig(bucketName.get());
-      if (bucketConfig !=  null) {
+      if (bucketConfig != null) {
         log.message("extractPingTargets: Getting targets from bucket config: " + bucketConfig);
         for (NodeInfo nodeInfo : bucketConfig.nodes()) {
           for (ServiceType serviceType : nodeInfo.services().keySet()) {
@@ -183,8 +212,30 @@ public class HealthPinger {
       }
     }
 
-    log.message("extractPingTargets: Finished. Returning targets (grouped by node): " + targets.stream().collect(Collectors.groupingBy(it -> it.nodeIdentifier().address() + ":" + it.nodeIdentifier().managerPort())));
+    // Narrow the results to only pingable services the caller is interested in.
+    targets = targets.stream()
+      .filter(t -> serviceTypes.contains(t.serviceType()))
+      .collect(toSet());
+
+    log.message(
+      "extractPingTargets: Finished. Returning filtered targets (grouped by node): " + formatGroupedByNode(targets)
+    );
+
     return targets;
+  }
+
+  private static String format(NodeIdentifier id) {
+      return new HostAndPort(id.address(), id.managerPort()).format();
+  }
+
+  /**
+   * Returns a map where the key is a redacted node identifier (stringified),
+   * and the value is the list of service types (stringified) associated with that node.
+   */
+  static Map<String, List<String>> formatGroupedByNode(Collection<RequestTarget> targets) {
+    Map<String, List<RequestTarget>> grouped = targets.stream()
+      .collect(Collectors.groupingBy(requestTarget -> redactSystem(format(requestTarget.nodeIdentifier())).toString()));
+    return transformValues(grouped, it -> transform(it, target -> target.serviceType().toString()));
   }
 
   private static Flux<EndpointPingReport> pingTargets(
@@ -198,7 +249,10 @@ public class HealthPinger {
     return Flux.fromIterable(targets).flatMap(target -> pingTarget(core, target, options, log));
   }
 
-  private static Mono<EndpointPingReport> pingTarget(
+  /**
+   * @see #pingableServices
+   */
+  static Mono<EndpointPingReport> pingTarget(
     final Core core,
     final RequestTarget target,
     final CoreCommonOptions options,
@@ -206,6 +260,7 @@ public class HealthPinger {
   ) {
     switch (target.serviceType()) {
       case QUERY:
+      case ANALYTICS:
         return pingHttpEndpoint(core, target, options, "/admin/ping", log);
       case KV:
         return pingKv(core, target, options, log);
@@ -213,17 +268,8 @@ public class HealthPinger {
         return pingHttpEndpoint(core, target, options, "/", log);
       case SEARCH:
         return pingHttpEndpoint(core, target, options, "/api/ping", log);
-      case MANAGER:
-      case EVENTING:
-      case BACKUP:
-        // right now we are not pinging the cluster manager
-        // right now we are not pinging the eventing service
-        // right now we are not pinging the backup service
-        return Mono.empty();
-      case ANALYTICS:
-        return pingHttpEndpoint(core, target, options, "/admin/ping", log);
       default:
-        return Mono.error(new IllegalStateException("Unknown service to ping, this is a bug!"));
+        return Mono.error(new RuntimeException("Don't know how to ping the " + target.serviceType() + " service."));
     }
   }
 

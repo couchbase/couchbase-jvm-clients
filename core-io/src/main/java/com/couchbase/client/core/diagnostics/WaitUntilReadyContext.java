@@ -17,6 +17,7 @@
 package com.couchbase.client.core.diagnostics;
 
 import com.couchbase.client.core.cnc.AbstractContext;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
@@ -27,6 +28,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.diagnostics.HealthPinger.formatGroupedByNode;
+import static java.util.Objects.requireNonNull;
+
 public class WaitUntilReadyContext extends AbstractContext {
 
   private final Set<ServiceType> serviceTypes;
@@ -35,17 +39,24 @@ public class WaitUntilReadyContext extends AbstractContext {
   private final Optional<String> bucketName;
   private final Map<ServiceType, List<EndpointDiagnostics>> diagnostics;
   private final WaitUntilReadyHelper.WaitUntilReadyState state;
+  private final Set<RequestTarget> remainingPingTargets;
 
-  public WaitUntilReadyContext(final Set<ServiceType> serviceTypes, final Duration timeout,
-                               final ClusterState desiredState, final Optional<String> bucketName,
-                               final Map<ServiceType, List<EndpointDiagnostics>> diagnostics,
-                               final WaitUntilReadyHelper.WaitUntilReadyState state) {
-    this.diagnostics = diagnostics;
-    this.serviceTypes = serviceTypes;
-    this.timeout = timeout;
-    this.desiredState = desiredState;
-    this.bucketName = bucketName;
-    this.state = state;
+  public WaitUntilReadyContext(
+    final Set<ServiceType> serviceTypes,
+    final Duration timeout,
+    final ClusterState desiredState,
+    final Optional<String> bucketName,
+    final Map<ServiceType, List<EndpointDiagnostics>> diagnostics,
+    final WaitUntilReadyHelper.WaitUntilReadyState state,
+    final Set<RequestTarget> remainingPingTargets
+  ) {
+    this.diagnostics = requireNonNull(diagnostics);
+    this.serviceTypes = requireNonNull(serviceTypes);
+    this.timeout = requireNonNull(timeout);
+    this.desiredState = requireNonNull(desiredState);
+    this.bucketName = requireNonNull(bucketName);
+    this.state = requireNonNull(state);
+    this.remainingPingTargets = requireNonNull(remainingPingTargets);
   }
 
   @Override
@@ -53,11 +64,10 @@ public class WaitUntilReadyContext extends AbstractContext {
     super.injectExportableParams(input);
 
     input.put("desiredState", desiredState);
-    input.put("currentState", DiagnosticsResult.aggregateClusterState(diagnostics.values()));
     input.put("checkedServices", serviceTypes);
     input.put("timeoutMs", timeout.toMillis());
     bucketName.ifPresent(b -> input.put("bucket", b));
-
+    input.put("remainingPingTargets", formatGroupedByNode(remainingPingTargets));
     Map<String, Object> services = new LinkedHashMap<>();
     for (Map.Entry<ServiceType, List<EndpointDiagnostics>> service : diagnostics.entrySet()) {
       services.put(service.getKey().ident(), service.getValue().stream().map(EndpointDiagnostics::toMap).collect(Collectors.toList()));
