@@ -56,8 +56,8 @@ public class ClusterVersion implements Comparable<ClusterVersion> {
     public static ClusterVersion parseString(String version) {
         String[] splits = version.split("\\.");
         int majorVersion = Integer.parseInt(splits[0]);
-        int minorVersion = Integer.parseInt(splits[1]);
-        int patchVersion = Integer.parseInt(splits[2].split("-")[0]);
+        int minorVersion = splits.length > 1 ? Integer.parseInt(splits[1]) : 0;
+        int patchVersion = splits.length > 2 ? Integer.parseInt(splits[2].split("-")[0]) : 0;
         boolean communityEdition = version.contains("community");
 
         return new ClusterVersion(majorVersion, minorVersion, patchVersion, communityEdition);
