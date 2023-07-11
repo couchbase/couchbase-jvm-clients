@@ -16,8 +16,12 @@
 package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+import com.google.protobuf.ByteString;
+import static com.couchbase.JavaSdkCommandExecutor.convertMetaData;
 // [start:3.2.1]
 import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
@@ -46,6 +50,7 @@ import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import static com.couchbase.JavaSdkCommandExecutor.waitUntilReadyOptions;
 
 import java.time.Duration;
@@ -244,6 +249,41 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                   return Mono.fromSupplier(() -> SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op));
                 }
                 // [end:3.4.5]
+
+                if (clc.hasQuery()) {
+                    var request = clc.getQuery();
+                    String query = request.getStatement();
+
+                    Mono<ReactiveQueryResult> queryResult;
+
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+
+                    if (request.hasOptions()){
+                        queryResult = connection.cluster().reactive().query(query, createOptions(request));
+                    }else{
+                        queryResult = connection.cluster().reactive().query(query);
+                    }
+                    result.setElapsedNanos(System.nanoTime() - start);
+
+                    return queryResult.publishOn(Schedulers.boundedElastic()).map(r -> {
+                        var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
+
+                        // Content
+                        for (JsonObject row: r.rowsAsObject().toIterable()){
+                            builder.addContent(ByteString.copyFrom(row.toBytes()));
+                        }
+
+                        // Metadata
+                        var convertedMetaData = convertMetaData(r.metaData().block());
+                        builder.setMetaData(convertedMetaData);
+
+                        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                                .setQueryResult(builder));
+
+                        return result.build();
+                    });
+                }
 
             } else if (op.hasBucketCommand()) {
               var blc = op.getBucketCommand();

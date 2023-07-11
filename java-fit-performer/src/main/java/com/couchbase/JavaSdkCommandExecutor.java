@@ -29,6 +29,7 @@ import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.kv.CommonDurabilityOptions;
 import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetResult;
@@ -39,6 +40,7 @@ import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
+import com.couchbase.client.java.query.*;
 // [start:3.2.1]
 import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
@@ -63,6 +65,7 @@ import com.couchbase.client.protocol.shared.CouchbaseExceptionEx;
 import com.couchbase.client.protocol.shared.CouchbaseExceptionType;
 import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.client.protocol.shared.ExceptionOther;
+import com.couchbase.client.protocol.shared.ScanConsistency;
 // [start:3.4.3]
 import com.couchbase.query.QueryIndexManagerHelper;
 // [end:3.4.3]
@@ -245,6 +248,18 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
             }
             // [end:3.4.5]
+
+            if (clc.hasQuery()) {
+                var query = clc.getQuery().getStatement();
+                QueryResult qr;
+                if (clc.getQuery().hasOptions()) {
+                    qr = connection.cluster().query(query, createOptions(clc.getQuery()));
+                }
+                else {
+                    qr = connection.cluster().query(query);
+                }
+                populateResult(result, qr);
+            }
 
         } else if (op.hasBucketCommand()) {
           var blc = op.getBucketCommand();
@@ -476,6 +491,73 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setGetResult(builder));
     }
 
+    public static com.google.protobuf.Duration convertDuration(Duration duration) {
+        return com.google.protobuf.Duration.newBuilder()
+                .setSeconds(duration.getSeconds())
+                .setNanos(duration.getNano())
+                .build();
+    }
+
+    public static com.couchbase.client.protocol.sdk.query.QueryMetaData.Builder convertMetaData(QueryMetaData metaData) {
+        var out = com.couchbase.client.protocol.sdk.query.QueryMetaData.newBuilder()
+                .setRequestId(metaData.requestId())
+                .setClientContextId(metaData.clientContextId())
+                .setStatus(
+                        com.couchbase.client.protocol.sdk.query.QueryStatus.valueOf(
+                                metaData.status().toString().substring(0,1).toUpperCase()+metaData.status().toString().substring(1).toLowerCase()
+                        )
+                );
+
+        if (metaData.signature().isPresent()) {
+            out.setSignature(ByteString.copyFrom(metaData.signature().get().toBytes()));
+        }
+
+        for (QueryWarning warning: metaData.warnings()) {
+            out.addWarnings(
+                    com.couchbase.client.protocol.sdk.query.QueryWarning.newBuilder().setCode(warning.code()).setMessage(warning.message()).build()
+            );
+        }
+
+        if (metaData.metrics().isPresent()) {
+            var resultMetricsData = metaData.metrics().get();
+            out.setMetrics(
+                    com.couchbase.client.protocol.sdk.query.QueryMetrics.newBuilder()
+                            .setElapsedTime(convertDuration(resultMetricsData.elapsedTime()))
+                            .setExecutionTime(convertDuration(resultMetricsData.executionTime()))
+                            .setSortCount(resultMetricsData.sortCount())
+                            .setResultSize(resultMetricsData.resultSize())
+                            .setMutationCount(resultMetricsData.mutationCount())
+                            .setErrorCount(resultMetricsData.errorCount())
+                            .setWarningCount(resultMetricsData.warningCount())
+            );
+        }
+
+        if (metaData.profile().isPresent()) {
+            out.setProfile(
+                    ByteString.copyFrom(metaData.profile().get().toBytes())
+            );
+        }
+
+        return out;
+    }
+
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, QueryResult values) {
+
+        var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
+
+        // Content
+        for (JsonObject row: values.rowsAsObject()) {
+            builder.addContent(ByteString.copyFrom(row.toBytes()));
+        }
+
+        // Metadata
+        var convertedMetaData = convertMetaData(values.metaData());
+        builder.setMetaData(convertedMetaData);
+
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setQueryResult(builder));
+    }
+
     public static Object content(Content content) {
         if (content.hasPassthroughString()) {
             return content.getPassthroughString();
@@ -532,6 +614,54 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
     // [end:3.4.1]
+
+    public static @Nullable QueryOptions createOptions(com.couchbase.client.protocol.sdk.query.Command request) {
+        if(request.hasOptions()){
+            var opts = request.getOptions();
+            var out = QueryOptions.queryOptions();
+            if (opts.hasScanConsistency()) {
+                if (opts.getScanConsistency() == ScanConsistency.NOT_BOUNDED) out.scanConsistency(QueryScanConsistency.NOT_BOUNDED);
+                if (opts.getScanConsistency() == ScanConsistency.REQUEST_PLUS) out.scanConsistency(QueryScanConsistency.REQUEST_PLUS);
+                else throw new UnsupportedOperationException("Unexpected scan consistency value:" + opts.getScanConsistency());
+            }
+
+            opts.getRawMap().forEach( (k,v) -> out.raw(k, JsonObject.fromJson(v)) );
+
+            if (opts.getParametersNamedCount() > 0) {
+                var outNamed = JsonObject.create();
+                opts.getParametersNamedMap().forEach(outNamed::put);
+                out.parameters(outNamed);
+            } else {
+                // named and positional parameters are mutually exclusive
+                var outPos = JsonArray.create();
+                opts.getParametersPositionalList().forEach(outPos::add);
+                out.parameters(outPos);
+            }
+
+            if (opts.hasAdhoc()) out.adhoc(opts.getAdhoc());
+            if (opts.hasProfile()) {
+                switch (opts.getProfile()) {
+                    case "OFF": out.profile(QueryProfile.OFF);
+                    case "PHASES": out.profile(QueryProfile.PHASES);
+                    case "TIMINGS": out.profile(QueryProfile.TIMINGS);
+                }
+            }
+            if (opts.hasReadonly()) out.readonly(opts.getReadonly());
+
+            // [start:3.0.9]
+            if (opts.hasFlexIndex()) out.flexIndex(opts.getFlexIndex());
+            // [end:3.0.9]
+            if (opts.hasPipelineCap()) out.pipelineCap(opts.getPipelineCap());
+            if (opts.hasPipelineBatch()) out.pipelineBatch(opts.getPipelineBatch());
+            if (opts.hasScanCap()) out.scanCap(opts.getScanCap());
+            if (opts.hasScanWaitMillis()) out.scanWait(Duration.ofMillis(opts.getScanWaitMillis()));
+            if (opts.hasTimeoutMillis()) out.timeout(Duration.ofMillis(opts.getTimeoutMillis()));
+            if (opts.hasMaxParallelism()) out.maxParallelism(opts.getMaxParallelism());
+            if (opts.hasMetrics()) out.metrics(opts.getMetrics());
+            return out;
+        }
+        else return null;
+    }
 
     public static @Nullable RemoveOptions createOptions(com.couchbase.client.protocol.sdk.kv.Remove request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
