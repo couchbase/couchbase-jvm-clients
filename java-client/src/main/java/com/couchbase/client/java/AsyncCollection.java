@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Couchbase, Inc.
+ * Copyright (c) 2023 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,10 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
+import com.couchbase.client.java.kv.LookupInAnyReplicaOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInReplicaResult;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
@@ -74,6 +77,8 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_ANY_REPLICA_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_MUTATE_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
@@ -665,6 +670,87 @@ public class AsyncCollection {
   }
 
   /**
+   * Reads from replicas or the active node based on the options and returns the results as a list
+   * of futures that might complete or fail.
+   *
+   * @param id the document id.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return a list of results from the active and the replica.
+   */
+  @Stability.Volatile
+  public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
+                                                                                          final List<LookupInSpec> specs) {
+    return lookupInAllReplicas(id, specs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads from replicas or the active node based on the options and returns the results as a list
+   * of futures that might complete or fail.
+   *
+   * @param id the document id.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return a list of results from the active and the replica.
+   */
+  @Stability.Volatile
+  public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
+                                                                                          final List<LookupInSpec> specs,
+                                                                                          final LookupInAllReplicasOptions options) {
+    notNull(options, "LookupInAllReplicasOptions");
+    LookupInAllReplicasOptions.Built opts = options.build();
+    final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+
+    return ReplicaHelper.lookupInAllReplicasAsync(
+      core(),
+      keyspace.toCollectionIdentifier(),
+      id,
+      transform(specs, LookupInSpec::toCore),
+      opts.timeout().orElse(environment.timeoutConfig().kvTimeout()),
+      opts.retryStrategy().orElse(environment().retryStrategy()),
+      opts.clientContext(),
+      opts.parentSpan().orElse(null),
+      response -> LookupInReplicaResult.from(response, serializer));
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @return a future containing the first available replica.
+   */
+  @Stability.Volatile
+  public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs) {
+    return lookupInAnyReplica(id, specs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id.
+   * @param specs the spec which specifies the type of lookups to perform.
+   * @param options the custom options.
+   * @return a future containing the first available replica.
+   */
+  @Stability.Volatile
+  public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs, final LookupInAnyReplicaOptions options) {
+    notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    notNull(options, "LookupInAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    LookupInAnyReplicaOptions.Built opts = options.build();
+    final JsonSerializer serializer = opts.serializer() == null ? environment.jsonSerializer() : opts.serializer();
+
+    return ReplicaHelper.lookupInAnyReplicaAsync(
+      core(),
+      keyspace.toCollectionIdentifier(),
+      id,
+      transform(specs, LookupInSpec::toCore),
+      opts.timeout().orElse(environment.timeoutConfig().kvTimeout()),
+      opts.retryStrategy().orElse(environment().retryStrategy()),
+      opts.clientContext(),
+      opts.parentSpan().orElse(null),
+      response -> LookupInReplicaResult.from(response, serializer));
+  }
+
+  /**
    * Performs mutations to document fragments with default options.
    *
    * @param id the outer document ID.
@@ -706,7 +792,6 @@ public class AsyncCollection {
       opts.createAsDeleted()
     ).thenApply(it -> new MutateInResult(it, serializer));
   }
-
 
   /**
    * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with default options.

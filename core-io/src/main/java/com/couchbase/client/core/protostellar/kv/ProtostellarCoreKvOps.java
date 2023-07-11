@@ -299,9 +299,22 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   public Mono<CoreSubdocGetResult> subdocGetReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
     return CoreProtostellarAccessors.reactive(core,
-            request,
-            (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
-            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+      request,
+      (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+  }
+
+
+  @Override
+  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    // Protostellar subdoc-from-replica support is currently incomplete.
+    throw unsupported();
+  }
+
+  @Override
+  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    // Protostellar subdoc-from-replica support is currently incomplete.
+    throw unsupported();
   }
 
   @Override

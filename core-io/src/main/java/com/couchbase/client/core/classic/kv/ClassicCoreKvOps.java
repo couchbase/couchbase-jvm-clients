@@ -45,7 +45,9 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -102,6 +104,8 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGet
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateReplaceParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocGetAllParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocGetAnyParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateSubdocMutateParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateTouchParams;
@@ -737,6 +741,34 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
     RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
     return getAllReplicasReactive(common.withParentSpan(getAnySpan), key)
+        .next()
+        .doFinally(signalType -> getAnySpan.end());
+  }
+
+  @Override
+  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    validateSubdocGetAllParams(common, key, commands);
+
+    Duration timeout = timeout(common);
+    RetryStrategy retryStrategy = retryStrategy(common);
+
+    return ReplicaHelper.lookupInAllReplicasReactive(
+        core,
+        collectionIdentifier,
+        key,
+        commands,
+        timeout,
+        retryStrategy,
+        common.clientContext(),
+        common.parentSpan().orElse(null)
+    );
+  }
+
+  @Override
+  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    validateSubdocGetAnyParams(common, key, commands);
+    RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
+    return subdocGetAllReplicasReactive(common.withParentSpan(getAnySpan), key, commands)
         .next()
         .doFinally(signalType -> getAnySpan.end());
   }

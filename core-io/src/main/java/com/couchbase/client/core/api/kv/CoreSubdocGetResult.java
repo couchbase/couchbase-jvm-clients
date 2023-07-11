@@ -33,6 +33,7 @@ import static java.util.Objects.requireNonNull;
 public class CoreSubdocGetResult extends CoreKvResult {
   private final long cas;
   private final boolean tombstone;
+  private final boolean replica;
   private final List<SubDocumentField> fields;
 
   public CoreSubdocGetResult(
@@ -43,10 +44,23 @@ public class CoreSubdocGetResult extends CoreKvResult {
       long cas,
       boolean tombstone
   ) {
+    this(keyspace, key, meta, fields, cas, tombstone, false);
+  }
+
+  public CoreSubdocGetResult(
+      CoreKeyspace keyspace,
+      String key,
+      @Nullable CoreKvResponseMetadata meta,
+      List<SubDocumentField> fields,
+      long cas,
+      boolean tombstone,
+      boolean replica
+  ) {
     super(keyspace, key, meta);
     this.fields = requireNonNull(fields);
     this.cas = cas;
     this.tombstone = tombstone;
+    this.replica = replica;
   }
 
   public List<SubDocumentField> fields() {
@@ -85,12 +99,17 @@ public class CoreSubdocGetResult extends CoreKvResult {
     return tombstone;
   }
 
+  public boolean replica() {
+    return replica;
+  }
+
   @Override
   public String toString() {
     return "CoreSubdocGetResult{" +
         "cas=" + cas +
         ", tombstone=" + tombstone +
         ", fields=" + redactUser(fields) +
+        ", replica=" + replica +
         '}';
   }
 }

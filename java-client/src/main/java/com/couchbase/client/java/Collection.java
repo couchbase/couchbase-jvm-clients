@@ -26,6 +26,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -48,7 +49,10 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
+import com.couchbase.client.java.kv.LookupInAnyReplicaOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInReplicaResult;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MapOptions;
@@ -84,6 +88,8 @@ import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_LOCK_
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_AND_TOUCH_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_GET_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_INSERT_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS;
+import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_LOOKUP_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_MUTATE_IN_OPTIONS;
 import static com.couchbase.client.java.ReactiveCollection.DEFAULT_REMOVE_OPTIONS;
@@ -740,6 +746,76 @@ public class Collection {
       opts.accessDeleted()
     );
     return new LookupInResult(coreResult, serializer);
+  }
+
+  /**
+   * Reads from all available replicas and the active node and returns the results as a stream.
+   * <p>
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param lookupInSpecs specifies the type of lookups to perform.
+   * @return a stream of results from the active and the replica.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws FeatureNotAvailableException if none of the requests return SUCCESS
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Stream<LookupInReplicaResult> lookupInAllReplicas(final String id, final List<LookupInSpec> lookupInSpecs) {
+    return lookupInAllReplicas(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available or one replica and returns the results as a stream with custom options.
+   * <p>
+   * By default all available replicas and the active node will be asked and returned as
+   * an async stream. If configured differently in the options
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param lookupInSpecs specifies the type of lookups to perform.
+   * @param options the custom options.
+   * @return a stream of results from the active and the replica depending on the options.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws FeatureNotAvailableException if none of the requests return SUCCESS
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Stream<LookupInReplicaResult> lookupInAllReplicas(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAllReplicasOptions options) {
+    return reactiveCollection.lookupInAllReplicas(id, lookupInSpecs, options).toStream();
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return the first available result, might be the active or a replica.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws FeatureNotAvailableException if none of the requests return SUCCESS
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs) {
+    return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found with custom options.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options the custom options.
+   * @return the first available result, might be the active or a replica.
+   * @throws DocumentUnretrievableException no document retrievable with a successful status.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws FeatureNotAvailableException if none of the requests return SUCCESS
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
+    return block(asyncCollection.lookupInAnyReplica(id, lookupInSpecs, options));
   }
 
   /**

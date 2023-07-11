@@ -324,6 +324,19 @@ public interface CoreKvOps {
     return Mono.defer(() -> subdocGetAsync(common, key, commands, accessDeleted).toMono());
   }
 
+
+  Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands
+  );
+
+  Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(
+      CoreCommonOptions common,
+      String key,
+      List<CoreSubdocGetCommand> commands
+  );
+
   Flux<CoreGetResult> getAllReplicasReactive(
       CoreCommonOptions common,
       String key

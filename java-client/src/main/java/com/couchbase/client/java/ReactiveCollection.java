@@ -19,6 +19,9 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
+import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
@@ -36,7 +39,10 @@ import com.couchbase.client.java.kv.GetOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
+import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
+import com.couchbase.client.java.kv.LookupInAnyReplicaOptions;
 import com.couchbase.client.java.kv.LookupInOptions;
+import com.couchbase.client.java.kv.LookupInReplicaResult;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
@@ -69,6 +75,8 @@ import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions
 import static com.couchbase.client.java.kv.GetAnyReplicaOptions.getAnyReplicaOptions;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static com.couchbase.client.java.kv.InsertOptions.insertOptions;
+import static com.couchbase.client.java.kv.LookupInAllReplicasOptions.lookupInAllReplicasOptions;
+import static com.couchbase.client.java.kv.LookupInAnyReplicaOptions.lookupInAnyReplicaOptions;
 import static com.couchbase.client.java.kv.LookupInOptions.lookupInOptions;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
@@ -98,6 +106,8 @@ public class ReactiveCollection {
   static final GetOptions DEFAULT_GET_OPTIONS = getOptions();
   static final InsertOptions DEFAULT_INSERT_OPTIONS = insertOptions();
   static final LookupInOptions DEFAULT_LOOKUP_IN_OPTIONS = lookupInOptions();
+  static final LookupInAllReplicasOptions DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS = lookupInAllReplicasOptions();
+  static final LookupInAnyReplicaOptions DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS = lookupInAnyReplicaOptions();
   static final MutateInOptions DEFAULT_MUTATE_IN_OPTIONS = mutateInOptions();
   static final RemoveOptions DEFAULT_REMOVE_OPTIONS = removeOptions();
   static final ReplaceOptions DEFAULT_REPLACE_OPTIONS = replaceOptions();
@@ -727,4 +737,72 @@ public class ReactiveCollection {
             opts.transcoder() != null ? opts.transcoder() : environment().transcoder()));
   }
 
+  /**
+   * Reads all available replicas, including the active, and returns the results as a flux.
+   * <p>
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
+   * <p>
+   * If the read requests all fail, the flux emits nothing.
+   *
+   * @param id the document id.
+   * @param lookupInSpecs
+   * @return a flux of results from all replicas
+   */
+  @Stability.Volatile
+  public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs) {
+    return lookupInAllReplicas(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available replicas, including the active, and returns the results as a flux.
+   * <p>
+   * Note that individual errors are ignored, so you can think of this API as a best effort
+   * approach which explicitly emphasises availability over consistency.
+   * <p>
+   * If the read requests all fail, the flux emits nothing.
+   *
+   * @param id the document id.
+   * @return a flux of results from all replicas
+   */
+  @Stability.Volatile
+  public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs, LookupInAllReplicasOptions options) {
+    notNull(options, "LookupInAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    LookupInAllReplicasOptions.Built opts = options.build();
+    final JsonSerializer serializer = Optional.ofNullable(opts.serializer()).orElse(environment().jsonSerializer());
+
+    return kvOps.subdocGetAllReplicasReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore)).map(response -> LookupInReplicaResult.from(response, serializer));
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   * <p>
+   * If the read requests all fail, the mono emits nothing.
+   *
+   * @param id the document id.
+   * @return a mono containing the first available replica.
+   */
+  @Stability.Volatile
+  public Mono<LookupInReplicaResult> lookupInAnyReplica(String id, List<LookupInSpec> lookupInSpecs) {
+    return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
+  }
+
+  /**
+   * Reads all available replicas, and returns the first found.
+   * <p>
+   * If the read requests all fail, the mono emits nothing.
+   *
+   * @param id the document id.
+   * @param options the custom options.
+   * @return a mono containing the first available replica.
+   */
+  @Stability.Volatile
+  public Mono<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
+    notNull(options, "LookupInAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
+    LookupInAnyReplicaOptions.Built opts = options.build();
+    final JsonSerializer serializer = Optional.ofNullable(opts.serializer()).orElse(environment().jsonSerializer());
+
+    return kvOps.subdocGetAnyReplicaReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore))
+      .map(response ->  LookupInReplicaResult.from(response, serializer));
+  }
 }

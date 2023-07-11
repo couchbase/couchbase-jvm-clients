@@ -78,8 +78,7 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
         env.securityConfig(security -> security.trustCertificates(certs)));
       // otherwise, if TLS enabled, trust default certs (Capella CA plus JVM's 'cacerts')
 
-      env.ioConfig(io -> io.enableDnsSrv(config().nodes().get(0).isDns())
-      );
+      env.ioConfig(io -> io.enableDnsSrv(config().nodes().get(0).isDns()));
     };
   }
 

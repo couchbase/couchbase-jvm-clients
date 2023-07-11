@@ -121,6 +121,8 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_LOOKUP_IN = "lookup_in";
 
+  public static final String SPAN_REQUEST_KV_LOOKUP_IN_REPLICA = "lookup_in_replica";
+
   public static final String SPAN_REQUEST_KV_MUTATE_IN = "mutate_in";
 
   public static final String SPAN_REQUEST_KV_APPEND = "append";
@@ -142,6 +144,10 @@ public class TracingIdentifiers {
   public static final String SPAN_GET_ALL_REPLICAS = "get_all_replicas";
 
   public static final String SPAN_GET_ANY_REPLICA = "get_any_replica";
+
+  public static final String SPAN_LOOKUP_IN_ALL_REPLICAS = "lookup_in_all_replicas";
+
+  public static final String SPAN_LOOKUP_IN_ANY_REPLICA = "lookup_in_any_replica";
 
   public static final String SPAN_REQUEST_MA_CONNECT_LINK = "manager_analytics_connect_link";
   public static final String SPAN_REQUEST_MA_CREATE_DATASET = "manager_analytics_create_dataset";

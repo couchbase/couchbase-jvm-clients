@@ -89,6 +89,14 @@ public class CoreKvParamValidators {
     // Server validates command limit.
   }
 
+  public static void validateSubdocGetAnyParams(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    validateSubdocGetParams(common, key, commands);
+  }
+
+  public static void validateSubdocGetAllParams(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+    validateSubdocGetParams(common, key, commands);
+  }
+
   public static void validateGetAllReplicasParams(CoreCommonOptions common, String key) {
     validateCommonOptions(common, key);
   }

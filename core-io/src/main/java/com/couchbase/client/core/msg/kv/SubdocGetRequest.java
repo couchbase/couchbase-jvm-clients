@@ -89,7 +89,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     }
   }
 
-  private static List<Command> convertCommands(List<CoreSubdocGetCommand> commands) {
+  static List<Command> convertCommands(List<CoreSubdocGetCommand> commands) {
     List<SubdocGetRequest.Command> result = new ArrayList<>(commands.size());
     for (int i = 0, len = commands.size(); i < len; i++) {
       CoreSubdocGetCommand core = commands.get(i);

@@ -32,6 +32,7 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.LookupInMacro;
+import com.couchbase.client.java.kv.LookupInReplicaResult;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.java.kv.MutateInOptions;
@@ -45,13 +46,23 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -59,6 +70,7 @@ import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -380,6 +392,148 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasBlocking() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    waitForReplicaResult(() -> {
+      Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, Collections.singletonList(get("foo")));
+      return result.peek(r -> assertEquals(content.get("foo"), r.contentAs(0, String.class))).collect(Collectors.toList());
+    });
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @Disabled
+    // Needs wholedoc get - see https://issues.couchbase.com/browse/MB-23162
+  void getFullDocumentAllReplicasBlocking() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    waitForReplicaResult(() -> {
+      Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, Collections.singletonList(get("")));
+      return result.peek(r -> assertEquals(content.get("foo"), r.contentAs(0, String.class))).collect(Collectors.toList());
+    });
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasNotFoundBlocking() {
+
+    String id = UUID.randomUUID().toString();
+
+    Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, Collections.singletonList(get("foo")));;
+    assertEquals(0, result.count());
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAnyReplicaBlocking() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    LookupInReplicaResult result = collection.lookupInAnyReplica(id, Collections.singletonList(get("foo")));
+    assertEquals(content.get("foo"), result.contentAs(0, String.class));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    List<LookupInReplicaResult> resultList = waitForReplicaResult(() -> {
+        CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> result = collection.async().lookupInAllReplicas(id, Collections.singletonList(get("foo")));
+        List<LookupInReplicaResult> collect;
+        try {
+          collect = result.get().stream().map(r -> {
+            try {
+              return r.get();
+            } catch (InterruptedException | ExecutionException e) {
+              throw new RuntimeException(e);
+            }
+          }).collect(Collectors.toList());
+        } catch(Exception e){
+          throw new RuntimeException(e);
+        }
+        return collect;
+      });
+
+    assertEquals(content.get("foo"), resultList.get(0).contentAs(0, String.class));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAnyReplicaAsync() throws ExecutionException, InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    CompletableFuture<LookupInReplicaResult> future = collection.async().lookupInAnyReplica(id, Collections.singletonList(get("foo")));
+    LookupInReplicaResult result = future.get();
+    assertEquals(content.get("foo"), result.contentAs(0, String.class));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasReactive() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    waitForReplicaResult(() -> {
+      Flux<LookupInReplicaResult> result = collection.reactive().lookupInAllReplicas(id, Collections.singletonList(get("foo")));
+      return result.map(r -> {
+        assertEquals(content.get("foo"), r.contentAs(0, String.class));
+        return r;
+      }).collectList().block();
+    });
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAnyReplicaReactive() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    Mono<LookupInReplicaResult> result = collection.reactive().lookupInAnyReplica(id, Collections.singletonList(get("foo")));
+    LookupInReplicaResult replica = result.block();
+    assertEquals(content.get("foo"), replica.contentAs(0, String.class));
+    collection.remove(id);
+  }
+
+  private static List<LookupInReplicaResult> waitForReplicaResult(Supplier<List<LookupInReplicaResult>> func) throws InterruptedException {
+    final int MAX_REPLICA_TRIES = 20;
+    List<LookupInReplicaResult> resultList;
+    int tries = 0;
+    do {
+      MILLISECONDS.sleep(100);
+      resultList = func.get();
+    } while (resultList.size() < config().numReplicas()+1 && ++tries <= MAX_REPLICA_TRIES);
+    assertTrue(resultList.size() == config().numReplicas()+1);
+    return resultList;
+  }
+
+  @Test
   void upsertFullDocument() {
     String id = UUID.randomUUID().toString();
 
@@ -417,7 +571,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     assertEquals(content, doc.contentAsObject());
   }
-
 
   @Test
   void counterMulti() {

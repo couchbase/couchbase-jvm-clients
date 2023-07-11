@@ -61,6 +61,7 @@ public class UnmanagedTestCluster extends TestCluster {
   private final String adminUsername;
   private final String adminPassword;
   private volatile String bucketname;
+  private final boolean deleteBucketOnClose;
   private final int numReplicas;
   private final String certsFile;
   private volatile boolean runWithTLS;
@@ -86,6 +87,7 @@ public class UnmanagedTestCluster extends TestCluster {
     runWithTLS = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.runWithTLS")) || seedPort == 18091;
     isDnsSrv = Boolean.parseBoolean(properties.getProperty("cluster.unmanaged.dnsSrv"));
     bucketname = Optional.ofNullable(properties.getProperty("cluster.unmanaged.bucket")).orElse("");
+    deleteBucketOnClose = bucketname.isEmpty();
     httpClient = setupHttpClient(runWithTLS);
     baseUrl = (runWithTLS ? "https://" : "http://") + getNodeUrl(isDnsSrv, seedHost, runWithTLS) + ":" + (runWithTLS ? "18091" : "8091") ;
   }
@@ -244,14 +246,16 @@ public class UnmanagedTestCluster extends TestCluster {
 
   @Override
   public void close() {
-    try {
-      httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/buckets/" + urlEncode(bucketname))
-        .delete()
-        .build()).execute();
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
+    if (deleteBucketOnClose) {
+      try {
+        httpClient.newCall(new Request.Builder()
+          .header("Authorization", Credentials.basic(adminUsername, adminPassword))
+          .url(baseUrl + "/pools/default/buckets/" + urlEncode(bucketname))
+          .delete()
+          .build()).execute();
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
     }
   }
 

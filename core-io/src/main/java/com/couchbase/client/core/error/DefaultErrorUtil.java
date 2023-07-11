@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;

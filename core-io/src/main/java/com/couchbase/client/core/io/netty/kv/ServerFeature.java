@@ -168,6 +168,14 @@ public enum ServerFeature {
    */
   @SinceCouchbase("7.2")
   REPORT_UNIT_USAGE(0x1a),
+
+  /**
+   * When enabled, the server will allow SUBDOC_MULTI_LOOKUP for
+   * a document to be accepted by a replica node and will return
+   * the replica for the document.
+   */
+  @SinceCouchbase("7.6")
+  SUBDOC_READ_REPLICA(0x1c),
   ;
 
   private static final EnumLookupTable<ServerFeature> lookupTable =
