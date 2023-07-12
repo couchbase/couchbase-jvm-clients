@@ -16,10 +16,14 @@
 
 package com.couchbase.client.performer.kotlin.util
 
+import com.couchbase.client.core.env.SecurityConfig
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.Collection
+import com.couchbase.client.kotlin.env.dsl.TrustSource
+import com.couchbase.client.protocol.shared.ClusterConfig
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest
 import com.couchbase.client.protocol.shared.DocLocation
+import kotlin.io.path.Path
 import com.couchbase.client.protocol.shared.Collection as FitCollection
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
@@ -27,7 +31,12 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
         connectionString = req.clusterHostname,
         username = req.clusterUsername,
         password = req.clusterPassword,
-    )
+    ) {
+        security {
+            enableTls = req.clusterConfig.useTls
+            trust = req.clusterConfig.trustSource
+        }
+    }
 
     fun collection(loc: DocLocation): Collection {
         val coll: FitCollection = when {
@@ -46,3 +55,10 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
             .collection(coll.collectionName)
     }
 }
+
+private val ClusterConfig.trustSource: TrustSource
+    get() = when {
+        hasCertPath() -> TrustSource.certificate(Path(certPath))
+        hasCert() -> TrustSource.certificates(SecurityConfig.decodeCertificates(listOf(cert)))
+        else -> TrustSource.certificates(SecurityConfig.defaultCaCertificates())
+    }
