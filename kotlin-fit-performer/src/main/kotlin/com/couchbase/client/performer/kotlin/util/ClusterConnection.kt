@@ -24,6 +24,8 @@ import com.couchbase.client.protocol.shared.ClusterConfig
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest
 import com.couchbase.client.protocol.shared.DocLocation
 import kotlin.io.path.Path
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import com.couchbase.client.protocol.shared.Collection as FitCollection
 
 class ClusterConnection(req: ClusterConnectionCreateRequest) {
@@ -32,9 +34,25 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
         username = req.clusterUsername,
         password = req.clusterPassword,
     ) {
-        security {
-            enableTls = req.clusterConfig.useTls
-            trust = req.clusterConfig.trustSource
+        with(req.clusterConfig) {
+            security {
+                enableTls = useTls
+                trust = trustSource
+            }
+
+            timeout {
+                if (hasKvConnectTimeoutSecs()) connectTimeout = kvConnectTimeoutSecs.seconds
+                if (hasKvTimeoutMillis()) kvTimeout = kvTimeoutMillis.milliseconds
+                if (hasKvDurableTimeoutMillis()) kvTimeout = kvDurableTimeoutMillis.milliseconds
+                if (hasViewTimeoutSecs()) viewTimeout = viewTimeoutSecs.seconds
+                if (hasQueryTimeoutSecs()) queryTimeout = queryTimeoutSecs.seconds
+                if (hasSearchTimeoutSecs()) searchTimeout = searchTimeoutSecs.seconds
+                if (hasManagementTimeoutSecs()) managementTimeout = managementTimeoutSecs.seconds
+
+                // [start:1.1.6]
+                if (hasKvScanTimeoutSecs()) kvScanTimeout = kvScanTimeoutSecs.seconds
+                // [end:1.1.6]
+            }
         }
     }
 
