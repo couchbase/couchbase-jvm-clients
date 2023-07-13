@@ -158,12 +158,14 @@ object OptionsUtil {
       }
       securityConfig = securityConfig.enableTls(true)
     }
+    // [start:1.2.1]
     if (cc.hasCertPath) {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
       }
       securityConfig = securityConfig.enableTls(true).trustCertificate(Path.of(cc.getCertPath))
     }
+    // [end:1.2.1]
     if (cc.hasCert) {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
