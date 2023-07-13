@@ -156,6 +156,7 @@ public class PerformerService extends CorePerformer {
         // [end:3.3.0]
         response.addSupportedApis(API.ASYNC);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
+        response.addPerformerCaps(Caps.CLUSTER_CONFIG_CERT);
         // Some observability options blocks changed name here
         // [start:3.2.0]
         response.addPerformerCaps(Caps.OBSERVABILITY_1);

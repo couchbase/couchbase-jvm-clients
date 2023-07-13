@@ -20,7 +20,7 @@ import com.couchbase.client.performer.core.commands.{SdkCommandExecutor, Transac
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.protocol.shared._
 import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection}
-import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse
+import com.couchbase.client.protocol.performer.{Caps, PerformerCapsFetchResponse}
 import com.couchbase.client.protocol.run.Workloads
 import com.couchbase.client.protocol.shared.{
   ClusterConnectionCreateRequest,
@@ -65,6 +65,7 @@ class ScalaPerformer extends CorePerformer {
   ): Unit = {
     response
       .setPerformerUserAgent("scala")
+      .addPerformerCaps(Caps.CLUSTER_CONFIG_CERT)
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
   }
 
