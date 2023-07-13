@@ -34,10 +34,12 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,6 +63,58 @@ class MemcacheProtocolTest {
     CoreEnvironment env = mock(CoreEnvironment.class);
     context = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
     when(env.eventBus()).thenReturn(eventBus);
+  }
+
+  @Test
+  void canParseMagic() {
+    assertCanParseEnum(
+      MemcacheProtocol.Magic.class,
+      MemcacheProtocol.Magic::magic,
+      MemcacheProtocol.Magic::of,
+      (byte) -1
+    );
+  }
+
+  @Test
+  void canParseOpcode() {
+    assertCanParseEnum(
+      MemcacheProtocol.Opcode.class,
+      MemcacheProtocol.Opcode::opcode,
+      MemcacheProtocol.Opcode::of,
+      (byte) -1
+    );
+  }
+
+  @Test
+  void canParseServerPushOpcode() {
+    assertCanParseEnum(
+      MemcacheProtocol.ServerPushOpcode.class,
+      MemcacheProtocol.ServerPushOpcode::opcode,
+      MemcacheProtocol.ServerPushOpcode::of,
+      (byte) -1
+    );
+  }
+
+  @Test
+  void canParseStatus() {
+    assertCanParseEnum(
+      MemcacheProtocol.Status.class,
+      MemcacheProtocol.Status::status,
+      MemcacheProtocol.Status::of,
+      (short) -1
+    );
+  }
+
+  private static <ENUM extends Enum<ENUM>, CODE extends Number> void assertCanParseEnum(
+    Class<ENUM> enumClass,
+    Function<ENUM, CODE> enumToCode,
+    Function<CODE, ENUM> codeToEnum,
+    CODE unrecognizedCode // for which codeToEnum returns null
+  ) {
+    for (ENUM e : enumClass.getEnumConstants()) {
+      assertEquals(e, codeToEnum.apply(enumToCode.apply(e)));
+    }
+    assertNull(codeToEnum.apply(unrecognizedCode));
   }
 
   @Test

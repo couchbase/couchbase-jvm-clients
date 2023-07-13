@@ -547,8 +547,8 @@ public enum MemcacheProtocol {
     int bodyPlusHeader = response.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
 
     return
-      (magic == Magic.RESPONSE.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic())
-      && readableBytes == bodyPlusHeader;
+      (magic == Magic.RESPONSE.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic() || magic == Magic.SERVER_PUSH_REQUEST.magic)
+        && readableBytes == bodyPlusHeader;
   }
 
   /**
@@ -1043,7 +1043,10 @@ public enum MemcacheProtocol {
     REQUEST((byte) 0x80),
     RESPONSE((byte) 0x81),
     FLEXIBLE_REQUEST((byte) 0x08),
-    FLEXIBLE_RESPONSE((byte) 0x18);
+    FLEXIBLE_RESPONSE((byte) 0x18),
+    SERVER_PUSH_REQUEST((byte) 0x82),
+    SERVER_PUSH_RESPONSE((byte) 0x83),
+    ;
 
     private final byte magic;
 
@@ -1060,16 +1063,25 @@ public enum MemcacheProtocol {
       return magic;
     }
 
+    public boolean isServerPush() {
+      return this == SERVER_PUSH_REQUEST || this == SERVER_PUSH_RESPONSE;
+    }
+
+    @Nullable
     public static Magic of(byte input) {
       switch (input) {
         case (byte) 0x80:
           return Magic.REQUEST;
         case (byte) 0x81:
           return Magic.RESPONSE;
-        case 0x08:
+        case (byte) 0x08:
           return Magic.FLEXIBLE_REQUEST;
-        case 0x18:
+        case (byte) 0x18:
           return Magic.FLEXIBLE_RESPONSE;
+        case (byte) 0x82:
+          return Magic.SERVER_PUSH_REQUEST;
+        case (byte) 0x83:
+          return Magic.SERVER_PUSH_RESPONSE;
       }
       return null;
     }
@@ -1082,6 +1094,42 @@ public enum MemcacheProtocol {
       return this == REQUEST || this == FLEXIBLE_REQUEST;
     }
 
+  }
+
+  public enum ServerPushOpcode {
+    CLUSTERMAP_CHANGE_NOTIFICATION((byte) 0x01),
+    AUTHENTICATE((byte) 0x02),
+    ACTIVE_EXTERNAL_USERS((byte) 0x03),
+    ;
+
+    private final byte opcode;
+
+    ServerPushOpcode(byte opcode) {
+      this.opcode = opcode;
+    }
+
+    /**
+     * Returns the opcode for the given command.
+     *
+     * @return the opcode for the command.
+     */
+    public byte opcode() {
+      return opcode;
+    }
+
+    @Nullable
+    public static ServerPushOpcode of(final byte input) {
+      switch (input) {
+        case (byte) 0x01:
+          return CLUSTERMAP_CHANGE_NOTIFICATION;
+        case (byte) 0x02:
+          return AUTHENTICATE;
+        case (byte) 0x03:
+          return ACTIVE_EXTERNAL_USERS;
+        default:
+          return null;
+      }
+    }
   }
 
   /**
@@ -1240,6 +1288,7 @@ public enum MemcacheProtocol {
       return opcode;
     }
 
+    @Nullable
     public static Opcode of(final byte input) {
       switch (input) {
         case (byte) 0x00:
@@ -1302,7 +1351,12 @@ public enum MemcacheProtocol {
           return Opcode.COLLECTIONS_GET_MANIFEST;
         case (byte) 0xa0:
           return Opcode.GET_META;
-
+        case (byte) 0xda:
+          return Opcode.RANGE_SCAN_CREATE;
+        case (byte) 0xdb:
+          return Opcode.RANGE_SCAN_CONTINUE;
+        case (byte) 0xdc:
+          return Opcode.RANGE_SCAN_CANCEL;
       }
       return null;
     }
@@ -1597,6 +1651,7 @@ public enum MemcacheProtocol {
       return status;
     }
 
+    @Nullable
     public static Status of(short input) {
       switch (input) {
         case 0x00:

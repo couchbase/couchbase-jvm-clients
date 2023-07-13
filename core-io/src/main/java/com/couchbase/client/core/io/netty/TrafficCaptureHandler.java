@@ -34,6 +34,7 @@ import com.couchbase.client.core.util.UnsignedLEB128;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Similar to the netty LoggingHandler, but it dumps the traffic into the event bus for later
@@ -91,16 +92,17 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
   private String memcacheToString(final ByteBuf msg) {
     StringBuilder sb = new StringBuilder(ByteBufUtil.prettyHexDump(msg));
 
-    byte magic = MemcacheProtocol.magic(msg);
-    if (MemcacheProtocol.Magic.of(magic) != null) {
+    byte magicByte = MemcacheProtocol.magic(msg);
+    MemcacheProtocol.Magic magic = MemcacheProtocol.Magic.of(magicByte);
+    if (MemcacheProtocol.Magic.of(magicByte) != null) {
       sb.append("\n\n");
       sb.append("------ Field ------+ Offset +--- Value ---\n");
-      sb.append("Magic              | 0      | 0x").append(String.format("%02X %s\n", magic,
-        emptyIfNull(MemcacheProtocol.Magic.of(magic))));
+      sb.append("Magic              | 0      | 0x").append(String.format("%02X %s\n", magicByte,
+        emptyIfNull(magic)));
 
       byte opcode = MemcacheProtocol.opcode(msg);
       sb.append("Opcode             | 1      | 0x").append(String.format("%02X %s\n", opcode,
-        emptyIfNull(MemcacheProtocol.Opcode.of(opcode))));
+        emptyIfNull(magic, it -> it.isServerPush() ? MemcacheProtocol.ServerPushOpcode.of(opcode) : MemcacheProtocol.Opcode.of(opcode))));
 
       short keyLength = MemcacheProtocol.keyLength(msg);
       if (MemcacheProtocol.isFlexible(msg)) {
@@ -173,6 +175,12 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
     } else {
       return "(" + object + ")";
     }
+  }
+
+  private static <T> String emptyIfNull(T object, Function<T, Object> transform) {
+    return object == null
+      ? ""
+      : emptyIfNull(transform.apply(object));
   }
 
 }
