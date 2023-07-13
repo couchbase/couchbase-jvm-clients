@@ -36,6 +36,7 @@ import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import com.couchbase.client.protocol.performer.Caps as PerformerCaps
 
 class KotlinPerformer : CorePerformer() {
     private val clusterConnections: MutableMap<String, ClusterConnection> = mutableMapOf()
@@ -45,7 +46,7 @@ class KotlinPerformer : CorePerformer() {
         response.setPerformerUserAgent("kotlin")
             .addSdkImplementationCaps(Caps.SDK_PRESERVE_EXPIRY)
             .addSdkImplementationCaps(Caps.SDK_KV_RANGE_SCAN)
-            .addPerformerCaps(com.couchbase.client.protocol.performer.Caps.CLUSTER_CONFIG_CERT)
+            .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
     }
 
     override fun clusterConnectionCreate(
