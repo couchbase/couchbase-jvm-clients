@@ -3,8 +3,12 @@ package com.couchbase.client.performer.scala.util
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.protocol.shared.{ClusterConfig, ClusterConnectionCreateRequest, Durability}
 import com.couchbase.client.scala.codec.{JsonTranscoder, LegacyTranscoder, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder, Transcoder}
-import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig, TimeoutConfig}
+import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig, SecurityConfig, TimeoutConfig}
 
+import java.io.ByteArrayInputStream
+import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.security.cert.{CertificateFactory, X509Certificate}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, FiniteDuration}
 
@@ -24,7 +28,7 @@ object OptionsUtil {
         // Scala handles serializers differently
         throw new UnsupportedOperationException()
       }
-      applyClusterConfig(clusterEnvironment, cc)
+      clusterEnvironment = applyClusterConfig(clusterEnvironment, cc)
       if (cc.hasObservabilityConfig) {
         throw new UnsupportedOperationException()
       }
@@ -35,9 +39,10 @@ object OptionsUtil {
     Option(clusterEnvironment)
   }
 
-  private def applyClusterConfig(clusterEnvironment: ClusterEnvironment.Builder, cc: ClusterConfig): Unit = {
+  private def applyClusterConfig(clusterEnvironment: ClusterEnvironment.Builder, cc: ClusterConfig): ClusterEnvironment.Builder = {
     var ioConfig: IoConfig = null
     var timeoutConfig: TimeoutConfig = null
+    var securityConfig: SecurityConfig = null
     if (cc.hasKvConnectTimeoutSecs) {
       if (timeoutConfig == null) {
         timeoutConfig = TimeoutConfig()
@@ -147,12 +152,38 @@ object OptionsUtil {
       }
       ioConfig = ioConfig.idleHttpConnectionTimeout(Duration(cc.getIdleHttpConnectionTimeoutSecs, TimeUnit.SECONDS))
     }
+    if (cc.getUseTls) {
+      if (securityConfig == null) {
+        securityConfig = SecurityConfig()
+      }
+      securityConfig = securityConfig.enableTls(true)
+    }
+    if (cc.hasCertPath) {
+      if (securityConfig == null) {
+        securityConfig = SecurityConfig()
+      }
+      securityConfig = securityConfig.enableTls(true).trustCertificate(Path.of(cc.getCertPath))
+    }
+    if (cc.hasCert) {
+      if (securityConfig == null) {
+        securityConfig = SecurityConfig()
+      }
+      val cFactory = CertificateFactory.getInstance("X.509")
+      val file = new ByteArrayInputStream(cc.getCert.getBytes(StandardCharsets.UTF_8))
+      val cert = cFactory.generateCertificate(file).asInstanceOf[X509Certificate]
+      securityConfig = securityConfig.enableTls(true).trustCertificates(Seq(cert))
+    }
+    var out = clusterEnvironment
     if (ioConfig != null) {
-      clusterEnvironment.ioConfig(ioConfig)
+      out = clusterEnvironment.ioConfig(ioConfig)
     }
     if (timeoutConfig != null) {
-      clusterEnvironment.timeoutConfig(timeoutConfig)
+      out = clusterEnvironment.timeoutConfig(timeoutConfig)
     }
+    if (securityConfig != null) {
+      out = clusterEnvironment.securityConfig(securityConfig)
+    }
+    out
   }
 
   def convertTranscoder(transcoder: com.couchbase.client.protocol.shared.Transcoder): Transcoder = {
