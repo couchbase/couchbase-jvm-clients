@@ -19,6 +19,7 @@ package com.couchbase.client.core.endpoint;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
@@ -74,8 +75,24 @@ public class KeyValueEndpoint extends BaseEndpoint {
         pipeline.addLast(new FlushConsolidationHandler(FLUSH_CONSOLIDATION_LIMIT, true));
       }
 
-      pipeline.addLast(new MemcacheProtocolDecodeHandler());
-      pipeline.addLast(new MemcacheProtocolVerificationHandler(ctx));
+      if (pipeline.get(TrafficCaptureHandler.class) != null) {
+        pipeline.addBefore(
+          TrafficCaptureHandler.class.getName(),
+          MemcacheProtocolDecodeHandler.class.getName(),
+          new MemcacheProtocolDecodeHandler()
+        );
+      } else {
+        pipeline.addLast(
+          MemcacheProtocolDecodeHandler.class.getName(),
+          new MemcacheProtocolDecodeHandler()
+        );
+      }
+
+      pipeline.addAfter(
+        MemcacheProtocolDecodeHandler.class.getName(),
+        MemcacheProtocolVerificationHandler.class.getName(),
+        new MemcacheProtocolVerificationHandler(ctx)
+      );
 
       pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));

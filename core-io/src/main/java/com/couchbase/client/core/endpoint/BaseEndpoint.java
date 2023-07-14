@@ -320,7 +320,7 @@ public abstract class BaseEndpoint implements Endpoint {
                 }
               }
               if (env.ioConfig().servicesToCapture().contains(serviceType)) {
-                pipeline.addLast(new TrafficCaptureHandler(endpointContext));
+                pipeline.addLast(TrafficCaptureHandler.class.getName(), new TrafficCaptureHandler(endpointContext));
               }
               pipelineInitializer().init(BaseEndpoint.this, pipeline);
               pipeline.addLast(new PipelineErrorHandler(BaseEndpoint.this));
