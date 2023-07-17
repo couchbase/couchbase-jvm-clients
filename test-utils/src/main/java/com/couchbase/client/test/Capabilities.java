@@ -107,5 +107,9 @@ public enum Capabilities {
   /**
    * Cluster is able to perform cluster level queries.
    */
-  CLUSTER_LEVEL_QUERY
+  CLUSTER_LEVEL_QUERY,
+  /**
+   * Cluster is serverless.  (The actual check is whether the cluster version is 7.5.0)
+   */
+  SERVERLESS
 }

@@ -255,7 +255,8 @@ pipeline {
         // make sure that JDK is still tested.
 
         // 7.5 is dedicated to serverless
-        // Temporarily disabled as MB-54250 is creating a large number of failed tests.
+        // Cannot be run due to issues with indexer service in --serverless-mode: https://couchbase.slack.com/archives/CFM4D3VFU/p1689590660024819
+        // Real Elixir is tested in job: http://qe-jenkins.sc.couchbase.com/job/DirectNebulaJob-centos-sdk/
 //         stage('Serverless testing (Linux, cbdyncluster 7.5-stable Serverless mode, Oracle JDK 8)') {
 //             agent { label "sdkqe" }
 //             environment {

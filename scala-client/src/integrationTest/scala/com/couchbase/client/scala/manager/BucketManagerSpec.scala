@@ -127,10 +127,12 @@ class BucketManagerSpec extends ScalaIntegrationTest {
     assert(!found.flushEnabled)
     assert(found.ramQuotaMB == 100)
     assert(found.numReplicas == 1)
-    assert(found.replicaIndexes)
     assert(found.bucketType == BucketType.Couchbase)
     assert(found.ejectionMethod == EjectionMethod.ValueOnly)
     assert(found.minimumDurabilityLevel == Durability.Disabled)
+    // replicaIndexes is not returned by serverless as it doesn't support views
+    // Source: https://couchbase.slack.com/archives/CLAEKRV33/p1689591292050769
+    assert(found.replicaIndexes != config.capabilities().contains(Capabilities.SERVERLESS))
   }
 
   @Test

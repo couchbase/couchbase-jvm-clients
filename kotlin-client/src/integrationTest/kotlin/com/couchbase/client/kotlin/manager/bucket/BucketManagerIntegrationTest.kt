@@ -232,6 +232,8 @@ internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
         }
     }
 
+    // Don't run on serverless as it returns a 'invalid bucket type' error
+    @IgnoreWhen(hasCapabilities = [Capabilities.SERVERLESS])
     @Test
     @Suppress("DEPRECATION")
     fun createMemcachedBucket(): Unit = runBlocking {

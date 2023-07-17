@@ -241,6 +241,8 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(DurabilityLevel.NONE, settings.minimumDurabilityLevel());
   }
 
+  // Don't run on serverless as it returns a 'invalid bucket type' error
+  @IgnoreWhen(hasCapabilities = {Capabilities.SERVERLESS})
   @Test
   void createMemcachedBucket() {
     String name = UUID.randomUUID().toString();
