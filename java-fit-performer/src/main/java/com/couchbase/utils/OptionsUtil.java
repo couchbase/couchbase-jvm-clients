@@ -506,7 +506,7 @@ public class OptionsUtil {
                 queryOptions.readonly(qo.getReadonly());
             }
 
-            if (qo.getParametersNamedCount() > 0) {
+            if (qo.getParametersPositionalCount() > 0) {
                 queryOptions.parameters(JsonArray.from(qo.getParametersPositionalList()));
             }
 
