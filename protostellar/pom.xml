@@ -11,7 +11,7 @@
     <!-- This version number doesn't change, since this component is not published.
          Use a high version number to see if it squelches false positives
          from broken vulnerability scanners that would otherwise mistakenly think
-         we're using an ancient version of gRPC. -->
+         we're using an ancient version of gRPC. It should end with SNAPSHOT -->
     <version>9999.0-SNAPSHOT</version>
 
     <properties>
