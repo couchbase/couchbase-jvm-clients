@@ -103,8 +103,18 @@ public enum ServerFeature {
   DUPLEX(0x0c),
 
   /**
-   * Request the server to push any cluster maps stored by ns_server into
-   * one of the buckets the client have access to.
+   * The client wants the server to send a CLUSTERMAP_CHANGE_NOTIFICATION
+   * request to the client whenever a new bucket config is available for
+   * the connected bucket, or global config if no bucket is selected.
+   * <p>
+   * The notification includes the config epoch and revision (as extras),
+   * as well as the full config JSON in the value of the request.
+   * <p>
+   * Note: When {@link #DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP} is also enabled,
+   * the server does not send a notification if it previously sent the new
+   * config in the body of a "Not My Vbucket" response.
+   *
+   * @see #CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF
    */
   @SinceCouchbase("5.5")
   CLUSTERMAP_CHANGE_NOTIFICATION(0x0d),
@@ -190,6 +200,53 @@ public enum ServerFeature {
    */
   @SinceCouchbase("7.6")
   SUBDOC_READ_REPLICA(0x1c),
+
+  /**
+   * If enabled, the client may include its current config version in a
+   * GET_CLUSTER_CONFIG request, and the server may respond to such a request
+   * with an empty value to indicate the client already has the latest version.
+   * <p>
+   * Note: Does not control server behavior. A server that supports this
+   * feature always allows such requests, regardless of whether the
+   * feature was enabled.
+   */
+  @SinceCouchbase("7.6")
+  GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION(0x1d),
+
+  /**
+   * Notify the server that the client correctly deals with the optional
+   * payload in a "Not My Vbucket" response. When enabled, this prevents
+   * the server from sending redundant config change notifications
+   * across "Not My Vbucket" responses as well as clustermap change notification
+   * server requests.
+   *
+   * @see #CLUSTERMAP_CHANGE_NOTIFICATION
+   * @see #CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF
+   */
+  @SinceCouchbase("7.6")
+  DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP(0x1e),
+
+  /**
+   * The client wants the server to send a CLUSTERMAP_CHANGE_NOTIFICATION
+   * request to the client whenever a new bucket config is available for
+   * the connected bucket, or global config if no bucket is selected.
+   * <p>
+   * The client wants the notification to be "brief", including only
+   * the config epoch and revision (as extras), but not the full config
+   * JSON itself.
+   * <p>
+   * This feature is an upgrade from {@link #CLUSTERMAP_CHANGE_NOTIFICATION}.
+   * If the server supports both, and the client requests both, only the brief
+   * version is enabled.
+   * <p>
+   * NOTE: When {@link #DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP} is also enabled,
+   * the server does not send a notification if it previously sent the new
+   * config in the body of a "Not My Vbucket" response.
+   *
+   * @see #CLUSTERMAP_CHANGE_NOTIFICATION
+   */
+  @SinceCouchbase("7.6")
+  CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF(0x1f),
   ;
 
   private static final EnumLookupTable<ServerFeature> lookupTable =
