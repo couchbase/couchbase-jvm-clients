@@ -35,10 +35,10 @@ public abstract class AbstractPooledEndpointServiceConfig implements ServiceConf
   public static final int DEFAULT_MIN_ENDPOINTS = 0;
 
   /**
-   * By default, idle pooled endpoints are cleaned up every 4.5 seconds so that
+   * By default, idle pooled endpoints are cleaned up every second so that
    * they do not clash with idle socket close attempts by the server.
    */
-  public static final Duration DEFAULT_IDLE_TIME = Duration.ofMillis(4500);
+  public static final Duration DEFAULT_IDLE_TIME = Duration.ofSeconds(1);
 
   private final int minEndpoints;
   private final int maxEndpoints;
