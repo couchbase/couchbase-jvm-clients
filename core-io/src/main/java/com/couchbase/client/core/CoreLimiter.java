@@ -79,12 +79,21 @@ public class CoreLimiter {
    */
   static synchronized void incrementAndVerifyNumInstances(final EventBus eventBus) {
     if (numInstances >= maxAllowedInstances) {
-      String msg = "The number of connected Cluster instances (" + (numInstances + 1) + ") exceeds " +
-        "the configured limit (" + maxAllowedInstances + "). It is recommended to create only " +
-        "one instance and reuse it across the application lifetime. Also, make sure to disconnect Clusters if they " +
-        "are not used anymore.";
+      int newNumInstances = numInstances + 1;
+      String msg = "The number of simultaneously connected Cluster instances (" + newNumInstances + ") exceeds" +
+        " the configurable warning threshold of " + maxAllowedInstances + "." +
+        " This is a diagnostic message to help detect potential resource leaks and inefficient usage patterns." +
+        " If you actually intended to create this many instances, please ignore this warning," +
+        " or increase the warning threshold by calling Cluster.maxAllowedInstances(int) on startup." +
+        " However, if you did not intend to have " + newNumInstances + " Cluster instances" +
+        " connected at the same time, this warning may indicate a resource leak." +
+        " In that case, please make sure to call cluster.disconnect() after a Cluster" +
+        " and its associated Buckets, Scopes, Collections, etc. are no longer required by your application." +
+        " Also note that Cluster, Bucket, Scope, and Collection instances are thread-safe and reusable" +
+        " until the Cluster is disconnected; for best performance, reuse the same instances throughout your application's lifetime.";
 
       if (failIfInstanceLimitReached) {
+        msg += " This warning was upgraded to an exception because of an earlier call to Cluster.failIfInstanceLimitReached(true).";
         throw new TooManyInstancesException(msg);
       } else {
         eventBus.publish(new TooManyInstancesDetectedEvent(msg));
