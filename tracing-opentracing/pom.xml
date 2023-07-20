@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.13.8</version>
+        <version>1.13.9-SNAPSHOT</version>
     </parent>
 
     <artifactId>tracing-opentracing</artifactId>
-    <version>1.2.8</version>
+    <version>1.2.9-SNAPSHOT</version>
 
     <name>OpenTracing Interoperability</name>
     <description>Provides interoperability with OpenTracing</description>
