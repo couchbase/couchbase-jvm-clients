@@ -102,28 +102,26 @@ pipeline {
         // No cluster testing for CLUSTER_VERSION_LATEST_STABLE since that is thoroughly tested by JVM tests
         // No cluster testing for non-serverless 7.5, as that is dedicated to serverless
 
-        // Temporarily disabled as MB-54250 is creating a large number of failed tests.
-        // Also "8.0-stable" does not currently work with cbdyncluster.
-//         stage('Cluster testing  (Linux, cbdyncluster 8.0-stable, Oracle JDK 8)') {
-//             agent { label "sdkqe" }
-//             environment {
-//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//             }
-//             when {
-//                 beforeAgent true;
-//                 expression
-//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-//             }
-//             steps {
-//                 test(ORACLE_JDK, ORACLE_JDK_8, "8.0-stable", REFSPEC)
-//             }
-//             post {
-//                 always {
-//                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-//                 }
-//             }
-//         }
+        stage('Cluster testing  (Linux, cbdyncluster 7.6.0-1228, Oracle JDK 8)') {
+            agent { label "sdkqe" }
+            environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
+                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
+            }
+            when {
+                beforeAgent true;
+                expression
+                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+            }
+            steps {
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.6.0-1228", REFSPEC)
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
