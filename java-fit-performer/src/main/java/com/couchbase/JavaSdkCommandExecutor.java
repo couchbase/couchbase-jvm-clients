@@ -504,7 +504,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setClientContextId(metaData.clientContextId())
                 .setStatus(
                         com.couchbase.client.protocol.sdk.query.QueryStatus.valueOf(
-                                metaData.status().toString().substring(0,1).toUpperCase()+metaData.status().toString().substring(1).toLowerCase()
+                                metaData.status().toString().toUpperCase()
                         )
                 );
 
