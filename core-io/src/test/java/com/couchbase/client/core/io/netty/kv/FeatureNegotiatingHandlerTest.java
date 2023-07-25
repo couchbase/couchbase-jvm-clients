@@ -297,7 +297,7 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
     channel.writeInbound(response);
     channel.runPendingTasks();
 
-    assertTrue(connectFuture.isSuccess());
+    assertFalse(connectFuture.isSuccess());
 
     assertEquals(2, eventBus.publishedEvents().size());
     FeaturesNegotiationFailedEvent failureEvent =

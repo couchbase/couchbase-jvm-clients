@@ -215,12 +215,19 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
     Set<ServerFeature> negotiated = EnumSet.noneOf(ServerFeature.class);
     List<ServerFeature> unsolicited = new ArrayList<>();
 
-    if (!body.isPresent()) {
-      return negotiated;
-    }
+    try {
+      if (MemcacheProtocol.status(response) != MemcacheProtocol.Status.SUCCESS.status()) {
+        throw new CouchbaseException(
+          "HELO failed with status " + MemcacheProtocol.decodeStatus(response) +
+            " and body: " + MemcacheProtocol.bodyAsString(response)
+        );
+      }
 
-    while (body.get().isReadable()) {
-      try {
+      if (!body.isPresent()) {
+        return negotiated;
+      }
+
+      while (body.get().isReadable()) {
         int featureRaw = body.get().readUnsignedShort();
         ServerFeature feature = ServerFeature.from(featureRaw);
         if (features.contains(feature)) {
@@ -228,12 +235,12 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
         } else {
           unsolicited.add(feature);
         }
-      } catch (Exception ex) {
-        interceptedConnectPromise.tryFailure(new CouchbaseException(
-          "Error while parsing negotiated server features.",
-          ex
-        ));
       }
+    } catch (Exception ex) {
+      interceptedConnectPromise.tryFailure(new CouchbaseException(
+        "Error while parsing negotiated server features.",
+        ex
+      ));
     }
 
     if (!unsolicited.isEmpty()) {
