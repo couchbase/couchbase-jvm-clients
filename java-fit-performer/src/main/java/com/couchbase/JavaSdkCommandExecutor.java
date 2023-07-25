@@ -526,6 +526,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                             .setExecutionTime(convertDuration(resultMetricsData.executionTime()))
                             .setSortCount(resultMetricsData.sortCount())
                             .setResultSize(resultMetricsData.resultSize())
+                            .setResultCount(resultMetricsData.resultCount())
                             .setMutationCount(resultMetricsData.mutationCount())
                             .setErrorCount(resultMetricsData.errorCount())
                             .setWarningCount(resultMetricsData.warningCount())
