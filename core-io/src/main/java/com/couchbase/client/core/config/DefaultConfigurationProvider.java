@@ -69,7 +69,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.annotation.Nullable;
 import reactor.util.retry.Retry;
 
 import javax.naming.NamingException;
@@ -565,7 +564,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     final String name = newConfig.name();
     final BucketConfig oldConfig = currentConfig.bucketConfig(name);
 
-    if (!force && oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
+    if (!force && oldConfig != null && newConfig.version().isLessThanOrEqualTo(oldConfig.version())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
@@ -599,7 +598,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private void checkAndApplyConfig(final GlobalConfig newConfig, final boolean force) {
     final GlobalConfig oldConfig = currentConfig.globalConfig();
 
-    if (!force && oldConfig != null && configIsOlderOrSame(oldConfig.revEpoch(), newConfig.revEpoch(), oldConfig.rev(), newConfig.rev())) {
+    if (!force && oldConfig != null && newConfig.version().isLessThanOrEqualTo(oldConfig.version())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
@@ -615,29 +614,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     checkAlternateAddress();
     updateSeedNodeList();
     pushConfig(false);
-  }
-
-  /**
-   * Helper method to check if a bucket or global config is older or the same (and can be ignored).
-   *
-   * @param oldRevEpoch the rev epoch from the old config, might be 0.
-   * @param newRevEpoch the rev epoch of the new config, might be 0.
-   * @param oldRev the rev of the old config, might be 0 but likely not unless with super old servers.
-   * @param newRev the rev of the new config, might be 0 but likely not unless with super old servers.
-   * @return true of old or same and safe to be ignored.
-   */
-  private boolean configIsOlderOrSame(long oldRevEpoch, long newRevEpoch, long oldRev, long newRev) {
-    if (newRevEpoch < oldRevEpoch) {
-      // The new rev epoch is definitely older, so ignore right away.
-      return true;
-    } else if (newRevEpoch > oldRevEpoch) {
-      // The new rev epoch is definitely newer, so we definitely need that config.
-      return false;
-    }
-
-    // Now we know that the epochs are the same (could be 0 as well, so not present), we ned to compare
-    // the revs themselves to figure out if it is newer or older.
-    return newRev > 0 && newRev <= oldRev;
   }
 
   /**

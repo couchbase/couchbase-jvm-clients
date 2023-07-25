@@ -93,7 +93,9 @@ public interface BucketConfig {
    * Revision number (optional) for that configuration.
    *
    * @return the rev number, might be 0.
+   * @deprecated Please use {@link #version()} instead.
    */
+  @Deprecated
   long rev();
 
   /**
@@ -103,8 +105,12 @@ public interface BucketConfig {
    * selected, that consumers can keep the correct configurations.
    * <p>
    * If revEpoch is not included in the config, it is set to 0 (it starts with 1 on configs that have it).
+   *
+   * @deprecated Please use {@link #version()} instead.
    */
   long revEpoch();
+
+  ConfigVersion version();
 
   /**
    * The bucket type.

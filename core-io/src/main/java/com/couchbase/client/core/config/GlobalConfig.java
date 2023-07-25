@@ -38,8 +38,7 @@ import java.util.Set;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GlobalConfig {
 
-  private final long rev;
-  private final long revEpoch;
+  private final ConfigVersion version;
   private final List<PortInfo> portInfos;
   private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
 
@@ -51,8 +50,7 @@ public class GlobalConfig {
     @JsonProperty("clusterCapabilities") Map<String, Set<ClusterCapabilities>> clusterCapabilities,
     @JacksonInject("origin") String origin
   ) {
-    this.rev = rev;
-    this.revEpoch = revEpoch;
+    this.version = new ConfigVersion(revEpoch, rev);
     this.portInfos = enrichPortInfos(portInfos, origin);
     this.clusterCapabilities = AbstractBucketConfig.convertClusterCapabilities(clusterCapabilities);
   }
@@ -83,16 +81,26 @@ public class GlobalConfig {
 
   /**
    * The revision id of this global config.
+   *
+   * @deprecated Please use {@link #version()} instead.
    */
+  @Deprecated
   public long rev() {
-    return rev;
+    return version().rev();
   }
 
   /**
    * The epoch of the revision, 0 if not set on the config.
+   *
+   * @deprecated Please use {@link #version()} instead.
    */
+  @Deprecated
   public long revEpoch() {
-    return revEpoch;
+    return version.epoch();
+  }
+
+  public ConfigVersion version() {
+    return version;
   }
 
   /**
@@ -112,8 +120,7 @@ public class GlobalConfig {
   @Override
   public String toString() {
     return "GlobalConfig{" +
-      "rev=" + rev +
-      ", revEpoch=" + revEpoch +
+      "version=" + version +
       ", portInfos=" + portInfos +
       ", clusterCapabilities=" + clusterCapabilities +
       '}';

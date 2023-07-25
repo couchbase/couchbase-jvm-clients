@@ -243,8 +243,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             + ", nodes=" + redactSystem(nodes())
             + ", partitionInfo=" + partitionInfo
             + ", tainted=" + tainted
-            + ", rev=" + rev()
-            + ", revEpoch=" + revEpoch()
+            + ", version=" + version()
             + '}';
     }
 }

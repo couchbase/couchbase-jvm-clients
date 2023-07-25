@@ -118,8 +118,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     public String toString() {
         return "MemcachedBucketConfig{" +
           "name='" + redactMeta(name()) + '\'' +
-          ", rev=" + rev() +
-          ", revEpoch=" + revEpoch() +
+          ", version=" + version() +
           ", nodes=" + redactSystem(nodes()) +
           '}';
     }
