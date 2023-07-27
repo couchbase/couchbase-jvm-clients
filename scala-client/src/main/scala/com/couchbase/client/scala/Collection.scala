@@ -732,6 +732,101 @@ class Collection(
   ): Iterable[GetReplicaResult] =
     reactive.getAllReplicas(id, options).toIterable()
 
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAllReplicasOptions]] instead, which supports all available options.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param timeout $Timeout
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+    **/
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Try[Iterable[LookupInReplicaResult]] =
+    Try(reactive.lookupInAllReplicas(id, spec, timeout).toIterable())
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param options $Options
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+   **/
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAllReplicasOptions
+  ): Try[Iterable[LookupInReplicaResult]] =
+    Try(reactive.lookupInAllReplicas(id, spec, options).toIterable())
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param timeout $Timeout
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+   **/
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Try[LookupInReplicaResult] = {
+    Try(
+      reactive.lookupInAnyReplica(id, spec, timeout).block()
+    )
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param options $Options
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+   **/
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAnyReplicaOptions
+  ): Try[LookupInReplicaResult] =
+    Try(
+      reactive.lookupInAnyReplica(id, spec, options).block()
+    )
+
   /** Checks if a document exists.
     *
     * This doesn't fetch the document so if the application simply needs to know if the document exists, this is the

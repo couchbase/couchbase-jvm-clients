@@ -1,6 +1,5 @@
 package com.couchbase.client.scala.subdoc
 
-import java.util.concurrent.TimeUnit
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
@@ -17,8 +16,10 @@ import com.couchbase.client.test.{
   Capabilities,
   ClusterAwareIntegrationTest,
   ClusterType,
-  IgnoreWhen
+  IgnoreWhen,
+  Util
 }
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
@@ -58,8 +59,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
   @Test
   def lookupIn(): Unit = {
-    val docId = TestUtils.docId()
-    coll.remove(docId)
+    val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
 
@@ -76,6 +76,53 @@ class SubdocGetSpec extends ScalaIntegrationTest {
         assert(result.expiry.isEmpty)
       case Failure(err) => assert(false, s"unexpected error $err")
     }
+  }
+
+  @Test
+  def lookupInAnyReplicaBlocking(): Unit = {
+    val docId        = TestUtils.docId()
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
+    val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
+
+    coll.lookupInAnyReplica(docId, Array(get("foo"), get("age"))) match {
+      case Success(result) =>
+        assert(result.cas != 0)
+        assert(result.cas == insertResult.cas)
+        assert(result.contentAs[String](0).get == "bar")
+        assert(result.contentAsBytes(0).get sameElements "\"bar\"".getBytes(StandardCharsets.UTF_8))
+        assert(result.contentAs[Int](1).get == 22)
+        assert(result.expiry.isEmpty)
+      case Failure(err) => assert(false, s"unexpected error $err")
+    }
+  }
+
+  @Test
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  def lookupInAllReplicasBlocking(): Unit = {
+    val docId        = TestUtils.docId()
+    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
+    val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
+
+    Util.waitUntilCondition(() => {
+      val results = coll.lookupInAllReplicas(docId, Array(get("foo"), get("age"))).get
+
+      try {
+        assertEquals(config.numReplicas() + 1, results.size);
+        for (result <- results) {
+          assert(result.cas != 0)
+          assert(result.cas == insertResult.cas)
+          assert(result.contentAs[String](0).get == "bar")
+          assert(
+            result.contentAsBytes(0).get sameElements "\"bar\"".getBytes(StandardCharsets.UTF_8)
+          )
+          assert(result.contentAs[Int](1).get == 22)
+          assert(result.expiry.isEmpty)
+        }
+        true
+      } catch {
+        case _: AssertionError => false
+      }
+    })
   }
 
   @Test

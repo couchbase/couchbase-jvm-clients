@@ -284,13 +284,7 @@ class AsyncCollection(
       transcoder: Transcoder,
       parentSpan: Option[RequestSpan]
   ): Future[LookupInResult] = {
-    var commands = spec.map {
-      case Get("", _xattr)      => new CoreSubdocGetCommand(SubdocCommandType.GET_DOC, "", _xattr)
-      case Get(path, _xattr)    => new CoreSubdocGetCommand(SubdocCommandType.GET, path, _xattr)
-      case Exists(path, _xattr) => new CoreSubdocGetCommand(SubdocCommandType.EXISTS, path, _xattr)
-      case Count(path, _xattr)  => new CoreSubdocGetCommand(SubdocCommandType.COUNT, path, _xattr)
-    }
-
+    var commands = LookupInSpec.map(spec)
     if (withExpiry) {
       commands = commands :+ new CoreSubdocGetCommand(
         SubdocCommandType.GET,
@@ -552,6 +546,82 @@ class AsyncCollection(
     // Users that require a true streaming solution should use the reactive version.
     convert(kvOps.getAllReplicasReactive(convert(options), id))
       .map(result => convertReplica(result, environment, None))
+      .collectSeq()
+      .block(options.timeout)
+      .map(result => Future.successful(result))
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * $Same
+    */
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Future[LookupInReplicaResult] = {
+    val opts = LookupInAnyReplicaOptions().timeout(timeout)
+    lookupInAnyReplica(id, spec, opts)
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * $Same
+    */
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAnyReplicaOptions
+  ): Future[LookupInReplicaResult] = {
+    convert(kvOps.subdocGetAnyReplicaReactive(convert(options), id, LookupInSpec.map(spec).asJava))
+      .map(result => convertLookupInReplica(result, environment))
+      .toFuture
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * Note that this will block the user's thread until all versions have been returned (or failed).
+    *
+    * Users needing a true non-blocking streaming version should use the reactive version.
+    *
+    * $Same
+    */
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Seq[Future[LookupInReplicaResult]] = {
+    val opts = LookupInAllReplicasOptions().timeout(timeout)
+    lookupInAllReplicas(id, spec, opts)
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * Note that this will block the user's thread until all versions have been returned (or failed).
+    *
+    * Users needing a true non-blocking streaming version should use the reactive version.
+    *
+    * $Same
+    */
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAllReplicasOptions
+  ): Seq[Future[LookupInReplicaResult]] = {
+    convert(kvOps.subdocGetAllReplicasReactive(convert(options), id, LookupInSpec.map(spec).asJava))
+      .map(result => convertLookupInReplica(result, environment))
       .collectSeq()
       .block(options.timeout)
       .map(result => Future.successful(result))

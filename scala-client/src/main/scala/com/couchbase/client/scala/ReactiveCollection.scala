@@ -376,6 +376,94 @@ class ReactiveCollection(async: AsyncCollection) {
     SMono.defer(() => SMono.fromFuture(async.lookupIn(id, spec, options)))
   }
 
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * $Same */
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): SMono[LookupInReplicaResult] = {
+    convert(
+      kvOps
+        .subdocGetAnyReplicaReactive(makeCommonOptions(timeout), id, LookupInSpec.map(spec).asJava)
+    ).map(result => convertLookupInReplica(result, environment))
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * $Same */
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAnyReplicaOptions
+  ): SMono[LookupInReplicaResult] = {
+    convert(kvOps.subdocGetAnyReplicaReactive(convert(options), id, LookupInSpec.map(spec).asJava))
+      .map(result => convertLookupInReplica(result, environment))
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAllReplicasOptions]] instead, which supports all available options.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * $Same */
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): SFlux[LookupInReplicaResult] = {
+    convert(
+      kvOps
+        .subdocGetAllReplicasReactive(makeCommonOptions(timeout), id, LookupInSpec.map(spec).asJava)
+    ).map(result => convertLookupInReplica(result, environment))
+  }
+
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAllReplicasOptions]] instead, which supports all available options.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * $Same */
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAllReplicasOptions
+  ): SFlux[LookupInReplicaResult] = {
+    convert(kvOps.subdocGetAllReplicasReactive(convert(options), id, LookupInSpec.map(spec).asJava))
+      .map(result => convertLookupInReplica(result, environment))
+  }
+
   /** Retrieves any available version of the document.
     *
     * $Same */

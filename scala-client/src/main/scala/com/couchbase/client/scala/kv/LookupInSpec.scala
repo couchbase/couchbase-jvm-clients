@@ -16,6 +16,9 @@
 
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.api.kv.CoreSubdocGetCommand
+import com.couchbase.client.core.msg.kv.SubdocCommandType
+
 /** Methods to allow creating a sequence of `LookupInSpec` for providing to a `lookupIn` SubDocument method.
   *
   * @define Path           a valid path in the document, such as "foo.bar"
@@ -53,6 +56,16 @@ object LookupInSpec {
   def exists(path: String): Exists = {
     Exists(path)
   }
+
+  private[scala] def map(spec: collection.Seq[LookupInSpec]): Seq[CoreSubdocGetCommand] = {
+    spec.map {
+      case Get("", _xattr)      => new CoreSubdocGetCommand(SubdocCommandType.GET_DOC, "", _xattr)
+      case Get(path, _xattr)    => new CoreSubdocGetCommand(SubdocCommandType.GET, path, _xattr)
+      case Exists(path, _xattr) => new CoreSubdocGetCommand(SubdocCommandType.EXISTS, path, _xattr)
+      case Count(path, _xattr)  => new CoreSubdocGetCommand(SubdocCommandType.COUNT, path, _xattr)
+    }
+  }
+
 }
 
 /** Represents a single SubDocument lookup operation, such as fetching a particular field. */

@@ -124,6 +124,17 @@ private[scala] object CoreCommonConverters {
     )
   }
 
+  def convertLookupInReplica(
+      in: CoreSubdocGetResult,
+      env: ClusterEnvironment
+  ): LookupInReplicaResult = {
+    LookupInReplicaResult(
+      in,
+      None,
+      in.replica()
+    )
+  }
+
   def convert(in: CoreMutationResult): MutationResult = {
     MutationResult(
       in.cas(),

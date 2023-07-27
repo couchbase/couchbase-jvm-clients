@@ -428,7 +428,7 @@ class AsyncCluster(
   private[scala] def performGlobalConnect(): Unit = {
     couchbaseOps match {
       case core: Core => core.initGlobalConfig()
-      case _ =>
+      case _          =>
     }
   }
 }

@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
 import com.couchbase.client.core.error.subdoc.PathInvalidException;
@@ -26,6 +27,7 @@ import com.couchbase.client.core.error.subdoc.PathMismatchException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.java.codec.RawStringTranscoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
@@ -58,8 +60,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -408,6 +408,34 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasTooManyBlocking() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    assertThrows(WrongNumberOfReplicasException.class, () ->
+      waitForReplicaResult(() -> {
+        Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, CbCollections.listOf(get("1"), get("2"), get("3"), get("4"), get("5"), get("6"), get("7"), get("8"), get("9"), get("10"), get("11"), get("12"), get("13"), get("14"), get("15"), get("16"), get("17")));
+        return result.peek(r -> assertEquals(content.get("foo"), r.contentAs(0, String.class))).collect(Collectors.toList());
+      }));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAnyReplicasTooManyBlocking() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+
+    assertThrows(DocumentUnretrievableException.class, () -> collection.lookupInAnyReplica(id, CbCollections.listOf(get("1"), get("2"), get("3"), get("4"), get("5"), get("6"), get("7"), get("8"), get("9"), get("10"), get("11"), get("12"), get("13"), get("14"), get("15"), get("16"), get("17"))));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
   @Disabled
     // Needs wholedoc get - see https://issues.couchbase.com/browse/MB-23162
   void getFullDocumentAllReplicasBlocking() throws InterruptedException {
@@ -521,7 +549,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.remove(id);
   }
 
-  private static List<LookupInReplicaResult> waitForReplicaResult(Supplier<List<LookupInReplicaResult>> func) throws InterruptedException {
+  private List<LookupInReplicaResult> waitForReplicaResult(Supplier<List<LookupInReplicaResult>> func) throws InterruptedException {
     final int MAX_REPLICA_TRIES = 20;
     List<LookupInReplicaResult> resultList;
     int tries = 0;
@@ -529,8 +557,16 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
       MILLISECONDS.sleep(100);
       resultList = func.get();
     } while (resultList.size() < config().numReplicas()+1 && ++tries <= MAX_REPLICA_TRIES);
-    assertTrue(resultList.size() == config().numReplicas()+1);
+    if(resultList.size() != config().numReplicas() + 1){
+      throw new WrongNumberOfReplicasException(("expected "+(config().numReplicas() + 1)+" found "+resultList.size()));
+    }
     return resultList;
+  }
+
+  private class WrongNumberOfReplicasException extends RuntimeException{
+    public WrongNumberOfReplicasException(String s){
+      super(s);
+    }
   }
 
   @Test

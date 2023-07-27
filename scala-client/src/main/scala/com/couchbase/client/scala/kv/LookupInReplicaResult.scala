@@ -1,30 +1,35 @@
+/*
+ * Copyright (c) 2023 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult
+import com.couchbase.client.scala.codec.JsonDeserializer
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import com.couchbase.client.core.error.InvalidArgumentException
-import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
-import com.couchbase.client.core.msg.kv.{
-  SubDocumentField,
-  SubDocumentOpResponseStatus,
-  SubdocCommandType
-}
-import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder}
-
-import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
-import scala.jdk.CollectionConverters._
+import scala.util.Try
 
-/** The results of a SubDocument 'lookupIn' operation.
+/** The results of a SubDocument lookupIn operation when reading from replicas.
   *
   * When doing a `lookupIn` the application provides a sequence of [[LookupInSpec]].  The indexes into this sequence
   * are used when retrieving the results.
   *
+  * @param isReplica whether this document is from a replica (versus the active)
   * @param expiryTime the document's expiration time, if it was fetched with the `withExpiry` flag set.  If that flag
   *                   was not set, this will be None.  The time is the point in time when the document expires.
   * @define Index          the index of the [[LookupInSpec]] provided to the `lookupIn`
@@ -35,10 +40,10 @@ import scala.jdk.CollectionConverters._
   * @author Graham Pople
   * @since 1.0.0
   **/
-case class LookupInResult private (
+case class LookupInReplicaResult private (
     private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
-    transcoder: Transcoder
+    isReplica: Boolean
 ) {
 
   /** The unique identifier of the document. */
@@ -77,7 +82,6 @@ case class LookupInResult private (
     * @param index the index of the subdoc value to retrieve.
     * @return the JSON content as a byte array
     */
-  @Stability.Uncommitted
   def contentAsBytes(index: Int): Try[Array[Byte]] = contentAs[Array[Byte]](index)
 
   /** Returns whether content has successfully been returned for a particular `LookupInSpec`.
@@ -91,52 +95,4 @@ case class LookupInResult private (
   def exists(index: Int): Boolean = {
     LookupInResult.exists(internal, index)
   }
-}
-
-private[scala] object LookupInResult {
-  def contentAs[T](
-      id: String,
-      internal: CoreSubdocGetResult,
-      index: Int,
-      deserializer: JsonDeserializer[T],
-      tag: ClassTag[T]
-  ): Try[T] = {
-    Try(internal.field(index))
-      .flatMap(field => {
-        field.error().asScala match {
-          case Some(err) => Failure(err)
-          case _ =>
-            field.`type` match {
-              case SubdocCommandType.EXISTS =>
-                if (tag.runtimeClass.isAssignableFrom(classOf[Boolean])) {
-                  val exists = field.status == SubDocumentOpResponseStatus.SUCCESS
-                  Success(exists.asInstanceOf[T])
-                } else {
-                  Failure(
-                    new InvalidArgumentException(
-                      "Exists results can only be returned as Boolean",
-                      null,
-                      ReducedKeyValueErrorContext.create(id)
-                    )
-                  )
-                }
-              case _ => deserializer.deserialize(field.value)
-            }
-        }
-      })
-  }
-
-  def exists(internal: CoreSubdocGetResult, index: Int): Boolean = {
-    val content = internal.fields.asScala
-    if (index < 0 || index >= content.size) {
-      false
-    } else {
-      val field = content(index)
-      field.error().asScala match {
-        case Some(err) => false
-        case _         => true
-      }
-    }
-  }
-
 }
