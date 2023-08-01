@@ -34,7 +34,7 @@ object QueryIndexManagerHelper {
       command: com.couchbase.client.protocol.sdk.Command
   ): com.couchbase.client.protocol.run.Result.Builder = {
     val qim = command.getClusterCommand.getQueryIndexManager
-    if (!qim.hasShared) throw new UnsupportedOperationException
+    if (!qim.hasShared) throw new UnsupportedOperationException("ClusterQueryIndexManager shared")
     val op = command.getClusterCommand.getQueryIndexManager.getShared
     handleQueryIndexManagerShared(Left((cluster, qim.getBucketName)), op)
   }
@@ -44,7 +44,7 @@ object QueryIndexManagerHelper {
       command: com.couchbase.client.protocol.sdk.Command
   ): com.couchbase.client.protocol.run.Result.Builder = {
     if (!command.getCollectionCommand.getQueryIndexManager.hasShared) {
-      throw new UnsupportedOperationException
+      throw new UnsupportedOperationException("ClusterQueryIndexManager shared")
     }
     // [start:1.4.3]
     val op = command.getCollectionCommand.getQueryIndexManager.getShared
@@ -52,7 +52,7 @@ object QueryIndexManagerHelper {
     // [end:1.4.3]
     // [start:<1.4.3]
 /*
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("Cannot handle ClusterQueryIndexManager");
     // [end:<1.4.3]
 */
   }
@@ -211,7 +211,7 @@ object QueryIndexManagerHelper {
         // [end:1.4.4]
         // [start:<1.4.4]
 /*
-          throw new UnsupportedOperationException()
+          throw new UnsupportedOperationException("QueryIndexManager")
           // [end:<1.4.4]
 */
       }

@@ -238,7 +238,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
         }
         // [end:1.2.4]
-        else throw new UnsupportedOperationException()
+        else throw new UnsupportedOperationException("Unknown cluster command")
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
         val bucket = connection.cluster.bucket(blc.getBucketName)
@@ -269,7 +269,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 
       if (clc.hasQueryIndexManager) {
         result = QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, op)
-      } else throw new UnsupportedOperationException()
+      } else throw new UnsupportedOperationException("Unknown collection command")
     } else
       throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
@@ -389,11 +389,11 @@ object ScalaSdkCommandExecutor {
       if (stt.hasExclusive && stt.getExclusive) {
         if (stt.hasAsString) {
           Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
-        } else throw new UnsupportedOperationException();
+        } else throw new UnsupportedOperationException("Unknown scan term");
       }
       if (stt.hasAsString) {
         Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
-      } else throw new UnsupportedOperationException();
+      } else throw new UnsupportedOperationException("Unknown scan term");
     } else throw new UnsupportedOperationException("Unknown scan term")
   }
 
@@ -406,7 +406,7 @@ object ScalaSdkCommandExecutor {
         RangeScan(from, to)
       } else if (scan.hasDocIdPrefix) {
         com.couchbase.client.scala.kv.ScanType.PrefixScan(scan.getDocIdPrefix)
-      } else throw new UnsupportedOperationException()
+      } else throw new UnsupportedOperationException("Unknown scan type")
     } else if (request.getScanType.hasSampling) {
       val scan = request.getScanType.getSampling
       if (scan.hasSeed) {
@@ -507,7 +507,7 @@ object ScalaSdkCommandExecutor {
         // [end:1.1.5]
         // [start:<1.1.5]
 /*
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("This SDK version does not support expiry")
         // [end:<1.1.5]
 */
       }
@@ -544,7 +544,7 @@ object ScalaSdkCommandExecutor {
         // [end:1.1.5]
         // [start:<1.1.5]
 /*
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("This SDK version does not support preserve expiry")
         // [end:<1.1.5]
 */
       }
@@ -567,7 +567,7 @@ object ScalaSdkCommandExecutor {
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasBatchByteLimit) out = out.batchByteLimit(opts.getBatchByteLimit)
       if (opts.hasBatchItemLimit) out = out.batchItemLimit(opts.getBatchItemLimit)
-      if (opts.hasBatchTimeLimit) throw new UnsupportedOperationException();
+      if (opts.hasBatchTimeLimit) throw new UnsupportedOperationException("Cannot support batch time limit");
       // Will add when adding support for Caps.OBSERVABILITY_1.
       // if (opts.hasParentSpanId) out = out.parentSpan(spans.get(opts.getParentSpanId))
       out

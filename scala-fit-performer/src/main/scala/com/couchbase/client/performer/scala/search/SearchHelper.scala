@@ -87,7 +87,7 @@ object SearchHelper {
             HighlightStyle.ANSI
           case com.couchbase.client.protocol.sdk.search.HighlightStyle.HIGHLIGHT_STYLE_HTML =>
             HighlightStyle.HTML
-          case _ => throw new UnsupportedOperationException()
+          case _ => throw new UnsupportedOperationException("Bad FTS style")
         })
       } else None
       val fields: Option[Seq[String]] =
@@ -99,7 +99,7 @@ object SearchHelper {
     if (o.hasScanConsistency)
       if (o.getScanConsistency == SEARCH_SCAN_CONSISTENCY_NOT_BOUNDED)
         opts = opts.scanConsistency(SearchScanConsistency.NotBounded)
-      else throw new UnsupportedOperationException
+      else throw new UnsupportedOperationException("FTS consistency")
     if (o.hasConsistentWith)
       opts = opts.scanConsistency(
         SearchScanConsistency.ConsistentWith(convertMutationState(o.getConsistentWith))
@@ -117,20 +117,20 @@ object SearchHelper {
                   case "date"   => FieldSortType.Date
                   case "number" => FieldSortType.Number
                   case "string" => FieldSortType.String
-                  case _        => throw new UnsupportedOperationException
+                  case _        => throw new UnsupportedOperationException("Bad FTS sort")
                 })
                 else None,
                 if (ss.hasMode) Some(ss.getMode match {
                   case "default" => FieldSortMode.Default
                   case "min"     => FieldSortMode.Min
                   case "max"     => FieldSortMode.Max
-                  case _         => throw new UnsupportedOperationException
+                  case _         => throw new UnsupportedOperationException("Bad FTS mode")
                 })
                 else None,
                 if (ss.hasMissing) Some(ss.getMissing match {
                   case "first" => FieldSortMissing.First
                   case "last"  => FieldSortMissing.Last
-                  case _       => throw new UnsupportedOperationException
+                  case _       => throw new UnsupportedOperationException("Bad FTS missing")
                 })
                 else None,
                 if (ss.hasDesc) Some(ss.getDesc) else None

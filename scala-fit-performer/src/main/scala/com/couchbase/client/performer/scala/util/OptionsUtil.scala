@@ -26,14 +26,14 @@ object OptionsUtil {
       clusterEnvironment = ClusterEnvironment.builder
       if (cc.getUseCustomSerializer) {
         // Scala handles serializers differently
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Cannot handle custom serializer")
       }
       clusterEnvironment = applyClusterConfig(clusterEnvironment, cc)
       if (cc.hasObservabilityConfig) {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Cannot handle observability")
       }
       if (cc.hasTransactionsConfig) {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Cannot handle transactions config")
       }
     }
     Option(clusterEnvironment)
@@ -117,7 +117,7 @@ object OptionsUtil {
       ioConfig = ioConfig.tcpKeepAliveTime(Duration(cc.getTcpKeepAliveTimeMillis, TimeUnit.MILLISECONDS))
     }
     if (cc.getForceIPV4) {
-      throw new UnsupportedOperationException
+      throw new UnsupportedOperationException("Cannot force IPV4")
     }
     if (cc.hasConfigPollIntervalSecs) {
       if (ioConfig == null) {
@@ -126,7 +126,7 @@ object OptionsUtil {
       ioConfig = ioConfig.configPollInterval(Duration(cc.getConfigPollIntervalSecs, TimeUnit.SECONDS))
     }
     if (cc.hasConfigPollFloorIntervalSecs) {
-      throw new UnsupportedOperationException
+      throw new UnsupportedOperationException("Cannot handle hasConfigPollFloorIntervalSecs")
     }
     if (cc.hasConfigIdleRedialTimeoutSecs) {
       if (ioConfig == null) {
