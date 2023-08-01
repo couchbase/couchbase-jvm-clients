@@ -31,11 +31,14 @@ import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownServerPushRequestReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
+import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -46,6 +49,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
@@ -57,6 +61,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.ServerPushOpcode;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -66,6 +71,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -153,6 +159,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private final boolean isInternalTracer;
 
+  private ClustermapChangeNotificationHandler notificationHandler;
+
   /**
    * Creates a new {@link KeyValueMessageHandler}.
    *
@@ -192,14 +200,19 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     errorMap = ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).get();
 
     Set<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    boolean compression = features != null && features.contains(ServerFeature.SNAPPY);
-    boolean collections = features != null && features.contains(ServerFeature.COLLECTIONS);
-    boolean mutationTokens = features != null && features.contains(ServerFeature.MUTATION_SEQNO);
-    boolean syncReplication = features != null && features.contains(ServerFeature.SYNC_REPLICATION);
-    boolean altRequest = features != null && features.contains(ServerFeature.ALT_REQUEST);
-    boolean vattrEnabled = features != null && features.contains(ServerFeature.VATTR);
-    boolean createAsDeleted = features != null && features.contains(ServerFeature.CREATE_AS_DELETED);
-    boolean preserveTtl = features != null && features.contains(ServerFeature.PRESERVE_TTL);
+    if (features == null) {
+      // Running in an embedded channel in a unit test.
+      features = Collections.emptySet();
+    }
+
+    boolean compression = features.contains(ServerFeature.SNAPPY);
+    boolean collections = features.contains(ServerFeature.COLLECTIONS);
+    boolean mutationTokens = features.contains(ServerFeature.MUTATION_SEQNO);
+    boolean syncReplication = features.contains(ServerFeature.SYNC_REPLICATION);
+    boolean altRequest = features.contains(ServerFeature.ALT_REQUEST);
+    boolean vattrEnabled = features.contains(ServerFeature.VATTR);
+    boolean createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
+    boolean preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
 
     if (syncReplication && !altRequest) {
       throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
@@ -219,6 +232,22 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       createAsDeleted,
       preserveTtl
     );
+
+    notificationHandler = new ClustermapChangeNotificationHandler(
+      endpointContext,
+      BaseKeyValueRequest::nextOpaque,
+      ctx.channel(),
+      endpoint.remoteHostname()
+    );
+
+    if (features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION)
+      || features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF)) {
+      // Since we won't be polling this channel for clustermap changes,
+      // trigger a "get clustermap" request to make sure we have a good baseline.
+      // Otherwise, we could miss a change that occurred before this connection was created,
+      // or a change ignored by `ServerPushDisabler` during the handshake sequence.
+      notificationHandler.getBaselineConfig();
+    }
 
     ctx.fireChannelActive();
   }
@@ -272,6 +301,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         }
         request.fail(err);
       }
+    } else if (msg instanceof ByteBuf) {
+      // A low-level request created by the clustermap change notification handler.
+      ctx.write(msg, promise);
     } else {
       eventBus.publish(new InvalidRequestDetectedEvent(ioContext, ServiceType.KV, msg));
       ctx.channel().close().addListener(f -> eventBus.publish(new ChannelClosedProactivelyEvent(
@@ -327,7 +359,9 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
 
     if (request == null) {
-      handleUnknownResponseReceived(ctx, response);
+      if (!notificationHandler.maybeHandleConfigResponse(response)) {
+        handleUnknownResponseReceived(ctx, response);
+      }
       return;
     }
 
@@ -373,7 +407,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     ServerPushOpcode opcode = ServerPushOpcode.of(opcodeByte);
 
     if (opcode == ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
-      handleClustermapChangeNotification(request);
+      handleClustermapChangeNotification(ctx, request);
       return;
     }
 
@@ -382,8 +416,49 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     );
   }
 
-  private void handleClustermapChangeNotification(ByteBuf request) {
-    // Placeholder for future implementation
+  private void handleClustermapChangeNotification(ChannelHandlerContext ctx, ByteBuf request) {
+    String body = bodyAsString(request);
+    if (body.isEmpty()) {
+      // It's a "brief" notification, with only the cluster map version -- not the map itself.
+      handleClustermapChangeNotificationBrief(ctx, request);
+      return;
+    }
+
+    String bucket = endpointContext.bucket().orElse(null);
+    if (bucket != null) {
+      ioContext.core().configurationProvider().proposeBucketConfig(
+        new ProposedBucketConfigContext(bucket, body, endpoint.remoteHostname())
+      );
+    } else {
+      ioContext.core().configurationProvider().proposeGlobalConfig(
+        new ProposedGlobalConfigContext(body, endpoint.remoteHostname())
+      );
+    }
+  }
+
+  private void handleClustermapChangeNotificationBrief(ChannelHandlerContext ctx, ByteBuf request) {
+    ConfigVersion notifiedVersion = getClustermapChangeNotificationVersion(request);
+    notificationHandler.onConfigChangeNotification(notifiedVersion);
+  }
+
+  private static ConfigVersion getClustermapChangeNotificationVersion(ByteBuf request) {
+    ByteBuf extras = MemcacheProtocol.extras(request).orElse(Unpooled.EMPTY_BUFFER);
+
+    long epoch;
+    long rev;
+    if (extras.readableBytes() >= 16) {
+      // Couchbase Server 7.0.2 and later always include rev epoch (see MB-46363).
+      epoch = extras.readLong();
+      rev = extras.readLong();
+    } else if (extras.readableBytes() == 4) {
+      // Couchbase Server 7.0.1 or earlier.
+      epoch = 0;
+      rev = extras.readUnsignedInt();
+    } else {
+      throw new CouchbaseException("Clustermap Change Notification had unexpected extras length: " + extras.readableBytes());
+    }
+
+    return new ConfigVersion(epoch, rev);
   }
 
   /**
