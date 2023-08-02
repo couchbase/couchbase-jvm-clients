@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.13.9</version>
+        <version>1.13.10-SNAPSHOT</version>
     </parent>
 
     <artifactId>java-client</artifactId>
-    <version>3.4.9</version>
+    <version>3.4.10-SNAPSHOT</version>
     <!-- Does not need packaging bundle as the felix plugin does this <packaging>bundle</packaging> -->
 
     <name>Couchbase Java SDK</name>
