@@ -254,35 +254,14 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     var request = clc.getQuery();
                     String query = request.getStatement();
 
-                    Mono<ReactiveQueryResult> queryResult;
-
                     result.setInitiated(getTimeNow());
                     long start = System.nanoTime();
 
-                    if (request.hasOptions()){
-                        queryResult = connection.cluster().reactive().query(query, createOptions(request));
-                    }else{
-                        queryResult = connection.cluster().reactive().query(query);
-                    }
-                    result.setElapsedNanos(System.nanoTime() - start);
+                    Mono<ReactiveQueryResult> queryResult;
+                    if (request.hasOptions()) queryResult = connection.cluster().reactive().query(query, createOptions(request));
+                    else queryResult = connection.cluster().reactive().query(query);
 
-                    return queryResult.publishOn(Schedulers.boundedElastic()).map(r -> {
-                        var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
-
-                        // Content
-                        for (JsonObject row: r.rowsAsObject().toIterable()){
-                            builder.addContent(ByteString.copyFrom(row.toBytes()));
-                        }
-
-                        // Metadata
-                        var convertedMetaData = convertMetaData(r.metaData().block());
-                        builder.setMetaData(convertedMetaData);
-
-                        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-                                .setQueryResult(builder));
-
-                        return result.build();
-                    });
+                    return returnQueryResult(queryResult, result, start);
                 }
 
             } else if (op.hasBucketCommand()) {
@@ -314,6 +293,22 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
             } else if (op.hasScopeCommand()) {
                 var slc = op.getScopeCommand();
                 var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
+
+                // [start:3.0.9]
+                if (slc.hasQuery()) {
+                    var request = slc.getQuery();
+                    String query = request.getStatement();
+
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+
+                    Mono<ReactiveQueryResult> queryResult;
+                    if (request.hasOptions()) queryResult = scope.reactive().query(query, createOptions(request));
+                    else queryResult = scope.reactive().query(query);
+
+                    return returnQueryResult(queryResult, result, start);
+                }
+                // [end:3.0.9]
 
                 // [start:3.4.5]
                 if (slc.hasSearch()) {
@@ -347,5 +342,27 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     @Override
     protected Exception convertException(Throwable raw) {
         return convertExceptionShared(raw);
+    }
+
+    private Mono<Result> returnQueryResult(Mono<ReactiveQueryResult> queryResult, Result.Builder result, Long start) {
+        return queryResult.publishOn(Schedulers.boundedElastic()).map(r -> {
+            result.setElapsedNanos(System.nanoTime() - start);
+
+            var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
+
+            // Content
+            for (JsonObject row: r.rowsAsObject().toIterable()){
+                builder.addContent(ByteString.copyFrom(row.toBytes()));
+            }
+
+            // Metadata
+            var convertedMetaData = convertMetaData(r.metaData().block());
+            builder.setMetaData(convertedMetaData);
+
+            result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                    .setQueryResult(builder));
+
+            return result.build();
+        });
     }
 }

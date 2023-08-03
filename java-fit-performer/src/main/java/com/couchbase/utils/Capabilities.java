@@ -51,6 +51,9 @@ public class Capabilities {
         //TODO: fully implement eventing function manager - Java performer only supports getFunction currently
         out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER);
 
+        out.add(Caps.SDK_QUERY);
+        out.add(Caps.SDK_QUERY_READ_FROM_REPLICA);
+
         return out;
     }
 }

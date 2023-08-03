@@ -19,6 +19,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JsonTranscoder;
@@ -286,6 +287,16 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         } else if (op.hasScopeCommand()) {
           var slc = op.getScopeCommand();
           var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
+
+          // [start:3.0.9]
+          if (slc.hasQuery()) {
+            var query = slc.getQuery().getStatement();
+            QueryResult qr;
+            if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery()));
+            else qr = scope.query(query);
+            populateResult(result, qr);
+          }
+          // [end:3.0.9]
 
           // [start:3.4.5]
           if (slc.hasSearch()) {
@@ -620,10 +631,22 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if(request.hasOptions()){
             var opts = request.getOptions();
             var out = QueryOptions.queryOptions();
+
             if (opts.hasScanConsistency()) {
                 if (opts.getScanConsistency() == ScanConsistency.NOT_BOUNDED) out.scanConsistency(QueryScanConsistency.NOT_BOUNDED);
                 if (opts.getScanConsistency() == ScanConsistency.REQUEST_PLUS) out.scanConsistency(QueryScanConsistency.REQUEST_PLUS);
                 else throw new UnsupportedOperationException("Unexpected scan consistency value:" + opts.getScanConsistency());
+            }
+
+            if (opts.hasConsistentWith()) {
+                out.consistentWith(
+                        MutationState.from(JsonObject.create()).add(new MutationToken(
+                                (short) opts.getConsistentWith().getTokens(0).getPartitionId(),
+                                opts.getConsistentWith().getTokens(0).getPartitionUuid(),
+                                opts.getConsistentWith().getTokens(0).getSequenceNumber(),
+                                opts.getConsistentWith().getTokens(0).getBucketName()
+                        ))
+                );
             }
 
             opts.getRawMap().forEach( (k,v) -> out.raw(k, JsonObject.fromJson(v)) );
@@ -641,11 +664,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             if (opts.hasAdhoc()) out.adhoc(opts.getAdhoc());
             if (opts.hasProfile()) {
-                switch (opts.getProfile()) {
-                    case "OFF": out.profile(QueryProfile.OFF);
-                    case "PHASES": out.profile(QueryProfile.PHASES);
-                    case "TIMINGS": out.profile(QueryProfile.TIMINGS);
-                }
+                if (opts.getProfile().equals("off")) out.profile(QueryProfile.OFF);
+                else if (opts.getProfile().equals("phases")) out.profile(QueryProfile.PHASES);
+                else if (opts.getProfile().equals("timings")) out.profile(QueryProfile.TIMINGS);
+                else throw new UnsupportedOperationException("Query Option Profile: " + opts.getProfile() + " not supported");
             }
             if (opts.hasReadonly()) out.readonly(opts.getReadonly());
 
@@ -659,6 +681,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasTimeoutMillis()) out.timeout(Duration.ofMillis(opts.getTimeoutMillis()));
             if (opts.hasMaxParallelism()) out.maxParallelism(opts.getMaxParallelism());
             if (opts.hasMetrics()) out.metrics(opts.getMetrics());
+            if (opts.hasClientContextId()) out.clientContextId(opts.getClientContextId());
+            // [start:3.2.5]
+            if (opts.hasPreserveExpiry()) out.preserveExpiry(opts.getPreserveExpiry());
+            // [end:3.2.5]
+            // [start:3.4.8]
+            if (opts.hasUseReplica()) out.useReplica(opts.getUseReplica());
+            // [end:3.4.8]
             return out;
         }
         else return null;
