@@ -30,12 +30,10 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.json.Mapper;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 
-import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -97,16 +95,22 @@ public class ClustermapChangeNotificationHandler {
 
     outstandingRequestOpaque = null;
 
-    String config = MemcacheProtocol.bodyAsString(message);
-    String bucketName = MemcacheProtocol.key(message).orElse(EMPTY_BUFFER).toString(StandardCharsets.UTF_8);
+    if (MemcacheProtocol.status(message) != MemcacheProtocol.Status.SUCCESS.status()) {
+      // Try again later.
+      sendGetConfigRequestAfterDelay();
+      return true;
+    }
 
-    if (!bucketName.isEmpty()) {
+    String config = MemcacheProtocol.bodyAsString(message);
+
+    ObjectNode configNode = (ObjectNode) Mapper.decodeIntoTree(config);
+    if (configNode.has("nodeLocator")) {
+      String bucketName = configNode.get("name").textValue();
       configurationProvider.proposeBucketConfig(new ProposedBucketConfigContext(bucketName, config, origin));
     } else {
       configurationProvider.proposeGlobalConfig(new ProposedGlobalConfigContext(config, origin));
     }
 
-    ObjectNode configNode = (ObjectNode) Mapper.decodeIntoTree(config);
     ConfigVersion version = parseConfigVersion(configNode);
     if (!notifiedVersion.isLessThanOrEqualTo(version)) {
       sendGetConfigRequest();
@@ -126,29 +130,27 @@ public class ClustermapChangeNotificationHandler {
     ByteBuf request = MemcacheProtocol.request(channel.alloc(), MemcacheProtocol.Opcode.GET_CONFIG, noDatatype(),
       noPartition(), outstandingRequestOpaque, noCas(), noExtras(), noKey(), noBody());
 
-    try {
-      channel.writeAndFlush(request).addListener((ChannelFuture writeFuture) -> {
-        if (writeFuture.isSuccess()) {
-          return;
-        }
+    channel.writeAndFlush(request).addListener((ChannelFuture writeFuture) -> {
+      if (writeFuture.isSuccess()) {
+        return;
+      }
 
-        boolean active = channel.isActive();
+      boolean active = channel.isActive();
 
-        Event.Severity severity = !active ? Event.Severity.DEBUG : Event.Severity.WARN;
-        endpointContext.environment().eventBus()
-          .publish(new EndpointWriteFailedEvent(severity, endpointContext, writeFuture.cause()));
+      Event.Severity severity = !active ? Event.Severity.DEBUG : Event.Severity.WARN;
+      endpointContext.environment().eventBus()
+        .publish(new EndpointWriteFailedEvent(severity, endpointContext, writeFuture.cause()));
 
-        if (active) {
-          long retryDelayMillis = 10 + (int) (250 * Math.random());
-          channel.eventLoop()
-            .schedule(this::sendGetConfigRequest, retryDelayMillis, TimeUnit.MILLISECONDS);
-        }
-      });
+      if (active) {
+        sendGetConfigRequestAfterDelay();
+      }
+    });
+  }
 
-    } catch (Throwable t) {
-      request.release();
-      channel.close();
-    }
+  private void sendGetConfigRequestAfterDelay() {
+    long retryDelayMillis = 10 + (int) (250 * Math.random());
+    channel.eventLoop()
+      .schedule(this::sendGetConfigRequest, retryDelayMillis, TimeUnit.MILLISECONDS);
   }
 
   private static ConfigVersion parseConfigVersion(ObjectNode json) {

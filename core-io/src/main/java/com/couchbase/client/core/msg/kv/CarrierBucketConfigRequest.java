@@ -17,6 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -24,26 +26,40 @@ import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 import java.util.Map;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
-public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest, UnmonitoredRequest {
+public class CarrierBucketConfigRequest
+  extends BaseKeyValueRequest<CarrierBucketConfigResponse>
+  implements TargetedRequest, UnmonitoredRequest, ConfigRequest {
 
   private final NodeIdentifier target;
+  private final Purpose purpose;
 
-  public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                                    final RetryStrategy retryStrategy, final NodeIdentifier target) {
+  public CarrierBucketConfigRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    CollectionIdentifier collectionIdentifier,
+    final RetryStrategy retryStrategy,
+    final NodeIdentifier target,
+    final Purpose purpose
+  ) {
     super(timeout, ctx, retryStrategy, null, collectionIdentifier);
     this.target = target;
+    this.purpose = requireNonNull(purpose);
   }
 
   @Override
@@ -61,6 +77,10 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
   @Override
   public NodeIdentifier target() {
     return target;
+  }
+
+  public Purpose purpose() {
+    return purpose;
   }
 
   @Override

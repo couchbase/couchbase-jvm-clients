@@ -39,6 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A request to fetch a global configuration.
@@ -48,19 +49,21 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
  */
 public class CarrierGlobalConfigRequest
   extends BaseKeyValueRequest<CarrierGlobalConfigResponse>
-  implements TargetedRequest, UnmonitoredRequest {
+  implements TargetedRequest, UnmonitoredRequest, ConfigRequest {
 
   private final NodeIdentifier target;
+  private final Purpose purpose;
 
-  public CarrierGlobalConfigRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                    final NodeIdentifier target) {
+  public CarrierGlobalConfigRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final NodeIdentifier target,
+    final Purpose purpose
+  ) {
     super(timeout, ctx, retryStrategy, null, null);
     this.target = target;
-  }
-
-  @Override
-  public NodeIdentifier target() {
-    return target;
+    this.purpose = requireNonNull(purpose);
   }
 
   @Override
@@ -73,6 +76,15 @@ public class CarrierGlobalConfigRequest
   public CarrierGlobalConfigResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
     byte[] content = bodyAsBytes(response);
     return new CarrierGlobalConfigResponse(decodeStatus(response), content);
+  }
+
+  @Override
+  public NodeIdentifier target() {
+    return target;
+  }
+
+  public Purpose purpose() {
+    return purpose;
   }
 
   @Override

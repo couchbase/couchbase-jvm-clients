@@ -38,14 +38,24 @@ public class KeyValueChannelContext {
   private final boolean altRequest;
   private final boolean createAsDeleted;
   private final boolean preserveTtl;
+  private final boolean clustermapChangeNotification;
   private final CollectionMap collectionMap;
   private final ChannelId channelId;
 
-  public KeyValueChannelContext(final CompressionConfig compression, final boolean collections,
-                                final boolean mutationTokens, final Optional<String> bucket,
-                                final boolean syncReplication, final boolean vattrEnabled, final boolean altRequest,
-                                final CollectionMap collectionMap, final ChannelId channelId,
-                                final boolean createAsDeleted, final boolean preserveTtl) {
+  public KeyValueChannelContext(
+    final CompressionConfig compression,
+    final boolean collections,
+    final boolean mutationTokens,
+    final Optional<String> bucket,
+    final boolean syncReplication,
+    final boolean vattrEnabled,
+    final boolean altRequest,
+    final CollectionMap collectionMap,
+    final ChannelId channelId,
+    final boolean createAsDeleted,
+    final boolean preserveTtl,
+    final boolean clustermapChangeNotification
+  ) {
     this.compression = compression;
     this.collections = collections;
     this.mutationTokensEnabled = mutationTokens;
@@ -57,6 +67,7 @@ public class KeyValueChannelContext {
     this.channelId = channelId;
     this.createAsDeleted = createAsDeleted;
     this.preserveTtl = preserveTtl;
+    this.clustermapChangeNotification = clustermapChangeNotification;
   }
 
   public boolean collectionsEnabled() {
@@ -101,6 +112,10 @@ public class KeyValueChannelContext {
 
   public boolean preserveTtl() {
     return preserveTtl;
+  }
+
+  public boolean clustermapChangeNotification() {
+    return clustermapChangeNotification;
   }
 
   /**

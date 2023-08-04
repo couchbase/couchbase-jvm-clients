@@ -29,6 +29,7 @@ import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
+import com.couchbase.client.core.msg.kv.ConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.NanoTimestamp;
@@ -269,7 +270,8 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         ctx,
         new CollectionIdentifier(name, Optional.empty(), Optional.empty()),
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier()
+        nodeInfo.identifier(),
+        ConfigRequest.Purpose.REFRESH
       );
       core.send(request);
       return Reactor
@@ -285,6 +287,10 @@ public class KeyValueBucketRefresher implements BucketRefresher {
             ));
           }
           return response.status().success();
+        })
+        .filter(response -> {
+          // Ignore responses from channels where clustermap change notifications are enabled.
+          return response.content().length > 0;
         })
         .map(response ->
           new ProposedBucketConfigContext(name, new String(response.content(), UTF_8), nodeInfo.hostname())
