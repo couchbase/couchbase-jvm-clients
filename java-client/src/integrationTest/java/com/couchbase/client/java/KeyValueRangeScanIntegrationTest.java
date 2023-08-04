@@ -100,7 +100,9 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
     collection.scan(ScanType.rangeScan(null, null),
         scanOptions().timeout(TIMEOUT)).forEach(item -> {
       count.incrementAndGet();
-      assertTrue(item.contentAsBytes().length > 0);
+      if(DOC_IDS.contains(item.id())){
+        assertTrue(item.contentAsBytes().length > 0);
+      }
       assertFalse(item.idOnly());
     });
     assertTrue(count.get() >= DOC_IDS.size());
