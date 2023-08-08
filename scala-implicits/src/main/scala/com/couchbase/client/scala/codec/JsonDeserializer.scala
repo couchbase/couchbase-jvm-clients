@@ -244,6 +244,13 @@ object JsonDeserializer {
     }
   }
 
+  /** `JsonDeserializer` converting a binary representation of content into a `Float`. */
+  implicit object FloatConvert extends JsonDeserializer[Float] {
+    override def deserialize(bytes: Array[Byte]): Try[Float] = {
+      Try(new String(bytes, StandardCharsets.UTF_8).toFloat)
+    }
+  }
+
   /** `JsonDeserializer` converting a binary representation of a document into a `Long`. */
   implicit object LongConvert extends JsonDeserializer[Long] {
     override def deserialize(bytes: Array[Byte]): Try[Long] = {
