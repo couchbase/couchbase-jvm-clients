@@ -24,8 +24,19 @@ import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.internal.toStringUtf8
 
-public class LookupInResult internal constructor(
-    private val core : CoreSubdocGetResult,
+public class LookupInReplicaResult internal constructor(
+    core: CoreSubdocGetResult,
+    defaultSerializer: JsonSerializer,
+    spec: LookupInSpec,
+) : LookupInResult(core, defaultSerializer, spec) {
+    /**
+     * True means the result came from a replica; false means it came from the active.
+     */
+    public val replica: Boolean = core.replica()
+}
+
+public open class LookupInResult internal constructor(
+    private val core: CoreSubdocGetResult,
     private val defaultSerializer: JsonSerializer,
     private val spec: LookupInSpec,
 ) {
@@ -43,8 +54,7 @@ public class LookupInResult internal constructor(
     public val SubdocCount.value: Int get() = content(this).toStringUtf8().toInt()
     public val Subdoc.contentAsBytes: ByteArray get() = content(this)
     public val Subdoc.exists: Boolean get() = exists(spec, index)
-    public inline fun <reified T> Subdoc.contentAs(serializer: JsonSerializer? = null): T
-        = internalContentAs(this, typeRef(), serializer)
+    public inline fun <reified T> Subdoc.contentAs(serializer: JsonSerializer? = null): T = internalContentAs(this, typeRef(), serializer)
 
     @PublishedApi
     internal fun <T> internalContentAs(subdoc: Subdoc, type: TypeRef<T>, serializer: JsonSerializer? = null): T {

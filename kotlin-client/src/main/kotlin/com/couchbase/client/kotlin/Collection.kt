@@ -33,6 +33,7 @@ import com.couchbase.client.core.kv.*
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -52,6 +53,7 @@ import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetReplicaResult
 import com.couchbase.client.kotlin.kv.GetResult
 import com.couchbase.client.kotlin.kv.KvScanConsistency
+import com.couchbase.client.kotlin.kv.LookupInReplicaResult
 import com.couchbase.client.kotlin.kv.LookupInResult
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInResult
@@ -315,6 +317,10 @@ public class Collection internal constructor(
         }
     }
 
+    /**
+     * Like [get], but sends the request to all replicas in addition to the active.
+     * Returns the results from all available sources.
+     */
     public fun getAllReplicas(
         id: String,
         common: CommonOptions = CommonOptions.Default,
@@ -324,8 +330,11 @@ public class Collection internal constructor(
     }
 
     /**
+     * Like [get], but sends the request to all replicas in addition to the active.
+     * Returns the result from whichever server node responded quickest.
+     *
      * @throws DocumentUnretrievableException if the document could not be
-     * retrieved from at least one replica.
+     * retrieved from at least one location.
      */
     public suspend fun getAnyReplica(
         id: String,
@@ -581,6 +590,77 @@ public class Collection internal constructor(
         ).await()
 
         return LookupInResult(coreResult, defaultJsonSerializer, spec)
+    }
+
+    /**
+     * Like [lookupIn], but sends the request to all replicas in addition to the active.
+     * Returns the result from whichever server node responded quickest.
+     *
+     * @param block callback for processing the results, with [LookupInReplicaResult] as the receiver.
+     *
+     * @throws DocumentUnretrievableException if the document could not be
+     * retrieved from at least one location.
+     *
+     * @sample com.couchbase.client.kotlin.samples.subdocLookup
+     * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
+     */
+    @SinceCouchbase("7.5")
+    @UncommittedCouchbaseApi
+    public suspend inline fun <T, L : LookupInSpec> lookupInAnyReplica(
+        id: String,
+        spec: L,
+        common: CommonOptions = CommonOptions.Default,
+        block: LookupInReplicaResult.() -> T
+    ): T {
+        val result = lookupInAnyReplica(id, spec, common)
+        return block(result)
+    }
+
+    /**
+     * Like [lookupIn], but sends the request to all replicas in addition to the active.
+     * Returns the result from whichever server node responded quickest.
+     *
+     * @throws DocumentUnretrievableException if the document could not be
+     * retrieved from at least one location.
+     *
+     * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
+     */
+    @SinceCouchbase("7.5")
+    @UncommittedCouchbaseApi
+    public suspend fun lookupInAnyReplica(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+    ): LookupInReplicaResult {
+        val coreResult = kvOps.subdocGetAnyReplicaReactive(
+            common.toCore(),
+            id,
+            spec.commands,
+        ).awaitFirstOrNull()
+            ?: throw DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionId))
+
+        return LookupInReplicaResult(coreResult, defaultJsonSerializer, spec)
+    }
+
+    /**
+     * Like [lookupIn], but sends the request to all replicas in addition to the active.
+     * Returns the results from all available sources.
+     */
+    @SinceCouchbase("7.5")
+    @UncommittedCouchbaseApi
+    public fun lookupInAllReplicas(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+    ): Flow<LookupInReplicaResult> {
+        val flux = kvOps.subdocGetAllReplicasReactive(
+            common.toCore(),
+            id,
+            spec.commands,
+        )
+        return flux
+            .map { coreResult -> LookupInReplicaResult(coreResult, defaultJsonSerializer, spec) }
+            .asFlow()
     }
 
     public suspend fun mutateIn(

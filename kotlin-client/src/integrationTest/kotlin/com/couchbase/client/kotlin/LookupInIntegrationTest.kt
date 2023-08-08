@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException
 import com.couchbase.client.core.error.subdoc.DocumentTooDeepException
@@ -11,11 +12,13 @@ import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.internal.toStringUtf8
+import com.couchbase.client.kotlin.kv.LookupInReplicaResult
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.internal.LookupInMacro
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -299,6 +302,76 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
                 val count = count("")
             }
             collection.lookupIn(id, spec) { assertEquals(3, spec.count.value) }
+        }
+    }
+
+    @Nested
+    @IgnoreWhen(clusterVersionIsBelow = "7.5")
+    inner class AnyReplica {
+        @Test
+        fun `fails when spec is empty`(): Unit = runBlocking {
+            val id = nextId()
+            val emptySpec = object : LookupInSpec() {}
+            assertThrows<InvalidArgumentException> { collection.lookupIn(id, emptySpec) }
+        }
+
+        @Test
+        fun `throws DocumentUnretrievable when document is absent`(): Unit = runBlocking {
+            val spec = object : LookupInSpec() {
+                @Suppress("unused")
+                val foo = get("foo")
+            }
+            assertThrows<DocumentUnretrievableException> { collection.lookupInAnyReplica(ABSENT_ID, spec) }
+        }
+
+        @Test
+        fun `can get when present`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("foo" to "bar"))
+
+            val spec = object : LookupInSpec() {
+                val foo = get("foo")
+            }
+            collection.lookupInAnyReplica(id, spec) {
+                assertEquals("bar", spec.foo.contentAs<String>())
+            }
+        }
+    }
+
+    @Nested
+    @IgnoreWhen(clusterVersionIsBelow = "7.5")
+    inner class AllReplicas {
+        @Test
+        fun `fails when spec is empty`(): Unit = runBlocking {
+            val id = nextId()
+            val emptySpec = object : LookupInSpec() {}
+            assertThrows<InvalidArgumentException> { collection.lookupIn(id, emptySpec) }
+        }
+
+        @Test
+        fun `returns empty Flow when document is absent`(): Unit = runBlocking {
+            val spec = object : LookupInSpec() {
+                @Suppress("unused")
+                val foo = get("foo")
+            }
+            assertEquals(
+                emptyList<LookupInReplicaResult>(),
+                collection.lookupInAllReplicas(ABSENT_ID, spec).toList(),
+            )
+        }
+
+        @Test
+        fun `always includes exactly one result from active`(): Unit = runBlocking {
+            val id = nextId()
+            collection.upsert(id, mapOf("foo" to "bar"))
+
+            val spec = object : LookupInSpec() {
+                val foo = get("foo")
+            }
+
+            val all = collection.lookupInAllReplicas(id, spec).toList()
+            assertEquals(1, all.count { !it.replica })
+            all.forEach { result -> assertEquals("bar", spec.foo.contentAs<String>(result)) }
         }
     }
 }
