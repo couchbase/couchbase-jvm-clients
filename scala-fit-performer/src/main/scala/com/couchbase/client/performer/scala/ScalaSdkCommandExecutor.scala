@@ -24,9 +24,9 @@ import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
+import com.couchbase.client.performer.scala.kv.LookupInHelper
 import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
-
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
 import com.couchbase.client.protocol.sdk.kv.rangescan.{Scan, ScanTermChoice}
@@ -35,7 +35,7 @@ import com.couchbase.client.protocol.shared.{CouchbaseExceptionEx, CouchbaseExce
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.diagnostics.WaitUntilReadyOptions
 import com.couchbase.client.scala.durability.{Durability, PersistTo, ReplicateTo}
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 
 import scala.concurrent.duration.DurationInt
 // [start:1.2.4]
@@ -115,7 +115,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         if (options == null) collection.get(docId).get
         else collection.get(docId, options).get
       result.setElapsedNanos(System.nanoTime - start)
-      if (op.getReturnResult) populateResult(result, r)
+      if (op.getReturnResult) populateResult(request, result, r)
       else setSuccess(result)
     } else if (op.hasRemove) {
       val request    = op.getRemove
@@ -258,18 +258,26 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             setSuccess(result)
 
         }
-
     } else if (op.hasCollectionCommand) {
       val clc  = op.getCollectionCommand
-      val coll = clc.getCollection
-      val collection = connection.cluster
-        .bucket(coll.getBucketName)
-        .scope(coll.getScopeName)
-        .collection(coll.getCollectionName)
+      val collection = if (clc.hasCollection) {
+          val coll = clc.getCollection
+          Some(connection.cluster
+                  .bucket(coll.getBucketName)
+                  .scope(coll.getScopeName)
+                  .collection(coll.getCollectionName))
+      }
+      else None
 
       if (clc.hasQueryIndexManager) {
-        result = QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, op)
-      } else throw new UnsupportedOperationException("Unknown collection command")
+        result = QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection.get, op)
+      }
+      else if (clc.hasLookupIn || clc.hasLookupInAllReplicas || clc.hasLookupInAnyReplica) {
+        result = LookupInHelper.handleLookupIn(perRun, connection, op, (loc) => getDocId(loc))
+      }
+      else throw new UnsupportedOperationException("Unknown collection command")
+
+
     } else
       throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
@@ -333,20 +341,18 @@ object ScalaSdkCommandExecutor {
     r.expiryTime.foreach(v => builder.setExpiryTime(v.getEpochSecond))
 
     if (request.hasContentAs) {
-      val bytes: Try[Array[Byte]] = if (request.getContentAs.hasAsString) {
-        r.contentAs[String].map(_.getBytes(StandardCharsets.UTF_8))
-      } else if (request.getContentAs.hasAsByteArray) {
-        r.contentAs[Array[Byte]]
-      } else if (request.getContentAs.hasAsJson) {
-        r.contentAs[JsonObject]
-          .map(v => {
-            JacksonTransformers.MAPPER.writeValueAsBytes(v)
-          })
-      } else throw new UnsupportedOperationException("Unknown contentAs")
+        val content = ContentAsUtil.contentType(request.getContentAs,
+            () => r.contentAs[Array[Byte]],
+            () => r.contentAs[String],
+            () => r.contentAs[JsonObject],
+            () => r.contentAs[JsonArray],
+            () => r.contentAs[Boolean],
+            () => r.contentAs[Int],
+            () => r.contentAs[Double])
 
-      bytes match {
+      content match {
         case Success(b) =>
-          builder.setContent(ByteString.copyFrom(b))
+          builder.setContent(b)
 
           com.couchbase.client.protocol.run.Result.newBuilder
             .setSdk(
@@ -607,12 +613,20 @@ object ScalaSdkCommandExecutor {
   }
 
   def populateResult(
+      request: com.couchbase.client.protocol.sdk.kv.Get,
       result: com.couchbase.client.protocol.run.Result.Builder,
       value: GetResult
   ): Unit = {
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
-      .setContent(ByteString.copyFrom(value.contentAs[JsonObject].get.toString.getBytes))
+      .setContent(ContentAsUtil.contentType(request.getContentAs,
+          () => value.contentAs[Array[Byte]],
+          () => value.contentAs[String],
+          () => value.contentAs[JsonObject],
+          () => value.contentAs[JsonArray],
+          () => value.contentAs[Boolean],
+          () => value.contentAs[Int],
+          () => value.contentAs[Double]).get)
     // [start:1.1.0]
     value.expiryTime.foreach(et => builder.setExpiryTime(et.getEpochSecond))
     // [end:1.1.0]

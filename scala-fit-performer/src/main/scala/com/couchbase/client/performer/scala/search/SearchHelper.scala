@@ -20,42 +20,21 @@ package com.couchbase.client.performer.scala.search
 
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
-  convertMutationState,
-  setSuccess
-}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertMutationState, setSuccess}
+import com.couchbase.client.performer.scala.util.ContentAsUtil
 import com.couchbase.client.protocol.run.Result
-import com.couchbase.client.protocol.sdk.search.MatchOperator.{
-  SEARCH_MATCH_OPERATOR_AND,
-  SEARCH_MATCH_OPERATOR_OR
-}
+import com.couchbase.client.protocol.sdk.search.MatchOperator.{SEARCH_MATCH_OPERATOR_AND, SEARCH_MATCH_OPERATOR_OR}
 import com.couchbase.client.protocol.sdk.search.{Search, SearchGeoDistanceUnits}
 import com.couchbase.client.protocol.sdk.search.SearchScanConsistency.SEARCH_SCAN_CONSISTENCY_NOT_BOUNDED
 import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndexes
 import com.couchbase.client.scala.Cluster
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.search.facet.SearchFacet
-import com.couchbase.client.scala.search.facet.SearchFacet.{
-  DateRange,
-  DateRangeFacet,
-  NumericRange,
-  NumericRangeFacet,
-  TermFacet
-}
+import com.couchbase.client.scala.search.facet.SearchFacet.{DateRange, DateRangeFacet, NumericRange, NumericRangeFacet, TermFacet}
 import com.couchbase.client.scala.search.queries.{MatchOperator, SearchQuery}
-import com.couchbase.client.scala.search.result.{
-  SearchFacetResult,
-  SearchMetaData,
-  SearchResult,
-  SearchRow
-}
-import com.couchbase.client.scala.search.sort.{
-  FieldSortMissing,
-  FieldSortMode,
-  FieldSortType,
-  SearchSort
-}
+import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchMetaData, SearchResult, SearchRow}
+import com.couchbase.client.scala.search.sort.{FieldSortMissing, FieldSortMode, FieldSortType, SearchSort}
 import com.couchbase.client.scala.search.{HighlightStyle, SearchOptions, SearchScanConsistency}
 import com.google.protobuf.{ByteString, Timestamp}
 
@@ -535,16 +514,17 @@ object SearchHelper {
       )
     })
     if (command.hasFieldsAs) {
-      val bytes: Try[Array[Byte]] =
-        if (command.getFieldsAs.hasAsString)
-          v.fieldsAs[String].map(_.getBytes(StandardCharsets.UTF_8))
-        else if (command.getFieldsAs.hasAsByteArray) v.fieldsAs[Array[Byte]]
-        else if (command.getFieldsAs.hasAsJson)
-          v.fieldsAs[JsonObject].map(_.toString.getBytes(StandardCharsets.UTF_8))
-        else throw new UnsupportedOperationException("Unknown contentAs")
-      bytes match {
+        val content = ContentAsUtil.contentType(command.getFieldsAs,
+            () => v.fieldsAs[Array[Byte]],
+            () => v.fieldsAs[String],
+            () => v.fieldsAs[JsonObject],
+            () => v.fieldsAs[JsonArray],
+            () => v.fieldsAs[Boolean],
+            () => v.fieldsAs[Int],
+            () => v.fieldsAs[Double])
+      content match {
         case Failure(exception) => throw exception
-        case Success(value)     => builder.setFields(ByteString.copyFrom(value))
+        case Success(value)     => builder.setFields(value)
       }
     }
     builder.build

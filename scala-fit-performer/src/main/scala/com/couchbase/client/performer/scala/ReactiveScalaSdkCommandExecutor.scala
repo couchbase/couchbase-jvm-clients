@@ -19,7 +19,8 @@ import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaIteratorStreamer}
+import com.couchbase.client.performer.scala.kv.LookupInHelper
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer, ScalaIteratorStreamer}
 import com.couchbase.client.protocol.run.Result
 import reactor.core.scala.publisher.SMono
 
@@ -55,90 +56,90 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       op: com.couchbase.client.protocol.sdk.Command,
       perRun: PerRun
   ): com.couchbase.client.protocol.run.Result = {
-    val result = com.couchbase.client.protocol.run.Result.newBuilder()
+    var result = com.couchbase.client.protocol.run.Result.newBuilder()
 
     if (op.hasInsert) {
       val request    = op.getInsert
-      val collection = connection.collection(request.getLocation)
+      val collection = connection.collection(request.getLocation).reactive
       val content    = convertContent(request.getContent)
       val docId      = getDocId(request.getLocation)
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-        case ContentString(value) => collection.insert(docId, value).get
-        case ContentJson(value)   => collection.insert(docId, value).get
+        case ContentString(value) => collection.insert(docId, value).block()
+        case ContentJson(value)   => collection.insert(docId, value).block()
       }
       else
         content match {
-          case ContentString(value) => collection.insert(docId, value, options).get
-          case ContentJson(value)   => collection.insert(docId, value, options).get
+          case ContentString(value) => collection.insert(docId, value, options).block()
+          case ContentJson(value)   => collection.insert(docId, value, options).block()
         }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     } else if (op.hasGet) {
       val request    = op.getGet
-      val collection = connection.collection(request.getLocation)
+      val collection = connection.collection(request.getLocation).reactive
       val docId      = getDocId(request.getLocation)
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r =
-        if (options == null) collection.get(docId).get
-        else collection.get(docId, options).get
+        if (options == null) collection.get(docId).block()
+        else collection.get(docId, options).block()
       result.setElapsedNanos(System.nanoTime - start)
-      if (op.getReturnResult) populateResult(result, r)
+      if (op.getReturnResult) populateResult(request, result, r)
       else setSuccess(result)
     } else if (op.hasRemove) {
       val request    = op.getRemove
-      val collection = connection.collection(request.getLocation)
+      val collection = connection.collection(request.getLocation).reactive
       val docId      = getDocId(request.getLocation)
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r =
-        if (options == null) collection.remove(docId).get
-        else collection.remove(docId, options).get
+        if (options == null) collection.remove(docId).block()
+        else collection.remove(docId, options).block()
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     } else if (op.hasReplace) {
       val request    = op.getReplace
-      val collection = connection.collection(request.getLocation)
+      val collection = connection.collection(request.getLocation).reactive
       val docId      = getDocId(request.getLocation)
       val options    = createOptions(request)
       val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-        case ContentString(value) => collection.replace(docId, value).get
-        case ContentJson(value)   => collection.replace(docId, value).get
+        case ContentString(value) => collection.replace(docId, value).block()
+        case ContentJson(value)   => collection.replace(docId, value).block()
       }
       else
         content match {
-          case ContentString(value) => collection.replace(docId, value, options).get
-          case ContentJson(value)   => collection.replace(docId, value, options).get
+          case ContentString(value) => collection.replace(docId, value, options).block()
+          case ContentJson(value)   => collection.replace(docId, value, options).block()
         }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
     } else if (op.hasUpsert) {
       val request    = op.getUpsert
-      val collection = connection.collection(request.getLocation)
+      val collection = connection.collection(request.getLocation).reactive
       val docId      = getDocId(request.getLocation)
       val options    = createOptions(request)
       val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
       val r = if (options == null) content match {
-        case ContentString(value) => collection.upsert(docId, value).get
-        case ContentJson(value)   => collection.upsert(docId, value).get
+        case ContentString(value) => collection.upsert(docId, value).block()
+        case ContentJson(value)   => collection.upsert(docId, value).block()
       }
       else
         content match {
-          case ContentString(value) => collection.upsert(docId, value, options).get
-          case ContentJson(value)   => collection.upsert(docId, value, options).get
+          case ContentString(value) => collection.upsert(docId, value, options).block()
+          case ContentJson(value)   => collection.upsert(docId, value, options).block()
         }
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
@@ -146,21 +147,21 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
     // [start:1.4.1]
     } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
-      val collection = connection.collection(request.getCollection)
+      val collection = connection.collection(request.getCollection).reactive
       val options    = createOptions(request)
       val scanType   = convertScanType(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val iterator =
+      val flux =
         if (options == null) collection.scan(scanType)
         else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
-      val streamer = new ScalaIteratorStreamer[ScanResult](
-        iterator.get,
+      val streamer = new ScalaFluxStreamer[ScanResult](
+        flux,
         perRun,
         request.getStreamConfig.getStreamId,
         request.getStreamConfig,
-        (r: AnyRef) => processScanResult(request, r.asInstanceOf[ScanResult]),
+        (r: ScanResult) => processScanResult(request, r.asInstanceOf[ScanResult]),
         (err: Throwable) => convertException(err)
       )
       perRun.streamerOwner.addAndStart(streamer)
@@ -229,7 +230,22 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
                 result.build()
             })).block()
         }
+    }
+    else if (op.hasCollectionCommand) {
+        val clc = op.getCollectionCommand
+        val collection = if (clc.hasCollection) {
+            val coll = clc.getCollection
+            Some(connection.cluster
+                    .bucket(coll.getBucketName)
+                    .scope(coll.getScopeName)
+                    .collection(coll.getCollectionName))
+        }
+        else None
 
+        if (clc.hasLookupIn || clc.hasLookupInAllReplicas || clc.hasLookupInAnyReplica) {
+            result = LookupInHelper.handleLookupInReactive(perRun, connection, op, (loc) => getDocId(loc)).block()
+        }
+        else throw new UnsupportedOperationException()
     }
     else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 

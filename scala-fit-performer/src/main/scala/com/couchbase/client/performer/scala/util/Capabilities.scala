@@ -45,6 +45,8 @@ object Capabilities {
     //TODO: fully implement eventing function manager - Scala performer only supports getFunction currently
     out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER)
 
+    out.add(Caps.SDK_LOOKUP_IN)
+
     out
   }
 
