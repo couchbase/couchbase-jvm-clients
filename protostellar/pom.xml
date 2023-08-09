@@ -62,6 +62,13 @@
             <artifactId>opentelemetry-grpc-1.6</artifactId>
             <!-- Older versions of Maven (certainly 3.6.3) cannot support "${opentelemetry.version}-alpha" -->
             <version>1.19.0-alpha</version>
+            <!-- Don't want the transitive dependencies to be shaded into core-io-deps -->
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!--Needed on Windows for annotations-->
