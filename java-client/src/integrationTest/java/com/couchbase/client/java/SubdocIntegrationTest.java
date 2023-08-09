@@ -50,6 +50,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -69,6 +70,7 @@ import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.java.kv.LookupInSpec.get;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -207,7 +209,8 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-383
+  // Needs ING-383
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
   void tooManyCommands() {
     String docId = UUID.randomUUID().toString();
 
@@ -408,22 +411,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
   @Test
   @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
-  void getDocumentAllReplicasTooManyBlocking() throws InterruptedException {
-    String id = UUID.randomUUID().toString();
-
-    JsonObject content = JsonObject.create().put("foo", "bar");
-    collection.upsert(id, content);
-
-    assertThrows(WrongNumberOfReplicasException.class, () ->
-      waitForReplicaResult(() -> {
-        Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, CbCollections.listOf(get("1"), get("2"), get("3"), get("4"), get("5"), get("6"), get("7"), get("8"), get("9"), get("10"), get("11"), get("12"), get("13"), get("14"), get("15"), get("16"), get("17")));
-        return result.peek(r -> assertEquals(content.get("foo"), r.contentAs(0, String.class))).collect(Collectors.toList());
-      }));
-    collection.remove(id);
-  }
-
-  @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
   void getDocumentAnyReplicasTooManyBlocking() throws InterruptedException {
     String id = UUID.randomUUID().toString();
 
@@ -457,7 +444,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
     String id = UUID.randomUUID().toString();
 
-    Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, Collections.singletonList(get("foo")));;
+    Stream<LookupInReplicaResult> result = collection.lookupInAllReplicas(id, Collections.singletonList(get("foo")));
     assertEquals(0, result.count());
   }
 
@@ -483,21 +470,21 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, content);
 
     List<LookupInReplicaResult> resultList = waitForReplicaResult(() -> {
-        CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> result = collection.async().lookupInAllReplicas(id, Collections.singletonList(get("foo")));
-        List<LookupInReplicaResult> collect;
-        try {
-          collect = result.get().stream().map(r -> {
-            try {
-              return r.get();
-            } catch (InterruptedException | ExecutionException e) {
-              throw new RuntimeException(e);
-            }
-          }).collect(Collectors.toList());
-        } catch(Exception e){
-          throw new RuntimeException(e);
-        }
-        return collect;
-      });
+      CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> result = collection.async().lookupInAllReplicas(id, Collections.singletonList(get("foo")));
+      List<LookupInReplicaResult> collect;
+      try {
+        collect = result.get().stream().map(r -> {
+          try {
+            return r.get();
+          } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+          }
+        }).collect(Collectors.toList());
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      return collect;
+    });
 
     assertEquals(content.get("foo"), resultList.get(0).contentAs(0, String.class));
     collection.remove(id);
@@ -556,15 +543,15 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     do {
       MILLISECONDS.sleep(100);
       resultList = func.get();
-    } while (resultList.size() < config().numReplicas()+1 && ++tries <= MAX_REPLICA_TRIES);
-    if(resultList.size() != config().numReplicas() + 1){
-      throw new WrongNumberOfReplicasException(("expected "+(config().numReplicas() + 1)+" found "+resultList.size()));
+    } while (resultList.size() < config().numReplicas() + 1 && ++tries <= MAX_REPLICA_TRIES);
+    if (resultList.size() != config().numReplicas() + 1) {
+      throw new WrongNumberOfReplicasException(("expected " + (config().numReplicas() + 1) + " found " + resultList.size()));
     }
     return resultList;
   }
 
-  private class WrongNumberOfReplicasException extends RuntimeException{
-    public WrongNumberOfReplicasException(String s){
+  private class WrongNumberOfReplicasException extends RuntimeException {
+    public WrongNumberOfReplicasException(String s) {
       super(s);
     }
   }
@@ -611,26 +598,26 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   @Test
   void counterMulti() {
     JsonObject initial = JsonObject.create()
-            .put("mutated", 0)
-            .put("body", "")
-            .put("first_name", "James")
-            .put("age", 0);
+      .put("mutated", 0)
+      .put("body", "")
+      .put("first_name", "James")
+      .put("age", 0);
 
     String id = UUID.randomUUID().toString();
     collection.upsert(id, initial);
 
     MutateInResult result = collection.mutateIn(id,
-            Arrays.asList(
-                    MutateInSpec.upsert("addr", JsonObject.create()
-                            .put("state", "NV")
-                            .put("pincode", 7)
-                            .put("city", "Chicago")),
-                    MutateInSpec.increment("mutated", 1),
-                    MutateInSpec.upsert("name", JsonObject.create()
-                            .put("last", "")
-                            .put("first", "James")
-                    )
-            ));
+      Arrays.asList(
+        MutateInSpec.upsert("addr", JsonObject.create()
+          .put("state", "NV")
+          .put("pincode", 7)
+          .put("city", "Chicago")),
+        MutateInSpec.increment("mutated", 1),
+        MutateInSpec.upsert("name", JsonObject.create()
+          .put("last", "")
+          .put("first", "James")
+        )
+      ));
 
     assertEquals(1, result.contentAs(1, Integer.class));
   }
@@ -638,10 +625,10 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   @Test
   void counterSingle() {
     JsonObject initial = JsonObject.create()
-            .put("mutated", 0)
-            .put("body", "")
-            .put("first_name", "James")
-            .put("age", 0);
+      .put("mutated", 0)
+      .put("body", "")
+      .put("first_name", "James")
+      .put("age", 0);
 
     String id = UUID.randomUUID().toString();
     collection.upsert(id, initial);
@@ -669,29 +656,27 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     try {
       collection.mutateIn(id,
         Collections.singletonList(MutateInSpec.upsert("mutated", 1)),
-              MutateInOptions.mutateInOptions()
-                      .cas(gr.cas())
-                      .durability(DurabilityLevel.MAJORITY));
-    }
-    catch (CasMismatchException err) {
+        MutateInOptions.mutateInOptions()
+          .cas(gr.cas())
+          .durability(DurabilityLevel.MAJORITY));
+    } catch (CasMismatchException err) {
       errorCount += 1;
     }
 
     try {
       collection.mutateIn(id,
         Collections.singletonList(MutateInSpec.upsert("mutated", 2)),
-              MutateInOptions.mutateInOptions()
-                      .cas(gr.cas())
-                      .durability(DurabilityLevel.MAJORITY));
-    }
-    catch (CasMismatchException err) {
+        MutateInOptions.mutateInOptions()
+          .cas(gr.cas())
+          .durability(DurabilityLevel.MAJORITY));
+    } catch (CasMismatchException err) {
       errorCount += 1;
     }
 
     assertEquals(1, errorCount);
   }
 
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
   @Test
   void macros() {
     String id = UUID.randomUUID().toString();
@@ -717,7 +702,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     result.contentAs(5, Integer.class);
   }
 
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED }, missesCapabilities = { Capabilities.GLOBAL_CONFIG })
+  @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, missesCapabilities = {Capabilities.GLOBAL_CONFIG})
   @Test
   void madHatterMacros() {
     String id = UUID.randomUUID().toString();
@@ -736,7 +721,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, JsonObject.create());
 
     assertThrows(XattrUnknownVirtualAttributeException.class, () ->
-            collection.lookupIn(id, Arrays.asList(LookupInSpec.get("$vbucket").xattr())));
+      collection.lookupIn(id, Arrays.asList(LookupInSpec.get("$vbucket").xattr())));
   }
 
   @Test
@@ -784,5 +769,50 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
     LookupInResult lookup = collection.reactive().lookupIn(id, listOf(LookupInSpec.get("foo"))).block();
     assertNotNull(lookup);
     assertEquals("bar", lookup.contentAs(0, String.class));
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasTooManyBlocking() {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+    List<LookupInSpec> specs = new ArrayList<>();
+    for (int i = 0; i < 17; i++) {
+      specs.add(LookupInSpec.get("x" + i));
+    }
+    assertEquals(emptyList(), collection.lookupInAllReplicas(id, specs).collect(Collectors.toList()));
+    collection.remove(id);
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  void getDocumentAllReplicasTooManyBlocking2() throws InterruptedException {
+    String id = UUID.randomUUID().toString();
+
+    JsonObject content = JsonObject.create().put("foo", "bar");
+    collection.upsert(id, content);
+    List<LookupInSpec> specs = new ArrayList<>();
+    specs.add(LookupInSpec.get("foo"));
+    specs.add(LookupInSpec.get("x"));
+
+    List<LookupInReplicaResult> list = waitForReplicaResult(() -> collection.lookupInAllReplicas(id, specs).collect(Collectors.toList()));
+    list.forEach(r -> {
+      assertEquals("bar", r.contentAs(0, String.class));
+      assertThrows(PathNotFoundException.class, () -> r.contentAsBytes(1));
+    });
+    collection.remove(id);
+  }
+
+  @Test
+  @Timeout(2)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED)
+  void getDocumentAnyReplicasTooManyBlockingNotTimeout() throws InterruptedException {
+    List<LookupInSpec> specs = new ArrayList<>();
+    for (int i = 0; i < 17; i++) {
+      specs.add(LookupInSpec.get("x" + i));
+    }
+    assertThrows(DocumentUnretrievableException.class, () -> collection.lookupInAnyReplica("airline_10", specs));
   }
 }

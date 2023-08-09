@@ -47,7 +47,9 @@ public class AggregateErrorContext extends ErrorContext {
       List<Map<String, Object>> inner = new ArrayList<>();
       for (ErrorContext ctx : innerContexts) {
         Map<String, Object> ctxInner = new HashMap<>();
-        ctx.injectExportableParams(ctxInner);
+        if (ctx != null) {
+          ctx.injectExportableParams(ctxInner);
+        }
         inner.add(ctxInner);
       }
       input.put("aggregateErrors", inner);

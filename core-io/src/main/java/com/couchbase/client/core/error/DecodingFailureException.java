@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
+
 /**
  * Raised when provided content could not be successfully decoded.
  *
@@ -23,19 +25,24 @@ package com.couchbase.client.core.error;
  */
 public class DecodingFailureException extends CouchbaseException {
 
-    public DecodingFailureException() {
-        super();
-    }
+  public DecodingFailureException() {
+    super();
+  }
 
-    public DecodingFailureException(String message) {
-        super(message);
-    }
+  public DecodingFailureException(String message) {
+    super(message);
+  }
 
-    public DecodingFailureException(String message, Throwable cause) {
-        super(message, cause);
-    }
+  public DecodingFailureException(String message, Throwable cause) {
+    super(message, cause);
+  }
 
-    public DecodingFailureException(Throwable cause) {
-        super(cause);
-    }
+  public DecodingFailureException(Throwable cause) {
+    super(cause);
+  }
+
+  public DecodingFailureException(String message, Throwable cause, ErrorContext ctx) {
+    super(message, cause, ctx);
+  }
+
 }

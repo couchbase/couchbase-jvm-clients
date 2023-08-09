@@ -49,6 +49,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
+import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
@@ -451,7 +452,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       Response decoded = request.decode(response, channelContext);
       request.succeed(decoded);
     } catch (Throwable t) {
-      request.fail(new DecodingFailureException(t));
+      request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
     }
   }
 
