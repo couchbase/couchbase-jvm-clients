@@ -79,6 +79,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   def lookupInAnyReplicaBlocking(): Unit = {
     val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)

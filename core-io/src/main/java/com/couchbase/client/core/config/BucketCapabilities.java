@@ -43,7 +43,8 @@ public enum BucketCapabilities {
     CREATE_AS_DELETED("tombstonedUserXAttrs"),
     SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
     SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument"),
-    RANGE_SCAN("rangeScan");
+    RANGE_SCAN("rangeScan"),
+    SUBDOC_READ_REPLICA("subdoc.ReplicaRead");
 
     private final String raw;
 

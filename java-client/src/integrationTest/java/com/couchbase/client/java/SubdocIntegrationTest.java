@@ -395,7 +395,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAllReplicasBlocking() throws InterruptedException {
     String id = UUID.randomUUID().toString();
 
@@ -422,7 +422,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   @Disabled
     // Needs wholedoc get - see https://issues.couchbase.com/browse/MB-23162
   void getFullDocumentAllReplicasBlocking() throws InterruptedException {
@@ -439,7 +439,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAllReplicasNotFoundBlocking() {
 
     String id = UUID.randomUUID().toString();
@@ -449,7 +449,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAnyReplicaBlocking() {
     String id = UUID.randomUUID().toString();
 
@@ -462,7 +462,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAllReplicasAsync() throws ExecutionException, InterruptedException {
     String id = UUID.randomUUID().toString();
 
@@ -491,7 +491,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAnyReplicaAsync() throws ExecutionException, InterruptedException {
     String id = UUID.randomUUID().toString();
 
@@ -505,7 +505,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAllReplicasReactive() throws InterruptedException {
     String id = UUID.randomUUID().toString();
 
@@ -523,7 +523,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
   void getDocumentAnyReplicaReactive() {
     String id = UUID.randomUUID().toString();
 

@@ -27,12 +27,14 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
+import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CommonExceptions;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.AggregateErrorContext;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
@@ -449,6 +451,11 @@ public class ReplicaHelper {
     final BucketConfig config = core.clusterConfig().bucketConfig(collectionIdentifier.bucket());
 
     if (config instanceof CouchbaseBucketConfig) {
+
+      if (!config.bucketCapabilities().contains(BucketCapabilities.SUBDOC_READ_REPLICA)) {
+        return failedFuture(FeatureNotAvailableException.subdocReadReplica());
+      }
+
       int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
       List<SubdocGetRequest> requests = new ArrayList<>(numReplicas + 1);
 
@@ -482,12 +489,15 @@ public class ReplicaHelper {
       }, retryDelay);
       return future;
     } else {
-      final CompletableFuture<Stream<SubdocGetRequest>> future = new CompletableFuture<>();
-      future.completeExceptionally(CommonExceptions.getFromReplicaNotCouchbaseBucket());
-      return future;
+      return failedFuture(CommonExceptions.getFromReplicaNotCouchbaseBucket());
     }
   }
 
+  private static <T> CompletableFuture<T> failedFuture(Throwable t) {
+    CompletableFuture<T> future = new CompletableFuture<>();
+    future.completeExceptionally(t);
+    return future;
+  }
 
   private static CompletableFuture<GetResponse> get(final Core core, final GetRequest request) {
     core.send(request);
