@@ -39,7 +39,7 @@ public class Capabilities {
         out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT);
         // [end:3.4.3]
 
-        // Actually the SDK has had various forms of FTS since 3.0.0, but we're not performance testing it currently
+        // Actually the SDK hasSDK_LOOKUP_IN had various forms of FTS since 3.0.0, but we're not performance testing it currently
         // so it's not worth trying to keep the various flavours compiling.
         // [start:3.4.5]
         out.add(Caps.SDK_SEARCH);
@@ -53,11 +53,13 @@ public class Capabilities {
 
         out.add(Caps.SDK_QUERY);
         out.add(Caps.SDK_QUERY_READ_FROM_REPLICA);
+        out.add(Caps.SDK_LOOKUP_IN);
+        out.add(Caps.SDK_LOOKUP_IN_REPLICAS);
 
         // [start:3.4.10]
         out.add(Caps.SDK_OBSERVABILITY_RFC_REV_24);
         // [end:3.4.10]
 
-      return out;
+        return out;
     }
 }

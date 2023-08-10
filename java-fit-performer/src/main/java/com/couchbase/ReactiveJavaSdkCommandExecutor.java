@@ -16,10 +16,14 @@
 package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.java.Collection;
+import com.couchbase.client.java.ReactiveCollection;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
 import static com.couchbase.JavaSdkCommandExecutor.convertMetaData;
 // [start:3.2.1]
@@ -120,7 +124,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 else gr = collection.get(docId, options);
                 return gr.map(r -> {
                     result.setElapsedNanos(System.nanoTime() - start);
-                    if (op.getReturnResult()) populateResult(result, r);
+                    if (op.getReturnResult()) populateResult(request, result, r);
                     else setSuccess(result);
                     return result.build();
                 });
@@ -261,7 +265,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     if (request.hasOptions()) queryResult = connection.cluster().reactive().query(query, createOptions(request));
                     else queryResult = connection.cluster().reactive().query(query);
 
-                    return returnQueryResult(queryResult, result, start);
+                    return returnQueryResult(request, queryResult, result, start);
                 }
 
             } else if (op.hasBucketCommand()) {
@@ -306,7 +310,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     if (request.hasOptions()) queryResult = scope.reactive().query(query, createOptions(request));
                     else queryResult = scope.reactive().query(query);
 
-                    return returnQueryResult(queryResult, result, start);
+                    return returnQueryResult(request, queryResult, result, start);
                 }
                 // [end:3.0.9]
 
@@ -320,17 +324,24 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 // [end:3.4.5]
             } else if (op.hasCollectionCommand()) {
                 var clc = op.getCollectionCommand();
-                var collection = connection.cluster()
-                        .bucket(clc.getCollection().getBucketName())
-                        .scope(clc.getCollection().getScopeName())
-                        .collection(clc.getCollection().getCollectionName())
-                        .reactive();
+
+                ReactiveCollection collection = null;
+                if (clc.hasCollection()) {
+                    collection = connection.cluster()
+                            .bucket(clc.getCollection().getBucketName())
+                            .scope(clc.getCollection().getScopeName())
+                            .collection(clc.getCollection().getCollectionName())
+                            .reactive();
+                }
 
                 // [start:3.4.3]
                 if (clc.hasQueryIndexManager()) {
                     return QueryIndexManagerHelper.handleCollectionQueryIndexManagerReactive(collection, spans, op, result);
                 }
                 // [end:3.4.3]
+                if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
+                    return LookupInHelper.handleLookupInReactive(perRun, connection, op, this::getDocId, spans);
+                }
             } else {
                 return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
             }
@@ -344,16 +355,28 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         return convertExceptionShared(raw);
     }
 
-    private Mono<Result> returnQueryResult(Mono<ReactiveQueryResult> queryResult, Result.Builder result, Long start) {
+    private Mono<Result> returnQueryResult(com.couchbase.client.protocol.sdk.query.Command request, Mono<ReactiveQueryResult> queryResult, Result.Builder result, Long start) {
         return queryResult.publishOn(Schedulers.boundedElastic()).map(r -> {
             result.setElapsedNanos(System.nanoTime() - start);
 
             var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
 
-            // Content
-            for (JsonObject row: r.rowsAsObject().toIterable()){
-                builder.addContent(ByteString.copyFrom(row.toBytes()));
+            // FIT only supports testing blocking (not streaming) queries currently, so the .block() here to gather
+            // the rows is fine.
+            var content = ContentAsUtil.contentTypeList(request.getContentAs(),
+                    () -> r.rowsAs(byte[].class).collectList().block(),
+                    () -> r.rowsAs(String.class).collectList().block(),
+                    () -> r.rowsAs(JsonObject.class).collectList().block(),
+                    () -> r.rowsAs(JsonArray.class).collectList().block(),
+                    () -> r.rowsAs(Boolean.class).collectList().block(),
+                    () -> r.rowsAs(Integer.class).collectList().block(),
+                    () -> r.rowsAs(Double.class).collectList().block());
+
+            if (content.isFailure()) {
+              throw content.exception();
             }
+
+            builder.addAllContent(content.value());
 
             // Metadata
             var convertedMetaData = convertMetaData(r.metaData().block());

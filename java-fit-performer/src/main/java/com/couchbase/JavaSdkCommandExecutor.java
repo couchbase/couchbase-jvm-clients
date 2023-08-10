@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JsonTranscoder;
 import com.couchbase.client.java.codec.LegacyTranscoder;
@@ -43,6 +44,7 @@ import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.query.*;
 // [start:3.2.1]
+import com.couchbase.client.protocol.sdk.kv.Get;
 import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
 // [start:3.2.4]
@@ -71,6 +73,7 @@ import com.couchbase.client.protocol.shared.ScanConsistency;
 import com.couchbase.query.QueryIndexManagerHelper;
 // [end:3.4.3]
 import com.couchbase.utils.ClusterConnection;
+import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
 // [start:3.4.5]
 import com.couchbase.search.SearchHelper;
@@ -140,7 +143,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (options == null) gr = collection.get(docId);
             else gr = collection.get(docId, options);
             result.setElapsedNanos(System.nanoTime() - start);
-            if (op.getReturnResult()) populateResult(result, gr);
+            if (op.getReturnResult()) populateResult(request, result, gr);
             else setSuccess(result);
         } else if (op.hasRemove()){
             var request = op.getRemove();
@@ -259,7 +262,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 else {
                     qr = connection.cluster().query(query);
                 }
-                populateResult(result, qr);
+                populateResult(clc.getQuery(), result, qr);
             }
 
         } else if (op.hasBucketCommand()) {
@@ -294,7 +297,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             QueryResult qr;
             if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery()));
             else qr = scope.query(query);
-            populateResult(result, qr);
+            populateResult(slc.getQuery(), result, qr);
           }
           // [end:3.0.9]
 
@@ -307,17 +310,24 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
           }
           // [end:3.4.5]
         } else if (op.hasCollectionCommand()) {
-            var clc = op.getCollectionCommand();
-            var collection = connection.cluster()
+          var clc = op.getCollectionCommand();
+
+          Collection collection = null;
+          if (clc.hasCollection()) {
+            collection = connection.cluster()
                     .bucket(clc.getCollection().getBucketName())
                     .scope(clc.getCollection().getScopeName())
                     .collection(clc.getCollection().getCollectionName());
+          }
 
             // [start:3.4.3]
             if (clc.hasQueryIndexManager()) {
                 QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
             }
             // [end:3.4.3]
+            if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
+                result = LookupInHelper.handleLookupIn(perRun, connection, op, this::getDocId, spans);
+            }
         } else {
             throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"));
         }
@@ -328,8 +338,6 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     // [start:3.4.1]
     public static Result processScanResult(Scan request, ScanResult r) {
         try {
-            byte[] bytes;
-
             var builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder()
                     .setId(r.id())
                     .setIdOnly(r.idOnly())
@@ -343,15 +351,20 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             }
 
             if (request.hasContentAs()) {
-                if (request.getContentAs().hasAsString()) {
-                    bytes = r.contentAs(String.class).getBytes(StandardCharsets.UTF_8);
-                } else if (request.getContentAs().hasAsByteArray()) {
-                    bytes = r.contentAsBytes();
-                } else if (request.getContentAs().hasAsJson()) {
-                    bytes = r.contentAs(JsonObject.class).toBytes();
-                } else throw new UnsupportedOperationException("Unknown contentAs");
+              var content = ContentAsUtil.contentType(request.getContentAs(),
+                      () -> r.contentAsBytes(),
+                      () -> r.contentAs(String.class),
+                      () -> r.contentAs(JsonObject.class),
+                      () -> r.contentAs(JsonArray.class),
+                      () -> r.contentAs(Boolean.class),
+                      () -> r.contentAs(Integer.class),
+                      () -> r.contentAs(Double.class));
 
-                builder.setContent(ByteString.copyFrom(bytes));
+              if (content.isFailure()) {
+                throw content.exception();
+              }
+
+              builder.setContent(content.value());
             }
 
             return Result.newBuilder()
@@ -488,11 +501,20 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setMutationResult(builder));
     }
 
-    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, GetResult value) {
+    public static void populateResult(Get req, Result.Builder result, GetResult value) {
+      var content = ContentAsUtil.contentType(req.getContentAs(),
+              () -> value.contentAsBytes(),
+              () -> value.contentAs(String.class),
+              () -> value.contentAs(JsonObject.class),
+              () -> value.contentAs(JsonArray.class),
+              () -> value.contentAs(Boolean.class),
+              () -> value.contentAs(Integer.class),
+              () -> value.contentAs(Double.class));
+      
+      if (content.isSuccess()) {
         var builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder()
                 .setCas(value.cas())
-                // contentAsBytes was added later
-                .setContent(ByteString.copyFrom(value.contentAs(JsonObject.class).toString().getBytes()));
+                .setContent(content.value());
 
         // [start:3.0.7]
         value.expiryTime().ifPresent(et -> builder.setExpiryTime(et.getEpochSecond()));
@@ -500,6 +522,10 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
         result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setGetResult(builder));
+      }
+      else {
+        throw content.exception();
+      }
     }
 
     public static com.google.protobuf.Duration convertDuration(Duration duration) {
@@ -553,14 +579,24 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         return out;
     }
 
-    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, QueryResult values) {
+    public static void populateResult(com.couchbase.client.protocol.sdk.query.Command request, com.couchbase.client.protocol.run.Result.Builder result, QueryResult values) {
 
         var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
 
-        // Content
-        for (JsonObject row: values.rowsAsObject()) {
-            builder.addContent(ByteString.copyFrom(row.toBytes()));
+        var content = ContentAsUtil.contentTypeList(request.getContentAs(),
+                () -> values.rowsAs(byte[].class),
+                () -> values.rowsAs(String.class),
+                () -> values.rowsAs(JsonObject.class),
+                () -> values.rowsAs(JsonArray.class),
+                () -> values.rowsAs(Boolean.class),
+                () -> values.rowsAs(Integer.class),
+                () -> values.rowsAs(Double.class));
+
+        if (content.isFailure()) {
+          throw content.exception();
         }
+
+        builder.addAllContent(content.value());
 
         // Metadata
         var convertedMetaData = convertMetaData(values.metaData());

@@ -22,6 +22,7 @@ import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.Scope;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.manager.search.AllowQueryingSearchIndexOptions;
 import com.couchbase.client.java.manager.search.AnalyzeDocumentOptions;
@@ -79,6 +80,7 @@ import com.couchbase.client.protocol.sdk.search.SearchMetaData;
 import com.couchbase.client.protocol.sdk.search.SearchMetrics;
 import com.couchbase.client.protocol.sdk.search.SearchRowLocation;
 import com.couchbase.stream.ReactiveSearchResultStreamer;
+import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import reactor.core.publisher.Mono;
@@ -761,19 +763,19 @@ public class SearchHelper {
               .toList());
     });
 
-    byte[] bytes;
     if (command.hasFieldsAs()) {
-      if (command.getFieldsAs().hasAsString()) {
-        bytes = v.fieldsAs(String.class).getBytes(StandardCharsets.UTF_8);
-      } else if (command.getFieldsAs().hasAsByteArray()) {
-        bytes = v.fieldsAs(byte[].class);
-      } else if (command.getFieldsAs().hasAsJson()) {
-        bytes = v.fieldsAs(JsonObject.class).toBytes();
-      } else {
-        throw new UnsupportedOperationException("Unknown contentAs");
+      var content = ContentAsUtil.contentType(command.getFieldsAs(),
+              () -> v.fieldsAs(byte[].class),
+              () -> v.fieldsAs(String.class),
+              () -> v.fieldsAs(JsonObject.class),
+              () -> v.fieldsAs(JsonArray.class),
+              () -> v.fieldsAs(Boolean.class),
+              () -> v.fieldsAs(Integer.class),
+              () -> v.fieldsAs(Double.class));
+      if (content.isFailure()) {
+        throw content.exception();
       }
-
-      builder.setFields(ByteString.copyFrom(bytes));
+      builder.setFields(content.value());
     }
 
     return builder.build();
