@@ -54,6 +54,10 @@ public class Capabilities {
         out.add(Caps.SDK_QUERY);
         out.add(Caps.SDK_QUERY_READ_FROM_REPLICA);
 
-        return out;
+        // [start:3.4.10]
+        out.add(Caps.SDK_OBSERVABILITY_RFC_REV_24);
+        // [end:3.4.10]
+
+      return out;
     }
 }

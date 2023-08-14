@@ -113,4 +113,8 @@ public class SearchRequest extends BaseRequest<SearchResponse>
     public String name() {
         return "search";
     }
+
+    public CoreBucketAndScope scope() {
+      return scope;
+    }
 }

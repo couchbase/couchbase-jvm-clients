@@ -233,7 +233,7 @@ public class RequestContext extends CoreContext {
     if (!(environment().meter() instanceof NoopMeter)) {
       long latency = logicalRequestLatency();
       if (latency > 0) {
-        core().responseMetric(request).recordValue(latency);
+        core().responseMetric(request, err).recordValue(latency);
       }
     }
 

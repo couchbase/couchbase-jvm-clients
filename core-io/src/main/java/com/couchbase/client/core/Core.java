@@ -72,6 +72,7 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -79,6 +80,9 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.query.QueryRequest;
+import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
@@ -116,6 +120,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -582,33 +587,37 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   }
 
   @Stability.Internal
-  public ValueRecorder responseMetric(final Request<?> request) {
-    return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request), key -> {
-      Map<String, String> tags = new HashMap<>(4);
+  public ValueRecorder responseMetric(final Request<?> request, @Nullable Throwable err) {
+    String exceptionSimpleName = null;
+    if (err instanceof CompletionException) {
+      exceptionSimpleName = err.getCause().getClass().getSimpleName();
+    } else if (err != null) {
+      exceptionSimpleName = err.getClass().getSimpleName();
+    }
+    final String finalExceptionSimpleName = exceptionSimpleName;
+
+    return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request, exceptionSimpleName), key -> {
+      Map<String, String> tags = new HashMap<>(7);
       if (key.serviceType == null) {
         // Virtual service
         if (request instanceof CoreTransactionRequest) {
           tags.put(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_TRANSACTIONS);
         }
       }
-      else {
-        tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
-      }
-      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
-      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
-    });
-  }
-
-  @Stability.Internal
-  public ValueRecorder responseMetric(final ResponseMetricIdentifier rmi) {
-    return responseMetrics.computeIfAbsent(rmi, key -> {
-      Map<String, String> tags = new HashMap<>(4);
       tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
+      tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
+      tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
+      tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
+      tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName == null ? "success" : "failure");
+
+      if (finalExceptionSimpleName != null) {
+        tags.put(TracingIdentifiers.ATTR_EXCEPTION, finalExceptionSimpleName);
+      }
+
       return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
     });
   }
-
 
   /**
    * Create a {@link Node} from the given identifier.
@@ -1087,26 +1096,58 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     private final String serviceType;
     private final String requestName;
+    private final @Nullable String bucketName;
+    private final @Nullable String scopeName;
+    private final @Nullable String collectionName;
+    private final @Nullable String exceptionSimpleName;
 
-    ResponseMetricIdentifier(final Request<?> request) {
+    ResponseMetricIdentifier(final Request<?> request, @Nullable String exceptionSimpleName) {
+      this.exceptionSimpleName = exceptionSimpleName;
       if (request.serviceType() == null) {
         if (request instanceof CoreTransactionRequest) {
           this.serviceType = TracingIdentifiers.SERVICE_TRANSACTIONS;
-        }
-        else {
+        } else {
           // Safer than throwing
           this.serviceType = TracingIdentifiers.SERVICE_UNKNOWN;
         }
-      }
-      else {
+      } else {
         this.serviceType = request.serviceType().ident();
       }
       this.requestName = request.name();
+      if (request instanceof KeyValueRequest) {
+        KeyValueRequest<?> kv = (KeyValueRequest<?>) request;
+        bucketName = request.bucket();
+        scopeName = kv.collectionIdentifier().scope().orElse(CollectionIdentifier.DEFAULT_SCOPE);
+        collectionName = kv.collectionIdentifier().collection().orElse(CollectionIdentifier.DEFAULT_SCOPE);
+      } else if (request instanceof QueryRequest) {
+        QueryRequest query = (QueryRequest) request;
+        bucketName = request.bucket();
+        scopeName = query.scope();
+        collectionName = null;
+      } else if (request instanceof SearchRequest) {
+        SearchRequest search = (SearchRequest) request;
+        if (search.scope() != null) {
+          bucketName = search.scope().bucketName();
+          scopeName = search.scope().scopeName();
+        } else {
+          bucketName = null;
+          scopeName = null;
+        }
+        collectionName = null;
+      } else {
+        bucketName = null;
+        scopeName = null;
+        collectionName = null;
+      }
     }
 
     public ResponseMetricIdentifier(final String serviceType, final String requestName) {
       this.serviceType = serviceType;
       this.requestName = requestName;
+      this.bucketName = null;
+      this.scopeName = null;
+      this.collectionName = null;
+      this.exceptionSimpleName = null;
     }
 
     public String serviceType() {
@@ -1122,12 +1163,17 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
-      return serviceType.equals(that.serviceType) && Objects.equals(requestName, that.requestName);
+      return serviceType.equals(that.serviceType)
+        && Objects.equals(requestName, that.requestName)
+        && Objects.equals(bucketName, that.bucketName)
+        && Objects.equals(scopeName, that.scopeName)
+        && Objects.equals(collectionName, that.collectionName)
+        && Objects.equals(exceptionSimpleName, that.exceptionSimpleName);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(serviceType, requestName);
+      return Objects.hash(serviceType, requestName, bucketName, scopeName, collectionName, exceptionSimpleName);
     }
   }
 
