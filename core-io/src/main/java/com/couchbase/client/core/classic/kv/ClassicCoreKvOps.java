@@ -36,6 +36,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.classic.ClassicHelper;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -970,6 +971,6 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   }
 
   private RequestSpan span(RequestSpan parent, String spanName) {
-    return requestTracer.requestSpan(spanName, parent);
+    return CbTracing.newSpan(requestTracer, spanName, parent);
   }
 }
