@@ -79,7 +79,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.5.0")
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0", replicasLessThan = 1)
   def lookupInAnyReplicaBlocking(): Unit = {
     val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
@@ -98,7 +98,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+  @IgnoreWhen(clusterVersionIsBelow = "7.5.0", replicasLessThan = 1, clusterTypes = Array(ClusterType.MOCKED))
   def lookupInAllReplicasBlocking(): Unit = {
     val docId        = TestUtils.docId()
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)

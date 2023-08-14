@@ -77,6 +77,6 @@ public class FeatureNotAvailableException extends CouchbaseException {
 
   public static CouchbaseException subdocReadReplica() {
     return new FeatureNotAvailableException("The cluster does not support reading subdocuments from replica " +
-      "(Only supported with Couchbase Server 7.5 and later). ");
+      "(Only supported with Couchbase Server 7.5 and later and in clusters with replicas). ");
   }
 }
