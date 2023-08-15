@@ -24,6 +24,9 @@ import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.kv.ScanTerm
 import com.couchbase.client.kotlin.kv.ScanType
+import com.couchbase.client.performer.kotlin.util.ContentAsUtil
+import com.couchbase.client.performer.kotlin.util.JsonArray
+import com.couchbase.client.performer.kotlin.util.JsonObject
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.protobuf.ByteString
 import com.couchbase.client.protocol.run.Result as FitRunResult
@@ -111,14 +114,16 @@ fun processScanResult(request: FitScan, documentOrId: Any): FitRunResult = try {
             }
 
             if (request.hasContentAs()) {
-                val bytes: ByteArray = when {
-                    request.contentAs.hasAsString() -> contentAs<String>(RawStringTranscoder).toByteArray()
-                    request.contentAs.hasAsByteArray() -> content.bytes
-                    request.contentAs.hasAsJson() -> contentAs<ObjectNode>().toString().toByteArray()
-                    else -> throw UnsupportedOperationException("Unknown contentAs: ${request.contentAs}")
-                }
+                val content = ContentAsUtil.contentType(request.contentAs,
+                    { contentAs<ByteArray>() },
+                    { contentAs<String>() },
+                    { contentAs<JsonObject>() },
+                    { contentAs<JsonArray>() },
+                    { contentAs<Boolean>() },
+                    { contentAs<Int>() },
+                    { contentAs<Double>() })
 
-                builder.content = ByteString.copyFrom(bytes)
+                builder.content = content
             }
         }
 

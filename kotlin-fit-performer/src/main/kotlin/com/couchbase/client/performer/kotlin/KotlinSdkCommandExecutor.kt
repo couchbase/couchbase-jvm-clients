@@ -43,7 +43,11 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
+import com.couchbase.client.performer.kotlin.util.ContentAsUtil
+import com.couchbase.client.performer.kotlin.util.JsonArray
+import com.couchbase.client.performer.kotlin.util.JsonObject
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
+import com.couchbase.client.protocol.sdk.kv.Get
 import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
 import com.couchbase.client.protocol.shared.CouchbaseExceptionEx
 import com.couchbase.client.protocol.shared.Exception
@@ -181,7 +185,7 @@ class KotlinSdkCommandExecutor(
                     )
                 } else collection.get(docId)
                 result.elapsedNanos = System.nanoTime() - start
-                if (op.returnResult) populateResult(result, r)
+                if (op.returnResult) populateResult(request, result, r)
                 else setSuccess(result)
             } else if (op.hasRemove()) {
                 val request = op.remove
@@ -421,10 +425,19 @@ class KotlinSdkCommandExecutor(
         )
     }
 
-    private fun populateResult(result: FitRunResult.Builder, value: GetResult) {
+    private fun populateResult(request: Get, result: FitRunResult.Builder, value: GetResult) {
+        val content = ContentAsUtil.contentType(request.contentAs,
+            { value.contentAs<ByteArray>() },
+            { value.contentAs<String>() },
+            { value.contentAs<JsonObject>() },
+            { value.contentAs<JsonArray>() },
+            { value.contentAs<Boolean>() },
+            { value.contentAs<Int>() },
+            { value.contentAs<Double>() })
+
         val builder = FitGetResult.newBuilder()
             .setCas(value.cas)
-            .setContent(ByteString.copyFrom(value.content.bytes))
+            .setContent(content)
         when (val expiry = value.expiry) {
             is Expiry.Absolute -> builder.expiryTime = expiry.instant.epochSecond
             else -> {}
