@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
@@ -71,7 +72,7 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    convert(async.queryOps.queryReactive(statement, options.toCore, null, null, null))
+    convert(async.queryOps.queryReactive(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null))
       .map(result => convert(result))
   }
 

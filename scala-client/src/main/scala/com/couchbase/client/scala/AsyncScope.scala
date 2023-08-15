@@ -17,6 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
@@ -96,7 +97,7 @@ class AsyncScope private[scala] (
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
-    convert(queryOps.queryAsync(statement, options.toCore, null, null, null))
+    convert(queryOps.queryAsync(statement, options.toCore, CoreQueryContext.of(bucketName, scopeName), null, null))
       .map(result => convert(result))
   }
 
