@@ -49,4 +49,67 @@ object ContentAsUtil {
         s"Scala performer cannot handle contentAs ${contentAs}"
       )
   }
+
+  def contentTypeSeq(
+      contentAs: ContentAs,
+      asByteArray: () => Try[Seq[Array[Byte]]],
+      asString: () => Try[Seq[String]],
+      asJsonObject: () => Try[Seq[JsonObject]],
+      asJsonArray: () => Try[Seq[JsonArray]],
+      asBoolean: () => Try[Seq[Boolean]],
+      asInteger: () => Try[Seq[Int]],
+      asFloatingPoint: () => Try[Seq[Double]]
+  ): Try[Seq[ContentTypes]] = {
+    if (contentAs.hasAsString) {
+      asString().map(
+        values => values.map(value => ContentTypes.newBuilder.setContentAsString(value).build)
+      )
+    } else if (contentAs.hasAsByteArray) {
+      asByteArray().map(
+        values =>
+          values.map(
+            value => ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
+          )
+      )
+    } else if (contentAs.hasAsJsonObject) {
+      asJsonObject().map(
+        values =>
+          values.map(
+            value =>
+              ContentTypes.newBuilder
+                .setContentAsBytes(
+                  ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+                )
+                .build
+          )
+      )
+    } else if (contentAs.hasAsJsonArray) {
+      asJsonArray().map(
+        values =>
+          values.map(
+            value =>
+              ContentTypes.newBuilder
+                .setContentAsBytes(
+                  ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+                )
+                .build
+          )
+      )
+    } else if (contentAs.hasAsBoolean) {
+      asBoolean().map(
+        values => values.map(value => ContentTypes.newBuilder.setContentAsBool(value).build)
+      )
+    } else if (contentAs.hasAsInteger) {
+      asInteger().map(
+        values => values.map(value => ContentTypes.newBuilder.setContentAsInt64(value).build)
+      )
+    } else if (contentAs.hasAsFloatingPoint) {
+      asFloatingPoint().map(
+        values => values.map(value => ContentTypes.newBuilder.setContentAsDouble(value).build)
+      )
+    } else
+      throw new UnsupportedOperationException(
+        s"Scala performer cannot handle contentAs ${contentAs}"
+      )
+  }
 }

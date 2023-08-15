@@ -25,7 +25,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
-import com.couchbase.client.performer.scala.query.QueryIndexManagerHelper
+import com.couchbase.client.performer.scala.query.{QueryHelper, QueryIndexManagerHelper}
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
@@ -238,6 +238,9 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
         }
         // [end:1.2.4]
+        else if (clc.hasQuery) {
+          result = QueryHelper.handleClusterQuery(connection, op, clc)
+        }
         else throw new UnsupportedOperationException("Unknown cluster command")
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
@@ -258,6 +261,17 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             setSuccess(result)
 
         }
+    } else if (op.hasScopeCommand) {
+      val slc = op.getScopeCommand
+
+      val scope = if (slc.hasScope) {
+        Some(connection.cluster.bucket(slc.getScope.getBucketName).scope(slc.getScope.getScopeName))
+      }
+      else None
+
+      if (slc.hasQuery) {
+        result = QueryHelper.handleScopeQuery(scope.get, op, slc)
+      }
     } else if (op.hasCollectionCommand) {
       val clc  = op.getCollectionCommand
       val collection = if (clc.hasCollection) {
@@ -673,6 +687,13 @@ object ScalaSdkCommandExecutor {
       )
 
     ret.build
+  }
+
+  def convertDuration(duration: scala.concurrent.duration.Duration): com.google.protobuf.Duration = {
+      com.google.protobuf.Duration.newBuilder()
+              .setSeconds(duration.toSeconds)
+              .setNanos((duration.toNanos - TimeUnit.SECONDS.toNanos(duration.toSeconds)).toInt)
+              .build
   }
 
     def waitUntilReadyOptions(request: WaitUntilReadyRequest): WaitUntilReadyOptions = {
