@@ -30,7 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
     implicit val ec: ExecutionContext
 ) {
-  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultManagerTimeout =
+    couchbaseOps.environment.timeoutConfig.managementTimeout
   private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
 
   private def reactive: Future[ReactiveUserManager] = {

@@ -50,7 +50,7 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps, bucket: String) {
-  private[scala] val DefaultTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val DefaultTimeout       = couchbaseOps.environment.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = couchbaseOps.environment.retryStrategy
 
   private def httpClientTry: SMono[CoreHttpClient] = couchbaseOps match {

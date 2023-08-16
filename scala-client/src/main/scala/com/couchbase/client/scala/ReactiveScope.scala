@@ -72,8 +72,10 @@ class ReactiveScope(async: AsyncScope, bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    convert(async.queryOps.queryReactive(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null))
-      .map(result => convert(result))
+    convert(
+      async.queryOps
+        .queryReactive(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null)
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

@@ -49,7 +49,8 @@ object ReactiveUserManager {
 
 @Volatile
 class ReactiveUserManager(private val couchbaseOps: CoreCouchbaseOps) {
-  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultManagerTimeout =
+    couchbaseOps.environment.timeoutConfig.managementTimeout
   private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
 
   private def pathForUsers = "/settings/rbac/users"

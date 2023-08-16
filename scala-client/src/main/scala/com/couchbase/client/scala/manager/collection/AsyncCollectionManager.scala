@@ -28,8 +28,9 @@ import scala.jdk.CollectionConverters._
 class AsyncCollectionManager(private val bucket: AsyncBucket)(
     implicit val ec: ExecutionContext
 ) {
-  private[scala] val defaultManagerTimeout: Duration = bucket.couchbaseOps.environment.timeoutConfig.managementTimeout
-  private[scala] val defaultRetryStrategy =  bucket.couchbaseOps.environment.retryStrategy
+  private[scala] val defaultManagerTimeout: Duration =
+    bucket.couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultRetryStrategy = bucket.couchbaseOps.environment.retryStrategy
 
   private def coreCollectionManager = bucket.couchbaseOps.collectionManager(bucket.name)
 

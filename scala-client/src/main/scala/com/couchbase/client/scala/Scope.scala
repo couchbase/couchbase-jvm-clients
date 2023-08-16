@@ -71,8 +71,10 @@ class Scope private[scala] (val async: AsyncScope, bucketName: String) {
     * @return a `QueryResult`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Try[QueryResult] = {
-    Try(async.queryOps.queryBlocking(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null))
-      .map(result => convert(result))
+    Try(
+      async.queryOps
+        .queryBlocking(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null)
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.

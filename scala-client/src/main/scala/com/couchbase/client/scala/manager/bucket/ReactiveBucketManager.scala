@@ -31,9 +31,10 @@ import scala.concurrent.duration.Duration
 
 @Volatile
 class ReactiveBucketManager(couchbaseOps: CoreCouchbaseOps) {
-  private[scala] val defaultManagerTimeout = couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val defaultManagerTimeout =
+    couchbaseOps.environment.timeoutConfig.managementTimeout
   private[scala] val defaultRetryStrategy = couchbaseOps.environment.retryStrategy
-  private[scala] val coreBucketManager = couchbaseOps.bucketManager()
+  private[scala] val coreBucketManager    = couchbaseOps.bucketManager()
 
   def create(
       settings: CreateBucketSettings,

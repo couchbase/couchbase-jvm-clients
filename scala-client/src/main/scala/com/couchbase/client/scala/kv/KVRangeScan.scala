@@ -3,7 +3,12 @@ package com.couchbase.client.scala.kv
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.kv.{CoreRangeScanItem, CoreScanTerm}
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.codec.{JsonDeserializer, Transcoder, TranscoderWithSerializer, TranscoderWithoutSerializer}
+import com.couchbase.client.scala.codec.{
+  JsonDeserializer,
+  Transcoder,
+  TranscoderWithSerializer,
+  TranscoderWithoutSerializer
+}
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -43,8 +48,7 @@ object ScanType {
     * If `None` is specified for `from`, it indicates to scan from the start of the collection.
     * If `None` is specified for `to`, it indicates to scan to the start of the collection.
     */
-  case class RangeScan(from: Option[ScanTerm], to: Option[ScanTerm])
-      extends ScanType
+  case class RangeScan(from: Option[ScanTerm], to: Option[ScanTerm]) extends ScanType
 
   /** Samples documents randomly from the collection until reaching `limit` documents.
     *

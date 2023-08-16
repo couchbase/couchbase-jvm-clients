@@ -51,7 +51,8 @@ class AsyncCollectionQueryIndexManager(
     collection.environment.core.requestTracer,
     keyspace
   )
-  private[scala] val DefaultTimeout: Duration = collection.couchbaseOps.environment.timeoutConfig.managementTimeout
+  private[scala] val DefaultTimeout: Duration =
+    collection.couchbaseOps.environment.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = collection.couchbaseOps.environment.retryStrategy
 
   /** Gets all indexes on this collection.

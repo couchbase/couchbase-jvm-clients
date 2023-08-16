@@ -97,8 +97,15 @@ class AsyncScope private[scala] (
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
-    convert(queryOps.queryAsync(statement, options.toCore, CoreQueryContext.of(bucketName, scopeName), null, null))
-      .map(result => convert(result))
+    convert(
+      queryOps.queryAsync(
+        statement,
+        options.toCore,
+        CoreQueryContext.of(bucketName, scopeName),
+        null,
+        null
+      )
+    ).map(result => convert(result))
   }
 
   /** Performs an Analytics query against the cluster.
