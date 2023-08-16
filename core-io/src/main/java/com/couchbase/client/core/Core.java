@@ -604,11 +604,19 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           tags.put(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_TRANSACTIONS);
         }
       }
-      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
+      else {
+        tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
+      }
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
-      tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
-      tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
-      tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
+      if (key.bucketName != null) {
+        tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
+      }
+      if (key.scopeName != null) {
+        tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
+      }
+      if (key.collectionName != null) {
+        tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
+      }
       tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName == null ? "success" : "failure");
 
       if (finalExceptionSimpleName != null) {
