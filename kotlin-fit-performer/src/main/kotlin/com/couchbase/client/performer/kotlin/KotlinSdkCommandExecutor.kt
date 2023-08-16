@@ -42,8 +42,11 @@ import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
+import com.couchbase.client.performer.kotlin.query.QueryHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.ContentAsUtil
+import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.createCommon
+import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.setSuccess
 import com.couchbase.client.performer.kotlin.util.JsonArray
 import com.couchbase.client.performer.kotlin.util.JsonObject
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
@@ -87,10 +90,6 @@ class KotlinSdkCommandExecutor(
     counters: Counters,
 ) : SdkCommandExecutor(counters) {
 
-    fun createCommon(hasTimeout: Boolean, timeout: Int): CommonOptions {
-        return if (hasTimeout) CommonOptions(timeout = timeout.milliseconds)
-        else CommonOptions.Default
-    }
 
     fun convertDurability(hasDurability: Boolean, durability: com.couchbase.client.protocol.shared.DurabilityType): Durability {
         if (!hasDurability) return Durability.None
@@ -142,7 +141,7 @@ class KotlinSdkCommandExecutor(
     }
 
     fun performOperationInternal(op: FitSdkCommand, perRun: PerRun): FitRunResult {
-        val result = FitRunResult.newBuilder()
+        var result = FitRunResult.newBuilder()
 
         runBlocking {
             if (op.hasInsert()) {
@@ -329,12 +328,11 @@ class KotlinSdkCommandExecutor(
 
                 } else if (clc.hasBucketManager()) {
                     handleBucketManager(connection.cluster, op, result)
-
+                } else if (clc.hasQuery()) {
+                    result = QueryHelper.handleClusterQuery(connection, op, clc)
                 } else {
                     throw UnsupportedOperationException(IllegalArgumentException("Unknown cluster-level operation"))
                 }
-
-
             } else if (op.hasBucketCommand()) {
                 val blc = op.bucketCommand
                 val bucket = connection.cluster.bucket(op.bucketCommand.bucketName)
@@ -358,7 +356,11 @@ class KotlinSdkCommandExecutor(
                 } else {
                     throw UnsupportedOperationException(IllegalArgumentException("Unknown bucket-level operation"))
                 }
+            } else if (op.hasScopeCommand()) {
+                val slc = op.scopeCommand
+                val scope = connection.cluster.bucket(slc.scope.bucketName).scope(slc.scope.scopeName)
 
+                result = QueryHelper.handleScopeQuery(scope, op, slc)
             } else {
                 throw UnsupportedOperationException(IllegalArgumentException("Unknown operation"))
             }
@@ -394,13 +396,6 @@ class KotlinSdkCommandExecutor(
             // Kotlin does not have LegacyTranscoder
             else -> throw UnsupportedOperationException("Unknown transcoder: $transcoder")
         }
-    }
-
-    private fun setSuccess(result: FitRunResult.Builder) {
-        result.setSdk(
-            com.couchbase.client.protocol.sdk.Result.newBuilder()
-                .setSuccess(true)
-        )
     }
 
     private fun populateResult(

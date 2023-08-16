@@ -46,6 +46,7 @@ class KotlinPerformer : CorePerformer() {
         response.setPerformerUserAgent("kotlin")
             .addSdkImplementationCaps(Caps.SDK_PRESERVE_EXPIRY)
             .addSdkImplementationCaps(Caps.SDK_KV_RANGE_SCAN)
+            .addSdkImplementationCaps(Caps.SDK_QUERY)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
     }
 
