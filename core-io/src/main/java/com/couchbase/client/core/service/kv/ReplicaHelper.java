@@ -37,7 +37,6 @@ import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.AggregateErrorContext;
 import com.couchbase.client.core.error.context.ErrorContext;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -337,17 +336,21 @@ public class ReplicaHelper {
       final AtomicInteger totalCompleted = new AtomicInteger(0);
       final List<ErrorContext> nestedContexts = Collections.synchronizedList(new ArrayList<>());
       futures.forEach(individual -> individual.whenComplete((result, error) -> {
-        int completed = totalCompleted.incrementAndGet();
-        if (error != null) {
-          if (error instanceof CompletionException && error.getCause() instanceof CouchbaseException) {
-            nestedContexts.add(((CouchbaseException) error.getCause()).context());
+        try { // anyReplicaFuture must complete even if there is an unexpected error. Otherwise the caller hangs.
+          int completed = totalCompleted.incrementAndGet();
+          if (error != null) {
+            if (error instanceof CompletionException && error.getCause() instanceof CouchbaseException) {
+              nestedContexts.add(((CouchbaseException) error.getCause()).context());
+            }
           }
-        }
-        if (result != null && successCompleted.compareAndSet(false, true)) {
-          anyReplicaFuture.complete(result);
-        }
-        if (!successCompleted.get() && completed == futures.size()) {
-          anyReplicaFuture.completeExceptionally(new DocumentUnretrievableException(new AggregateErrorContext(nestedContexts)));
+          if (result != null && successCompleted.compareAndSet(false, true)) {
+            anyReplicaFuture.complete(result);
+          }
+          if (!successCompleted.get() && completed == futures.size()) {
+            anyReplicaFuture.completeExceptionally(new DocumentUnretrievableException(new AggregateErrorContext(nestedContexts)));
+          }
+        } catch (Throwable t) {
+            anyReplicaFuture.completeExceptionally(new RuntimeException(t.getClass().toString()));
         }
       }));
     });
