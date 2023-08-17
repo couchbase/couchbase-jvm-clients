@@ -546,8 +546,7 @@ public class Cluster internal constructor(
         clientContextId: String? = UUID.randomUUID().toString(),
         raw: Map<String, Any?> = emptyMap(),
         @SinceCouchbase("7.6") useReplica: Boolean? = null,
-
-        ): Flow<QueryFlowItem> {
+    ): Flow<QueryFlowItem> {
 
         return queryExecutor.query(
             statement,
@@ -571,7 +570,7 @@ public class Cluster internal constructor(
         )
     }
 
-    @Deprecated(level = DeprecationLevel.HIDDEN, message="Use similar method with additional useReplica parameter.")
+    @Deprecated(level = DeprecationLevel.HIDDEN, message = "Use similar method with additional useReplica parameter.")
     public fun query(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
@@ -594,8 +593,8 @@ public class Cluster internal constructor(
         pipelineCap: Int? = null,
 
         clientContextId: String? = UUID.randomUUID().toString(),
-        raw: Map<String, Any?> = emptyMap()
-        ): Flow<QueryFlowItem> {
+        raw: Map<String, Any?> = emptyMap(),
+    ): Flow<QueryFlowItem> {
 
         return queryExecutor.query(
             statement,

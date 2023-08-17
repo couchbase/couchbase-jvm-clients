@@ -176,9 +176,8 @@ public class Scope(
 
         clientContextId: String? = UUID.randomUUID().toString(),
         raw: Map<String, Any?> = emptyMap(),
-        @SinceCouchbase("7.6") useReplica : Boolean? = null
-
-        ): Flow<QueryFlowItem> {
+        @SinceCouchbase("7.6") useReplica: Boolean? = null,
+    ): Flow<QueryFlowItem> {
 
         return queryExecutor.query(
             statement,
@@ -202,7 +201,7 @@ public class Scope(
         )
     }
 
-    @Deprecated(level = DeprecationLevel.HIDDEN, message="Use similar method with additional useReplica parameter.")
+    @Deprecated(level = DeprecationLevel.HIDDEN, message = "Use similar method with additional useReplica parameter.")
     public fun query(
         statement: String,
         common: CommonOptions = CommonOptions.Default,
