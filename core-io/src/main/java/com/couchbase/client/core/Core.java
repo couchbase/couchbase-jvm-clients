@@ -590,9 +590,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   public ValueRecorder responseMetric(final Request<?> request, @Nullable Throwable err) {
     String exceptionSimpleName = null;
     if (err instanceof CompletionException) {
-      exceptionSimpleName = err.getCause().getClass().getSimpleName();
+      exceptionSimpleName = err.getCause().getClass().getSimpleName().replace("Exception", "");
     } else if (err != null) {
-      exceptionSimpleName = err.getClass().getSimpleName();
+      exceptionSimpleName = err.getClass().getSimpleName().replace("Exception", "");
     }
     final String finalExceptionSimpleName = exceptionSimpleName;
 
@@ -617,10 +617,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       if (key.collectionName != null) {
         tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
       }
-      tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName == null ? "success" : "failure");
 
       if (finalExceptionSimpleName != null) {
-        tags.put(TracingIdentifiers.ATTR_EXCEPTION, finalExceptionSimpleName);
+        tags.put(TracingIdentifiers.ATTR_ERROR, finalExceptionSimpleName);
       }
 
       return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);

@@ -283,9 +283,7 @@ public class TracingIdentifiers {
   public static final String ATTR_DURABILITY = "db.couchbase.durability";
 
   public static final String ATTR_RETRIES = "db.couchbase.retries";
-
-  public static final String ATTR_OUTCOME = "outcome";
-  public static final String ATTR_EXCEPTION = "exception";
+  public static final String ATTR_ERROR = "error";
   public static final String TRANSACTION_OP = "transaction";
   public static final String TRANSACTION_OP_ATTEMPT = "transaction_attempt";
   public static final String TRANSACTION_OP_REPLACE = "transaction_replace";
