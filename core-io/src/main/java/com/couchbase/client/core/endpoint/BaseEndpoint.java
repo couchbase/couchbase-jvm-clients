@@ -110,7 +110,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * The related context to use.
    */
-  private final AtomicReference<EndpointContext> endpointContext;
+  final AtomicReference<EndpointContext> endpointContext;
 
   /**
    * If instructed to disconnect, disrupts any connecting attempts
@@ -157,7 +157,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * Once connected, contains the channel to work with.
    */
-  private volatile Channel channel;
+  volatile Channel channel;
 
   /**
    * Holds the unix nanotime when the last response completed.
@@ -542,7 +542,7 @@ public abstract class BaseEndpoint implements Endpoint {
    *
    * @param channel the channel to close.
    */
-  private void closeChannel(final Channel channel) {
+  void closeChannel(final Channel channel) {
     if (channel != null && !channel.eventLoop().isShutdown()) {
       final EndpointContext endpointContext = this.endpointContext.get();
       final long start = System.nanoTime();
