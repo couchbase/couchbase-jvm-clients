@@ -18,10 +18,12 @@ package com.couchbase;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
+// [start:3.4.9]
 import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
 import com.couchbase.client.java.kv.LookupInAnyReplicaOptions;
-import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInReplicaResult;
+// [end:3.4.9]
+import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
 import com.couchbase.client.performer.core.perf.PerRun;
@@ -137,10 +139,10 @@ public class LookupInHelper {
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
     // [start:<3.4.9]
-    /*
-      throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
+/*
+      throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
       // [end:<3.4.9]
-     */
+*/
 
     // [start:3.4.9]
     var req = clc.getLookupInAnyReplica();
@@ -179,10 +181,10 @@ public class LookupInHelper {
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
     // [start:<3.4.9]
-    /*
-    throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
+/*
+    throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
     // [end:<3.4.9]
-     */
+*/
 
     // [start:3.4.9]
     var req = clc.getLookupInAllReplicas();
@@ -272,10 +274,10 @@ public class LookupInHelper {
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
     // [start:<3.4.9]
-    /*
-          throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAnyReplica")
+/*
+          throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAnyReplica");
           // [end:<3.4.9]
-     */
+*/
 
     // [start:3.4.9]
     var req = clc.getLookupInAnyReplica();
@@ -299,15 +301,15 @@ public class LookupInHelper {
             .doFinally(v -> System.out.println("Finished"))
             .doOnNext(v -> {
               System.out.println("Got next");
-      out.setElapsedNanos(System.nanoTime() - start);
+              out.setElapsedNanos(System.nanoTime() - start);
 
-      if (command.getReturnResult()) {
-        var r = populateResult(req.getSpecList(), v);
-        out.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder().setLookupInAnyReplicaResult(r));
-      } else {
-        setSuccess(out);
-      }
-    });
+              if (command.getReturnResult()) {
+                var r = populateResult(req.getSpecList(), v);
+                out.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder().setLookupInAnyReplicaResult(r));
+              } else {
+                setSuccess(out);
+              }
+            });
     // [end:3.4.9]
   }
 
@@ -320,10 +322,10 @@ public class LookupInHelper {
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
     // [start:<3.4.9]
-    /*
-        throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
+/*
+        throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
         // [end:<3.4.9]
-     */
+*/
 
     // [start:3.4.9]
     var req = clc.getLookupInAllReplicas();

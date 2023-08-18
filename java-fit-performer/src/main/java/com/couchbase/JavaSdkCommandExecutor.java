@@ -43,8 +43,8 @@ import com.couchbase.client.java.kv.RemoveOptions;
 import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.query.*;
-// [start:3.2.1]
 import com.couchbase.client.protocol.sdk.kv.Get;
+// [start:3.2.1]
 import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
 // [start:3.2.4]
@@ -501,20 +501,20 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setMutationResult(builder));
     }
 
-    public static void populateResult(Get req, Result.Builder result, GetResult value) {
-      var content = ContentAsUtil.contentType(req.getContentAs(),
-              () -> value.contentAsBytes(),
-              () -> value.contentAs(String.class),
-              () -> value.contentAs(JsonObject.class),
-              () -> value.contentAs(JsonArray.class),
-              () -> value.contentAs(Boolean.class),
-              () -> value.contentAs(Integer.class),
-              () -> value.contentAs(Double.class));
-      
-      if (content.isSuccess()) {
-        var builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder()
-                .setCas(value.cas())
-                .setContent(content.value());
+  public static void populateResult(Get req, Result.Builder result, GetResult value) {
+    var content = ContentAsUtil.contentType(req.getContentAs(),
+            () -> value.contentAs(byte[].class),
+            () -> value.contentAs(String.class),
+            () -> value.contentAs(JsonObject.class),
+            () -> value.contentAs(JsonArray.class),
+            () -> value.contentAs(Boolean.class),
+            () -> value.contentAs(Integer.class),
+            () -> value.contentAs(Double.class));
+
+    if (content.isSuccess()) {
+      var builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder()
+              .setCas(value.cas())
+              .setContent(content.value());
 
         // [start:3.0.7]
         value.expiryTime().ifPresent(et -> builder.setExpiryTime(et.getEpochSecond()));
