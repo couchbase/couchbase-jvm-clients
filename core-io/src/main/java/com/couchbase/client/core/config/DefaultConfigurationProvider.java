@@ -560,7 +560,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private void checkAndApplyConfig(final BucketConfig newConfig, final boolean force) {
+  private synchronized void checkAndApplyConfig(final BucketConfig newConfig, final boolean force) {
     final String name = newConfig.name();
     final BucketConfig oldConfig = currentConfig.bucketConfig(name);
 
@@ -595,7 +595,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private void checkAndApplyConfig(final GlobalConfig newConfig, final boolean force) {
+  private synchronized void checkAndApplyConfig(final GlobalConfig newConfig, final boolean force) {
     final GlobalConfig oldConfig = currentConfig.globalConfig();
 
     if (!force && oldConfig != null && newConfig.version().isLessThanOrEqualTo(oldConfig.version())) {
@@ -768,8 +768,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       if (emitResult != Sinks.EmitResult.OK) {
         eventBus.publish(new ConfigPushFailedEvent(core.context(), emitResult));
       }
-    }
-    else {
+    } else {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
@@ -777,6 +776,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         Optional.empty(),
         Optional.empty()));
     }
+  }
+
+  @Override
+  public void republishCurrentConfig() {
+    pushConfig(false);
   }
 
   /**

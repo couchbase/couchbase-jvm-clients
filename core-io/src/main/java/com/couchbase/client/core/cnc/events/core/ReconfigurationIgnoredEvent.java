@@ -25,7 +25,9 @@ import java.time.Duration;
  * Client got a new config, but for some valid reason the event is ignored.
  *
  * @since 2.0.0
+ * @deprecated This event is never emitted by the SDK.
  */
+@Deprecated
 public class ReconfigurationIgnoredEvent extends AbstractEvent {
 
   public ReconfigurationIgnoredEvent(Context context) {

@@ -45,7 +45,6 @@ import com.couchbase.client.core.cnc.events.core.CoreCreatedEvent;
 import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ReconfigurationErrorDetectedEvent;
-import com.couchbase.client.core.cnc.events.core.ReconfigurationIgnoredEvent;
 import com.couchbase.client.core.cnc.events.core.ServiceReconfigurationFailedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
@@ -104,6 +103,7 @@ import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.CoreIdGenerator;
+import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -210,15 +210,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   private final CopyOnWriteArrayList<Node> nodes;
 
   /**
-   * If a reconfiguration is in process, this will be set to true and prevent concurrent reconfig attempts.
+   * Reconfigures the core in response to configs emitted by {@link #configurationProvider}.
    */
-  private final AtomicBoolean reconfigureInProgress = new AtomicBoolean(false);
-
-  /**
-   * We use a barrier to only run one reconfiguration at the same time, so when a new one comes in
-   * and is ignored we need to set a flag to come back to it once the others finished.
-   */
-  private final AtomicBoolean moreConfigsPending = new AtomicBoolean(false);
+  private final LatestStateSubscription<ClusterConfig> configurationProcessor;
 
   /**
    * Once shutdown, this will be set to true and as a result no further ops are allowed to go through.
@@ -298,13 +292,19 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.eventBus = environment.eventBus();
     this.timer = environment.timer();
     this.currentConfig = configurationProvider.config();
-    this.configurationProvider
+
+    Flux<ClusterConfig> configs = configurationProvider
       .configs()
-      .publishOn(environment.scheduler())
-      .subscribe(c -> {
-        currentConfig = c;
-        reconfigure();
-      });
+      .concatWith(Mono.just(new ClusterConfig())); // Disconnect everything!
+
+    this.configurationProcessor = new LatestStateSubscription<>(
+      configs,
+      environment.scheduler(),
+      (config, doFinally) -> {
+        currentConfig = config;
+        reconfigure(doFinally);
+      }
+    );
 
     this.beforeSendRequestCallbacks = environment
       .requestCallbacks()
@@ -715,16 +715,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             .fromIterable(currentConfig.bucketConfigs().keySet())
             .flatMap(this::closeBucket)
             .then(configurationProvider.shutdown())
-            // JVMCBC-1161: The configurationProvider used to emit this empty config itself, but due to races it was unreliable.
-            .then(Mono.fromRunnable(() -> {
-              currentConfig = new ClusterConfig();
-              reconfigure();
-            }))
+            .then(configurationProcessor.awaitTermination())
             .then(protostellar != null ? protostellar.shutdown(timeout) : Mono.empty())
-            // every 10ms check if all nodes have been cleared, and then move on.
-            // this links the config provider shutdown with our core reconfig logic
-            // Nb this check is probably redundant with the empty config now pushed for JVMCBC-1161.
-            .then(Flux.interval(Duration.ofMillis(10), coreContext.environment().scheduler()).takeUntil(i -> nodes.isEmpty()).then())
             .doOnTerminate(() -> {
               CoreLimiter.decrement();
               eventBus.publish(new ShutdownCompletedEvent(start.elapsed(), coreContext));
@@ -737,92 +729,81 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   /**
    * Reconfigures the SDK topology to align with the current server configuration.
-   *
-   * <p>When reconfigure is called, it will grab a current configuration and then add/remove
-   * nodes/services to mirror the current topology and configuration settings.</p>
-   *
-   * <p>This is a eventually consistent process, so in-flight operations might still be rescheduled
+   * <p>
+   * When reconfigure is called, it will grab a current configuration and then add/remove
+   * nodes/services to mirror the current topology and configuration settings.
+   * <p>
+   * This is an eventually consistent process, so in-flight operations might still be rescheduled
    * and then picked up later (or cancelled, depending on the strategy). For those coming from 1.x,
-   * it works very similar.</p>
+   * it works very similar.
+   *
+   * @param doFinally A callback to execute after reconfiguration is complete.
    */
-  private void reconfigure() {
-    if (reconfigureInProgress.compareAndSet(false, true)) {
-      final ClusterConfig configForThisAttempt = currentConfig;
+  private void reconfigure(Runnable doFinally) {
+    final ClusterConfig configForThisAttempt = currentConfig;
 
-      if (configForThisAttempt.bucketConfigs().isEmpty() && configForThisAttempt.globalConfig() == null) {
-        reconfigureDisconnectAll();
-        return;
-      }
+    if (configForThisAttempt.bucketConfigs().isEmpty() && configForThisAttempt.globalConfig() == null) {
+      reconfigureDisconnectAll(doFinally);
+      return;
+    }
 
-      final NanoTimestamp start = NanoTimestamp.now();
-      Flux<BucketConfig> bucketConfigFlux = Flux
-        .just(configForThisAttempt)
-        .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
+    final NanoTimestamp start = NanoTimestamp.now();
+    Flux<BucketConfig> bucketConfigFlux = Flux
+      .just(configForThisAttempt)
+      .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
 
-      reconfigureBuckets(bucketConfigFlux)
-        .then(reconfigureGlobal(configForThisAttempt.globalConfig()))
-        .then(Mono.defer(() ->
-          Flux
-            .fromIterable(new ArrayList<>(nodes))
-            .flatMap(n -> maybeRemoveNode(n, configForThisAttempt))
-            .then()
-        ))
-        .subscribe(
-        v -> {},
+    reconfigureBuckets(bucketConfigFlux)
+      .then(reconfigureGlobal(configForThisAttempt.globalConfig()))
+      .then(Mono.defer(() ->
+        Flux
+          .fromIterable(new ArrayList<>(nodes))
+          .flatMap(n -> maybeRemoveNode(n, configForThisAttempt))
+          .then()
+      ))
+      .subscribe(
+        v -> {
+        },
         e -> {
-          clearReconfigureInProgress();
+          doFinally.run();
           eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
         },
         () -> {
-          clearReconfigureInProgress();
+          doFinally.run();
           eventBus.publish(new ReconfigurationCompletedEvent(
             start.elapsed(),
             coreContext
           ));
         }
       );
-    } else {
-      moreConfigsPending.set(true);
-      eventBus.publish(new ReconfigurationIgnoredEvent(coreContext));
-    }
   }
 
   /**
    * This reconfiguration sequence takes all nodes and disconnects them.
-   *
-   * <p>This is usually called by the parent {@link #reconfigure()} when all buckets are closed which
-   * points to a shutdown/all buckets closed disconnect phase.</p>
+   * <p>
+   * This must only be called by {@link #reconfigure}, and only when all buckets are closed,
+   * which points to a shutdown/all buckets closed disconnect phase.
    */
-  private void reconfigureDisconnectAll() {
+  private void reconfigureDisconnectAll(Runnable doFinally) {
     NanoTimestamp start = NanoTimestamp.now();
     Flux
       .fromIterable(new ArrayList<>(nodes))
       .flatMap(Node::disconnect)
       .doOnComplete(nodes::clear)
       .subscribe(
-        v -> {},
+        v -> {
+        },
         e -> {
-          clearReconfigureInProgress();
+          doFinally.run();
           eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
         },
         () -> {
-          clearReconfigureInProgress();
+          doFinally.run();
           eventBus.publish(new ReconfigurationCompletedEvent(
             start.elapsed(),
             coreContext
           ));
         }
       );
-  }
-
-  /**
-   * Clean reconfiguration in progress and check if there is a new one we need to try.
-   */
-  private void clearReconfigureInProgress() {
-    reconfigureInProgress.set(false);
-    if (moreConfigsPending.compareAndSet(true, false)) {
-      reconfigure();
-    }
   }
 
   private Mono<Void> reconfigureGlobal(final GlobalConfig config) {
@@ -1209,7 +1190,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             String message = "Number of managed nodes (" + numNodes + ") differs from the current config ("
               + numConfigNodes + "), triggering reconfiguration.";
             eventBus.publish(new WatchdogInvalidStateIdentifiedEvent(context(), message));
-            reconfigure();
+            configurationProvider.republishCurrentConfig();
           }
         }
       } catch (Throwable ex) {

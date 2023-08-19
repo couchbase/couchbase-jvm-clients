@@ -129,6 +129,12 @@ public interface ConfigurationProvider  {
   void refreshCollectionId(CollectionIdentifier identifier);
 
   /**
+   * Shouldn't be necessary, but gives {@code InvalidStateWatchdog} something to do.
+   */
+  default void republishCurrentConfig() {
+  }
+
+  /**
    * Returns true if an initial global config load attempt is in progress.
    *
    * @return true if it is in progress, false if not (done or failed).

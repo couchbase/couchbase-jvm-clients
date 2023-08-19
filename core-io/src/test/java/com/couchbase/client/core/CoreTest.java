@@ -46,12 +46,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.readResource;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -89,6 +90,34 @@ class CoreTest {
     ENV.shutdown();
   }
 
+  private static class MockConfigProvider {
+    private final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
+    private final Sinks.Many<ClusterConfig> configs = Sinks.many().replay().all();
+    private final ClusterConfig clusterConfig = new ClusterConfig();
+
+    MockConfigProvider() {
+      when(configProvider.configs()).thenReturn(configs.asFlux());
+      when(configProvider.config()).thenReturn(clusterConfig);
+      when(configProvider.closeBucket(anyString(), anyBoolean())).thenReturn(Mono.empty());
+      when(configProvider.shutdown()).thenAnswer((Answer<Mono<Void>>) invocationOnMock -> {
+        configs.tryEmitComplete().orThrow();
+        return Mono.empty();
+      });
+
+      configs.tryEmitNext(clusterConfig).orThrow();
+    }
+
+    public void accept(BucketConfig bucketConfig) throws InterruptedException {
+      clusterConfig.setBucketConfig(bucketConfig);
+      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      configs.tryEmitNext(clusterConfig).orThrow();
+
+      // A sleep after emitting the config prevents it intermittently
+      // emitting the config twice, for reasons that are unclear.
+      MILLISECONDS.sleep(500);
+    }
+  }
+
   /**
    * This test initializes with a first config and then pushes a second one, making sure that
    * the difference in services and nodes is enabled.
@@ -96,13 +125,7 @@ class CoreTest {
   @Test
   @SuppressWarnings({"unchecked"})
   void addNodesAndServicesOnNewConfig() throws Exception {
-    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux());
-    when(configProvider.config()).thenReturn(clusterConfig);
-    when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -115,7 +138,7 @@ class CoreTest {
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
-        return configProvider;
+        return mockConfigProvider.configProvider;
       }
 
       @Override
@@ -123,10 +146,6 @@ class CoreTest {
         return mocks.get(target.address());
       }
     }) {
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
-
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
@@ -136,10 +155,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(oneNodeConfig);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(oneNodeConfig);
 
       logger.info("Validating 1");
       logger.info("Validating 2");
@@ -164,10 +180,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodeConfig);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodeConfig);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(2))
@@ -190,16 +203,15 @@ class CoreTest {
     }
   }
 
-
   void configureMock(Node mock, String id, String ip, int port) {
     when(mock.identifier()).thenReturn(new NodeIdentifier(ip, port));
     when(mock.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
-      .thenAnswer((Answer) invocation -> {
+      .thenAnswer((Answer<Mono<Void>>) invocation -> {
         logger.info("{}.addService called with arguments: {}", id, Arrays.toString(invocation.getArguments()));
         return Mono.empty();
       });
     when(mock.removeService(any(ServiceType.class), any(Optional.class)))
-      .thenAnswer((Answer) invocation -> {
+      .thenAnswer((Answer<Mono<Void>>) invocation -> {
         logger.info("{}.removeService called with arguments: {}", id, Arrays.toString(invocation.getArguments()));
         return Mono.empty();
       });
@@ -212,13 +224,7 @@ class CoreTest {
   @Test
   @SuppressWarnings("unchecked")
   void addServicesOnNewConfig() throws Exception {
-    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux());
-    when(configProvider.config()).thenReturn(clusterConfig);
-    when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -231,7 +237,7 @@ class CoreTest {
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
-        return configProvider;
+        return mockConfigProvider.configProvider;
       }
 
       @Override
@@ -239,10 +245,6 @@ class CoreTest {
         return mocks.get(target.address());
       }
     }) {
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
-
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
@@ -252,10 +254,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesConfig);
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -281,10 +280,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesConfigMore);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesConfigMore);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(2))
@@ -313,13 +309,7 @@ class CoreTest {
   @Test
   @SuppressWarnings("unchecked")
   void removeNodesAndServicesOnNewConfig() throws Exception {
-    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux());
-    when(configProvider.config()).thenReturn(clusterConfig);
-    when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -332,7 +322,7 @@ class CoreTest {
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
-        return configProvider;
+        return mockConfigProvider.configProvider;
       }
 
       @Override
@@ -340,11 +330,7 @@ class CoreTest {
         logger.info("createNode {} {}", target, alternate);
         return mocks.get(target.address());
       }
-    } ) {
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
-
+    }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
@@ -354,10 +340,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesConfig);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -385,10 +368,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesLessServices);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesLessServices);
 
       logger.info("Validating");
       verify(mock102, timeout(TIMEOUT).times(1))
@@ -399,13 +379,7 @@ class CoreTest {
   @Test
   @SuppressWarnings("unchecked")
   void removesNodeIfNotPresentInConfigAnymore() throws Exception {
-    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux());
-    when(configProvider.config()).thenReturn(clusterConfig);
-    when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket(eq("travel-sample"), anyBoolean())).thenReturn(Mono.empty());
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -418,7 +392,7 @@ class CoreTest {
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
-        return configProvider;
+        return mockConfigProvider.configProvider;
       }
 
       @Override
@@ -426,10 +400,6 @@ class CoreTest {
         return mocks.get(target.address());
       }
     }) {
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
-
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
@@ -439,10 +409,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesConfig);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -470,10 +437,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(twoNodesLessServices);
-      logger.info("Emitting config");
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(twoNodesLessServices);
 
       logger.info("Validating");
 
@@ -488,14 +452,7 @@ class CoreTest {
   @Test
   @SuppressWarnings("unchecked")
   void addsSecondNodeIfBothSameHostname() throws Exception {
-    final ConfigurationProvider configProvider = mock(ConfigurationProvider.class);
-    Sinks.Many<ClusterConfig> configs = Sinks.many().multicast().directBestEffort();
-    ClusterConfig clusterConfig = new ClusterConfig();
-    when(configProvider.configs()).thenReturn(configs.asFlux()
-      .doOnNext(v -> logger.info("config emitted")));
-    when(configProvider.config()).thenReturn(clusterConfig);
-    when(configProvider.shutdown()).thenReturn(Mono.empty());
-    when(configProvider.closeBucket(eq("default"), anyBoolean())).thenReturn(Mono.empty());
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
@@ -509,7 +466,7 @@ class CoreTest {
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
-        return configProvider;
+        return mockConfigProvider.configProvider;
       }
 
       @Override
@@ -517,10 +474,6 @@ class CoreTest {
         return mocks.get(target.address() + ":" + target.managerPort());
       }
     }) {
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
-
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
@@ -530,10 +483,7 @@ class CoreTest {
         ENV,
         LOCALHOST
       );
-      clusterConfig.setBucketConfig(oneNodeConfig);
-      logger.info("Emitting config {}", oneNodeConfig.nodes().stream().map(v -> v.hostname()).collect(Collectors.joining(", ")));
-      configs.tryEmitNext(clusterConfig).orThrow();
-      addMagicSleep();
+      mockConfigProvider.accept(oneNodeConfig);
 
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(1))
@@ -584,12 +534,4 @@ class CoreTest {
     }
   }
 
-  // A sleep after emitting the config prevents it intermittently emitting the config twice, for reasons that are unclear.
-  static void addMagicSleep() {
-    try {
-      Thread.sleep(500);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
 }
