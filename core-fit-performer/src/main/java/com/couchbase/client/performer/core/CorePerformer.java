@@ -29,6 +29,10 @@ import com.couchbase.client.protocol.performer.Caps;
 import com.couchbase.client.protocol.performer.PerformerCapsFetchRequest;
 import com.couchbase.client.protocol.performer.PerformerCapsFetchResponse;
 import com.couchbase.client.protocol.shared.API;
+import com.couchbase.client.protocol.shared.Counter;
+import com.couchbase.client.protocol.shared.SetCounterResponse;
+import com.couchbase.client.protocol.shared.ClearAllCountersRequest;
+import com.couchbase.client.protocol.shared.ClearAllCountersResponse;
 import com.couchbase.client.protocol.streams.CancelRequest;
 import com.couchbase.client.protocol.streams.CancelResponse;
 import com.couchbase.client.protocol.streams.RequestItemsRequest;
@@ -56,6 +60,8 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
 
     abstract protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response);
     private final Logger logger = LoggerFactory.getLogger(CorePerformer.class);
+
+    private static final Counters counters = new Counters();
 
     @Override
     public void performerCapsFetch(PerformerCapsFetchRequest request, StreamObserver<PerformerCapsFetchResponse> responseObserver) {
@@ -94,7 +100,6 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
                 throw new UnsupportedOperationException("Not workloads");
             }
 
-            var counters = new Counters();
             var sdkExecutor = executor(request.getWorkloads(), counters, API.DEFAULT);
             @Nullable var sdkExecutorReactive = executor(request.getWorkloads(), counters, API.ASYNC);
             @Nullable var transactionsExecutor = transactionsExecutor(request.getWorkloads(), counters);
@@ -158,5 +163,19 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
         } catch (RuntimeException err) {
             responseObserver.onError(Status.UNKNOWN.withDescription(err.toString()).asException());
         }
+    }
+
+    @Override
+    public void setCounter(Counter counter, StreamObserver<SetCounterResponse> responseObserver) {
+        counters.setCounter(counter.getCounterId(), counter.getGlobal().getCount());
+        responseObserver.onNext(SetCounterResponse.getDefaultInstance());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void clearAllCounters(ClearAllCountersRequest request, StreamObserver<ClearAllCountersResponse> responseObserver) {
+        counters.clearCounters();
+        responseObserver.onNext(ClearAllCountersResponse.getDefaultInstance());
+        responseObserver.onCompleted();
     }
 }

@@ -18,7 +18,7 @@ package com.couchbase.client.performer.core.bounds;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BoundsCounterBased implements BoundsExecutor {
-    private final AtomicInteger counter;
+    protected final AtomicInteger counter;
 
     public BoundsCounterBased(AtomicInteger counter) {
         this.counter = counter;

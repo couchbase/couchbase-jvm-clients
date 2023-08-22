@@ -37,4 +37,14 @@ public class Counters {
         }
         throw new UnsupportedOperationException("Unknown counter type");
     }
+
+    public void setCounter(String counterId, int newCount) {
+        var counter = counters.get(counterId);
+        if (counter == null) throw new UnsupportedOperationException("Counter does not exist");
+        counter.set(newCount);
+    }
+
+    public void clearCounters() {
+        counters.clear();
+    }
 }
