@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.performer.core.perf;
 
+import com.couchbase.client.performer.core.bounds.BoundsCounterEquals;
 import com.couchbase.client.performer.core.bounds.BoundsExecutor;
 import com.couchbase.client.performer.core.bounds.BoundsCounterBased;
 import com.couchbase.client.performer.core.bounds.BoundsForTime;
@@ -22,7 +23,6 @@ import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.shared.Bounds;
-import com.couchbase.client.protocol.transactions.TransactionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,8 +58,10 @@ public class HorizontalScalingThread extends Thread {
         if (bounds.hasCounter()) {
             var counter = per.counters().getCounter(bounds.getCounter());
             return new BoundsCounterBased(counter);
-        }
-        else if (bounds.hasForTime()) {
+        } else if (bounds.hasCounterEq()) {
+            var counter = per.counters().getCounter(bounds.getCounterEq());
+            return new BoundsCounterEquals(counter);
+        } else if (bounds.hasForTime()) {
             return new BoundsForTime(Duration.ofSeconds(bounds.getForTime().getSeconds()));
         }
         else {
