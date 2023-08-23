@@ -621,7 +621,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       if (finalExceptionSimpleName != null) {
         tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName);
       } else {
-        tags.put(TracingIdentifiers.ATTR_OUTCOME, "success");
+        tags.put(TracingIdentifiers.ATTR_OUTCOME, "Success");
       }
 
       return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
