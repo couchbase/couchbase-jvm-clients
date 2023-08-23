@@ -23,8 +23,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * A {@link SenderContext} for Couchbase.
- *
- * @author Marcin Grzejszczak
  */
 public class CouchbaseSenderContext extends SenderContext<Object> {
 

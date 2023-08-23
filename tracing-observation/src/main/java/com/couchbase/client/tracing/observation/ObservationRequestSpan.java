@@ -26,8 +26,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Wraps a Micrometer Observation, ready to be passed in into options for each operation into the SDK as a parent.
- *
- * @author Marcin Grzejszczak
  */
 public class ObservationRequestSpan implements RequestSpan {
 

@@ -29,8 +29,6 @@ import java.time.Duration;
 /**
  * Wraps the Micrometer Observation, so it is suitable to be passed in into the couchbase environment and picked up
  * by the rest of the SDK as a result.
- *
- * @author Marcin Grzejszczak
  */
 public class ObservationRequestTracer implements RequestTracer {
 
