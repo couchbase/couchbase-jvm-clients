@@ -22,36 +22,65 @@ import com.couchbase.client.core.msg.Request;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.Arrays;
 import java.util.List;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 class RoundRobinSelectionStrategyTest {
 
   @Test
-  @SuppressWarnings("unchecked")
+  void checksForEmptyEndpointList() {
+    RoundRobinSelectionStrategy strategy = new RoundRobinSelectionStrategy();
+    assertNull(strategy.select(request(), emptyList()));
+  }
+
+  @Test
+  void ignoresUnreadyEndpoints() {
+    RoundRobinSelectionStrategy strategy = new RoundRobinSelectionStrategy();
+
+    List<Endpoint> endpoints = listOf(
+      unreadyEndpoint(),
+      readyEndpoint(),
+      unreadyEndpoint()
+    );
+
+    for (int i = 0; i < 10; i++) {
+      assertSame(endpoints.get(1), strategy.select(request(), endpoints));
+    }
+  }
+
+  @Test
+  void returnsNullIfAllUnready() {
+    RoundRobinSelectionStrategy strategy = new RoundRobinSelectionStrategy();
+
+    List<Endpoint> endpoints = listOf(
+      unreadyEndpoint(),
+      unreadyEndpoint(),
+      unreadyEndpoint()
+    );
+
+    for (int i = 0; i < 10; i++) {
+      assertNull(strategy.select(request(), endpoints));
+    }
+  }
+
+  @Test
   void testRoundRobinSelectOverIntegerMaxValue() {
     RoundRobinSelectionStrategy strategy = new RoundRobinSelectionStrategy();
-    Endpoint a = Mockito.mock(Endpoint.class);
-    Endpoint b = Mockito.mock(Endpoint.class);
-    Endpoint c = Mockito.mock(Endpoint.class);
-    Endpoint d = Mockito.mock(Endpoint.class);
-    Endpoint e = Mockito.mock(Endpoint.class);
-    when(a.state()).thenReturn(EndpointState.CONNECTED);
-    when(a.freeToWrite()).thenReturn(true);
-    when(b.state()).thenReturn(EndpointState.CONNECTED);
-    when(b.freeToWrite()).thenReturn(true);
-    when(c.state()).thenReturn(EndpointState.CONNECTED);
-    when(c.freeToWrite()).thenReturn(true);
-    when(d.state()).thenReturn(EndpointState.CONNECTED);
-    when(d.freeToWrite()).thenReturn(true);
-    when(e.state()).thenReturn(EndpointState.CONNECTED);
-    when(e.freeToWrite()).thenReturn(true);
-    List<Endpoint> endpoints = Arrays.asList(a, b, c, d, e);
-    Request request = Mockito.mock(Request.class);
+    Endpoint a = readyEndpoint();
+    Endpoint b = readyEndpoint();
+    Endpoint c = readyEndpoint();
+    Endpoint d = readyEndpoint();
+    Endpoint e = readyEndpoint();
+
+    List<Endpoint> endpoints = listOf(a, b, c, d, e);
+    Request<?> request = request();
 
     strategy.setSkip(Integer.MAX_VALUE - 2);
 
@@ -92,4 +121,21 @@ class RoundRobinSelectionStrategyTest {
     assertEquals(selected, a);
   }
 
+  private static Endpoint readyEndpoint() {
+    Endpoint e = Mockito.mock(Endpoint.class);
+    when(e.state()).thenReturn(EndpointState.CONNECTED);
+    when(e.freeToWrite()).thenReturn(true);
+    return e;
+  }
+
+  private static Endpoint unreadyEndpoint() {
+    Endpoint e = Mockito.mock(Endpoint.class);
+    when(e.state()).thenReturn(EndpointState.DISCONNECTING);
+    when(e.freeToWrite()).thenReturn(false);
+    return e;
+  }
+
+  private static Request<?> request() {
+    return Mockito.mock(Request.class);
+  }
 }

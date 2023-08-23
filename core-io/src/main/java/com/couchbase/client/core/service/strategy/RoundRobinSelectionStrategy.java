@@ -32,25 +32,26 @@ public class RoundRobinSelectionStrategy implements EndpointSelectionStrategy {
   @Override
   public <R extends Request<? extends Response>> Endpoint select(final R request,
                                                                  final List<Endpoint> endpoints) {
-    int endpointSize = endpoints.size();
-    //increments skip and prevents it to overflow to a negative value
-    skip.set(Math.max(0, skip.get()+1));
-    int offset = skip.get() % endpointSize;
-
-    //attempt to find a CONNECTED endpoint at the offset, or try following ones
-    for (int i = offset; i < endpointSize; i++) {
-      Endpoint endpoint = endpoints.get(i);
-      if (endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
-        return endpoint;
-      }
+    // `endpoints` is mutable and might be modified concurrently, so check again for empty list
+    // to prevent the upcoming % operations from throwing ArithmeticException.
+    int endpointsSize = endpoints.size();
+    if (endpointsSize == 0) {
+      return null;
     }
 
-    //arriving here means the offset endpoint wasn't CONNECTED and none of the endpoints after it were.
-    //wrap around and try from the beginning of the array
-    for (int i = 0; i < offset; i++) {
-      Endpoint endpoint = endpoints.get(i);
-      if (endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
-        return endpoint;
+    int startIndex = forcePositive(skip.incrementAndGet()) % endpointsSize;
+
+    // Search for a connected endpoint, starting at startOffset, and wrapping around if necessary.
+    for (int i = 0; i < endpointsSize; i++) {
+      try {
+        Endpoint endpoint = endpoints.get((startIndex + i) % endpointsSize);
+        if (endpoint.state() == EndpointState.CONNECTED && endpoint.freeToWrite()) {
+          return endpoint;
+        }
+      } catch (IndexOutOfBoundsException ignore) {
+        // Endpoint list was modified concurrently, and there's no longer
+        // an element at this index. Continue, because later iterations might
+        // wrap around to the start of the list.
       }
     }
 
@@ -71,7 +72,10 @@ public class RoundRobinSelectionStrategy implements EndpointSelectionStrategy {
    * Returns the current skip value, useful for testing.
    */
   int currentSkip() {
-    return skip.get();
+    return forcePositive(skip.get());
   }
 
+  private static int forcePositive(int i) {
+    return i & 0x7fffffff; // clear the sign bit
+  }
 }
