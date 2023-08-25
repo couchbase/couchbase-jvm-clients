@@ -81,7 +81,6 @@ import static com.couchbase.search.SearchHelper.handleSearchBlocking;
 // [end:3.4.5]
 
 import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -670,7 +669,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             if (opts.hasScanConsistency()) {
                 if (opts.getScanConsistency() == ScanConsistency.NOT_BOUNDED) out.scanConsistency(QueryScanConsistency.NOT_BOUNDED);
-                if (opts.getScanConsistency() == ScanConsistency.REQUEST_PLUS) out.scanConsistency(QueryScanConsistency.REQUEST_PLUS);
+                else if (opts.getScanConsistency() == ScanConsistency.REQUEST_PLUS) out.scanConsistency(QueryScanConsistency.REQUEST_PLUS);
                 else throw new UnsupportedOperationException("Unexpected scan consistency value:" + opts.getScanConsistency());
             }
 
