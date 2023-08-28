@@ -122,8 +122,8 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
 
     AtomicBoolean first = new AtomicBoolean(true);
     cluster.reactive().query(
-        "select meta(a).id, meta(b).cas, * from " + "`" + config().bucketname() + "` a, " + "`"
-          + config().bucketname() + "` b ",
+        "select * from `" + config().bucketname() + "` a  UNNEST(SELECT b.* FROM `" + config().bucketname()
+          + "` b) AS c",
         queryOptions().metrics(true).scanConsistency(QueryScanConsistency.REQUEST_PLUS)
       ).block()
       .rowsAs(byte[].class).doOnNext(it -> {
@@ -132,7 +132,6 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
             new ProposedGlobalConfigContext(dummyConfig, "localhost", true)
           );
         }
-        //System.out.println(new String(it));
       }).blockLast();
     cluster.reactive().core().shutdown().block(); // flush out events
     List<Class> events = new LinkedList<>();
