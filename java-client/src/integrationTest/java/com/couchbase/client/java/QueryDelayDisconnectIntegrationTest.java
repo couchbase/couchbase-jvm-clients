@@ -123,7 +123,7 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
     AtomicBoolean first = new AtomicBoolean(true);
     cluster.reactive().query(
         "select * from `" + config().bucketname() + "` a  UNNEST(SELECT b.* FROM `" + config().bucketname()
-          + "` b) AS c",
+          + "` b limit 100) AS c limit 10000",
         queryOptions().metrics(true).scanConsistency(QueryScanConsistency.REQUEST_PLUS)
       ).block()
       .rowsAs(byte[].class).doOnNext(it -> {
