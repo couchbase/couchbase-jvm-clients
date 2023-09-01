@@ -351,7 +351,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             if (request.hasContentAs()) {
               var content = ContentAsUtil.contentType(request.getContentAs(),
-                      () -> r.contentAsBytes(),
+                      () -> r.contentAs(byte[].class),
                       () -> r.contentAs(String.class),
                       () -> r.contentAs(JsonObject.class),
                       () -> r.contentAs(JsonArray.class),
