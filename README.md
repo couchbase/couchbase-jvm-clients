@@ -21,7 +21,7 @@ This repository contains the following projects:
  - `java-client`: the Java language binding
  - `scala-client`: the Scala language binding
  - `kotlin-client`: the Kotlin language binding
- - `tracing-observation`: module to integrate with [Micrometer Observation](https://micrometer.io/docs/observation)
+ - `tracing-micrometer-observation`: module to integrate with [Micrometer Observation](https://micrometer.io/docs/observation)
  - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
  - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
  - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics

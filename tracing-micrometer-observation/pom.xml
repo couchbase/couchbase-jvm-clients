@@ -9,7 +9,7 @@
         <version>1.13.10-SNAPSHOT</version>
     </parent>
 
-    <artifactId>tracing-observation</artifactId>
+    <artifactId>tracing-micrometer-observation</artifactId>
     <version>1.2.10-SNAPSHOT</version>
 
     <name>Micrometer Observation Interoperability</name>
@@ -159,7 +159,7 @@
                         <manifestSections>
                             <manifestSection>
                                 <!-- the part after couchbase- needs to match with the agent title in the env -->
-                                <name>couchbase-java-tracing-observation</name>
+                                <name>couchbase-java-tracing-micrometer-observation</name>
                                 <manifestEntries>
                                     <Impl-Version>${project.version}</Impl-Version>
                                     <Impl-Git-Revision>${buildNumber}</Impl-Git-Revision>

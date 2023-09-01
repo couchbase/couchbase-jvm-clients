@@ -69,6 +69,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
+  @Stability.Internal
   default void lowCardinalityAttribute(String key, String value) {
     attribute(key, value);
   }
@@ -81,6 +82,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
+  @Stability.Internal
   default void lowCardinalityAttribute(String key, boolean value) {
     attribute(key, value);
   }
@@ -93,6 +95,7 @@ public interface RequestSpan {
    * @param key the key of the attribute.
    * @param value the value of the attribute.
    */
+  @Stability.Internal
   default void lowCardinalityAttribute(String key, long value) {
     attribute(key, value);
   }
