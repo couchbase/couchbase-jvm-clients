@@ -53,7 +53,8 @@ class ObservationTracingIntegrationTest extends ClusterAwareIntegrationTest {
   static void beforeEach(ObservationRegistry observationRegistry) {
     TestNodeConfig config = config().firstNodeWith(Services.KV).get();
 
-    cluster = Cluster.connect("couchbase://" + config.hostname(),
+    cluster = Cluster.connect(
+      String.format("couchbase://%s:%d", config.hostname(), config.ports().get(Services.KV)),
       clusterOptions(config().adminUsername(), config().adminPassword())
         .environment(env -> env.requestTracer(ObservationRequestTracer.wrap(observationRegistry)))
     );
