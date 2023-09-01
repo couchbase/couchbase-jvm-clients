@@ -37,13 +37,18 @@ public class WorkloadStreamingThread extends Thread {
     private final ServerCallStreamObserver<Result> responseObserver;
     private final ConcurrentLinkedQueue<Result> writeQueue = new ConcurrentLinkedQueue<>();
     private final Config config;
-    private final GrpcPerformanceMeasureThread grpcPerformance = new GrpcPerformanceMeasureThread();
+    private GrpcPerformanceMeasureThread grpcPerformance = new GrpcPerformanceMeasureThread();
 
     public WorkloadStreamingThread(StreamObserver<Result> responseObserver, Config config) {
         super("perf-workload-streaming");
         this.responseObserver = (ServerCallStreamObserver<Result>) responseObserver;
         this.config = config;
-        this.grpcPerformance.start();
+
+        // Use the request for metrics as a proxy for this being performance testing
+        if (config.hasStreamingConfig() && config.getStreamingConfig().getEnableMetrics()) {
+            grpcPerformance = new GrpcPerformanceMeasureThread();
+            this.grpcPerformance.start();
+        }
     }
 
     public void enqueue(Result result) {
