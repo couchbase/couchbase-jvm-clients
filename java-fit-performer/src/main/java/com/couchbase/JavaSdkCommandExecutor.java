@@ -32,18 +32,16 @@ import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.diagnostics.WaitUntilReadyOptions;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.kv.CommonDurabilityOptions;
-import com.couchbase.client.java.kv.GetOptions;
-import com.couchbase.client.java.kv.GetResult;
-import com.couchbase.client.java.kv.InsertOptions;
-import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
-import com.couchbase.client.java.kv.RemoveOptions;
-import com.couchbase.client.java.kv.ReplaceOptions;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.query.*;
-import com.couchbase.client.protocol.sdk.kv.Get;
+import com.couchbase.client.protocol.sdk.collection.mutatein.MutateIn;
+import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInMacro;
+import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpecResult;
+import com.couchbase.client.protocol.sdk.kv.GetAllReplicas;
+import com.couchbase.client.protocol.shared.*;
 // [start:3.2.1]
 import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
@@ -63,15 +61,10 @@ import com.couchbase.client.performer.core.util.ErrorUtil;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest;
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
-import com.couchbase.client.protocol.shared.Content;
-import com.couchbase.client.protocol.shared.CouchbaseExceptionEx;
-import com.couchbase.client.protocol.shared.CouchbaseExceptionType;
-import com.couchbase.client.protocol.shared.Exception;
-import com.couchbase.client.protocol.shared.ExceptionOther;
-import com.couchbase.client.protocol.shared.ScanConsistency;
 // [start:3.4.3]
 import com.couchbase.query.QueryIndexManagerHelper;
 // [end:3.4.3]
+import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
@@ -86,10 +79,12 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
+import static com.couchbase.client.protocol.streams.Type.STREAM_KV_GET_ALL_REPLICAS;
 
 
 /**
@@ -142,7 +137,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (options == null) gr = collection.get(docId);
             else gr = collection.get(docId, options);
             result.setElapsedNanos(System.nanoTime() - start);
-            if (op.getReturnResult()) populateResult(request, result, gr);
+            if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
             else setSuccess(result);
         } else if (op.hasRemove()){
             var request = op.getRemove();
@@ -324,6 +319,193 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
             }
             // [end:3.4.3]
+
+            if (clc.hasGetAndLock()) {
+                var request = clc.getGetAndLock();
+                var docId = getDocId(request.getLocation());
+                var duration = Duration.ofSeconds(clc.getGetAndLock().getDuration().getSeconds());
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                GetResult gr;
+                if (options == null) gr = collection.getAndLock(docId, duration);
+                else gr = collection.getAndLock(docId, duration, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
+                else setSuccess(result);
+            }
+
+            if (clc.hasUnlock()) {
+                var request = clc.getUnlock();
+                var docId = getDocId(request.getLocation());
+                var cas = request.getCas();
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                if (options == null) collection.unlock(docId, cas);
+                else collection.unlock(docId, cas, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                setSuccess(result);
+            }
+
+            if (clc.hasGetAndTouch()) {
+                var request = clc.getGetAndTouch();
+                var docId = getDocId(request.getLocation());
+                Duration expiry;
+                if (request.getExpiry().hasAbsoluteEpochSecs()) {
+                    expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+                }
+                else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                GetResult gr;
+                if (options == null) gr = collection.getAndTouch(docId, expiry);
+                else gr = collection.getAndTouch(docId, expiry, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
+                else setSuccess(result);
+            }
+
+            if (clc.hasTouch()) {
+                var request = clc.getTouch();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request, spans);
+                Duration expiry;
+                if (request.getExpiry().hasAbsoluteEpochSecs()) {
+                    expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+                }
+                else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                MutationResult mr;
+                if (options == null) mr = collection.touch(docId, expiry);
+                else mr = collection.touch(docId, expiry , options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(result, mr);
+                else setSuccess(result);
+            }
+
+            if (clc.hasExists()) {
+                var request = clc.getExists();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request);
+                ExistsResult exists;
+                if (options == null) exists = collection.exists(docId);
+                else exists = collection.exists(docId , options);
+                if (op.getReturnResult()) populateResult(result, exists);
+                else setSuccess(result);
+            }
+
+            if (clc.hasMutateIn()) {
+                var request = clc.getMutateIn();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request);
+                var requestList = request.getSpecList().stream().map(JavaSdkCommandExecutor::convertMutateInSpec).toList();
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                MutateInResult mr;
+                if (options == null) mr = collection.mutateIn(docId, requestList);
+                else mr = collection.mutateIn(docId, requestList, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(result, mr, request);
+                else setSuccess(result);
+            }
+
+            if (clc.hasBinary()) {
+                var blc = clc.getBinary();
+
+                if (blc.hasIncrement()) {
+                    var request = blc.getIncrement();
+                    var docId = getDocId(request.getLocation());
+                    var options = createOptions(request);
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+                    CounterResult cr;
+                    if (options == null) cr = collection.binary().increment(docId);
+                    else cr = collection.binary().increment(docId, options);
+                    result.setElapsedNanos(System.nanoTime() - start);
+                    if (op.getReturnResult()) populateResult(result, cr);
+                    else setSuccess(result);
+                }
+
+                if (blc.hasDecrement()) {
+                    var request = blc.getDecrement();
+                    var docId = getDocId(request.getLocation());
+                    var options = createOptions(request);
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+                    CounterResult cr;
+                    if (options == null) cr = collection.binary().decrement(docId);
+                    else cr = collection.binary().decrement(docId, options);
+                    result.setElapsedNanos(System.nanoTime() - start);
+                    if (op.getReturnResult()) populateResult(result, cr);
+                    else setSuccess(result);
+                }
+
+                if (blc.hasAppend()) {
+                    var request = blc.getAppend();
+                    var docId = getDocId(request.getLocation());
+                    var options = createOptions(request);
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+                    MutationResult mr;
+                    if (options == null) mr = collection.binary().append(docId, request.getContent().toByteArray());
+                    else mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
+                    result.setElapsedNanos(System.nanoTime() - start);
+                    if (op.getReturnResult()) populateResult(result, mr);
+                    else setSuccess(result);
+                }
+
+                if (blc.hasPrepend()) {
+                    var request = blc.getPrepend();
+                    var docId = getDocId(request.getLocation());
+                    var options = createOptions(request);
+                    result.setInitiated(getTimeNow());
+                    long start = System.nanoTime();
+                    MutationResult mr;
+                    if (options == null) mr = collection.binary().prepend(docId, request.getContent().toByteArray());
+                    else mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
+                    result.setElapsedNanos(System.nanoTime() - start);
+                    if (op.getReturnResult()) populateResult(result, mr);
+                    else setSuccess(result);
+                }
+            }
+
+            if (clc.hasGetAllReplicas()) {
+                var request = clc.getGetAllReplicas();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                Stream<GetReplicaResult> results;
+                if (options == null) results = collection.getAllReplicas(docId);
+                else results = collection.getAllReplicas(docId, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                var streamer = new StreamStreamer<GetReplicaResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+                        (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
+                        (Throwable err) -> convertException(err));
+                perRun.streamerOwner().addAndStart(streamer);
+                result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+                        .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
+                                .setType(STREAM_KV_GET_ALL_REPLICAS)
+                                .setStreamId(streamer.streamId())));
+            }
+
+            if (clc.hasGetAnyReplica()) {
+                var request = clc.getGetAnyReplica();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                GetReplicaResult mr;
+                if (options == null) mr = collection.getAnyReplica(docId);
+                else mr = collection.getAnyReplica(docId, options);
+                result.setElapsedNanos(System.nanoTime() - start);
+                if (op.getReturnResult()) populateResult(result, mr, request.getContentAs());
+                else setSuccess(result);
+            }
+
             if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
                 result = LookupInHelper.handleLookupIn(perRun, connection, op, this::getDocId, spans);
             }
@@ -332,6 +514,103 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         }
 
         return result.build();
+    }
+
+    public static MutateInSpec convertMutateInSpec(com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpec requestSpec) {
+        if (requestSpec.hasUpsert()) {
+            var spec = MutateInSpec.upsert(
+                    requestSpec.getUpsert().getPath(),
+                    contentOrMacro(requestSpec.getUpsert().getContent()));
+            if (requestSpec.getUpsert().hasXattr()) spec.xattr();
+            if (requestSpec.getUpsert().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasInsert()) {
+            var spec = MutateInSpec.insert(
+                    requestSpec.getInsert().getPath(),
+                    contentOrMacro(requestSpec.getInsert().getContent()));
+            if (requestSpec.getInsert().hasXattr()) spec.xattr();
+            if (requestSpec.getInsert().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasReplace()) {
+            var spec = MutateInSpec.replace(
+                    requestSpec.getReplace().getPath(),
+                    contentOrMacro(requestSpec.getReplace().getContent()));
+            if (requestSpec.getReplace().hasXattr()) spec.xattr();
+            return spec;
+        }
+        if (requestSpec.hasRemove())
+        {
+            var spec = MutateInSpec.remove(requestSpec.getRemove().getPath());
+            if (requestSpec.getRemove().hasXattr()) spec.xattr();
+            return spec;
+        }
+        if (requestSpec.hasArrayAppend()) {
+            var spec  = MutateInSpec.arrayAppend(
+                    requestSpec.getArrayAppend().getPath(),
+                    requestSpec.getArrayAppend().getContentList()
+                            .stream()
+                            .map(JavaSdkCommandExecutor::contentOrMacro)
+                            .toList()
+            );
+            if (requestSpec.getArrayAppend().hasXattr()) spec.xattr();
+            if (requestSpec.getArrayAppend().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasArrayPrepend()) {
+            var spec = MutateInSpec.arrayPrepend(
+                    requestSpec.getArrayPrepend().getPath(),
+                    requestSpec.getArrayPrepend().getContentList()
+                            .stream()
+                            .map(JavaSdkCommandExecutor::contentOrMacro)
+                            .toList()
+            );
+            if (requestSpec.getArrayPrepend().hasXattr()) spec.xattr();
+            if (requestSpec.getArrayPrepend().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasArrayInsert()) {
+            var spec = MutateInSpec.arrayInsert(
+                    requestSpec.getArrayInsert().getPath(),
+                    requestSpec.getArrayInsert().getContentList()
+                            .stream()
+                            .map(JavaSdkCommandExecutor::contentOrMacro)
+                            .toList()
+            );
+            if (requestSpec.getArrayInsert().hasXattr()) spec.xattr();
+            if (requestSpec.getArrayInsert().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasArrayAddUnique()) {
+            var spec = MutateInSpec.arrayAddUnique(
+                    requestSpec.getArrayAddUnique().getPath(),
+                    requestSpec.getArrayAddUnique().getContentList()
+                            .stream()
+                            .map(JavaSdkCommandExecutor::contentOrMacro)
+                            .toList()
+            );
+            if (requestSpec.getArrayAddUnique().hasXattr()) spec.xattr();
+            if (requestSpec.getArrayAddUnique().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasIncrement()) {
+            var spec = MutateInSpec.increment(
+                    requestSpec.getIncrement().getPath(),
+                    requestSpec.getIncrement().getDelta());
+            if (requestSpec.getIncrement().hasXattr()) spec.xattr();
+            if (requestSpec.getIncrement().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        if (requestSpec.hasDecrement()) {
+            var spec = MutateInSpec.decrement(
+                    requestSpec.getDecrement().getPath(),
+                    requestSpec.getDecrement().getDelta());
+            if (requestSpec.getIncrement().hasXattr()) spec.xattr();
+            if (requestSpec.getIncrement().hasCreatePath()) spec.createPath();
+            return spec;
+        }
+        throw new UnsupportedOperationException("Given MutateInSpec operation is unsupported");
     }
 
     // [start:3.4.1]
@@ -500,8 +779,8 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setMutationResult(builder));
     }
 
-  public static void populateResult(Get req, Result.Builder result, GetResult value) {
-    var content = ContentAsUtil.contentType(req.getContentAs(),
+  public static void populateResult(ContentAs contentAs, Result.Builder result, GetResult value) {
+    var content = ContentAsUtil.contentType(contentAs,
             () -> value.contentAs(byte[].class),
             () -> value.contentAs(String.class),
             () -> value.contentAs(JsonObject.class),
@@ -525,6 +804,118 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       else {
         throw content.exception();
       }
+    }
+
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, MutateInResult value, MutateIn request) {
+        var builder = com.couchbase.client.protocol.sdk.collection.mutatein.MutateInResult.newBuilder()
+                .setCas(value.cas());
+        value.mutationToken().ifPresent(mt ->
+                builder.setMutationToken(com.couchbase.client.protocol.shared.MutationToken.newBuilder()
+                        .setPartitionId(mt.partitionID())
+                        .setPartitionUuid(mt.partitionUUID())
+                        .setSequenceNumber(mt.sequenceNumber())
+                        .setBucketName(mt.bucketName())));
+
+        AtomicInteger index = new AtomicInteger();
+        request.getSpecList().forEach(spec -> {
+            if (spec.hasContentAs()) {
+                var content = ContentAsUtil.contentType(spec.getContentAs(),
+                        () -> value.contentAs(index.get(), byte[].class),
+                        () -> value.contentAs(index.get(), String.class),
+                        () -> value.contentAs(index.get(), JsonObject.class),
+                        () -> value.contentAs(index.get(), JsonArray.class),
+                        () -> value.contentAs(index.get(), Boolean.class),
+                        () -> value.contentAs(index.get(), Integer.class),
+                        () -> value.contentAs(index.getAndIncrement(), Double.class));
+                builder.addResults(
+                        MutateInSpecResult.newBuilder()
+                                .setContentAsResult(ContentOrError.newBuilder().setContent(content.value()).build())
+                                .build()
+                );
+            }
+            else builder.addResults(MutateInSpecResult.newBuilder().build());
+        });
+
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setMutateInResult(builder));
+    }
+
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, CounterResult value) {
+        var builder = com.couchbase.client.protocol.sdk.kv.CounterResult.newBuilder()
+                .setCas(value.cas())
+                .setContent(value.content());
+        value.mutationToken().ifPresent(mt ->
+                builder.setMutationToken(com.couchbase.client.protocol.shared.MutationToken.newBuilder()
+                        .setPartitionId(mt.partitionID())
+                        .setPartitionUuid(mt.partitionUUID())
+                        .setSequenceNumber(mt.sequenceNumber())
+                        .setBucketName(mt.bucketName())));
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setCounterResult(builder));
+    }
+
+    public static Result processGetAllReplicasResult(GetAllReplicas request, GetReplicaResult value) {
+        try {
+
+            var content = ContentAsUtil.contentType(request.getContentAs(),
+                    () -> value.contentAs(byte[].class),
+                    () -> value.contentAs(String.class),
+                    () -> value.contentAs(JsonObject.class),
+                    () -> value.contentAs(JsonArray.class),
+                    () -> value.contentAs(Boolean.class),
+                    () -> value.contentAs(Integer.class),
+                    () -> value.contentAs(Double.class));
+
+            var builder = com.couchbase.client.protocol.sdk.kv.GetReplicaResult.newBuilder()
+                    .setCas(value.cas())
+                    .setContent(content.value())
+                    .setIsReplica(value.isReplica())
+                    .setStreamId(request.getStreamConfig().getStreamId());
+
+            return Result.newBuilder()
+                    .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                            .setGetReplicaResult(builder.build()))
+                    .build();
+        } catch (RuntimeException err) {
+            return Result.newBuilder()
+                    .setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+                            .setError(com.couchbase.client.protocol.streams.Error.newBuilder()
+                                    .setException(convertExceptionShared(err))
+                                    .setStreamId(request.getStreamConfig().getStreamId())))
+                    .build();
+        }
+    }
+
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, GetReplicaResult value, ContentAs contentAs) {
+        var content = ContentAsUtil.contentType(contentAs,
+                () -> value.contentAs(byte[].class),
+                () -> value.contentAs(String.class),
+                () -> value.contentAs(JsonObject.class),
+                () -> value.contentAs(JsonArray.class),
+                () -> value.contentAs(Boolean.class),
+                () -> value.contentAs(Integer.class),
+                () -> value.contentAs(Double.class));
+
+        var builder = com.couchbase.client.protocol.sdk.kv.GetReplicaResult.newBuilder()
+                .setCas(value.cas())
+                .setContent(content.value())
+                .setIsReplica(value.isReplica());
+
+        // [start:3.0.7]
+        value.expiryTime().ifPresent(et -> builder.setExpiryTime(et.getEpochSecond()));
+        // [end:3.0.7]
+
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setGetReplicaResult(builder));
+    }
+
+    public static void populateResult(com.couchbase.client.protocol.run.Result.Builder result, ExistsResult value) {
+        var builder = com.couchbase.client.protocol.sdk.kv.ExistsResult.newBuilder()
+                .setCas(value.cas())
+                .setExists(value.exists());
+
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                .setExistsResult(builder));
     }
 
     public static com.google.protobuf.Duration convertDuration(Duration duration) {
@@ -605,6 +996,18 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setQueryResult(builder));
     }
 
+    public static Object contentOrMacro(com.couchbase.client.protocol.sdk.collection.mutatein.ContentOrMacro contentOrMacro) {
+        switch (contentOrMacro.getContentOrMacroCase()) {
+            case CONTENT -> {
+                return content(contentOrMacro.getContent());
+            }
+            case MACRO -> {
+                return convertMacro(contentOrMacro.getMacro());
+            }
+            default -> throw new UnsupportedOperationException("Unknown content type");
+        }
+    }
+
     public static Object content(Content content) {
         if (content.hasPassthroughString()) {
             return content.getPassthroughString();
@@ -612,7 +1015,22 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else if (content.hasConvertToJson()) {
             return JsonObject.fromJson(content.getConvertToJson().toByteArray());
         }
+        else if (content.hasByteArray()) {
+            return content.getByteArray().toByteArray();
+        }
+        else if (content.hasNull()) {
+            return null;
+        }
         throw new UnsupportedOperationException("Unknown content type");
+    }
+
+    public static com.couchbase.client.java.kv.MutateInMacro convertMacro (MutateInMacro macro) {
+        return switch (macro.name()) {
+            case "CAS" -> com.couchbase.client.java.kv.MutateInMacro.CAS;
+            case "SEQ_NO" -> com.couchbase.client.java.kv.MutateInMacro.SEQ_NO;
+            case "VALUE_CRC_32C" -> com.couchbase.client.java.kv.MutateInMacro.VALUE_CRC_32C;
+            default -> throw new UnsupportedOperationException("Macro value not supported: " + macro.name());
+        };
     }
 
     public static @Nullable InsertOptions createOptions(com.couchbase.client.protocol.sdk.kv.Insert request, ConcurrentHashMap<String, RequestSpan> spans) {
@@ -750,6 +1168,197 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.getProjectionCount() > 0) out.project(opts.getProjectionList().stream().toList());
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable GetAndLockOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAndLock request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = GetAndLockOptions.getAndLockOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable UnlockOptions createOptions(com.couchbase.client.protocol.sdk.kv.Unlock request, ConcurrentHashMap<String, RequestSpan> spans) {
+
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = UnlockOptions.unlockOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable GetAndTouchOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAndTouch request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = GetAndTouchOptions.getAndTouchOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable TouchOptions createOptions(com.couchbase.client.protocol.sdk.kv.Touch request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = TouchOptions.touchOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable ExistsOptions createOptions(com.couchbase.client.protocol.sdk.kv.Exists request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = ExistsOptions.existsOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable IncrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Increment request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = IncrementOptions.incrementOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasDelta()) out.delta(opts.getDelta());
+            if (opts.hasInitial()) out.initial(opts.getInitial());
+
+            if (opts.hasExpiry()) {
+                if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
+                else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
+            }
+
+            if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable DecrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Decrement request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = DecrementOptions.decrementOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasDelta()) out.delta(opts.getDelta());
+            if (opts.hasInitial()) out.initial(opts.getInitial());
+
+            if (opts.hasExpiry()) {
+                if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
+                else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
+            }
+
+            if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable AppendOptions createOptions(com.couchbase.client.protocol.sdk.kv.Append request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = AppendOptions.appendOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasCas()) out.cas(opts.getCas());
+
+            convertDurability(opts.getDurability(), out);
+
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable PrependOptions createOptions(com.couchbase.client.protocol.sdk.kv.Prepend request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = PrependOptions.prependOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasCas()) out.cas(opts.getCas());
+
+            convertDurability(opts.getDurability(), out);
+
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable GetAllReplicasOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAllReplicas request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = GetAllReplicasOptions.getAllReplicasOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+
+            return out;
+        }
+        else return null;
+    }
+
+    public static @Nullable GetAnyReplicaOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAnyReplica request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = GetAnyReplicaOptions.getAnyReplicaOptions();
+            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+
+            return out;
+        }
+        else return null;
+    }
+    public static @Nullable MutateInOptions createOptions(com.couchbase.client.protocol.sdk.collection.mutatein.MutateIn request) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            var out = MutateInOptions.mutateInOptions();
+
+            if (opts.hasTimeoutMillis()) out.timeout(Duration.ofMillis(opts.getTimeoutMillis()));
+            if (opts.hasAccessDeleted()) out.accessDeleted(opts.getAccessDeleted());
+            if (opts.hasCas()) out.cas(opts.getCas());
+            // [start:3.0.1]
+            if (opts.hasCreateAsDeleted()) out.createAsDeleted(opts.getCreateAsDeleted());
+            // [end:3.0.1]
+            if (opts.hasExpiry()) {
+                if (opts.getExpiry().hasAbsoluteEpochSecs()) {
+                    // [start:3.0.7]
+                    out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
+                    // [end:3.0.7]
+                    // [start:<3.0.7]
+/*
+                    //throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+                    // [end:<3.0.7]
+*/
+                }
+                else if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
+                else throw new UnsupportedOperationException("Unknown expiry");
+            }
+            if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+            // [start:3.1.5]
+            if (opts.hasPreserveExpiry()) out.preserveExpiry(opts.getPreserveExpiry());
+            // [end:3.1.5]
+            if (opts.hasStoreSemantics()) {
+                switch (opts.getStoreSemantics()) {
+                    case INSERT -> out.storeSemantics(StoreSemantics.INSERT);
+                    case UPSERT -> out.storeSemantics(StoreSemantics.UPSERT);
+                    case REPLACE -> out.storeSemantics(StoreSemantics.REPLACE);
+                    case UNRECOGNIZED -> throw new UnsupportedOperationException("Unrecognised store semantics option value: " + opts.getStoreSemantics());
+                }
+            }
+
             return out;
         }
         else return null;
