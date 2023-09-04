@@ -49,7 +49,7 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
     this.expiration = expiration;
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH);
     }
   }
 

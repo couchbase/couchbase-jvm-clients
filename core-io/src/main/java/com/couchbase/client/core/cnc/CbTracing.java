@@ -72,7 +72,7 @@ public class CbTracing {
    */
   public static RequestSpan newSpan(RequestTracer tracer, String spanName, RequestSpan parent) {
     RequestSpan span = tracer.requestSpan(spanName, parent);
-    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     return span;
   }
 

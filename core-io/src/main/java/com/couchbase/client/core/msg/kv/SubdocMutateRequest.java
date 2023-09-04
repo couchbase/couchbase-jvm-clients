@@ -213,7 +213,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.createAsDeleted = createAsDeleted;
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

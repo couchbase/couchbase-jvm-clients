@@ -58,7 +58,7 @@ public class SearchRequest extends BaseRequest<SearchResponse>
         this.scope = scope;
 
         if (span != null && !CbTracing.isInternalSpan(span)) {
-            span.attribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
+            span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
             span.attribute(TracingIdentifiers.ATTR_OPERATION, indexName);
         }
     }

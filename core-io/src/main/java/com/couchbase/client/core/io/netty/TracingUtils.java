@@ -49,8 +49,8 @@ public class TracingUtils {
                                                      @Nullable final String localHost, final int localPort,
                                                      @Nullable final String remoteHost, final int remotePort,
                                                      @Nullable final String operationId) {
-    span.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    span.attribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
+    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
 
     if (localId != null) {
       span.attribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
@@ -87,7 +87,7 @@ public class TracingUtils {
     if (request instanceof SyncDurabilityRequest) {
       SyncDurabilityRequest syncDurabilityRequest = (SyncDurabilityRequest) request;
       if (syncDurabilityRequest.durabilityLevel() != null) {
-        span.attribute(TracingIdentifiers.ATTR_DURABILITY,
+        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY,
                 syncDurabilityRequest.durabilityLevel().map(Enum::name).orElse(DurabilityLevel.NONE.name()));
       }
     }

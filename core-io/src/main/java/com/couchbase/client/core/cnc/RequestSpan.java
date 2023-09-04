@@ -32,7 +32,7 @@ import java.time.Instant;
 public interface RequestSpan {
 
   /**
-   * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
+   * Sets a high-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
    * <p>
    * Note that, depending on the implementation, attributes might be ignored.
    *
@@ -42,7 +42,7 @@ public interface RequestSpan {
   void attribute(String key, String value);
 
   /**
-   * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
+   * Sets a high-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
    * <p>
    * Note that, depending on the implementation, attributes might be ignored.
    *
@@ -52,7 +52,7 @@ public interface RequestSpan {
   void attribute(String key, boolean value);
 
   /**
-   * Sets an attribute on the span, which is translated to the corresponding implementation specific tag.
+   * Sets a high-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
    * <p>
    * Note that, depending on the implementation, attributes might be ignored.
    *
@@ -60,6 +60,45 @@ public interface RequestSpan {
    * @param value the value of the attribute.
    */
   void attribute(String key, long value);
+
+  /**
+   * Sets a low-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
+   * <p>
+   * Note that, depending on the implementation, attributes might be ignored.
+   *
+   * @param key the key of the attribute.
+   * @param value the value of the attribute.
+   */
+  @Stability.Internal
+  default void lowCardinalityAttribute(String key, String value) {
+    attribute(key, value);
+  }
+
+  /**
+   * Sets a low-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
+   * <p>
+   * Note that, depending on the implementation, attributes might be ignored.
+   *
+   * @param key the key of the attribute.
+   * @param value the value of the attribute.
+   */
+  @Stability.Internal
+  default void lowCardinalityAttribute(String key, boolean value) {
+    attribute(key, value);
+  }
+
+  /**
+   * Sets a low-cardinality attribute on the span, which is translated to the corresponding implementation specific tag.
+   * <p>
+   * Note that, depending on the implementation, attributes might be ignored.
+   *
+   * @param key the key of the attribute.
+   * @param value the value of the attribute.
+   */
+  @Stability.Internal
+  default void lowCardinalityAttribute(String key, long value) {
+    attribute(key, value);
+  }
 
   /**
    * Sets an event on the span, which is translated to the corresponding implementation specific event.

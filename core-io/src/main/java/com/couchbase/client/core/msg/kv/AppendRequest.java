@@ -54,7 +54,7 @@ public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_APPEND);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

@@ -73,7 +73,7 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REPLACE);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_REPLACE);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

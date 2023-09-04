@@ -48,7 +48,7 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
 
     if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_EXISTS);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_EXISTS);
     }
   }
 

@@ -64,7 +64,7 @@ public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> imp
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }

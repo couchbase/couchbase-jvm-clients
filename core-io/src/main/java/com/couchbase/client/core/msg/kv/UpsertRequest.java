@@ -66,7 +66,7 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
     this.syncReplicationType = syncReplicationType;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UPSERT);
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_UPSERT);
       applyLevelOnSpan(syncReplicationType, span);
     }
   }
