@@ -47,7 +47,7 @@ object BucketManagerHelper {
             val bucketName = bm.getGetBucket.getBucketName
 
             val response = cluster.buckets.getBucket(bucketName,
-                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeoutMsecs) Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeoutMsecs) scala.concurrent.duration.Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
                 else DefaultManagementTimeout)
 
             response match {
@@ -68,7 +68,7 @@ object BucketManagerHelper {
             val bucketName = bm.getGetBucket.getBucketName
 
             val response: SMono[bucket.BucketSettings] = cluster.buckets.getBucket(bucketName,
-                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.getTimeoutMsecs) Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeoutMsecs) scala.concurrent.duration.Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
                 else DefaultManagementTimeout)
 
             response.map(r => {
