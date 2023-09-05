@@ -102,7 +102,7 @@ public class BucketManagerHelper {
             .setNumReplicas(response.numReplicas())
             .setRamQuotaMB(response.ramQuotaMB())
             .setStorageBackend(StorageBackend.valueOf(response.storageBackend().toString().toUpperCase()))
-            .setMaxExpiry(Duration.newBuilder().setNanos(response.maxExpiry().getNano()).setSeconds(response.maxExpiry().getSeconds()));
+            .setMaxExpirySeconds((int) response.maxExpiry().toSeconds());
 
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
             .setBucketManagerResult(com.couchbase.client.protocol.sdk.cluster.bucketmanager.Result.newBuilder()
@@ -113,7 +113,7 @@ public class BucketManagerHelper {
   private static com.couchbase.client.java.manager.bucket.GetBucketOptions createGetBucketOptions(GetBucketOptions getBucketOptions, ConcurrentHashMap<String, RequestSpan> spans) {
     var options = com.couchbase.client.java.manager.bucket.GetBucketOptions.getBucketOptions();
 
-    if (getBucketOptions.hasTimeout()) options.timeout(convertDuration(getBucketOptions.getTimeout()));
+    if (getBucketOptions.hasTimeoutMsecs()) options.timeout(java.time.Duration.ofMillis(getBucketOptions.getTimeoutMsecs()));
     if (getBucketOptions.hasParentSpanId()) options.parentSpan(spans.get(getBucketOptions.getParentSpanId()));
 
     return options;

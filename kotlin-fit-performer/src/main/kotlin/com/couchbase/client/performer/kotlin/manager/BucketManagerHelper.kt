@@ -53,9 +53,8 @@ suspend fun handleBucketManager(cluster: Cluster, command: Command, result: Resu
 }
 
 fun createGetBucketOptions(getBucketOptions: GetBucketOptions): CommonOptions {
-    val options = if (getBucketOptions.hasTimeout()) {
-        val nanos = getBucketOptions.timeout.nanos + TimeUnit.SECONDS.toNanos(getBucketOptions.timeout.seconds)
-        CommonOptions(nanos.toDuration(DurationUnit.NANOSECONDS))
+    val options = if (getBucketOptions.hasTimeoutMsecs()) {
+        CommonOptions(getBucketOptions.timeoutMsecs.toDuration(DurationUnit.MILLISECONDS))
     } else {
         CommonOptions.Default
     }
@@ -97,9 +96,9 @@ fun populateResult(result: Result.Builder, response: com.couchbase.client.kotlin
     }
 
     when (response.maximumExpiry) {
-        Expiry.None -> builder.setMaxExpiry(Duration.newBuilder().setNanos(0).setSeconds(0))
-        Expiry.Unknown -> builder.setMaxExpiry(Duration.newBuilder().setNanos(0).setSeconds(0))
-        else -> builder.setMaxExpiry(Duration.newBuilder().setNanos((response.maximumExpiry as Expiry.Relative).duration.inWholeNanoseconds.toInt()))
+        Expiry.None -> builder.setMaxExpirySeconds(0)
+        Expiry.Unknown -> builder.setMaxExpirySeconds(0)
+        else -> builder.setMaxExpirySeconds((response.maximumExpiry as Expiry.Relative).duration.inWholeSeconds.toInt())
     }
 
 

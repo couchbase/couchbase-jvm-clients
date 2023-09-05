@@ -32,6 +32,8 @@ import com.couchbase.client.scala.{Cluster, ReactiveCluster}
 import com.google.protobuf.Duration
 import reactor.core.scala.publisher.SMono
 
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 object BucketManagerHelper {
@@ -45,7 +47,7 @@ object BucketManagerHelper {
             val bucketName = bm.getGetBucket.getBucketName
 
             val response = cluster.buckets.getBucket(bucketName,
-                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeout) convertDuration(bm.getGetBucket.getOptions.getTimeout)
+                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeoutMsecs) Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
                 else DefaultManagementTimeout)
 
             response match {
@@ -66,7 +68,7 @@ object BucketManagerHelper {
             val bucketName = bm.getGetBucket.getBucketName
 
             val response: SMono[bucket.BucketSettings] = cluster.buckets.getBucket(bucketName,
-                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.hasTimeout) convertDuration(bm.getGetBucket.getOptions.getTimeout)
+                if (bm.getGetBucket.hasOptions && bm.getGetBucket.getOptions.getTimeoutMsecs) Duration(bm.getGetBucket.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
                 else DefaultManagementTimeout)
 
             response.map(r => {
@@ -86,7 +88,7 @@ object BucketManagerHelper {
                 .setRamQuotaMB(response.ramQuotaMB)
                 .setNumReplicas(response.numReplicas)
                 .setReplicaIndexes(response.replicaIndexes)
-                .setMaxExpiry(Duration.newBuilder().setSeconds(response.maxTTL.getOrElse(0).toLong))
+                .setMaxExpirySeconds(response.maxTTL.getOrElse(0))
 
         response.bucketType match {
             case Couchbase => builder.setBucketType(BucketType.COUCHBASE)
