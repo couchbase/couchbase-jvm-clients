@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.13.10</version>
+        <version>1.13.11-SNAPSHOT</version>
     </parent>
 
     <artifactId>metrics-opentelemetry</artifactId>
-    <version>0.4.10</version>
+    <version>0.4.11-SNAPSHOT</version>
 
     <name>OpenTelemetry Metrics Interoperability</name>
     <description>Provides interoperability with OpenTelemetry Metrics</description>
