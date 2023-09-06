@@ -63,7 +63,7 @@ object LookupInSpec {
       case Get(path, _xattr)    => new CoreSubdocGetCommand(SubdocCommandType.GET, path, _xattr)
       case Exists(path, _xattr) => new CoreSubdocGetCommand(SubdocCommandType.EXISTS, path, _xattr)
       case Count(path, _xattr)  => new CoreSubdocGetCommand(SubdocCommandType.COUNT, path, _xattr)
-    }
+    }.toSeq // toSeq for 2.13
   }
 
 }
