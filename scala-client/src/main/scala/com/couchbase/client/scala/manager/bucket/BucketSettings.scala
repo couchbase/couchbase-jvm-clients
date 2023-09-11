@@ -21,6 +21,8 @@ import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.manager.bucket.{
   CoreBucketSettings,
   CoreCompressionMode,
+  CoreConflictResolutionType,
+  CoreCreateBucketSettings,
   CoreEvictionPolicyType,
   CoreStorageBackend
 }
@@ -326,6 +328,20 @@ case class CreateBucketSettings(
           case StorageBackend.Couchstore => CoreStorageBackend.COUCHSTORE
           case StorageBackend.Magma      => CoreStorageBackend.MAGMA
         }.orNull
+    }
+  }
+
+  private[scala] def toCoreCreateBucketSettings: CoreCreateBucketSettings = {
+    val x = this
+    new CoreCreateBucketSettings {
+      override def conflictResolutionType(): CoreConflictResolutionType =
+        x.conflictResolutionType match {
+          case Some(ConflictResolutionType.Timestamp) => CoreConflictResolutionType.TIMESTAMP
+          case Some(ConflictResolutionType.Custom)    => CoreConflictResolutionType.CUSTOM
+          case Some(ConflictResolutionType.SequenceNumber) =>
+            CoreConflictResolutionType.SEQUENCE_NUMBER
+          case None => null
+        }
     }
   }
 }

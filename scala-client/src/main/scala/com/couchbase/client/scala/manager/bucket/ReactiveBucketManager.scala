@@ -44,7 +44,11 @@ class ReactiveBucketManager(couchbaseOps: CoreCouchbaseOps) {
     FutureConversions
       .javaCFToScalaMono(
         coreBucketManager
-          .createBucket(settings.toCore, null, toCommonOptions(timeout, retryStrategy))
+          .createBucket(
+            settings.toCore,
+            settings.toCoreCreateBucketSettings,
+            toCommonOptions(timeout, retryStrategy)
+          )
       )
       .`then`()
   }
