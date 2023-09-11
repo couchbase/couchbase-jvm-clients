@@ -24,7 +24,6 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
-import com.couchbase.client.core.msg.kv.ConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -65,8 +64,7 @@ public class KeyValueBucketLoader extends BaseBucketLoader {
         ctx,
         new CollectionIdentifier(bucket, Optional.empty(), Optional.empty()),
         BestEffortRetryStrategy.INSTANCE,
-        seed,
-        ConfigRequest.Purpose.DISCOVERY
+        seed
       );
       core().send(request);
       return Reactor.wrap(request, request.response(), true);

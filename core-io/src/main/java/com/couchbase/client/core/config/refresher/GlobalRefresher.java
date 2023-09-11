@@ -26,7 +26,6 @@ import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
-import com.couchbase.client.core.msg.kv.ConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.NanoTimestamp;
@@ -159,8 +158,7 @@ public class GlobalRefresher {
         configRequestTimeout,
         ctx,
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier(),
-        ConfigRequest.Purpose.REFRESH
+        nodeInfo.identifier()
       );
       core.send(request);
       return Reactor
@@ -178,10 +176,6 @@ public class GlobalRefresher {
             response
           ));
           return false;
-        })
-        .filter(response -> {
-          // Ignore responses from channels where clustermap change notifications are enabled.
-          return response.content().length > 0;
         })
         .map(response ->
           new ProposedGlobalConfigContext(new String(response.content(), UTF_8), nodeInfo.hostname())

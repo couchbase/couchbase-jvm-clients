@@ -39,7 +39,6 @@ import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
@@ -63,7 +62,6 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
-import com.couchbase.client.core.msg.kv.ConfigRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -92,12 +90,6 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETR
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noOpaque;
 
 /**
  * This handler is responsible for writing KV requests and completing their associated responses
@@ -221,8 +213,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     boolean vattrEnabled = features.contains(ServerFeature.VATTR);
     boolean createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
     boolean preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
-    boolean clustermapChangeNotification = features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION)
-      || features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
 
     if (syncReplication && !altRequest) {
       throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
@@ -240,8 +230,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ioContext.core().configurationProvider().collectionMap(),
       ctx.channel().id(),
       createAsDeleted,
-      preserveTtl,
-      clustermapChangeNotification
+      preserveTtl
     );
 
     notificationHandler = new ClustermapChangeNotificationHandler(
@@ -251,7 +240,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       endpoint.remoteHostname()
     );
 
-    if (clustermapChangeNotification) {
+    if (features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION)
+      || features.contains(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF)) {
       // Since we won't be polling this channel for clustermap changes,
       // trigger a "get clustermap" request to make sure we have a good baseline.
       // Otherwise, we could miss a change that occurred before this connection was created,
@@ -267,10 +257,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
     if (msg instanceof KeyValueRequest) {
       KeyValueRequest<Response> request = (KeyValueRequest<Response>) msg;
-
-      if (shortCircuit(request)) {
-        return;
-      }
 
       int opaque = request.opaque();
       writtenRequests.put(opaque, request);
@@ -327,34 +313,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
   }
 
-  private static final ByteBuf emptyGetConfigResponse = MemcacheProtocol.response(
-    UnpooledByteBufAllocator.DEFAULT,
-    MemcacheProtocol.Opcode.GET_CONFIG,
-    noDatatype(),
-    MemcacheProtocol.Status.SUCCESS.status(),
-    noOpaque(),
-    noCas(),
-    noExtras(),
-    noKey(),
-    noBody()
-  ).asReadOnly();
-
-  /**
-   * @return true if the request was immediately completed without writing to the channel
-   */
-  private boolean shortCircuit(KeyValueRequest<Response> request) {
-    if (
-      channelContext.clustermapChangeNotification()
-        && request instanceof ConfigRequest
-        && ((ConfigRequest) request).purpose() == ConfigRequest.Purpose.REFRESH
-    ) {
-      Response response = request.decode(emptyGetConfigResponse, channelContext);
-      request.response().complete(response);
-      return true;
-    }
-    return false;
-  }
-
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
     try {
@@ -376,7 +334,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   @Override
   public void channelInactive(final ChannelHandlerContext ctx) {
-    for (KeyValueRequest<? extends Response> request : writtenRequests.values()) {
+    for (KeyValueRequest<? extends  Response> request : writtenRequests.values()) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     }
     ctx.fireChannelInactive();

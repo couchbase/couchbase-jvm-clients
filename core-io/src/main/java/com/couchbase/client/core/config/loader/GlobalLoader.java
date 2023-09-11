@@ -25,7 +25,6 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
-import com.couchbase.client.core.msg.kv.ConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -82,8 +81,7 @@ public class GlobalLoader {
         ctx.environment().timeoutConfig().connectTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
-        seed,
-        ConfigRequest.Purpose.DISCOVERY
+        seed
       );
       core.send(request);
       return Reactor.wrap(request, request.response(), true);
