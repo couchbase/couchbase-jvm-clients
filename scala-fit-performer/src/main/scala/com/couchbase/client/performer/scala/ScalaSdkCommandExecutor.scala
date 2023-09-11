@@ -228,11 +228,9 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             setSuccess(result)
 
         }
-        // [start:1.4.1]
         else if (clc.hasBucketManager) {
             result = BucketManagerHelper.handleBucketManager(connection.cluster, op)
         }
-        // [end:1.4.1]
         // [start:1.2.4]
         else if (clc.hasEventingFunctionManager) {
             result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
@@ -302,14 +300,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 object ScalaSdkCommandExecutor {
   def convertDurability(durability: protocol.shared.DurabilityType): Durability = {
     if (durability.hasDurabilityLevel()) {
-      durability.getDurabilityLevel() match {
-        case shared.Durability.NONE     => Durability.Disabled
-        case shared.Durability.MAJORITY => Durability.Majority
-        case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE =>
-          Durability.MajorityAndPersistToActive
-        case shared.Durability.PERSIST_TO_MAJORITY => Durability.PersistToMajority
-        case _                                     => throw new UnsupportedOperationException("Unknown durability level")
-      }
+      convertDurability(durability.getDurabilityLevel)
     } else if (durability.hasObserve) {
       Durability.ClientVerified(
         durability.getObserve.getReplicateTo match {
@@ -331,6 +322,15 @@ object ScalaSdkCommandExecutor {
       )
     } else {
       throw new UnsupportedOperationException("Unknown durability")
+    }
+  }
+  def convertDurability(durability: protocol.shared.Durability): Durability = {
+    durability match {
+      case shared.Durability.NONE => Durability.Disabled
+      case shared.Durability.MAJORITY => Durability.Majority
+      case shared.Durability.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
+      case shared.Durability.PERSIST_TO_MAJORITY => Durability.PersistToMajority
+      case _ => throw new UnsupportedOperationException("Unknown durability level")
     }
   }
 

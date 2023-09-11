@@ -197,11 +197,9 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
                 result.build()
             }).block()
         }
-        // [start:1.4.1]
         else if (clc.hasBucketManager) {
             return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
         }
-        // [end:1.4.1]
         // [start:1.2.4]
         else if (clc.hasEventingFunctionManager) {
             return EventingHelper.handleEventingFunctionManagerReactive(cluster, op).block()

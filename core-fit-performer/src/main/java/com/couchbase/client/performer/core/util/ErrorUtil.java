@@ -60,7 +60,10 @@ public class ErrorUtil {
 
             logger.warn("Failed to convert {} to {}.{} (not a valid enum value)",
                     simpleClassName, CouchbaseExceptionType.class.getSimpleName(), enumValueName);
-            return null;
+            // We should only be here if the original exception derives from CouchbaseException.
+            // (But we can't assert that here without adding a dependency on core-io).
+            // There are some errors like HttpStatusCodeException which do, but aren't in the FIT enum as they're not specced.
+            return CouchbaseExceptionType.SDK_COUCHBASE_EXCEPTION;
         }
     }
 

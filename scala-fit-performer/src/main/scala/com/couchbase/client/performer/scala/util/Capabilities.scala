@@ -49,6 +49,8 @@ object Capabilities {
     out.add(Caps.SDK_QUERY)
     out.add(Caps.SDK_QUERY_READ_FROM_REPLICA)
 
+    out.add(Caps.SDK_BUCKET_MANAGEMENT)
+
     out
   }
 
