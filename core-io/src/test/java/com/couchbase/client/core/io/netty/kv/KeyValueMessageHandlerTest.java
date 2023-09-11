@@ -18,14 +18,10 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
-import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
@@ -37,7 +33,10 @@ import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -92,19 +91,13 @@ class KeyValueMessageHandlerTest {
     ENV.shutdown();
   }
 
-  private EmbeddedChannel newChannel() {
-    BaseEndpoint endpoint = mock(BaseEndpoint.class);
-    when(endpoint.remoteHostname()).thenReturn(CTX.remoteSocket().host());
-    return new EmbeddedChannel(new KeyValueMessageHandler(endpoint, CTX, Optional.of(BUCKET)));
-  }
-
   /**
    * This test sends two get requests and makes sure the latter one has a higher opaque then the
    * former one.
    */
   @Test
   void opaqueIsIncreasing() {
-    EmbeddedChannel channel = newChannel();
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
       channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1),
@@ -136,7 +129,7 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void attemptsRetryIfInstructedByErrorMap() {
-    EmbeddedChannel channel = newChannel();
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     ErrorMap errorMap = mock(ErrorMap.class);
     Map<Short, ErrorMap.ErrorCode> errors = new HashMap<>();
@@ -174,7 +167,7 @@ class KeyValueMessageHandlerTest {
    */
   @Test
   void closesChannelWithInvalidOpaque() {
-    EmbeddedChannel channel = newChannel();
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
       GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
@@ -214,7 +207,7 @@ class KeyValueMessageHandlerTest {
     );
 
     for (MemcacheProtocol.Status status : closeOnThese) {
-      EmbeddedChannel channel = newChannel();
+      EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
       try {
         GetRequest request1 = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
         channel.writeOutbound(request1);
@@ -253,7 +246,7 @@ class KeyValueMessageHandlerTest {
 
     int i = 0;
     for (MemcacheProtocol.Status status : retryOnThese) {
-      EmbeddedChannel channel = newChannel();
+      EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
       try {
         GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);
         channel.writeOutbound(request);
@@ -273,7 +266,7 @@ class KeyValueMessageHandlerTest {
 
   @Test
   void incrementsNotMyVbucketIndicator() {
-    EmbeddedChannel channel = newChannel();
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
 
     try {
       GetRequest request = new GetRequest("key", Duration.ofSeconds(1), CTX, CID, FailFastRetryStrategy.INSTANCE, null);

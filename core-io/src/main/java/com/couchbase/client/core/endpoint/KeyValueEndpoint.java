@@ -27,8 +27,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
-import com.couchbase.client.core.io.netty.kv.ServerPushDisabler;
-import com.couchbase.client.core.io.netty.kv.ServerPushEnabler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -96,22 +94,12 @@ public class KeyValueEndpoint extends BaseEndpoint {
         new MemcacheProtocolVerificationHandler(ctx)
       );
 
-      // Ignore server push requests during the handshake sequence.
-      // The following handlers can't tolerate being interrupted
-      // by a server push request (such as a clustermap change notification).
-      pipeline.addLast(new ServerPushDisabler());
-
       pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
       authenticator.authKeyValueConnection(ctx, pipeline);
 
       bucketname.ifPresent(s -> pipeline.addLast(new SelectBucketHandler(ctx, s)));
-
-      // After the handshake handlers have finished and removed themselves from
-      // the pipeline, we can stop ignoring server push requests.
-      pipeline.addLast(new ServerPushEnabler());
-
       pipeline.addLast(new KeyValueMessageHandler(endpoint, ctx, bucketname));
     }
 
@@ -142,10 +130,6 @@ public class KeyValueEndpoint extends BaseEndpoint {
         features.add(ServerFeature.SNAPPY);
         features.add(ServerFeature.SNAPPY_EVERYWHERE);
       }
-
-      features.add(ServerFeature.DUPLEX);
-      features.add(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
-      features.add(ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION);
 
       boolean unorderedExecutionEnabled = Boolean.parseBoolean(
         System.getProperty("com.couchbase.unorderedExecutionEnabled", "true")
