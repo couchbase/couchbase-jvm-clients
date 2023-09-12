@@ -20,7 +20,7 @@ import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer, ScalaIteratorStreamer}
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer}
 import com.couchbase.client.protocol.run.Result
 import reactor.core.scala.publisher.SMono
 
