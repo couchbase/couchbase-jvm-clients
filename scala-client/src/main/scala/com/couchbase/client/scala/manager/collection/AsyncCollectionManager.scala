@@ -15,12 +15,14 @@
  */
 package com.couchbase.client.scala.manager.collection
 
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncBucket
 import com.couchbase.client.scala.util.CoreCommonConverters.makeCommonOptions
 import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
 import com.couchbase.client.scala.util.FutureConversions
 
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
@@ -61,12 +63,21 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
               scope =>
                 ScopeSpec(
                   scope.name,
-                  scope.collections.asScala.map(coll => CollectionSpec(coll.name, scope.name))
+                  scope.collections.asScala.map(
+                    coll =>
+                      CollectionSpec(
+                        coll.name,
+                        scope.name,
+                        Some(coll.maxExpiry).map(v => Duration(v.longValue, TimeUnit.SECONDS)),
+                        Some(coll.history)
+                      )
+                  )
                 )
             )
       )
   }
 
+  @deprecated("Please use the overload that takes a CreateCollectionSettings", since = "1.4.11")
   def createCollection(
       collection: CollectionSpec,
       timeout: Duration = defaultManagerTimeout,
@@ -84,16 +95,93 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
       .map(_ => ())
   }
 
-  def dropCollection(
-      collection: CollectionSpec,
+  @Volatile
+  def createCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: CreateCollectionSettings
+  ): Future[Unit] = {
+    createCollection(
+      scopeName,
+      collectionName,
+      settings,
+      defaultManagerTimeout,
+      defaultRetryStrategy
+    )
+  }
+
+  @Volatile
+  def createCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: CreateCollectionSettings,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): Future[Unit] = {
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.createCollection(
+          scopeName,
+          collectionName,
+          settings.toCore,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
+  }
+
+  @Volatile
+  def updateCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: UpdateCollectionSettings,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
     FutureConversions
       .javaCFToScalaFutureMappingExceptions(
+        coreCollectionManager.updateCollection(
+          scopeName,
+          collectionName,
+          settings.toCore,
+          makeCommonOptions(timeout, retryStrategy)
+        )
+      )
+      .map(_ => ())
+  }
+
+  @deprecated(
+    "Please use the overload that takes separate scopeName and collectionName",
+    since = "1.4.11"
+  )
+  def dropCollection(
+      collection: CollectionSpec,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): Future[Unit] = {
+    dropCollection(collection.scopeName, collection.name, timeout, retryStrategy)
+  }
+
+  @Volatile
+  def dropCollection(
+      scopeName: String,
+      collectionName: String
+  ): Future[Unit] = {
+    dropCollection(scopeName, collectionName, defaultManagerTimeout, defaultRetryStrategy)
+  }
+
+  @Volatile
+  def dropCollection(
+      scopeName: String,
+      collectionName: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): Future[Unit] = {
+    FutureConversions
+      .javaCFToScalaFutureMappingExceptions(
         coreCollectionManager.dropCollection(
-          collection.scopeName,
-          collection.name,
+          scopeName,
+          collectionName,
           makeCommonOptions(timeout, retryStrategy)
         )
       )

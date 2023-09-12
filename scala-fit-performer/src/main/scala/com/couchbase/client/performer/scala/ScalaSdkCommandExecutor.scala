@@ -25,6 +25,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
+import com.couchbase.client.performer.scala.manager.CollectionManagerHelper
 import com.couchbase.client.performer.scala.query.{QueryHelper, QueryIndexManagerHelper}
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
@@ -257,8 +258,10 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             }
 
             setSuccess(result)
-
         }
+      if (blc.hasCollectionManager) {
+        result = CollectionManagerHelper.handleCollectionManager(connection.cluster, op)
+      }
     } else if (op.hasScopeCommand) {
       val slc = op.getScopeCommand
 

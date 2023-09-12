@@ -23,6 +23,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
+import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PATCH;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.POST;
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
 import static java.util.Objects.requireNonNull;
@@ -43,6 +44,10 @@ public class CoreHttpClient {
 
   public CoreHttpRequest.Builder put(CoreHttpPath path, CoreCommonOptions options) {
     return newRequest(PUT, path, options);
+  }
+
+  public CoreHttpRequest.Builder patch(CoreHttpPath path, CoreCommonOptions options) {
+    return newRequest(PATCH, path, options);
   }
 
   public CoreHttpRequest.Builder post(CoreHttpPath path, CoreCommonOptions options) {

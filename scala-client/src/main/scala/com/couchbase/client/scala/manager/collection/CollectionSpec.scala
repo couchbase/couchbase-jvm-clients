@@ -15,4 +15,19 @@
  */
 package com.couchbase.client.scala.manager.collection
 
-case class CollectionSpec(name: String, scopeName: String)
+import scala.concurrent.duration.Duration
+
+/**
+  * Represents a collection.
+  *
+  * @param name the name of the collection.
+  * @param scopeName the name of the scope the collection is on.
+  * @param expiry any configured TTL for newly created documents on this collection.  Older server versions will not have this setting, in which case it will be `None`.
+  * @param history whether history retention is enabled on this collection.  Older server versions will not have this setting, in which case it will be `None`.
+  */
+case class CollectionSpec private (
+    name: String,
+    scopeName: String,
+    expiry: Option[Duration] = None,
+    history: Option[Boolean] = None
+)

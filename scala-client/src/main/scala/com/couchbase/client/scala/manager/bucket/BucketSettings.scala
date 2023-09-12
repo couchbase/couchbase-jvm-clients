@@ -18,21 +18,14 @@ package com.couchbase.client.scala.manager.bucket
 import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
 import com.couchbase.client.core.config
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.manager.bucket.{
-  CoreBucketSettings,
-  CoreCompressionMode,
-  CoreConflictResolutionType,
-  CoreCreateBucketSettings,
-  CoreEvictionPolicyType,
-  CoreStorageBackend
-}
+import com.couchbase.client.core.manager.bucket.{CoreBucketSettings, CoreCompressionMode, CoreConflictResolutionType, CoreCreateBucketSettings, CoreEvictionPolicyType, CoreStorageBackend}
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.scala.durability.Durability
-import com.couchbase.client.scala.util.CouchbasePickler
+import com.couchbase.client.scala.util.{CouchbasePickler, DurationConversions}
 
 import java.lang
-import java.time.Duration
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 
 @Volatile
 sealed trait BucketType {
@@ -223,7 +216,10 @@ case class CreateBucketSettings(
     private[scala] val compressionMode: Option[CompressionMode] = None,
     private[scala] val conflictResolutionType: Option[ConflictResolutionType] = None,
     private[scala] val minimumDurabilityLevel: Option[Durability] = None,
-    private[scala] val storageBackend: Option[StorageBackend] = None
+    private[scala] val storageBackend: Option[StorageBackend] = None,
+    private[scala] val historyRetentionCollectionDefault: Option[Boolean] = None,
+    private[scala] val historyRetentionBytes: Option[Long] = None,
+    private[scala] val historyRetentionDuration: Option[Duration] = None,
 ) {
 
   def flushEnabled(value: Boolean): CreateBucketSettings = {
@@ -275,6 +271,18 @@ case class CreateBucketSettings(
     copy(storageBackend = Some(value))
   }
 
+  def historyRetentionCollectionDefault(value: Boolean): CreateBucketSettings = {
+    copy(historyRetentionCollectionDefault = Some(value))
+  }
+
+  def historyRetentionBytes(value: Long): CreateBucketSettings = {
+    copy(historyRetentionBytes = Some(value))
+  }
+
+  def historyRetentionDuration(value: Duration): CreateBucketSettings = {
+    copy(historyRetentionDuration = Some(value))
+  }
+
   private[scala] def toCore: CoreBucketSettings = {
     val x = this
     new CoreBucketSettings {
@@ -304,7 +312,7 @@ case class CreateBucketSettings(
           case EjectionMethod.NotRecentlyUsed => CoreEvictionPolicyType.NOT_RECENTLY_USED
         }.orNull
 
-      override def maxExpiry(): Duration = x.maxTTL.map(v => Duration.ofSeconds(v)).orNull
+      override def maxExpiry(): java.time.Duration = x.maxTTL.map(v => java.time.Duration.ofSeconds(v)).orNull
 
       override def compressionMode(): CoreCompressionMode =
         x.compressionMode.map {
@@ -328,6 +336,12 @@ case class CreateBucketSettings(
           case StorageBackend.Couchstore => CoreStorageBackend.COUCHSTORE
           case StorageBackend.Magma      => CoreStorageBackend.MAGMA
         }.orNull
+
+      override def historyRetentionCollectionDefault(): lang.Boolean = x.historyRetentionCollectionDefault.map(lang.Boolean.valueOf).orNull
+
+      override def historyRetentionBytes(): lang.Long = x.historyRetentionBytes.map(lang.Long.valueOf).orNull
+
+      override def historyRetentionDuration(): java.time.Duration = x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
     }
   }
 
@@ -359,8 +373,10 @@ case class BucketSettings(
     compressionMode: Option[CompressionMode],
     minimumDurabilityLevel: Durability,
     @Internal private[scala] val healthy: Boolean,
-    storageBackend: Option[StorageBackend] = None
-) {
+    storageBackend: Option[StorageBackend] = None,
+    historyRetentionCollectionDefault: Option[Boolean] = None,
+    historyRetentionBytes: Option[Long] = None,
+    historyRetentionDuration: Option[Duration] = None) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
       name,
@@ -372,15 +388,19 @@ case class BucketSettings(
       Some(ejectionMethod),
       maxTTL,
       compressionMode,
-      minimumDurabilityLevel = Some(minimumDurabilityLevel),
-      storageBackend = storageBackend
+      None,
+      Some(minimumDurabilityLevel),
+      storageBackend,
+      historyRetentionCollectionDefault,
+      historyRetentionBytes,
+      historyRetentionDuration
     )
   }
 }
 
 private[scala] object BucketSettings {
   def fromCore(core: CoreBucketSettings): BucketSettings = {
-    BucketSettings(
+    val out = BucketSettings(
       core.name,
       core.flushEnabled,
       core.ramQuotaMB.toInt,
@@ -420,8 +440,13 @@ private[scala] object BucketSettings {
         case CoreStorageBackend.COUCHSTORE => StorageBackend.Couchstore
         case CoreStorageBackend.MAGMA      => StorageBackend.Magma
         case _                             => throw new CouchbaseException(s"Unknown storage type ${core.storageBackend}")
-      }
+      },
+      // Cannot just do Option(x) here due to java.lang.Boolean and scala.Boolean
+      if (core.historyRetentionCollectionDefault != null) Some(core.historyRetentionCollectionDefault) else None,
+      if (core.historyRetentionBytes != null) Some(core.historyRetentionBytes) else None,
+      if (core.historyRetentionDuration != null) Some(core.historyRetentionDuration).map(DurationConversions.javaDurationToScala) else None
     )
+    out
   }
 }
 

@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.protostellar.ProtostellarCollectionManagerRequest;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
@@ -28,10 +29,12 @@ import com.couchbase.client.protostellar.admin.collection.v1.CreateScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteCollectionRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequest;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedCurrentlyInProtostellar;
 
 /**
  * For creating Protostellar GRPC requests.
@@ -45,18 +48,25 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                                      String bucketName,
                                                                                      String scopeName,
                                                                                      String collectionName,
-                                                                                     Duration maxTTL,
+                                                                                     @Nullable CoreCreateOrUpdateCollectionSettings settings,
                                                                                      CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
 
-    CreateCollectionRequest request = CreateCollectionRequest.newBuilder()
+    CreateCollectionRequest.Builder request = CreateCollectionRequest.newBuilder()
       .setBucketName(bucketName)
       .setScopeName(scopeName)
-      .setCollectionName(collectionName)
-      .setMaxExpirySecs(Math.toIntExact(maxTTL.getSeconds()))
-      .build();
+      .setCollectionName(collectionName);
 
-    return new ProtostellarCollectionManagerRequest<>(request,
+    if (settings != null) {
+      if (settings.maxExpiry() != null) {
+        request.setMaxExpirySecs(Math.toIntExact(settings.maxExpiry().getSeconds()));
+      }
+      if (settings.history() != null) {
+        throw unsupportedCurrentlyInProtostellar();
+      }
+    }
+
+    return new ProtostellarCollectionManagerRequest<>(request.build(),
       core,
       bucketName, scopeName, collectionName,
       TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION,

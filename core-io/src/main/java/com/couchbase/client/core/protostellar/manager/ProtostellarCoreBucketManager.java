@@ -210,6 +210,21 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
             throw incompatibleProtostellar("Unknown storage backend " + bucket.getStorageBackend());
         }
       }
+
+      @Override
+      public Boolean historyRetentionCollectionDefault() {
+        return null;
+      }
+
+      @Override
+      public Long historyRetentionBytes() {
+        return null;
+      }
+
+      @Override
+      public Duration historyRetentionDuration() {
+        return null;
+      }
     };
   }
 

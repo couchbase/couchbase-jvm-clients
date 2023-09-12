@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.AsyncCluster;
@@ -102,7 +103,17 @@ public class AsyncCollectionManager {
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
       final CreateCollectionOptions options) {
     return coreCollectionManager.createCollection(collectionSpec.scopeName(), collectionSpec.name(),
-        collectionSpec.maxExpiry(), options.build());
+      new CoreCreateOrUpdateCollectionSettings() {
+        @Override
+        public Duration maxExpiry() {
+          return collectionSpec.maxExpiry();
+        }
+
+        @Override
+        public Boolean history() {
+          return null;
+        }
+      }, options.build());
   }
 
   /**
@@ -251,7 +262,7 @@ public class AsyncCollectionManager {
         .thenApply(manifest -> manifest.scopes().stream()
             .map(s -> ScopeSpec.create(s.name(),
                 s.collections().stream()
-                    .map(c -> CollectionSpec.create(c.name(), s.name(), Duration.ofSeconds(c.maxExpiry())))
+                    .map(c -> CollectionSpec.create(c.name(), s.name(), c.maxExpiry() == null ? Duration.ZERO : Duration.ofSeconds(c.maxExpiry())))
                     .collect(Collectors.toSet())))
             .collect(Collectors.toList()));
   }

@@ -183,6 +183,7 @@ public class TracingIdentifiers {
   public static final String SPAN_REQUEST_MB_UPDATE_BUCKET = "manager_buckets_update_bucket";
 
   public static final String SPAN_REQUEST_MC_CREATE_COLLECTION = "manager_collections_create_collection";
+  public static final String SPAN_REQUEST_MC_UPDATE_COLLECTION = "manager_collections_update_collection";
   public static final String SPAN_REQUEST_MC_CREATE_SCOPE = "manager_collections_create_scope";
   public static final String SPAN_REQUEST_MC_DROP_COLLECTION = "manager_collections_drop_collection";
   public static final String SPAN_REQUEST_MC_DROP_SCOCPE = "manager_collections_drop_scope";

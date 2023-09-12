@@ -50,6 +50,8 @@ object Capabilities {
     out.add(Caps.SDK_QUERY_READ_FROM_REPLICA)
 
     out.add(Caps.SDK_BUCKET_MANAGEMENT)
+    out.add(Caps.SDK_COLLECTION_MANAGEMENT)
+    out.add(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
 
     out
   }

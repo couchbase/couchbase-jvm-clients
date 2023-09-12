@@ -44,7 +44,8 @@ public enum BucketCapabilities {
     SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
     SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument"),
     RANGE_SCAN("rangeScan"),
-    SUBDOC_READ_REPLICA("subdoc.ReplicaRead");
+    SUBDOC_READ_REPLICA("subdoc.ReplicaRead"),
+    NON_DEDUPED_HISTORY("nonDedupedHistory");
 
     private final String raw;
 

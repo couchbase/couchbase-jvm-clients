@@ -13,55 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package com.couchbase.client.core.manager.bucket;
+package com.couchbase.client.core.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.BucketType;
-import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
+// Currently create and update have the same settings.  If that changes, this will need to be split out.
 @Stability.Internal
-public interface CoreBucketSettings {
-  String name();
-
-  @Nullable
-  Boolean flushEnabled();
-
-  long ramQuotaMB();
-
-  @Nullable
-  Integer numReplicas();
-
-  @Nullable
-  Boolean replicaIndexes();
-
-  @Nullable
-  BucketType bucketType();
-
-  @Nullable
-  CoreEvictionPolicyType evictionPolicy();
-
+public interface CoreCreateOrUpdateCollectionSettings {
   @Nullable
   Duration maxExpiry();
 
   @Nullable
-  CoreCompressionMode compressionMode();
-
-  @Nullable
-  DurabilityLevel minimumDurabilityLevel();
-
-  @Nullable
-  CoreStorageBackend storageBackend();
-
-  @Nullable
-  Boolean historyRetentionCollectionDefault();
-
-  @Nullable
-  Long historyRetentionBytes();
-
-  @Nullable
-  Duration historyRetentionDuration();
+  Boolean history();
 }

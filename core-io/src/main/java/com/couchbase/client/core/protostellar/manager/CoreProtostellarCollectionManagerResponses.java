@@ -42,7 +42,7 @@ public class CoreProtostellarCollectionManagerResponses {
     for (ListCollectionsResponse.Scope s : response.getScopesList()) {
       List<CollectionsManifestCollection> collections = new LinkedList();
       for (ListCollectionsResponse.Collection c : s.getCollectionsList()) {
-        CollectionsManifestCollection collection = new CollectionsManifestCollection(c.getName(), c.getName(), c.getMaxExpirySecs());
+        CollectionsManifestCollection collection = new CollectionsManifestCollection(c.getName(), c.getName(), c.getMaxExpirySecs(), false);
         collections.add(collection);
       }
       CollectionsManifestScope scope = new CollectionsManifestScope(s.getName(), s.getName(), collections);

@@ -281,6 +281,9 @@ object BucketManagerHelper {
         StorageBackend.Magma
       case _ => throw new UnsupportedOperationException("Unknown storage backend")
     })
+    if (bs.hasHistoryRetentionCollectionDefault) cs = cs.historyRetentionCollectionDefault(bs.getHistoryRetentionCollectionDefault)
+    if (bs.hasHistoryRetentionBytes) cs = cs.historyRetentionBytes(bs.getHistoryRetentionBytes)
+    if (bs.hasHistoryRetentionSeconds) cs = cs.historyRetentionDuration(scala.concurrent.duration.Duration(bs.getHistoryRetentionSeconds, TimeUnit.SECONDS))
     cbs match {
       case Some(value) =>
         if (value.hasConflictResolutionType)
@@ -384,6 +387,10 @@ object BucketManagerHelper {
         builder.setMinimumDurabilityLevel(Durability.MAJORITY_AND_PERSIST_TO_ACTIVE)
       case PersistToMajority => builder.setMinimumDurabilityLevel(Durability.PERSIST_TO_MAJORITY)
     }
+
+    response.historyRetentionCollectionDefault.foreach(v => builder.setHistoryRetentionCollectionDefault(v))
+    response.historyRetentionBytes.foreach(v => builder.setHistoryRetentionBytes(v))
+    response.historyRetentionDuration.foreach(v => builder.setHistoryRetentionSeconds(v.toSeconds))
 
     builder.build
   }

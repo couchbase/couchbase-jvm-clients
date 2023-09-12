@@ -25,16 +25,21 @@ public class CollectionsManifestCollection {
 
   private final String name;
   private final String uid;
-  private final int maxExpiry;
+  private final Integer maxExpiry;
+  private final Boolean history;
 
   @JsonCreator
   public CollectionsManifestCollection(
     @JsonProperty("name") String name,
     @JsonProperty("uid") String uid,
-    @JsonProperty("maxTTL") int maxExpiry) {
+    @JsonProperty("maxTTL") Integer maxExpiry,
+    @JsonProperty("history") Boolean history) {
     this.name = name;
     this.uid = uid;
+    // Even if maxTTL is not set, it still appears in the JSON as 0.  Except on older server versions.
     this.maxExpiry = maxExpiry;
+    // Similarly history will appear as false in the JSON if not set.  Also except on older server versions.
+    this.history = history;
   }
 
   public String name() {
@@ -45,8 +50,12 @@ public class CollectionsManifestCollection {
     return uid;
   }
 
-  public int maxExpiry() {
+  public Integer maxExpiry() {
     return maxExpiry;
+  }
+
+  public Boolean history() {
+    return history;
   }
 
   @Override
@@ -54,7 +63,8 @@ public class CollectionsManifestCollection {
     return "CollectionsManifestCollection{" +
       "name='" + name + '\'' +
       ", uid='" + uid + '\'' +
-      ", maxExpiry=" + maxExpiry +
+      ", maxExpiry=" + maxExpiry + '\'' +
+      ", history=" + history +
       '}';
   }
 }

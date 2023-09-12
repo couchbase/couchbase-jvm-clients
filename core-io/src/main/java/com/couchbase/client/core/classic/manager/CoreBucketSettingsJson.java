@@ -54,6 +54,9 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
   private final @Nullable CoreEvictionPolicyType evictionPolicy;
   private final @Nullable DurabilityLevel minimumDurabilityLevel;
   private final @Nullable CoreStorageBackend storageBackend;
+  private final @Nullable Boolean historyRetentionCollectionDefault;
+  private final @Nullable Long historyRetentionBytes;
+  private final @Nullable Duration historyRetentionDuration;
 
   @Stability.Internal
   @JsonCreator
@@ -69,7 +72,10 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
       @JsonProperty("conflictResolutionType") final CoreConflictResolutionType conflictResolutionType,
       @JsonProperty("evictionPolicy") final CoreEvictionPolicyType evictionPolicy,
       @JsonProperty("durabilityMinLevel") final String durabilityMinLevel,
-      @JsonProperty("storageBackend") final CoreStorageBackend storageBackend
+      @JsonProperty("storageBackend") final CoreStorageBackend storageBackend,
+      @JsonProperty("historyRetentionCollectionDefault") final Boolean historyRetentionCollectionDefault,
+      @JsonProperty("historyRetentionBytes") final Long historyRetentionBytes,
+      @JsonProperty("historyRetentionSeconds") final Long historyRetentionDurationSeconds
   ) {
     this.name = name;
     this.flushEnabled = controllers.containsKey("flush");
@@ -84,6 +90,9 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
     this.evictionPolicy = evictionPolicy;
     this.minimumDurabilityLevel = DurabilityLevel.decodeFromManagementApi(durabilityMinLevel);
     this.storageBackend = storageBackend;
+    this.historyRetentionCollectionDefault = historyRetentionCollectionDefault;
+    this.historyRetentionBytes = historyRetentionBytes;
+    this.historyRetentionDuration = historyRetentionDurationSeconds == null ? null : Duration.ofSeconds(historyRetentionDurationSeconds);
   }
 
   static CoreBucketSettings create(final byte[] bytes) {
@@ -148,6 +157,21 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
     return evictionPolicy;
   }
 
+  @Nullable
+  public Boolean historyRetentionCollectionDefault() {
+    return historyRetentionCollectionDefault;
+  }
+
+  @Nullable
+  public Long historyRetentionBytes() {
+    return historyRetentionBytes;
+  }
+
+  @Nullable
+  public Duration historyRetentionDuration() {
+    return historyRetentionDuration;
+  }
+
   @Override
   public String toString() {
     return "BucketSettings{" +
@@ -163,6 +187,9 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
         ", evictionPolicy=" + evictionPolicy +
         ", minimumDurabilityLevel=" + minimumDurabilityLevel +
         ", storageBackend=" + storageBackend +
+        ", historyRetentionCollectionDefault=" + historyRetentionCollectionDefault +
+        ", historyRetentionBytes=" + historyRetentionBytes +
+        ", historyRetentionDuration=" + historyRetentionDuration +
         '}';
   }
 

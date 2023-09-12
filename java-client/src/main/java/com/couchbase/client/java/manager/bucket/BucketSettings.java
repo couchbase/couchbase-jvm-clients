@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -498,6 +499,21 @@ public class BucketSettings {
         }
 
         return storageBackend.alias().equals(StorageBackend.MAGMA.alias()) ? CoreStorageBackend.MAGMA : CoreStorageBackend.COUCHSTORE;
+      }
+
+      @Override
+      public Boolean historyRetentionCollectionDefault() {
+        return null;
+      }
+
+      @Override
+      public Long historyRetentionBytes() {
+        return null;
+      }
+
+      @Override
+      public Duration historyRetentionDuration() {
+        return null;
       }
     };
   }

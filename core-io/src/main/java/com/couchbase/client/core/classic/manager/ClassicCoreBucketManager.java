@@ -47,6 +47,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.config.BucketType.MEMCACHED;
@@ -241,6 +242,18 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         && settings.bucketType() != BucketType.EPHEMERAL
         && settings.replicaIndexes() != null) {
       params.put("replicaIndex", String.valueOf(settings.replicaIndexes() ? 1 : 0));
+    }
+
+    if (settings.historyRetentionCollectionDefault() != null) {
+      params.put("historyRetentionCollectionDefault", settings.historyRetentionCollectionDefault().toString());
+    }
+
+    if (settings.historyRetentionBytes() != null) {
+      params.put("historyRetentionBytes", settings.historyRetentionBytes().toString());
+    }
+
+    if (settings.historyRetentionDuration() != null) {
+      params.put("historyRetentionSeconds", String.valueOf(TimeUnit.MILLISECONDS.toSeconds(settings.historyRetentionDuration().toMillis())));
     }
 
     // The following values must not be changed on update

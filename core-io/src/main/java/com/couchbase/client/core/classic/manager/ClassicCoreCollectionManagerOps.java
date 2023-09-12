@@ -21,13 +21,14 @@ import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.propagate;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.config.BucketCapabilities;
+import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CollectionsManifest;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
@@ -41,9 +42,12 @@ import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
+import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public final class ClassicCoreCollectionManagerOps implements CoreCollectionManager {
@@ -135,23 +139,77 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
     };
   }
 
-  private static RuntimeException unsupported() {
-    return new UnsupportedOperationException("Not currently supported");
+  @Override
+  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, @Nullable CoreCreateOrUpdateCollectionSettings settings,
+      CoreCommonOptions options) {
+
+    return bucketConfigCheck(settings, options)
+        .thenCompose(v -> {
+          UrlQueryStringBuilder form = applySettingsToForm(settings, collectionName, false);
+
+          return httpClient.post(pathForCollections(bucketName, scopeName), options)
+              .trace(TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION).traceBucket(bucketName).traceScope(scopeName)
+              .traceCollection(collectionName).form(form).exec(core).exceptionally(translateErrors(scopeName, collectionName))
+              .thenApply(response -> null);
+        });
+  }
+
+  private static UrlQueryStringBuilder applySettingsToForm(CoreCreateOrUpdateCollectionSettings settings, String collectionName, boolean isUpdate) {
+    UrlQueryStringBuilder form = newForm();
+
+    if (!isUpdate) {
+      // Server will error if try and send this on update.
+      form.set("name", collectionName);
+    }
+
+    if (settings != null) {
+      if (settings.maxExpiry() != null && !settings.maxExpiry().isZero()) {
+        form.set("maxTTL", settings.maxExpiry().getSeconds());
+      }
+      if (settings.history() != null) {
+        // Send as "true"/"false"
+        form.set("history", settings.history());
+      }
+    }
+
+    return form;
+  }
+
+  private CompletableFuture<Void> bucketConfigCheck(@Nullable CoreCreateOrUpdateCollectionSettings settings, CoreCommonOptions options) {
+    if (settings == null) {
+      return CompletableFuture.completedFuture(null);
+    }
+
+    boolean needsBucketConfig = (settings.history() != null && settings.history());
+    CompletableFuture<BucketConfig> bucketConfigFuture = needsBucketConfig
+        ? BucketConfigUtil.waitForBucketConfig(core, bucketName, options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout())).toFuture()
+        : CompletableFuture.completedFuture(null);
+
+    return bucketConfigFuture
+        .thenAccept(bucketConfig -> {
+          if (needsBucketConfig && !bucketConfig.bucketCapabilities().contains(BucketCapabilities.NON_DEDUPED_HISTORY)) {
+            throw new FeatureNotAvailableException("History retention is not supported - note that both server 7.2+ and Magma storage engine must be used");
+          }
+        });
   }
 
   @Override
-  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, Duration maxTTL,
-      CoreCommonOptions options) {
+  public CompletableFuture<Void> updateCollection(String scopeName, String collectionName, @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                  CoreCommonOptions options) {
+    return bucketConfigCheck(settings, options)
+        .thenCompose(v -> {
+          UrlQueryStringBuilder form = applySettingsToForm(settings, collectionName, true);
 
-    UrlQueryStringBuilder form = newForm().set("name", collectionName);
-    if (maxTTL != null && !maxTTL.isZero()) {
-      form.set("maxTTL", maxTTL.getSeconds());
-    }
-
-    return httpClient.post(pathForCollections(bucketName, scopeName), options)
-        .trace(TracingIdentifiers.SPAN_REQUEST_MC_CREATE_COLLECTION).traceBucket(bucketName).traceScope(scopeName)
-        .traceCollection(collectionName).form(form).exec(core).exceptionally(translateErrors(scopeName, collectionName))
-        .thenApply(response -> null);
+          return httpClient.patch(pathForCollection(bucketName, scopeName, collectionName), options)
+              .trace(TracingIdentifiers.SPAN_REQUEST_MC_UPDATE_COLLECTION)
+              .traceBucket(bucketName)
+              .traceScope(scopeName)
+              .traceCollection(collectionName)
+              .form(form)
+              .exec(core)
+              .exceptionally(translateErrors(scopeName, collectionName))
+              .thenApply(response -> null);
+        });
   }
 
   @Override

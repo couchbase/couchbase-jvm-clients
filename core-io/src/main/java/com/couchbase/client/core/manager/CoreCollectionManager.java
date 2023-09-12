@@ -18,13 +18,21 @@ package com.couchbase.client.core.manager;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.CollectionsManifest;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
+import reactor.util.annotation.Nullable;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
 public interface CoreCollectionManager {
-  CompletableFuture<Void> createCollection(String scopeName, String collectionName, Duration maxTTL,
+  CompletableFuture<Void> createCollection(String scopeName,
+                                           String collectionName,
+                                           @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                           CoreCommonOptions options);
+
+  CompletableFuture<Void> updateCollection(String scopeName,
+                                           String collectionName,
+                                           @Nullable CoreCreateOrUpdateCollectionSettings settings,
                                            CoreCommonOptions options);
 
   CompletableFuture<Void> createScope(String scopeName, CoreCommonOptions options);

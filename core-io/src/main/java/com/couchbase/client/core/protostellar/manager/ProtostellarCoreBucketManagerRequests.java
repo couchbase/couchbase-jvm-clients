@@ -44,6 +44,7 @@ import java.time.Duration;
 import static com.couchbase.client.core.manager.bucket.CoreStorageBackend.COUCHSTORE;
 import static com.couchbase.client.core.manager.bucket.CoreStorageBackend.MAGMA;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedCurrentlyInProtostellar;
 
 @Stability.Internal
 public class ProtostellarCoreBucketManagerRequests {
@@ -151,6 +152,12 @@ public class ProtostellarCoreBucketManagerRequests {
       } else {
         throw InvalidArgumentException.fromMessage("Unknown storage backend");
       }
+    }
+
+    if (settings.historyRetentionCollectionDefault() != null
+      || settings.historyRetentionDuration() != null
+      || settings.historyRetentionBytes() != null) {
+      throw unsupportedCurrentlyInProtostellar();
     }
 
     if (createSpecificSettings != null) {

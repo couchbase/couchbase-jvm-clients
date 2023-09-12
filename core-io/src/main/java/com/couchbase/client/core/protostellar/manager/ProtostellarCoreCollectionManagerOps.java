@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.CollectionsManifest;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.manager.CoreCollectionManager;
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessors;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.CreateCollectionRequest;
@@ -27,10 +28,11 @@ import com.couchbase.client.protostellar.admin.collection.v1.CreateScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteCollectionRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequest;
+import reactor.util.annotation.Nullable;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedCurrentlyInProtostellar;
 import static com.couchbase.client.core.protostellar.manager.CoreProtostellarCollectionManagerRequests.createCollectionRequest;
 import static com.couchbase.client.core.protostellar.manager.CoreProtostellarCollectionManagerRequests.createScopeRequest;
 import static com.couchbase.client.core.protostellar.manager.CoreProtostellarCollectionManagerRequests.deleteCollectionRequest;
@@ -50,13 +52,24 @@ public final class ProtostellarCoreCollectionManagerOps implements CoreCollectio
   }
 
   @Override
-  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, Duration maxTTL, CoreCommonOptions options) {
-    ProtostellarRequest<CreateCollectionRequest> request = createCollectionRequest(core, bucketName, scopeName, collectionName, maxTTL, options);
+  public CompletableFuture<Void> createCollection(String scopeName,
+                                                  String collectionName,
+                                                  @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                  CoreCommonOptions options) {
+    ProtostellarRequest<CreateCollectionRequest> request = createCollectionRequest(core, bucketName, scopeName, collectionName, settings, options);
     return CoreProtostellarAccessors.async(core,
         request,
         (endpoint) -> endpoint.collectionAdminStub().withDeadline(request.deadline()).createCollection(request.request()),
         (response) -> null)
       .thenApply(obj -> null);
+  }
+
+  @Override
+  public CompletableFuture<Void> updateCollection(String scopeName,
+                                                  String collectionName,
+                                                  @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                  CoreCommonOptions options) {
+    throw unsupportedCurrentlyInProtostellar();
   }
 
   @Override

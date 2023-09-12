@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException
 import com.couchbase.client.core.error.ScopeExistsException
 import com.couchbase.client.core.error.ScopeNotFoundException
 import com.couchbase.client.core.manager.CoreCollectionManager
+import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings
 import com.couchbase.client.kotlin.Bucket
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
@@ -62,7 +63,10 @@ public class CollectionManager internal constructor(bucket: Bucket) {
         common: CommonOptions = CommonOptions.Default,
         maxExpiry: Duration? = null,
     ) {
-        core.createCollection(scopeName, collectionName, maxExpiry?.toJavaDuration(), common.toCore()).await()
+        core.createCollection(scopeName, collectionName, object : CoreCreateOrUpdateCollectionSettings {
+            override fun maxExpiry(): java.time.Duration? = maxExpiry?.toJavaDuration()
+            override fun history(): Boolean? = null
+        }, common.toCore()).await()
     }
 
     /**
@@ -188,7 +192,7 @@ public class CollectionManager internal constructor(bucket: Bucket) {
                     CollectionSpec(
                         scopeName = scope.name(),
                         name = collection.name(),
-                        maxExpiry = if (collection.maxExpiry() == 0) null else collection.maxExpiry().seconds
+                        maxExpiry = if (collection.maxExpiry() == null || collection.maxExpiry() == 0) null else collection.maxExpiry().seconds
                     )
                 },
             )

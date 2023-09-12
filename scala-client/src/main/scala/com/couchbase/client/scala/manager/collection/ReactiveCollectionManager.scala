@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala.manager.collection
 
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -46,6 +47,7 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
       .flatMapMany(v => SFlux.fromIterable(v))
   }
 
+  @deprecated("Please use the overload that takes a CreateCollectionSettings", since = "1.4.11")
   def createCollection(
       collection: CollectionSpec,
       timeout: Duration = defaultManagerTimeout,
@@ -54,12 +56,75 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     SMono.fromFuture(async.createCollection(collection, timeout, retryStrategy))
   }
 
+  @Volatile
+  def createCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: CreateCollectionSettings
+  ): SMono[Unit] = {
+    createCollection(
+      scopeName,
+      collectionName,
+      settings,
+      defaultManagerTimeout,
+      defaultRetryStrategy
+    )
+  }
+
+  @Volatile
+  def createCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: CreateCollectionSettings,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(
+      async.createCollection(scopeName, collectionName, settings, timeout, retryStrategy)
+    )
+  }
+
+  @Volatile
+  def updateCollection(
+      scopeName: String,
+      collectionName: String,
+      settings: UpdateCollectionSettings,
+      timeout: Duration = defaultManagerTimeout,
+      retryStrategy: RetryStrategy = defaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(
+      async.updateCollection(scopeName, collectionName, settings, timeout, retryStrategy)
+    )
+  }
+
+  @deprecated(
+    "Please use the overload that takes separate scopeName and collectionName",
+    since = "1.4.11"
+  )
   def dropCollection(
       collection: CollectionSpec,
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): SMono[Unit] = {
     SMono.fromFuture(async.dropCollection(collection, timeout, retryStrategy))
+  }
+
+  @Volatile
+  def dropCollection(
+      scopeName: String,
+      collectionName: String
+  ): SMono[Unit] = {
+    dropCollection(scopeName, collectionName, defaultManagerTimeout, defaultRetryStrategy)
+  }
+
+  @Volatile
+  def dropCollection(
+      scopeName: String,
+      collectionName: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.dropCollection(scopeName, collectionName, timeout, retryStrategy))
   }
 
   def createScope(
