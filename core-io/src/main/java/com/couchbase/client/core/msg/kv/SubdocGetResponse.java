@@ -33,13 +33,13 @@ public class SubdocGetResponse extends KeyValueBaseResponse {
 
   public SubdocGetResponse(ResponseStatus status,
                            Optional<CouchbaseException> error,
-                           SubDocumentField[] values,
+                           @Nullable SubDocumentField[] values,
                            long cas,
                            final boolean isDeleted,
                            @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     super(status, flexibleExtras);
     this.error = error;
-    this.values = values;
+    this.values = values == null ? new SubDocumentField[0] : values;
     this.cas = cas;
     this.isDeleted = isDeleted;
   }
@@ -53,7 +53,7 @@ public class SubdocGetResponse extends KeyValueBaseResponse {
   }
 
   /**
-   * Error will be set, and should be checked and handled, when status==SUBDOC_FAILURE
+   * A top-level exception that will be thrown from the lookupIn() call.
    */
   public Optional<CouchbaseException> error() { return error; }
 

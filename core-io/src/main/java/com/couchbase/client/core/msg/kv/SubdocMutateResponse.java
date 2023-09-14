@@ -43,7 +43,7 @@ public class SubdocMutateResponse extends KeyValueBaseResponse {
                               @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     super(status, flexibleExtras);
     this.error = error;
-    this.values = values;
+    this.values = values == null ? new SubDocumentField[0] : values;
     this.cas = cas;
     this.mutationToken = mutationToken;
   }
@@ -61,7 +61,7 @@ public class SubdocMutateResponse extends KeyValueBaseResponse {
   }
 
   /**
-   * Error will be set, and should be checked and handled, when status==SUBDOC_FAILURE
+   * A top-level exception that will be thrown from the mutateIn() call.
    */
   public Optional<CouchbaseException> error() {
     return error;
@@ -72,9 +72,10 @@ public class SubdocMutateResponse extends KeyValueBaseResponse {
     if (insertDocument
             && (status() == ResponseStatus.EXISTS || status() == ResponseStatus.NOT_STORED)) {
       return new DocumentExistsException(ctx);
-    } else if (status() == ResponseStatus.SUBDOC_FAILURE && error().isPresent()) {
+    } else if (error().isPresent()) {
       return error().get();
     }
+    // This should be superfluous now - if the op failed then error() should be set - but leaving as a fail-safe.
     return keyValueStatusToException(request, this);
   }
 

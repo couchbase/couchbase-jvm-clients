@@ -32,7 +32,7 @@ public class KeyValueErrorContext extends ErrorContext {
   private final KeyValueRequest<?> request;
   private final @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras;
 
-  protected KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
+  public KeyValueErrorContext(final KeyValueRequest<?> request, final ResponseStatus status, @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
     super(status);
     this.request = request;
     this.flexibleExtras = flexibleExtras;

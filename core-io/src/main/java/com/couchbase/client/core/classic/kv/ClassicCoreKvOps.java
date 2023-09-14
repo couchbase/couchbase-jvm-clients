@@ -243,6 +243,11 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       throw response.error().get();
     }
 
+    // Simulate logic that used to be present in SubdocGetResponse.
+    if (response.values().length == 1 && response.values()[0].error().isPresent()) {
+      throw response.values()[0].error().get();
+    }
+
     long cas = response.cas();
 
     byte[] exptime = null;
@@ -692,10 +697,17 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     return newAsyncResponse(
         request,
         (req, res) -> {
+          // This is a top-level exception meant to be thrown from the lookupIn call.
+          if (res.error().isPresent()) {
+            throw res.error().get();
+          }
+
           if (res.status() == SUBDOC_FAILURE) {
             // Ignore. The failure of any one lookup command does not cause the whole request to fail.
             return;
           }
+
+          // This should be superfluous now - if the op failed then error() should be set - but leaving as a fail-safe.
           commonKvResponseCheck(req, res);
         },
         it -> new CoreSubdocGetResult(

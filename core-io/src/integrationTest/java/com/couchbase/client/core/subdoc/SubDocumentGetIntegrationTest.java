@@ -26,6 +26,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
+import com.couchbase.client.core.msg.kv.SubDocumentField;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -144,7 +146,27 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
       new SubdocGetRequest.Command(SubdocCommandType.GET, path, false, 0)
     );
 
-    checkExpectedFailure(input, commands, expected);
+    String id = UUID.randomUUID().toString();
+    insertContent(id, input);
+
+    SubdocGetRequest request = new SubdocGetRequest(Duration.ofSeconds(5), core.context(),
+      CollectionIdentifier.fromDefault(config().bucketname()), env.retryStrategy(), id, (byte) 0, commands, null);
+    core.send(request);
+
+    SubdocGetResponse response = null;
+    try {
+      response = request.response().get();
+    } catch (InterruptedException | ExecutionException e) {
+      fail("Failed with " + e);
+    }
+    assertTrue(response.status().success());
+    assertEquals(ResponseStatus.SUCCESS, response.status());
+    assertFalse(response.error().isPresent());
+    assertEquals(1, response.values().length);
+    SubDocumentField field = response.values()[0];
+    assertTrue(field.error().isPresent());
+    CouchbaseException err = field.error().get();
+    assertTrue(expected.isInstance(err));
   }
 
   // TODO adding basic tests for DP, but really should port all subdoc tests from old client

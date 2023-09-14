@@ -25,20 +25,11 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.context.ErrorContext;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
-import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
-import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.FlexibleExtras;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -49,6 +40,7 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeSubDocumentStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
@@ -57,6 +49,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static com.couchbase.client.core.msg.kv.SubdocUtil.handleNonFieldLevelErrors;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 
@@ -172,41 +165,56 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   @Override
   public SubdocGetResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
     short rawStatus = status(response);
+    boolean isJson = (datatype(response) & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
     Optional<ByteBuf> maybeBody = body(response);
     MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
+    ResponseStatus status = decodeStatus(response);
 
-    checkCommandLimit(rawStatus, maybeBody, flexibleExtras);
-
-    SubDocumentField[] values;
+    SubDocumentField[] values = null;
     List<CouchbaseException> errors = null;
+    Optional<CouchbaseException> error = Optional.empty();
+    String bodyErrorMessage = null;
+
+    // Sources for sub-doc error-handling:
+    // https://github.com/couchbase/kv_engine/blob/master/docs/SubDocument.md
+    // Internal discussion: https://couchbase.slack.com/archives/CFJDXSGUA/p1694617140032519
+    // The body (if present) either contains a sub-doc response (can include errors), or a JSON error message.
+    boolean isSuccess = rawStatus == Status.SUCCESS.status()
+      || rawStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status()
+      // With lookupIn, even if some operations fail, others can succeed and the op can be seen as successful.
+      || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
+      || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status();
+
     if (maybeBody.isPresent()) {
       ByteBuf body = maybeBody.get();
-      values = new SubDocumentField[commands.size()];
-      for (Command command : commands) {
-        short statusRaw = body.readShort();
-        SubDocumentOpResponseStatus status = decodeSubDocumentStatus(statusRaw);
-        Optional<CouchbaseException> error = Optional.empty();
-        if (status != SubDocumentOpResponseStatus.SUCCESS) {
-          if (errors == null) errors = new ArrayList<>();
-          CouchbaseException err = mapSubDocumentError(this, status, command.path, command.originalIndex(), flexibleExtras);
-          errors.add(err);
-          error = Optional.of(err);
+      if (isSuccess) {
+        values = new SubDocumentField[commands.size()];
+        for (Command command : commands) {
+          short statusRaw = body.readShort();
+          SubDocumentOpResponseStatus fieldStatus = decodeSubDocumentStatus(statusRaw);
+          Optional<CouchbaseException> fieldError = Optional.empty();
+          if (fieldStatus != SubDocumentOpResponseStatus.SUCCESS) {
+            if (errors == null) errors = new ArrayList<>();
+            CouchbaseException err = mapSubDocumentError(this, fieldStatus, command.path, command.originalIndex(), flexibleExtras);
+            errors.add(err);
+            fieldError = Optional.of(err);
+          }
+          int valueLength = body.readInt();
+          byte[] value = new byte[valueLength];
+          body.readBytes(value, 0, valueLength);
+          SubDocumentField op = new SubDocumentField(fieldStatus, fieldError, value, command.path, command.type);
+          values[command.originalIndex] = op;
         }
-        int valueLength = body.readInt();
-        byte[] value = new byte[valueLength];
-        body.readBytes(value, 0, valueLength);
-        SubDocumentField op = new SubDocumentField(status, error, value, command.path, command.type);
-        values[command.originalIndex] = op;
+      } else if (isJson) {
+        // Body contains an error message
+        byte[] value = new byte[body.readableBytes()];
+        body.readBytes(value, 0, body.readableBytes());
+        bodyErrorMessage = new String(value, UTF_8);
       }
-    } else {
-      values = new SubDocumentField[0];
     }
 
-    ResponseStatus status = decodeStatus(response);
     boolean isDeleted = rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status()
             || rawStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status();
-
-    Optional<CouchbaseException> error = Optional.empty();
 
     // Note that we send all subdoc requests as multi currently so always get this back on error
     if (rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
@@ -214,67 +222,18 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       // Special case logic for CMD_EXISTS
       if (commands.size() == 1 && commands.get(0).type == SubdocCommandType.EXISTS) {
         status = ResponseStatus.SUCCESS;
-      }
-      // If a single subdoc op was tried and failed, return that directly
-      else if (commands.size() == 1 && errors != null && errors.size() == 1) {
-        error = Optional.of(errors.get(0));
-      }
-      else {
+      } else {
         // Otherwise return success, as some of the operations have succeeded
         status = ResponseStatus.SUCCESS;
       }
     }
 
-    // Handle any document-level failures here
-    if (rawStatus == Status.SUBDOC_DOC_NOT_JSON.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_NOT_JSON, flexibleExtras);
-      error = Optional.of(new DocumentNotJsonException(e));
-    } else if (rawStatus == Status.SUBDOC_DOC_TOO_DEEP.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.DOC_TOO_DEEP, flexibleExtras);
-      error = Optional.of(new DocumentTooDeepException(e));
-    } else if (rawStatus == Status.SUBDOC_XATTR_INVALID_KEY_COMBO.status()) {
-      SubDocumentErrorContext e = createSubDocumentExceptionContext(SubDocumentOpResponseStatus.XATTR_INVALID_KEY_COMBO, flexibleExtras);
-      error = Optional.of(new XattrInvalidKeyComboException(e));
+    CouchbaseException nonFieldError = handleNonFieldLevelErrors(this, rawStatus, flexibleExtras, bodyErrorMessage);
+    if (nonFieldError != null) {
+      error = Optional.of(nonFieldError);
     }
 
-    // Do not handle SUBDOC_INVALID_COMBO here, it indicates a client-side bug
     return new SubdocGetResponse(status, error, values, cas(response), isDeleted, flexibleExtras);
-  }
-
-  private void checkCommandLimit(short rawStatus, Optional<ByteBuf> maybeBody, FlexibleExtras flexibleExtras) {
-    if (rawStatus == Status.SUBDOC_INVALID_COMBO.status()) {
-      // Assume we are not sending lookups and mutations in the same request.
-      // The server also uses this error code when there are too many commands.
-      String msg = "Sub-document lookup failed with error code INVALID_COMBO," +
-        " which probably means too many sub-document operations in a single request.";
-
-      if (maybeBody.isPresent()) {
-        // The body includes the actual sub-doc operation limit.
-        // Include it in the exception message, but only if it looks like a JSON object.
-        String body = maybeBody.get().toString(UTF_8);
-        if (body.startsWith("{")) {
-          msg += " Server said: " + body;
-        }
-      }
-
-      ErrorContext errorContext = createSubDocumentExceptionContext(
-        SubDocumentOpResponseStatus.INVALID_COMBO,
-        flexibleExtras
-      );
-
-      throw new InvalidArgumentException(msg, null, errorContext);
-    }
-  }
-
-  private SubDocumentErrorContext createSubDocumentExceptionContext(SubDocumentOpResponseStatus status,
-                                                                    @Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
-    return new SubDocumentErrorContext(
-      KeyValueErrorContext.completedRequest(this, ResponseStatus.SUBDOC_FAILURE, flexibleExtras),
-      0,
-      null,
-      status,
-      null
-    );
   }
 
   public static class Command {

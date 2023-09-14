@@ -910,6 +910,7 @@ public enum MemcacheProtocol {
       index,
       path,
       status,
+      null,
       null
     );
 
