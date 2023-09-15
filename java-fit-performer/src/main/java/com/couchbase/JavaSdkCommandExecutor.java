@@ -585,11 +585,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         if (requestSpec.hasArrayAddUnique()) {
             var spec = MutateInSpec.arrayAddUnique(
                     requestSpec.getArrayAddUnique().getPath(),
-                    requestSpec.getArrayAddUnique().getContentList()
-                            .stream()
-                            .map(JavaSdkCommandExecutor::contentOrMacro)
-                            .toList()
-            );
+                    contentOrMacro(requestSpec.getArrayAddUnique().getContent()));
             if (requestSpec.getArrayAddUnique().hasXattr()) spec.xattr();
             if (requestSpec.getArrayAddUnique().hasCreatePath()) spec.createPath();
             return spec;
@@ -606,8 +602,8 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var spec = MutateInSpec.decrement(
                     requestSpec.getDecrement().getPath(),
                     requestSpec.getDecrement().getDelta());
-            if (requestSpec.getIncrement().hasXattr()) spec.xattr();
-            if (requestSpec.getIncrement().hasCreatePath()) spec.createPath();
+            if (requestSpec.getDecrement().hasXattr()) spec.xattr();
+            if (requestSpec.getDecrement().hasCreatePath()) spec.createPath();
             return spec;
         }
         throw new UnsupportedOperationException("Given MutateInSpec operation is unsupported");
