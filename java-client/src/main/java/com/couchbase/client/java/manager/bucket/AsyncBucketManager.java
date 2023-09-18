@@ -102,25 +102,7 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return coreBucketManager.createBucket(settings.toCore(), new CoreCreateBucketSettings() {
-      @Override
-      public CoreConflictResolutionType conflictResolutionType() {
-        if (settings.conflictResolutionType() == null) {
-          return null;
-        }
-
-        switch (settings.conflictResolutionType()) {
-          case TIMESTAMP:
-            return CoreConflictResolutionType.TIMESTAMP;
-          case SEQUENCE_NUMBER:
-            return CoreConflictResolutionType.SEQUENCE_NUMBER;
-          case CUSTOM:
-            return CoreConflictResolutionType.CUSTOM;
-          default:
-            throw new CouchbaseException("Unknown conflict resolution type");
-        }
-      }
-    }, options.build());
+    return coreBucketManager.createBucket(settings.toCore(), settings.toCoreCreateBucketSettings(), options.build());
   }
 
   /**

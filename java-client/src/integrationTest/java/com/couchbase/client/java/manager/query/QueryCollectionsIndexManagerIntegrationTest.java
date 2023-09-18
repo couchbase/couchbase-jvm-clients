@@ -23,7 +23,6 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
@@ -38,7 +37,6 @@ import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeoutException;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
@@ -54,7 +52,6 @@ import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.w
 import static com.couchbase.client.test.Capabilities.CLUSTER_LEVEL_QUERY;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
-import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.emptyList;
@@ -97,7 +94,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
 
     bucket.collections().createScope(scopeName);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
-    bucket.collections().createCollection(CollectionSpec.create(collectionName, scopeName));
+    bucket.collections().createCollection(scopeName, collectionName);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), scopeName, collectionName);
     waitForQueryIndexerToHaveKeyspace(cluster, collectionName);
   }

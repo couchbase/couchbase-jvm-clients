@@ -25,9 +25,11 @@ import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.java.Bucket;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
+import static com.couchbase.client.java.manager.collection.CreateCollectionSettings.createCollectionSettings;
 import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
 import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
 import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
@@ -69,6 +71,7 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public void createCollection(final CollectionSpec collectionSpec) {
     createCollection(collectionSpec, createCollectionOptions());
   }
@@ -84,8 +87,60 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public void createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
     block(asyncCollectionManager.createCollection(collectionSpec, options));
+  }
+
+  /**
+   * Creates a collection if it does not already exist.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName the scope name
+   * @param collectionName the collection name
+   * @throws CollectionExistsException if the collection already exists
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void createCollection(final String scopeName, final String collectionName) {
+    createCollection(scopeName, collectionName, createCollectionSettings(), createCollectionOptions());
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName the scope name to create the collection in
+   * @param collectionName the collection name
+   * @param settings the collection settings
+   * @throws CollectionExistsException if the collection already exists
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings) {
+    block(asyncCollectionManager.createCollection(scopeName, collectionName, settings));
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName the scope name to create the collection in
+   * @param collectionName the collection name
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @throws CollectionExistsException if the collection already exists
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings, final CreateCollectionOptions options) {
+    block(asyncCollectionManager.createCollection(scopeName, collectionName, settings, options));
   }
 
   /**
@@ -112,6 +167,39 @@ public class CollectionManager {
   }
 
   /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection does not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings) {
+    block(asyncCollectionManager.updateCollection(scopeName, collectionName, settings));
+  }
+
+  /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection does not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings, UpdateCollectionOptions options) {
+    block(asyncCollectionManager.updateCollection(scopeName, collectionName, settings, options));
+  }
+
+  /**
    * Drops a collection if it exists.
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
@@ -119,6 +207,7 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public void dropCollection(final CollectionSpec collectionSpec) {
     dropCollection(collectionSpec, dropCollectionOptions());
   }
@@ -132,8 +221,38 @@ public class CollectionManager {
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public void dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
     block(asyncCollectionManager.dropCollection(collectionSpec, options));
+  }
+
+  /**
+   * Drops a collection if it exists.
+   *
+   * @param scopeName the scope name containing the collection to drop
+   * @param collectionName the collection name
+   * @throws CollectionNotFoundException if the collection did not exist.
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void dropCollection(final String scopeName, final String collectionName) {
+    dropCollection(scopeName, collectionName, dropCollectionOptions());
+  }
+
+  /**
+   * Drops a collection if it exists with custom options.
+   *
+   * @param scopeName the scope name containing the collection to drop
+   * @param collectionName the collection name
+   * @param options the custom options to apply.
+   * @throws CollectionNotFoundException if the collection did not exist.
+   * @throws ScopeNotFoundException if the specified scope does not exist.
+   * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public void dropCollection(final String scopeName, final String collectionName, final DropCollectionOptions options) {
+    block(asyncCollectionManager.dropCollection(scopeName, collectionName, options));
   }
 
   /**

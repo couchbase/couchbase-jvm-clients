@@ -16,7 +16,13 @@
 
 package com.couchbase.client.java.manager.eventing;
 
-import com.couchbase.client.core.error.*;
+import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.EventingFunctionCompilationFailureException;
+import com.couchbase.client.core.error.EventingFunctionIdenticalKeyspaceException;
+import com.couchbase.client.core.error.EventingFunctionNotBootstrappedException;
+import com.couchbase.client.core.error.EventingFunctionNotDeployedException;
+import com.couchbase.client.core.error.EventingFunctionNotFoundException;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -33,7 +39,6 @@ import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -64,8 +69,8 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
 
     bucket.collections().createScope("eventing");
     ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), "eventing");
-    bucket.collections().createCollection(CollectionSpec.create("source", "eventing"));
-    bucket.collections().createCollection(CollectionSpec.create("meta", "eventing"));
+    bucket.collections().createCollection("eventing", "source");
+    bucket.collections().createCollection("eventing", "meta");
     ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "eventing", "source");
     ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), "eventing", "meta");
 
@@ -73,19 +78,19 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
     metaCollection = bucket.scope("eventing").collection("meta");
 
     waitUntilCondition(() -> bucket.collections().getAllScopes().stream().anyMatch(s -> {
-        if (s.name().equals("eventing")) {
-          boolean sourceFound = false;
-          boolean metaFound = false;
-          for (CollectionSpec c : s.collections()) {
-            if (c.name().equals("source")) {
-              sourceFound = true;
-            } else if (c.name().equals("meta")) {
-              metaFound = true;
-            }
+      if (s.name().equals("eventing")) {
+        boolean sourceFound = false;
+        boolean metaFound = false;
+        for (CollectionSpec c : s.collections()) {
+          if (c.name().equals("source")) {
+            sourceFound = true;
+          } else if (c.name().equals("meta")) {
+            metaFound = true;
           }
-          return sourceFound && metaFound;
         }
-        return false;
+        return sourceFound && metaFound;
+      }
+      return false;
       }));
 
     // On CI seeing CollectionNotFoundException intermittently.  Wait until we can successfully create a function

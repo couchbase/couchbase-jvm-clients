@@ -16,9 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.IndexExistsException;
-import com.couchbase.client.core.error.QueryException;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.json.JsonArray;
@@ -42,17 +39,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
-import static com.couchbase.client.core.util.CbThrowables.hasCause;
-import static com.couchbase.client.core.util.CbThrowables.throwIfUnchecked;
-import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
@@ -101,7 +90,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), bucket.name(), SCOPE_NAME);
     waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
 
-    collectionManager.createCollection(collSpec);
+    collectionManager.createCollection(SCOPE_NAME, COLLECTION_NAME);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 

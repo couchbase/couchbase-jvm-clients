@@ -28,6 +28,13 @@ public class Capabilities {
         out.add(Caps.SDK_PRESERVE_EXPIRY);
         // [end:3.1.5]
 
+      // [start:3.4.12]
+      out.add(Caps.SDK_BUCKET_MANAGEMENT);
+      out.add(Caps.SDK_COLLECTION_MANAGEMENT);
+      out.add(Caps.SDK_MANAGEMENT_HISTORY_RETENTION);
+      // [end:3.4.12]
+
+
         // [start:3.4.1]
         out.add(Caps.SDK_KV_RANGE_SCAN);
         // [end:3.4.1]

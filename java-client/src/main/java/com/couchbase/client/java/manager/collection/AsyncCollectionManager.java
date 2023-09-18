@@ -36,12 +36,14 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static com.couchbase.client.java.manager.collection.CreateCollectionSettings.createCollectionSettings;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
 import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
 import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
 import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
 import static com.couchbase.client.java.manager.collection.GetAllScopesOptions.getAllScopesOptions;
 import static com.couchbase.client.java.manager.collection.GetScopeOptions.getScopeOptions;
+import static com.couchbase.client.java.manager.collection.UpdateCollectionOptions.updateCollectionOptions;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -84,8 +86,9 @@ public class AsyncCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec) {
-    return createCollection(collectionSpec, createCollectionOptions());
+    return createCollection(collectionSpec.scopeName(), collectionSpec.name(), CreateCollectionSettings.createCollectionSettings());
   }
 
   /**
@@ -100,8 +103,9 @@ public class AsyncCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
-      final CreateCollectionOptions options) {
+                                                  final CreateCollectionOptions options) {
     return coreCollectionManager.createCollection(collectionSpec.scopeName(), collectionSpec.name(),
       new CoreCreateOrUpdateCollectionSettings() {
         @Override
@@ -111,9 +115,46 @@ public class AsyncCollectionManager {
 
         @Override
         public Boolean history() {
-          return null;
+          return collectionSpec.history();
         }
       }, options.build());
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName name of scope to create collection in
+   * @param collectionName name of collection to create
+   * @param settings the collection settings
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, CreateCollectionSettings settings) {
+    return coreCollectionManager.createCollection(scopeName, collectionName, settings.build(), createCollectionOptions().build());
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName name of scope to create collection in
+   * @param collectionName name of collection to create
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, CreateCollectionSettings settings, CreateCollectionOptions options) {
+    return coreCollectionManager.createCollection(scopeName, collectionName, settings.build(), options.build());
   }
 
   /**
@@ -142,14 +183,47 @@ public class AsyncCollectionManager {
   }
 
   /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> updateCollection(final String scopeName, final String collectionName, final UpdateCollectionSettings settings) {
+    return updateCollection(scopeName, collectionName, settings, updateCollectionOptions());
+  }
+
+  /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection does not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> updateCollection(final String scopeName, final String collectionName, final UpdateCollectionSettings settings, final UpdateCollectionOptions options) {
+    return coreCollectionManager.updateCollection(scopeName, collectionName, settings.build(), options.build());
+  }
+
+  /**
    * Drops a collection if it exists.
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
    * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
-   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws CollectionNotFoundException (async) if the collection does not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec) {
     return dropCollection(collectionSpec, dropCollectionOptions());
   }
@@ -164,9 +238,44 @@ public class AsyncCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec,
-      final DropCollectionOptions options) {
+                                                final DropCollectionOptions options) {
     return coreCollectionManager.dropCollection(collectionSpec.scopeName(), collectionSpec.name(), options.build());
+  }
+
+  /**
+   * Drops a collection if it exists.
+   *
+   * @param scopeName name of scope to drop collection from
+   * @param collectionName name of collection to drop
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> dropCollection(final String scopeName,
+                                                final String collectionName) {
+    return dropCollection(scopeName, collectionName, dropCollectionOptions());
+  }
+
+  /**
+   * Drops a collection if it exists with custom options.
+   *
+   * @param scopeName name of scope to drop collection from
+   * @param collectionName name of collection to drop
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public CompletableFuture<Void> dropCollection(final String scopeName,
+                                                final String collectionName,
+                                                final DropCollectionOptions options) {
+    return coreCollectionManager.dropCollection(scopeName, collectionName, options.build());
   }
 
   /**
@@ -262,7 +371,7 @@ public class AsyncCollectionManager {
         .thenApply(manifest -> manifest.scopes().stream()
             .map(s -> ScopeSpec.create(s.name(),
                 s.collections().stream()
-                    .map(c -> CollectionSpec.create(c.name(), s.name(), c.maxExpiry() == null ? Duration.ZERO : Duration.ofSeconds(c.maxExpiry())))
+                    .map(c -> CollectionSpec.internalCreate(c.name(), s.name(), c.maxExpiry() == null ? Duration.ZERO : Duration.ofSeconds(c.maxExpiry()), c.history()))
                     .collect(Collectors.toSet())))
             .collect(Collectors.toList()));
   }

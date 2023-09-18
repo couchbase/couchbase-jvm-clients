@@ -16,7 +16,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.kv.GetResult;
@@ -33,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.UUID;
 
+import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 import static com.couchbase.client.java.kv.GetOptions.getOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -62,7 +62,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Fails as CNG is not yet waiting for the collection to be ready before continuing
   void recognizesCollectionAfterCreation() {
     String collId = UUID.randomUUID().toString().substring(0, 10);
-    CollectionSpec collectionSpec = CollectionSpec.create(collId, CollectionIdentifier.DEFAULT_SCOPE);
+    CollectionSpec collectionSpec = CollectionSpec.create(collId, DEFAULT_SCOPE);
     bucket.collections().createCollection(collectionSpec);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collectionSpec.scopeName(), collectionSpec.name());
 

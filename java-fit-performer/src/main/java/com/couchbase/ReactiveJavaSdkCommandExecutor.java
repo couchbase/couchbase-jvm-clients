@@ -31,6 +31,7 @@ import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
 // [start:3.2.4]
 import com.couchbase.manager.BucketManagerHelper;
+import com.couchbase.manager.CollectionManagerHelper;
 // [end:3.2.4]
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanResult;
@@ -288,7 +289,11 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                   return result.build();
                 }));
               }
-
+              // [start:3.4.12]
+              else if (blc.hasCollectionManager()) {
+                return CollectionManagerHelper.handleCollectionManagerReactive(connection.cluster().reactive(), spans, op, result);
+              }
+              // [end:3.4.12]
             } else if (op.hasScopeCommand()) {
                 var slc = op.getScopeCommand();
                 var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());

@@ -18,7 +18,14 @@ package com.couchbase.client.scala.manager.bucket
 import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
 import com.couchbase.client.core.config
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.manager.bucket.{CoreBucketSettings, CoreCompressionMode, CoreConflictResolutionType, CoreCreateBucketSettings, CoreEvictionPolicyType, CoreStorageBackend}
+import com.couchbase.client.core.manager.bucket.{
+  CoreBucketSettings,
+  CoreCompressionMode,
+  CoreConflictResolutionType,
+  CoreCreateBucketSettings,
+  CoreEvictionPolicyType,
+  CoreStorageBackend
+}
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.util.{CouchbasePickler, DurationConversions}
@@ -219,7 +226,7 @@ case class CreateBucketSettings(
     private[scala] val storageBackend: Option[StorageBackend] = None,
     private[scala] val historyRetentionCollectionDefault: Option[Boolean] = None,
     private[scala] val historyRetentionBytes: Option[Long] = None,
-    private[scala] val historyRetentionDuration: Option[Duration] = None,
+    private[scala] val historyRetentionDuration: Option[Duration] = None
 ) {
 
   def flushEnabled(value: Boolean): CreateBucketSettings = {
@@ -312,7 +319,8 @@ case class CreateBucketSettings(
           case EjectionMethod.NotRecentlyUsed => CoreEvictionPolicyType.NOT_RECENTLY_USED
         }.orNull
 
-      override def maxExpiry(): java.time.Duration = x.maxTTL.map(v => java.time.Duration.ofSeconds(v)).orNull
+      override def maxExpiry(): java.time.Duration =
+        x.maxTTL.map(v => java.time.Duration.ofSeconds(v)).orNull
 
       override def compressionMode(): CoreCompressionMode =
         x.compressionMode.map {
@@ -337,11 +345,14 @@ case class CreateBucketSettings(
           case StorageBackend.Magma      => CoreStorageBackend.MAGMA
         }.orNull
 
-      override def historyRetentionCollectionDefault(): lang.Boolean = x.historyRetentionCollectionDefault.map(lang.Boolean.valueOf).orNull
+      override def historyRetentionCollectionDefault(): lang.Boolean =
+        x.historyRetentionCollectionDefault.map(lang.Boolean.valueOf).orNull
 
-      override def historyRetentionBytes(): lang.Long = x.historyRetentionBytes.map(lang.Long.valueOf).orNull
+      override def historyRetentionBytes(): lang.Long =
+        x.historyRetentionBytes.map(lang.Long.valueOf).orNull
 
-      override def historyRetentionDuration(): java.time.Duration = x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
+      override def historyRetentionDuration(): java.time.Duration =
+        x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
     }
   }
 
@@ -376,7 +387,8 @@ case class BucketSettings(
     storageBackend: Option[StorageBackend] = None,
     historyRetentionCollectionDefault: Option[Boolean] = None,
     historyRetentionBytes: Option[Long] = None,
-    historyRetentionDuration: Option[Duration] = None) {
+    historyRetentionDuration: Option[Duration] = None
+) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
       name,
@@ -442,9 +454,13 @@ private[scala] object BucketSettings {
         case _                             => throw new CouchbaseException(s"Unknown storage type ${core.storageBackend}")
       },
       // Cannot just do Option(x) here due to java.lang.Boolean and scala.Boolean
-      if (core.historyRetentionCollectionDefault != null) Some(core.historyRetentionCollectionDefault) else None,
+      if (core.historyRetentionCollectionDefault != null)
+        Some(core.historyRetentionCollectionDefault)
+      else None,
       if (core.historyRetentionBytes != null) Some(core.historyRetentionBytes) else None,
-      if (core.historyRetentionDuration != null) Some(core.historyRetentionDuration).map(DurationConversions.javaDurationToScala) else None
+      if (core.historyRetentionDuration != null)
+        Some(core.historyRetentionDuration).map(DurationConversions.javaDurationToScala)
+      else None
     )
     out
   }

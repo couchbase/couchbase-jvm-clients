@@ -47,6 +47,7 @@ import com.couchbase.eventing.EventingHelper;
 // [end:3.2.1]
 // [start:3.2.4]
 import com.couchbase.manager.BucketManagerHelper;
+import com.couchbase.manager.CollectionManagerHelper;
 // [end:3.2.4]
 // [start:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
@@ -280,6 +281,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
             setSuccess(result);
           }
+
+          // [start:3.4.12]
+          else if (blc.hasCollectionManager()) {
+            CollectionManagerHelper.handleCollectionManager(connection.cluster(), spans, op, result);
+          }
+          // [end:3.4.12]
 
         } else if (op.hasScopeCommand()) {
           var slc = op.getScopeCommand();

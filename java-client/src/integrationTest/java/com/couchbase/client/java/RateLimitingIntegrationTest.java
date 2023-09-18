@@ -52,9 +52,7 @@ import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -249,7 +247,7 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     createLimitedScope(scopeName, config().bucketname(), limits);
 
     CollectionManager collectionManager = adminCluster.bucket(config().bucketname()).collections();
-    collectionManager.createCollection(CollectionSpec.create(scopeName, scopeName));
+    collectionManager.createCollection(scopeName, scopeName);
     ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), scopeName, scopeName);
 
     Collection collection = adminCluster.bucket(config().bucketname()).scope(scopeName).collection(scopeName);
@@ -423,11 +421,11 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
     CollectionManager collectionManager = adminCluster.bucket(config().bucketname()).collections();
 
     try {
-      collectionManager.createCollection(CollectionSpec.create("collection1", scopeName));
+      collectionManager.createCollection(scopeName, "collection1");
       ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), scopeName, "collection1");
 
       assertThrows(QuotaLimitedException.class, () ->
-        collectionManager.createCollection(CollectionSpec.create("collection2", scopeName)));
+        collectionManager.createCollection(scopeName, "collection2"));
     } finally {
       collectionManager.dropScope(scopeName);
     }
@@ -627,18 +625,16 @@ class RateLimitingIntegrationTest extends JavaIntegrationTest {
       ));
 
     try {
-      CollectionSpec collectionSpec = CollectionSpec.create(collectionName, scopeName);
-      collectionManager.createCollection(collectionSpec);
-      ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
-      waitUntilCondition(() -> collectionExists(collectionManager, collectionSpec));
+      collectionManager.createCollection(scopeName, collectionName);
+      ConsistencyUtil.waitUntilCollectionPresent(adminCluster.core(), config().bucketname(), scopeName, collectionName);
+      waitUntilCondition(() -> collectionExists(collectionManager, CollectionSpec.create(collectionName, scopeName)));
 
       waitForService(adminCluster.bucket(config().bucketname()), ServiceType.SEARCH);
       Util.waitUntilCondition(() -> {
         try {
           adminCluster.searchIndexes().upsertIndex(new SearchIndex("ratelimits1", config().bucketname())
-                  .params(params));
-        }
-        catch (CouchbaseException err) {
+            .params(params));
+        } catch (CouchbaseException err) {
           // See intermittent failures on CI:
           // Unknown search error: {"error":"rest_create_index: error creating index: ratelimits1, err: manager_api: CreateIndex, Prepare failed, err: collection_utils: collection: 'searchCollection' doesn't belong to scope: 'ratelimitSearch' in bucket: "...
           LOGGER.info("Got error upserting index: {}", err.toString());

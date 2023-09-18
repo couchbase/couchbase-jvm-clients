@@ -20,6 +20,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
+import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
+import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreEvictionPolicyType;
 import com.couchbase.client.core.manager.bucket.CoreStorageBackend;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -56,6 +58,9 @@ public class BucketSettings {
   private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
   private DurabilityLevel minimumDurabilityLevel = DurabilityLevel.NONE;
   private StorageBackend storageBackend = null; // null means default for the bucket type
+  private Boolean historyRetentionCollectionDefault;
+  private Long historyRetentionBytes;
+  private Duration historyRetentionDuration;
   private boolean healthy = true;
 
   @Stability.Internal
@@ -113,6 +118,10 @@ public class BucketSettings {
     } else if (internal.storageBackend() == MAGMA) {
       this.storageBackend = StorageBackend.MAGMA;
     }
+
+    this.historyRetentionCollectionDefault = internal.historyRetentionCollectionDefault();
+    this.historyRetentionBytes = internal.historyRetentionBytes();
+    this.historyRetentionDuration = internal.historyRetentionDuration();
   }
 
   BucketSettings(String name) {
@@ -223,6 +232,26 @@ public class BucketSettings {
     return storageBackend;
   }
 
+  /**
+   * Returns the history retention duration used on the bucket.
+   */
+  public Duration historyRetentionDuration() {
+    return historyRetentionDuration;
+  }
+
+  /**
+   * Returns the history retention bytes used on the bucket.
+   */
+  public Long historyRetentionBytes() {
+    return historyRetentionBytes;
+  }
+
+  /**
+   * Returns the history retention default used on the bucket.
+   */
+  public Boolean historyRetentionCollectionDefault() {
+    return historyRetentionCollectionDefault;
+  }
   /**
    * Returns the eviction policy used on the bucket.
    */
@@ -374,6 +403,39 @@ public class BucketSettings {
   }
 
   /**
+   * Configures historyRetentionCollectionDefault for this bucket.
+   *
+   * @param historyRetentionCollectionDefault
+   * @return this {@link BucketSettings} instance for chaining purposes.
+   */
+  public BucketSettings historyRetentionCollectionDefault(final Boolean historyRetentionCollectionDefault) {
+    this.historyRetentionCollectionDefault = notNull(historyRetentionCollectionDefault, "historyRetentionCollectionDefault");
+    return this;
+  }
+
+  /**
+   * Configures historyRetentionBytes for this bucket.
+   *
+   * @param historyRetentionBytes
+   * @return this {@link BucketSettings} instance for chaining purposes.
+   */
+  public BucketSettings historyRetentionBytes(final Long historyRetentionBytes) {
+    this.historyRetentionBytes = notNull(historyRetentionBytes, "historyRetentionBytes");
+    return this;
+  }
+
+  /**
+   * Configures historyRetentionDuration for this bucket.
+   *
+   * @param historyRetentionDuration
+   * @return this {@link BucketSettings} instance for chaining purposes.
+   */
+  public BucketSettings historyRetentionDuration(final Duration historyRetentionDuration) {
+    this.historyRetentionDuration = notNull(historyRetentionDuration, "historyRetentionDuration");
+    return this;
+  }
+
+  /**
    * Returns the maximum expiry (time-to-live) for all documents in the bucket in seconds.
    *
    * @deprecated please use {@link #maxExpiry()} instead.
@@ -497,24 +559,24 @@ public class BucketSettings {
 
       @Override
       public Boolean historyRetentionCollectionDefault() {
-        return null;
+        return historyRetentionCollectionDefault;
       }
 
       @Override
       public Long historyRetentionBytes() {
-        return null;
+        return historyRetentionBytes;
       }
 
       @Override
       public Duration historyRetentionDuration() {
-        return null;
+        return historyRetentionDuration;
       }
     };
   }
 
   @Override
   public String toString() {
-    return "BucketSettings{" +
+    return "BucketSettings{" + // overriden in CreateBucketSettings
       "name='" + redactMeta(name) + '\'' +
       ", flushEnabled=" + flushEnabled +
       ", ramQuotaMB=" + ramQuotaMB +
@@ -526,8 +588,32 @@ public class BucketSettings {
       ", conflictResolutionType=" + conflictResolutionType +
       ", evictionPolicy=" + evictionPolicy +
       ", minimumDurabilityLevel=" + minimumDurabilityLevel +
-      ", storageBackend=" +storageBackend +
+      ", storageBackend=" + storageBackend +
+      ", historyRetentionCollectionDefault=" + historyRetentionCollectionDefault +
+      ", historyRetentionBytes=" + historyRetentionBytes +
+      ", historyRetentionDuration=" + historyRetentionDuration +
       '}';
+  }
+
+  public CoreCreateBucketSettings toCoreCreateBucketSettings() {
+    return new CoreCreateBucketSettings() {
+      @Override
+      public CoreConflictResolutionType conflictResolutionType() {
+        if (conflictResolutionType == null) {
+          return null;
+        }
+        switch (conflictResolutionType) {
+          case TIMESTAMP:
+            return CoreConflictResolutionType.TIMESTAMP;
+          case SEQUENCE_NUMBER:
+            return CoreConflictResolutionType.SEQUENCE_NUMBER;
+          case CUSTOM:
+            return CoreConflictResolutionType.CUSTOM;
+          default:
+            throw new CouchbaseException("Unknown conflict resolution type");
+        }
+      }
+    };
   }
 
 }

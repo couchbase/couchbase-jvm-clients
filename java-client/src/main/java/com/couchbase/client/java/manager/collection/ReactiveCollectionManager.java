@@ -26,6 +26,8 @@ import com.couchbase.client.java.ReactiveBucket;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.CompletableFuture;
+
 import static com.couchbase.client.core.Reactor.toMono;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
 import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
@@ -69,6 +71,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public Mono<Void> createCollection(final CollectionSpec collectionSpec) {
     return createCollection(collectionSpec, createCollectionOptions());
   }
@@ -85,8 +88,46 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public Mono<Void> createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
     return toMono(() -> async.createCollection(collectionSpec, options));
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName name of scope to create collection in
+   * @param collectionName name of collection to create
+   * @param settings the collection settings
+   * @return a {@link Mono} completing when the operation is applied or failed with an error.
+   * @throws CollectionExistsException (async) if the collection already exists
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings) {
+    return toMono(() -> async.createCollection(scopeName, collectionName, settings));
+  }
+
+  /**
+   * Creates a collection if it does not already exist with custom options.
+   * <p>
+   * Note that a scope needs to be created first (via {@link #createScope(String)}) if it doesn't exist already.
+   *
+   * @param scopeName name of scope to create collection in
+   * @param collectionName name of collection to create
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @return a {@link Mono} completing when the operation is applied or failed with an error.
+   * @throws CollectionExistsException (async) if the collection already exists.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings, final CreateCollectionOptions options) {
+    return toMono(() -> async.createCollection(scopeName, collectionName, settings, options));
   }
 
   /**
@@ -115,6 +156,39 @@ public class ReactiveCollectionManager {
   }
 
   /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the specified collection does not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings) {
+    return toMono(() -> async.updateCollection(scopeName, collectionName, settings));
+  }
+
+  /**
+   * Updates a collection with custom options.
+   *
+   * @param scopeName name of scope to update collection in
+   * @param collectionName name of collection to update
+   * @param settings the collection settings
+   * @param options the custom options to apply.
+   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the specified collection does not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings, UpdateCollectionOptions options) {
+    return toMono(() -> async.updateCollection(scopeName, collectionName, settings, options));
+  }
+
+  /**
    * Drops a collection if it exists.
    *
    * @param collectionSpec the collection spec that contains the properties of the collection.
@@ -123,6 +197,7 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec) {
     return dropCollection(collectionSpec, dropCollectionOptions());
   }
@@ -137,8 +212,40 @@ public class ReactiveCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
+  @Deprecated
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
     return toMono(() -> async.dropCollection(collectionSpec, options));
+  }
+
+  /**
+   * Drops a collection if it exists.
+   *
+   * @param scopeName name of scope to drop collection from
+   * @param collectionName name of collection to drop
+   * @return a {@link Mono} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> dropCollection(final String scopeName, final String collectionName) {
+    return dropCollection(scopeName, collectionName, dropCollectionOptions());
+  }
+
+  /**
+   * Drops a collection if it exists with custom options.
+   *
+   * @param scopeName name of scope to drop collection from
+   * @param collectionName name of collection to drop
+   * @param options the custom options to apply.
+   * @return a {@link Mono} completing when the operation is applied or failed with an error.
+   * @throws CollectionNotFoundException (async) if the collection did not exist.
+   * @throws ScopeNotFoundException (async) if the specified scope does not exist.
+   * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   */
+  @Stability.Volatile
+  public Mono<Void> dropCollection(final String scopeName, final String collectionName, final DropCollectionOptions options) {
+    return toMono(() -> async.dropCollection(scopeName, collectionName, options));
   }
 
   /**

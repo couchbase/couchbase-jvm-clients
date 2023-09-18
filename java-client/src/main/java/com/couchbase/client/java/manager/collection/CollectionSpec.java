@@ -18,6 +18,7 @@ package com.couchbase.client.java.manager.collection;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -47,16 +48,23 @@ public class CollectionSpec {
   private final Duration maxExpiry;
 
   /**
+   * Whether history retention is enabled on this collection.  Older server versions will not have this setting, in which case it will be null.
+   */
+  private final Boolean history;
+
+  /**
    * Creates a new {@link CollectionSpec}.
    *
    * @param name the name of the collection.
    * @param scopeName the name of the parent scope.
    * @param maxExpiry the maximum expiry, or {@link Duration#ZERO} if none.
+   * @param history whether history retention is enabled on this collection.
    */
-  private CollectionSpec(String name, String scopeName, Duration maxExpiry) {
+  private CollectionSpec(String name, String scopeName, Duration maxExpiry, @Nullable Boolean history) {
     this.name = notNullOrEmpty(name, "Name");
     this.scopeName = notNullOrEmpty(scopeName, "Scope Name");
     this.maxExpiry = notNull(maxExpiry, "Max Expiry");
+    this.history = history;
   }
 
   /**
@@ -77,7 +85,7 @@ public class CollectionSpec {
    * @return the created {@link CollectionSpec}.
    */
   public static CollectionSpec create(final String name, final String scopeName) {
-    return new CollectionSpec(name, scopeName, Duration.ZERO);
+    return new CollectionSpec(name, scopeName, Duration.ZERO, null);
   }
 
   /**
@@ -102,7 +110,22 @@ public class CollectionSpec {
    */
   @Stability.Volatile
   public static CollectionSpec create(final String name, final String scopeName, final Duration maxExpiry) {
-    return new CollectionSpec(name, scopeName, maxExpiry);
+    return new CollectionSpec(name, scopeName, maxExpiry, null);
+  }
+
+  /**
+   * Creates a new {@link CollectionSpec} with a custom max expiry.
+   *
+   * @param name the name of the collection.
+   * @param scopeName the name of the parent scope.
+   * @param maxExpiry the maximum expiry (ttl) to use for this collection.
+   * @param history whether history retention is enabled on this collection.
+   * @return the created {@link CollectionSpec}.
+   */
+  @Stability.Volatile
+  @Stability.Internal
+  protected static CollectionSpec internalCreate(final String name, final String scopeName, final Duration maxExpiry, final Boolean history) {
+    return new CollectionSpec(name, scopeName, maxExpiry, history);
   }
 
   /**
@@ -127,12 +150,21 @@ public class CollectionSpec {
     return maxExpiry;
   }
 
+  /**
+   * whether history retention is enabled on this collection.
+   */
+  @Stability.Volatile
+  public Boolean history() {
+    return history;
+  }
+
   @Override
   public String toString() {
     return "CollectionSpec{" +
       "name='" + redactMeta(name) + '\'' +
       ", scopeName='" + redactMeta(scopeName) + '\'' +
-      ", maxExpiry=" + redactMeta(maxExpiry.getSeconds()) +
+      ", maxExpiry=" + redactMeta(maxExpiry.getSeconds()) + '\'' +
+      ", history=" + redactMeta(history) +
       '}';
   }
 
@@ -143,12 +175,13 @@ public class CollectionSpec {
     CollectionSpec that = (CollectionSpec) o;
     return Objects.equals(name, that.name) &&
       Objects.equals(scopeName, that.scopeName) &&
-      Objects.equals(maxExpiry, that.maxExpiry);
+      Objects.equals(maxExpiry, that.maxExpiry) &&
+      Objects.equals(history, that.history);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(name, scopeName, maxExpiry);
+    return Objects.hash(name, scopeName, maxExpiry, history);
   }
 
 }

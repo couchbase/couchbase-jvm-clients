@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.collection;
 
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -31,7 +30,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -43,7 +41,7 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
   @BeforeAll
   static void setup() {
-    cluster = createCluster(env -> env.ioConfig(IoConfig.captureTraffic(ServiceType.MANAGER)));
+    cluster = createCluster(env -> env.ioConfig(io -> io.captureTraffic(ServiceType.MANAGER)));
     Bucket bucket = cluster.bucket(config().bucketname());
     collections = bucket.collections();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
@@ -66,11 +64,11 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(FeatureNotAvailableException.class, () -> collections.dropScope("foo"));
     assertThrows(
       FeatureNotAvailableException.class,
-      () -> collections.dropCollection(CollectionSpec.create("foo", "bar"))
+      () -> collections.dropCollection("bar", "foo")
     );
     assertThrows(
       FeatureNotAvailableException.class,
-      () -> collections.createCollection(CollectionSpec.create("foo", "bar"))
+      () -> collections.createCollection("bar", "foo")
     );
   }
 
@@ -89,9 +87,9 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
       CollectionManager mgr = bucket.collections();
       assertThrows(FeatureNotAvailableException.class, () -> mgr.createScope("a"));
-      assertThrows(FeatureNotAvailableException.class, () -> mgr.createCollection(CollectionSpec.create("a", "b")));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.createCollection("b", "a"));
       assertThrows(FeatureNotAvailableException.class, () -> mgr.dropScope("a"));
-      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropCollection(CollectionSpec.create("a", "b")));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropCollection("b", "a"));
     } finally {
       cluster.buckets().dropBucket(bucketName);
     }

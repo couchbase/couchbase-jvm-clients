@@ -72,7 +72,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
 
     assertFalse(collectionExists(collections, collSpec));
-    assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec));
+    assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec.scopeName(), collSpec.name()));
 
     collections.createScope(scopeName);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
@@ -82,7 +82,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
       return scope.isPresent() && scope.get().equals(scopeSpec);
     });
 
-    collections.createCollection(collSpec);
+    collections.createCollection(collSpec.scopeName(), collSpec.name());
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> {
       boolean collExists = collectionExists(collections, collSpec);
@@ -112,10 +112,10 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
-    collections.createCollection(collectionSpec);
+    collections.createCollection(collectionSpec.scopeName(), collectionSpec.name());
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
 
-    assertThrows(CollectionExistsException.class, () -> collections.createCollection(collectionSpec));
+    assertThrows(CollectionExistsException.class, () -> collections.createCollection(collectionSpec.scopeName(), collectionSpec.name()));
   }
 
   @Test
@@ -128,32 +128,33 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
 
     assertThrows(ScopeNotFoundException.class, () -> collections.dropScope("foobar"));
-    assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
+    assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec1.scopeName(), collectionSpec1.name()));
 
     collections.createScope(scope);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
-    collections.createCollection(collectionSpec1);
-    collections.createCollection(collectionSpec2);
+    collections.createCollection(collectionSpec1.scopeName(), collectionSpec1.name());
+    collections.createCollection(collectionSpec2.scopeName(), collectionSpec2.name());
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
-    collections.dropCollection(collectionSpec1);
+    collections.dropCollection(collectionSpec1.scopeName(), collectionSpec1.name());
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionDropped(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
     waitUntilCondition(() -> !collectionExists(collections, collectionSpec1));
-    assertThrows(CollectionNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
+    assertThrows(CollectionNotFoundException.class, () -> collections.dropCollection(collectionSpec1.scopeName(), collectionSpec1.name()));
 
     collections.dropScope(scope);
     if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopeDropped(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> !scopeExists(collections, scope));
 
-    assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2));
+    assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2.scopeName(), collectionSpec2.name()));
   }
 
   @Test
+  // gRpc for protostellare createCollectionRequest has no maxTTL
   @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION)
-  void shouldCreateCollectionWithMaxExpiry() {
+  void shouldCreateCollectionWithMaxExpiryDeprecated() {
     String scope = randomString();
     String collection1 = randomString();
     CollectionSpec collectionSpec1 = CollectionSpec.create(collection1, scope, Duration.ofSeconds(30));
@@ -185,6 +186,48 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
         }
       }
     }
+    collections.dropCollection(collectionSpec1);
+    collections.dropCollection(collectionSpec2);
+  }
+
+  @Test
+  // gRpc for protostellare createCollectionRequest has no maxTTL
+  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION, isProtostellarWillWorkLater = true)
+  void shouldCreateCollectionWithMaxExpiry() {
+    String scope = randomString();
+    String collection1 = randomString();
+    CollectionSpec collectionSpec1 = CollectionSpec.create(collection1, scope, Duration.ofSeconds(30));
+    String collection2 = randomString();
+    CollectionSpec collectionSpec2 = CollectionSpec.create(collection2, scope);
+
+    collections.createScope(scope);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    waitUntilCondition(() -> scopeExists(collections, scope));
+
+    collections.createCollection(collectionSpec1.scopeName(), collectionSpec1.name(), CreateCollectionSettings.createCollectionSettings().maxExpiry(collectionSpec1.maxExpiry()));
+    collections.createCollection(collectionSpec2.scopeName(), collectionSpec2.name(), CreateCollectionSettings.createCollectionSettings().maxExpiry(collectionSpec2.maxExpiry()));
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
+
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec1));  // maxTTL must also match
+    waitUntilCondition(() -> collectionExists(collections, collectionSpec2));  // maxTTL must also match
+
+    for (ScopeSpec ss : collections.getAllScopes()) {
+      if (!ss.name().equals(scope)) {
+        continue;
+      }
+
+      for (CollectionSpec cs : ss.collections()) {
+        if (cs.name().equals(collection1)) {
+          assertEquals(cs.maxExpiry(), Duration.ofSeconds(30));
+        } else if (cs.name().equals(collection2)) {
+          assertEquals(cs.maxExpiry(), Duration.ZERO);
+        }
+      }
+    }
+
+    collections.dropCollection(collectionSpec1.scopeName(), collectionSpec1.name());
+    collections.dropCollection(collectionSpec2.scopeName(), collectionSpec2.name());
   }
 
   @Test
@@ -208,7 +251,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(scopeSpec, scope);
     for (int i = 0; i < collectionsPerScope; i++) {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
-      collections.createCollection(collectionSpec);
+      collections.createCollection(collectionSpec.scopeName(), collectionSpec.name());
       if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
       waitUntilCondition(() -> collectionExists(collections, collectionSpec));
       waitUntilCondition(() -> collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
@@ -222,12 +265,12 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   void failCollectionOpIfScopeNotFound() {
     assertThrows(
       ScopeNotFoundException.class,
-      () -> collections.createCollection(CollectionSpec.create("jesse", "dude-where-is-my-scope"))
+      () -> collections.createCollection("dude-where-is-my-scope", "jesse")
     );
 
     assertThrows(
       ScopeNotFoundException.class,
-      () ->  collections.dropCollection(CollectionSpec.create("chester", "dude-where-is-my-scope"))
+      () -> collections.dropCollection("dude-where-is-my-scope", "chester")
     );
   }
 
