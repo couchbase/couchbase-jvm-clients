@@ -172,7 +172,7 @@ public class HooksUtil {
                 case ON_CALL:
                     out = Mono.defer(() -> {
                         final int desiredCallNumber = hook.getHookConditionParam1();
-                        int callNumber = callCount.getCount(hook.getHookPoint());
+                        var callNumber = callCount.getCount(hook.getHookPoint());
                         logger.info("Evaluating whether to execute ON_CALL hook at {}: call count={} desired={}",
                                 hook.getHookPoint(), callNumber, desiredCallNumber);
                         if (callNumber == desiredCallNumber) {
@@ -186,7 +186,7 @@ public class HooksUtil {
                 case ON_CALL_LE:
                     out = Mono.defer(() -> {
                         final int desiredCallNumber = hook.getHookConditionParam1();
-                        int callNumber =callCount.getCount(hook.getHookPoint());
+                        var callNumber =callCount.getCount(hook.getHookPoint());
                         if (callNumber <= desiredCallNumber) {
                             logger.info("Executing the hook since the condition for ON_CALL_LE  is met: call count={} desired={}",
                                     callNumber, desiredCallNumber);
@@ -200,7 +200,7 @@ public class HooksUtil {
                 case ON_CALL_GE:
                     out = Mono.defer(() -> {
                         final int desiredCallNumber = hook.getHookConditionParam1();
-                        int callNumber =callCount.getCount(hook.getHookPoint());
+                        var callNumber =callCount.getCount(hook.getHookPoint());
                         if (callNumber >= desiredCallNumber) {
                             logger.info("Executing the hook since the condition for ON_CALL_GE  is met: call count={} desired={}",
                                     callNumber, desiredCallNumber);
@@ -235,7 +235,7 @@ public class HooksUtil {
 
                         final int desiredCallNumber = hook.getHookConditionParam1();
                         final String desiredParam = hook.getHookConditionParam2();
-                        int callNumber = callCount.getCount(hook.getHookPoint(), param);
+                        var callNumber = callCount.getCount(hook.getHookPoint(), param);
                         logger.info("Evaluating whether to execute ON_CALL_AND_EQUALS hook at {}: call count (for this hook-param pair)={} param={} desired={} {}",
                                 hook.getHookPoint(), callNumber, param, desiredCallNumber, desiredParam);
                         if (callNumber == desiredCallNumber && param.equals(desiredParam)) {

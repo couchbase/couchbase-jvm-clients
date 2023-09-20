@@ -21,41 +21,35 @@ import reactor.util.function.Tuples;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Tracks what calls to what hooks were made.
+ * <p>
+ * Thread-safe.
  */
 class CallCounts {
-    private final Map<HookPoint, Integer> countsPerHook = new HashMap<>();
+    private final Map<HookPoint, LongAdder> countsPerHook = new ConcurrentHashMap<>();
     // So a call to BEFORE_DOC_COMMITTED with "docId1" can be tracked separately to a call to the same hook point with
     // "docId2".
-    private final Map<Tuple2<HookPoint, String>, Integer> countsPerHookAndParam = new HashMap<>();
+    private final Map<Tuple2<HookPoint, String>, LongAdder> countsPerHookAndParam = new ConcurrentHashMap<>();
 
     public void add(HookPoint hookPoint) {
-        countsPerHook.merge(hookPoint, 1, Integer::sum);
+        countsPerHook.computeIfAbsent(hookPoint, key -> new LongAdder()).increment();
     }
 
     public void add(HookPoint hookPoint, String param) {
-        countsPerHookAndParam.merge(Tuples.of(hookPoint, param), 1, Integer::sum);
+      countsPerHookAndParam.computeIfAbsent(Tuples.of(hookPoint, param), key -> new LongAdder()).increment();
     }
 
-    public int getCount(HookPoint hookPoint) {
-        Integer count = countsPerHook.get(hookPoint);
-        if (count == null) {
-            return 0;
-        }
-        else {
-            return count;
-        }
+    public long getCount(HookPoint hookPoint) {
+        var adder = countsPerHook.get(hookPoint);
+        return adder == null ? 0 : adder.sum();
     }
 
-    public int getCount(HookPoint hookPoint, String param) {
-        Integer count = countsPerHookAndParam.get(Tuples.of(hookPoint, param));
-        if (count == null) {
-            return 0;
-        }
-        else {
-            return count;
-        }
+    public long getCount(HookPoint hookPoint, String param) {
+      var adder = countsPerHookAndParam.get(Tuples.of(hookPoint, param));
+      return adder == null ? 0 : adder.sum();
     }
 }
