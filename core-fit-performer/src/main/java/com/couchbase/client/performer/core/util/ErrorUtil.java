@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import java.util.Map;
 
 import static com.couchbase.client.protocol.shared.CouchbaseExceptionType.SDK_DURABLE_WRITE_RECOMMIT_IN_PROGRESS_EXCEPTION;
+import static com.couchbase.client.protocol.shared.CouchbaseExceptionType.SDK_PATH_TOO_BIG_EXCEPTION;
+import static com.couchbase.client.protocol.shared.CouchbaseExceptionType.SDK_PATH_TOO_DEEP_EXCEPTION;
 import static com.couchbase.client.protocol.shared.CouchbaseExceptionType.SDK_REQUEST_CANCELLED_EXCEPTION;
 
 public class ErrorUtil {
@@ -45,7 +47,9 @@ public class ErrorUtil {
      */
     private static final Map<String, CouchbaseExceptionType> irregular = Map.of(
             "DurableWriteReCommitInProgressException", SDK_DURABLE_WRITE_RECOMMIT_IN_PROGRESS_EXCEPTION,
-            "RequestCanceledException", SDK_REQUEST_CANCELLED_EXCEPTION
+            "RequestCanceledException", SDK_REQUEST_CANCELLED_EXCEPTION,
+            "PathTooDeepException", SDK_PATH_TOO_BIG_EXCEPTION,
+            "DocumentTooDeepException", SDK_PATH_TOO_DEEP_EXCEPTION
     );
 
     public static @Nullable CouchbaseExceptionType convertException(String simpleClassName) {
