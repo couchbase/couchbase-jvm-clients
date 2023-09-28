@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.bucket;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
@@ -27,7 +26,6 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -494,11 +492,7 @@ public class BucketSettings {
 
       @Override
       public CoreStorageBackend storageBackend() {
-        if (storageBackend == null) {
-          return null;
-        }
-
-        return storageBackend.alias().equals(StorageBackend.MAGMA.alias()) ? CoreStorageBackend.MAGMA : CoreStorageBackend.COUCHSTORE;
+        return storageBackend == null ? null : CoreStorageBackend.of(storageBackend.alias());
       }
 
       @Override
