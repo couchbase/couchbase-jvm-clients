@@ -119,7 +119,8 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.TRACING,
         ServerFeature.PRESERVE_TTL,
         ServerFeature.JSON,
-        ServerFeature.SUBDOC_READ_REPLICA
+        ServerFeature.SUBDOC_READ_REPLICA,
+        ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION
       );
 
       if (ctx.environment().ioConfig().mutationTokensEnabled()) {
