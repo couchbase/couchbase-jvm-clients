@@ -84,6 +84,7 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETR
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
+import static java.util.Collections.emptySet;
 
 /**
  * This handler is responsible for writing KV requests and completing their associated responses
@@ -192,14 +193,19 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     errorMap = ctx.channel().attr(ChannelAttributes.ERROR_MAP_KEY).get();
 
     Set<ServerFeature> features = ctx.channel().attr(ChannelAttributes.SERVER_FEATURE_KEY).get();
-    boolean compression = features != null && features.contains(ServerFeature.SNAPPY);
-    boolean collections = features != null && features.contains(ServerFeature.COLLECTIONS);
-    boolean mutationTokens = features != null && features.contains(ServerFeature.MUTATION_SEQNO);
-    boolean syncReplication = features != null && features.contains(ServerFeature.SYNC_REPLICATION);
-    boolean altRequest = features != null && features.contains(ServerFeature.ALT_REQUEST);
-    boolean vattrEnabled = features != null && features.contains(ServerFeature.VATTR);
-    boolean createAsDeleted = features != null && features.contains(ServerFeature.CREATE_AS_DELETED);
-    boolean preserveTtl = features != null && features.contains(ServerFeature.PRESERVE_TTL);
+    if (features == null) {
+      // Running in an embedded channel in a unit test.
+      features = emptySet();
+    }
+
+    boolean compression = features.contains(ServerFeature.SNAPPY);
+    boolean collections = features.contains(ServerFeature.COLLECTIONS);
+    boolean mutationTokens = features.contains(ServerFeature.MUTATION_SEQNO);
+    boolean syncReplication = features.contains(ServerFeature.SYNC_REPLICATION);
+    boolean altRequest = features.contains(ServerFeature.ALT_REQUEST);
+    boolean vattrEnabled = features.contains(ServerFeature.VATTR);
+    boolean createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
+    boolean preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
 
     if (syncReplication && !altRequest) {
       throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
