@@ -199,31 +199,13 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
 
     boolean compression = features.contains(ServerFeature.SNAPPY);
-    boolean collections = features.contains(ServerFeature.COLLECTIONS);
-    boolean mutationTokens = features.contains(ServerFeature.MUTATION_SEQNO);
-    boolean syncReplication = features.contains(ServerFeature.SYNC_REPLICATION);
-    boolean altRequest = features.contains(ServerFeature.ALT_REQUEST);
-    boolean vattrEnabled = features.contains(ServerFeature.VATTR);
-    boolean createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
-    boolean preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
-
-    if (syncReplication && !altRequest) {
-      throw new IllegalStateException("If Synchronous Replication is enabled, the server also " +
-        "must negotiate Alternate Requests. This is a bug! - please report.");
-    }
 
     channelContext = new KeyValueChannelContext(
       compression ? compressionConfig : null,
-      collections,
-      mutationTokens,
       bucketName,
-      syncReplication,
-      vattrEnabled,
-      altRequest,
       ioContext.core().configurationProvider().collectionMap(),
       ctx.channel().id(),
-      createAsDeleted,
-      preserveTtl
+      features
     );
 
     ctx.fireChannelActive();

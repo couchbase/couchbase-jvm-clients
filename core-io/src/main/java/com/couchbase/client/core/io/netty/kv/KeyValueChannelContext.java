@@ -16,11 +16,16 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelId;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionMap;
+import reactor.util.annotation.Nullable;
 
 import java.util.Optional;
+import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Holds context to encode KV operations based on what got negotiated in the channel.
@@ -41,22 +46,31 @@ public class KeyValueChannelContext {
   private final CollectionMap collectionMap;
   private final ChannelId channelId;
 
-  public KeyValueChannelContext(final CompressionConfig compression, final boolean collections,
-                                final boolean mutationTokens, final Optional<String> bucket,
-                                final boolean syncReplication, final boolean vattrEnabled, final boolean altRequest,
-                                final CollectionMap collectionMap, final ChannelId channelId,
-                                final boolean createAsDeleted, final boolean preserveTtl) {
+  @Stability.Internal
+  public KeyValueChannelContext(
+    @Nullable final CompressionConfig compression,
+    final Optional<String> bucket,
+    final CollectionMap collectionMap,
+    @Nullable final ChannelId channelId,
+    final Set<ServerFeature> features
+  ) {
     this.compression = compression;
-    this.collections = collections;
-    this.mutationTokensEnabled = mutationTokens;
-    this.bucket = bucket;
-    this.syncReplication = syncReplication;
-    this.vattrEnabled = vattrEnabled;
-    this.altRequest = altRequest;
-    this.collectionMap = collectionMap;
+    this.bucket = requireNonNull(bucket); // may be absent, but the Optional itself must not be null
+    this.collectionMap = requireNonNull(collectionMap);
     this.channelId = channelId;
-    this.createAsDeleted = createAsDeleted;
-    this.preserveTtl = preserveTtl;
+
+    this.collections = features.contains(ServerFeature.COLLECTIONS);
+    this.mutationTokensEnabled = features.contains(ServerFeature.MUTATION_SEQNO);
+    this.syncReplication = features.contains(ServerFeature.SYNC_REPLICATION);
+    this.altRequest = features.contains(ServerFeature.ALT_REQUEST);
+    this.vattrEnabled = features.contains(ServerFeature.VATTR);
+    this.createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
+    this.preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
+
+    if (syncReplication && !altRequest) {
+      throw new IllegalArgumentException("If Synchronous Replication is enabled, the server also " +
+        "must negotiate Alternate Requests. This is a bug! - please report.");
+    }
   }
 
   public boolean collectionsEnabled() {
@@ -67,6 +81,7 @@ public class KeyValueChannelContext {
     return compression != null;
   }
 
+  @Nullable
   public CompressionConfig compressionConfig() {
     return compression;
   }
@@ -91,6 +106,7 @@ public class KeyValueChannelContext {
     return collectionMap;
   }
 
+  @Nullable
   public ChannelId channelId() {
     return channelId;
   }

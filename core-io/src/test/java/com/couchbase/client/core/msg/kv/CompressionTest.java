@@ -38,6 +38,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.rawBody;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -243,16 +244,10 @@ class CompressionTest {
   private KeyValueChannelContext ctx(boolean enabled) {
     return new KeyValueChannelContext(
       CompressionConfig.builder().enable(enabled).build(),
-      false,
-      false,
       Optional.of(cid.bucket()),
-      false,
-      false,
-      false,
       new CollectionMap(),
       null,
-      false,
-      false
+      emptySet()
     );
   }
 
