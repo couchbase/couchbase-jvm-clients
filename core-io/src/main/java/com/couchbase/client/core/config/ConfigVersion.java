@@ -24,6 +24,14 @@ import java.util.Objects;
 
 @Stability.Internal
 public class ConfigVersion implements Comparable<ConfigVersion> {
+  /**
+   * A synthetic version, older than anything the server could send.
+   * <p>
+   * (Actually, the server could send a version with a negative epoch
+   * to indicate the epoch is not yet initialized, but we want
+   * to ignore those undercooked configs.)
+   */
+  public static final ConfigVersion ZERO = new ConfigVersion(0, 0);
 
   private static final Comparator<ConfigVersion> naturalOrder =
     Comparator
@@ -63,7 +71,6 @@ public class ConfigVersion implements Comparable<ConfigVersion> {
 
   public boolean isLessThanOrEqualTo(ConfigVersion other) {
     return compareTo(other) < 1;
-
   }
 
   @Override
