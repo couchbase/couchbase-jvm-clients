@@ -144,18 +144,14 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
             .withProtostellarPort(cfg.protostellarPort().get());
       }
       else {
-        int kvPort = cfg.ports().get(Services.KV);
-        int managerPort = cfg.ports().get(Services.MANAGER);
-
-        if (config().runWithTLS()) {
-          kvPort = cfg.ports().get(Services.KV_TLS);
-          managerPort = cfg.ports().get(Services.MANAGER_TLS);
-        }
+        boolean tls = config().runWithTLS();
+        Integer kvPort = cfg.ports().get(tls ? Services.KV_TLS : Services.KV);
+        int managerPort = cfg.ports().get(tls ? Services.MANAGER_TLS: Services.MANAGER);
 
         return SeedNode.create(
           cfg.hostname(),
           Optional.ofNullable(kvPort),
-          Optional.ofNullable(managerPort));
+          Optional.of(managerPort));
       }
     }).collect(Collectors.toSet());
   }
