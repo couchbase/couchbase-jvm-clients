@@ -351,6 +351,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public void proposeBucketConfig(final ProposedBucketConfigContext ctx) {
     if (!shutdown.get()) {
       try {
+        if (ctx.config().isEmpty()) {
+          // It came from an "ifNewerThan" request, and the result wasn't newer.
+          eventBus.publish(new ConfigIgnoredEvent(
+            core.context(),
+            ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+            Optional.empty(),
+            Optional.empty(),
+            Optional.of(ctx.bucketName())
+          ));
+          return;
+        }
+
         BucketConfig config = BucketConfigParser.parse(
           ctx.config(),
           core.context().environment(),
@@ -381,6 +393,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   public void proposeGlobalConfig(final ProposedGlobalConfigContext ctx) {
     if (!shutdown.get()) {
       try {
+        if (ctx.config().isEmpty()) {
+          // It came from an "ifNewerThan" request, and the result wasn't newer.
+          eventBus.publish(new ConfigIgnoredEvent(
+            core.context(),
+            ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty()
+          ));
+          return;
+        }
+
         GlobalConfig config = GlobalConfigParser.parse(ctx.config(), ctx.origin());
         checkAndApplyConfig(config, ctx.forcesOverride());
       } catch (Exception ex) {

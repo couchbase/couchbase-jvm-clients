@@ -19,6 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -64,7 +65,8 @@ public class KeyValueBucketLoader extends BaseBucketLoader {
         ctx,
         new CollectionIdentifier(bucket, Optional.empty(), Optional.empty()),
         BestEffortRetryStrategy.INSTANCE,
-        seed
+        seed,
+        ConfigVersion.ZERO
       );
       core().send(request);
       return Reactor.wrap(request, request.response(), true);

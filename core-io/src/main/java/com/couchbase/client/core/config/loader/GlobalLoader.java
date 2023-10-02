@@ -19,6 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
@@ -81,7 +82,8 @@ public class GlobalLoader {
         ctx.environment().timeoutConfig().connectTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
-        seed
+        seed,
+        ConfigVersion.ZERO
       );
       core.send(request);
       return Reactor.wrap(request, request.response(), true);

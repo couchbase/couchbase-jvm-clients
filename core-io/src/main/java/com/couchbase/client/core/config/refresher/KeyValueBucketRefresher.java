@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.config.BucketConfigRefreshFailedEvent;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
@@ -269,7 +270,8 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         ctx,
         new CollectionIdentifier(name, Optional.empty(), Optional.empty()),
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier()
+        nodeInfo.identifier(),
+        currentVersion(name)
       );
       core.send(request);
       return Reactor
@@ -301,6 +303,11 @@ public class KeyValueBucketRefresher implements BucketRefresher {
           return Mono.empty();
         });
     });
+  }
+
+  private ConfigVersion currentVersion(String bucketName) {
+    BucketConfig config = provider.config().bucketConfig(bucketName);
+    return config == null ? ConfigVersion.ZERO : config.version();
   }
 
   /**

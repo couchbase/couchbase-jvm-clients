@@ -17,17 +17,21 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
@@ -51,11 +55,18 @@ public class CarrierGlobalConfigRequest
   implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
+  private final ConfigVersion ifNewerThan;
 
-  public CarrierGlobalConfigRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                    final NodeIdentifier target) {
+  public CarrierGlobalConfigRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final NodeIdentifier target,
+    @Nullable final ConfigVersion ifNewerThan
+  ) {
     super(timeout, ctx, retryStrategy, null, null);
     this.target = target;
+    this.ifNewerThan = Optional.ofNullable(ifNewerThan).orElse(ConfigVersion.ZERO);
   }
 
   @Override
@@ -64,9 +75,44 @@ public class CarrierGlobalConfigRequest
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
-    return MemcacheProtocol.request(alloc, Opcode.GET_CONFIG, noDatatype(),
-      noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
+  public ByteBuf encode(
+    final ByteBufAllocator alloc,
+    final int opaque,
+    final KeyValueChannelContext ctx
+  ) {
+    return encodeConfigRequest(alloc, opaque, ctx, ifNewerThan);
+  }
+
+  static ByteBuf encodeConfigRequest(
+    final ByteBufAllocator alloc,
+    final int opaque,
+    final KeyValueChannelContext ctx,
+    final ConfigVersion ifNewerThan
+  ) {
+    return MemcacheProtocol.request(
+      alloc,
+      Opcode.GET_CONFIG,
+      noDatatype(),
+      noPartition(),
+      opaque,
+      noCas(),
+      requestExtras(ifNewerThan, ctx),
+      noKey(),
+      noBody()
+    );
+  }
+
+  private static ByteBuf requestExtras(
+    final ConfigVersion ifNewerThan,
+    final KeyValueChannelContext ctx
+  ) {
+    if (!ctx.getClusterConfigWithKnownVersion() || ifNewerThan.isLessThanOrEqualTo(ConfigVersion.ZERO)) {
+      return noExtras();
+    }
+
+    return Unpooled.buffer(16)
+      .writeLong(ifNewerThan.epoch())
+      .writeLong(ifNewerThan.rev());
   }
 
   @Override
@@ -98,6 +144,7 @@ public class CarrierGlobalConfigRequest
   public String toString() {
     return "CarrierGlobalConfigRequest{" +
       "target=" + redactSystem(target.address()) +
+      ", ifNewerThan=" + ifNewerThan +
       '}';
   }
 }

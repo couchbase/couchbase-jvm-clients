@@ -338,7 +338,12 @@ public abstract class BaseEndpoint implements Endpoint {
 
         state.transition(EndpointState.CONNECTING);
         attemptStart.set(System.nanoTime());
-        return channelFutureIntoMono(channelBootstrap.connect());
+        return channelFutureIntoMono(channelBootstrap.connect())
+          // Netty completes this "connect" future immediately _prior_ to calling channelActive.
+          // Publishing on a different scheduler ensures any writes triggered by "connect"
+          // happen _after_ Netty calls channelActive. This is important because some requests
+          // encode themselves differently depending on values initialized in channelActive.
+          .publishOn(endpointContext.environment().scheduler());
       })
       .timeout(endpointContext.environment().timeoutConfig().connectTimeout())
       .onErrorResume(throwable -> {

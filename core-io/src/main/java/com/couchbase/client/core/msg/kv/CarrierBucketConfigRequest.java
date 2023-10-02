@@ -17,39 +17,54 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.config.ConfigVersion;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.util.Bytes;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest.encodeConfigRequest;
 
-public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucketConfigResponse> implements TargetedRequest, UnmonitoredRequest {
+public class CarrierBucketConfigRequest
+  extends BaseKeyValueRequest<CarrierBucketConfigResponse>
+  implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
+  private final ConfigVersion ifNewerThan;
 
-  public CarrierBucketConfigRequest(final Duration timeout, final CoreContext ctx, CollectionIdentifier collectionIdentifier,
-                                    final RetryStrategy retryStrategy, final NodeIdentifier target) {
+  public CarrierBucketConfigRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final CollectionIdentifier collectionIdentifier,
+    final RetryStrategy retryStrategy,
+    final NodeIdentifier target,
+    @Nullable final ConfigVersion ifNewerThan
+  ) {
     super(timeout, ctx, retryStrategy, null, collectionIdentifier);
     this.target = target;
+    this.ifNewerThan = Optional.ofNullable(ifNewerThan).orElse(ConfigVersion.ZERO);
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_CONFIG, noDatatype(),
-      noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
+  public ByteBuf encode(
+    final ByteBufAllocator alloc,
+    final int opaque,
+    final KeyValueChannelContext ctx
+  ) {
+    return encodeConfigRequest(alloc, opaque, ctx, ifNewerThan);
   }
 
   @Override
@@ -87,6 +102,7 @@ public class CarrierBucketConfigRequest extends BaseKeyValueRequest<CarrierBucke
     return "CarrierBucketConfigRequest{" +
       "target=" + redactSystem(target.address()) +
       ", bucket=" + redactMeta(collectionIdentifier().bucket()) +
+      ", ifNewerThan=" + ifNewerThan +
       '}';
   }
 }

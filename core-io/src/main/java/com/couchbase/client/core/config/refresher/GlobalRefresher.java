@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigRefreshFailedEvent;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
+import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.PortInfo;
@@ -158,7 +159,8 @@ public class GlobalRefresher {
         configRequestTimeout,
         ctx,
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier()
+        nodeInfo.identifier(),
+        currentVersion()
       );
       core.send(request);
       return Reactor
@@ -197,6 +199,11 @@ public class GlobalRefresher {
           return Mono.empty();
         });
     });
+  }
+
+  private ConfigVersion currentVersion() {
+    GlobalConfig config = provider.config().globalConfig();
+    return config == null ? ConfigVersion.ZERO : config.version();
   }
 
   private List<PortInfo> filterEligibleNodes() {
