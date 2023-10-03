@@ -14,7 +14,6 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
-@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-369
 @TestInstance(Lifecycle.PER_CLASS)
 class ProjectionsSpec extends ScalaIntegrationTest {
 

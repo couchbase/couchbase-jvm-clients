@@ -86,21 +86,19 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                    boolean withExpiry) {
     validateGetParams(opts, key, projections, withExpiry);
 
-    // Needs ING-369
-    if (!projections.isEmpty()) {
-      throw new UnsupportedOperationException("Projections are not yet supported with Protostellar, but will be");
-    }
-
-    GetRequest request = com.couchbase.client.protostellar.kv.v1.GetRequest.newBuilder()
+    GetRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
-      .setKey(key)
-      .build();
+      .setKey(key);
+
+    if (!projections.isEmpty()) {
+      request.addAllProject(projections);
+    }
 
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
 
-    return new ProtostellarKeyValueRequest<>(request,
+    return new ProtostellarKeyValueRequest<>(request.build(),
       core,
       keyspace,
       key,

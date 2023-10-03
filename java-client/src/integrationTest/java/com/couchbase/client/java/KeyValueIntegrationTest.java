@@ -185,7 +185,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-369
   @Test
   void getWithProjection() {
     String id = UUID.randomUUID().toString();
