@@ -27,6 +27,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
+import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -94,6 +95,10 @@ public class KeyValueEndpoint extends BaseEndpoint {
         new MemcacheProtocolVerificationHandler(ctx)
       );
 
+      // Server push handler must come before handshake handlers, because handshake handlers
+      // can't tolerate being interrupted by a server push request (such as a clustermap change notification).
+      pipeline.addLast(new ServerPushHandler(ctx));
+
       pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
@@ -120,7 +125,9 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.PRESERVE_TTL,
         ServerFeature.JSON,
         ServerFeature.SUBDOC_READ_REPLICA,
-        ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION
+        ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION,
+        ServerFeature.DUPLEX,
+        ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF
       );
 
       if (ctx.environment().ioConfig().mutationTokensEnabled()) {

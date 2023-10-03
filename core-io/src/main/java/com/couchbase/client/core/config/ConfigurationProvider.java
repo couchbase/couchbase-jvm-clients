@@ -35,7 +35,7 @@ import java.util.Set;
  * @since 1.0.0
  */
 @Stability.Internal
-public interface ConfigurationProvider  {
+public interface ConfigurationProvider {
 
   /**
    * This is a hot stream which when attached will return the current config as well as
@@ -167,4 +167,20 @@ public interface ConfigurationProvider  {
    */
   void signalConfigRefreshFailed(ConfigRefreshFailure failure);
 
+  /**
+   * Signals to the config provider that the server sent a notification
+   * that the cluster topology or bucket config changed.
+   */
+  void signalConfigChanged();
+
+  /**
+   * Returns a feed that emits {@value TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION}
+   * whenever someone calls {@link #signalConfigChanged()}.
+   */
+  Flux<Long> configChangeNotifications();
+
+  /**
+   * The value emitted by the {@link #configChangeNotifications()} feed.
+   */
+  long TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION = -1L;
 }

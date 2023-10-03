@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.config.ConfigurationProvider.TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -141,15 +142,17 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.configPollInterval = core.context().environment().ioConfig().configPollInterval();
     this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
-    pollRegistration = Flux
-      .interval(pollerInterval(), core.context().environment().scheduler())
+    pollRegistration = Flux.merge(
+        Flux.interval(pollerInterval(), core.context().environment().scheduler()),
+        provider.configChangeNotifications()
+      )
       // Proposing a new config should be quick, but just in case it gets held up we do
       // not want to terminate the refresher and just drop the ticks and keep going.
       .onBackpressureDrop()
       .filter(v -> !registrations.isEmpty())
-      .flatMap(ignored -> Flux
+      .flatMap(tick -> Flux
         .fromIterable(registrations.keySet())
-        .flatMap(KeyValueBucketRefresher.this::maybeUpdateBucket)
+        .flatMap(bucketName -> maybeUpdateBucket(bucketName, tick == TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION))
       )
       .subscribe(provider::proposeBucketConfig);
   }
@@ -198,10 +201,10 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @param name the name of the bucket.
    * @return a {@link Mono} either with a new config or nothing to ignore.
    */
-  private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name) {
+  private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name, boolean triggeredByConfigChangeNotification) {
     NanoTimestamp last = registrations.get(name);
     boolean overInterval = last != null && last.hasElapsed(configPollInterval);
-    boolean allowed = tainted.contains(name) || overInterval;
+    boolean allowed = triggeredByConfigChangeNotification || tainted.contains(name) || overInterval;
 
     if (allowed) {
       List<NodeInfo> nodes = filterEligibleNodes(name);

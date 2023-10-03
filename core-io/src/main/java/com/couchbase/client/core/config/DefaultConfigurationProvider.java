@@ -170,6 +170,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile NanoTimestamp lastDnsSrvLookup = NanoTimestamp.never();
 
+  private final Sinks.Many<Long> configPollTrigger = Sinks.many().multicast().directBestEffort();
+
   public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
     this(core, seedNodes, asConnectionString(seedNodes));
   }
@@ -853,6 +855,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     if (failure == ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS) {
       handlePotentialDnsSrvRefresh();
     }
+  }
+
+  @Override
+  public synchronized void signalConfigChanged() {
+    configPollTrigger.tryEmitNext(TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION);
+  }
+
+  @Override
+  public Flux<Long> configChangeNotifications() {
+    return configPollTrigger.asFlux();
   }
 
   /**

@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.config.DefaultConfigurationProvider.TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.MAX_PARALLEL_FETCH;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.POLLER_INTERVAL;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.clampConfigRequestTimeout;
@@ -96,7 +97,7 @@ public class GlobalRefresher {
   /**
    * Stores the last poll attempt to calculate if enough time has passed for a new poll.
    */
-  private volatile NanoTimestamp lastPoll;
+  private volatile NanoTimestamp lastPoll = NanoTimestamp.never();
 
   /**
    * Holds the number of consecutively failed refreshes to trigger side effects if needed.
@@ -115,16 +116,19 @@ public class GlobalRefresher {
     configPollInterval = core.context().environment().ioConfig().configPollInterval();
     configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
-    pollRegistration = Flux
-      .interval(pollerInterval(), core.context().environment().scheduler())
+    pollRegistration = Flux.merge(
+        Flux.interval(pollerInterval(), core.context().environment().scheduler()),
+        provider.configChangeNotifications()
+      )
       // Proposing a new config should be quick, but just in case it gets held up we do
       // not want to terminate the refresher and just drop the ticks and keep going.
       .onBackpressureDrop()
       // If the refresher is not started yet, drop all intervals
       .filter(v -> started)
       // Since the POLLER_INTERVAL is smaller than the config poll interval, make sure
-      // we only emit poll events if enough time has elapsed.
-      .filter(v -> lastPoll == null || lastPoll.hasElapsed(configPollInterval))
+      // we only emit poll events if enough time has elapsed -- or if the server told us
+      // there's a new config.
+      .filter(v -> v == TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION || lastPoll.hasElapsed(configPollInterval))
       .flatMap(ign -> {
         List<PortInfo> nodes = filterEligibleNodes();
         if (numFailedRefreshes.get() >= nodes.size()) {

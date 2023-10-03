@@ -29,7 +29,6 @@ import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
 import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
-import com.couchbase.client.core.cnc.events.io.UnknownServerPushRequestReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
@@ -53,7 +52,6 @@ import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.ServerPushOpcode;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -303,14 +301,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param response the response to decode and handle.
    */
   private void decode(final ChannelHandlerContext ctx, final ByteBuf response) {
-    // Server push request opcode might collide with client request opcode,
-    // so do this check first!
-    boolean serverPush = MemcacheProtocol.magic(response) == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic();
-    if (serverPush) {
-      handleServerPushRequest(ctx, response);
-      return;
-    }
-
     int opaque = MemcacheProtocol.opaque(response);
     KeyValueRequest<Response> request = writtenRequests.remove(opaque);
 
@@ -354,24 +344,6 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } else {
       retryOrComplete(request, response, status, isRangeScanContinue, originalStart);
     }
-  }
-
-  private void handleServerPushRequest(ChannelHandlerContext ctx, ByteBuf request) {
-    byte opcodeByte = MemcacheProtocol.opcode(request);
-    ServerPushOpcode opcode = ServerPushOpcode.of(opcodeByte);
-
-    if (opcode == ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
-      handleClustermapChangeNotification(request);
-      return;
-    }
-
-    ioContext.environment().eventBus().publish(
-      new UnknownServerPushRequestReceivedEvent(ioContext, ByteBufUtil.getBytes(request))
-    );
-  }
-
-  private void handleClustermapChangeNotification(ByteBuf request) {
-    // Placeholder for future implementation
   }
 
   /**

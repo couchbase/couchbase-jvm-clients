@@ -34,6 +34,7 @@ import com.couchbase.client.core.util.Bytes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -79,6 +80,7 @@ public class KeyValueBucketRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
+    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
     BucketConfig config = mock(BucketConfig.class);
     when(config.name()).thenReturn("bucket");
     clusterConfig.setBucketConfig(config);

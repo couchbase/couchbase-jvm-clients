@@ -130,6 +130,14 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
 
   @Override
   public void signalConfigRefreshFailed(ConfigRefreshFailure failure) {
+  }
 
+  @Override
+  public void signalConfigChanged() {
+  }
+
+  @Override
+  public Flux<Long> configChangeNotifications() {
+    return Flux.empty();
   }
 }

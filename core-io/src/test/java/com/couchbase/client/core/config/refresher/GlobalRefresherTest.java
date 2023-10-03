@@ -34,6 +34,7 @@ import com.couchbase.client.core.util.NanoTimestamp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -80,6 +81,7 @@ class GlobalRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
+    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
     GlobalConfig config = mock(GlobalConfig.class);
     clusterConfig.setGlobalConfig(config);
     when(config.portInfos()).thenReturn(Arrays.asList(
@@ -127,6 +129,7 @@ class GlobalRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
+    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
     GlobalConfig config = mock(GlobalConfig.class);
     clusterConfig.setGlobalConfig(config);
     when(config.portInfos()).thenReturn(Arrays.asList(
