@@ -122,7 +122,7 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
 
       @Override
       public long ramQuotaMB() {
-        return bucket.getRamQuotaBytes() / 1_000_000; // todo
+        return bucket.getRamQuotaMb();
       }
 
       @Override
@@ -186,29 +186,35 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
 
       @Override
       public DurabilityLevel minimumDurabilityLevel() {
-        switch (bucket.getMinimumDurabilityLevel()) {
-          case DURABILITY_LEVEL_MAJORITY:
-            return DurabilityLevel.MAJORITY;
-          case DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE:
-            return DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE;
-          case DURABILITY_LEVEL_PERSIST_TO_MAJORITY:
-            return DurabilityLevel.PERSIST_TO_MAJORITY;
-          case UNRECOGNIZED:
-          default:
-            throw incompatibleProtostellar("Unknown min durability level " + bucket.getMinimumDurabilityLevel());
+        if (bucket.hasMinimumDurabilityLevel()) {
+          switch (bucket.getMinimumDurabilityLevel()) {
+            case DURABILITY_LEVEL_MAJORITY:
+              return DurabilityLevel.MAJORITY;
+            case DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE:
+              return DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE;
+            case DURABILITY_LEVEL_PERSIST_TO_MAJORITY:
+              return DurabilityLevel.PERSIST_TO_MAJORITY;
+            case UNRECOGNIZED:
+            default:
+              throw incompatibleProtostellar("Unknown min durability level " + bucket.getMinimumDurabilityLevel());
+          }
         }
+        return null;
       }
 
       @Override
       public CoreStorageBackend storageBackend() {
-        switch (bucket.getStorageBackend()) {
-          case STORAGE_BACKEND_COUCHSTORE:
-            return CoreStorageBackend.COUCHSTORE;
-          case STORAGE_BACKEND_MAGMA:
-            return CoreStorageBackend.MAGMA;
-          default:
-            throw incompatibleProtostellar("Unknown storage backend " + bucket.getStorageBackend());
+        if (bucket.hasStorageBackend()) {
+          switch (bucket.getStorageBackend()) {
+            case STORAGE_BACKEND_COUCHSTORE:
+              return CoreStorageBackend.COUCHSTORE;
+            case STORAGE_BACKEND_MAGMA:
+              return CoreStorageBackend.MAGMA;
+            default:
+              throw incompatibleProtostellar("Unknown storage backend " + bucket.getStorageBackend());
+          }
         }
+        return null;
       }
 
       @Override

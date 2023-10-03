@@ -16,7 +16,6 @@ service KvService {
   rpc GetAndTouch(GetAndTouchRequest) returns (GetAndTouchResponse) {}
   rpc GetAndLock(GetAndLockRequest) returns (GetAndLockResponse) {}
   rpc Unlock(UnlockRequest) returns (UnlockResponse) {}
-  rpc GetReplica(GetReplicaRequest) returns (GetReplicaResponse) {}
   rpc Touch(TouchRequest) returns (TouchResponse) {}
   rpc Exists(ExistsRequest) returns (ExistsResponse) {}
 
@@ -30,6 +29,9 @@ service KvService {
   rpc Prepend(PrependRequest) returns (PrependResponse) {}
   rpc LookupIn(LookupInRequest) returns (LookupInResponse) {}
   rpc MutateIn(MutateInRequest) returns (MutateInResponse) {}
+
+  rpc GetAllReplicas(GetAllReplicasRequest)
+      returns (stream GetAllReplicasResponse) {}
 
   rpc RangeScan(RangeScanRequest) returns (RangeScanResponse) {}
 }
@@ -57,6 +59,7 @@ message GetRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
+  repeated string project = 5;
 }
 
 message GetResponse {
@@ -95,22 +98,6 @@ message GetAndLockRequest {
 }
 
 message GetAndLockResponse {
-  bytes content = 1;
-  uint32 content_flags = 6;
-  uint64 cas = 3;
-  google.protobuf.Timestamp expiry = 4;
-  reserved 2, 5;
-}
-
-message GetReplicaRequest {
-  string bucket_name = 1;
-  string scope_name = 2;
-  string collection_name = 3;
-  string key = 4;
-  uint32 replica_index = 5;
-}
-
-message GetReplicaResponse {
   bytes content = 1;
   uint32 content_flags = 6;
   uint64 cas = 3;
@@ -395,6 +382,20 @@ message MutateInResponse {
 
   uint64 cas = 2;
   MutationToken mutation_token = 3;
+}
+
+message GetAllReplicasRequest {
+  string bucket_name = 1;
+  string scope_name = 2;
+  string collection_name = 3;
+  string key = 4;
+}
+
+message GetAllReplicasResponse {
+  bool is_replica = 1;
+  bytes content = 2;
+  uint32 content_flags = 3;
+  uint64 cas = 4;
 }
 
 message RangeScanRequest {

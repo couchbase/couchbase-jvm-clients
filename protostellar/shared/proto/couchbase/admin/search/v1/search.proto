@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+option go_package = "github.com/couchbase/goprotostellar/genproto/admin_search_v1;admin_search_v1";
+option ruby_package = "Couchbase::Protostellar::Generated::Admin::Search::V1";
+option php_namespace = "Couchbase\\Protostellar\\Generated\\Admin\\Search\\V1";
+option java_package = "com.couchbase.client.protostellar.admin.search.v1";
+option java_multiple_files = true;
+
+package couchbase.admin.search.v1;
+
+service SearchAdminService {
+  rpc GetIndex(GetIndexRequest) returns (GetIndexResponse) {}
+  rpc ListIndexes(ListIndexesRequest) returns (ListIndexesResponse) {}
+
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse) {}
+  rpc UpdateIndex(UpdateIndexRequest) returns (UpdateIndexResponse) {}
+  rpc DeleteIndex(DeleteIndexRequest) returns (DeleteIndexResponse) {}
+
+  rpc AnalyzeDocument(AnalyzeDocumentRequest) returns (AnalyzeDocumentResponse) {}
+  rpc GetIndexedDocumentsCount(GetIndexedDocumentsCountRequest) returns (GetIndexedDocumentsCountResponse) {}
+
+  rpc PauseIndexIngest(PauseIndexIngestRequest) returns (PauseIndexIngestResponse) {}
+  rpc ResumeIndexIngest(ResumeIndexIngestRequest) returns (ResumeIndexIngestResponse) {}
+  rpc AllowIndexQuerying(AllowIndexQueryingRequest) returns (AllowIndexQueryingResponse) {}
+  rpc DisallowIndexQuerying(DisallowIndexQueryingRequest) returns (DisallowIndexQueryingResponse) {}
+  rpc FreezeIndexPlan(FreezeIndexPlanRequest) returns (FreezeIndexPlanResponse) {}
+  rpc UnfreezeIndexPlan(UnfreezeIndexPlanRequest) returns (UnfreezeIndexPlanResponse) {}
+}
+
+message Index {
+  string name = 1;
+  map<string, bytes> params = 2;
+  map<string, bytes> plan_params = 3;
+  optional string source_name = 4;
+  map<string, bytes> source_params = 5;
+  optional string source_type = 6;
+  optional string source_uuid = 7;
+  string type = 8;
+  string uuid = 9;
+}
+
+// CreateIndexRequest does not use Index because of the uuid field.
+message CreateIndexRequest {
+  string name = 1;
+  map<string, bytes> params = 2;
+  map<string, bytes> plan_params = 3;
+  optional string prev_index_uuid = 4;
+  optional string source_name = 5;
+  map<string, bytes> source_params = 6;
+  optional string source_type = 7;
+  optional string source_uuid = 8;
+  string type = 9;
+  optional string bucket_name = 10;
+  optional string scope_name = 11;
+}
+
+message CreateIndexResponse {}
+
+message UpdateIndexRequest {
+  Index index = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message UpdateIndexResponse {}
+
+message GetIndexRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message GetIndexResponse {
+  Index index = 1;
+}
+
+message ListIndexesRequest {
+  optional string bucket_name = 1;
+  optional string scope_name = 2;
+}
+
+message ListIndexesResponse {
+  repeated Index indexes = 1;
+}
+
+message DeleteIndexRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message DeleteIndexResponse {}
+
+message AnalyzeDocumentRequest {
+  string name = 1;
+  bytes doc = 2;
+  optional string bucket_name = 3;
+  optional string scope_name = 4;
+}
+
+message AnalyzeDocumentResponse {
+  string status = 1;
+  bytes analyzed = 2;
+}
+
+message GetIndexedDocumentsCountRequest {
+  string name = 1;
+  optional string bucket_name = 3;
+  optional string scope_name = 4;
+}
+
+message GetIndexedDocumentsCountResponse {
+  uint64 count = 1;
+}
+
+message PauseIndexIngestRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message PauseIndexIngestResponse {}
+
+message ResumeIndexIngestRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message ResumeIndexIngestResponse {}
+
+message AllowIndexQueryingRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message AllowIndexQueryingResponse {}
+
+message DisallowIndexQueryingRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message DisallowIndexQueryingResponse {}
+
+message FreezeIndexPlanRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message FreezeIndexPlanResponse {}
+
+message UnfreezeIndexPlanRequest {
+  string name = 1;
+  optional string bucket_name = 2;
+  optional string scope_name = 3;
+}
+
+message UnfreezeIndexPlanResponse {}

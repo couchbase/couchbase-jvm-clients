@@ -272,6 +272,9 @@ message SearchQueryRequest {
   repeated string collections = 12;
   bool include_locations = 13;
   map<string, Facet> facets = 14;
+
+  optional string bucket_name = 15;
+  optional string scope_name = 16;
 }
 
 message SearchQueryResponse {
@@ -313,7 +316,7 @@ message SearchQueryResponse {
   }
 
   message TermFacetResult {
-    string name = 1;
+    reserved 1;
     string field = 2;
     int64 total = 3;
     int64 missing = 4;
@@ -329,7 +332,7 @@ message SearchQueryResponse {
   }
 
   message DateRangeFacetResult {
-    string name = 1;
+    reserved 1;
     string field = 2;
     int64 total = 3;
     int64 missing = 4;
@@ -345,7 +348,7 @@ message SearchQueryResponse {
   }
 
   message NumericRangeFacetResult{
-    string name = 1;
+    reserved 1;
     string field = 2;
     int64 total = 3;
     int64 missing = 4;

@@ -319,13 +319,13 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
 
   @Override
   public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key) {
-    // Protostellar get-from-replica support is currently incomplete.
+    // Protostellar get-from-replica support is currently incomplete.  JVMCBC-1263.
     throw unsupported();
   }
 
   @Override
   public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key) {
-    // Protostellar get-from-replica support is currently incomplete.
+    // Protostellar get-from-replica support is currently incomplete.  JVMCBC-1263.
     throw unsupported();
   }
 
