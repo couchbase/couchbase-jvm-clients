@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.13.11-SNAPSHOT</version>
+    <version>1.13.11</version>
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -16,13 +16,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <osgi-feature.version>3.4.11-SNAPSHOT</osgi-feature.version>
-        <java-examples.version>1.4.11-SNAPSHOT</java-examples.version>
-        <java-client.version>3.4.11-SNAPSHOT</java-client.version>
-        <core-io.version>2.4.11-SNAPSHOT</core-io.version>
-        <core-io-deps.version>1.4.11-SNAPSHOT</core-io-deps.version>
-        <scala-client.version>1.4.11-SNAPSHOT</scala-client.version>
-        <kotlin-client.version>1.1.11-SNAPSHOT</kotlin-client.version>
+        <osgi-feature.version>3.4.11</osgi-feature.version>
+        <java-examples.version>1.4.11</java-examples.version>
+        <java-client.version>3.4.11</java-client.version>
+        <core-io.version>2.4.11</core-io.version>
+        <core-io-deps.version>1.4.11</core-io-deps.version>
+        <scala-client.version>1.4.11</scala-client.version>
+        <kotlin-client.version>1.1.11</kotlin-client.version>
 
         <junit.version>5.9.1</junit.version>
         <assertj.version>3.23.1</assertj.version>
@@ -117,17 +117,17 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
-                <version>1.4.11-SNAPSHOT</version>
+                <version>1.4.11</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>tracing-opentelemetry</artifactId>
-                <version>1.2.11-SNAPSHOT</version>
+                <version>1.2.11</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>metrics-opentelemetry</artifactId>
-                <version>0.4.11-SNAPSHOT</version>
+                <version>0.4.11</version>
             </dependency>
             <dependency>
                 <groupId>io.projectreactor.tools</groupId>
