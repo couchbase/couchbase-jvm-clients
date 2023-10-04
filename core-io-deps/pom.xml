@@ -265,15 +265,6 @@
                             <pattern>io.perfmark</pattern>
                             <shadedPattern>${shaded.package.prefix}io.perfmark</shadedPattern>
                         </relocation>
-
-                        <!-- For tracing-opentelemetry, we need to combine the user's unshaded OpenTelemetry object, with a shaded
-                         ManagedChannelBuilder, via the GRPC instrumentation library.  The only solution that works is to
-                         a) include the instrumentation library in core-io-deps so it can be shaded, and b) shade
-                         only these - so that the shaded instrumentation library continues to depend on unshaded io.opentelemetry.OpenTelemetry -->
-                        <relocation>
-                            <pattern>io.opentelemetry.instrumentation.grpc</pattern>
-                            <shadedPattern>${shaded.package.prefix}io.opentelemetry.instrumentation.grpc</shadedPattern>
-                        </relocation>
                     </relocations>
                     <transformers>
                         <!-- Required for gRPC -->

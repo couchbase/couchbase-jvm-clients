@@ -20,6 +20,13 @@
             <groupId>com.couchbase.client</groupId>
             <artifactId>core-io</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>tracing-opentelemetry-deps</artifactId>
+            <version>1.2.11-SNAPSHOT</version>
+        </dependency>
+
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api</artifactId>

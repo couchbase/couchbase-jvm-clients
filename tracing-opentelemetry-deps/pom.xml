@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.couchbase.client</groupId>
+    <artifactId>tracing-opentelemetry-deps</artifactId>
+    <version>1.2.11-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>OpenTelemetry Interoperability Dependencies</name>
+    <description>Shadowing dependencies for sanity's sake</description>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-grpc-1.6</artifactId>
+            <!-- Older versions of Maven (certainly 3.6.3) cannot support "${opentelemetry.version}-alpha" -->
+            <version>1.19.0-alpha</version>
+            <!-- Don't want the transitive dependencies to be shaded into tracing-opentelemetry-deps -->
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <relocations>
+                        <!-- For tracing-opentelemetry, we need to combine the user's unshaded OpenTelemetry object, with a shaded
+                         ManagedChannelBuilder, via the GRPC instrumentation library.  The only solution that works is to
+                         a) include the instrumentation library in a separate tracing-opentelemeytry-deps so it can be shaded, and b) shade
+                         only these packages - so that the shaded instrumentation library continues to depend on unshaded io.opentelemetry.OpenTelemetry -->
+                        <relocation>
+                            <pattern>io.opentelemetry.instrumentation.grpc</pattern>
+                            <shadedPattern>${shaded.package.prefix}io.opentelemetry.instrumentation.grpc</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>io.grpc</pattern>
+                            <shadedPattern>${shaded.package.prefix}io.grpc</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <createSourcesJar>true</createSourcesJar>
+                    <shadeSourcesContent>true</shadeSourcesContent>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
