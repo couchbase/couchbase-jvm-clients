@@ -16,7 +16,7 @@
 
     <properties>
         <!-- when updating grpc version, check to see if it's still necessary to pin Guava to 32.0.0 -->
-        <grpc.version>1.56.0</grpc.version>
+        <grpc.version>1.55.1</grpc.version>
         <grpc.protoc.version>3.23.2</grpc.protoc.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>32.0.1-jre</version>
+            <version>32.0.0-jre</version>
         </dependency>
 
         <dependency>
