@@ -16,9 +16,8 @@
 
 package com.couchbase.client.kotlin.env.dsl
 
-import com.couchbase.client.core.cnc.LoggingEventConsumer
 import com.couchbase.client.core.env.LoggerConfig
-import com.couchbase.client.core.env.LoggerConfig.Defaults.*
+import com.couchbase.client.core.env.LoggerConfig.Defaults.DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED
 import java.util.logging.Level
 import kotlin.properties.Delegates.observable
 
@@ -28,25 +27,17 @@ import kotlin.properties.Delegates.observable
 @ClusterEnvironmentDslMarker
 public class LoggerConfigDslBuilder(private val wrapped: LoggerConfig.Builder) {
 
-    internal var customLogger: LoggingEventConsumer.Logger?
-            by observable(null) { _, _, it -> wrapped.customLogger(it) }
-
-    /**
-     * @see LoggerConfig.Builder.fallbackToConsole
-     */
+    @Deprecated("Has no effect; SLF4J is used for all logging.")
     public var fallbackToConsole: Boolean
-            by observable(DEFAULT_FALLBACK_TO_CONSOLE) { _, _, it -> wrapped.fallbackToConsole(it) }
+            by observable(false) { _, _, it -> wrapped.fallbackToConsole(it) }
 
-    /**
-     * @see LoggerConfig.Builder.consoleLogLevel
-     */
+    @Deprecated("Has no effect; SLF4J is used for all logging.")
     public var consoleLogLevel: Level
-            by observable(DEFAULT_CONSOLE_LOG_LEVEL) { _, _, it -> wrapped.consoleLogLevel(it) }
-    /**
-     * @see LoggerConfig.Builder.disableSlf4J
-     */
+            by observable(Level.INFO) { _, _, it -> wrapped.consoleLogLevel(it) }
+
+    @Deprecated("Has no effect; SLF4J is used for all logging.")
     public var disableSlf4J: Boolean
-            by observable(DEFAULT_DISABLE_SLF4J) { _, _, it -> wrapped.disableSlf4J(it) }
+            by observable(false) { _, _, it -> wrapped.disableSlf4J(it) }
 
     /**
      * @see LoggerConfig.Builder.enableDiagnosticContext

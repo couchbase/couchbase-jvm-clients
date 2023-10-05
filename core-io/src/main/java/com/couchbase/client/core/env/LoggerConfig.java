@@ -17,47 +17,59 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.LoggerFormatter;
 import com.couchbase.client.core.cnc.DefaultLoggerFormatter;
-import com.couchbase.client.core.cnc.LoggingEventConsumer;
+import com.couchbase.client.core.cnc.LoggerFormatter;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 
-import static com.couchbase.client.core.util.Validators.notNull;
-
 /**
  * The {@link LoggerConfig} allows to customize various aspects of the SDKs logging behavior.
  */
 public class LoggerConfig {
+  static {
+    String loggerFactoryClassName = LoggerFactory.getILoggerFactory().getClass().getName();
+    boolean missingSlf4jBinding = loggerFactoryClassName.equals("org.slf4j.helpers.NOPLoggerFactory");
+
+    if (missingSlf4jBinding) {
+      String slf4jVersion = "2.0.9";
+      System.err.printf(
+        "WARN: The Couchbase SDK uses SLF4J for logging, but there does not appear to be an SLF4J binding on the class path.%n" +
+          "To see log messages from the Couchbase SDK, please add an SLF4J binding as a dependency of your project.%n" +
+          "If you're using Maven, a simple way to enable basic logging is to add these dependencies to your POM:%n" +
+          "    <dependency>%n" +
+          "        <groupId>org.slf4j</groupId>%n" +
+          "        <artifactId>slf4j-api</artifactId>%n" +
+          "        <version>" + slf4jVersion + "</version>%n" +
+          "    </dependency>%n" +
+          "    <dependency>%n" +
+          "        <groupId>org.slf4j</groupId>%n" +
+          "        <artifactId>slf4j-simple</artifactId>%n" +
+          "        <version>" + slf4jVersion + "</version>%n" +
+          "    </dependency>%n" +
+          "Or if you're using Gradle, add these to your dependencies section:%n" +
+          "    implementation(\"org.slf4j:slf4j-api:" + slf4jVersion + "\")%n" +
+          "    implementation(\"org.slf4j:slf4j-simple:" + slf4jVersion + "\")%n" +
+          "If you see this warning even though there's an SLF4J binding on the class path,%n" +
+          "it may be due to an `slf4j-api` version mismatch; try adding an explicit dependency%n" +
+          "on the version of `slf4j-api` required by your selected binding.%n" +
+          "To learn more about SLF4J bindings, see https://www.slf4j.org/manual.html#swapping%n" +
+          "%n"
+      );
+    }
+  }
 
   @Stability.Internal
   public static class Defaults {
-    public static final boolean DEFAULT_FALLBACK_TO_CONSOLE = false;
-    public static final boolean DEFAULT_DISABLE_SLF4J = false;
-    public static final String DEFAULT_LOGGER_NAME = "CouchbaseLogger";
     public static final boolean DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED = false;
-    public static final Level DEFAULT_CONSOLE_LOG_LEVEL = Level.INFO;
-    public static final LoggerFormatter DEFAULT_CONSOLE_LOGGER_FORMATTER = DefaultLoggerFormatter.INSTANCE;
   }
 
-  private final LoggingEventConsumer.Logger customLogger;
-  private final boolean fallbackToConsole;
-  private final boolean disableSlf4J;
-  private final String loggerName;
   private final boolean diagnosticContextEnabled;
-  private final Level consoleLogLevel;
-  private final LoggerFormatter consoleLoggerFormatter;
 
   private LoggerConfig(final Builder builder) {
-    customLogger = builder.customLogger;
-    disableSlf4J = builder.disableSlf4J;
-    loggerName = builder.loggerName;
-    fallbackToConsole = builder.fallbackToConsole;
     diagnosticContextEnabled = builder.diagnosticContextEnabled;
-    consoleLogLevel = builder.consoleLogLevel;
-    consoleLoggerFormatter = builder.consoleLoggerFormatter;
   }
 
   /**
@@ -77,36 +89,39 @@ public class LoggerConfig {
   }
 
   /**
-   * Use the console logger instead of the java.util.logging fallback in case SLF4J is not found or disabled.
+   * Returns a new LoggerConfig builder with default settings.
+   * <p>
+   * SLF4J is used for all logging. If you wish to log to the console,
+   * please configure your SLF4J binding accordingly.
    *
-   * Please note that in addition setting this to true, either SLF4J must not be on the classpath or manually disabled
-   * via {@link #disableSlf4J(boolean)} to make it work. By default, it will log at INFO level to stdout/stderr, but
-   * the loglevel can be configured via {@link #consoleLogLevel(Level)}.
-   *
-   * @param fallbackToConsole true if the console logger should be used as a fallback.
+   * @param fallbackToConsole ignored
    * @return a {@link Builder} for chaining purposes.
+   * @deprecated Please use {@link LoggerConfig#builder()} instead,
+   * and configure your SLF4J binding to log to the console if desired.
    */
+  @Deprecated
   public static Builder fallbackToConsole(boolean fallbackToConsole) {
     return builder().fallbackToConsole(fallbackToConsole);
   }
 
   /**
-   * Disable SLF4J logging, which is by default the first option tried.
+   * Returns a new LoggerConfig builder with default settings.
+   * <p>
+   * Deprecated because SLF4J is used for all logging, and cannot be disabled.
    *
-   * If SLF4J is disabled, java.util.logging will be tried next, unless {@link #fallbackToConsole(boolean)} is set
-   * to true.
-   *
-   * @param disableSlf4J set to true to disable SLF4J logging.
+   * @param disableSlf4J ignored
    * @return a {@link Builder} for chaining purposes.
+   * @deprecated Please use {@link LoggerConfig#builder()} instead.
    */
+  @Deprecated
   public static Builder disableSlf4J(boolean disableSlf4J) {
     return builder().disableSlf4J(disableSlf4J);
   }
 
   /**
-   * Allowed to set a custom logger name - does not have an effect and is deprecated.
+   * Returns a new LoggerConfig builder with default settings.
    *
-   * @param loggerName the custom logger name.
+   * @param loggerName ignored
    * @return a {@link Builder} for chaining purposes.
    * @deprecated the logging infrastructure picks the logger name automatically now based on the event type
    * so it is easier to enable/disable logging or change the verbosity level for certain groups rather than having a
@@ -118,88 +133,77 @@ public class LoggerConfig {
   }
 
   /**
-   * Enables the diagnostic context (if supported by the used logger) - disabled by default.
-   *
-   * Please note that this will only work for the SLF4J logger. Neither the java util logger, nor the console
-   * logger support the diagnostic context at this point. In SLF4J parlance, it is called the MDC.
+   * Creates a new LoggerConfig builder with the {@code enableDiagnosticContext} feature
+   * set to the specified value.
    *
    * @param diagnosticContextEnabled if the diagnostic context should be enabled.
    * @return a {@link Builder} for chaining purposes.
+   * @deprecated Instead, please create a new builder with {@link LoggerConfig#builder()},
+   * and then call the non-static {@link LoggerConfig.Builder#enableDiagnosticContext(boolean)} method.
    */
+  @Deprecated
   public static Builder enableDiagnosticContext(boolean diagnosticContextEnabled) {
     return builder().enableDiagnosticContext(diagnosticContextEnabled);
   }
 
   /**
-   * Allows to specify a custom logger. This is used for testing only.
+   * Returns a new LoggerConfig builder with default settings.
+   * <p>
+   * Deprecated because SLF4J is used for all logging. Please configure logging
+   * settings like this via your SLF4J binding.
    *
-   * @param customLogger the custom logger to use in testing.
+   * @param consoleLogLevel ignored
    * @return a {@link Builder} for chaining purposes.
+   * @deprecated Please use {@link LoggerConfig#builder()} instead.
    */
-  @Stability.Internal
-  public static Builder customLogger(final LoggingEventConsumer.Logger customLogger) {
-    return builder().customLogger(customLogger);
-  }
-
-  /**
-   * Allows to customize the log level for the Console Logger.
-   *
-   * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
-   * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
-   * is set to true at the same time.
-   *
-   * @param consoleLogLevel the log level for the console logger.
-   * @return a {@link Builder} for chaining purposes.
-   */
+  @Deprecated
   public static Builder consoleLogLevel(final Level consoleLogLevel) {
     return builder().consoleLogLevel(consoleLogLevel);
   }
 
   /**
-   * Allows to customize the format when the console logger is used.
-   *
-   * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
-   * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
-   * is set to true at the same time.
+   * Returns a new LoggerConfig builder with default settings.
    * <p>
-   * If only a custom timestamp needs to be added, it is recommended to override the {@link DefaultLoggerFormatter}
-   * for ease of use. If a completely custom line is needed, the interface can be implemented from scratch.
+   * Deprecated because SLF4J is used for all logging. Please configure
+   * this kind of logging setting via your SLF4J binding.
    *
-   * @param loggerFormatter the custom formatter to be used.
+   * @param loggerFormatter ignored
    * @return a {@link Builder} for chaining purposes.
+   * @deprecated Please use {@link LoggerConfig#builder()} instead.
    */
+  @Deprecated
   public Builder consoleLoggerFormatter(final LoggerFormatter loggerFormatter) {
     return builder().consoleLoggerFormatter(loggerFormatter);
   }
 
   /**
-   * Returns a custom logger if configured for testing.
+   * Always returns false.
+   *
+   * @deprecated SLF4J is used for all logging.
    */
-  @Stability.Internal
-  public LoggingEventConsumer.Logger customLogger() {
-    return customLogger;
-  }
-
-  /**
-   * Returns true if the console fallback is activated.
-   */
+  @Deprecated
   public boolean fallbackToConsole() {
-    return fallbackToConsole;
+    return false;
   }
 
   /**
-   * Returns true if SLF4J should not be used, even if found on the classpath.
+   * Always returns false.
+   *
+   * @deprecated SLF4J is used for all logging.
    */
+  @Deprecated
   public boolean disableSlf4J() {
-    return disableSlf4J;
+    return false;
   }
 
   /**
-   * Returns the custom logger name to use, deprecated.
+   * Always returns empty string.
+   *
+   * @deprecated Setting a custom logger name has no effect.
    */
   @Deprecated
   public String loggerName() {
-    return loggerName;
+    return "";
   }
 
   /**
@@ -210,21 +214,24 @@ public class LoggerConfig {
   }
 
   /**
-   * Returns the log level that should be used if the ConsoleLogger is enabled/used.
+   * Always returns {@link Level#INFO}.
    *
-   * @return the log level for the console logger.
+   * @deprecated SLF4J is used for all logging. Setting a console log level has no effect.
    */
+  @Deprecated
   public Level consoleLogLevel() {
-    return consoleLogLevel;
+    return Level.INFO;
   }
 
   /**
-   * Returns the logger formatter used for the console logger.
+   * Always returns an instance of DefaultLoggerFormatter.
    *
    * @return the logger formatter.
+   * @deprecated SLF4J is used for all logging. Setting a custom console logger formatter has no effect.
    */
+  @Deprecated
   public LoggerFormatter consoleLoggerFormatter() {
-    return consoleLoggerFormatter;
+    return DefaultLoggerFormatter.INSTANCE;
   }
 
   /**
@@ -233,64 +240,54 @@ public class LoggerConfig {
   @Stability.Volatile
   Map<String, Object> exportAsMap() {
     Map<String, Object> export = new LinkedHashMap<>();
-    export.put("customLogger", customLogger == null ? null : customLogger.getClass().getSimpleName());
-    export.put("fallbackToConsole", fallbackToConsole);
-    export.put("consoleLogLevel", consoleLogLevel);
-    export.put("consoleLoggerFormatter", consoleLoggerFormatter == null ? null : consoleLoggerFormatter.getClass().getSimpleName());
-    export.put("disableSlf4j", disableSlf4J);
-    export.put("loggerName", loggerName);
     export.put("diagnosticContextEnabled", diagnosticContextEnabled);
     return export;
   }
 
   public static class Builder {
-    private LoggingEventConsumer.Logger customLogger = null;
-    private boolean fallbackToConsole = Defaults.DEFAULT_FALLBACK_TO_CONSOLE;
-    private boolean disableSlf4J = Defaults.DEFAULT_DISABLE_SLF4J;
-    private String loggerName = Defaults.DEFAULT_LOGGER_NAME;
     private boolean diagnosticContextEnabled = Defaults.DEFAULT_DIAGNOSTIC_CONTEXT_ENABLED;
-    private Level consoleLogLevel = Defaults.DEFAULT_CONSOLE_LOG_LEVEL;
-    private LoggerFormatter consoleLoggerFormatter = Defaults.DEFAULT_CONSOLE_LOGGER_FORMATTER;
 
-    /**
-     * Allows to specify a custom logger. This is used for testing only.
-     *
-     * @param customLogger the custom logger
-     * @return this {@link Builder} for chaining purposes.
-     */
-    @Stability.Internal
-    public Builder customLogger(final LoggingEventConsumer.Logger customLogger) {
-      this.customLogger = customLogger;
+    private Builder deprecatedInFavorOfSlf4J(String clientSettingName) {
+      // A user who sets these properties probably isn't using SLF4J,
+      // so it doesn't make sense to log this warning via SLF4J.
+      // This is a rare case where writing directly to stderr is appropriate.
+      System.err.println(
+        "WARN: The Couchbase SDK `" + clientSettingName + "` client setting is deprecated, and has no effect." +
+          " The Couchbase SDK now uses SLF4J for all logging." +
+          " Instead of customizing log output via SDK client settings," +
+          " please include an appropriate SLF4J binding as a dependency of your project," +
+          " and configure your chosen logging framework to generate log messages in the desired format." +
+          " To learn more about SLF4J bindings, see https://www.slf4j.org/manual.html#swapping"
+      );
+
       return this;
     }
 
     /**
-     * Use the console logger instead of the java.util.logging fallback in case SLF4J is not found or disabled.
+     * This method has no effect.
+     * <p>
+     * SLF4J is used for all logging. If you wish to log to the console,
+     * please configure your SLF4J binding accordingly.
      *
-     * Please note that in addition setting this to true, either SLF4J must not be on the classpath or manually disabled
-     * via {@link #disableSlf4J(boolean)} to make it work. By default, it will log at INFO level to stdout/stderr, but
-     * the loglevel can be configured via {@link #consoleLogLevel(Level)}.
-     *
-     * @param fallbackToConsole true if the console logger should be used as a fallback.
+     * @param fallbackToConsole ignored
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated SLF4J is used for all logging.
      */
+    @Deprecated
     public Builder fallbackToConsole(final boolean fallbackToConsole) {
-      this.fallbackToConsole = fallbackToConsole;
-      return this;
+      return deprecatedInFavorOfSlf4J("logger.fallbackToConsole");
     }
 
     /**
-     * Disable SLF4J logging, which is by default the first option tried.
+     * This method does nothing.
      *
-     * If SLF4J is disabled, java.util.logging will be tried next, unless {@link #fallbackToConsole(boolean)} is set
-     * to true.
-     *
-     * @param disableSlf4J set to true to disable SLF4J logging.
+     * @param disableSlf4J ignored
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated SFL4J is always used for logging.
      */
+    @Deprecated
     public Builder disableSlf4J(final boolean disableSlf4J) {
-      this.disableSlf4J = disableSlf4J;
-      return this;
+      return deprecatedInFavorOfSlf4J("logger.disableSlf4J");
     }
 
     /**
@@ -304,15 +301,17 @@ public class LoggerConfig {
      */
     @Deprecated
     public Builder loggerName(final String loggerName) {
-      this.loggerName = loggerName;
-      return this;
+      return deprecatedInFavorOfSlf4J("logger.loggerName");
     }
 
     /**
-     * Enables the diagnostic context (if supported by the used logger) - disabled by default.
-     *
-     * Please note that this will only work for the SLF4J logger. Neither the java util logger, nor the console
-     * logger support the diagnostic context at this point. In SLF4J parlance, it is called the MDC.
+     * If enabled, and the user specifies a {@code clientContext} for a request,
+     * the client context is copied into the Mapped Diagnostic Context (MDC)
+     * when events related to that request are logged.
+     * <p>
+     * Has no effect if the SLF4J binding does not support MDC.
+     * <p>
+     * Disabled by default.
      *
      * @param diagnosticContextEnabled if the diagnostic context should be enabled.
      * @return this {@link Builder} for chaining purposes.
@@ -323,36 +322,29 @@ public class LoggerConfig {
     }
 
     /**
-     * Allows to customize the log level for the Console Logger.
+     * This method is deprecated, and has no effect.
      *
-     * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
-     * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
-     * is set to true at the same time.
-     *
-     * @param consoleLogLevel the log level for the console logger.
+     * @param consoleLogLevel ignored
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method has no effect. SLF4J is used for all logging.
      */
+    @Deprecated
     public Builder consoleLogLevel(final Level consoleLogLevel) {
-      this.consoleLogLevel = consoleLogLevel;
-      return this;
+      return deprecatedInFavorOfSlf4J("logger.consoleLogLevel");
     }
 
     /**
-     * Allows to customize the format when the console logger is used.
-     *
-     * Please note that this DOES NOT AFFECT any other logging infrastructure (so neither the java.util.logging, nor
-     * the SLF4J setup which is the default!). It will only affect the log level if {@link #fallbackToConsole(boolean)}
-     * is set to true at the same time.
+     * This method has no effect.
      * <p>
-     * If only a custom timestamp needs to be added, it is recommended to override the {@link DefaultLoggerFormatter}
-     * for ease of use. If a completely custom line is needed, the interface can be implemented from scratch.
+     * If you wish to customize the log output, please configure your SLF4J binding.
      *
-     * @param loggerFormatter the custom formatter to be used.
+     * @param loggerFormatter ignored
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated Please configure logger output via SLF4J binding instead.
      */
+    @Deprecated
     public Builder consoleLoggerFormatter(final LoggerFormatter loggerFormatter) {
-      this.consoleLoggerFormatter = notNull(loggerFormatter, "LoggerFormatter");
-      return this;
+      return deprecatedInFavorOfSlf4J("logger.consoleLoggerFormatter");
     }
 
     /**
@@ -363,8 +355,5 @@ public class LoggerConfig {
     public LoggerConfig build() {
       return new LoggerConfig(this);
     }
-
   }
-
-
 }

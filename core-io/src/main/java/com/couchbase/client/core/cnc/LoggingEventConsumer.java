@@ -16,18 +16,17 @@
 
 package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.LoggerConfig;
 import com.couchbase.client.core.msg.RequestContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import java.io.PrintStream;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
@@ -35,20 +34,11 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 /**
  * Consumes {@link Event Events} and logs them per configuration.
- *
- * <p>This consumer is intended to be attached per default and performs convenient logging
- * throughout the system. It tries to detect settings and loggers in a best-effort
- * way but can always be swapped out or changed to implement custom functionality.</p>
- *
- * <p>If SLF4J is detected on the classpath it will be used, otherwise it will fall back to
- * java.com.couchbase.client.test.util.logging or the console depending on the configuration.</p>
+ * <p>
+ * This consumer is intended to be attached by default and performs convenient logging
+ * throughout the system.
  */
 public class LoggingEventConsumer implements Consumer<Event> {
-
-  /**
-   * Contains true if SLF4J is on the classpath, false otherwise.
-   */
-  private static final boolean SLF4J_AVAILABLE = slf4JOnClasspath();
 
   /**
    * Contains the selected loggers that should be used for logging.
@@ -74,22 +64,6 @@ public class LoggingEventConsumer implements Consumer<Event> {
     this.loggerConfig = loggerConfig;
   }
 
-  private Logger createLogger(final String name) {
-    Logger logger;
-
-    if (loggerConfig.customLogger() != null) {
-      logger = loggerConfig.customLogger();
-    } else if (SLF4J_AVAILABLE && !loggerConfig.disableSlf4J()) {
-      logger = new Slf4JLogger(name);
-    } else if (loggerConfig.fallbackToConsole()) {
-      logger = new ConsoleLogger(name, loggerConfig.consoleLogLevel(), loggerConfig.consoleLoggerFormatter());
-    } else {
-      logger = new JdkLogger(name);
-    }
-
-    return logger;
-  }
-
   @Override
   public void accept(final Event event) {
     Event.Severity severity = event.severity();
@@ -98,11 +72,7 @@ public class LoggingEventConsumer implements Consumer<Event> {
       return;
     }
 
-    Logger logger = loggers.get(event.category());
-    if (logger == null) {
-      logger = createLogger(event.category());
-      loggers.put(event.category(), logger);
-    }
+    Logger logger = loggers.computeIfAbsent(event.category(), LoggerFactory::getLogger);
 
     if (!mustLogEvent(severity, logger)) {
       return;
@@ -134,50 +104,65 @@ public class LoggingEventConsumer implements Consumer<Event> {
     boolean diagnosticContext = loggerConfig.diagnosticContextEnabled() && event.context() instanceof RequestContext;
 
     if (diagnosticContext) {
-      logger.attachContext(((RequestContext) event.context()).clientContext());
+      attachContext(((RequestContext) event.context()).clientContext());
     }
 
     switch (severity) {
       case VERBOSE:
         if (event.cause() != null) {
-          logger.trace(logLine, event.cause());
+          logger.trace("{}", logLine, event.cause());
         } else {
-          logger.trace(logLine);
+          logger.trace("{}", logLine);
         }
         break;
       case DEBUG:
         if (event.cause() != null) {
-          logger.debug(logLine, event.cause());
+          logger.debug("{}", logLine, event.cause());
         } else {
-          logger.debug(logLine);
+          logger.debug("{}", logLine);
         }
         break;
       case INFO:
         if (event.cause() != null) {
-          logger.info(logLine, event.cause());
+          logger.info("{}", logLine, event.cause());
         } else {
-          logger.info(logLine);
+          logger.info("{}", logLine);
         }
         break;
       case WARN:
         if (event.cause() != null) {
-          logger.warn(logLine, event.cause());
+          logger.warn("{}", logLine, event.cause());
         } else {
-          logger.warn(logLine);
+          logger.warn("{}", logLine);
         }
         break;
       case ERROR:
         if (event.cause() != null) {
-          logger.error(logLine, event.cause());
+          logger.error("{}", logLine, event.cause());
         } else {
-          logger.error(logLine);
+          logger.error("{}", logLine);
         }
       default:
     }
 
     if (diagnosticContext) {
-      logger.clearContext();
+      MDC.clear();
     }
+  }
+
+  private static void attachContext(final Map<String, Object> context) {
+    if (isNullOrEmpty(context)) {
+      return;
+    }
+
+    MDC.setContextMap(
+      context.entrySet().stream().collect(Collectors.toMap(
+        e -> redactUser(e.getKey()).toString(),
+        e -> {
+          Object v = e.getValue();
+          return v == null ? "" : redactUser(v.toString()).toString();
+        }))
+    );
   }
 
   /**
@@ -213,490 +198,16 @@ public class LoggingEventConsumer implements Consumer<Event> {
    * @param duration the duration to convert.
    * @return the converted duration.
    */
-  private static String convertEventDuration(final Duration duration) {
+   static String convertEventDuration(final Duration duration) {
     long nanos = duration.toNanos();
     if (nanos < 1000L) { // everything below a microsecond is ns
       return nanos + "ns";
-    } else if (nanos < 1000_000_0L) {
+    } else if (nanos < 10_000_000L) {
       return TimeUnit.NANOSECONDS.toMicros(nanos) + "us"; // everything below 10ms is micros
-    } else if (nanos < 1000_000_000_0L) { // everything below 10s is millis
+    } else if (nanos < 10_000_000_000L) { // everything below 10s is millis
       return TimeUnit.NANOSECONDS.toMillis(nanos) + "ms";
     } else { // everything higher than 10s is seconds
       return TimeUnit.NANOSECONDS.toSeconds(nanos) + "s";
-    }
-  }
-
-  /**
-   * Helper method to check if SLF4J is on the classpath.
-   */
-  private static boolean slf4JOnClasspath() {
-    try {
-      Class.forName("org.slf4j.Logger");
-      return true;
-    } catch (ClassNotFoundException e) {
-      return false;
-    }
-  }
-
-  /**
-   * Generic logger interface.
-   */
-  @Stability.Internal
-  public interface Logger {
-
-    /**
-     * Return the name of this <code>Logger</code> instance.
-     *
-     * @return name of this logger instance
-     */
-    String getName();
-
-    /**
-     * Is the logger instance enabled for the TRACE level.
-     *
-     * @return True if this Logger is enabled for the TRACE level,
-     *         false otherwise.
-     */
-    boolean isTraceEnabled();
-
-    /**
-     * Log a message at the TRACE level.
-     *
-     * @param msg the message string to be logged
-     */
-    void trace(String msg);
-
-    /**
-     * Log an exception (throwable) at the TRACE level with an
-     * accompanying message.
-     *
-     * @param msg the message accompanying the exception
-     * @param t   the exception (throwable) to log
-     */
-    void trace(String msg, Throwable t);
-
-    /**
-     * Is the logger instance enabled for the DEBUG level.
-     *
-     * @return True if this Logger is enabled for the DEBUG level,
-     *         false otherwise.
-     */
-    boolean isDebugEnabled();
-
-    /**
-     * Log a message at the DEBUG level.
-     *
-     * @param msg the message string to be logged
-     */
-    void debug(String msg);
-
-    /**
-     * Log an exception (throwable) at the DEBUG level with an
-     * accompanying message.
-     *
-     * @param msg the message accompanying the exception
-     * @param t   the exception (throwable) to log
-     */
-    void debug(String msg, Throwable t);
-
-    /**
-     * Is the logger instance enabled for the INFO level.
-     *
-     * @return True if this Logger is enabled for the INFO level,
-     *         false otherwise.
-     */
-    boolean isInfoEnabled();
-
-    /**
-     * Log a message at the INFO level.
-     *
-     * @param msg the message string to be logged
-     */
-    void info(String msg);
-
-    /**
-     * Log an exception (throwable) at the INFO level with an
-     * accompanying message.
-     *
-     * @param msg the message accompanying the exception
-     * @param t   the exception (throwable) to log
-     */
-    void info(String msg, Throwable t);
-
-    /**
-     * Is the logger instance enabled for the WARN level.
-     *
-     * @return True if this Logger is enabled for the WARN level,
-     *         false otherwise.
-     */
-    boolean isWarnEnabled();
-
-    /**
-     * Log a message at the WARN level.
-     *
-     * @param msg the message string to be logged
-     */
-    void warn(String msg);
-
-    /**
-     * Log an exception (throwable) at the WARN level with an
-     * accompanying message.
-     *
-     * @param msg the message accompanying the exception
-     * @param t   the exception (throwable) to log
-     */
-    void warn(String msg, Throwable t);
-
-    /**
-     * Is the logger instance enabled for the ERROR level.
-     *
-     * @return True if this Logger is enabled for the ERROR level,
-     *         false otherwise.
-     */
-    boolean isErrorEnabled();
-
-    /**
-     * Log a message at the ERROR level.
-     *
-     * @param msg the message string to be logged
-     */
-    void error(String msg);
-
-    /**
-     * Log an exception (throwable) at the ERROR level with an
-     * accompanying message.
-     *
-     * @param msg the message accompanying the exception
-     * @param t   the exception (throwable) to log
-     */
-    void error(String msg, Throwable t);
-
-    /**
-     * Writes a diagnostics key/value pair.
-     *
-     * <p>note that this feature might not be supported by all implementations.</p>
-     *
-     * @param context the context to attach
-     */
-    default void attachContext(Map<String, Object> context) {}
-
-    /**
-     * Clears the diagnostics context for this thread.
-     *
-     * <p>note that this feature might not be supported by all implementations.</p>
-     */
-    default void clearContext() {}
-
-  }
-
-  static class Slf4JLogger implements Logger {
-
-    private final org.slf4j.Logger logger;
-
-    Slf4JLogger(final String name) {
-      logger = org.slf4j.LoggerFactory.getLogger(name);
-    }
-
-    @Override
-    public String getName() {
-      return logger.getName();
-    }
-
-    @Override
-    public boolean isTraceEnabled() {
-      return logger.isTraceEnabled();
-    }
-
-    @Override
-    public void trace(String msg) {
-      logger.trace(msg);
-    }
-
-    @Override
-    public void trace(String msg, Throwable t) {
-      logger.trace(msg, t);
-    }
-
-    @Override
-    public boolean isDebugEnabled() {
-      return logger.isDebugEnabled();
-    }
-
-    @Override
-    public void debug(String msg) {
-      logger.debug(msg);
-    }
-
-    @Override
-    public void debug(String msg, Throwable t) {
-      logger.debug(msg, t);
-    }
-
-    @Override
-    public boolean isInfoEnabled() {
-      return logger.isInfoEnabled();
-    }
-
-    @Override
-    public void info(String msg) {
-      logger.info(msg);
-    }
-
-    @Override
-    public void info(String msg, Throwable t) {
-      logger.info(msg, t);
-    }
-
-    @Override
-    public boolean isWarnEnabled() {
-      return logger.isWarnEnabled();
-    }
-
-    @Override
-    public void warn(String msg) {
-      logger.warn(msg);
-    }
-
-    @Override
-    public void warn(String msg, Throwable t) {
-      logger.warn(msg, t);
-    }
-
-    @Override
-    public boolean isErrorEnabled() {
-      return logger.isErrorEnabled();
-    }
-
-    @Override
-    public void error(String msg) {
-      logger.error(msg);
-    }
-
-    @Override
-    public void error(String msg, Throwable t) {
-      logger.error(msg, t);
-    }
-
-    @Override
-    public void attachContext(final Map<String, Object> context) {
-      if (isNullOrEmpty(context)) {
-        return;
-      }
-
-      MDC.setContextMap(
-        context.entrySet().stream().collect(Collectors.toMap(
-          e -> redactUser(e.getKey()).toString(),
-          e -> {
-            Object v = e.getValue();
-            return v == null ? "" : redactUser(v.toString()).toString();
-        }))
-      );
-    }
-
-    @Override
-    public void clearContext() {
-      MDC.clear();
-    }
-
-    public org.slf4j.Logger getImplementation() {
-      return logger;
-    }
-  }
-
-  static class JdkLogger implements Logger {
-
-    private final java.util.logging.Logger logger;
-
-    JdkLogger(String name) {
-      this.logger = java.util.logging.Logger.getLogger(name);
-    }
-
-    @Override
-    public String getName() {
-      return logger.getName();
-    }
-
-    @Override
-    public boolean isTraceEnabled() {
-      return logger.isLoggable(Level.FINEST);
-    }
-
-    @Override
-    public void trace(String msg) {
-      logger.log(Level.FINEST, msg);
-    }
-
-    @Override
-    public void trace(String msg, Throwable t) {
-      logger.log(Level.FINEST, msg, t);
-    }
-
-    @Override
-    public boolean isDebugEnabled() {
-      return logger.isLoggable(Level.FINE);
-    }
-
-    @Override
-    public void debug(String msg) {
-      logger.log(Level.FINE, msg);
-    }
-
-    @Override
-    public void debug(String msg, Throwable t) {
-      logger.log(Level.FINE, msg, t);
-    }
-
-    @Override
-    public boolean isInfoEnabled() {
-      return logger.isLoggable(Level.INFO);
-    }
-
-    @Override
-    public void info(String msg) {
-      logger.log(Level.INFO, msg);
-    }
-
-    @Override
-    public void info(String msg, Throwable t) {
-      logger.log(Level.INFO, msg, t);
-    }
-
-    @Override
-    public boolean isWarnEnabled() {
-      return logger.isLoggable(Level.WARNING);
-    }
-
-    @Override
-    public void warn(String msg) {
-      logger.log(Level.WARNING, msg);
-    }
-
-    @Override
-    public void warn(String msg, Throwable t) {
-      logger.log(Level.WARNING, msg, t);
-    }
-
-    @Override
-    public boolean isErrorEnabled() {
-      return logger.isLoggable(Level.SEVERE);
-    }
-
-    @Override
-    public void error(String msg) {
-      logger.log(Level.SEVERE, msg);
-    }
-
-    @Override
-    public void error(String msg, Throwable t) {
-      logger.log(Level.SEVERE, msg, t);
-    }
-
-  }
-
-  static class ConsoleLogger implements Logger {
-
-    private final String name;
-    private final PrintStream err;
-    private final PrintStream log;
-    private final boolean traceEnabled;
-    private final boolean debugEnabled;
-    private final boolean infoEnabled;
-    private final boolean warnEnabled;
-    private final boolean errorEnabled;
-
-    private final LoggerFormatter formatter;
-
-    ConsoleLogger(String name, Level logLevel, LoggerFormatter formatter) {
-      this.name = name;
-      this.log = System.out;
-      this.err = System.err;
-      this.formatter = formatter;
-
-      traceEnabled = logLevel.intValue() <= Level.FINEST.intValue();
-      debugEnabled = logLevel.intValue() <= Level.FINE.intValue();
-      infoEnabled = logLevel.intValue() <= Level.INFO.intValue();
-      warnEnabled = logLevel.intValue() <= Level.WARNING.intValue();
-      errorEnabled = logLevel.intValue() <= Level.SEVERE.intValue();
-    }
-
-    @Override
-    public String getName() {
-      return this.name;
-    }
-
-    @Override
-    public boolean isTraceEnabled() {
-      return traceEnabled;
-    }
-
-    @Override
-    public void trace(String msg) {
-      trace(msg, null);
-    }
-
-    @Override
-    public synchronized void trace(String msg, Throwable t) {
-      log.print(formatter.format(Level.FINEST, msg, t));
-    }
-
-    @Override
-    public boolean isDebugEnabled() {
-      return debugEnabled;
-    }
-
-    @Override
-    public void debug(String msg) {
-      debug(msg, null);
-    }
-
-    @Override
-    public synchronized void debug(String msg, Throwable t) {
-      log.print(formatter.format(Level.FINE, msg, t));
-    }
-
-    @Override
-    public boolean isInfoEnabled() {
-      return infoEnabled;
-    }
-
-    @Override
-    public void info(String msg) {
-      info(msg, null);
-    }
-
-    @Override
-    public synchronized void info(String msg, Throwable t) {
-      log.print(formatter.format(Level.INFO, msg, t));
-    }
-
-    @Override
-    public boolean isWarnEnabled() {
-      return warnEnabled;
-    }
-
-    @Override
-    public void warn(String msg) {
-      warn(msg, null);
-    }
-
-    @Override
-    public synchronized void warn(String msg, Throwable t) {
-      err.print(formatter.format(Level.WARNING, msg, t));
-    }
-
-    @Override
-    public boolean isErrorEnabled() {
-      return errorEnabled;
-    }
-
-    @Override
-    public void error(String msg) {
-      error(msg, null);
-    }
-
-    @Override
-    public synchronized void error(String msg, Throwable t) {
-      err.print(formatter.format(Level.SEVERE, msg, t));
     }
   }
 

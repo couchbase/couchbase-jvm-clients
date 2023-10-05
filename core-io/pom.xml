@@ -39,14 +39,13 @@
             <version>${reactive-streams.version}</version>
         </dependency>
 
-        <!-- External, Optional Dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
-            <optional>true</optional>
         </dependency>
 
+        <!-- External, Optional Dependencies -->
         <dependency>
             <groupId>io.projectreactor.tools</groupId>
             <artifactId>blockhound</artifactId>

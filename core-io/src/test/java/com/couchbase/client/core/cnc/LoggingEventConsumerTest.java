@@ -16,153 +16,154 @@
 
 package com.couchbase.client.core.cnc;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.env.LoggerConfig;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.retry.RetryReason;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.StringLayout;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.CharArrayWriter;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
 
-/**
- * Verifies the functionality of the {@link LoggingEventConsumer}.
- */
+import static com.couchbase.client.core.cnc.LoggingEventConsumer.convertEventDuration;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 class LoggingEventConsumerTest {
 
-  private LoggingEventConsumer.Logger logger;
+  private static final String TEST_MDC_KEY = "testMdcKey";
+  private static final String TEST_MDC_VALUE = "testMdcValue";
+
+  private static final String PATTERN = "%-5level %X{" + TEST_MDC_KEY + "} %msg";
+  private static final Event.Category category = Event.Category.IO;
+
+  private Logger logger;
+  private Appender appender;
+  private final CharArrayWriter logOutput = new CharArrayWriter();
+
   private LoggingEventConsumer loggingEventConsumer;
 
   @BeforeEach
   void setup() {
-    logger = mock(LoggingEventConsumer.Logger.class);
+    logger = (Logger) LogManager.getLogger(category.path());
 
-    // Enable all log levels by default
-    when(logger.isTraceEnabled()).thenReturn(true);
-    when(logger.isDebugEnabled()).thenReturn(true);
-    when(logger.isInfoEnabled()).thenReturn(true);
-    when(logger.isWarnEnabled()).thenReturn(true);
-    when(logger.isErrorEnabled()).thenReturn(true);
+    StringLayout layout = PatternLayout.newBuilder().withPattern(PATTERN).build();
+    appender = WriterAppender.newBuilder()
+      .setTarget(logOutput)
+      .setLayout(layout)
+      .setName("test-appender")
+      .build();
+    appender.start();
+    logger.addAppender(appender);
+    logger.setLevel(Level.ALL);
 
-    loggingEventConsumer = LoggingEventConsumer.create(LoggerConfig.customLogger(logger).build());
+    loggingEventConsumer = LoggingEventConsumer.create();
+  }
+
+  @AfterEach
+  void cleanup() {
+    logger.removeAppender(appender);
+    appender.stop();
+  }
+
+  private void assertLogOutput(String expectedLine) {
+    assertEquals(expectedLine, logOutput.toString());
   }
 
   @Test
   void formatAndLogWithoutContextOrDuration() {
-    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO, null);
+    Event event = new MyEvent(Event.Severity.INFO, category, Duration.ZERO, null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent]");
+    assertLogOutput("INFO   [com.couchbase.io][MyEvent]");
   }
 
   @Test
   void formatAndLogWithDuration() {
-    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123), null);
+    Event event = new MyEvent(Event.Severity.INFO, category, Duration.ofMillis(123), null);
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123ms]");
+    assertLogOutput("INFO   [com.couchbase.io][MyEvent][123ms]");
   }
 
   @Test
   void formatAndLogWithContext() {
     Map<String, Object> ctxData = new HashMap<>();
     ctxData.put("foo", true);
-    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ZERO,
+    Event event = new MyEvent(Event.Severity.INFO, category, Duration.ZERO,
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent] {\"foo\":true}");
+    assertLogOutput("INFO   [com.couchbase.io][MyEvent] {\"foo\":true}");
   }
 
   @Test
   void formatAndLogWithContextAndDuration() {
     Map<String, Object> ctxData = new HashMap<>();
     ctxData.put("foo", true);
-    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(123),
+    Event event = new MyEvent(Event.Severity.INFO, category, Duration.ofMillis(123),
       new MyContext(ctxData));
     loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][123ms] {\"foo\":true}");
+    assertLogOutput("INFO   [com.couchbase.io][MyEvent][123ms] {\"foo\":true}");
   }
 
   @Test
   void formatAndLogWithDescription() {
     Event event = new EventWithDescription("some text");
     loggingEventConsumer.accept(event);
-    verify(logger, times(1))
-      .debug("[com.couchbase.io][EventWithDescription][3600s] some text");
+    assertLogOutput("DEBUG  [com.couchbase.io][EventWithDescription][3600s] some text");
   }
 
   @Test
   void attachesClientContextIfEnabled() {
     LoggingEventConsumer loggingEventConsumer = LoggingEventConsumer.create(
-      LoggerConfig.enableDiagnosticContext(true).customLogger(logger).build()
+      LoggerConfig.builder()
+        .enableDiagnosticContext(true)
+        .build()
     );
 
-    RequestContext context = mock(RequestContext.class);
-    Map<String, Object> userContext = new HashMap<>();
-    userContext.put("hello", "world");
-    when(context.clientContext()).thenReturn(userContext);
-
-    RequestRetryScheduledEvent retryEvent = new RequestRetryScheduledEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
-    loggingEventConsumer.accept(retryEvent);
-
-    verify(logger, times(1)).attachContext(userContext);
+    loggingEventConsumer.accept(mockRetryEvent());
+    assertLogOutput("DEBUG " + TEST_MDC_VALUE + " [com.couchbase.io][][1000ms] Request GetRequest retry scheduled per RetryStrategy (Reason: UNKNOWN) {\"foo\":true}");
   }
 
   @Test
   void doesNotAttachClientContextByDefault() {
+    loggingEventConsumer.accept(mockRetryEvent());
+    assertLogOutput("DEBUG  [com.couchbase.io][][1000ms] Request GetRequest retry scheduled per RetryStrategy (Reason: UNKNOWN) {\"foo\":true}");
+  }
+
+  private static Event mockRetryEvent() {
     RequestContext context = mock(RequestContext.class);
-    Map<String, Object> userContext = new HashMap<>();
-    userContext.put("hello", "world");
-    when(context.clientContext()).thenReturn(userContext);
+    when(context.clientContext()).thenReturn(mapOf(TEST_MDC_KEY, TEST_MDC_VALUE));
+    when(context.exportAsString(Context.ExportFormat.JSON)).thenReturn("{\"foo\":true}");
 
-    RequestRetryScheduledEvent retryEvent = new RequestRetryScheduledEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN);
-    loggingEventConsumer.accept(retryEvent);
-
-    verify(logger, never()).attachContext(userContext);
+    return new RequestRetryScheduledEvent(Duration.ofSeconds(1), context, GetRequest.class, RetryReason.UNKNOWN) {
+      public String category() {
+        return category.path();
+      }
+    };
   }
 
   @Test
   void convertsDurationsAtExpectedBoundaries() {
-    Event event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(1), null);
-    loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000us]");
-
-    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofMillis(11), null);
-    loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][11ms]");
-
-    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofSeconds(1), null);
-    loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][1000ms]");
-
-    event = new MyEvent(Event.Severity.INFO, Event.Category.IO, Duration.ofSeconds(11), null);
-    loggingEventConsumer.accept(event);
-    verify(logger, times(1)).info("[com.couchbase.io][MyEvent][11s]");
+    assertEquals("1000us", convertEventDuration(Duration.ofMillis(1)));
+    assertEquals("11ms", convertEventDuration(Duration.ofMillis(11)));
+    assertEquals("1000ms", convertEventDuration(Duration.ofSeconds(1)));
+    assertEquals("11s", convertEventDuration(Duration.ofSeconds(11)));
   }
 
-  @Test
-  void verifyConsoleLoggerLogLevelEnablement() {
-    LoggingEventConsumer.ConsoleLogger logger = new LoggingEventConsumer.ConsoleLogger("logger", Level.INFO,
-      DefaultLoggerFormatter.INSTANCE);
-
-    assertFalse(logger.isTraceEnabled());
-    assertFalse(logger.isDebugEnabled());
-    assertTrue(logger.isInfoEnabled());
-    assertTrue(logger.isWarnEnabled());
-    assertTrue(logger.isErrorEnabled());
-  }
-
-  static class MyEvent extends AbstractEvent {
+  private static class MyEvent extends AbstractEvent {
     MyEvent(Severity severity, Category category, Duration duration, Context context) {
       super(severity, category, duration, context);
     }
@@ -173,7 +174,7 @@ class LoggingEventConsumerTest {
     }
   }
 
-  static class EventWithDescription extends AbstractEvent {
+  private static class EventWithDescription extends AbstractEvent {
 
     final String desc;
 
@@ -188,7 +189,7 @@ class LoggingEventConsumerTest {
     }
   }
 
-  static class MyContext extends AbstractContext {
+  private static class MyContext extends AbstractContext {
 
     private final Map<String, Object> data;
 

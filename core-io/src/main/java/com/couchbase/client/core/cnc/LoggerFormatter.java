@@ -21,7 +21,10 @@ import java.util.logging.Level;
 
 /**
  * Interface allowing to customize the output format of the logger (right now only used for console logging).
+ *
+ * @deprecated SLF4J is used for all logging. Configuring the Couchbase SDK to use a customer logger formatter has no effect.
  */
+@Deprecated
 public interface LoggerFormatter {
 
   /**
