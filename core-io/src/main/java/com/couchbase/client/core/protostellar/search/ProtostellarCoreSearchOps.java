@@ -86,6 +86,7 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupp
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static com.couchbase.client.core.util.ProtostellarUtil.convert;
+import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
@@ -352,6 +353,9 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
                                                                  String indexName,
                                                                  CoreSearchQuery query,
                                                                  CoreSearchOptions opts) {
+    notNull(indexName, "IndexName");
+    notNull(query, "Query");
+    notNull(opts, "SearchOptions");
     opts.validate();
 
     Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
