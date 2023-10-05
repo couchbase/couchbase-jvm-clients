@@ -201,7 +201,9 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
                                                         boolean update) {
     Map<String, String> params = new HashMap<>();
 
-    params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB()));
+    if (settings.ramQuotaMB() != null) {
+      params.put("ramQuotaMB", String.valueOf(settings.ramQuotaMB()));
+    }
     if (settings.bucketType() != MEMCACHED && settings.numReplicas() != null) {
       params.put("replicaNumber", String.valueOf(settings.numReplicas()));
     }

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.bucket;
 
+import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.error.BucketExistsException;
@@ -23,8 +24,6 @@ import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
-import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncCluster;
 
@@ -57,6 +56,8 @@ public class AsyncBucketManager {
   @PreventsGarbageCollection
   private final AsyncCluster cluster;
 
+  private final boolean isProtostellar;
+
   /**
    * Creates a new {@link AsyncBucketManager}.
    * <p>
@@ -68,6 +69,7 @@ public class AsyncBucketManager {
     final CoreCouchbaseOps ops,
     final AsyncCluster cluster
   ) {
+    isProtostellar = (ops instanceof CoreProtostellar);
     this.coreBucketManager = ops.bucketManager();
     this.cluster = requireNonNull(cluster);
   }
@@ -102,7 +104,20 @@ public class AsyncBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public CompletableFuture<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return coreBucketManager.createBucket(settings.toCore(), settings.toCoreCreateBucketSettings(), options.build());
+    // JVMCBC-1395: Ideally we only be sending settings the user has specified.
+    // But for Classic we have always sent some fields (those in BucketSettings.createDefaults), and cannot change this
+    // without potential breakage.
+    // For Protostellar we have a clean slate to implement things correctly.
+    BucketSettings merged;
+    if (isProtostellar) {
+      merged = settings;
+    }
+    else {
+      BucketSettings base = BucketSettings.createDefaults(settings.name());
+      merged = BucketSettings.merge(base, settings);
+    }
+
+    return coreBucketManager.createBucket(merged.toCore(), merged.toCoreCreateBucketSettings(), options.build());
   }
 
   /**

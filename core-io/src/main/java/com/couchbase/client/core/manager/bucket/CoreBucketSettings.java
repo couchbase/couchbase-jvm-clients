@@ -30,7 +30,8 @@ public interface CoreBucketSettings {
   @Nullable
   Boolean flushEnabled();
 
-  long ramQuotaMB();
+  @Nullable
+  Long ramQuotaMB();
 
   @Nullable
   Integer numReplicas();

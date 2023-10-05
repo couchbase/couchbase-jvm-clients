@@ -121,7 +121,7 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
       }
 
       @Override
-      public long ramQuotaMB() {
+      public Long ramQuotaMB() {
         return bucket.getRamQuotaMb();
       }
 

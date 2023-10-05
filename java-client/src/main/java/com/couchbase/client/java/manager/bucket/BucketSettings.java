@@ -44,23 +44,35 @@ import static com.couchbase.client.core.util.Validators.notNull;
  * and {@link AsyncCluster#buckets()}.
  */
 public class BucketSettings {
+  private static final boolean DEFAULT_FLUSH_ENABLED = false;
+  private static final long DEFAULT_RAM_QUOTA_MB = 100;
+  private static final int DEFAULT_NUM_REPLICAS = 1;
+  private static final boolean DEFAULT_REPLICA_INDEXES = false;
+  private static final BucketType DEFAULT_BUCKET_TYPE = BucketType.COUCHBASE;
+  private static final Duration DEFAULT_MAX_EXPIRY = Duration.ZERO;
+  private static final DurabilityLevel DEFAULT_MINIMUM_DURABILITY_LEVEL = DurabilityLevel.NONE;
+  private static final ConflictResolutionType DEFAULT_CONFLICT_RESOLUTION = ConflictResolutionType.SEQUENCE_NUMBER;
+  // JVMCBC-1395: Note to future implementors: it's very unlikely that new defaults are needed.  All settings should usually be left empty,
+  // e.g. at server default.
 
   private final String name;
 
-  private boolean flushEnabled = false;
-  private long ramQuotaMB = 100;
-  private int numReplicas = 1;
-  private boolean replicaIndexes = false;
-  private Duration maxExpiry = Duration.ZERO;
+  private Boolean flushEnabled;
+  private Long ramQuotaMB;
+  private Integer numReplicas;
+  private Boolean replicaIndexes;
+  private Duration maxExpiry;
   private CompressionMode compressionMode;
-  private BucketType bucketType = BucketType.COUCHBASE;
-  private ConflictResolutionType conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
-  private EvictionPolicyType evictionPolicy = null; // null means default for the bucket type
-  private DurabilityLevel minimumDurabilityLevel = DurabilityLevel.NONE;
-  private StorageBackend storageBackend = null; // null means default for the bucket type
+  private BucketType bucketType;
+  private ConflictResolutionType conflictResolutionType;
+  private EvictionPolicyType evictionPolicy;
+  private DurabilityLevel minimumDurabilityLevel;
+  private StorageBackend storageBackend;
   private Boolean historyRetentionCollectionDefault;
   private Long historyRetentionBytes;
   private Duration historyRetentionDuration;
+  // Remember to add any new user settings into the merge function.
+
   private boolean healthy = true;
 
   @Stability.Internal
@@ -87,36 +99,42 @@ public class BucketSettings {
           throw new CouchbaseException("Unknown compression mode");
       }
     }
-    switch (internal.bucketType()) {
-      case COUCHBASE:
-        this.bucketType = BucketType.COUCHBASE;
-        break;
-      case EPHEMERAL:
-        this.bucketType = BucketType.EPHEMERAL;
-        break;
-      case MEMCACHED:
-        this.bucketType = BucketType.MEMCACHED;
-        break;
+    if (internal.bucketType() != null) {
+      switch (internal.bucketType()) {
+        case COUCHBASE:
+          this.bucketType = BucketType.COUCHBASE;
+          break;
+        case EPHEMERAL:
+          this.bucketType = BucketType.EPHEMERAL;
+          break;
+        case MEMCACHED:
+          this.bucketType = BucketType.MEMCACHED;
+          break;
+      }
     }
-    switch (internal.evictionPolicy()) {
-      case FULL:
-        this.evictionPolicy = EvictionPolicyType.FULL;
-        break;
-      case VALUE_ONLY:
-        this.evictionPolicy = EvictionPolicyType.VALUE_ONLY;
-        break;
-      case NOT_RECENTLY_USED:
-        this.evictionPolicy = EvictionPolicyType.NOT_RECENTLY_USED;
-        break;
-      case NO_EVICTION:
-        this.evictionPolicy = EvictionPolicyType.NO_EVICTION;
-        break;
+    if (internal.evictionPolicy() != null) {
+      switch (internal.evictionPolicy()) {
+        case FULL:
+          this.evictionPolicy = EvictionPolicyType.FULL;
+          break;
+        case VALUE_ONLY:
+          this.evictionPolicy = EvictionPolicyType.VALUE_ONLY;
+          break;
+        case NOT_RECENTLY_USED:
+          this.evictionPolicy = EvictionPolicyType.NOT_RECENTLY_USED;
+          break;
+        case NO_EVICTION:
+          this.evictionPolicy = EvictionPolicyType.NO_EVICTION;
+          break;
+      }
     }
     this.minimumDurabilityLevel = internal.minimumDurabilityLevel();
-    if (internal.storageBackend() == COUCHSTORE) {
-      this.storageBackend = StorageBackend.COUCHSTORE;
-    } else if (internal.storageBackend() == MAGMA) {
-      this.storageBackend = StorageBackend.MAGMA;
+    if (internal.storageBackend() != null) {
+      if (internal.storageBackend() == COUCHSTORE) {
+        this.storageBackend = StorageBackend.COUCHSTORE;
+      } else if (internal.storageBackend() == MAGMA) {
+        this.storageBackend = StorageBackend.MAGMA;
+      }
     }
 
     this.historyRetentionCollectionDefault = internal.historyRetentionCollectionDefault();
@@ -136,17 +154,6 @@ public class BucketSettings {
    */
   public static BucketSettings create(final String name) {
     return new BucketSettings(name);
-  }
-
-  /**
-   * Converts the server ram quota from bytes to megabytes.
-   *
-   * @param ramQuotaBytes the input quota in bytes
-   * @return converted to megabytes
-   */
-  private static long ramQuotaToMB(long ramQuotaBytes) {
-    final long BYTES_PER_MEGABYTE = 1024 * 1024;
-    return ramQuotaBytes == 0 ? 0 : ramQuotaBytes / BYTES_PER_MEGABYTE;
   }
 
   /**
@@ -489,7 +496,7 @@ public class BucketSettings {
       }
 
       @Override
-      public long ramQuotaMB() {
+      public Long ramQuotaMB() {
         return ramQuotaMB;
       }
 
@@ -505,12 +512,19 @@ public class BucketSettings {
 
       @Override
       public com.couchbase.client.core.config.BucketType bucketType() {
-        switch (bucketType) {
-          case COUCHBASE: return com.couchbase.client.core.config.BucketType.COUCHBASE;
-          case MEMCACHED: return com.couchbase.client.core.config.BucketType.MEMCACHED;
-          case EPHEMERAL: return com.couchbase.client.core.config.BucketType.EPHEMERAL;
-          default: throw new CouchbaseException("Unknown bucket type " + bucketType);
+        if (bucketType != null) {
+          switch (bucketType) {
+            case COUCHBASE:
+              return com.couchbase.client.core.config.BucketType.COUCHBASE;
+            case MEMCACHED:
+              return com.couchbase.client.core.config.BucketType.MEMCACHED;
+            case EPHEMERAL:
+              return com.couchbase.client.core.config.BucketType.EPHEMERAL;
+            default:
+              throw new CouchbaseException("Unknown bucket type " + bucketType);
+          }
         }
+        return null;
       }
 
       @Override
@@ -582,7 +596,7 @@ public class BucketSettings {
       ", ramQuotaMB=" + ramQuotaMB +
       ", numReplicas=" + numReplicas +
       ", replicaIndexes=" + replicaIndexes +
-      ", maxExpiry=" + maxExpiry.getSeconds() +
+      ", maxExpiry=" + (maxExpiry != null ? maxExpiry.getSeconds() : null) +
       ", compressionMode=" + compressionMode +
       ", bucketType=" + bucketType +
       ", conflictResolutionType=" + conflictResolutionType +
@@ -616,4 +630,45 @@ public class BucketSettings {
     };
   }
 
+  /**
+   * Using `base` as a baseline, merges non-null settings from `fromUser` (which, per the name, are the settings
+   * provided by the user), and returns a new `BucketSettings` with the merged result.
+   */
+  static BucketSettings merge(BucketSettings base, BucketSettings fromUser) {
+    BucketSettings out = new BucketSettings(fromUser.name != null ? fromUser.name : base.name);
+    out.flushEnabled = defaultIfNull(fromUser.flushEnabled, base.flushEnabled);
+    out.ramQuotaMB = defaultIfNull(fromUser.ramQuotaMB, base.ramQuotaMB);
+    out.numReplicas = defaultIfNull(fromUser.numReplicas, base.numReplicas);
+    out.replicaIndexes = defaultIfNull(fromUser.replicaIndexes, base.replicaIndexes);
+    out.maxExpiry = defaultIfNull(fromUser.maxExpiry, base.maxExpiry);
+    out.compressionMode = defaultIfNull(fromUser.compressionMode, base.compressionMode);
+    out.bucketType = defaultIfNull(fromUser.bucketType, base.bucketType);
+    out.conflictResolutionType = defaultIfNull(fromUser.conflictResolutionType, base.conflictResolutionType);
+    out.evictionPolicy = defaultIfNull(fromUser.evictionPolicy, base.evictionPolicy);
+    out.minimumDurabilityLevel = defaultIfNull(fromUser.minimumDurabilityLevel, base.minimumDurabilityLevel);
+    out.storageBackend = defaultIfNull(fromUser.storageBackend, base.storageBackend);
+    out.historyRetentionCollectionDefault = defaultIfNull(fromUser.historyRetentionCollectionDefault, base.historyRetentionCollectionDefault);
+    out.historyRetentionBytes = defaultIfNull(fromUser.historyRetentionBytes, base.historyRetentionBytes);
+    out.historyRetentionDuration = defaultIfNull(fromUser.historyRetentionDuration, base.historyRetentionDuration);
+    return out;
+  }
+
+  private static <T> T defaultIfNull(T value, T defaultValue) {
+    return value == null ? defaultValue : value;
+  }
+
+  static BucketSettings createDefaults(String name) {
+    // JVMCBC-1395: These are the default bucket settings the Java SDK has always used.
+    // Ideally none of them would be set, but that cannot be changed without potential breakage.
+    BucketSettings out = new BucketSettings(name);
+    out.flushEnabled = DEFAULT_FLUSH_ENABLED;
+    out.ramQuotaMB = DEFAULT_RAM_QUOTA_MB;
+    out.numReplicas = DEFAULT_NUM_REPLICAS;
+    out.replicaIndexes = DEFAULT_REPLICA_INDEXES;
+    out.bucketType = DEFAULT_BUCKET_TYPE;
+    out.maxExpiry = DEFAULT_MAX_EXPIRY;
+    out.minimumDurabilityLevel = DEFAULT_MINIMUM_DURABILITY_LEVEL;
+    out.conflictResolutionType = DEFAULT_CONFLICT_RESOLUTION;
+    return out;
+  }
 }

@@ -297,7 +297,7 @@ case class CreateBucketSettings(
 
       override def flushEnabled(): lang.Boolean = x.flushEnabled.map(lang.Boolean.valueOf).orNull
 
-      override def ramQuotaMB(): Long = x.ramQuotaMB
+      override def ramQuotaMB(): lang.Long = x.ramQuotaMB
 
       override def numReplicas(): Integer = x.numReplicas.map(Integer.valueOf).orNull
 

@@ -56,8 +56,11 @@ public class ProtostellarCoreBucketManagerRequests {
                                                                              @Nullable CoreCreateBucketSettings createSpecificSettings,
                                                                              CoreCommonOptions opts) {
     CreateBucketRequest.Builder request = CreateBucketRequest.newBuilder()
-      .setBucketName(settings.name())
-      .setRamQuotaMb(settings.ramQuotaMB());
+      .setBucketName(settings.name());
+
+    if (settings.ramQuotaMB() != null) {
+      request.setRamQuotaMb(settings.ramQuotaMB());
+    }
 
     if (settings.bucketType() != null) {
       switch (settings.bucketType()) {
@@ -197,8 +200,11 @@ public class ProtostellarCoreBucketManagerRequests {
                                                                              CoreBucketSettings settings,
                                                                              CoreCommonOptions opts) {
     UpdateBucketRequest.Builder request = UpdateBucketRequest.newBuilder()
-      .setBucketName(settings.name())
-      .setRamQuotaMb(settings.ramQuotaMB());
+      .setBucketName(settings.name());
+
+    if (settings.ramQuotaMB() != null) {
+      request.setRamQuotaMb(settings.ramQuotaMB());
+    }
 
     if (settings.flushEnabled() != null) {
       request.setFlushEnabled(settings.flushEnabled());

@@ -117,7 +117,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
     return flushEnabled;
   }
 
-  public long ramQuotaMB() {
+  public Long ramQuotaMB() {
     return ramQuotaMB;
   }
 
