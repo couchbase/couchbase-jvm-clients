@@ -29,6 +29,7 @@ import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CollectionExistsException;
+import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
@@ -168,7 +169,7 @@ public class CoreProtostellarErrorHandlingUtil {
             } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
               return ProtostellarRequestBehaviour.fail(new ScopeNotFoundException(info.getResourceName(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_COLLECTION)) {
-              return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
+              return ProtostellarRequestBehaviour.fail(new CollectionNotFoundException(info.getResourceName(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_PATH)) {
               return ProtostellarRequestBehaviour.fail(new PathNotFoundException(null));
             }
