@@ -44,8 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS,
-  clusterTypes = ClusterType.CAVES,
-  isProtostellarWillWorkLater = true
+  clusterTypes = ClusterType.CAVES
 )
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
@@ -66,7 +65,6 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldCreateScopeAndCollection() {
     String scopeName = randomString();
     String collection = randomString();
@@ -77,7 +75,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.createCollection(collSpec));
 
     collections.createScope(scopeName);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
 
     waitUntilCondition(() -> {
       Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
@@ -85,7 +83,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     });
 
     collections.createCollection(collSpec);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collSpec.scopeName(), collSpec.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> {
       boolean collExists = collectionExists(collections, collSpec);
       if (collExists) {
@@ -97,33 +95,30 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldThrowWhenScopeAlreadyExists() {
     String scope = randomString();
 
     collections.createScope(scope);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
     assertThrows(ScopeExistsException.class, () -> collections.createScope(scope));
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldThrowWhenCollectionAlreadyExists() {
     String scope = randomString();
     collections.createScope(scope);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     CollectionSpec collectionSpec = CollectionSpec.create(randomString(), scope);
     collections.createCollection(collectionSpec);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
 
     assertThrows(CollectionExistsException.class, () -> collections.createCollection(collectionSpec));
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void shouldDropScopeAndCollections() {
     String scope = randomString();
     String collection1 = randomString();
@@ -136,29 +131,28 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.createScope(scope);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
     collections.dropCollection(collectionSpec1);
-    ConsistencyUtil.waitUntilCollectionDropped(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionDropped(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
     waitUntilCondition(() -> !collectionExists(collections, collectionSpec1));
     assertThrows(CollectionNotFoundException.class, () -> collections.dropCollection(collectionSpec1));
 
     collections.dropScope(scope);
-    ConsistencyUtil.waitUntilScopeDropped(cluster.core(), config().bucketname(), scope);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopeDropped(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> !scopeExists(collections, scope));
 
     assertThrows(ScopeNotFoundException.class, () -> collections.dropCollection(collectionSpec2));
   }
 
   @Test
-  // gRpc for protostellare createCollectionRequest has no maxTTL
-  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION)
   void shouldCreateCollectionWithMaxExpiry() {
     String scope = randomString();
     String collection1 = randomString();
@@ -167,13 +161,13 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collectionSpec2 = CollectionSpec.create(collection2, scope);
 
     collections.createScope(scope);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scope);
     waitUntilCondition(() -> scopeExists(collections, scope));
 
     collections.createCollection(collectionSpec1);
     collections.createCollection(collectionSpec2);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec1.scopeName(), collectionSpec1.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec2.scopeName(), collectionSpec2.name());
 
     waitUntilCondition(() -> collectionExists(collections, collectionSpec1));  // maxTTL must also match
     waitUntilCondition(() -> collectionExists(collections, collectionSpec2));  // maxTTL must also match
@@ -199,7 +193,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     int collectionsPerScope = 10;
     ScopeSpec scopeSpec = ScopeSpec.create(scopeName);
     collections.createScope(scopeName);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
     waitUntilCondition(() -> scopeExists(collections, scopeName));
 
     List<ScopeSpec> scopeList = collections.getAllScopes();
@@ -215,7 +209,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
     for (int i = 0; i < collectionsPerScope; i++) {
       CollectionSpec collectionSpec = CollectionSpec.create(String.valueOf(collectionsPerScope + i), scopeName);
       collections.createCollection(collectionSpec);
-      ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
+      if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
       waitUntilCondition(() -> collectionExists(collections, collectionSpec));
       waitUntilCondition(() -> collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
     }
@@ -225,7 +219,6 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
    * This test tries to create a collection under a scope which does not exist.
    */
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void failCollectionOpIfScopeNotFound() {
     assertThrows(
       ScopeNotFoundException.class,

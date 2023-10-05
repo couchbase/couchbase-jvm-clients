@@ -130,7 +130,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         return UUID.randomUUID().toString();
     }
 
-    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-371
     @Test
     void noCommands() {
         assertThrows(InvalidArgumentException.class, () -> coll.mutateIn(docId(), Collections.emptyList()));
@@ -174,7 +173,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertFalse(getContent(docId).containsKey("foo"));
     }
 
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA}, isProtostellarWillWorkLater = true)
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA})
     @Test
     void removeFullDocAndSetSystemXattr() {
         JsonObject content = JsonObject.create().put("foo", "bar");
@@ -192,7 +191,10 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
                 listOf(LookupInSpec.get(systemXattrName).xattr()),
                 LookupInOptions.lookupInOptions().accessDeleted(true));
         assertEquals("y", result.contentAs(0, String.class));
-        assertTrue(result.isDeleted());
+        if (!config().isProtostellar()) {
+          // Not returned by Protostellar
+          assertTrue(result.isDeleted());
+        }
     }
 
     private JsonObject checkSingleOpSuccess(JsonObject content, MutateInSpec ops) {
@@ -521,7 +523,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Needs ING-372
+    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellar = true)
     void xattrOpsAreReordered() {
       JsonObject content = JsonObject.create();
       String docId = prepareXattr(content);
@@ -1229,7 +1231,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
         // 7.1.0-2216 is required for the MB-50425 fix.  Use this capability as a stand-in for 7.1.
         missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT},
-        isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro support
+      isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro support
     @RepeatedTest(10)
     void concurrentInserts() throws InterruptedException {
         String id = UUID.randomUUID().toString();

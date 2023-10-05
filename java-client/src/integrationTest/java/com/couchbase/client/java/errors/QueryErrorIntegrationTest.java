@@ -33,10 +33,7 @@ import java.time.Duration;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen( missesCapabilities = { Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY },
-  // Needs fixed STG error handling
-  isProtostellarOnlyBecauseOfWaitUntilReady = true
-)
+@IgnoreWhen( missesCapabilities = { Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY })
 class QueryErrorIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;
@@ -60,7 +57,7 @@ class QueryErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellar = true)
   void includesHttpStatusCodeInErrorContext() {
     ParsingFailureException ex = assertThrows(ParsingFailureException.class, () -> cluster.query("select 1="));
     assertTrue(ex.getMessage().contains("\"httpStatus\":400"));

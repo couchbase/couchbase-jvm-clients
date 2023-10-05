@@ -20,6 +20,7 @@ import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.service.ServiceType;
@@ -146,7 +147,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(result.metaData().metrics().isPresent());
     }
 
-    @IgnoreWhen(isProtostellarWillWorkLater = true) // STG bug, ignores readonly
     @Test
     void readOnlyViolation() {
         QueryOptions options = queryOptions().readonly(true);
@@ -155,7 +155,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
                 "INSERT INTO " + bucketName + " (KEY, VALUE) values (\"foo\", \"bar\")",
                 options
             ));
-        assertEquals(1000, ((QueryErrorContext) e.context()).errors().get(0).code());
+        if (!config().isProtostellar()) assertEquals(1000, ((QueryErrorContext) e.context()).errors().get(0).code());
     }
 
     @Test
@@ -233,10 +233,14 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertTrue(profile.size() > 0);
     }
 
-    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs correct error from STG
     @Test
     void failOnSyntaxError() {
+      if (config().isProtostellar()) {
+        assertThrows(InvalidArgumentException.class, () -> cluster.query("invalid export"));
+      }
+      else {
         assertThrows(ParsingFailureException.class, () -> cluster.query("invalid export"));
+      }
     }
 
     @Test
@@ -341,7 +345,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertEquals(1, rows.size());
     }
 
-    @IgnoreWhen(isProtostellarWillWorkLater = true) // STG bug, returns error
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-540
     @Test
     void consistentWith() {
         String id = UUID.randomUUID().toString();

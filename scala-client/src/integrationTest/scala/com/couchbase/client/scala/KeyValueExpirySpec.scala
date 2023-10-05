@@ -26,9 +26,7 @@ case class DocAndOperation(
 @TestInstance(Lifecycle.PER_CLASS)
 // Mock does not support expiry
 @IgnoreWhen(
-  clusterTypes = Array(ClusterType.MOCKED),
-  // Needs ING-369
-  isProtostellarWillWorkLater = true
+  clusterTypes = Array(ClusterType.MOCKED)
 )
 class KeyValueExpirySpec extends ScalaIntegrationTest {
 
@@ -57,7 +55,10 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
     assert(coll.insert(docId, content, InsertOptions().expiry(5.seconds)).isSuccess)
 
     coll.get(docId) match {
-      case Success(result) => assert(result.expiry.isEmpty)
+      case Success(result) =>
+        // Protostellar always returns expiry
+        if (config.isProtostellar) assert(result.expiry.isDefined)
+        else assert(result.expiry.isEmpty)
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
@@ -215,7 +216,8 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
   private val NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS)
 
   @Test
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY))
+  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY),
+      isProtostellarWillWorkLater = true) // Needs ING-434
   def upsert_can_preserve_expiry(): Unit = {
     val docId = TestUtils.docId()
 

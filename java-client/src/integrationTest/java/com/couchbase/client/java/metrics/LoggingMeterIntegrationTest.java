@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1396
 class LoggingMeterIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

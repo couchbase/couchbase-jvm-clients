@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 /**
  * Simple verification of the {@link DiagnosticsResult}.
  */
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1189
 public class DiagnosticsReportTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

@@ -57,7 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the default behavior of the circuit breaker when enabled.
  */
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1194
 class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
 
   private Cluster cluster;

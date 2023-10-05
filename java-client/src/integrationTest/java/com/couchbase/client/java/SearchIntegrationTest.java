@@ -59,8 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Flaky
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH,
   clusterTypes = ClusterType.CAVES,
-  clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101,
-  isProtostellarWillWorkLater = true
+  clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101
 )
 class SearchIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchIntegrationTest.class);

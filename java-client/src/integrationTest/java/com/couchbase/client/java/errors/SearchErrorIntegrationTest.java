@@ -34,9 +34,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen( missesCapabilities = { Capabilities.SEARCH },
-  isProtostellarWillWorkLater = true
-)
+@IgnoreWhen( missesCapabilities = { Capabilities.SEARCH })
 class SearchErrorIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

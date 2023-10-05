@@ -41,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the functionality of the {@link BatchHelper}.
  */
 @IgnoreWhen(clusterTypes = ClusterType.CAVES,
-  isProtostellarWillWorkLater = true,
+  isProtostellar = true,  // Not currently supported as it uses Core directly
   clusterVersionEquals = "7.5.0" // Disabled until JCBC-2065 is addressed
 )
 public class BatchHelperIntegrationTest extends JavaIntegrationTest {

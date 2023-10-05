@@ -42,7 +42,6 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class RequestTracerIntegrationTest extends JavaIntegrationTest {
 
   static private Cluster cluster;

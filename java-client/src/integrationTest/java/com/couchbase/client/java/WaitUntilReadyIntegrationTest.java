@@ -46,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -89,7 +88,8 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA })
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
+    isProtostellarWillWorkLater = true) // Fails with BucketNotFoundException as a) bucket.waitUntilReady() currently a no-op in PS and b) ops currently raise NOT_FOUND and are not retried
   void handlesCreatingBucketDuringWaitUntilReady()  {
     ExecutorService es = Executors.newFixedThreadPool(1);
     String bucketName = UUID.randomUUID().toString();

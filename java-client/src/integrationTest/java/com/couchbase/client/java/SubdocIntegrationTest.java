@@ -209,8 +209,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  // Needs ING-383
-  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true)
+  @IgnoreWhen(clusterTypes = ClusterType.MOCKED, isProtostellarWillWorkLater = true) // Needs ING-383
   void tooManyCommands() {
     String docId = UUID.randomUUID().toString();
 
@@ -230,7 +229,6 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
   void xattrOrder() {
     String docId = UUID.randomUUID().toString();
     collection.upsert(docId, mapOf("magicWord", "xyzzy"));

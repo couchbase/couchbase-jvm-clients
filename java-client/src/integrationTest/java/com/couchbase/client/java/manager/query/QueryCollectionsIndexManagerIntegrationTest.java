@@ -71,8 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(clusterTypes = { CAVES, MOCKED },
   missesCapabilities = { QUERY, COLLECTIONS, CLUSTER_LEVEL_QUERY },
-  clusterVersionIsBelow = REQUIRE_MB_50132,
-  isProtostellarWillWorkLater = true
+  clusterVersionIsBelow = REQUIRE_MB_50132
 )
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
@@ -97,9 +96,9 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     waitForQueryIndexerToHaveKeyspace(cluster, bucketName);
 
     bucket.collections().createScope(scopeName);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
     bucket.collections().createCollection(CollectionSpec.create(collectionName, scopeName));
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), scopeName, collectionName);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), scopeName, collectionName);
     waitForQueryIndexerToHaveKeyspace(cluster, collectionName);
   }
 
@@ -126,7 +125,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     );
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void createDuplicatePrimaryIndex() {
     CreatePrimaryQueryIndexOptions options = enrich(createPrimaryQueryIndexOptions());
@@ -138,7 +137,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     indexes.createPrimaryIndex(bucketName, options.ignoreIfExists(true));
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void createDuplicateSecondaryIndex() {
     final String indexName = "foo" + UUID.randomUUID();
@@ -214,7 +213,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
       .orElseThrow(() -> new AssertionError("Index '" + indexName + "' not found in scope '" + scope + "' collection '" + collection + "'"));
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void dropPrimaryIndex() {
     assertThrows(IndexNotFoundException.class, () ->
@@ -229,7 +228,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertNoIndexesPresent();
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void dropIndex() {
     assertThrows(IndexNotFoundException.class, () -> indexes.dropIndex(bucketName, "foo", enrich(dropQueryIndexOptions())));
@@ -399,7 +398,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
     assertEquals("online", getIndex("#primary").state());
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void reactiveErrorPropagationSmokeTest() {
     assertThrows(IndexNotFoundException.class, () ->
@@ -413,7 +412,7 @@ public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegration
         .block());
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // needs fixed STG query error handling
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-568
   @Test
   void reactiveMonosAreColdAndRepeatable() throws InterruptedException {
     // This should NOT result in the index being created.

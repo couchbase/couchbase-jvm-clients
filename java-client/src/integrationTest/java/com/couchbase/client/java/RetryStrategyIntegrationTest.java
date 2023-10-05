@@ -38,7 +38,7 @@ import static com.couchbase.client.java.kv.RemoveOptions.removeOptions;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1190
 class RetryStrategyIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

@@ -122,7 +122,6 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     }
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // get is always returning expiry - ING-369
   @Test
   def insert_without_expiry(): Unit = {
     val docId = cleanupDoc()
@@ -131,13 +130,16 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     assert(wrap(coll.insert(docId, content, InsertOptions().expiry(5.seconds))).isSuccess)
 
     wrap(coll.get(docId)) match {
-      case Success(result) => assert(result.expiry.isEmpty)
+      case Success(result) =>
+        // Protostellar always returns expiry
+        if (config.isProtostellar) assert(result.expiry.isDefined)
+        else assert(result.expiry.isEmpty)
       case Failure(err)    => assert(false, s"unexpected error $err")
       case _               => assert(false, s"unexpected error")
     }
   }
 
-  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED), isProtostellarWillWorkLater = true) // ING-369
+  @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   @Test
   def insert_with_expiry(): Unit = {
     val docId = cleanupDoc()
@@ -146,7 +148,10 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     assert(wrap(coll.insert(docId, content, InsertOptions().expiry(5.seconds))).isSuccess)
 
     wrap(coll.get(docId, GetOptions().withExpiry(true))) match {
-      case Success(result) => assert(result.expiry.isDefined)
+      case Success(result) =>
+        // Protostellar always returns expiry
+        if (config.isProtostellar) assert(result.expiry.isDefined)
+        else assert(result.expiry.isEmpty)
       case Failure(err)    => assert(false, s"unexpected error $err")
       case _               => assert(false, s"unexpected error")
     }

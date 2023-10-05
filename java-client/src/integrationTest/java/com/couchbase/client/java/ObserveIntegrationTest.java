@@ -39,7 +39,7 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellar = true) // OG observability is not supported in Protostellar
 class ObserveIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -135,7 +135,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
     ));
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @IgnoreWhen(isProtostellar = true) // Does not support old-style observability
   @Test
   void disallowObserveWhenTokensDisabled() {
     Cluster cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(false)));

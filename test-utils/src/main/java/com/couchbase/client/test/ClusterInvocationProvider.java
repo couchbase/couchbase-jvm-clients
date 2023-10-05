@@ -148,7 +148,7 @@ public class ClusterInvocationProvider
         }
       }
 
-      if (found.isProtostellar() || found.isProtostellarWillWorkLater() || found.isProtostellarOnlyBecauseOfWaitUntilReady()) {
+      if (found.isProtostellar() || found.isProtostellarWillWorkLater()) {
         if (testCluster.isProtostellar()) {
           return ConditionEvaluationResult.disabled("Test disabled because isProtostellar in @IgnoreWhen");
         }

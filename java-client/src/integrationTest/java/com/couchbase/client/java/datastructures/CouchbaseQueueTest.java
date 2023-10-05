@@ -44,7 +44,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CouchbaseQueueTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

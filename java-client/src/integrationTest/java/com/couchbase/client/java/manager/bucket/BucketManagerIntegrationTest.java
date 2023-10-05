@@ -55,15 +55,14 @@ import static com.couchbase.client.java.manager.bucket.EvictionPolicyType.VALUE_
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the functionality of the bucket manager.
  */
-@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
-  isProtostellarWillWorkLater = true // Needs ING-495
-)
+@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA })
 @Execution(ExecutionMode.CONCURRENT)
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
@@ -100,7 +99,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   private void waitUntilHealthy(String bucket) {
-    ConsistencyUtil.waitUntilBucketPresent(cluster.core(), bucket);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilBucketPresent(cluster.core(), bucket);
     Util.waitUntilCondition(() -> {
       try {
         BucketSettings bkt = buckets.getBucket(bucket);
@@ -112,7 +111,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   private void waitUntilDropped(String bucket) {
-    ConsistencyUtil.waitUntilBucketDropped(cluster.core(), bucket);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilBucketDropped(cluster.core(), bucket);
     Util.waitUntilCondition(() -> {
       try {
         buckets.getBucket(bucket);
@@ -148,6 +147,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     }
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1187
   @Test
   void createEphemeralBucketWithDefaultEvictionPolicy() {
     String name = UUID.randomUUID().toString();
@@ -156,6 +156,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     assertEquals(NO_EVICTION, settings.evictionPolicy());
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1187
   @Test
   void createEphemeralBucketWithNruEvictionPolicy() {
     String name = UUID.randomUUID().toString();
@@ -238,11 +239,19 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     createBucket(BucketSettings.create(name)
       .bucketType(BucketType.COUCHBASE));
     BucketSettings settings = buckets.getBucket(name);
-    assertEquals(DurabilityLevel.NONE, settings.minimumDurabilityLevel());
+    // If no durability level is set Protostellar won't return one and it'll be null here.  For classic the SDK has always set it to NONE
+    // if it's not specified by the server.  The Protostellar approach feels more correct - future server versions could potentially change the
+    // default.
+    if (config().isProtostellar()) {
+      assertNull(settings.minimumDurabilityLevel());
+    }
+    else {
+      assertEquals(DurabilityLevel.NONE, settings.minimumDurabilityLevel());
+    }
   }
 
   // Don't run on serverless as it returns a 'invalid bucket type' error
-  @IgnoreWhen(hasCapabilities = {Capabilities.SERVERLESS})
+  @IgnoreWhen(hasCapabilities = {Capabilities.SERVERLESS}, isProtostellarWillWorkLater = true) // Needs JVMCBC-1395
   @Test
   void createMemcachedBucket() {
     String name = UUID.randomUUID().toString();
@@ -307,6 +316,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
     });
   }
 
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1395
   @Test
   void updateShouldFailIfAbsent() {
     assertThrows(BucketNotFoundException.class, () -> buckets.updateBucket(BucketSettings.create("does-not-exist")));
@@ -333,7 +343,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND})
+  @IgnoreWhen(missesCapabilities = {Capabilities.STORAGE_BACKEND}, isProtostellarWillWorkLater = true) // Needs JVMCBC-1395
   void customConflictResolution() {
     String bucketName = UUID.randomUUID().toString();
     try {
@@ -392,7 +402,7 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
 
   private void createBucket(BucketSettings settings) {
     buckets.createBucket(settings);
-    ConsistencyUtil.waitUntilBucketPresent(cluster.core(), settings.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilBucketPresent(cluster.core(), settings.name());
     bucketsToDrop.add(settings.name());
     waitUntilHealthy(settings.name());
   }

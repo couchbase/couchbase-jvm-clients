@@ -36,7 +36,6 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;
@@ -78,7 +77,8 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = {Capabilities.COLLECTIONS},
     hasCapabilities = {Capabilities.SERVERLESS},
-    clusterTypes = {ClusterType.CAVES, ClusterType.CAPELLA})
+    clusterTypes = {ClusterType.CAVES, ClusterType.CAPELLA},
+    isProtostellarWillWorkLater = true) // Needs JVMCBC-1395
   void failsUnderMemcachedBuckets() {
     String bucketName = UUID.randomUUID().toString();
     cluster.buckets().createBucket(BucketSettings.create(bucketName).bucketType(BucketType.MEMCACHED));

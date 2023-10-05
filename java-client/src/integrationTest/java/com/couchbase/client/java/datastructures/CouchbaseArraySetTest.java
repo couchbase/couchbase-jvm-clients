@@ -43,7 +43,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CouchbaseArraySetTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

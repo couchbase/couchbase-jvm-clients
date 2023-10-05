@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS, isProtostellarWillWorkLater = true)
+@IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
 public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
 
   static Cluster cluster;
@@ -59,12 +59,12 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Fails as CNG is not yet waiting for the collection to be ready before continuing
   void recognizesCollectionAfterCreation() {
     String collId = UUID.randomUUID().toString().substring(0, 10);
     CollectionSpec collectionSpec = CollectionSpec.create(collId, CollectionIdentifier.DEFAULT_SCOPE);
     bucket.collections().createCollection(collectionSpec);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collectionSpec.scopeName(), collectionSpec.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collectionSpec.scopeName(), collectionSpec.name());
 
     Collection collection = bucket.collection(collId);
 
@@ -92,6 +92,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   /**
    * Regression test for JVMCBC-874
    */
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Now reports CollectionNotFoundException
   @Test
   void usesCollectionNotFoundRetryReason() {
     Collection notFoundCollection = bucket.collection("doesNotExist");

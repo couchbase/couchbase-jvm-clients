@@ -42,7 +42,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(isProtostellarWillWorkLater = true)
 class CouchbaseMapTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

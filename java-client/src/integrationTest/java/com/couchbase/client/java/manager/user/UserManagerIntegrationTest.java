@@ -64,7 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
-  isProtostellarWillWorkLater = true
+  isProtostellarWillWorkLater = true // User management not yet in Protostellar
 )
 class UserManagerIntegrationTest extends JavaIntegrationTest {
 

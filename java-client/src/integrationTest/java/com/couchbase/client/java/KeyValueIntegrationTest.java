@@ -288,7 +288,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
    * <p>See https://github.com/couchbase/CouchbaseMock/issues/46</p>
    */
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
   void projectionWithExpiration() {
     String id = UUID.randomUUID().toString();
 
@@ -615,7 +615,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY,
     clusterTypes = ClusterType.CAVES,
-    isProtostellarWillWorkLater = true, // Need ING-369
+    isProtostellarWillWorkLater = true, // Need ING-434
     clusterVersionEquals = "7.5.0") // Need ING-434
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
@@ -765,7 +765,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED }, isProtostellarWillWorkLater = true)
+  @IgnoreWhen( clusterTypes = { ClusterType.MOCKED })
   void upsertLockedDocumentTimeoutHasRetryReasonLocked() {
     String id = UUID.randomUUID().toString();
 
@@ -775,7 +775,9 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     TimeoutException exception = assertThrows(
       TimeoutException.class,
       () -> collection.upsert(id, JsonObject.create(), upsertOptions().timeout(Duration.ofMillis(100))));
-    assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
+    if (!config().isProtostellar()) {
+      assertEquals(EnumSet.of(RetryReason.KV_LOCKED), exception.context().requestContext().retryReasons());
+    }
   }
 
   @Test
@@ -1146,7 +1148,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
     assertEquals(0L, result.content());
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true)
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // ING-571
   @Test
   void throwsIfTooLarge() {
     String id = UUID.randomUUID().toString();

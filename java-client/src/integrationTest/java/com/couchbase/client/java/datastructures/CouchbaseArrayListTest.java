@@ -49,7 +49,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-@IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true)
+@IgnoreWhen(clusterTypes = ClusterType.CAVES)
 class CouchbaseArrayListTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

@@ -59,7 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * find many annotations on the tests and the suite needs to be executed against different topologies
  * in order to execute them all.</p>
  */
-@IgnoreWhen(isProtostellarWillWorkLater = true)
+@IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1263
 class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

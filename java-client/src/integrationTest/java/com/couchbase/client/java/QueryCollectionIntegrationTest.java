@@ -71,9 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
   clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
-  // query_context not currently working in STG
-  isProtostellarWillWorkLater = true
+  clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
 )
 class QueryCollectionIntegrationTest extends JavaIntegrationTest {
 
@@ -100,11 +98,11 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
     CollectionSpec collSpec = CollectionSpec.create(COLLECTION_NAME, SCOPE_NAME);
 
     collectionManager.createScope(SCOPE_NAME);
-    ConsistencyUtil.waitUntilScopePresent(cluster.core(), bucket.name(), SCOPE_NAME);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilScopePresent(cluster.core(), bucket.name(), SCOPE_NAME);
     waitUntilCondition(() -> scopeExists(collectionManager, SCOPE_NAME));
 
     collectionManager.createCollection(collSpec);
-    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collSpec.scopeName(), collSpec.name());
     waitUntilCondition(() -> collectionExists(collectionManager, collSpec));
 
     Scope scope = cluster.bucket(config().bucketname()).scope(SCOPE_NAME);
@@ -159,6 +157,7 @@ class QueryCollectionIntegrationTest extends JavaIntegrationTest {
   }
 
   //Test for MB-46876
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-540
   @Test
   void consistentWith() {
     String id = UUID.randomUUID().toString();

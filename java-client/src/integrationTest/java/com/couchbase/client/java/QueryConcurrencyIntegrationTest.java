@@ -47,7 +47,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES
+  clusterTypes = ClusterType.CAVES,
+  isProtostellarWillWorkLater = true // Blocked by ING-568
 )
 class QueryConcurrencyIntegrationTest extends JavaIntegrationTest {
 

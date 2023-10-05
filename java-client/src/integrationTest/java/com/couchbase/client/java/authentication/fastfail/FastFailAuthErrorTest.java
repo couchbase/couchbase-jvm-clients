@@ -70,7 +70,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * - various operations (KV, waitUntilReady, query, etc.)
  * - AuthenticationStatus in EndpointDiagnostic is correct
  */
-@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED, ClusterType.CAPELLA}, missesCapabilities = {Capabilities.COLLECTIONS})
+@IgnoreWhen(clusterTypes = {com.couchbase.client.test.ClusterType.MOCKED, ClusterType.CAPELLA},
+  missesCapabilities = {Capabilities.COLLECTIONS},
+  isProtostellar = true)
 class FastFailAuthErrorTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(FastFailAuthErrorTest.class);
 
