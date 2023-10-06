@@ -13,49 +13,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.java.search.queries;
 
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.api.search.queries.CoreBooleanQuery;
-import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery;
-import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery;
 import com.couchbase.client.java.search.SearchQuery;
+import reactor.util.annotation.Nullable;
 
 /**
  * A compound FTS query that allows various combinations of sub-queries.
  *
- * @author Simon Baslé
- * @author Michael Nitschinger
  * @since 2.3.0
  */
 public class BooleanQuery extends SearchQuery {
 
-    private final ConjunctionQuery must;
-    private final DisjunctionQuery mustNot;
-    private final DisjunctionQuery should;
-
-    public BooleanQuery() {
-        super();
-        this.must = new ConjunctionQuery();
-        this.should = new DisjunctionQuery();
-        this.mustNot = new DisjunctionQuery();
-    }
+    @Nullable private ConjunctionQuery must;
+    @Nullable private DisjunctionQuery mustNot;
+    @Nullable private DisjunctionQuery should;
 
     public BooleanQuery shouldMin(int minForShould) {
+        if (this.should == null) {
+          this.should = new DisjunctionQuery();
+        }
         this.should.min(minForShould);
         return this;
     }
 
     public BooleanQuery must(SearchQuery... mustQueries) {
+        if (this.must == null) {
+          this.must = new ConjunctionQuery();
+        }
         must.and(mustQueries);
         return this;
     }
 
     public BooleanQuery mustNot(SearchQuery... mustNotQueries) {
+        if (this.mustNot == null) {
+          this.mustNot = new DisjunctionQuery();
+        }
         mustNot.or(mustNotQueries);
         return this;
     }
+
     public BooleanQuery should(SearchQuery... shouldQueries) {
+        if (this.should == null) {
+          this.should = new DisjunctionQuery();
+        }
         should.or(shouldQueries);
         return this;
     }
@@ -68,6 +72,11 @@ public class BooleanQuery extends SearchQuery {
 
     @Override
     public CoreSearchQuery toCore() {
-        return new CoreBooleanQuery(must.toCore(), mustNot.toCore(), should.toCore(), boost);
+        return new CoreBooleanQuery(
+            must == null ? null : must.toCore(),
+            mustNot == null ? null : mustNot.toCore(),
+            should == null ? null : should.toCore(),
+            boost
+        );
     }
 }

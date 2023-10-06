@@ -38,7 +38,7 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
     this.min = min;
 
     if (childQueries.isEmpty()) {
-      throw InvalidArgumentException.fromMessage("Compound query has no child query");
+      throw InvalidArgumentException.fromMessage("Disjunction query has no child query");
     }
     if (min != null && childQueries.size() < min) {
       throw InvalidArgumentException.fromMessage("Disjunction query has fewer children than the configured minimum " + min);

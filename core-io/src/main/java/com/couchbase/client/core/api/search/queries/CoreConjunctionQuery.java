@@ -35,7 +35,7 @@ public class CoreConjunctionQuery extends CoreAbstractCompoundQuery {
     super(queries, boost);
 
     if (childQueries.isEmpty()) {
-      throw InvalidArgumentException.fromMessage("Compound query has no child query");
+      throw InvalidArgumentException.fromMessage("Conjunction query has no child query");
     }
   }
 
