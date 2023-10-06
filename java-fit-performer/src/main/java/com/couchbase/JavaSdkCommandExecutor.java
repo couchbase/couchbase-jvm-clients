@@ -251,7 +251,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 var query = clc.getQuery().getStatement();
                 QueryResult qr;
                 if (clc.getQuery().hasOptions()) {
-                    qr = connection.cluster().query(query, createOptions(clc.getQuery()));
+                    qr = connection.cluster().query(query, createOptions(clc.getQuery(), spans));
                 }
                 else {
                     qr = connection.cluster().query(query);
@@ -289,7 +289,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
           if (slc.hasQuery()) {
             var query = slc.getQuery().getStatement();
             QueryResult qr;
-            if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery()));
+            if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery(), spans));
             else qr = scope.query(query);
             populateResult(slc.getQuery(), result, qr);
           }
@@ -1076,7 +1076,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
     // [end:3.4.1]
 
-    public static @Nullable QueryOptions createOptions(com.couchbase.client.protocol.sdk.query.Command request) {
+    public static @Nullable QueryOptions createOptions(com.couchbase.client.protocol.sdk.query.Command request, ConcurrentHashMap<String, RequestSpan> spans) {
         if(request.hasOptions()){
             var opts = request.getOptions();
             var out = QueryOptions.queryOptions();
@@ -1137,6 +1137,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             // [start:3.4.8]
             if (opts.hasUseReplica()) out.useReplica(opts.getUseReplica());
             // [end:3.4.8]
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;

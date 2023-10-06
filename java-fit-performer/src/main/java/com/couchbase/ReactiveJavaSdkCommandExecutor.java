@@ -257,7 +257,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     long start = System.nanoTime();
 
                     Mono<ReactiveQueryResult> queryResult;
-                    if (request.hasOptions()) queryResult = connection.cluster().reactive().query(query, createOptions(request));
+                    if (request.hasOptions()) queryResult = connection.cluster().reactive().query(query, createOptions(request, spans));
                     else queryResult = connection.cluster().reactive().query(query);
 
                     return returnQueryResult(request, queryResult, result, start);
@@ -302,7 +302,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     long start = System.nanoTime();
 
                     Mono<ReactiveQueryResult> queryResult;
-                    if (request.hasOptions()) queryResult = scope.reactive().query(query, createOptions(request));
+                    if (request.hasOptions()) queryResult = scope.reactive().query(query, createOptions(request, spans));
                     else queryResult = scope.reactive().query(query);
 
                     return returnQueryResult(request, queryResult, result, start);
