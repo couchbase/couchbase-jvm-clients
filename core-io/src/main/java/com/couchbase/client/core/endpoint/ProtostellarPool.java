@@ -37,7 +37,7 @@ public class ProtostellarPool {
 
   public ProtostellarPool(ProtostellarContext ctx, HostAndPort remote) {
     // JVMCBC-1196: assuming ProtostellarPool is kept, add configuration options for it.
-    int numEndpoints = Integer.parseInt(System.getProperty("com.couchbase.protostellar.numEndpoints", "3"));
+    int numEndpoints = Integer.parseInt(System.getProperty("com.couchbase.protostellar.numEndpoints", "1"));
     List<ProtostellarEndpoint> endpoints = new ArrayList<>(numEndpoints);
     for (int i = 0; i < numEndpoints; i++) {
       endpoints.add(new ProtostellarEndpoint(ctx, remote));
