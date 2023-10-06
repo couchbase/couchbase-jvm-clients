@@ -44,6 +44,7 @@ import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
+import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -74,12 +75,13 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   private final boolean idempotent;
   private final AtomicBoolean executed = new AtomicBoolean();
   private final boolean bypassExceptionTranslation;
+  private final @Nullable String name;
 
   public static Builder builder(CoreCommonOptions options, CoreContext coreContext, HttpMethod method, CoreHttpPath path, RequestTarget target) {
     return new Builder(options, coreContext, target, method, path);
   }
 
-  private CoreHttpRequest(Builder builder, RequestSpan span, Duration timeout, RetryStrategy retry) {
+  private CoreHttpRequest(Builder builder, RequestSpan span, Duration timeout, RetryStrategy retry, @Nullable String name) {
     super(timeout, builder.coreContext, retry, span);
 
     this.target = builder.target;
@@ -90,11 +92,17 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.headers = builder.headers;
     this.idempotent = defaultIfNull(builder.idempotent, method == GET);
     this.bypassExceptionTranslation = builder.bypassExceptionTranslation;
+    this.name = name;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
       span.attribute(TracingIdentifiers.ATTR_OPERATION, builder.method + " " + builder.path.format());
     }
+  }
+
+  @Override
+  public String name() {
+    return name == null ? super.name() : name;
   }
 
   public CompletableFuture<CoreHttpResponse> exec(Core core) {
@@ -315,7 +323,8 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
           this,
           span,
           resolveTimeout(coreContext, target.serviceType(), options.timeout()),
-          options.retryStrategy().orElse(null)
+          options.retryStrategy().orElse(null),
+          spanName
       );
     }
 

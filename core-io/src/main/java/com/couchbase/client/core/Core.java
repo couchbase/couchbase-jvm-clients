@@ -33,6 +33,7 @@ import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
 import com.couchbase.client.core.classic.manager.ClassicCoreBucketManager;
 import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
 import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -1101,7 +1102,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           this.serviceType = TracingIdentifiers.SERVICE_UNKNOWN;
         }
       } else {
-        this.serviceType = request.serviceType().ident();
+        this.serviceType = CbTracing.getTracingId(request.serviceType());
       }
       this.requestName = request.name();
       if (request instanceof KeyValueRequest) {
