@@ -403,7 +403,7 @@ public class ProtostellarEndpoint {
       onDone.complete(null);
     }
     else {
-      this.managedChannel.notifyWhenStateChanged(current, () -> {
+      ctx.environment().timer().schedule(() -> {
         ConnectivityState now = this.managedChannel.getState(true);
 
         if (inDesiredState(current, waitingForReady)) {
@@ -413,7 +413,7 @@ public class ProtostellarEndpoint {
         } else {
           notify(now, onDone, deadline, waitingForReady);
         }
-      });
+      }, Duration.ofMillis(50));
     }
   }
 
