@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbCollections.listCopyOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Collections.unmodifiableList;
@@ -168,13 +169,26 @@ public class ConnectionString {
   public enum Scheme {
     COUCHBASE,
     COUCHBASES,
-    PROTOSTELLAR
+    COUCHBASE2,
     ;
 
+    private static final Map<String, Scheme> aliases = mapOf(
+      "PROTOSTELLAR", COUCHBASE2, // Code name used during development and testing.
+      "GROUCHBASE", COUCHBASE2 // Easter egg for Matt.
+    );
+
     private static Scheme parse(String s) {
+      String uppercase = s.toUpperCase(Locale.ROOT);
+
       try {
-        return valueOf(s.toUpperCase(Locale.ROOT));
+        return valueOf(uppercase);
+
       } catch (IllegalArgumentException e) {
+        Scheme fromAlias = aliases.get(uppercase);
+        if (fromAlias != null) {
+          return fromAlias;
+        }
+
         List<String> lowercaseNames = transform(values(), it -> it.name().toLowerCase(Locale.ROOT));
         throw InvalidArgumentException.fromMessage("Expected scheme to be one of " + lowercaseNames + " but got: " + s);
       }

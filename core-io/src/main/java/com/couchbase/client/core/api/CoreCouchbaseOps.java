@@ -80,7 +80,7 @@ public interface CoreCouchbaseOps {
       ConnectionString connectionString
   ) {
     switch (connectionString.scheme()) {
-      case PROTOSTELLAR:
+      case COUCHBASE2:
         return new CoreProtostellar(env, authenticator, connectionString);
       case COUCHBASE:
       case COUCHBASES:

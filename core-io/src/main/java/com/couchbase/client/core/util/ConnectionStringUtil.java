@@ -145,11 +145,11 @@ public class ConnectionStringUtil {
 
     groupedByHost.forEach((host, addresses) -> {
       Map<PortType, Integer> ports = new EnumMap<>(PortType.class);
-      PortType assumedPortType = connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR ? PortType.PROTOSTELLAR : PortType.KV;
+      PortType assumedPortType = connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2 ? PortType.PROTOSTELLAR : PortType.KV;
       addresses.stream()
         .filter(it -> it.port() != 0)
         .forEach(it -> {
-          if (connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
+          if (connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2 && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
             throw InvalidArgumentException.fromMessage("Invalid connection string. Port type " + it.portType().get() + " is not compatible with scheme " + connectionString.scheme());
           }
 
@@ -226,7 +226,7 @@ public class ConnectionStringUtil {
     }
 
     return ConnectionString.create(String.join(",", addresses))
-      .withScheme(hasProtostellarPort ? ConnectionString.Scheme.PROTOSTELLAR : COUCHBASE);
+      .withScheme(hasProtostellarPort ? ConnectionString.Scheme.COUCHBASE2 : COUCHBASE);
   }
 
   public static final String INCOMPATIBLE_CONNECTION_STRING_SCHEME =
@@ -243,7 +243,7 @@ public class ConnectionStringUtil {
       if (!tls && connStr.scheme() == COUCHBASES) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
-      if (!tls && connStr.scheme() == ConnectionString.Scheme.PROTOSTELLAR) {
+      if (!tls && connStr.scheme() == ConnectionString.Scheme.COUCHBASE2) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
       if (!connStr.params().isEmpty()) {

@@ -87,7 +87,7 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
       ));
 
     if (connectionString.scheme() == ConnectionString.Scheme.COUCHBASES
-      || connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR) {
+      || connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2) {
       properties.put("security.enableTls", "true");
     }
 

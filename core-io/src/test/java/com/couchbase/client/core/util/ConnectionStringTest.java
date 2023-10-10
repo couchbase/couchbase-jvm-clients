@@ -364,7 +364,7 @@ class ConnectionStringTest {
   @Test
   void infersProtostellarScheme() {
     assertEquals(
-      "protostellar://example.com:123",
+      "couchbase2://example.com:123",
       asConnectionString(listOf(
         SeedNode.create("example.com").withProtostellarPort(123)
       )).original()

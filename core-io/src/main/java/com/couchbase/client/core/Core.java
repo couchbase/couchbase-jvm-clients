@@ -314,7 +314,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    boolean isProtostellar = connectionString.scheme() == ConnectionString.Scheme.PROTOSTELLAR;
+    boolean isProtostellar = connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2;
 
     this.protostellar = isProtostellar
       ? new CoreProtostellar(environment, authenticator, connectionString)
