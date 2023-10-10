@@ -53,15 +53,15 @@ public class ErrorUtil {
     );
 
     public static @Nullable CouchbaseExceptionType convertException(String simpleClassName) {
+        CouchbaseExceptionType type = irregular.get(simpleClassName);
+        if (type != null) return type;
+
         // Convert "MyCouchbaseException" to "SDK_MY_COUCHBASE_EXCEPTION", for example.
         String enumValueName = "SDK_" + upperCamelToUpperUnderscore.convert(simpleClassName);
         try {
             return CouchbaseExceptionType.valueOf(enumValueName);
 
         } catch (IllegalArgumentException e) {
-            CouchbaseExceptionType type = irregular.get(simpleClassName);
-            if (type != null) return type;
-
             logger.warn("Failed to convert {} to {}.{} (not a valid enum value)",
                     simpleClassName, CouchbaseExceptionType.class.getSimpleName(), enumValueName);
             // We should only be here if the original exception derives from CouchbaseException.
