@@ -22,7 +22,7 @@
         <core-io.version>2.5.0-SNAPSHOT</core-io.version>
         <core-io-deps.version>1.5.0-SNAPSHOT</core-io-deps.version>
         <scala-client.version>1.5.0-SNAPSHOT</scala-client.version>
-        <kotlin-client.version>1.5.0-SNAPSHOT</kotlin-client.version>
+        <kotlin-client.version>1.2.0-SNAPSHOT</kotlin-client.version>
 
         <junit.version>5.9.1</junit.version>
         <assertj.version>3.23.1</assertj.version>
