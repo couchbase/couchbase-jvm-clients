@@ -240,11 +240,6 @@ public class WaitUntilReadyHelper {
     final ClusterState desiredState,
     final Optional<String> bucketName
   ) {
-    // Some temporary glue until Core and CoreProtostellar are separated
-    if (core.isProtostellar()) {
-      return core.protostellar().waitUntilReady(serviceTypes, timeout, desiredState, bucketName.orElse(null));
-    }
-
     WaitUntilReadyLogger log = WaitUntilReadyLogger.create(core.environment().eventBus());
 
     log.message("Starting WaitUntilReady." +

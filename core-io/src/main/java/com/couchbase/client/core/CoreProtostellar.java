@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
@@ -73,6 +74,8 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   ) {
     this.ctx = new ProtostellarContext(env, authenticator);
     notNull(connectionString, "connectionString");
+
+    checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE2);
 
     ConnectionString.UnresolvedSocket first = connectionString.hosts().get(0);
     first.portType().ifPresent(type -> {

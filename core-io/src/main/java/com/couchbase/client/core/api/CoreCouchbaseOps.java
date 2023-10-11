@@ -42,6 +42,8 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.CbCollections.setOf;
+
 /**
  * Provides access to the various {@code Core*Ops} instances.
  */
@@ -87,6 +89,16 @@ public interface CoreCouchbaseOps {
         return Core.create(env, authenticator, connectionString);
       default:
         throw InvalidArgumentException.fromMessage("Unrecognized connection string scheme: " + connectionString.scheme());
+    }
+  }
+
+  static void checkConnectionStringScheme(
+      ConnectionString cs,
+      ConnectionString.Scheme... validSchemes
+  ) {
+    Set<ConnectionString.Scheme> set = setOf(validSchemes);
+    if (!set.contains(cs.scheme())) {
+      throw new IllegalArgumentException("Expected connection string scheme to be one of " + set + " but got: " + cs.scheme());
     }
   }
 

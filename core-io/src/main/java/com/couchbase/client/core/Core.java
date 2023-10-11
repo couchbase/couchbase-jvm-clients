@@ -90,11 +90,6 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
-import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
-import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
-import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketManager;
-import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
-import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -129,6 +124,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static java.util.Objects.requireNonNull;
@@ -250,8 +246,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final ConnectionString connectionString;
 
-  @Nullable private final CoreProtostellar protostellar;
-
   /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
@@ -282,6 +276,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
       throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
     }
+
+    checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
 
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
@@ -314,12 +310,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    boolean isProtostellar = connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2;
-
-    this.protostellar = isProtostellar
-      ? new CoreProtostellar(environment, authenticator, connectionString)
-      : null;
-
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
@@ -344,11 +334,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       env.securityConfig().tlsEnabled(),
       env.eventBus()
     );
-  }
-
-  @Stability.Internal
-  public CoreProtostellar protostellar() {
-    return protostellar;
   }
 
   /**
@@ -717,7 +702,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             .flatMap(this::closeBucket)
             .then(configurationProvider.shutdown())
             .then(configurationProcessor.awaitTermination())
-            .then(protostellar != null ? protostellar.shutdown(timeout) : Mono.empty())
             .doOnTerminate(() -> {
               CoreLimiter.decrement();
               eventBus.publish(new ShutdownCompletedEvent(start.elapsed(), coreContext));
@@ -1008,24 +992,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   }
 
   @Stability.Internal
-  public boolean isProtostellar() {
-    return protostellar != null;
-  }
-
-  @Stability.Internal
   @Override
   public CoreKvOps kvOps(CoreKeyspace keyspace) {
-    return isProtostellar()
-      ? new ProtostellarCoreKvOps(protostellar, keyspace)
-      : new ClassicCoreKvOps(this, keyspace);
+    return new ClassicCoreKvOps(this, keyspace);
   }
 
   @Stability.Internal
   @Override
   public CoreQueryOps queryOps() {
-    return isProtostellar()
-      ? new ProtostellarCoreQueryOps(protostellar)
-      : new ClassicCoreQueryOps(this);
+    return new ClassicCoreQueryOps(this);
   }
 
   @Stability.Internal
@@ -1036,25 +1011,19 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Stability.Internal
   @Override
   public CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace) {
-    return isProtostellar()
-      ? new ProtostellarCoreKvBinaryOps(protostellar, keyspace)
-      : new ClassicCoreKvBinaryOps(this, keyspace);
+    return new ClassicCoreKvBinaryOps(this, keyspace);
   }
 
   @Stability.Internal
   @Override
   public CoreBucketManagerOps bucketManager() {
-    return isProtostellar()
-      ? new ProtostellarCoreBucketManager(protostellar)
-      : new ClassicCoreBucketManager(this);
+    return new ClassicCoreBucketManager(this);
   }
 
   @Stability.Internal
   @Override
   public CoreCollectionManager collectionManager(String bucketName) {
-    return isProtostellar()
-      ? new ProtostellarCoreCollectionManagerOps(protostellar, bucketName)
-      : new ClassicCoreCollectionManagerOps(this, bucketName);
+    return new ClassicCoreCollectionManagerOps(this, bucketName);
   }
 
   @Override

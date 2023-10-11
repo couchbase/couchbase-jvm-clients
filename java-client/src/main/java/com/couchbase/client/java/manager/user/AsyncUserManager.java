@@ -27,7 +27,6 @@ import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import com.couchbase.client.java.AsyncCluster;
@@ -103,8 +102,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<UserAndMetadata> getUser(AuthDomain domain, String username, GetUserOptions options) {
-    checkIfProtostellar();
-
     return httpClient.get(pathForUser(domain, username), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_USER)
         .exec(core)
@@ -117,8 +114,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<List<UserAndMetadata>> getAllUsers(GetAllUsersOptions options) {
-    checkIfProtostellar();
-
     return httpClient.get(pathForUsers(), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_USERS)
         .exec(core)
@@ -131,8 +126,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<List<RoleAndDescription>> getRoles(GetRolesOptions options) {
-    checkIfProtostellar();
-
     return httpClient.get(pathForRoles(), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ROLES)
         .exec(core)
@@ -158,8 +151,6 @@ public class AsyncUserManager {
    * @param options Common options (timeout, retry...)
    */
   public CompletableFuture<Void> changePassword(String newPassword, ChangePasswordOptions options){
-    checkIfProtostellar();
-
     UrlQueryStringBuilder params = newForm()
             .add("password", newPassword);
 
@@ -176,8 +167,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<Void> upsertUser(User user, UpsertUserOptions options) {
-    checkIfProtostellar();
-
     String username = user.username();
     UrlQueryStringBuilder params = newForm()
         .add("name", user.displayName())
@@ -206,8 +195,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<Void> dropUser(String username, DropUserOptions options) {
-    checkIfProtostellar();
-
     AuthDomain domain = AuthDomain.LOCAL;
 
     return httpClient.delete(pathForUser(domain, username), options.build())
@@ -222,8 +209,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<Group> getGroup(String groupName, GetGroupOptions options) {
-    checkIfProtostellar();
-
     return httpClient.get(pathForGroup(groupName), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_GROUP)
         .exec(core)
@@ -236,8 +221,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<List<Group>> getAllGroups(GetAllGroupsOptions options) {
-    checkIfProtostellar();
-
     return httpClient.get(pathForGroups(), options.build())
         .trace(TracingIdentifiers.SPAN_REQUEST_MU_GET_ALL_GROUPS)
         .exec(core)
@@ -250,8 +233,6 @@ public class AsyncUserManager {
   }
 
   public CompletableFuture<Void> upsertGroup(Group group, UpsertGroupOptions options) {
-    checkIfProtostellar();
-
     UrlQueryStringBuilder params = newForm()
         .add("description", group.description())
         .add("ldap_group_ref", group.ldapGroupReference().orElse(""))
@@ -284,11 +265,5 @@ public class AsyncUserManager {
           ? exceptionSupplier.get()
           : propagate(t);
     };
-  }
-
-  private void checkIfProtostellar() {
-    if (core.isProtostellar()) {
-      throw CoreProtostellarUtil.unsupportedInProtostellar("user management");
-    }
   }
 }

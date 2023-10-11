@@ -126,10 +126,6 @@ public class HealthPinger {
     final WaitUntilReadyHelper.WaitUntilReadyLogger log
   ) {
     return Mono.defer(() -> {
-      if (core.isProtostellar()) {
-        return Mono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar());
-      }
-
       Set<RequestTarget> targets = extractPingTargets(core.clusterConfig(), serviceTypes, bucketName, log);
 
       return pingTargets(core, targets, timeout, retryStrategy, log).collectList().map(reports -> new PingResult(
