@@ -238,7 +238,8 @@ public class JavaIntegrationTest extends ClusterAwareIntegrationTest {
       Optional<ScopeSpec> scope = scopeList.stream().filter(s -> s.name().equals(spec.scopeName())).findFirst();
 
       if(scope.isPresent()) {
-        return scope.get().collections().contains(spec);
+        return scope.get().collections().stream()
+          .anyMatch(c -> c.name().equals(spec.name()) && c.scopeName().equals(spec.scopeName()));
       } else {
         return false;
       }

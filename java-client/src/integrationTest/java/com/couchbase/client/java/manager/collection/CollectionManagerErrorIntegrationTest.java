@@ -64,11 +64,11 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(FeatureNotAvailableException.class, () -> collections.dropScope("foo"));
     assertThrows(
       FeatureNotAvailableException.class,
-      () -> collections.dropCollection("bar", "foo")
+      () -> collections.dropCollection("foo", "bar")
     );
     assertThrows(
       FeatureNotAvailableException.class,
-      () -> collections.createCollection("bar", "foo")
+      () -> collections.createCollection("foo", "bar")
     );
   }
 
@@ -87,9 +87,9 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
 
       CollectionManager mgr = bucket.collections();
       assertThrows(FeatureNotAvailableException.class, () -> mgr.createScope("a"));
-      assertThrows(FeatureNotAvailableException.class, () -> mgr.createCollection("b", "a"));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.createCollection("a", "b"));
       assertThrows(FeatureNotAvailableException.class, () -> mgr.dropScope("a"));
-      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropCollection("b", "a"));
+      assertThrows(FeatureNotAvailableException.class, () -> mgr.dropCollection("a", "b"));
     } finally {
       cluster.buckets().dropBucket(bucketName);
     }

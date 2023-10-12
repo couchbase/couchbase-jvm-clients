@@ -254,7 +254,9 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
       collections.createCollection(collectionSpec.scopeName(), collectionSpec.name());
       if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), collectionSpec.scopeName(), collectionSpec.name());
       waitUntilCondition(() -> collectionExists(collections, collectionSpec));
-      waitUntilCondition(() -> collections.getAllScopes().stream().anyMatch(ss -> ss.collections().contains(collectionSpec)));
+      waitUntilCondition(() -> collections.getAllScopes().stream()
+        .filter(s -> s.name().equals(collectionSpec.scopeName())).findFirst().map(ScopeSpec::collections).get()
+        .stream().anyMatch(cs -> cs.name().equals(collectionSpec.name())));
     }
   }
 
