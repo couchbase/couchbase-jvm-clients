@@ -311,7 +311,7 @@ public class AsyncCluster {
    * Provides access to the Full Text Search index management services.
    */
   public AsyncSearchIndexManager searchIndexes() {
-    return new AsyncSearchIndexManager(core(), this);
+    return new AsyncSearchIndexManager(couchbaseOps, this);
   }
 
   /**

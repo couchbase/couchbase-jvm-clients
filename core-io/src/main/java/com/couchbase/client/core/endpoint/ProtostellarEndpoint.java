@@ -54,6 +54,7 @@ import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.protostellar.admin.bucket.v1.BucketAdminServiceGrpc;
 import com.couchbase.client.protostellar.admin.collection.v1.CollectionAdminServiceGrpc;
+import com.couchbase.client.protostellar.admin.search.v1.SearchAdminServiceGrpc;
 import com.couchbase.client.protostellar.analytics.v1.AnalyticsServiceGrpc;
 import com.couchbase.client.protostellar.internal.hooks.v1.HooksServiceGrpc;
 import com.couchbase.client.protostellar.kv.v1.KvServiceGrpc;
@@ -94,6 +95,7 @@ public class ProtostellarEndpoint {
   private final HooksServiceGrpc.HooksServiceBlockingStub hooksBlockingStub;
   private final CollectionAdminServiceGrpc.CollectionAdminServiceFutureStub collectionAdminStub;
   private final BucketAdminServiceGrpc.BucketAdminServiceFutureStub bucketAdminStub;
+  private final SearchAdminServiceGrpc.SearchAdminServiceFutureStub searchAdminStub;
   private final HostAndPort remote;
   private final CoreEnvironment env;
   private final ProtostellarContext ctx;
@@ -196,6 +198,7 @@ public class ProtostellarEndpoint {
     hooksBlockingStub = HooksServiceGrpc.newBlockingStub(managedChannel).withCallCredentials(creds);
     collectionAdminStub = CollectionAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
     bucketAdminStub = BucketAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
+    searchAdminStub = SearchAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
   }
 
   private ManagedChannel channel(ProtostellarContext ctx) {
@@ -370,6 +373,10 @@ public class ProtostellarEndpoint {
 
   public BucketAdminServiceGrpc.BucketAdminServiceFutureStub bucketAdminStub() {
     return bucketAdminStub;
+  }
+
+  public SearchAdminServiceGrpc.SearchAdminServiceFutureStub searchAdminStub() {
+    return searchAdminStub;
   }
 
   /**

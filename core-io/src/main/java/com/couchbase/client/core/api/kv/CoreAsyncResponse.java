@@ -57,6 +57,10 @@ public final class CoreAsyncResponse<T> {
     return future;
   }
 
+  public CompletableFuture<Void> toFutureVoid() {
+    return thenApply(it -> null);
+  }
+
   public Mono<T> toMono() {
     return Reactor.wrap(future, cancellationTask);
   }

@@ -41,6 +41,7 @@ import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketMana
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreSearchIndexManager;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
@@ -152,12 +153,12 @@ public class CoreProtostellar implements CoreCouchbaseOps {
 
   @Override
   public CoreSearchIndexManager clusterSearchIndexManager() {
-    throw new UnsupportedOperationException("Cluster-level search index management is not yet supported in Protostellar");
+    return new ProtostellarCoreSearchIndexManager(this, null);
   }
 
   @Override
   public CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope) {
-    throw new UnsupportedOperationException("Scope-level search index management is not yet supported in Protostellar");
+    return new ProtostellarCoreSearchIndexManager(this, scope);
   }
 
   @Override

@@ -80,6 +80,7 @@ public class CoreProtostellarErrorHandlingUtil {
 
   private static final String RESOURCE_TYPE_DOCUMENT = "document";
   private static final String RESOURCE_TYPE_INDEX = "index";
+  private static final String RESOURCE_TYPE_SEARCH_INDEX = "searchindex";
   private static final String RESOURCE_TYPE_BUCKET = "bucket";
   private static final String RESOURCE_TYPE_SCOPE = "scope";
   private static final String RESOURCE_TYPE_COLLECTION = "collection";
@@ -162,8 +163,8 @@ public class CoreProtostellarErrorHandlingUtil {
           if (code == Code.NOT_FOUND) {
             if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
               return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX)) {
-              return ProtostellarRequestBehaviour.fail(new IndexNotFoundException(context));
+            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX) || info.getResourceType().equals(RESOURCE_TYPE_SEARCH_INDEX)) {
+              return ProtostellarRequestBehaviour.fail(IndexNotFoundException.withMessageAndErrorContext(status.getMessage(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
               return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
@@ -176,8 +177,8 @@ public class CoreProtostellarErrorHandlingUtil {
           } else if (code == Code.ALREADY_EXISTS) {
             if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
               return ProtostellarRequestBehaviour.fail(new DocumentExistsException(context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX)) {
-              return ProtostellarRequestBehaviour.fail(new IndexExistsException(context));
+            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX) || info.getResourceType().equals(RESOURCE_TYPE_SEARCH_INDEX)) {
+              return ProtostellarRequestBehaviour.fail(new IndexExistsException(status.getMessage(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
               return ProtostellarRequestBehaviour.fail(new BucketExistsException(info.getResourceName(), context));
             } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
