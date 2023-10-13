@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// [skip:<1.4.11]
+
 package com.couchbase.client.performer.scala.manager
 
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertDurability, setSuccess}
@@ -230,7 +232,7 @@ object BucketManagerHelper {
         result.build
       })
     } else {
-      SMono.error(new IllegalArgumentException("Unknown operation"))
+      SMono.raiseError(new IllegalArgumentException("Unknown operation"))
     }
   }
 

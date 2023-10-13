@@ -25,7 +25,6 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
-import com.couchbase.client.performer.scala.manager.CollectionManagerHelper
 import com.couchbase.client.performer.scala.query.{QueryHelper, QueryIndexManagerHelper}
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaIteratorStreamer}
 import com.couchbase.client.protocol
@@ -45,11 +44,14 @@ import com.couchbase.client.performer.scala.search.SearchHelper
 // [end:1.2.4]
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
-import com.couchbase.client.performer.scala.manager.BucketManagerHelper
 // [end:1.4.1]
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.google.protobuf.ByteString
+// [start:1.4.11]
+import com.couchbase.client.performer.scala.manager.BucketManagerHelper
+import com.couchbase.client.performer.scala.manager.CollectionManagerHelper
+// [end:1.4.11]
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
@@ -229,9 +231,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             setSuccess(result)
 
         }
+        // [start:1.4.11]
         else if (clc.hasBucketManager) {
             result = BucketManagerHelper.handleBucketManager(connection.cluster, op)
         }
+        // [end:1.4.11]
         // [start:1.2.4]
         else if (clc.hasEventingFunctionManager) {
             result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
@@ -259,9 +263,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
 
             setSuccess(result)
         }
+      // [start:1.4.11]
       if (blc.hasCollectionManager) {
         result = CollectionManagerHelper.handleCollectionManager(connection.cluster, op)
       }
+      // [end:1.4.11]
     } else if (op.hasScopeCommand) {
       val slc = op.getScopeCommand
 

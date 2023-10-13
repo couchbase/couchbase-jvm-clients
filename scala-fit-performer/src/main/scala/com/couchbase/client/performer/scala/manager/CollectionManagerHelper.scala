@@ -16,6 +16,8 @@
 
 package com.couchbase.client.performer.scala.manager
 
+// [skip:<1.4.11]
+
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.setSuccess
 import com.couchbase.client.performer.scala.util.OptionsUtil.{
   DefaultManagementTimeout,

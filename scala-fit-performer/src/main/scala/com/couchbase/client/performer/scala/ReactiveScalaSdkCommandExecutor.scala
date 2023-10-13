@@ -32,9 +32,12 @@ import com.couchbase.client.performer.scala.eventing.EventingHelper
 // [end:1.2.4]
 // [start:1.4.1]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
-import com.couchbase.client.performer.scala.manager.BucketManagerHelper
 // [end:1.4.1]
 import com.couchbase.client.scala.kv._
+// [start:1.4.11]
+import com.couchbase.client.performer.scala.manager.BucketManagerHelper
+import com.couchbase.client.performer.scala.manager.CollectionManagerHelper
+// [end:1.4.11]
 
 class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters)
     extends SdkCommandExecutor(counters) {
@@ -197,11 +200,13 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
                 result.build()
             }).block()
         }
+        // [start:1.4.11]
         else if (clc.hasBucketManager) {
             return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
         }
+        // [end:1.4.11]
         // [start:1.2.4]
-        else if (clc.hasEventingFunctionManager) {
+        if (clc.hasEventingFunctionManager) {
             return EventingHelper.handleEventingFunctionManagerReactive(cluster, op).block()
         }
         // [end:1.2.4]
