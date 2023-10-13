@@ -265,6 +265,7 @@ public class BucketManagerHelper {
       if (response.maxExpiry() != null) {
         builder.setMaxExpirySeconds((int) response.maxExpiry().toSeconds());
       }
+      // [start:3.4.12]
       if (response.historyRetentionBytes() != null) {
         builder.setHistoryRetentionBytes(response.historyRetentionBytes());
       }
@@ -274,6 +275,7 @@ public class BucketManagerHelper {
       if (response.historyRetentionCollectionDefault() != null) {
         builder.setHistoryRetentionCollectionDefault(response.historyRetentionCollectionDefault());
       }
+      // [end:3.4.12]
 
       result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder().setSuccess(true)
               .setBucketManagerResult(com.couchbase.client.protocol.sdk.cluster.bucketmanager.Result.newBuilder()
@@ -322,6 +324,7 @@ public class BucketManagerHelper {
       if (bucketSettings.hasStorageBackend()) {
         settings.storageBackend(com.couchbase.client.java.manager.bucket.StorageBackend.of(bucketSettings.getStorageBackend().name().toLowerCase()));
       }
+      // [start:3.4.12]
       // "History Retention can only used with Magma"
       if (bucketSettings.hasHistoryRetentionBytes()) {
         settings.historyRetentionBytes(bucketSettings.getHistoryRetentionBytes());
@@ -332,7 +335,7 @@ public class BucketManagerHelper {
       if (bucketSettings.hasHistoryRetentionCollectionDefault()) {
         settings.historyRetentionCollectionDefault(bucketSettings.getHistoryRetentionCollectionDefault());
       }
-
+      // [end:3.4.12]
       if (bucketSettings.hasFlushEnabled() && bucketSettings.getFlushEnabled()) {
         settings.flushEnabled(bucketSettings.getFlushEnabled());
       }
@@ -385,6 +388,7 @@ public class BucketManagerHelper {
       if (bucketSettings.hasStorageBackend()) {
         settings.storageBackend(com.couchbase.client.java.manager.bucket.StorageBackend.of(bucketSettings.getStorageBackend().name().toLowerCase()));
       }
+      // [start:3.4.12]
       // "History Retention can only used with Magma"
       if (bucketSettings.hasHistoryRetentionBytes()) {
         settings.historyRetentionBytes(bucketSettings.getHistoryRetentionBytes());
@@ -395,6 +399,7 @@ public class BucketManagerHelper {
       if (bucketSettings.hasHistoryRetentionCollectionDefault()) {
         settings.historyRetentionCollectionDefault(bucketSettings.getHistoryRetentionCollectionDefault());
       }
+      // [end:3.4.12]
       if (bucketSettings.hasFlushEnabled() && bucketSettings.getFlushEnabled()) {
         settings.flushEnabled(bucketSettings.getFlushEnabled());
       }
