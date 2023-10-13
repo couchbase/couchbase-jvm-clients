@@ -115,29 +115,13 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
   public CompletableFuture<Void> updateBucket(CoreBucketSettings settings, final CoreCommonOptions options) {
     String bucketName = settings.name();
 
-    RequestSpan span = CbTracing.newSpan(core.context(), TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, options.parentSpan().orElse(null));
-    span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
-    CoreCommonOptions getAllBucketOptions = options.withParentSpan(span);
-
-    return Mono
-        .fromFuture(() -> getAllBuckets(getAllBucketOptions))
-        .map(buckets -> buckets.containsKey(bucketName))
-        .flatMap(bucketExists -> {
-          if (!bucketExists) {
-            return Mono.error(BucketNotFoundException.forBucket(bucketName));
-          }
-          return Mono.fromFuture(
-              httpClient.post(pathForBucket(bucketName), options)
-                  .form(convertSettingsToParams(settings, null, true))
-                  .exec(core)
-                  .exceptionally(t -> {
-                    throw propagate(wrap(t));
-                  })
-                  .thenApply(response -> null));
-        })
-        .then()
-        .doOnTerminate(span::end)
-        .toFuture();
+    return httpClient.post(pathForBucket(bucketName), options)
+        .trace(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET)
+        .traceBucket(bucketName)
+        .form(convertSettingsToParams(settings, null, true))
+        .exec(core)
+        .exceptionally(translateBucketNotFound(bucketName))
+        .thenApply(response -> null);
   }
 
   public CompletableFuture<Void> dropBucket(String bucketName, CoreCommonOptions options) {
