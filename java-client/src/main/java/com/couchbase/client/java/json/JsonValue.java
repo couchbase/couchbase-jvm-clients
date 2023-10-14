@@ -83,10 +83,13 @@ public abstract class JsonValue {
             return value;
         }
         if (value instanceof Map) {
-            return JsonObject.from((Map) value);
+            return JsonObject.from((Map<String, ?>) value);
         }
         if (value instanceof List) {
-            return JsonArray.from((List) value);
+            return JsonArray.from((List<?>) value);
+        }
+        if (value instanceof Iterable) {
+            return JsonArray.fromIterable((Iterable<?>) value);
         }
         if (value instanceof JsonNull) {
             return null;

@@ -26,8 +26,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -100,6 +102,22 @@ class JsonArrayTest {
     JsonArray arr = JsonArray.from(Collections.emptyList());
     assertNotNull(arr);
     assertTrue(arr.isEmpty());
+  }
+
+  @Test
+  void shouldCoerceSetToJsonArray() {
+    List<String> expected = listOf("a", "b", "c", "d", "e");
+    Object arr = JsonValue.coerce(new LinkedHashSet<>(listOf("a", "b", "c", "d", "e")));
+    assertEquals(JsonArray.from(expected), arr);
+  }
+
+  @Test
+  void shouldSupportAddingSetToJsonArray() {
+    List<String> expected = listOf("a", "b", "c", "d", "e");
+    JsonArray arr = JsonArray.create()
+      .add(new LinkedHashSet<>(listOf("a", "b", "c", "d", "e")));
+
+    assertEquals(JsonArray.from(listOf(expected)), arr);
   }
 
   @Test

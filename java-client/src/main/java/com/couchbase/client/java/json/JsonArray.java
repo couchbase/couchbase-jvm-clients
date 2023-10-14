@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.json;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
@@ -25,7 +26,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -98,20 +98,20 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
   }
 
   /**
-   * Creates a new {@link JsonArray} and populates it with the values in the supplied {@link List}.
-   *
-   * If the type of an item is not supported, an {@link InvalidArgumentException} is thrown.
-   * If the list is null, a {@link NullPointerException} is thrown, but null items are supported.
-   *
-   * *Sub Maps and Lists*
-   * If possible, Maps and Lists contained in items will be converted to JsonObject and
-   * JsonArray respectively. However, same restrictions apply. Any non-convertible collection
+   * Returns a new {@link JsonArray} containing items from the given {@link List},
+   * in the same order they were returned by the list's iterator.
+   * <p>
+   * <b>Sub Maps and Iterables:</b>
+   * If possible, contained Maps and Iterables are converted to JsonObject and
+   * JsonArray respectively. However, some restrictions apply. Any non-convertible item
    * will raise a {@link ClassCastException}. If the sub-conversion raises an exception (like an
    * InvalidArgumentException) then it is put as cause for the ClassCastException.
    *
    * @param items the list of items to be stored in the {@link JsonArray}.
-   * @return a populated {@link JsonArray}.
-   * @throws InvalidArgumentException if at least one item is of unsupported type.
+   * @return a new {@link JsonArray} containing the elements from the given list,
+   * in the order they were returned by the list's iterator.
+   * @throws InvalidArgumentException if one or more items is of unsupported type.
+   * @throws NullPointerException if the given list is null.
    */
   public static JsonArray from(List<?> items) {
     if (items == null) {
@@ -121,6 +121,35 @@ public class JsonArray extends JsonValue implements Iterable<Object>, Serializab
     JsonArray array = new JsonArray(items.size());
     for (Object item : items) {
         array.add(JsonValue.coerce(item));
+    }
+    return array;
+  }
+
+  /**
+   * Returns a new {@link JsonArray} containing items from the given {@link Iterable},
+   * in the same order they were returned by the iterable's iterator.
+   * <p>
+   * <b>Sub Maps and Iterables:</b>
+   * If possible, contained Maps and Iterables are converted to JsonObject and
+   * JsonArray respectively. However, some restrictions apply. Any non-convertible item
+   * will raise a {@link ClassCastException}. If the sub-conversion raises an exception (like an
+   * InvalidArgumentException) then it is put as cause for the ClassCastException.
+   *
+   * @param items the iterable to convert to a JsonArray.
+   * @return a new {@link JsonArray} containing the elements from the given iterable,
+   * in the order they were returned by the iterable's iterator.
+   * @throws InvalidArgumentException if one or more items is of unsupported type.
+   * @throws NullPointerException if the given iterable is null.
+   */
+  @Stability.Internal
+  static JsonArray fromIterable(Iterable<?> items) {
+    if (items == null) {
+      throw InvalidArgumentException.fromMessage("Null iterable unsupported");
+    }
+
+    JsonArray array = new JsonArray();
+    for (Object it : items) {
+      array.add(JsonValue.coerce(it));
     }
     return array;
   }
