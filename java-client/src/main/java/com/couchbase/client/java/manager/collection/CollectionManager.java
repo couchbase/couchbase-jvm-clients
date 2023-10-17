@@ -70,6 +70,8 @@ public class CollectionManager {
    * @throws CollectionExistsException if the collection already exists
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   * @deprecated This method cannot be used to set the collection's "history" property.
+   * Please use {@link #createCollection(String, String, CreateCollectionSettings)} instead.
    */
   @Deprecated
   public void createCollection(final CollectionSpec collectionSpec) {
@@ -86,6 +88,9 @@ public class CollectionManager {
    * @throws CollectionExistsException if the collection already exists
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   *
+   * @deprecated This method cannot be used to set the collection's "history" property.
+   * Please use {@link #createCollection(String, String, CreateCollectionSettings, CreateCollectionOptions)} instead.
    */
   @Deprecated
   public void createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
@@ -206,6 +211,7 @@ public class CollectionManager {
    * @throws CollectionNotFoundException if the collection did not exist.
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   * @deprecated Please use {@link #dropCollection(String, String)} instead.
    */
   @Deprecated
   public void dropCollection(final CollectionSpec collectionSpec) {
@@ -220,6 +226,7 @@ public class CollectionManager {
    * @throws CollectionNotFoundException if the collection did not exist.
    * @throws ScopeNotFoundException if the specified scope does not exist.
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
+   * @deprecated Please use {@link #dropCollection(String, String, DropCollectionOptions)} instead.
    */
   @Deprecated
   public void dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {

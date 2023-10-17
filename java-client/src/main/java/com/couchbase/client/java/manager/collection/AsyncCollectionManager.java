@@ -85,6 +85,8 @@ public class AsyncCollectionManager {
    * @throws CollectionExistsException (async) if the collection already exists
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   * @deprecated This method cannot be used to set the collection's "history" property.
+   * Please use {@link #createCollection(String, String, CreateCollectionSettings)} instead.
    */
   @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec) {
@@ -102,6 +104,8 @@ public class AsyncCollectionManager {
    * @throws CollectionExistsException (async) if the collection already exists
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   * @deprecated This method cannot be used to set the collection's "history" property.
+   * Please use {@link #createCollection(String, String, CreateCollectionSettings, CreateCollectionOptions)} instead.
    */
   @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
@@ -222,6 +226,7 @@ public class AsyncCollectionManager {
    * @throws CollectionNotFoundException (async) if the collection does not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   * @deprecated Please use {@link #dropCollection(String, String)} instead.
    */
   @Deprecated
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec) {
@@ -237,6 +242,7 @@ public class AsyncCollectionManager {
    * @throws CollectionNotFoundException (async) if the collection did not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
+   * @deprecated Please use {@link #dropCollection(String, String, DropCollectionOptions)} instead.
    */
   @Deprecated
   public CompletableFuture<Void> dropCollection(final CollectionSpec collectionSpec,
