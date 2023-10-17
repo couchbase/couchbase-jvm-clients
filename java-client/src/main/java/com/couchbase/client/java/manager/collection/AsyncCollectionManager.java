@@ -23,7 +23,6 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.manager.CoreCollectionManager;
-import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncBucket;
 import com.couchbase.client.java.AsyncCluster;
@@ -36,8 +35,8 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
-import static com.couchbase.client.java.manager.collection.CreateCollectionSettings.createCollectionSettings;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
+import static com.couchbase.client.java.manager.collection.CreateCollectionSettings.createCollectionSettings;
 import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
 import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
 import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
@@ -90,7 +89,7 @@ public class AsyncCollectionManager {
    */
   @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec) {
-    return createCollection(collectionSpec.scopeName(), collectionSpec.name(), CreateCollectionSettings.createCollectionSettings());
+    return createCollection(collectionSpec, createCollectionOptions());
   }
 
   /**
@@ -110,18 +109,13 @@ public class AsyncCollectionManager {
   @Deprecated
   public CompletableFuture<Void> createCollection(final CollectionSpec collectionSpec,
                                                   final CreateCollectionOptions options) {
-    return coreCollectionManager.createCollection(collectionSpec.scopeName(), collectionSpec.name(),
-      new CoreCreateOrUpdateCollectionSettings() {
-        @Override
-        public Duration maxExpiry() {
-          return collectionSpec.maxExpiry();
-        }
-
-        @Override
-        public Boolean history() {
-          return collectionSpec.history();
-        }
-      }, options.build());
+    return createCollection(
+      collectionSpec.scopeName(),
+      collectionSpec.name(),
+      createCollectionSettings()
+        .maxExpiry(collectionSpec.maxExpiry()),
+      options
+    );
   }
 
   /**
