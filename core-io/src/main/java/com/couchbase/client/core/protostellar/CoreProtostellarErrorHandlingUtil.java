@@ -79,8 +79,9 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
 
   private static final String RESOURCE_TYPE_DOCUMENT = "document";
-  private static final String RESOURCE_TYPE_INDEX = "index";
   private static final String RESOURCE_TYPE_SEARCH_INDEX = "searchindex";
+  private static final String RESOURCE_TYPE_QUERY_INDEX = "queryindex";
+  private static final String RESOURCE_TYPE_ANALYTICS_INDEX = "analyticsindex";
   private static final String RESOURCE_TYPE_BUCKET = "bucket";
   private static final String RESOURCE_TYPE_SCOPE = "scope";
   private static final String RESOURCE_TYPE_COLLECTION = "collection";
@@ -157,35 +158,44 @@ public class CoreProtostellarErrorHandlingUtil {
         } else if (typeUrl.equals(TYPE_URL_RESOURCE_INFO)) {
           ResourceInfo info = ResourceInfo.parseFrom(details.getValue());
 
-          context.put("resourceName", info.getResourceName());
+          String resourceName = info.getResourceName();
+          String resourceType = info.getResourceType();
+
+          if (resourceName != null) {
+            context.put("resourceName", info.getResourceName());
+          }
           context.put("resourceType", info.getResourceType());
 
           if (code == Code.NOT_FOUND) {
-            if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
+            if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
               return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX) || info.getResourceType().equals(RESOURCE_TYPE_SEARCH_INDEX)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
+              || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
+              || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
               return ProtostellarRequestBehaviour.fail(IndexNotFoundException.withMessageAndErrorContext(status.getMessage(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
               return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
               return ProtostellarRequestBehaviour.fail(new ScopeNotFoundException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_COLLECTION)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
               return ProtostellarRequestBehaviour.fail(new CollectionNotFoundException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_PATH)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
               return ProtostellarRequestBehaviour.fail(new PathNotFoundException(null));
             }
           } else if (code == Code.ALREADY_EXISTS) {
-            if (info.getResourceType().equals(RESOURCE_TYPE_DOCUMENT)) {
+            if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
               return ProtostellarRequestBehaviour.fail(new DocumentExistsException(context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_INDEX) || info.getResourceType().equals(RESOURCE_TYPE_SEARCH_INDEX)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
+              || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
+              || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
               return ProtostellarRequestBehaviour.fail(new IndexExistsException(status.getMessage(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_BUCKET)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
               return ProtostellarRequestBehaviour.fail(new BucketExistsException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_SCOPE)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
               return ProtostellarRequestBehaviour.fail(new ScopeExistsException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_COLLECTION)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
               return ProtostellarRequestBehaviour.fail(new CollectionExistsException(info.getResourceName(), context));
-            } else if (info.getResourceType().equals(RESOURCE_TYPE_PATH)) {
+            } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
               return ProtostellarRequestBehaviour.fail(new PathExistsException(context));
             }
           }
