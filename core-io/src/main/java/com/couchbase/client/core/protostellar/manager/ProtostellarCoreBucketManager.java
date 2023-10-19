@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketType;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
@@ -82,17 +81,6 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
         (endpoint) -> endpoint.bucketAdminStub().withDeadline(request.deadline()).deleteBucket(request.request()),
         (response) -> null)
       .thenApply(obj -> null);
-  }
-
-  @Override
-  public CompletableFuture<CoreBucketSettings> getBucket(String bucketName, CoreCommonOptions options) {
-    return getAllBuckets(options)
-      .thenApply(buckets -> {
-        if (!buckets.containsKey(bucketName)) {
-          throw new BucketNotFoundException(bucketName);
-        }
-        return buckets.get(bucketName);
-      });
   }
 
   @Override

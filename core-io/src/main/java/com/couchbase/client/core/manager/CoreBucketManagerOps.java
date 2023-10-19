@@ -18,11 +18,13 @@ package com.couchbase.client.core.manager;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import reactor.util.annotation.Nullable;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
@@ -33,7 +35,13 @@ public interface CoreBucketManagerOps {
 
   CompletableFuture<Void> dropBucket(String bucketName, CoreCommonOptions options);
 
-  CompletableFuture<CoreBucketSettings> getBucket(String bucketName, CoreCommonOptions options);
+  default CompletableFuture<CoreBucketSettings> getBucket(String bucketName, CoreCommonOptions options) {
+    return getAllBuckets(options)
+      .thenApply(buckets ->
+        Optional.ofNullable(buckets.get(bucketName))
+          .orElseThrow(() -> new BucketNotFoundException(bucketName))
+      );
+  }
 
   CompletableFuture<Map<String, CoreBucketSettings>> getAllBuckets(CoreCommonOptions options);
 
