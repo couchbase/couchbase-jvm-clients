@@ -18,8 +18,6 @@ package com.couchbase.client.core.classic.manager;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.CbTracing;
-import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
@@ -40,7 +38,6 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.util.HashMap;
@@ -83,9 +80,10 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         mapOf("bucketName", bucketName));
   }
 
+  @Override
   public CompletableFuture<Void> createBucket(CoreBucketSettings settings, CoreCreateBucketSettings createSpecificSettings, CoreCommonOptions options) {
-
     String bucketName = settings.name();
+
     return httpClient.post(pathForBuckets(), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_CREATE_BUCKET)
         .traceBucket(bucketName)
@@ -112,6 +110,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
     return t;
   }
 
+  @Override
   public CompletableFuture<Void> updateBucket(CoreBucketSettings settings, final CoreCommonOptions options) {
     String bucketName = settings.name();
 
@@ -124,6 +123,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         .thenApply(response -> null);
   }
 
+  @Override
   public CompletableFuture<Void> dropBucket(String bucketName, CoreCommonOptions options) {
     return httpClient.delete(pathForBucket(bucketName), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_DROP_BUCKET)
@@ -133,6 +133,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         .thenApply(response -> null);
   }
 
+  @Override
   public CompletableFuture<CoreBucketSettings> getBucket(String bucketName, CoreCommonOptions options) {
     return httpClient.get(pathForBucket(bucketName), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_GET_BUCKET)
@@ -150,6 +151,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
     };
   }
 
+  @Override
   public CompletableFuture<Map<String, CoreBucketSettings>> getAllBuckets(CoreCommonOptions options) {
     return httpClient.get(pathForBuckets(), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_GET_ALL_BUCKETS)
@@ -165,6 +167,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         });
   }
 
+  @Override
   public CompletableFuture<Void> flushBucket(String bucketName, CoreCommonOptions options) {
     return httpClient.post(pathForBucketFlush(bucketName), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_FLUSH_BUCKET)
