@@ -44,6 +44,7 @@ import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.error.ValueTooLargeException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.GenericErrorContext;
 import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
@@ -75,6 +76,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String PRECONDITION_WOULD_INVALIDATE_JSON = "WOULD_INVALIDATE_JSON";
   // Not currently used as it's unclear what exception this maps to.
   private static final String PRECONDITION_PATH_VALUE_OUT_OF_RANGE = "PATH_VALUE_OUT_OF_RANGE";
+  private static final String PRECONDITION_VALUE_TOO_LARGE = "VALUE_TOO_LARGE";
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
 
@@ -153,6 +155,8 @@ public class CoreProtostellarErrorHandlingUtil {
               return ProtostellarRequestBehaviour.fail(new DocumentTooDeepException(context));
             } else if (type.equals(PRECONDITION_WOULD_INVALIDATE_JSON)) {
               return ProtostellarRequestBehaviour.fail(new ValueInvalidException(context));
+            } else if (type.equals(PRECONDITION_VALUE_TOO_LARGE)) {
+              return ProtostellarRequestBehaviour.fail(new ValueTooLargeException(context));
             }
           }
         } else if (typeUrl.equals(TYPE_URL_RESOURCE_INFO)) {
