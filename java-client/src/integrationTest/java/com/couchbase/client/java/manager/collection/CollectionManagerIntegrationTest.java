@@ -88,7 +88,8 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
       boolean collExists = collectionExists(collections, collSpec);
       if (collExists) {
         Optional<ScopeSpec> scope = collections.getAllScopes().stream().filter(ss -> ss.name().equals(scopeName)).findFirst();
-        return scope.isPresent() && scope.get().collections().contains(collSpec);
+        return scope.isPresent() &&  scope.get().collections().stream()
+          .anyMatch(c -> c.name().equals(collSpec.name()) && c.scopeName().equals(collSpec.scopeName()));
       }
       return false;
     });
