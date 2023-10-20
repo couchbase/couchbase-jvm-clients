@@ -134,8 +134,8 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         // Protostellar always returns expiry
         if (config.isProtostellar) assert(result.expiry.isDefined)
         else assert(result.expiry.isEmpty)
-      case Failure(err)    => assert(false, s"unexpected error $err")
-      case _               => assert(false, s"unexpected error")
+      case Failure(err) => assert(false, s"unexpected error $err")
+      case _            => assert(false, s"unexpected error")
     }
   }
 
@@ -152,8 +152,8 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
         // Protostellar always returns expiry
         if (config.isProtostellar) assert(result.expiry.isDefined)
         else assert(result.expiry.isEmpty)
-      case Failure(err)    => assert(false, s"unexpected error $err")
-      case _               => assert(false, s"unexpected error")
+      case Failure(err) => assert(false, s"unexpected error $err")
+      case _            => assert(false, s"unexpected error")
     }
   }
 

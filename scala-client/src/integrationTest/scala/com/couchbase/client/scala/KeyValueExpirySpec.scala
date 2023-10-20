@@ -59,7 +59,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         // Protostellar always returns expiry
         if (config.isProtostellar) assert(result.expiry.isDefined)
         else assert(result.expiry.isEmpty)
-      case Failure(err)    => assert(false, s"unexpected error $err")
+      case Failure(err) => assert(false, s"unexpected error $err")
     }
   }
 
@@ -216,8 +216,10 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
   private val NEAR_FUTURE_INSTANT = Instant.now().plus(5, DAYS)
 
   @Test
-  @IgnoreWhen(missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY),
-      isProtostellarWillWorkLater = true) // Needs ING-434
+  @IgnoreWhen(
+    missesCapabilities = Array(Capabilities.PRESERVE_EXPIRY),
+    isProtostellarWillWorkLater = true
+  ) // Needs ING-434
   def upsert_can_preserve_expiry(): Unit = {
     val docId = TestUtils.docId()
 

@@ -48,12 +48,12 @@ case class CreateCollectionSettings(
     new CoreCreateOrUpdateCollectionSettings {
       override def maxExpiry(): time.Duration = x.maxExpiry match {
         case Some(v) => v
-        case _ => null
+        case _       => null
       }
 
       override def history(): lang.Boolean = x.history match {
         case Some(value) => value
-        case None => null
+        case None        => null
       }
     }
   }
@@ -85,12 +85,12 @@ case class UpdateCollectionSettings(
     new CoreCreateOrUpdateCollectionSettings {
       override def maxExpiry(): time.Duration = x.maxExpiry match {
         case Some(v) => v
-        case _ => null
+        case _       => null
       }
 
       override def history(): lang.Boolean = x.history match {
         case Some(value) => value
-        case None => null
+        case None        => null
       }
     }
   }
