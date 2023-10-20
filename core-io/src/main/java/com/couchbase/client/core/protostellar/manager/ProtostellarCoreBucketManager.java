@@ -23,7 +23,7 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
+import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
 import com.couchbase.client.core.manager.bucket.CoreEvictionPolicyType;
 import com.couchbase.client.core.manager.bucket.CoreStorageBackend;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -34,7 +34,6 @@ import com.couchbase.client.protostellar.admin.bucket.v1.DeleteBucketRequest;
 import com.couchbase.client.protostellar.admin.bucket.v1.ListBucketsRequest;
 import com.couchbase.client.protostellar.admin.bucket.v1.ListBucketsResponse;
 import com.couchbase.client.protostellar.admin.bucket.v1.UpdateBucketRequest;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -54,8 +53,8 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
   }
 
   @Override
-  public CompletableFuture<Void> createBucket(CoreBucketSettings settings, @Nullable CoreCreateBucketSettings createSpecificSettings, CoreCommonOptions options) {
-    ProtostellarRequest<CreateBucketRequest> request = ProtostellarCoreBucketManagerRequests.createBucketRequest(core, settings, createSpecificSettings, options);
+  public CompletableFuture<Void> createBucket(CoreBucketSettings settings, CoreCommonOptions options) {
+    ProtostellarRequest<CreateBucketRequest> request = ProtostellarCoreBucketManagerRequests.createBucketRequest(core, settings, options);
     return CoreProtostellarAccessors.async(core,
         request,
         (endpoint) -> endpoint.bucketAdminStub().withDeadline(request.deadline()).createBucket(request.request()),
@@ -134,6 +133,20 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
             return BucketType.EPHEMERAL;
           default:
             throw incompatibleProtostellar("Unknown bucket type " + bucket.getBucketType());
+        }
+      }
+
+      @Override
+      public CoreConflictResolutionType conflictResolutionType() {
+        switch (bucket.getConflictResolutionType()) {
+          case CONFLICT_RESOLUTION_TYPE_CUSTOM:
+            return CoreConflictResolutionType.CUSTOM;
+          case CONFLICT_RESOLUTION_TYPE_SEQUENCE_NUMBER:
+            return CoreConflictResolutionType.SEQUENCE_NUMBER;
+          case CONFLICT_RESOLUTION_TYPE_TIMESTAMP:
+            return CoreConflictResolutionType.TIMESTAMP;
+          default:
+            throw incompatibleProtostellar("Unknown conflict resolution type: " + bucket.getConflictResolutionType());
         }
       }
 

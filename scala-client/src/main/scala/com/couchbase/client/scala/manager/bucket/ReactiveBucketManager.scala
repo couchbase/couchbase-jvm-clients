@@ -46,7 +46,6 @@ class ReactiveBucketManager(couchbaseOps: CoreCouchbaseOps) {
         coreBucketManager
           .createBucket(
             settings.toCore,
-            settings.toCoreCreateBucketSettings,
             toCommonOptions(timeout, retryStrategy)
           )
       )

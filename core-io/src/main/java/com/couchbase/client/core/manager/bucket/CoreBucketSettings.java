@@ -43,6 +43,9 @@ public interface CoreBucketSettings {
   BucketType bucketType();
 
   @Nullable
+  CoreConflictResolutionType conflictResolutionType();
+
+  @Nullable
   CoreEvictionPolicyType evictionPolicy();
 
   @Nullable

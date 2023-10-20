@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import com.couchbase.client.core.service.ServiceType;
@@ -37,7 +36,6 @@ import com.couchbase.client.protostellar.admin.bucket.v1.ListBucketsRequest;
 import com.couchbase.client.protostellar.admin.bucket.v1.StorageBackend;
 import com.couchbase.client.protostellar.admin.bucket.v1.UpdateBucketRequest;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -51,10 +49,11 @@ public class ProtostellarCoreBucketManagerRequests {
   private ProtostellarCoreBucketManagerRequests() {
   }
 
-  public static ProtostellarRequest<CreateBucketRequest> createBucketRequest(CoreProtostellar core,
-                                                                             CoreBucketSettings settings,
-                                                                             @Nullable CoreCreateBucketSettings createSpecificSettings,
-                                                                             CoreCommonOptions opts) {
+  public static ProtostellarRequest<CreateBucketRequest> createBucketRequest(
+    CoreProtostellar core,
+    CoreBucketSettings settings,
+    CoreCommonOptions opts
+  ) {
     CreateBucketRequest.Builder request = CreateBucketRequest.newBuilder()
       .setBucketName(settings.name());
 
@@ -163,21 +162,19 @@ public class ProtostellarCoreBucketManagerRequests {
       throw unsupportedCurrentlyInProtostellar();
     }
 
-    if (createSpecificSettings != null) {
-      if (createSpecificSettings.conflictResolutionType() != null) {
-        switch (createSpecificSettings.conflictResolutionType()) {
-          case TIMESTAMP:
-            request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_TIMESTAMP);
-            break;
-          case SEQUENCE_NUMBER:
-            request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_SEQUENCE_NUMBER);
-            break;
-          case CUSTOM:
-            request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_CUSTOM);
-            break;
-          default:
-            throw InvalidArgumentException.fromMessage("Unknown conflict resolution type");
-        }
+    if (settings.conflictResolutionType() != null) {
+      switch (settings.conflictResolutionType()) {
+        case TIMESTAMP:
+          request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_TIMESTAMP);
+          break;
+        case SEQUENCE_NUMBER:
+          request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_SEQUENCE_NUMBER);
+          break;
+        case CUSTOM:
+          request.setConflictResolutionType(ConflictResolutionType.CONFLICT_RESOLUTION_TYPE_CUSTOM);
+          break;
+        default:
+          throw InvalidArgumentException.fromMessage("Unknown conflict resolution type");
       }
     }
 

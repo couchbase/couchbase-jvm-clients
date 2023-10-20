@@ -20,8 +20,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
-import reactor.util.annotation.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -29,7 +27,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
 public interface CoreBucketManagerOps {
-  CompletableFuture<Void> createBucket(CoreBucketSettings settings, @Nullable CoreCreateBucketSettings createSpecificSettings, CoreCommonOptions options);
+  CompletableFuture<Void> createBucket(CoreBucketSettings settings, CoreCommonOptions options);
 
   CompletableFuture<Void> updateBucket(CoreBucketSettings settings, CoreCommonOptions options);
 

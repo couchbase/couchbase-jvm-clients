@@ -357,6 +357,18 @@ class BucketManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
+  @IgnoreWhen(missesCapabilities = Capabilities.ENTERPRISE_EDITION)
+  void canSetAndGetConfluctResolutionType() {
+    String bucketName = UUID.randomUUID().toString();
+
+    ConflictResolutionType nonDefaultType = ConflictResolutionType.TIMESTAMP;
+    createBucket(BucketSettings.create(bucketName).ramQuotaMB(100).conflictResolutionType(nonDefaultType));
+
+    BucketSettings bucket = buckets.getBucket(bucketName);
+    assertEquals(nonDefaultType, bucket.conflictResolutionType());
+  }
+
+  @Test
   @IgnoreWhen(hasCapabilities = {Capabilities.ENTERPRISE_EDITION})
   void createBucketWithCompressionModeShouldFailOnCE() {
     String name = UUID.randomUUID().toString();

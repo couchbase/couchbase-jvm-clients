@@ -22,7 +22,6 @@ import com.couchbase.client.core.manager.bucket.{
   CoreBucketSettings,
   CoreCompressionMode,
   CoreConflictResolutionType,
-  CoreCreateBucketSettings,
   CoreEvictionPolicyType,
   CoreStorageBackend
 }
@@ -311,6 +310,15 @@ case class CreateBucketSettings(
           case BucketType.Ephemeral => config.BucketType.EPHEMERAL
         }.orNull
 
+      override def conflictResolutionType(): CoreConflictResolutionType =
+        x.conflictResolutionType match {
+          case Some(ConflictResolutionType.Timestamp) => CoreConflictResolutionType.TIMESTAMP
+          case Some(ConflictResolutionType.Custom)    => CoreConflictResolutionType.CUSTOM
+          case Some(ConflictResolutionType.SequenceNumber) =>
+            CoreConflictResolutionType.SEQUENCE_NUMBER
+          case None => null
+        }
+
       override def evictionPolicy(): CoreEvictionPolicyType =
         x.ejectionMethod.map {
           case EjectionMethod.FullEviction    => CoreEvictionPolicyType.FULL
@@ -353,20 +361,6 @@ case class CreateBucketSettings(
 
       override def historyRetentionDuration(): java.time.Duration =
         x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
-    }
-  }
-
-  private[scala] def toCoreCreateBucketSettings: CoreCreateBucketSettings = {
-    val x = this
-    new CoreCreateBucketSettings {
-      override def conflictResolutionType(): CoreConflictResolutionType =
-        x.conflictResolutionType match {
-          case Some(ConflictResolutionType.Timestamp) => CoreConflictResolutionType.TIMESTAMP
-          case Some(ConflictResolutionType.Custom)    => CoreConflictResolutionType.CUSTOM
-          case Some(ConflictResolutionType.SequenceNumber) =>
-            CoreConflictResolutionType.SEQUENCE_NUMBER
-          case None => null
-        }
     }
   }
 }

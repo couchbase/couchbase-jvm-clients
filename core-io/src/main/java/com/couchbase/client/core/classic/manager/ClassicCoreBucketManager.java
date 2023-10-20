@@ -33,12 +33,10 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import reactor.util.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,13 +79,13 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
   }
 
   @Override
-  public CompletableFuture<Void> createBucket(CoreBucketSettings settings, CoreCreateBucketSettings createSpecificSettings, CoreCommonOptions options) {
+  public CompletableFuture<Void> createBucket(CoreBucketSettings settings, CoreCommonOptions options) {
     String bucketName = settings.name();
 
     return httpClient.post(pathForBuckets(), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_CREATE_BUCKET)
         .traceBucket(bucketName)
-        .form(convertSettingsToParams(settings, createSpecificSettings, false))
+        .form(convertSettingsToParams(settings, false))
         .exec(core)
         .exceptionally(t -> {
           throw httpResponseBody(t).contains("Bucket with given name already exists")
@@ -117,7 +115,7 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
     return httpClient.post(pathForBucket(bucketName), options)
         .trace(TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET)
         .traceBucket(bucketName)
-        .form(convertSettingsToParams(settings, null, true))
+        .form(convertSettingsToParams(settings, true))
         .exec(core)
         .exceptionally(translateBucketNotFound(bucketName))
         .thenApply(response -> null);
@@ -183,9 +181,10 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
         .thenApply(response -> null);
   }
 
-  private UrlQueryStringBuilder convertSettingsToParams(CoreBucketSettings settings,
-                                                        @Nullable CoreCreateBucketSettings createSpecificSettings,
-                                                        boolean update) {
+  private UrlQueryStringBuilder convertSettingsToParams(
+      CoreBucketSettings settings,
+      boolean update
+  ) {
     Map<String, String> params = new HashMap<>();
 
     if (settings.ramQuotaMB() != null) {
@@ -224,8 +223,8 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
     if (settings.bucketType() != null) {
       params.put("bucketType", settings.bucketType().getRaw());
     }
-    if (createSpecificSettings != null && createSpecificSettings.conflictResolutionType() != null) {
-      params.put("conflictResolutionType", createSpecificSettings.conflictResolutionType().alias());
+    if (settings.conflictResolutionType() != null) {
+      params.put("conflictResolutionType", settings.conflictResolutionType().alias());
     }
     if (settings.bucketType() != null
         && settings.bucketType() != BucketType.EPHEMERAL

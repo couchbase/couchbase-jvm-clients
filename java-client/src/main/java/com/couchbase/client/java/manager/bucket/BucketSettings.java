@@ -21,7 +21,6 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreCompressionMode;
 import com.couchbase.client.core.manager.bucket.CoreConflictResolutionType;
-import com.couchbase.client.core.manager.bucket.CoreCreateBucketSettings;
 import com.couchbase.client.core.manager.bucket.CoreEvictionPolicyType;
 import com.couchbase.client.core.manager.bucket.CoreStorageBackend;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -109,6 +108,19 @@ public class BucketSettings {
           break;
         case MEMCACHED:
           this.bucketType = BucketType.MEMCACHED;
+          break;
+      }
+    }
+    if (internal.conflictResolutionType() != null) {
+      switch (internal.conflictResolutionType()) {
+        case CUSTOM:
+          this.conflictResolutionType = ConflictResolutionType.CUSTOM;
+          break;
+        case SEQUENCE_NUMBER:
+          this.conflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER;
+          break;
+        case TIMESTAMP:
+          this.conflictResolutionType = ConflictResolutionType.TIMESTAMP;
           break;
       }
     }
@@ -528,6 +540,23 @@ public class BucketSettings {
       }
 
       @Override
+      public CoreConflictResolutionType conflictResolutionType() {
+        if (conflictResolutionType == null) {
+          return null;
+        }
+        switch (conflictResolutionType) {
+          case TIMESTAMP:
+            return CoreConflictResolutionType.TIMESTAMP;
+          case SEQUENCE_NUMBER:
+            return CoreConflictResolutionType.SEQUENCE_NUMBER;
+          case CUSTOM:
+            return CoreConflictResolutionType.CUSTOM;
+          default:
+            throw new CouchbaseException("Unknown conflict resolution type");
+        }
+      }
+
+      @Override
       public CoreEvictionPolicyType evictionPolicy() {
         if (evictionPolicy == null) {
           return null;
@@ -607,27 +636,6 @@ public class BucketSettings {
       ", historyRetentionBytes=" + historyRetentionBytes +
       ", historyRetentionDuration=" + historyRetentionDuration +
       '}';
-  }
-
-  public CoreCreateBucketSettings toCoreCreateBucketSettings() {
-    return new CoreCreateBucketSettings() {
-      @Override
-      public CoreConflictResolutionType conflictResolutionType() {
-        if (conflictResolutionType == null) {
-          return null;
-        }
-        switch (conflictResolutionType) {
-          case TIMESTAMP:
-            return CoreConflictResolutionType.TIMESTAMP;
-          case SEQUENCE_NUMBER:
-            return CoreConflictResolutionType.SEQUENCE_NUMBER;
-          case CUSTOM:
-            return CoreConflictResolutionType.CUSTOM;
-          default:
-            throw new CouchbaseException("Unknown conflict resolution type");
-        }
-      }
-    };
   }
 
   /**

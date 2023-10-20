@@ -117,7 +117,7 @@ public class AsyncBucketManager {
       merged = BucketSettings.merge(base, settings);
     }
 
-    return coreBucketManager.createBucket(merged.toCore(), merged.toCoreCreateBucketSettings(), options.build());
+    return coreBucketManager.createBucket(merged.toCore(), options.build());
   }
 
   /**
