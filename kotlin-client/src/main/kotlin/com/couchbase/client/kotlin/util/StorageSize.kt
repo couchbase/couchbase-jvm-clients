@@ -89,6 +89,7 @@ public class StorageSize(
     internal fun serialize(): String = "$value ${unit.shortName}"
 
     internal fun simplify(): StorageSize {
+        if (inBytes == 0L) return 0.bytes
         if (value % 1024 != 0L) return this
         val nextUnit = when (unit) {
             BYTES -> KIBIBYTES
