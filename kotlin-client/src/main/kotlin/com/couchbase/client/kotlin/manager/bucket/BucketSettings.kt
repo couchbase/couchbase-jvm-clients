@@ -24,7 +24,6 @@ import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
-import kotlin.DeprecationLevel.WARNING
 import kotlin.time.Duration.Companion.seconds
 
 @JvmInline
@@ -85,8 +84,7 @@ public value class BucketType private constructor(
          * buckets reduce the number of queries a database-server must perform. Each Memcached bucket provides a
          * directly addressable, distributed, in-memory key-value cache.
          */
-        @Deprecated(level = WARNING,
-            message = "Memcached buckets are deprecated. Consider using an ephemeral bucket instead.")
+        @Deprecated("Memcached buckets are deprecated. Consider using an ephemeral bucket instead.")
         public val MEMCACHED: BucketType = BucketType("memcached")
 
         public fun of(name: String): BucketType = when (name) {
