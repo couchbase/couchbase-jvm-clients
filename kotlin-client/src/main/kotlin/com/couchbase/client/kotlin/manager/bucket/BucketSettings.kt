@@ -24,6 +24,7 @@ import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @JvmInline
@@ -226,6 +227,13 @@ public class BucketSettings internal constructor(
     public val conflictResolutionType: ConflictResolutionType,
     public val minimumDurability: Durability,
     public val evictionPolicy: EvictionPolicyType,
+    public val replicateViewIndexes: Boolean?,
+    @SinceCouchbase("7.2") public val historyRetentionCollectionDefault: Boolean?,
+    @SinceCouchbase("7.2") public val historyRetentionSize: StorageSize?,
+    @SinceCouchbase("7.2") public val historyRetentionDuration: Duration?,
+    // NOTE: All new fields should be nullable, please.
+    // That way, field values can be fed back into `updateBucket`
+    // without fear of passing a value not supported by the server.
 ) {
 
     init {
@@ -259,12 +267,17 @@ public class BucketSettings internal constructor(
                     DurabilityLevel.decodeFromManagementApi(json.path("durabilityMinLevel").textValue())
                 ),
                 evictionPolicy = EvictionPolicyType.of(json.path("evictionPolicy").asText()),
-                storageBackend = StorageBackend.of(json.path("storageBackend").asText())
+                storageBackend = StorageBackend.of(json.path("storageBackend").asText()),
+                replicateViewIndexes = json.get("replicaIndex")?.booleanValue(),
+
+                historyRetentionCollectionDefault = json.get("historyRetentionCollectionDefault")?.booleanValue(),
+                historyRetentionSize = json.get("historyRetentionBytes")?.longValue()?.bytes?.simplify(),
+                historyRetentionDuration = json.get("historyRetentionSeconds")?.longValue()?.seconds,
             )
         }
     }
 
     override fun toString(): String {
-        return "BucketSettings(name='$name', ramQuota=$ramQuota, bucketType=$bucketType, storageBackend=$storageBackend, flushEnabled=$flushEnabled, replicas=$replicas, maximumExpiry=$maximumExpiry, compressionMode=$compressionMode, conflictResolutionType=$conflictResolutionType, minimumDurability=$minimumDurability, evictionPolicy=$evictionPolicy)"
+        return "BucketSettings(name='$name', ramQuota=$ramQuota, bucketType=$bucketType, storageBackend=$storageBackend, flushEnabled=$flushEnabled, replicas=$replicas, maximumExpiry=$maximumExpiry, compressionMode=$compressionMode, conflictResolutionType=$conflictResolutionType, minimumDurability=$minimumDurability, evictionPolicy=$evictionPolicy, replicateViewIndexes=$replicateViewIndexes, historyRetentionCollectionDefault=$historyRetentionCollectionDefault, historyRetentionSize=$historyRetentionSize, historyRetentionDuration=$historyRetentionDuration)"
     }
 }

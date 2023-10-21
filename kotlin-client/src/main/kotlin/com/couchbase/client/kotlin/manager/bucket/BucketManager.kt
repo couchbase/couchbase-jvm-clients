@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.manager.bucket
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.error.BucketExistsException
 import com.couchbase.client.core.error.BucketNotFlushableException
 import com.couchbase.client.core.error.BucketNotFoundException
@@ -31,6 +32,7 @@ import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.util.StorageSize
 import com.couchbase.client.kotlin.util.StorageSize.Companion.mebibytes
 import kotlinx.coroutines.future.await
+import kotlin.time.Duration
 
 public class BucketManager(core: Core) {
     private val coreManager = CoreBucketManager(core)
@@ -40,6 +42,51 @@ public class BucketManager(core: Core) {
      *
      * @throws BucketExistsException if bucket already exists
      */
+    public suspend fun createBucket(
+        name: String,
+        common: CommonOptions = CommonOptions.Default,
+        ramQuota: StorageSize = 100.mebibytes,
+        bucketType: BucketType? = null,
+        storageBackend: StorageBackend? = null,
+        evictionPolicy: EvictionPolicyType? = null,
+        flushEnabled: Boolean? = null,
+        replicas: Int? = null,
+        maximumExpiry: Expiry? = null,
+        compressionMode: CompressionMode? = null,
+        minimumDurability: Durability? = null,
+        conflictResolutionType: ConflictResolutionType? = null,
+        replicateViewIndexes: Boolean? = null,
+        @SinceCouchbase("7.2") historyRetentionCollectionDefault: Boolean? = null,
+        @SinceCouchbase("7.2") historyRetentionSize: StorageSize? = null,
+        @SinceCouchbase("7.2") historyRetentionDuration: Duration? = null,
+    ) {
+        val params = toMap(
+            name = name,
+            ramQuota = ramQuota,
+            bucketType = bucketType,
+            storageBackend = storageBackend,
+            evictionPolicy = evictionPolicy,
+            flushEnabled = flushEnabled,
+            conflictResolutionType = conflictResolutionType,
+            replicas = replicas,
+            replicateViewIndexes = replicateViewIndexes,
+            historyRetentionCollectionDefault = historyRetentionCollectionDefault,
+            historyRetentionDuration = historyRetentionDuration,
+            historyRetentionSize = historyRetentionSize,
+
+            // KLUDGE: CE throws an error if we send these, but previous versions
+            // of the SDK allowed CE users to specify the "default" values anyway :-/
+            maximumExpiry = if (maximumExpiry == Expiry.none()) null else maximumExpiry,
+            compressionMode = if (compressionMode == CompressionMode.PASSIVE) null else compressionMode,
+            minimumDurability = if (minimumDurability !is Durability.Synchronous) null else minimumDurability,
+            // ^-- Please don't do this for new settings. Going forward,
+            // the pattern is that we pass all non-null arguments to the server.
+        )
+
+        coreManager.createBucket(params.toMap(), common.toCore()).await()
+    }
+
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
     public suspend fun createBucket(
         name: String,
         common: CommonOptions = CommonOptions.Default,
@@ -55,23 +102,20 @@ public class BucketManager(core: Core) {
         conflictResolutionType: ConflictResolutionType = ConflictResolutionType.SEQUENCE_NUMBER,
     ) {
         @Suppress("DEPRECATION")
-        val params = toMap(
+        createBucket(
             name = name,
+            common = common,
             ramQuota = ramQuota,
             bucketType = bucketType,
             storageBackend = storageBackend,
             evictionPolicy = evictionPolicy,
             flushEnabled = flushEnabled,
-            conflictResolutionType = conflictResolutionType,
             replicas = if (bucketType == BucketType.MEMCACHED) null else replicas,
-
-            // CE doesn't support these, so exclude the default values from the request
-            maximumExpiry = if (maximumExpiry == Expiry.none()) null else maximumExpiry,
-            compressionMode = if (compressionMode == CompressionMode.PASSIVE) null else compressionMode,
-            minimumDurability = if (minimumDurability !is Durability.Synchronous) null else minimumDurability,
+            conflictResolutionType = conflictResolutionType,
+            maximumExpiry = maximumExpiry,
+            compressionMode = compressionMode,
+            minimumDurability = minimumDurability,
         )
-
-        coreManager.createBucket(params.toMap(), common.toCore()).await()
     }
 
     /**
@@ -90,10 +134,9 @@ public class BucketManager(core: Core) {
         compressionMode: CompressionMode? = null,
         minimumDurability: Durability? = null,
         evictionPolicy: EvictionPolicyType? = null,
-
-        // bucketType can't be updated
-        // conflictResolutionType can't be updated
-        // storageBackend can't be updated
+        @SinceCouchbase("7.2") historyRetentionCollectionDefault: Boolean? = null,
+        @SinceCouchbase("7.2") historyRetentionSize: StorageSize? = null,
+        @SinceCouchbase("7.2") historyRetentionDuration: Duration? = null,
     ) {
         val params = toMap(
             name = name,
@@ -104,8 +147,42 @@ public class BucketManager(core: Core) {
             compressionMode = compressionMode,
             minimumDurability = minimumDurability,
             evictionPolicy = evictionPolicy,
+            historyRetentionCollectionDefault = historyRetentionCollectionDefault,
+            historyRetentionDuration = historyRetentionDuration,
+            historyRetentionSize = historyRetentionSize,
+
+            // these cannot be updated
+            bucketType = null,
+            conflictResolutionType = null,
+            storageBackend = null,
+            replicateViewIndexes = null,
         )
         coreManager.updateBucket(params, common.toCore()).await()
+    }
+
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public suspend fun updateBucket(
+        name: String,
+        common: CommonOptions = CommonOptions.Default,
+        ramQuota: StorageSize? = null,
+        flushEnabled: Boolean? = null,
+        replicas: Int? = null,
+        maximumExpiry: Expiry? = null,
+        compressionMode: CompressionMode? = null,
+        minimumDurability: Durability? = null,
+        evictionPolicy: EvictionPolicyType? = null,
+    ) {
+        updateBucket(
+            name = name,
+            common = common,
+            ramQuota = ramQuota,
+            flushEnabled = flushEnabled,
+            replicas = replicas,
+            maximumExpiry = maximumExpiry,
+            compressionMode = compressionMode,
+            minimumDurability = minimumDurability,
+            evictionPolicy = evictionPolicy,
+        )
     }
 
     /**
@@ -174,30 +251,38 @@ public class BucketManager(core: Core) {
 
     private fun toMap(
         name: String,
-        ramQuota: StorageSize? = null,
-        bucketType: BucketType? = null,
-        storageBackend: StorageBackend? = null,
-        flushEnabled: Boolean? = null,
-        replicas: Int? = null,
-        maximumExpiry: Expiry? = null,
-        compressionMode: CompressionMode? = null,
-        minimumDurability: Durability? = null,
-        evictionPolicy: EvictionPolicyType? = null,
-        conflictResolutionType: ConflictResolutionType? = null,
+        ramQuota: StorageSize?,
+        bucketType: BucketType?,
+        storageBackend: StorageBackend?,
+        flushEnabled: Boolean?,
+        replicas: Int?,
+        maximumExpiry: Expiry?,
+        compressionMode: CompressionMode?,
+        minimumDurability: Durability?,
+        evictionPolicy: EvictionPolicyType?,
+        conflictResolutionType: ConflictResolutionType?,
+        replicateViewIndexes: Boolean?,
+        historyRetentionCollectionDefault: Boolean?,
+        historyRetentionSize: StorageSize?,
+        historyRetentionDuration: Duration?,
     ): Map<String, String> {
-        val params = mutableMapOf<String, Any?>("name" to name)
-        ramQuota?.let { params["ramQuotaMB"] = ramQuota.inWholeMebibytes }
-        flushEnabled?.let { params["flushEnabled"] = if (flushEnabled) 1 else 0 }
-        evictionPolicy?.let { params["evictionPolicy"] = evictionPolicy.name }
+        val params = mutableMapOf<String, Any>("name" to name)
+        ramQuota?.let { params["ramQuotaMB"] = it.inWholeMebibytes }
+        flushEnabled?.let { params["flushEnabled"] = if (it) 1 else 0 }
+        evictionPolicy?.let { params["evictionPolicy"] = it.name }
         compressionMode?.let { params["compressionMode"] = it.name }
         storageBackend?.let { params["storageBackend"] = it.name }
         bucketType?.let { params["bucketType"] = it.name }
         conflictResolutionType?.let { params["conflictResolutionType"] = it.name }
-        replicas?.let { params["replicaNumber"] = replicas }
+        replicas?.let { params["replicaNumber"] = it }
+        replicateViewIndexes?.let { params["replicaIndex"] = if (it) 1 else 0 }
+        historyRetentionCollectionDefault?.let { params["historyRetentionCollectionDefault"] = it }
+        historyRetentionSize?.let { params["historyRetentionBytes"] = it.inBytes }
+        historyRetentionDuration?.let { params["historyRetentionSeconds"] = it.inWholeSeconds }
 
         maximumExpiry?.let {
-            require(it !is Expiry.Absolute) {
-                "Maximum expiry must not be absolute -- use Expiry.none() or Expiry.of(Duration)."
+            require(it is Expiry.None || it is Expiry.Relative) {
+                "Maximum expiry must be Expiry.none() or Expiry.of(Duration)."
             }
             params["maxTTL"] = if (it is Expiry.Relative) it.duration.inWholeSeconds else 0
         }
@@ -206,7 +291,7 @@ public class BucketManager(core: Core) {
             require(it !is Durability.ClientVerified) {
                 "Minimum durability must not be client verified."
             }
-            params["durabilityMinLevel"] = minimumDurability.levelIfSynchronous().orElse(DurabilityLevel.NONE)
+            params["durabilityMinLevel"] = it.levelIfSynchronous().orElse(DurabilityLevel.NONE)
                 .encodeForManagementApi()
         }
 
