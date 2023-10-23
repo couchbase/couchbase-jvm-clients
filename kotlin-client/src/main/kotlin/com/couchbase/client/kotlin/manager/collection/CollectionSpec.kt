@@ -29,7 +29,27 @@ public class CollectionSpec(
     public val scopeName: String,
     public val name: String,
     public val maxExpiry: Duration? = null,
+    public val history: Boolean? = null,
 ) {
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public constructor(
+        scopeName: String,
+        name: String,
+        maxExpiry: Duration? = null,
+    ) : this(
+        scopeName = scopeName,
+        name = name,
+        maxExpiry = maxExpiry,
+    )
+
+    public fun copy(
+        scopeName: String = this.scopeName,
+        name: String = this.name,
+        maxExpiry: Duration? = this.maxExpiry,
+        history: Boolean? = this.history,
+    ): CollectionSpec = CollectionSpec(scopeName, name, maxExpiry, history)
+
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
     public fun copy(
         scopeName: String = this.scopeName,
         name: String = this.name,
@@ -37,7 +57,7 @@ public class CollectionSpec(
     ): CollectionSpec = CollectionSpec(scopeName, name, maxExpiry)
 
     override fun toString(): String {
-        return "CollectionSpec(scopeName='$scopeName', name='$name', maxExpiry=$maxExpiry)"
+        return "CollectionSpec(scopeName='$scopeName', name='$name', maxExpiry=$maxExpiry, history=$history)"
     }
 
     override fun equals(other: Any?): Boolean {
@@ -49,6 +69,7 @@ public class CollectionSpec(
         if (scopeName != other.scopeName) return false
         if (name != other.name) return false
         if (maxExpiry != other.maxExpiry) return false
+        if (history != other.history) return false
 
         return true
     }

@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.util.*
+import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
@@ -65,7 +65,7 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
         manager.createCollection(spec)
         waitUntil { manager.collectionExists(spec.scopeName, spec.name) }
         ConsistencyUtil.waitUntilCollectionPresent(cluster.core, bucket.name, spec.scopeName, spec.name)
-        return spec
+        return spec.copy(history = false)
     }
 
     @Test

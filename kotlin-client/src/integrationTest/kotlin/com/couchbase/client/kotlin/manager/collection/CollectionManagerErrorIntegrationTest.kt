@@ -27,7 +27,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.util.*
+import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 
 internal class CollectionManagerErrorIntegrationTest : KotlinIntegrationTest() {
@@ -71,13 +71,14 @@ internal class CollectionManagerErrorIntegrationTest : KotlinIntegrationTest() {
                 // getAllScopes is the only supported operation
                 val defaultScope = ScopeSpec(
                     name = DEFAULT_SCOPE,
-                    collections = listOf(CollectionSpec(DEFAULT_SCOPE, DEFAULT_COLLECTION))
+                    collections = listOf(CollectionSpec(DEFAULT_SCOPE, DEFAULT_COLLECTION, history = false))
                 )
                 assertEquals(listOf(defaultScope), getAllScopes())
 
                 assertThrows<FeatureNotAvailableException> { createScope("foo") }
                 assertThrows<FeatureNotAvailableException> { dropScope("foo") }
                 assertThrows<FeatureNotAvailableException> { createCollection("foo", "bar") }
+                assertThrows<FeatureNotAvailableException> { updateCollection("foo", "bar") }
                 assertThrows<FeatureNotAvailableException> { dropCollection("foo", "bar") }
             }
         } finally {

@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.manager.collection
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.error.CollectionExistsException
 import com.couchbase.client.core.error.CollectionNotFoundException
 import com.couchbase.client.core.error.ScopeExistsException
@@ -56,16 +57,16 @@ public class CollectionManager internal constructor(bucket: Bucket) {
      *
      * @sample com.couchbase.client.kotlin.samples.createScopeAndCollections
      */
-    @UncommittedCouchbaseApi
     public suspend fun createCollection(
         scopeName: String,
         collectionName: String,
         common: CommonOptions = CommonOptions.Default,
         maxExpiry: Duration? = null,
+        @SinceCouchbase("7.2") history: Boolean? = null,
     ) {
         core.createCollection(scopeName, collectionName, object : CoreCreateOrUpdateCollectionSettings {
             override fun maxExpiry(): java.time.Duration? = maxExpiry?.toJavaDuration()
-            override fun history(): Boolean? = null
+            override fun history(): Boolean? = history
         }, common.toCore()).await()
     }
 
@@ -86,16 +87,39 @@ public class CollectionManager internal constructor(bucket: Bucket) {
                 scopeName = scopeName,
                 collectionName = name,
                 common = common,
-                maxExpiry = maxExpiry
+                maxExpiry = maxExpiry,
+                history = history,
             )
         }
     }
 
     /**
-     * Deletes a collection from a scope. Equivalent to:
-     * ```
-     * dropCollection(CollectionSpec(scopeName, collectionName))
-     * ```
+     * Modifies an existing collection.
+     *
+     * @param scopeName Name of the parent scope. This scope must already exist.
+     * @param collectionName Name of the collection to update. This collection must already exist.
+     * @param maxExpiry New value for the maximum expiry for documents in the collection ([Duration.ZERO] means "no expiry"), or null to leave unmodified.
+     * @param history New value for history preservation for this collection, or null to leave unmodified.
+     *
+     * @throws ScopeNotFoundException if the parent scope does not exist.
+     * @throws CollectionNotFoundException if the collection does not exist.
+     */
+    @SinceCouchbase("7.2")
+    public suspend fun updateCollection(
+        scopeName: String,
+        collectionName: String,
+        common: CommonOptions = CommonOptions.Default,
+        @SinceCouchbase("7.6") maxExpiry: Duration? = null,
+        history: Boolean? = null,
+    ) {
+        core.updateCollection(scopeName, collectionName, object : CoreCreateOrUpdateCollectionSettings {
+            override fun maxExpiry(): java.time.Duration? = maxExpiry?.toJavaDuration()
+            override fun history(): Boolean? = history
+        }, common.toCore()).await()
+    }
+
+    /**
+     * Deletes a collection from a scope.
      *
      * **WARNING:** All documents and indexes in the collection will be lost.
      *
@@ -105,7 +129,6 @@ public class CollectionManager internal constructor(bucket: Bucket) {
      * @throws ScopeNotFoundException if the parent scope does not exist.
      * @throws CollectionNotFoundException if there is no collection with this name in the parent scope.
      */
-    @UncommittedCouchbaseApi
     public suspend fun dropCollection(
         scopeName: String,
         collectionName: String,
@@ -115,7 +138,10 @@ public class CollectionManager internal constructor(bucket: Bucket) {
     }
 
     /**
-     * Deletes a collection from a scope.
+     * Deletes a collection from a scope. Equivalent to:
+     * ```
+     * dropCollection(collection.scopeName, collection.name)
+     * ```
      *
      * **WARNING:** All documents and indexes in the collection will be lost.
      *
@@ -192,7 +218,8 @@ public class CollectionManager internal constructor(bucket: Bucket) {
                     CollectionSpec(
                         scopeName = scope.name(),
                         name = collection.name(),
-                        maxExpiry = if (collection.maxExpiry() == null || collection.maxExpiry() == 0) null else collection.maxExpiry().seconds
+                        maxExpiry = if (collection.maxExpiry() == null || collection.maxExpiry() == 0) null else collection.maxExpiry().seconds,
+                        history = collection.history()
                     )
                 },
             )
