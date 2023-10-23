@@ -124,6 +124,12 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
           // This happens on 7.0 and later under memcached buckets
           throw FeatureNotAvailableException.collectionsForMemcached();
         }
+        if (error.contains("Unsupported key")) {
+          // Server didn't recognize one of the request parameters.
+          // Assume it's for a feature the server does not support,
+          // like "maxTTL" before server version 7.6.
+          throw new FeatureNotAvailableException("This version of Couchbase Server does not recognize one of the request parameters. Details: " + error, t);
+        }
 
         if (error.matches(".*Collection.+not found.*") || error.contains("collection_not_found")) {
           throw CollectionNotFoundException.forCollection(collectionName);
