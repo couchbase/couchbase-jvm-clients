@@ -20,6 +20,10 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.kv.CoreRangeScan;
+import com.couchbase.client.core.kv.CoreSamplingScan;
+import com.couchbase.client.core.kv.CoreScanOptions;
+import com.couchbase.client.core.kv.CoreScanType;
 
 import java.time.Duration;
 import java.util.List;
@@ -110,6 +114,30 @@ public class CoreKvParamValidators {
     if (cas != 0 && (storeSemantics != REPLACE && storeSemantics != REVIVE)) {
       // Not mentioning REVIVE in the user-facing error message, since it's internal API.
       throw InvalidArgumentException.fromMessage("A non-zero CAS value requires \"replace\" store semantics.");
+    }
+  }
+
+  public static void validateScanParams(CoreScanType scanType, CoreScanOptions options) {
+    notNull(scanType, "ScanType");
+    if (scanType instanceof CoreRangeScan) {
+      CoreRangeScan st = (CoreRangeScan) scanType;
+      notNull(st.to(), "ScanType To");
+      notNull(st.from(), "ScanType From");
+      notNullOrEmpty(st.to().id(), "ScanType To Id");
+      notNullOrEmpty(st.from().id(), "ScanType From Id");
+    } else if (scanType instanceof CoreSamplingScan) {
+      CoreSamplingScan st = (CoreSamplingScan) scanType;
+      if (st.limit() <= 0) {
+        throw InvalidArgumentException.fromMessage("The limit of the SamplingScan must be greater than 0");
+      }
+    } else {
+      throw InvalidArgumentException.fromMessage("Unsupported ScanType: " + scanType);
+    }
+    if (options.batchByteLimit() < 0) {
+      throw InvalidArgumentException.fromMessage("The batchByteLimit must not be smaller than 0");
+    }
+    if (options.batchItemLimit() < 0) {
+      throw InvalidArgumentException.fromMessage("The batchItemLimit must not be smaller than 0");
     }
   }
 

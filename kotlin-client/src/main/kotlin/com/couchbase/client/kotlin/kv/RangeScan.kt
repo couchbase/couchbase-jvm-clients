@@ -48,9 +48,6 @@ public sealed class ScanType {
         public val limit: Long,
         public val seed: Long?,
     ) : ScanType() {
-        init {
-            require(limit > 0) { "Sample size limit must be > 0 but got $limit" }
-        }
     }
 
     public class Prefix internal constructor(

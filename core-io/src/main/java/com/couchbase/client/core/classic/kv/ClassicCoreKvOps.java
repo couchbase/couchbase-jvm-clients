@@ -27,6 +27,7 @@ import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
+import com.couchbase.client.core.api.kv.CoreKvParamValidators;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreLookupInMacro;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
@@ -877,7 +878,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public Flux<CoreRangeScanItem> scanRequestReactive(final CoreScanType scanType, final CoreScanOptions options) {
-    notNull(scanType, "ScanType");
+    CoreKvParamValidators.validateScanParams(scanType, options);
     notNull(options, "Options");
 
     Flux<CoreRangeScanItem> coreScanStream;
