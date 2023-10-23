@@ -420,7 +420,7 @@ object ScalaSdkCommandExecutor {
           Some(com.couchbase.client.scala.kv.ScanTerm.exclusive(stt.getAsString))
         } else throw new UnsupportedOperationException("Unknown scan term");
       }
-      if (stt.hasAsString) {
+      else if (stt.hasAsString) {
         Some(com.couchbase.client.scala.kv.ScanTerm.inclusive(stt.getAsString))
       } else throw new UnsupportedOperationException("Unknown scan term");
     } else throw new UnsupportedOperationException("Unknown scan term")
