@@ -18,6 +18,7 @@ package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
+import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
 import com.couchbase.client.kotlin.kv.KvScanConsistency
@@ -103,25 +104,35 @@ fun processScanResult(request: FitScan, documentOrId: Any): FitRunResult = try {
         .setStreamId(request.streamConfig.streamId)
 
     when (documentOrId) {
-        is String -> builder.id = documentOrId
+        is String -> {
+            builder.id = documentOrId
+            builder.idOnly = true
+        }
 
         is GetResult -> with(documentOrId) {
             builder.id = id
+            builder.idOnly = false
             builder.cas = cas
 
             if (expiry is Expiry.Absolute) {
                 builder.expiryTime = (expiry as Expiry.Absolute).instant.epochSecond
             }
 
+            val transcoder: Transcoder? = if (request.hasOptions()) {
+                convertTranscoder(request.options.hasTranscoder(), request.options.transcoder)
+            } else {
+                null
+            }
+
             if (request.hasContentAs()) {
                 val content = ContentAsUtil.contentType(request.contentAs,
-                    { contentAs<ByteArray>() },
-                    { contentAs<String>() },
-                    { contentAs<JsonObject>() },
-                    { contentAs<JsonArray>() },
-                    { contentAs<Boolean>() },
-                    { contentAs<Int>() },
-                    { contentAs<Double>() })
+                    { contentAs<ByteArray>(transcoder) },
+                    { contentAs<String>(transcoder) },
+                    { contentAs<JsonObject>(transcoder) },
+                    { contentAs<JsonArray>(transcoder) },
+                    { contentAs<Boolean>(transcoder) },
+                    { contentAs<Int>(transcoder) },
+                    { contentAs<Double>(transcoder) })
 
                 builder.content = content
             }

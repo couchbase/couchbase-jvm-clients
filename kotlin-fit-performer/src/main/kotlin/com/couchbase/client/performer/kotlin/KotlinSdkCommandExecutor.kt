@@ -384,20 +384,6 @@ class KotlinSdkCommandExecutor(
         }
     }
 
-    private fun convertTranscoder(hasTranscoder: Boolean, transcoderMaybe: Transcoder?): com.couchbase.client.kotlin.codec.Transcoder? {
-        if (!hasTranscoder) return null
-
-        val transcoder = transcoderMaybe!!
-        return when {
-            transcoder.hasRawJson() -> RawJsonTranscoder
-            transcoder.hasJson() -> jsonTranscoder
-            transcoder.hasRawString() -> RawStringTranscoder
-            transcoder.hasRawBinary() -> RawBinaryTranscoder
-            // Kotlin does not have LegacyTranscoder
-            else -> throw UnsupportedOperationException("Unknown transcoder: $transcoder")
-        }
-    }
-
     private fun populateResult(
         result: FitRunResult.Builder,
         value: MutationResult
@@ -483,4 +469,18 @@ fun waitUntilReadyServiceTypes (request: WaitUntilReadyRequest): Set<com.couchba
     }
 
     return services
+}
+
+fun convertTranscoder(hasTranscoder: Boolean, transcoderMaybe: Transcoder?): com.couchbase.client.kotlin.codec.Transcoder? {
+    if (!hasTranscoder) return null
+
+    val transcoder = transcoderMaybe!!
+    return when {
+        transcoder.hasRawJson() -> RawJsonTranscoder
+        transcoder.hasJson() -> KotlinSdkCommandExecutor.jsonTranscoder
+        transcoder.hasRawString() -> RawStringTranscoder
+        transcoder.hasRawBinary() -> RawBinaryTranscoder
+        // Kotlin does not have LegacyTranscoder
+        else -> throw UnsupportedOperationException("Unknown transcoder: $transcoder")
+    }
 }
