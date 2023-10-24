@@ -214,6 +214,16 @@ public class CollectionManagerHelper {
     }
   }
 
+  private static CollectionSpec.Builder toFit(com.couchbase.client.java.manager.collection.CollectionSpec spec) {
+    CollectionSpec.Builder builder = CollectionSpec.newBuilder()
+            .setName(spec.name())
+            .setExpirySecs(spec.maxExpiry() != null ? (int) spec.maxExpiry().toSeconds() : 0)
+            .setScopeName(spec.scopeName());
+    if (spec.history() != null) {
+      builder.setHistory(spec.history());
+    }
+    return builder;
+  }
 
   public static void populateResult(Result.Builder result, List<com.couchbase.client.java.manager.collection.ScopeSpec> response) {
     var builder = GetAllScopesResult.newBuilder();
@@ -222,12 +232,8 @@ public class CollectionManagerHelper {
             .map(scopeSpec -> ScopeSpec.newBuilder()
                     .setName(scopeSpec.name())
                     .addAllCollections(scopeSpec.collections().stream()
-                            .map(c -> CollectionSpec.newBuilder()
-                                    .setName(c.name())
-                                    .setExpirySecs(c.maxExpiry() != null ? (int) c.maxExpiry().toSeconds() : 0)
-                                    .setScopeName(c.scopeName())
-                                    .setHistory(c.history())
-                                    .build()).collect(Collectors.toList()))
+                            .map(c -> toFit(c).build())
+                            .collect(Collectors.toList()))
                     .build()).collect(Collectors.toList());
 
     builder.addAllResult(allResult);
@@ -246,12 +252,8 @@ public class CollectionManagerHelper {
     var allResult = ScopeSpec.newBuilder()
             .setName(scopeSpec.name())
             .addAllCollections(scopeSpec.collections().stream()
-                    .map(c -> CollectionSpec.newBuilder()
-                            .setName(c.name())
-                            .setExpirySecs(c.maxExpiry() != null ? (int) c.maxExpiry().toSeconds() : 0)
-                            .setScopeName(c.scopeName())
-                            .setHistory(c.history())
-                            .build()).collect(Collectors.toList()))
+                    .map(c -> toFit(c).build())
+                    .collect(Collectors.toList()))
             .build();
 
     if (list != null) {
