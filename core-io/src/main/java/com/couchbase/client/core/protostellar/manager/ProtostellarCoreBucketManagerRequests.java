@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
@@ -70,8 +71,7 @@ public class ProtostellarCoreBucketManagerRequests {
           request.setBucketType(BucketType.BUCKET_TYPE_EPHEMERAL);
           break;
         case MEMCACHED:
-          request.setBucketType(BucketType.BUCKET_TYPE_MEMCACHED);
-          break;
+          throw new FeatureNotAvailableException("Memcached buckets are not supported when using couchbase2");
         default:
           throw InvalidArgumentException.fromMessage("Unknown bucket type");
       }
@@ -209,10 +209,6 @@ public class ProtostellarCoreBucketManagerRequests {
 
     if (settings.numReplicas() != null) {
       request.setNumReplicas(settings.numReplicas());
-    }
-
-    if (settings.replicaIndexes() != null) {
-      request.setReplicaIndexes(settings.replicaIndexes());
     }
 
     if (settings.evictionPolicy() != null) {

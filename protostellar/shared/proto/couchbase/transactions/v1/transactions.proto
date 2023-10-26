@@ -5,6 +5,7 @@ option ruby_package = "Couchbase::Protostellar::Generated::Transactions::V1";
 option php_namespace = "Couchbase\\Protostellar\\Generated\\Transactions\\V1";
 option java_package = "com.couchbase.client.protostellar.transactions.v1";
 option java_multiple_files = true;
+option csharp_namespace = "Couchbase.Protostellar.Transactions.V1";
 
 package couchbase.transactions.v1;
 

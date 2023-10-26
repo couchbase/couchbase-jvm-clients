@@ -127,8 +127,6 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
         switch (bucket.getBucketType()) {
           case BUCKET_TYPE_COUCHBASE:
             return BucketType.COUCHBASE;
-          case BUCKET_TYPE_MEMCACHED:
-            return BucketType.MEMCACHED;
           case BUCKET_TYPE_EPHEMERAL:
             return BucketType.EPHEMERAL;
           default:

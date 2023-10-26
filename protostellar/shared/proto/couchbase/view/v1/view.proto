@@ -5,6 +5,7 @@ option ruby_package = "Couchbase::Protostellar::Generated::View::V1";
 option php_namespace = "Couchbase\\Protostellar\\Generated\\View\\V1";
 option java_package = "com.couchbase.client.protostellar.view.v1";
 option java_multiple_files = true;
+option csharp_namespace = "Couchbase.Protostellar.View.V1";
 
 package couchbase.view.v1;
 

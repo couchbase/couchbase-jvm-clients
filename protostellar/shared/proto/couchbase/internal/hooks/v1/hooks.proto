@@ -5,6 +5,7 @@ option ruby_package = "Couchbase::Protostellar::Generated::Internal::Hooks::V1";
 option php_namespace = "Couchbase\\Protostellar\\Generated\\Internal\\Hooks\\V1";
 option java_package = "com.couchbase.client.protostellar.internal.hooks.v1";
 option java_multiple_files = true;
+option csharp_namespace = "Couchbase.Protostellar.Internal.Hooks.V1";
 
 package couchbase.internal.hooks.v1;
 
