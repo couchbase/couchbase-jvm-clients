@@ -71,7 +71,7 @@ public class UnmanagedTestCluster extends TestCluster {
   UnmanagedTestCluster(final Properties properties) {
     // localhost:8091 or couchbases://localhost:8091 or protostellar://localhost:8091 or protostellar://localhost
     String[] split = properties.getProperty("cluster.unmanaged.seed").split(":");
-    isProtostellar = split[0].equals("protostellar");
+    isProtostellar = split[0].equals("couchbase2");
     seedHost = split[split.length - 2].replace("//", "");
     int seedPort = 0;
     try {
