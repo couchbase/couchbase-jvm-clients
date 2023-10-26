@@ -91,6 +91,18 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
+            <groupId>dnsjava</groupId>
+            <artifactId>dnsjava</artifactId>
+            <version>3.5.2</version>
+            <exclusions>
+                <!-- Exclude SLF4J; we'll declare it separately as a dependency of core-io -->
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>org.iq80.snappy</groupId>
             <artifactId>snappy</artifactId>
             <version>0.4</version>
@@ -236,6 +248,10 @@
                             <shadedPattern>${shaded.package.prefix}com.fasterxml.jackson</shadedPattern>
                         </relocation>
                         <relocation>
+                            <pattern>org.xbill.DNS</pattern>
+                            <shadedPattern>${shaded.package.prefix}org.xbill.DNS</shadedPattern>
+                        </relocation>
+                        <relocation>
                             <pattern>org.iq80.snappy</pattern>
                             <shadedPattern>${shaded.package.prefix}org.iq80.snappy</shadedPattern>
                         </relocation>
@@ -308,6 +324,13 @@
                         </transformer>
                     </transformers>
                     <filters>
+                        <filter>
+                            <artifact>dnsjava:dnsjava</artifact>
+                            <excludes>
+                                <!-- These localized messages are optional (See R.java) and aren't worth the trouble of relocating. -->
+                                <resource>messages.properties</resource>
+                            </excludes>
+                        </filter>
                         <filter>
                             <artifact>*:*</artifact>
                             <excludes>

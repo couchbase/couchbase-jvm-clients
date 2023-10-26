@@ -19,30 +19,17 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 
 import javax.naming.NameNotFoundException;
-import javax.naming.NamingEnumeration;
-import javax.naming.NamingException;
-import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.DirContext;
-import javax.naming.directory.InitialDirContext;
-import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ForkJoinPool;
+
+import static com.couchbase.client.core.util.CbCollections.transform;
 
 /**
  * The default implementation for performing DNS SRV lookups.
  */
 @Stability.Internal
 public class DnsSrv {
-
-  private static final Hashtable<String, String> DNS_ENV = new Hashtable<>();
-  private static final String DEFAULT_DNS_FACTORY = "com.sun.jndi.dns.DnsContextFactory";
-  private static final String DEFAULT_DNS_PROVIDER = "dns:";
-
-  static {
-    DNS_ENV.put("java.naming.factory.initial", DEFAULT_DNS_FACTORY);
-    DNS_ENV.put("java.naming.provider.url", DEFAULT_DNS_PROVIDER);
-  }
 
   /**
    * The default DNS prefix for not encrypted connections.
@@ -54,11 +41,8 @@ public class DnsSrv {
    */
   public static final String DEFAULT_DNS_SECURE_SERVICE = "_couchbases._tcp.";
 
-  public static void setDnsEnvParameter(final String key, final String value) {
-    DNS_ENV.put(key, value);
+  private DnsSrv() {
   }
-
-  private DnsSrv() {}
 
   /**
    * Fetch a bootstrap list from DNS SRV using default OS name resolution.
@@ -67,24 +51,9 @@ public class DnsSrv {
    * @param full if the service name is the full one or needs to be enriched by the couchbase prefixes.
    * @param secure if the secure service prefix should be used.
    * @return a list of DNS SRV records.
-   * @throws NamingException if something goes wrong during the load process.
+   * @throws NameNotFoundException if there's no SRV record associated with serviceName
    */
-  public static List<String> fromDnsSrv(final String serviceName, boolean full, boolean secure) throws NamingException {
-    return fromDnsSrv(serviceName, full, secure, null);
-  }
-
-  /**
-   * Fetch a bootstrap list from DNS SRV using a specific nameserver IP.
-   *
-   * @param serviceName the DNS SRV locator.
-   * @param full if the service name is the full one or needs to be enriched by the couchbase prefixes.
-   * @param secure if the secure service prefix should be used.
-   * @param nameServerIP an IPv4 for the name server to use for SRV resolution.
-   * @return a list of DNS SRV records.
-   * @throws NamingException if something goes wrong during the load process.
-   */
-  public static List<String> fromDnsSrv(final String serviceName, boolean full, boolean secure,
-                                        final String nameServerIP) throws NamingException {
+  public static List<String> fromDnsSrv(final String serviceName, boolean full, boolean secure) throws NameNotFoundException {
     String fullService;
     if (full) {
       fullService = serviceName;
@@ -92,79 +61,19 @@ public class DnsSrv {
       fullService = (secure ? DEFAULT_DNS_SECURE_SERVICE : DEFAULT_DNS_SERVICE) + serviceName;
     }
 
-    DirContext ctx;
-    if (nameServerIP == null || nameServerIP.isEmpty()) {
-      ctx = new InitialDirContext(DNS_ENV);
-    } else {
-      Hashtable<String, String> finalEnv = new Hashtable<>(DNS_ENV);
-      finalEnv.put("java.naming.provider.url", "dns://" + nameServerIP);
-      ctx = new InitialDirContext(finalEnv);
-    }
-    return loadDnsRecords(fullService, ctx);
-  }
+    try {
+      DnsSrvResolver resolver = new DnsSrvResolver(ForkJoinPool.commonPool());
+      List<HostAndPort> results = resolver.resolve(fullService)
+        .blockOptional().orElseThrow(() -> new NoSuchElementException("No value present"));
+      return transform(results, HostAndPort::host);
 
-  /**
-   * Helper method to load a list of DNS SRV records.
-   *
-   * @param serviceName the service to locate.
-   * @param ctx the directory context to fetch from.
-   * @return the list of dns records
-   * @throws NamingException if something goes wrong during the load process.
-   */
-  static List<String> loadDnsRecords(final String serviceName, final DirContext ctx) throws NamingException {
-    Attributes attrs = ctx.getAttributes(serviceName, new String[] { "SRV" });
-    Attribute srv = attrs.get("srv");
-    if (srv == null) {
-      throw new NameNotFoundException();
-    }
-    NamingEnumeration<?> servers = srv.getAll();
-    List<String> records = new ArrayList<>();
-    while (servers.hasMore()) {
-      DnsRecord record = DnsRecord.fromString((String) servers.next());
-      records.add(record.getHost());
-    }
-    return records;
-  }
-
-  /**
-   * Value class to represent a dns record loaded from a DNS SRV row.
-   */
-  static class DnsRecord {
-
-    private final int priority;
-    private final int weight;
-    private final int port;
-    private final String host;
-
-    DnsRecord(int priority, int weight, int port, String host) {
-      this.priority = priority;
-      this.weight = weight;
-      this.port = port;
-      this.host = host.replaceAll("\\.$", "");
-    }
-
-    public String getHost() {
-      return host;
-    }
-
-    static DnsRecord fromString(String input) {
-      String[] splitted = input.split(" ");
-      return new DnsRecord(
-        Integer.parseInt(splitted[0]),
-        Integer.parseInt(splitted[1]),
-        Integer.parseInt(splitted[2]),
-        splitted[3]
-      );
-    }
-
-    @Override
-    public String toString() {
-      return "DnsRecord{" +
-        "priority=" + priority +
-        ", weight=" + weight +
-        ", port=" + port +
-        ", host='" + host + '\'' +
-        '}';
+    } catch (RuntimeException e) {
+      // NameNotFound is a checked exception, so reactor wraps it in a runtime exception.
+      NameNotFoundException cause = CbThrowables.findCause(e, NameNotFoundException.class).orElse(null);
+      if (cause != null) {
+        throw cause;
+      }
+      throw e;
     }
   }
 }
