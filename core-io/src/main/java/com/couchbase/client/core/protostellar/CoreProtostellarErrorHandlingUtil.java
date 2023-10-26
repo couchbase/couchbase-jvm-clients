@@ -19,6 +19,7 @@ import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.google.protobuf.Any;
 import com.couchbase.client.core.deps.com.google.protobuf.InvalidProtocolBufferException;
+import com.couchbase.client.core.deps.com.google.rpc.ErrorInfo;
 import com.couchbase.client.core.deps.com.google.rpc.PreconditionFailure;
 import com.couchbase.client.core.deps.com.google.rpc.ResourceInfo;
 import com.couchbase.client.core.deps.io.grpc.StatusRuntimeException;
@@ -79,6 +80,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String PRECONDITION_VALUE_TOO_LARGE = "VALUE_TOO_LARGE";
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
+  private static final String TYPE_URL_ERROR_INFO = "type.googleapis.com/google.rpc.ErrorInfo";
 
   private static final String RESOURCE_TYPE_DOCUMENT = "document";
   private static final String RESOURCE_TYPE_SEARCH_INDEX = "searchindex";
@@ -88,6 +90,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String RESOURCE_TYPE_SCOPE = "scope";
   private static final String RESOURCE_TYPE_COLLECTION = "collection";
   private static final String RESOURCE_TYPE_PATH = "path";
+  private static final String REASON_CAS_MISMATCH = "CAS_MISMATCH";
 
   public static ProtostellarRequestBehaviour convertException(CoreProtostellar core,
                                                               ProtostellarRequest<?> request,
@@ -143,9 +146,7 @@ public class CoreProtostellarErrorHandlingUtil {
             PreconditionFailure.Violation violation = info.getViolations(0);
             String type = violation.getType();
 
-            if (type.equals(PRECONDITION_CAS)) {
-              return ProtostellarRequestBehaviour.fail(new CasMismatchException(context));
-            } else if (type.equals(PRECONDITION_LOCKED)) {
+            if (type.equals(PRECONDITION_LOCKED)) {
               return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.KV_LOCKED);
             } else if (type.equals(PRECONDITION_PATH_MISMATCH)) {
               return ProtostellarRequestBehaviour.fail(new PathMismatchException(context));
@@ -203,7 +204,20 @@ public class CoreProtostellarErrorHandlingUtil {
               return ProtostellarRequestBehaviour.fail(new PathExistsException(context));
             }
           }
+
           // If the code or resourceType are not understood, will intentionally fallback to a CouchbaseException.
+        } else if (typeUrl.equals(TYPE_URL_ERROR_INFO)) {
+          ErrorInfo info = ErrorInfo.parseFrom(details.getValue());
+
+          String reason = info.getReason();
+
+          context.put("reason", reason);
+
+          if (code == Code.ABORTED) {
+            if (reason.equals(REASON_CAS_MISMATCH)) {
+              return ProtostellarRequestBehaviour.fail(new CasMismatchException(context));
+            }
+          }
         }
       } catch (InvalidProtocolBufferException e) {
         return ProtostellarRequestBehaviour.fail(new DecodingFailureException("Failed to decode GRPC response", e));
