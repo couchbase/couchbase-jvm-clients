@@ -39,9 +39,9 @@ import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvBinaryOps;
 import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketManager;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
+import com.couchbase.client.core.protostellar.manager.ProtostellarCoreSearchIndexManager;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
-import com.couchbase.client.core.protostellar.manager.ProtostellarCoreSearchIndexManager;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
@@ -88,6 +88,9 @@ public class CoreProtostellar implements CoreCouchbaseOps {
     int port = first.port() == 0 ? DEFAULT_PROTOSTELLAR_TLS_PORT : first.port();
     HostAndPort remote = new HostAndPort(first.host(), port);
 
+    // After argument validation, before allocating resources.
+    CoreLimiter.incrementAndVerifyNumInstances(env.eventBus());
+
     this.pool = new ProtostellarPool(ctx, remote);
   }
 
@@ -98,7 +101,10 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public Mono<Void> shutdown(final Duration timeout) {
     // This will block, locking up a scheduler thread - but since all we're interested in doing is shutting down, that doesn't matter.
-    return Mono.fromRunnable(() -> pool.shutdown(timeout));
+    return Mono.fromRunnable(() -> {
+      pool.shutdown(timeout);
+      CoreLimiter.decrement();
+    });
   }
 
   public ProtostellarEndpoint endpoint() {
