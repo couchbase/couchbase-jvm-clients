@@ -30,6 +30,8 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public final class ProtostellarContext extends AbstractContext {
   private final long id = CoreIdGenerator.nextId();
+  private final String hexId = String.format("0x%016x", id);
+
   private final CoreEnvironment env;
   private final Authenticator authenticator;
 
@@ -48,6 +50,10 @@ public final class ProtostellarContext extends AbstractContext {
     return id;
   }
 
+  public String hexId() {
+    return hexId;
+  }
+
   public CoreEnvironment environment() {
     return env;
   }
@@ -58,7 +64,7 @@ public final class ProtostellarContext extends AbstractContext {
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
-    input.put("coreId", "0x" + Long.toHexString(id));
+    input.put("coreId", hexId);
   }
 
 }

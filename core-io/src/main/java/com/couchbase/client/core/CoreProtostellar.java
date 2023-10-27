@@ -24,14 +24,19 @@ import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
+import com.couchbase.client.core.cnc.Context;
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
+import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
@@ -46,6 +51,8 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.util.NanoTimestamp;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -59,6 +66,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
@@ -71,7 +80,7 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   public CoreProtostellar(
     final CoreEnvironment env,
     final Authenticator authenticator,
-    ConnectionString connectionString
+    final ConnectionString connectionString
   ) {
     this.ctx = new ProtostellarContext(env, authenticator);
     notNull(connectionString, "connectionString");
@@ -92,6 +101,19 @@ public class CoreProtostellar implements CoreCouchbaseOps {
     CoreLimiter.incrementAndVerifyNumInstances(env.eventBus());
 
     this.pool = new ProtostellarPool(ctx, remote);
+
+    logCoreCreatedEvent(connectionString);
+  }
+
+  private void logCoreCreatedEvent(ConnectionString connectionString) {
+    LoggerFactory.getLogger(Event.Category.CORE.path()).info(
+      "[CoreCreatedEvent] {} {}",
+      Mapper.encodeAsString(mapOf(
+        "coreId", ctx.hexId(),
+        "connectionString", redactSystem(connectionString.original())
+      )),
+      environment().exportAsString(Context.ExportFormat.JSON)
+    );
   }
 
   public ProtostellarContext context() {
@@ -102,8 +124,14 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   public Mono<Void> shutdown(final Duration timeout) {
     // This will block, locking up a scheduler thread - but since all we're interested in doing is shutting down, that doesn't matter.
     return Mono.fromRunnable(() -> {
-      pool.shutdown(timeout);
-      CoreLimiter.decrement();
+      NanoTimestamp start = NanoTimestamp.now();
+      try {
+        environment().eventBus().publish(new ShutdownInitiatedEvent(ctx));
+        pool.shutdown(timeout);
+      } finally {
+        CoreLimiter.decrement();
+        environment().eventBus().publish(new ShutdownCompletedEvent(start.elapsed(), ctx));
+      }
     });
   }
 
