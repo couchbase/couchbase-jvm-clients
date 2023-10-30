@@ -133,6 +133,11 @@ public class OptionsUtil {
             }
           }
 
+          if (cc.hasInsecure()) {
+            if (secBuilder == null) secBuilder = SecurityConfig.builder();
+            secBuilder.enableCertificateVerification(!cc.getInsecure());
+          }
+
           if (secBuilder != null) {
               clusterEnvironment.securityConfig(secBuilder);
             }

@@ -66,6 +66,7 @@ class ScalaPerformer extends CorePerformer {
     response
       .setPerformerUserAgent("scala")
       .addPerformerCaps(Caps.CLUSTER_CONFIG_CERT)
+      .addPerformerCaps(Caps.CLUSTER_CONFIG_INSECURE)
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
   }
 

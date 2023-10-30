@@ -160,10 +160,16 @@ object OptionsUtil {
     }
     // [start:1.2.1]
     if (cc.hasCertPath) {
+        if (securityConfig == null) {
+            securityConfig = SecurityConfig()
+        }
+        securityConfig = securityConfig.enableTls(true).trustCertificate(Path.of(cc.getCertPath))
+    }
+    if (cc.hasInsecure) {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
       }
-      securityConfig = securityConfig.enableTls(true).trustCertificate(Path.of(cc.getCertPath))
+      securityConfig.enableHostnameVerification(false)
     }
     // [end:1.2.1]
     if (cc.hasCert) {
