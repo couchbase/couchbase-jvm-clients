@@ -43,6 +43,7 @@ import com.couchbase.client.core.protostellar.CoreProtostellarAccessorsStreaming
 import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.ProtostellarUtil;
 import com.couchbase.client.protostellar.query.v1.QueryRequest;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
 import reactor.core.publisher.Flux;
@@ -53,7 +54,6 @@ import reactor.util.annotation.Nullable;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
@@ -282,7 +282,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
       if (tuning == null) {
         tuning = QueryRequest.TuningOptions.newBuilder();
       }
-      tuning.setScanWait(com.couchbase.client.core.deps.com.google.protobuf.Duration.newBuilder().setSeconds(TimeUnit.NANOSECONDS.toSeconds(opts.scanWait().toNanos())));
+      tuning.setScanWait(ProtostellarUtil.convert(opts.scanWait()));
     }
 
     if (opts.maxParallelism() != null) {
