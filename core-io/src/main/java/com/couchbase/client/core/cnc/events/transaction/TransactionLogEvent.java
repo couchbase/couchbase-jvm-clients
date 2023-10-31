@@ -19,12 +19,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import reactor.util.annotation.Nullable;
 
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.Objects;
 
 /**
