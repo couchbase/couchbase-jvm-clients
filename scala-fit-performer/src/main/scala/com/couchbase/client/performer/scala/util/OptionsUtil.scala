@@ -1,5 +1,6 @@
 package com.couchbase.client.performer.scala.util
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.protocol.shared.{ClusterConfig, ClusterConnectionCreateRequest, Durability}
 import com.couchbase.client.scala.codec.{JsonTranscoder, LegacyTranscoder, RawBinaryTranscoder, RawJsonTranscoder, RawStringTranscoder, Transcoder}
@@ -169,7 +170,8 @@ object OptionsUtil {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
       }
-      securityConfig.enableHostnameVerification(false)
+        // Cannot use enableCertificateVerification as it was added later
+        securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
     }
     // [end:1.2.1]
     if (cc.hasCert) {

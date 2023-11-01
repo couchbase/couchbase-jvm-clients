@@ -51,6 +51,7 @@ import com.couchbase.client.protocol.shared.Durability;
 import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
 import com.couchbase.client.protocol.transactions.TransactionQueryOptions;
 import com.couchbase.client.tracing.opentelemetry.OpenTelemetryRequestTracer;
+import io.grpc.netty.shaded.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -66,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -133,9 +135,10 @@ public class OptionsUtil {
             }
           }
 
-          if (cc.hasInsecure()) {
+          if (cc.hasInsecure() && cc.getInsecure()) {
             if (secBuilder == null) secBuilder = SecurityConfig.builder();
-            secBuilder.enableCertificateVerification(!cc.getInsecure());
+            // Cannot use enableCertificateVerification as it was added later
+            secBuilder.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
           }
 
           if (secBuilder != null) {
