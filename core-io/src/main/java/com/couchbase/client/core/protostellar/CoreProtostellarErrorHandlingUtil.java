@@ -74,7 +74,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String PRECONDITION_PATH_MISMATCH = "PATH_MISMATCH";
   private static final String PRECONDITION_DOC_NOT_JSON = "DOC_NOT_JSON";
   private static final String PRECONDITION_DOC_TOO_DEEP = "DOC_TOO_DEEP";
-  private static final String PRECONDITION_WOULD_INVALIDATE_JSON = "WOULD_INVALIDATE_JSON";
+  private static final String PRECONDITION_VALUE_OUT_OF_RANGE = "VALUE_OUT_OF_RANGE";
   // Not currently used as it's unclear what exception this maps to.
   private static final String PRECONDITION_PATH_VALUE_OUT_OF_RANGE = "PATH_VALUE_OUT_OF_RANGE";
   private static final String PRECONDITION_VALUE_TOO_LARGE = "VALUE_TOO_LARGE";
@@ -154,7 +154,7 @@ public class CoreProtostellarErrorHandlingUtil {
               return ProtostellarRequestBehaviour.fail(new DocumentNotJsonException(context));
             } else if (type.equals(PRECONDITION_DOC_TOO_DEEP)) {
               return ProtostellarRequestBehaviour.fail(new DocumentTooDeepException(context));
-            } else if (type.equals(PRECONDITION_WOULD_INVALIDATE_JSON)) {
+            } else if (type.equals(PRECONDITION_VALUE_OUT_OF_RANGE)) {
               return ProtostellarRequestBehaviour.fail(new ValueInvalidException(context));
             } else if (type.equals(PRECONDITION_VALUE_TOO_LARGE)) {
               return ProtostellarRequestBehaviour.fail(new ValueTooLargeException(context));
