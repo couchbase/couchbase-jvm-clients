@@ -118,6 +118,7 @@ public class CoreKvParamValidators {
   }
 
   public static void validateScanParams(CoreScanType scanType, CoreScanOptions options) {
+    notNull(options, "Options");
     notNull(scanType, "ScanType");
     if (scanType instanceof CoreRangeScan) {
       CoreRangeScan st = (CoreRangeScan) scanType;

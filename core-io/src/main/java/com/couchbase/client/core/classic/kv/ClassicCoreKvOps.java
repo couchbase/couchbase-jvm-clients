@@ -878,9 +878,6 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
   @Override
   public Flux<CoreRangeScanItem> scanRequestReactive(final CoreScanType scanType, final CoreScanOptions options) {
-    CoreKvParamValidators.validateScanParams(scanType, options);
-    notNull(options, "Options");
-
     Flux<CoreRangeScanItem> coreScanStream;
 
     if (scanType instanceof CoreRangeScan) {

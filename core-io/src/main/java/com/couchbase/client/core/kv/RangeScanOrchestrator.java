@@ -19,6 +19,7 @@ package com.couchbase.client.core.kv;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvParamValidators;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
@@ -120,6 +121,7 @@ public class RangeScanOrchestrator {
 
     public Flux<CoreRangeScanItem> rangeScan(CoreRangeScan rangeScan, CoreScanOptions options) {
     return Flux.defer(() -> {
+      CoreKvParamValidators.validateScanParams(rangeScan, options);
 
       if (currentBucketConfig == null) {
         // We might not have a config yet if bootstrap is still in progress, wait 100ms
@@ -149,6 +151,8 @@ public class RangeScanOrchestrator {
   public Flux<CoreRangeScanItem> samplingScan(CoreSamplingScan samplingScan, CoreScanOptions options) {
     return Flux
       .defer(() -> {
+        CoreKvParamValidators.validateScanParams(samplingScan, options);
+
         if (currentBucketConfig == null) {
           // We might not have a config yet if bootstrap is still in progress, wait 100ms
           // and then try again. In a steady state this should not happen.
