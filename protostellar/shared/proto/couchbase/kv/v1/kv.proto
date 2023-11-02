@@ -33,14 +33,17 @@ service KvService {
 
   rpc GetAllReplicas(GetAllReplicasRequest)
       returns (stream GetAllReplicasResponse) {}
-
-  rpc RangeScan(RangeScanRequest) returns (RangeScanResponse) {}
 }
 
 enum DurabilityLevel {
   DURABILITY_LEVEL_MAJORITY = 0;
   DURABILITY_LEVEL_MAJORITY_AND_PERSIST_TO_ACTIVE = 1;
   DURABILITY_LEVEL_PERSIST_TO_MAJORITY = 2;
+}
+
+enum CompressionEnabled {
+  COMPRESSION_ENABLED_OPTIONAL = 0;
+  COMPRESSION_ENABLED_ALWAYS = 1;
 }
 
 message LegacyDurabilitySpec {
@@ -61,10 +64,14 @@ message GetRequest {
   string collection_name = 3;
   string key = 4;
   repeated string project = 5;
+  optional CompressionEnabled compression = 6;
 }
 
 message GetResponse {
-  bytes content = 1;
+  oneof content {
+    bytes content_uncompressed = 1;
+    bytes content_compressed = 7;
+  }
   uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
@@ -80,10 +87,14 @@ message GetAndTouchRequest {
     google.protobuf.Timestamp expiry_time = 5;
     uint32 expiry_secs = 6;
   }
+  optional CompressionEnabled compression = 7;
 }
 
 message GetAndTouchResponse {
-  bytes content = 1;
+  oneof content {
+    bytes content_uncompressed = 1;
+    bytes content_compressed = 7;
+  }
   uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
@@ -96,10 +107,14 @@ message GetAndLockRequest {
   string collection_name = 3;
   string key = 4;
   uint32 lock_time = 5;
+  optional CompressionEnabled compression = 6;
 }
 
 message GetAndLockResponse {
-  bytes content = 1;
+  oneof content {
+    bytes content_uncompressed = 1;
+    bytes content_compressed = 7;
+  }
   uint32 content_flags = 6;
   uint64 cas = 3;
   google.protobuf.Timestamp expiry = 4;
@@ -149,7 +164,10 @@ message InsertRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
-  bytes content = 5;
+  oneof content {
+    bytes content_uncompressed = 5;
+    bytes content_compressed = 12;
+  }
   uint32 content_flags = 11;
   oneof expiry {
     google.protobuf.Timestamp expiry_time = 7;
@@ -169,12 +187,16 @@ message UpsertRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
-  bytes content = 5;
+  oneof content {
+    bytes content_uncompressed = 5;
+    bytes content_compressed = 13;
+  }
   uint32 content_flags = 11;
   oneof expiry {
     google.protobuf.Timestamp expiry_time = 7;
     uint32 expiry_secs = 10;
   }
+  optional bool preserve_expiry_on_existing = 12;
   optional DurabilityLevel durability_level = 9;
   reserved 6;
 }
@@ -189,7 +211,10 @@ message ReplaceRequest {
   string scope_name = 2;
   string collection_name = 3;
   string key = 4;
-  bytes content = 5;
+  oneof content {
+    bytes content_uncompressed = 5;
+    bytes content_compressed = 13;
+  }
   uint32 content_flags = 12;
   optional uint64 cas = 7;
   oneof expiry {
@@ -397,51 +422,4 @@ message GetAllReplicasResponse {
   bytes content = 2;
   uint32 content_flags = 3;
   uint64 cas = 4;
-}
-
-message RangeScanRequest {
-  string bucket_name = 1;
-  string scope_name = 2;
-  string collection_name = 3;
-
-  bool key_only = 9;
-
-  message Range {
-    string start_key = 1;
-    string end_key = 2;
-    bool inclusive_start = 3;
-    bool inclusive_end = 4;
-  }
-  Range range = 7;
-
-  message Sampling {
-    int64 seed = 1;
-    int64 samples = 2;
-  }
-  Sampling sampling = 8;
-
-  message SnapshotRequirements {
-    uint64 vb_uuid = 1;
-    uint64 seqno = 2;
-    bool check_seqno_exists = 3;
-  }
-  SnapshotRequirements snapshot_requirements = 6;
-}
-
-message RangeScanResponse {
-  message Document {
-    message MetaData {
-      uint32 content_flags = 1;
-      optional google.protobuf.Timestamp expiry = 2;
-      uint64 seqno = 3;
-      uint64 cas = 4;
-      reserved 5, 6;
-    }
-
-    string key = 1;
-    optional bytes content = 2;
-    optional MetaData meta_data = 3;
-  }
-
-  repeated Document documents = 1;
 }

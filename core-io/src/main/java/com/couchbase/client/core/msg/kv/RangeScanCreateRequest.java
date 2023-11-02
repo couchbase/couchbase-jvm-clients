@@ -35,7 +35,6 @@ import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.UnsignedLEB128;
-import com.couchbase.client.protostellar.kv.v1.RangeScanRequest;
 
 import java.time.Duration;
 import java.util.Arrays;

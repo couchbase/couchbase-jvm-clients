@@ -196,7 +196,7 @@ public class CoreProtostellarKeyValueRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
+      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
       .setContentFlags(encoded.getT1().flags());
 
     expiry.when(
@@ -246,7 +246,7 @@ public class CoreProtostellarKeyValueRequests {
       .setCollectionName(keyspace.collection())
       .setKey(key)
       .setCas(cas)
-      .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
+      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
       .setContentFlags(encoded.getT1().flags());
 
     if (!preserveExpiry) {
@@ -296,7 +296,7 @@ public class CoreProtostellarKeyValueRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContent(ByteString.copyFrom(encoded.getT1().encoded()))
+      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
       .setContentFlags(encoded.getT1().flags());
 
     if (!preserveExpiry) {
