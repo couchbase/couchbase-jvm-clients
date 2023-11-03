@@ -615,7 +615,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY,
     clusterTypes = ClusterType.CAVES,
-    isProtostellarWillWorkLater = true, // Need ING-434
     clusterVersionEquals = "7.5.0") // Need ING-434
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();

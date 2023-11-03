@@ -297,15 +297,14 @@ public class CoreProtostellarKeyValueRequests {
       .setCollectionName(keyspace.collection())
       .setKey(key)
       .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentFlags(encoded.getT1().flags());
+      .setContentFlags(encoded.getT1().flags())
+      .setPreserveExpiryOnExisting(preserveExpiry);
 
-    if (!preserveExpiry) {
-      expiry.when(
-        absolute -> request.setExpiryTime(toExpiryTime(absolute)),
-        relative -> request.setExpirySecs(toExpirySeconds(relative)),
-        () -> request.setExpiryTime(NO_EXPIRY)
-      );
-    }
+    expiry.when(
+      absolute -> request.setExpiryTime(toExpiryTime(absolute)),
+      relative -> request.setExpirySecs(toExpirySeconds(relative)),
+      () -> request.setExpiryTime(NO_EXPIRY)
+    );
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
