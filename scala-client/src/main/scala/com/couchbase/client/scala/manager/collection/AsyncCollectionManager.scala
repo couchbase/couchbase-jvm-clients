@@ -68,8 +68,8 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
                       CollectionSpec(
                         coll.name,
                         scope.name,
-                        Some(coll.maxExpiry).map(v => Duration(v.longValue, TimeUnit.SECONDS)),
-                        Some(coll.history)
+                        Option(coll.maxExpiry).map(v => Duration(v.longValue, TimeUnit.SECONDS)),
+                        Option(coll.history)
                       )
                   )
                 )
