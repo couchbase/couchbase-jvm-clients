@@ -152,7 +152,9 @@ public class RangeScanOrchestrator {
     return Flux
       .defer(() -> {
         CoreKvParamValidators.validateScanParams(samplingScan, options);
-
+        return Mono.just(0);
+      })
+      .thenMany(Flux.defer(() -> {
         if (currentBucketConfig == null) {
           // We might not have a config yet if bootstrap is still in progress, wait 100ms
           // and then try again. In a steady state this should not happen.
@@ -165,7 +167,7 @@ public class RangeScanOrchestrator {
         Map<Short, MutationToken> consistencyMap=options.consistencyMap();
         return streamForPartitions((partition, ignored) -> RangeScanCreateRequest.forSamplingScan(samplingScan,
               options, partition, core.context(), collectionIdentifier, consistencyMap), options);
-        }).take(samplingScan.limit());
+        }).take(samplingScan.limit()));
   }
 
   @SuppressWarnings("unchecked")
