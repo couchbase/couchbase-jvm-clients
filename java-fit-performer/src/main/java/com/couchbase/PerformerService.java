@@ -162,6 +162,7 @@ public class PerformerService extends CorePerformer {
         // [start:3.2.0]
         response.addPerformerCaps(Caps.OBSERVABILITY_1);
         // [end:3.2.0]
+        response.addPerformerCaps(Caps.TIMING_ON_FAILED_OPS);
         response.setPerformerUserAgent("java-sdk");
     }
 

@@ -42,7 +42,9 @@ public abstract class SdkCommandExecutor extends Executor {
     abstract protected com.couchbase.client.protocol.shared.Exception convertException(Throwable raw);
 
     public void run(com.couchbase.client.protocol.sdk.Command command, PerRun perRun) {
-        var timeInitiated = getTimeNow(); // only used for error results
+        // These two times are only used for error results.  They won't be quite as accurate as requested by the RPC, but.. it's only for error results.
+        var timeInitiated = getTimeNow();
+        long start = System.nanoTime();
 
         try {
             performOperation(command, perRun);
@@ -59,6 +61,7 @@ public abstract class SdkCommandExecutor extends Executor {
 
             perRun.resultsStream().enqueue(com.couchbase.client.protocol.run.Result.newBuilder()
                     .setInitiated(timeInitiated)
+                    .setElapsedNanos(System.nanoTime() - start)
                     .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                             .setException(convertException(err)))
                     .build());
