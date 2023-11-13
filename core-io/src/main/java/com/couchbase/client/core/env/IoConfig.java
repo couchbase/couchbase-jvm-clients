@@ -71,6 +71,7 @@ public class IoConfig {
   private final Duration idleHttpConnectionTimeout;
   private final Duration configIdleRedialTimeout;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
+  private final TimerConfig timerConfig;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -97,6 +98,7 @@ public class IoConfig {
     idleHttpConnectionTimeout = builder.idleHttpConnectionTimeout;
     configIdleRedialTimeout = builder.configIdleRedialTimeout;
     memcachedHashingStrategy = builder.memcachedHashingStrategy;
+    timerConfig = builder.timerConfig.build();
   }
 
   public static IoConfig create() {
@@ -297,6 +299,11 @@ public class IoConfig {
     return memcachedHashingStrategy;
   }
 
+  @Stability.Volatile
+  public TimerConfig timerConfig() {
+    return timerConfig;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -323,6 +330,7 @@ public class IoConfig {
     export.put("idleHttpConnectionTimeoutMs", idleHttpConnectionTimeout.toMillis());
     export.put("configIdleRedialTimeoutMs", configIdleRedialTimeout.toMillis());
     export.put("memcachedHashingStrategy", memcachedHashingStrategy.getClass().getSimpleName());
+    export.put("timerConfig", timerConfig.exportAsMap());
     return export;
   }
 
@@ -348,6 +356,7 @@ public class IoConfig {
     private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
     private Duration configIdleRedialTimeout = DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT;
     private MemcachedHashingStrategy memcachedHashingStrategy = DEFAULT_MEMCACHED_HASHING_STRATEGY;
+    private TimerConfig.Builder timerConfig = TimerConfig.builder();
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -662,5 +671,20 @@ public class IoConfig {
       return this;
     }
 
+    /**
+     * Configures the backup circuit breaker by passing its config builder to the given consumer.
+     *
+     * @return this, for chaining
+     */
+    @Stability.Volatile
+    public Builder timerConfig(Consumer<TimerConfig.Builder> builderConsumer) {
+      builderConsumer.accept(timerConfig);
+      return this;
+    }
+
+    @Stability.Volatile
+    public TimerConfig.Builder timerConfig() {
+      return timerConfig;
+    }
   }
 }

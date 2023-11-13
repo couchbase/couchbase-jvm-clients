@@ -17,6 +17,7 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.env.TimerConfig;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -25,6 +26,8 @@ import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -38,18 +41,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Timer {
 
   /**
-   * We are using a default tick duration of 10ms instead of the netty-default 100ms because we are also
-   * retrying operations on this timer that have much lower resolution.
-   * <p>
-   * Based on our testing 10ms strikes a good balance, 1ms seems to be too noisy and 100ms has too much loss
-   * in accuracy.
-   */
-  private static final Duration DEFAULT_TICK_DURATION = Duration.ofMillis(10);
-
-  /**
    * The internal timer.
    */
-  private final HashedWheelTimer wheelTimer;
+  private final List<HashedWheelTimer> wheelTimers;
+  private final AtomicLong currentTimer = new AtomicLong();
 
   /**
    * Set to true once stopped.
@@ -72,8 +67,8 @@ public class Timer {
    * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    * @return the created timer.
    */
-  public static Timer create(final long maxNumRequestsInRetry) {
-    return new Timer(maxNumRequestsInRetry);
+  public static Timer create(final long maxNumRequestsInRetry, TimerConfig timerConfig) {
+    return new Timer(maxNumRequestsInRetry, timerConfig);
   }
 
   /**
@@ -83,7 +78,13 @@ public class Timer {
    * @return the created and started timer.
    */
   public static Timer createAndStart(final long maxNumRequestsInRetry) {
-    Timer timer = create(maxNumRequestsInRetry);
+    Timer timer = create(maxNumRequestsInRetry, TimerConfig.create());
+    timer.start();
+    return timer;
+  }
+
+  public static Timer createAndStart(final long maxNumRequestsInRetry, TimerConfig timerConfig) {
+    Timer timer = create(maxNumRequestsInRetry, timerConfig);
     timer.start();
     return timer;
   }
@@ -93,13 +94,19 @@ public class Timer {
    *
    * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    */
-  private Timer(final long maxNumRequestsInRetry) {
+  private Timer(final long maxNumRequestsInRetry, TimerConfig timerConfig) {
     this.maxNumRequestsInRetry = maxNumRequestsInRetry;
-    wheelTimer = new HashedWheelTimer(
-      new DefaultThreadFactory("cb-timer", true),
-      DEFAULT_TICK_DURATION.toMillis(),
-      TimeUnit.MILLISECONDS
-    );
+    wheelTimers = new ArrayList<>();
+    for (int i = 0; i < timerConfig.numTimers(); i ++) {
+      HashedWheelTimer wheelTimer = new HashedWheelTimer(
+        // Preserve original "cb-timer" name if only using default single timer.
+        new DefaultThreadFactory("cb-timer" + (timerConfig.numTimers() == 1 ? "" : "-" + i), true),
+        timerConfig.tickDuration().toMillis(),
+        TimeUnit.MILLISECONDS,
+        timerConfig.numBuckets()
+      );
+      wheelTimers.add(wheelTimer);
+    }
   }
 
   /**
@@ -151,10 +158,16 @@ public class Timer {
       }
     }
 
-    return wheelTimer.newTimeout(timeout -> {
+    return timer().newTimeout(timeout -> {
       outstandingForRetry.decrementAndGet();
       callback.run();
     }, runAfter.toNanos(), TimeUnit.NANOSECONDS);
+  }
+
+  private HashedWheelTimer timer() {
+    // Using a long for currentTimer permits 100,000 timeouts/retries per second for 9.223372e+13 seconds, or
+    // nearly 3 million years.
+    return wheelTimers.get((int) (currentTimer.getAndIncrement() % wheelTimers.size()));
   }
 
   /**
@@ -162,13 +175,13 @@ public class Timer {
    *
    * @param request the request to track.
    */
-  public void register(final Request<Response> request) {
+  public  void register(final Request<Response> request) {
     if (stopped) {
       request.cancel(CancellationReason.SHUTDOWN);
       return;
     }
 
-    final Timeout registration = wheelTimer.newTimeout(
+    final Timeout registration = timer().newTimeout(
       timeout -> request.cancel(CancellationReason.TIMEOUT),
       request.timeout().toNanos(),
       TimeUnit.NANOSECONDS
@@ -180,7 +193,7 @@ public class Timer {
    * Starts this timer.
    */
   public void start() {
-    wheelTimer.start();
+    wheelTimers.forEach(HashedWheelTimer::start);
   }
 
   /**
@@ -188,7 +201,7 @@ public class Timer {
    */
   public void stop() {
     stopped = true;
-    wheelTimer.stop();
+    wheelTimers.forEach(HashedWheelTimer::stop);
   }
 
 
@@ -202,7 +215,7 @@ public class Timer {
   @Override
   public String toString() {
     return "Timer{" +
-      "wheelTimer=" + wheelTimer +
+      "wheelTimer=" + wheelTimers +
       ", stopped=" + stopped +
       ", outstandingForRetry=" + outstandingForRetry +
       ", maxNumRequestsInRetry=" + maxNumRequestsInRetry +

@@ -183,7 +183,7 @@ public class CoreEnvironment implements AutoCloseable {
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
       .orElse(new OwnedSupplier<>(DefaultEventBus.create(scheduler.get())));
-    this.timer = Timer.createAndStart(maxNumRequestsInRetry);
+    this.timer = Timer.createAndStart(maxNumRequestsInRetry, builder.ioConfig.timerConfig().build());
 
 
     this.securityConfig = builder.securityConfig.build();
