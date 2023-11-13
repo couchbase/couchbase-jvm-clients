@@ -52,6 +52,7 @@ import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
+import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
@@ -574,11 +575,14 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   @Stability.Internal
   public ValueRecorder responseMetric(final Request<?> request, @Nullable Throwable err) {
+    boolean isDefaultLoggingMeter = coreContext.environment().meter() instanceof LoggingMeter;
     String exceptionSimpleName = null;
-    if (err instanceof CompletionException) {
-      exceptionSimpleName = err.getCause().getClass().getSimpleName().replace("Exception", "");
-    } else if (err != null) {
-      exceptionSimpleName = err.getClass().getSimpleName().replace("Exception", "");
+    if (!isDefaultLoggingMeter) {
+      if (err instanceof CompletionException) {
+        exceptionSimpleName = err.getCause().getClass().getSimpleName().replace("Exception", "");
+      } else if (err != null) {
+        exceptionSimpleName = err.getClass().getSimpleName().replace("Exception", "");
+      }
     }
     final String finalExceptionSimpleName = exceptionSimpleName;
 
@@ -589,25 +593,29 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         if (request instanceof CoreTransactionRequest) {
           tags.put(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_TRANSACTIONS);
         }
-      }
-      else {
+      } else {
         tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
       }
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
-      if (key.bucketName != null) {
-        tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
-      }
-      if (key.scopeName != null) {
-        tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
-      }
-      if (key.collectionName != null) {
-        tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
-      }
 
-      if (finalExceptionSimpleName != null) {
-        tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName);
-      } else {
-        tags.put(TracingIdentifiers.ATTR_OUTCOME, "Success");
+      // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
+      // assigning other labels.
+      if (!isDefaultLoggingMeter) {
+        if (key.bucketName != null) {
+          tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
+        }
+        if (key.scopeName != null) {
+          tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
+        }
+        if (key.collectionName != null) {
+          tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
+        }
+
+        if (finalExceptionSimpleName != null) {
+          tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName);
+        } else {
+          tags.put(TracingIdentifiers.ATTR_OUTCOME, "Success");
+        }
       }
 
       return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
