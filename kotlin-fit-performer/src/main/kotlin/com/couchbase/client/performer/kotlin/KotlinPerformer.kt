@@ -47,6 +47,11 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_PRESERVE_EXPIRY)
             .addSdkImplementationCaps(Caps.SDK_KV_RANGE_SCAN)
             .addSdkImplementationCaps(Caps.SDK_QUERY)
+            .addSdkImplementationCaps(Caps.SDK_BUCKET_MANAGEMENT)
+            .addSdkImplementationCaps(Caps.SDK_COLLECTION_MANAGEMENT)
+            // [start:1.2.0]
+            .addSdkImplementationCaps(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
+            // [end:1.2.0]
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
     }
 

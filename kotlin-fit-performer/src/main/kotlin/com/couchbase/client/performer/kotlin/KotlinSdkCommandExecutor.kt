@@ -18,30 +18,32 @@ package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.diagnostics.ClusterState
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
 import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
+// [start:1.1.6]
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
+import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
+// [end:1.1.6]
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
+// [start:1.1.6]
+import com.couchbase.client.kotlin.kv.KvScanConsistency
+// [end:1.1.6]
 import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
 import com.couchbase.client.kotlin.util.StorageSize.Companion.bytes
-// [start:1.1.6]
-import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
-import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
-import com.couchbase.client.kotlin.kv.KvScanConsistency
-// [end:1.1.6]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
+import com.couchbase.client.performer.kotlin.manager.handleCollectionManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.ContentAsUtil
@@ -64,7 +66,6 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.jsonMapper
-import com.google.protobuf.ByteString
 import kotlinx.coroutines.reactive.asPublisher
 import kotlinx.coroutines.runBlocking
 import reactor.core.publisher.Flux
@@ -337,7 +338,9 @@ class KotlinSdkCommandExecutor(
                 val blc = op.bucketCommand
                 val bucket = connection.cluster.bucket(op.bucketCommand.bucketName)
 
-                if (blc.hasWaitUntilReady()) {
+                if (blc.hasCollectionManager()) {
+                    handleCollectionManager(connection.cluster.bucket(blc.bucketName), blc.collectionManager, result)
+                } else if (blc.hasWaitUntilReady()) {
                     val request = blc.waitUntilReady;
                     logger.info("Calling waitUntilReady on bucket " + bucket.name + " with timeout " + request.timeoutMillis + " milliseconds.")
                     val timeout = request.timeoutMillis.milliseconds
