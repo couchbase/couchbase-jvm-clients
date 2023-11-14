@@ -97,7 +97,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
 
   static CoreBucketSettings create(final byte[] bytes) {
     JsonNode node = Mapper.decodeIntoTree(bytes);
-    return Mapper.convertValue(node, CoreBucketSettingsJson.class);
+    return create(node);
   }
 
   static CoreBucketSettings create(final JsonNode node) {
