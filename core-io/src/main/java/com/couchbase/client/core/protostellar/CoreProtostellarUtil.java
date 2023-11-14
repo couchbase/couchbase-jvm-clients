@@ -222,15 +222,15 @@ public class CoreProtostellarUtil {
   }
 
   public static RuntimeException unsupportedInProtostellar(String feature) {
-    return new FeatureNotAvailableException("Feature '" + feature + "' is not supported when using protostellar:// to connect");
+    return new FeatureNotAvailableException("Feature '" + feature + "' is not supported when using couchbase2:// to connect");
   }
 
   // JVMCBC-1187: This and everything using it will be fixed and removed before GA.
   public static RuntimeException unsupportedCurrentlyInProtostellar() {
-    return new FeatureNotAvailableException("Feature is not supported when using protostellar:// to connect (but will be before GA)");
+    return new FeatureNotAvailableException("Feature is not supported when using couchbase2:// to connect");
   }
 
   public static RuntimeException incompatibleProtostellar(String error) {
-    return new CouchbaseException("Encountered error '" + error + "', indicating that a value is being returned from a future version of Protostellar that this SDK does not understand.  Please update your SDK.");
+    return new CouchbaseException("Encountered error '" + error + "', indicating that a value is being returned from a future version of couchbase2 that this SDK does not understand.  Please update your SDK.");
   }
 }
