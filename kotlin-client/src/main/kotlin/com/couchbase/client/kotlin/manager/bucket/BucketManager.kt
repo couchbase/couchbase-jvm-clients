@@ -73,14 +73,9 @@ public class BucketManager(core: Core) {
             historyRetentionCollectionDefault = historyRetentionCollectionDefault,
             historyRetentionDuration = historyRetentionDuration,
             historyRetentionSize = historyRetentionSize,
-
-            // KLUDGE: CE throws an error if we send these, but previous versions
-            // of the SDK allowed CE users to specify the "default" values anyway :-/
-            maximumExpiry = if (maximumExpiry == Expiry.none()) null else maximumExpiry,
-            compressionMode = if (compressionMode == CompressionMode.PASSIVE) null else compressionMode,
-            minimumDurability = if (minimumDurability !is Durability.Synchronous) null else minimumDurability,
-            // ^-- Please don't do this for new settings. Going forward,
-            // the pattern is that we pass all non-null arguments to the server.
+            maximumExpiry = maximumExpiry,
+            compressionMode = compressionMode,
+            minimumDurability = minimumDurability,
         )
 
         coreManager.createBucket(params.toMap(), common.toCore()).await()
@@ -112,9 +107,10 @@ public class BucketManager(core: Core) {
             flushEnabled = flushEnabled,
             replicas = if (bucketType == BucketType.MEMCACHED) null else replicas,
             conflictResolutionType = conflictResolutionType,
-            maximumExpiry = maximumExpiry,
-            compressionMode = compressionMode,
-            minimumDurability = minimumDurability,
+            // Workarounds for Community Edition, which rejects requests that have these parameters.
+            maximumExpiry = if (maximumExpiry == Expiry.none()) null else maximumExpiry,
+            compressionMode = if (compressionMode == CompressionMode.PASSIVE) null else compressionMode,
+            minimumDurability = if (minimumDurability !is Durability.Synchronous) null else minimumDurability,
         )
     }
 
