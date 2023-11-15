@@ -110,12 +110,9 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     CoreAsyncResponse<List<SearchQueryResponse>> responses = CoreProtostellarAccessorsStreaming.async(core,
       request,
-      (endpoint, stream) -> {
-        endpoint.searchStub()
-          .withDeadline(request.deadline())
-          .searchQuery(request.request(), stream);
-        return null;
-      },
+      (endpoint, stream) -> endpoint.searchStub()
+        .withDeadline(request.deadline())
+        .searchQuery(request.request(), stream),
       (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
     );
 
@@ -166,12 +163,9 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
         Flux<SearchQueryResponse> responses = CoreProtostellarAccessorsStreaming.reactive(core,
           request,
-          (endpoint, stream) -> {
-            endpoint.searchStub()
-              .withDeadline(request.deadline())
-              .searchQuery(request.request(), stream);
-            return null;
-          },
+          (endpoint, stream) -> endpoint.searchStub()
+            .withDeadline(request.deadline())
+            .searchQuery(request.request(), stream),
           (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
         );
 

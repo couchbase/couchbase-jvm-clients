@@ -27,7 +27,7 @@ import reactor.core.publisher.Sinks;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.handleShutdownAsync;
@@ -48,7 +48,7 @@ public class CoreProtostellarAccessorsStreaming {
   public static <TGrpcRequest, TGrpcResponse>
   List<TGrpcResponse> blocking(CoreProtostellar core,
                                ProtostellarRequest<TGrpcRequest> request,
-                               BiFunction<ProtostellarEndpoint, StreamObserver<TGrpcResponse>, Void> executeFutureGrpcCall,
+                               BiConsumer<ProtostellarEndpoint, StreamObserver<TGrpcResponse>> executeFutureGrpcCall,
                                Function<Throwable, ProtostellarRequestBehaviour> convertException) {
     return async(core, request, executeFutureGrpcCall, convertException).toBlocking();
   }
@@ -56,7 +56,7 @@ public class CoreProtostellarAccessorsStreaming {
   public static <TGrpcRequest, TGrpcResponse>
   CoreAsyncResponse<List<TGrpcResponse>> async(CoreProtostellar core,
                                                ProtostellarRequest<TGrpcRequest> request,
-                                               BiFunction<ProtostellarEndpoint, StreamObserver<TGrpcResponse>, Void> executeFutureGrpcCall,
+                                               BiConsumer<ProtostellarEndpoint, StreamObserver<TGrpcResponse>> executeFutureGrpcCall,
                                                Function<Throwable, ProtostellarRequestBehaviour> convertException) {
 
     CompletableFuture<List<TGrpcResponse>> ret = new CompletableFuture<>();
@@ -70,7 +70,7 @@ public class CoreProtostellarAccessorsStreaming {
   void asyncInternal(CompletableFuture<List<TGrpcResponse>> ret,
                      CoreProtostellar core,
                      ProtostellarRequest<TGrpcRequest> request,
-                     BiFunction<ProtostellarEndpoint, StreamObserver<TGrpcResponse>, Void> executeFutureGrpcCall,
+                     BiConsumer<ProtostellarEndpoint, StreamObserver<TGrpcResponse>> executeFutureGrpcCall,
                      Function<Throwable, ProtostellarRequestBehaviour> convertException) {
     if (handleShutdownAsync(core, ret, request)) {
       return;
@@ -115,13 +115,13 @@ public class CoreProtostellarAccessorsStreaming {
       }
     };
 
-    executeFutureGrpcCall.apply(endpoint, response);
+    executeFutureGrpcCall.accept(endpoint, response);
   }
 
   public static <TGrpcRequest, TGrpcResponse>
   Flux<TGrpcResponse> reactive(CoreProtostellar core,
                                ProtostellarRequest<TGrpcRequest> request,
-                               BiFunction<ProtostellarEndpoint, StreamObserver<TGrpcResponse>, Void> executeFutureGrpcCall,
+                               BiConsumer<ProtostellarEndpoint, StreamObserver<TGrpcResponse>> executeFutureGrpcCall,
                                Function<Throwable, ProtostellarRequestBehaviour> convertException) {
     return Flux.defer(() -> {
       Sinks.Many<TGrpcResponse> ret = Sinks.many().unicast().onBackpressureBuffer();
@@ -135,7 +135,7 @@ public class CoreProtostellarAccessorsStreaming {
   void reactiveInternal(Sinks.Many<TGrpcResponse> ret,
                         CoreProtostellar core,
                         ProtostellarRequest<TGrpcRequest> request,
-                        BiFunction<ProtostellarEndpoint, StreamObserver<TGrpcResponse>, Void> executeFutureGrpcCall,
+                        BiConsumer<ProtostellarEndpoint, StreamObserver<TGrpcResponse>> executeFutureGrpcCall,
                         Function<Throwable, ProtostellarRequestBehaviour> convertException) {
     if (handleShutdownReactive(ret, core, request)) {
       return;
@@ -179,6 +179,6 @@ public class CoreProtostellarAccessorsStreaming {
       }
     };
 
-    executeFutureGrpcCall.apply(endpoint, response);
+    executeFutureGrpcCall.accept(endpoint, response);
   }
 }

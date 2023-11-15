@@ -82,14 +82,11 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
     ProtostellarRequest<QueryRequest> request = request(core, statement, options, queryContext, target);
 
     List<QueryResponse> responses = CoreProtostellarAccessorsStreaming.blocking(core,
-            request,
-            (endpoint, stream) -> {
-              endpoint.queryStub()
-                      .withDeadline(request.deadline())
-                      .query(request.request(), stream);
-              return null;
-            },
-            (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
+      request,
+      (endpoint, stream) -> endpoint.queryStub()
+        .withDeadline(request.deadline())
+        .query(request.request(), stream),
+      (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
     );
 
     return new ProtostellarCoreQueryResult(responses);
@@ -105,12 +102,9 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
     CoreAsyncResponse<List<QueryResponse>> responses = CoreProtostellarAccessorsStreaming.async(core,
       request,
-      (endpoint, stream) -> {
-        endpoint.queryStub()
-          .withDeadline(request.deadline())
-          .query(request.request(), stream);
-        return null;
-      },
+      (endpoint, stream) -> endpoint.queryStub()
+        .withDeadline(request.deadline())
+        .query(request.request(), stream),
       (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
     );
 
@@ -132,12 +126,9 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
         Flux<QueryResponse> responses = CoreProtostellarAccessorsStreaming.reactive(core,
           request,
-          (endpoint, stream) -> {
-            endpoint.queryStub()
-              .withDeadline(request.deadline())
-              .query(request.request(), stream);
-            return null;
-          },
+          (endpoint, stream) -> endpoint.queryStub()
+            .withDeadline(request.deadline())
+            .query(request.request(), stream),
           (error) -> CoreProtostellarErrorHandlingUtil.convertException(core, request, error)
         );
 
