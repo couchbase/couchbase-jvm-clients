@@ -58,8 +58,11 @@ public class CoreProtoStellarKvBinaryRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContent(ByteString.copyFrom(content))
-      .setCas(cas);
+      .setContent(ByteString.copyFrom(content));
+
+    if (cas != 0) {
+      request.setCas(cas);
+    }
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));
@@ -90,8 +93,11 @@ public class CoreProtoStellarKvBinaryRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContent(ByteString.copyFrom(content))
-      .setCas(cas);
+      .setContent(ByteString.copyFrom(content));
+
+    if (cas != 0) {
+      request.setCas(cas);
+    }
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(CoreProtostellarUtil.convert(durability));

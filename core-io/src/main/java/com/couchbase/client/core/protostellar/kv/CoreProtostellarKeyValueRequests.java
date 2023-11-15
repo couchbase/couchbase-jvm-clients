@@ -245,9 +245,12 @@ public class CoreProtostellarKeyValueRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setCas(cas)
       .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
       .setContentFlags(encoded.getT1().flags());
+
+    if (cas != 0) {
+      request.setCas(cas);
+    }
 
     if (!preserveExpiry) {
       expiry.when(
@@ -351,8 +354,11 @@ public class CoreProtostellarKeyValueRequests {
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
-      .setKey(key)
-      .setCas(cas);
+      .setKey(key);
+
+    if (cas != 0) {
+      request.setCas(cas);
+    }
 
     if (!durability.isNone()) {
       request.setDurabilityLevel(convert(durability));
@@ -486,7 +492,6 @@ public class CoreProtostellarKeyValueRequests {
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
-      .setCas(cas)
       .setKey(key)
       .addAllSpecs(commands.stream()
         .map(command -> {
@@ -572,6 +577,10 @@ public class CoreProtostellarKeyValueRequests {
         break;
       default:
         throw new IllegalArgumentException("Sub-Document store semantic " + storeSemantics + " is not supported in Protostellar");
+    }
+
+    if (cas != 0) {
+      request.setCas(cas);
     }
 
     if (accessDeleted) {
