@@ -534,6 +534,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       case LOCKED:
         return request instanceof UnlockRequest ? null : RetryReason.KV_LOCKED;
       case TEMPORARY_FAILURE:
+      case SERVER_BUSY:
         return RetryReason.KV_TEMPORARY_FAILURE;
       case SYNC_WRITE_IN_PROGRESS:
         return RetryReason.KV_SYNC_WRITE_IN_PROGRESS;
