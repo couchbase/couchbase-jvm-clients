@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
@@ -37,7 +38,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse> implements TargetedRequest {
 
-  private static final String PATH = "/pools/default/b/%s";
+  private static final String PATH = "/pools/default/b/{}";
 
   private final String bucketName;
   private final Authenticator authenticator;
@@ -56,7 +57,7 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
     FullHttpRequest request = new DefaultFullHttpRequest(
       HttpVersion.HTTP_1_1,
       HttpMethod.GET,
-      String.format(PATH, bucketName)
+      CoreHttpPath.formatPath(PATH, bucketName)
     );
     authenticator.authHttpRequest(serviceType(), request);
     return request;

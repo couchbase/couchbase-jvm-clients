@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpReques
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -33,7 +34,7 @@ import java.time.Duration;
  */
 public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfigStreamingResponse> {
 
-  private static final String PATH = "/pools/default/bs/%s";
+  private static final String PATH = "/pools/default/bs/{}";
 
   private final String bucketName;
   private final Authenticator authenticator;
@@ -60,7 +61,7 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
     FullHttpRequest request = new DefaultFullHttpRequest(
       HttpVersion.HTTP_1_1,
       HttpMethod.GET,
-      String.format(PATH, bucketName)
+      CoreHttpPath.formatPath(PATH, bucketName)
     );
     authenticator.authHttpRequest(serviceType(), request);
     return request;
