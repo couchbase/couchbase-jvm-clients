@@ -25,7 +25,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 /**
  * A keyspace represents a triple of bucket, scope and collection.
  */
-@Stability.Internal
 public class TransactionKeyspace {
 
     private final String bucket;

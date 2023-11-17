@@ -53,17 +53,13 @@ public class TransactionsConfig {
 
     /**
      * Sets the maximum time that transactions can run for.  The default is 15 seconds.
-     * After this time, the transaction will throw a
-     * {@link com.couchbase.client.java.transactions.error.TransactionExpiredException} error.
+     * After this time, the transaction will abort.  Note that this could be mid-commit, in which case the cleanup process
+     * will complete the transaction asynchronously at a later point.
      * <p>
      * Applications can increase or decrease this as desired.  The trade-off to understand is that documents that are
      * being mutated in a transaction A, are effectively locked from being updated by other transactions until
      * transaction A has completed - committed or rolled back.  If transaction A is unable to complete for whatever
-     * reason, the document can be locked for this <code>expirationTime</code> time.
-     * <p>
-     * It is worth noting that this setting does not completely guarantee that the transaction will immediately be
-     * completed after that time.  In some rare cases, such as application crashes, it may take longer as the lost transactions
-     * cleanup process will be involved.
+     * reason, the document can be locked for this <code>timeout</code> time.
      */
     public static Builder timeout(Duration timeout) {
         return builder().timeout(timeout);
@@ -72,14 +68,10 @@ public class TransactionsConfig {
     /**
      * All transaction writes will be performed with this durability setting.
      * <p>
-     * All writes in Couchbase go initially to one primary node, and from their fan-out to any configured replicas.
-     * <p>
-     * If durability is disabled then the transaction will continue as soon as the write is available on the primary
-     * node.  The durability setting will ensure the transaction does not continue until the write is available in
-     * more places.  This can provide a small degree of extra security in the advent of node loss.
-     * <p>
      * The default setting is DurabilityLevel.MAJORITY, meaning a transaction will pause on each write
      * until it is available in-memory on a majority of configured replicas.
+     * <p>
+     * DurabilityLevel.NONE is not supported and provides no ACID transactional guarantees.
      */
     public static Builder durabilityLevel(DurabilityLevel level) {
         return builder().durabilityLevel(level);

@@ -75,9 +75,8 @@ public class TransactionAttemptContext {
     }
 
     /**
-     * Gets a document from the specified Couchbase <code>bucket</code> matching the specified <code>id</code>.  If
-     * the document is not found, a <code>DocumentNotFoundException</code> is thrown.  If not caught inside the transaction logic, this
-     * particular exception will cause the overall transaction to abort with a thrown <code>TransactionFailed</code>.
+     * Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.  If
+     * the document is not found, a <code>DocumentNotFoundException</code> is thrown.
      *
      * @param collection the Couchbase collection the document exists on
      * @param id     the document's ID
@@ -126,9 +125,7 @@ public class TransactionAttemptContext {
     /**
      * Inserts a new document into the specified Couchbase <code>collection</code>.
      * <p>
-     * As with {@link #replace}, the insert is staged until the transaction is committed.  Due to technical limitations
-     * it is not as possible to completely hide the staged data from the rest of the Couchbase platform, as an empty
-     * document must be created.
+     * As with {@link #replace}, the insert is staged until the transaction is committed.
      * <p>
      * This staged data effectively locks the document from other transactional writes until the attempt completes
      * (commits or rolls back).

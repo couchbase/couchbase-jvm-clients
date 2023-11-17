@@ -20,17 +20,17 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommi
 
 /**
  * The transaction expired at the point of trying to commit it.  It is ambiguous whether the transaction has committed
- * or not.  Actors may be able to see the content of this transaction.
- *
+ * or not.
+ * <p>
  * This error is result of inevitable and unavoidable edge cases when working with unreliable networks.  For example,
  * consider an ordinary mutation being made over the network to any database.  The mutation could succeed on the
  * database-side, and then just before the result is returned to the client, the network connection drops.  The client
  * cannot receive the success result and will timeout - it is ambiguous to it whether the mutation succeeded or not.
- *
+ * <p>
  * The transactions layer will work to resolve the ambiguity up until the transaction expires, but if unable to resolve
  * it in that time, it is forced to raise this error.  The transaction may or may not have been successful, and
  * error-handling of this is highly application-dependent.
- *
+ * <p>
  * An asynchronous cleanup process will try to complete the transaction: roll it back if it didn't commit, roll it
  * forwards if it did.
  */

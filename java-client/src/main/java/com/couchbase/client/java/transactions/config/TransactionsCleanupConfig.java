@@ -45,38 +45,31 @@ public class TransactionsCleanupConfig {
     /**
      * Controls where a background thread is created to cleanup any transaction attempts made by this client.
      * <p>
-     * This should be left at its default of true.  Without this, this client's transactions will only be cleaned up
-     * by the lost attempts cleanup process, which is by necessity slower.
+     * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
+     * transactions.
      */
     public static Builder cleanupClientAttempts(boolean cleanupClientAttempts) {
         return builder().cleanupClientAttempts(cleanupClientAttempts);
     }
 
     /**
-     * Controls where a background process is created to cleanup any 'lost' transaction attempts: that is, those for
-     * which the regular cleanup process has failed.
+     * Controls where a background process is created to cleanup any 'lost' transaction attempts.
      * <p>
-     * This should be left at its default of true.  Without at least one client performing this cleanup, 'lost'
-     * transactions will not be removed.
+     * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
+     * transactions.
      */
     public static Builder cleanupLostAttempts(boolean cleanupLostAttempts) {
         return builder().cleanupLostAttempts(cleanupLostAttempts);
     }
 
     /**
-     * Part of the lost attempts background cleanup process.  Specifies the window during which the
-     * cleanup
+     * Part of the lost attempts background cleanup process.  Specifies the window during which the cleanup
      * process is sure to discover all lost transactions.
      * <p>
-     * This process is an implementation detail, but currently consists of polling multiple documents.  The default
-     * setting of 60 seconds is tuned to reduce impact on the cluster.  If the application would prefer to discover
-     * lost transactions more swiftly, but at the cost of more frequent polling, it can feel free to reduce this
-     * parameter, while monitoring resource usage.
-     * <p>
-     * The trade-off to appreciate is that if a document is in a transaction A, it is effectively locked from being
-     * updated by another transaction until transaction A has been completed - that is, committed or rolled back.  In
-     * rare cases such as application crashes, the transaction will remain incomplete - that is, it will be lost - until
-     * the lost transactions process discovers it.
+     * The default setting of 60 seconds is tuned to balance how quickly such transactions are discovered, while
+     * minimising impact on the cluster.  If the application would prefer to discover
+     * lost transactions more swiftly, but at the cost of increased impact, it can feel free to reduce this
+     * parameter.
      */
     public static Builder cleanupWindow(Duration cleanupWindow) {
         return builder().cleanupWindow(cleanupWindow);
@@ -95,8 +88,10 @@ public class TransactionsCleanupConfig {
     /**
      * Adds collections to the set of metadata collections that will be cleaned up automatically.
      * <p>
-     * This will also start cleanup immediately rather than on the first transaction (unless cleanup has been
-     * explicitly disabled.)
+     * Collections will be added automatically to this 'cleanup set' as transactions are performed, so generally
+     * an application will not need to change this.
+     * <p>
+     * Setting this parameter will also start cleanup immediately rather than on the first transaction.
      */
     public Builder addCollections(java.util.Collection<TransactionKeyspace> collections) {
         return builder().addCollections(collections);

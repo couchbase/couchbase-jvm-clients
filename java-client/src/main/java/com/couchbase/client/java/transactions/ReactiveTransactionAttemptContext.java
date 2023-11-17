@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
@@ -42,8 +43,6 @@ import static com.couchbase.client.java.transactions.internal.EncodingUtil.encod
 /**
  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents, as well
  * as commit or rollback the transaction.
- * <p>
- * Thread-safety: This class is thread-safe for specific workloads, namely doing batch mutations in a reactive way.
  */
 public class ReactiveTransactionAttemptContext {
     private final CoreTransactionAttemptContext internal;
@@ -60,9 +59,9 @@ public class ReactiveTransactionAttemptContext {
     }
 
     /**
-     * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>bucket</code>.
+     * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
      * <p>
-     * If the document does not exist it will throw a DocumentNotFoundException.
+     * If the document does not exist it will throw a {@link DocumentNotFoundException}.
      *
      * @param collection the Couchbase collection the document exists on
      * @param id         the document's ID

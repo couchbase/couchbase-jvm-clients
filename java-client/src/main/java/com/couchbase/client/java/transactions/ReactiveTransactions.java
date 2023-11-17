@@ -63,9 +63,8 @@ public class ReactiveTransactions {
      * This is the asynchronous version of {@link Transactions#run}, so to cover the differences:
      * <ul>
      * <li>The transaction logic is supplied with a {@link CoreTransactionAttemptContext}, which contains asynchronous
-     * methods to allow it to read, mutate, insert and delete documents, as well as commit or rollback the
-     * transactions.</li>
-     * <li>The transaction logic should run these methods as a Reactor chain.</li>
+     * methods to allow it to read, mutate, insert and delete documents.</li>
+     * <li>The transaction logic should run these methods as a Reactor chain - as standard with reactive programming.</li>
      * <li>The transaction logic should return a <code>Mono{@literal <}Void{@literal >}</code>.  Any
      * <code>Flux</code> or <code>Mono</code> can be converted to a <code>Mono{@literal <}Void{@literal >}</code> by
      * calling <code>.then()</code> on it.</li>
