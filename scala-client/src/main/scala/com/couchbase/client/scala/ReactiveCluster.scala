@@ -21,15 +21,12 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
+import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.AsyncCluster.extractClusterEnvironment
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{
-  DiagnosticsOptions,
-  PingOptions,
-  WaitUntilReadyOptions
-}
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.ReactiveBucketManager
@@ -42,6 +39,8 @@ import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.ReactiveSearchResult
+import com.couchbase.client.scala.transactions.{ReactiveTransactions, Transactions}
+import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
@@ -86,6 +85,14 @@ class ReactiveCluster(val async: AsyncCluster) {
 
   @Stability.Uncommitted
   lazy val eventingFunctions = new ReactiveEventingFunctionManager(async.eventingFunctions)
+
+  @Stability.Uncommitted
+  lazy val transactions = new ReactiveTransactions(
+    new CoreTransactionsReactive(
+      async.core,
+      env.transactionsConfig.map(v => v.toCore).getOrElse(TransactionsConfig().toCore)
+    )
+  )
 
   /** Performs a N1QL query against the cluster.
     *

@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
@@ -27,6 +28,7 @@ import com.couchbase.client.scala.util.CoreCommonConverters._
 import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 import reactor.core.scala.publisher.{SFlux, SMono}
 
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
@@ -50,6 +52,8 @@ class ReactiveCollection(async: AsyncCollection) {
   private val environment                              = async.environment
   private implicit val ec: ExecutionContext            = async.ec
   private[scala] val kvOps                             = async.kvOps
+  private[scala] lazy val collectionIdentifier =
+    new CollectionIdentifier(bucketName, Some(scopeName).asJava, Some(name).asJava)
 
   /** Manage query indexes for this collection */
   @Volatile

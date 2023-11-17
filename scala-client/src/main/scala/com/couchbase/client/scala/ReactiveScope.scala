@@ -38,7 +38,7 @@ import scala.util.{Failure, Success}
   * @author Graham Pople
   * @since 1.0.0
   */
-class ReactiveScope(async: AsyncScope, bucketName: String) {
+class ReactiveScope(async: AsyncScope, val bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
   /** The name of this scope. */

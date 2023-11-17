@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.datastructures._
 import com.couchbase.client.scala.durability.Durability
@@ -32,6 +33,7 @@ import com.couchbase.client.scala.util.CoreCommonConverters.{
 }
 import com.couchbase.client.scala.util.{ExpiryUtil, TimeoutUtil}
 
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.jdk.CollectionConverters._
@@ -121,6 +123,8 @@ class Collection(
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
   private[scala] val kvOps                             = async.kvOps
+  private[scala] lazy val collectionIdentifier =
+    new CollectionIdentifier(bucketName, Some(scopeName).asJava, Some(name).asJava)
 
   private def block[T](in: Future[T]) =
     Collection.block(in)

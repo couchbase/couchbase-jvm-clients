@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.{EventBus, Meter, RequestTracer}
 import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, PropertyLoader}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
+import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -78,6 +79,7 @@ object ClusterEnvironment {
       ]] = Seq(),
       private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
       private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None,
+      private[scala] val transactionsConfig: Option[TransactionsConfig] = None,
       private[scala] val error: Option[Throwable] = None
   ) {
 
@@ -249,6 +251,15 @@ object ClusterEnvironment {
       copy(loggingMeterConfig = Some(config))
     }
 
+    /**
+      * Configurations transactions.
+      *
+      * @return this, for chaining purposes.
+      */
+    def transactionsConfig(config: TransactionsConfig): ClusterEnvironment.Builder = {
+      copy(transactionsConfig = Some(config))
+    }
+
     /** Applies custom properties based on a profile name.
       *
       * At the moment only the "wan-development" profile is supported.
@@ -305,6 +316,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
 
   private[scala] def transcoder = builder.transcoder.getOrElse(JsonTranscoder.Instance)
 
+  private[scala] def transactionsConfig = builder.transactionsConfig
+
   // Create the thread pool that will be used for all `Future`s throughout the SDK.
   // Note that the app will also need its own ExecutionContext to do anything with the returned `Future`. It could be
   // possible in future to expose this internal thread-pool:
@@ -348,6 +361,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     v => coreBuilder.thresholdRequestTracerConfig(v.toCore)
   )
   builder.loggingMeterConfig.foreach(v => coreBuilder.loggingMeterConfig(v.toCore))
+  builder.transactionsConfig.foreach(v => coreBuilder.transactionsConfig(v.toCore))
 
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 

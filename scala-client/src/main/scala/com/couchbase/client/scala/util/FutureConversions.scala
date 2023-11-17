@@ -33,7 +33,7 @@ import scala.util.{Failure, Success}
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] object FutureConversions {
+private[client] object FutureConversions {
   def javaCFToScalaFuture[T](future: CompletableFuture[T]): Future[T] = {
     future.toScala
   }

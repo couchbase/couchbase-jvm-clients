@@ -32,6 +32,9 @@ public class CoreTransactionsCleanupConfig {
     public static final Duration DEFAULT_TRANSACTION_CLEANUP_WINDOW = Duration.ofSeconds(60);
     public static final String TRANSACTIONS_CLEANUP_LOST_PROPERTY = "com.couchbase.transactions.cleanup.lost.enabled";
     public static final String TRANSACTIONS_CLEANUP_REGULAR_PROPERTY = "com.couchbase.transactions.cleanup.regular.enabled";
+    public static final Boolean DEFAULT_TRANSACTIONS_CLEANUP_LOST_ENABLED = true;
+    public static final Boolean DEFAULT_TRANSACTIONS_CLEANUP_CLIENT_ENABLED = true;
+
 
     private final boolean runLostAttemptsCleanupThread;
     private final boolean runRegularAttemptsCleanupThread;

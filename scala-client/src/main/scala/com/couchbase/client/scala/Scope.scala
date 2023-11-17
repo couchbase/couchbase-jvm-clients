@@ -37,7 +37,7 @@ import scala.util.{Failure, Success, Try}
   * @author Graham Pople
   * @since 1.0.0
   */
-class Scope private[scala] (val async: AsyncScope, bucketName: String) {
+class Scope private[scala] (val async: AsyncScope, val bucketName: String) {
   private[scala] implicit val ec: ExecutionContext = async.ec
 
   /** Access a Reactive version of this API. */

@@ -1124,6 +1124,17 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
+     * Allows configuring the transactions config.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Internal
+    public SELF transactionsConfig(final CoreTransactionsConfig transactionsConfig) {
+      this.transactionsConfig = transactionsConfig;
+      return self();
+    }
+
+    /**
      * Allows to configure callbacks across the lifetime of a request.
      * <p>
      * <strong>IMPORTANT:</strong> this is internal API and might change at any point in time.
