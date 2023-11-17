@@ -83,12 +83,12 @@ object Collection {
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define ErrorHandling  any `scala.util.control.NonFatal` error returned will derive ultimately from
   *                        `com.couchbase.client.core.error.CouchbaseException`.  See
-  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/error-handling.html the error handling docs]]
+  *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/error-handling.html the error handling docs]]
   *                        for more detail.
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
   *                        of types that are supported 'out of the box' is available at
-  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
+  *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   * @define Durability     writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                        take care of sending that mutation to any configured replicas.  This parameter provides
   *                        some control over ensuring the success of the mutation's replication.  See

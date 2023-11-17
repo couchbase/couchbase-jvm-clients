@@ -17,7 +17,7 @@ import scala.util.{Failure, Try}
   *                        alongside a document.
   * @define SupportedTypes this can be of any type for which an implicit JsonSerializer can be found: a list
   *                        of types that are supported 'out of the box' is available at
-  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
+  *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   * @define JsonSerializer      an implicit JsonSerializer.  For any supported type T this will be found automatically.
   * @author Graham Pople
   * @since 1.0.0

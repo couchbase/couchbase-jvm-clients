@@ -44,7 +44,7 @@ import scala.util.Try
   * @define CAS             Couchbase documents all have a CAS (Compare-And-Set) field, a simple integer that allows
   *                         optimistic concurrency - e.g. it can detect if another agent has modified a document
   *                         in-between this agent getting and modifying the document.  See
-  *                         [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full
+  *                         [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]] for a full
   *                         description.  The default is 0, which disables CAS checking.
   * @define Timeout         when the operation will timeout.  This will default to `timeoutConfig().kvTimeout()` in the
   *                         provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
@@ -52,7 +52,7 @@ import scala.util.Try
   *                         in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   * @define ErrorHandling   any `scala.util.control.NonFatal` error returned will derive ultimately from
   *                         `com.couchbase.client.core.error.CouchbaseException`.  See
-  *                         [[https://docs.couchbase.com/scala-sdk/1.0/howtos/error-handling.html the error handling docs]]
+  *                         [[https://docs.couchbase.com/scala-sdk/current/howtos/error-handling.html the error handling docs]]
   *                         for more detail.
   * @define Durability      writes in Couchbase are written to a single node, and from there the Couchbase Server will
   *                         take care of sending that mutation to any configured replicas.  This parameter provides

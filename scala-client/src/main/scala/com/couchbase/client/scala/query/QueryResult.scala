@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
   * @define SupportedTypes The rows can be converted into the user's desired type.  This can be any type for which an
   *                        implicit `JsonDeserializer[T]` can be found, and can include `JsonObject`, a case class, String,
   *                        or one of a number of supported third-party JSON libraries; see
-  *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
+  *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]] for a full list
   * @author Graham Pople
   * @since 1.0.0
   */
@@ -68,7 +68,7 @@ case class ReactiveQueryResult(
   /** A Flux of any returned rows, streamed directly from the query service.  If the query service returns an error
     * while returning the rows, it will be raised on this.
     *
-    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]] for a full list
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(row => {
@@ -162,7 +162,7 @@ case class QueryMetaData(
     *
     * Note a profile must first be requested with [[QueryOptions.profile]].
     *
-    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]] for a full list
     */
   def profileAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _profileContent match {
@@ -173,7 +173,7 @@ case class QueryMetaData(
 
   /** Return any signature content, converted into the application's preferred representation.
     *
-    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]] for a full list
+    * @tparam T any supported type; see [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]] for a full list
     */
   def signatureAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
     _signatureContent match {

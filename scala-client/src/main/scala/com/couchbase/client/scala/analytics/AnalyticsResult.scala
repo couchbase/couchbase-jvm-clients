@@ -73,7 +73,7 @@ case class ReactiveAnalyticsResult(
     * @tparam T this can be of any type for which an implicit
     *   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
     *   *                        of types that are supported 'out of the box' is available at
-    *   *                        [[https://docs.couchbase.com/scala-sdk/1.0/howtos/json.html these JSON docs]]
+    *   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
     rows.map(
