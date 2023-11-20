@@ -18,6 +18,7 @@ package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.Collections;
@@ -47,6 +48,10 @@ public abstract class TimeoutException extends CouchbaseException {
 
   protected TimeoutException(final String message, final CancellationErrorContext ctx) {
     super(message, ctx);
+  }
+
+  public TimeoutException(final String message, final Throwable cause, final boolean enableSuppression, final boolean writableStacktrace, final ErrorContext ctx) {
+    super(message, cause, enableSuppression, writableStacktrace, ctx);
   }
 
   @Override

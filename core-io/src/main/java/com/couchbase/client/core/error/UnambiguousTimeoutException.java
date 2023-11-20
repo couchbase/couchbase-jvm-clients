@@ -24,7 +24,7 @@ import com.couchbase.client.core.error.context.CancellationErrorContext;
 public class UnambiguousTimeoutException extends TimeoutException {
 
   public UnambiguousTimeoutException(final String message, final CancellationErrorContext ctx) {
-    super(message, ctx);
+    super(message, null, true, false, ctx);
   }
 
 }

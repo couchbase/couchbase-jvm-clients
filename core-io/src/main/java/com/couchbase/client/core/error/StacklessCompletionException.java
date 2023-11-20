@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2023 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,23 @@
 
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.annotation.Stability;
+
+import java.util.concurrent.CompletionException;
 
 /**
- * This is a special case of the timeout exception, signaling that the timeout happened with an ambiguous cause.
+ * Internal optimisation to avoid the cost of completableFuture.completeExceptionally() creating a CompletionException
+ * (including expensive stack creation).
  */
-public class AmbiguousTimeoutException extends TimeoutException {
+@Stability.Internal
+public class StacklessCompletionException extends CompletionException {
 
-  public AmbiguousTimeoutException(final String message, final CancellationErrorContext ctx) {
-    super(message, null, true, false, ctx);
+  public StacklessCompletionException(String msg, Throwable cause) {
+    super(msg,cause);
   }
 
+  @Override
+  public Throwable fillInStackTrace() {
+    return this;
+  }
 }

@@ -55,6 +55,12 @@ public class CouchbaseException extends RuntimeException {
     this.ctx = ctx;
   }
 
+  @Stability.Internal
+  public CouchbaseException(final String message, final Throwable cause, final boolean enableSuppression, final boolean writableStacktrace, final ErrorContext ctx) {
+    super(message, cause, enableSuppression, writableStacktrace);
+    this.ctx = ctx;
+  }
+
   public CouchbaseException(final String message, final Throwable cause) {
     this(message, cause, null);
   }
