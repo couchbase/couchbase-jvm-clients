@@ -148,10 +148,7 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
     assert(wrap(coll.insert(docId, content, InsertOptions().expiry(5.seconds))).isSuccess)
 
     wrap(coll.get(docId, GetOptions().withExpiry(true))) match {
-      case Success(result) =>
-        // Protostellar always returns expiry
-        if (config.isProtostellar) assert(result.expiry.isDefined)
-        else assert(result.expiry.isEmpty)
+      case Success(result) => assert(result.expiry.isDefined)
       case Failure(err) => assert(false, s"unexpected error $err")
       case _            => assert(false, s"unexpected error")
     }
