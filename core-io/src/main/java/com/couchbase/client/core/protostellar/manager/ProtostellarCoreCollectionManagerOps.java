@@ -28,7 +28,6 @@ import com.couchbase.client.protostellar.admin.collection.v1.CreateScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteCollectionRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequest;
-import reactor.util.annotation.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -54,7 +53,7 @@ public final class ProtostellarCoreCollectionManagerOps implements CoreCollectio
   @Override
   public CompletableFuture<Void> createCollection(String scopeName,
                                                   String collectionName,
-                                                  @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                  CoreCreateOrUpdateCollectionSettings settings,
                                                   CoreCommonOptions options) {
     ProtostellarRequest<CreateCollectionRequest> request = createCollectionRequest(core, bucketName, scopeName, collectionName, settings, options);
     return CoreProtostellarAccessors.async(core,
@@ -67,7 +66,7 @@ public final class ProtostellarCoreCollectionManagerOps implements CoreCollectio
   @Override
   public CompletableFuture<Void> updateCollection(String scopeName,
                                                   String collectionName,
-                                                  @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                  CoreCreateOrUpdateCollectionSettings settings,
                                                   CoreCommonOptions options) {
     throw unsupportedCurrentlyInProtostellar();
   }

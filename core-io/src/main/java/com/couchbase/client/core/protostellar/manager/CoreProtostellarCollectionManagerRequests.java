@@ -29,7 +29,6 @@ import com.couchbase.client.protostellar.admin.collection.v1.CreateScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteCollectionRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.DeleteScopeRequest;
 import com.couchbase.client.protostellar.admin.collection.v1.ListCollectionsRequest;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -48,7 +47,7 @@ public class CoreProtostellarCollectionManagerRequests {
                                                                                      String bucketName,
                                                                                      String scopeName,
                                                                                      String collectionName,
-                                                                                     @Nullable CoreCreateOrUpdateCollectionSettings settings,
+                                                                                     CoreCreateOrUpdateCollectionSettings settings,
                                                                                      CoreCommonOptions opts) {
     Duration timeout = CoreProtostellarUtil.managementTimeout(opts.timeout(), core);
 
@@ -57,13 +56,11 @@ public class CoreProtostellarCollectionManagerRequests {
       .setScopeName(scopeName)
       .setCollectionName(collectionName);
 
-    if (settings != null) {
-      if (settings.maxExpiry() != null) {
-        request.setMaxExpirySecs(Math.toIntExact(settings.maxExpiry().getSeconds()));
-      }
-      if (settings.history() != null) {
-        throw unsupportedCurrentlyInProtostellar();
-      }
+    if (settings.maxExpiry() != null) {
+      request.setMaxExpirySecs(Math.toIntExact(settings.maxExpiry().getSeconds()));
+    }
+    if (settings.history() != null) {
+      throw unsupportedCurrentlyInProtostellar();
     }
 
     return new ProtostellarCollectionManagerRequest<>(request.build(),

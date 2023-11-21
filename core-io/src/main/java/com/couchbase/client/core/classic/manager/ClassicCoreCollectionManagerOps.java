@@ -47,7 +47,6 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
-import reactor.util.annotation.Nullable;
 
 @Stability.Internal
 public final class ClassicCoreCollectionManagerOps implements CoreCollectionManager {
@@ -146,7 +145,7 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
   }
 
   @Override
-  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, @Nullable CoreCreateOrUpdateCollectionSettings settings,
+  public CompletableFuture<Void> createCollection(String scopeName, String collectionName, CoreCreateOrUpdateCollectionSettings settings,
       CoreCommonOptions options) {
 
     return bucketConfigCheck(settings, options)
@@ -168,24 +167,18 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
       form.set("name", collectionName);
     }
 
-    if (settings != null) {
-      if (settings.maxExpiry() != null) {
-        form.set("maxTTL", settings.maxExpiry().getSeconds());
-      }
-      if (settings.history() != null) {
-        // Send as "true"/"false"
-        form.set("history", settings.history());
-      }
+    if (settings.maxExpiry() != null) {
+      form.set("maxTTL", settings.maxExpiry().getSeconds());
+    }
+    if (settings.history() != null) {
+      // Send as "true"/"false"
+      form.set("history", settings.history());
     }
 
     return form;
   }
 
-  private CompletableFuture<Void> bucketConfigCheck(@Nullable CoreCreateOrUpdateCollectionSettings settings, CoreCommonOptions options) {
-    if (settings == null) {
-      return CompletableFuture.completedFuture(null);
-    }
-
+  private CompletableFuture<Void> bucketConfigCheck(CoreCreateOrUpdateCollectionSettings settings, CoreCommonOptions options) {
     boolean needsBucketConfig = (settings.history() != null && settings.history());
     CompletableFuture<BucketConfig> bucketConfigFuture = needsBucketConfig
         ? BucketConfigUtil.waitForBucketConfig(core, bucketName, options.timeout().orElse(core.context().environment().timeoutConfig().managementTimeout())).toFuture()
@@ -200,7 +193,7 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
   }
 
   @Override
-  public CompletableFuture<Void> updateCollection(String scopeName, String collectionName, @Nullable CoreCreateOrUpdateCollectionSettings settings,
+  public CompletableFuture<Void> updateCollection(String scopeName, String collectionName, CoreCreateOrUpdateCollectionSettings settings,
                                                   CoreCommonOptions options) {
     return bucketConfigCheck(settings, options)
         .thenCompose(v -> {
