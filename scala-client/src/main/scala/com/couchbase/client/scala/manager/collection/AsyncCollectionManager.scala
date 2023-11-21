@@ -88,7 +88,7 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
         coreCollectionManager.createCollection(
           collection.scopeName,
           collection.name,
-          CreateCollectionSettings().toCore,
+          CreateCollectionSettings(maxExpiry = collection.expiry).toCore,
           makeCommonOptions(timeout, retryStrategy)
         )
       )
