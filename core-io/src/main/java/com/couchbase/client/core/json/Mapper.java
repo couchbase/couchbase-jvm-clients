@@ -49,7 +49,7 @@ public class Mapper {
     ObjectMapper mapper = new ObjectMapper();
     mapper.getFactory().setStreamReadConstraints(
       StreamReadConstraints.defaults().rebuild()
-        .maxStringLength(20 * 1024 * 1024) // increase from 5 MB to 20 MiB
+        .maxStringLength(20 * 1024 * 1024) // increase from default of 20 MB to 20 MiB (note megabytes vs mebibytes)
         .build()
     );
     return mapper;
