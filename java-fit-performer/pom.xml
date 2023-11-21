@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.14.0</version>
+        <version>1.14.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>fit-performer-java-sdk</artifactId>
@@ -41,13 +41,13 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>tracing-opentelemetry</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>metrics-opentelemetry</artifactId>
-            <version>0.4.0</version>
+            <version>0.4.1-SNAPSHOT</version>
         </dependency>
 
         <dependency>
