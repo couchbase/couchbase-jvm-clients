@@ -169,7 +169,7 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
     }
 
     if (settings != null) {
-      if (settings.maxExpiry() != null && !settings.maxExpiry().isZero()) {
+      if (settings.maxExpiry() != null) {
         form.set("maxTTL", settings.maxExpiry().getSeconds());
       }
       if (settings.history() != null) {
