@@ -25,7 +25,6 @@ import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.java.Bucket;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
@@ -177,7 +176,6 @@ public class CollectionManager {
    * @param scopeName name of scope to update collection in
    * @param collectionName name of collection to update
    * @param settings the collection settings
-   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
    * @throws CollectionNotFoundException (async) if the collection does not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
@@ -194,7 +192,6 @@ public class CollectionManager {
    * @param collectionName name of collection to update
    * @param settings the collection settings
    * @param options the custom options to apply.
-   * @return a {@link CompletableFuture} completing when the operation is applied or failed with an error.
    * @throws CollectionNotFoundException (async) if the collection does not exist.
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
