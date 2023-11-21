@@ -18,7 +18,11 @@ package com.couchbase.client.scala.transactions;
 
 import com.couchbase.client.core.api.query.{CoreQueryContext, CoreQueryOptions}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
-import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
+import com.couchbase.client.core.cnc.TracingIdentifiers.{
+  TRANSACTION_OP_INSERT,
+  TRANSACTION_OP_REMOVE,
+  TRANSACTION_OP_REPLACE
+}
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
