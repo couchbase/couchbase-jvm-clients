@@ -18,6 +18,7 @@ def OPENJDK_8 = "8u292-b10"       // https://github.com/AdoptOpenJDK/openjdk8-bi
 def OPENJDK_11 = "11.0.2+7"
 def OPENJDK_11_M1 = "11.0.11+9"
 def OPENJDK_17 = "17.0.1+12"
+def OPENJDK_21 = "21.0.1+12"
 def CORRETTO = "corretto"         // Amazon JDK
 def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
 def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
@@ -102,7 +103,28 @@ pipeline {
         // No cluster testing for CLUSTER_VERSION_LATEST_STABLE since that is thoroughly tested by JVM tests
         // No cluster testing for non-serverless 7.5, as that is dedicated to serverless
 
-        stage('Cluster testing  (Linux, cbdyncluster 7.6.0-1228, Oracle JDK 8)') {
+        stage('JDK/Cluster testing  (Linux, cbdyncluster 7.6-stable, OpenJDK 21)') {
+             agent { label "sdkqe" }
+             environment {
+                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_21}"
+                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_21}/bin:$PATH"
+             }
+             when {
+                 beforeAgent true;
+                 expression
+                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+             }
+             steps {
+                 test(OPENJDK, OPENJDK_21, "7.6-stable", REFSPEC)
+             }
+             post {
+                 always {
+                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                 }
+             }
+         }
+
+        stage('Cluster testing  (Linux, cbdyncluster 7.6-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
             environment {
                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
@@ -114,7 +136,7 @@ pipeline {
                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.6.0-1228", REFSPEC)
+                test(ORACLE_JDK, ORACLE_JDK_8, "7.6-stable", REFSPEC)
             }
             post {
                 always {
@@ -228,28 +250,6 @@ pipeline {
                 }
             }
         }
-
-        // 6.0 is EOL, we do one sanity test against it
-        stage('JDK/Cluster testing  (Linux, cbdyncluster 6.0-release, openjdk 11)') {
-             agent { label "sdkqe" }
-             environment {
-                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
-             }
-             when {
-                 beforeAgent true;
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
-             }
-             steps {
-                 test(OPENJDK, OPENJDK_11, "6.0-release", REFSPEC)
-             }
-             post {
-                 always {
-                     junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                 }
-             }
-         }
 
         // When removing tests for an older cluster version, if it's a JDK/Cluster test please
         // make sure that JDK is still tested.
