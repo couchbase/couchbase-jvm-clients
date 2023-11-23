@@ -49,6 +49,14 @@ class ReactiveTransactions private[scala] (private val internal: CoreTransaction
     */
   def run(
       transactionLogic: (ReactiveTransactionAttemptContext) => SMono[Unit],
+      options: TransactionOptions
+  ): SMono[TransactionResult] = {
+    run(transactionLogic, Some(options))
+  }
+
+  @deprecated("Users should use the overload that takes a TransactionsOption directly rather than an Option")
+  def run(
+      transactionLogic: (ReactiveTransactionAttemptContext) => SMono[Unit],
       options: Option[TransactionOptions] = None
   ): SMono[TransactionResult] = {
     val opts = options.map(v => v.toCore).orNull

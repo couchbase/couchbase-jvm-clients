@@ -96,7 +96,7 @@ case class TransactionsConfig private (
     * @param queryConfig the query configuration to use
     * @return this, for chaining
     */
-  def queryConfig(queryConfig: TransactionsQueryConfig) {
+  def queryConfig(queryConfig: TransactionsQueryConfig): TransactionsConfig = {
     copy(queryConfig = Some(queryConfig))
   }
 

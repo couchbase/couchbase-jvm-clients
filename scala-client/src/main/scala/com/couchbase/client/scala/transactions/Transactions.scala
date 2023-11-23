@@ -65,6 +65,14 @@ class Transactions private[scala] (private val internal: CoreTransactionsReactiv
     */
   def run(
       transactionLogic: (TransactionAttemptContext) => Try[Unit],
+      options: TransactionOptions
+  ): Try[TransactionResult] = {
+    run(transactionLogic, Some(options))
+  }
+
+  @deprecated("Users should use the overload that takes a TransactionsOption directly rather than an Option")
+  def run(
+      transactionLogic: (TransactionAttemptContext) => Try[Unit],
       options: Option[TransactionOptions] = None
   ): Try[TransactionResult] = {
     val scheduler = internal.core.context.environment.transactionsSchedulers.schedulerBlocking
