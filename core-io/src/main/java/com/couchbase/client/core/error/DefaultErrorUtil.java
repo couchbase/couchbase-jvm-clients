@@ -51,6 +51,7 @@ public class DefaultErrorUtil {
       case DURABILITY_IMPOSSIBLE: return new DurabilityImpossibleException(ctx);
       case EXISTS: return new CasMismatchException(ctx);
       case LOCKED: return new DocumentLockedException(ctx);
+      case NOT_LOCKED: return new DocumentNotLockedException(ctx);
       case NOT_FOUND: return new DocumentNotFoundException(ctx);
       case NOT_STORED: return new DocumentNotFoundException(ctx);
       case OUT_OF_MEMORY: return new ServerOutOfMemoryException(ctx);

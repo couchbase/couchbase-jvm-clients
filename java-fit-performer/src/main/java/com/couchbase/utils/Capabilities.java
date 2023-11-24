@@ -68,6 +68,9 @@ public class Capabilities {
         // [end:3.4.10]
 
         out.add(Caps.SDK_KV);
+        // [start:3.5.1]
+        out.add(Caps.SDK_DOCUMENT_NOT_LOCKED);
+        // [end:3.5.1]
 
         return out;
     }

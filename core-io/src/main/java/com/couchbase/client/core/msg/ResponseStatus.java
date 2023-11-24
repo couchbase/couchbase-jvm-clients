@@ -184,7 +184,12 @@ public enum ResponseStatus {
   /**
    * The vbuuid as part of the snapshot requirements does not align with the server.
    */
-  VBUUID_NOT_EQUAL;
+  VBUUID_NOT_EQUAL,
+
+  /**
+   * The requested resource is locked.
+   */
+  NOT_LOCKED;
 
   public boolean success() {
     return this == ResponseStatus.SUCCESS;

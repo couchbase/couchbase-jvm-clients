@@ -776,6 +776,8 @@ public enum MemcacheProtocol {
       return ResponseStatus.NOT_MY_VBUCKET;
     } else if (status == Status.LOCKED.status) {
       return ResponseStatus.LOCKED;
+    } else if (status == Status.NOT_LOCKED.status) {
+      return ResponseStatus.NOT_LOCKED;
     } else if (status == Status.TOO_BIG.status) {
       return ResponseStatus.TOO_BIG;
     } else if (status == Status.NOT_STORED.status) {
@@ -1635,6 +1637,13 @@ public enum MemcacheProtocol {
      * The scope contains too much data.
      */
     SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34),
+
+    /**
+     * Resource is locked.
+     *
+     * Added in 7.6.0 under MB-58088.
+     */
+    NOT_LOCKED((short) 0x0e),
     ;
 
     private final short status;
@@ -1775,6 +1784,8 @@ public enum MemcacheProtocol {
           return RATE_LIMITED_MAX_COMMANDS;
         case 0x34:
           return SCOPE_SIZE_LIMIT_EXCEEDED;
+        case 0xe:
+          return NOT_LOCKED;
       }
       return null;
     }
