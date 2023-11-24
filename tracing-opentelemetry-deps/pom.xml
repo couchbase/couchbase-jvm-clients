@@ -4,9 +4,12 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Intentionally not a child of couchbase-jvm-clients.  Like core-io-deps, due to Maven limitations
+    it needs to be built in a separate step, from the Makefile. -->
+
     <groupId>com.couchbase.client</groupId>
     <artifactId>tracing-opentelemetry-deps</artifactId>
-    <version>1.2.11</version>
+    <version>1.3.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>OpenTelemetry Interoperability Dependencies</name>

@@ -23,6 +23,8 @@
         <core-io-deps.version>1.5.1-SNAPSHOT</core-io-deps.version>
         <scala-client.version>1.5.1-SNAPSHOT</scala-client.version>
         <kotlin-client.version>1.2.1-SNAPSHOT</kotlin-client.version>
+        <tracing-opentelemetry.version>1.3.1-SNAPSHOT</tracing-opentelemetry.version>
+        <metrics-opentelemetry.version>0.5.1-SNAPSHOT</metrics-opentelemetry.version>
 
         <junit.version>5.9.1</junit.version>
         <assertj.version>3.23.1</assertj.version>
@@ -122,12 +124,12 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>tracing-opentelemetry</artifactId>
-                <version>1.3.1-SNAPSHOT</version>
+                <version>${tracing-opentelemetry.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>metrics-opentelemetry</artifactId>
-                <version>0.5.1-SNAPSHOT</version>
+                <version>${metrics-opentelemetry.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.projectreactor.tools</groupId>
