@@ -485,7 +485,8 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = [MOCKED])
+    @IgnoreWhen(clusterTypes = [MOCKED],
+        clusterVersionIsEqualToOrAbove = "7.6.0") // Support added in MB-57864
     fun `multiple xattr keys should fail`(): Unit = runBlocking {
         assertThrows<XattrInvalidKeyComboException> {
             collection.mutateIn(nextId(), storeSemantics = upsert()) {

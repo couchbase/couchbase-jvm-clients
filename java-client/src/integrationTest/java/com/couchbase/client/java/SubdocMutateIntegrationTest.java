@@ -817,7 +817,9 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("bar_orig_1", updated.getString("foo1"));
     }
 
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES}, isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+            clusterVersionIsEqualToOrAbove = "7.6.0",   // Support added in MB-57864
+            isProtostellarWillWorkLater = true)         // Needs ING-372 - expandMacro
     @Test
     public void multipleXattrKeysShouldFail() {
         String docId = docId();
