@@ -155,7 +155,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                 logger.info("{} Sleeping for Msecs: {}", dbg, op.getWaitMsecs());
                 Thread.sleep(op.getWaitMsecs());
             } catch (InterruptedException e) {
-                throw new InternalPerformerFailure(new RuntimeException(e));
+                logger.info("{} Interrupted during sleep, which likely just means that a parallel op failed.  Ignoring.", dbg);
             }
         }
 
