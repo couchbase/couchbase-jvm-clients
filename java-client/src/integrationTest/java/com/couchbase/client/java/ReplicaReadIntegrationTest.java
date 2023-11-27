@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -50,14 +49,13 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This integration test verifies all different ways a replica read can be used.
- *
- * <p>Note that since naturally this depends on different topologies to be present (or not), you'll
+ * <p>
+ * Note that since naturally this depends on different topologies to be present (or not), you'll
  * find many annotations on the tests and the suite needs to be executed against different topologies
- * in order to execute them all.</p>
+ * in order to execute them all.
  */
 @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs JVMCBC-1263
 class ReplicaReadIntegrationTest extends JavaIntegrationTest {
@@ -81,8 +79,8 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   /**
    * As a simple litmus test, when ALL is used there should be at least one record coming back,
    * namely from the active.
-   *
-   * <p>Depending on the topology, it might be more than that.</p>
+   * <p>
+   * Depending on the topology, it might be more than that.
    */
   @Test
   void alwaysPassesWithAll() {
@@ -94,17 +92,17 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     assertFalse(results.isEmpty());
     for (GetResult result : results) {
       assertEquals("Hello, World!", result.contentAs(String.class));
-      assertFalse(result.expiry().isPresent());
+      assertFalse(result.expiryTime().isPresent());
     }
   }
 
   /**
    * This test only executes when there are at least two nodes and exactly one replica
    * defined.
-   *
-   * <p>Note that this is supposed to work on the mock, but for some reason it does fail depending
+   * <p>
+   * Note that this is supposed to work on the mock, but for some reason it does fail depending
    * on the key chosen. once https://github.com/couchbase/CouchbaseMock/issues/47 is cleared up
-   * the restriction can be lifted.</p>
+   * the restriction can be lifted.
    */
   @Test
   @IgnoreWhen(
@@ -203,12 +201,12 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   /**
    * If we have a constellation where there are more replicas defined than available, a
    * subset of the requests will fail.
-   *
-   * <p>In ALL mode, these individual errors need to be ignored, but they should be logged at
-   * warn level.</p>
-   *
-   * <p>In this case we have 2 nodes and 2 replicas configured, but we'll only get the result
-   * back from the active and one replica.</p>
+   * <p>
+   * In ALL mode, these individual errors need to be ignored, but they should be logged at
+   * warn level.
+   * <p>
+   * In this case we have 2 nodes and 2 replicas configured, but we'll only get the result
+   * back from the active and one replica.
    */
   @Test
   @IgnoreWhen(
@@ -244,8 +242,8 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
   // Checking behaviour used in getAnyReplica to make sure an aggregated future times out
   @Test
-  void checkFuturesTimeout() throws InterruptedException {
-    List<CompletableFuture> futures = new ArrayList<>();
+  void checkFuturesTimeout() {
+    List<CompletableFuture<Integer>> futures = new ArrayList<>();
 
     CompletableFuture<Integer> cf1 = new CompletableFuture<>();
     CompletableFuture<Integer> cf2 = new CompletableFuture<>();
@@ -264,12 +262,8 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
             50,
             TimeUnit.MILLISECONDS);
 
-    try {
-      f.get();
-    }
-    catch (ExecutionException err) {
-      assertInstanceOf(TimeoutException.class, err.getCause());
-    }
+    ExecutionException err = assertThrows(ExecutionException.class, f::get);
+    assertInstanceOf(TimeoutException.class, err.getCause());
   }
 
   // Checking behaviour used in reactive getAnyReplica
