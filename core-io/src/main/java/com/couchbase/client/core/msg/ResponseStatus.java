@@ -187,7 +187,7 @@ public enum ResponseStatus {
   VBUUID_NOT_EQUAL,
 
   /**
-   * The requested resource is locked.
+   * The requested resource is not locked.
    */
   NOT_LOCKED;
 

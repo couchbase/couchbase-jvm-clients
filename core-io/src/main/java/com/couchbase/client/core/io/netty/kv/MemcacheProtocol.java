@@ -1639,7 +1639,7 @@ public enum MemcacheProtocol {
     SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34),
 
     /**
-     * Resource is locked.
+     * Resource is not locked.
      *
      * Added in 7.6.0 under MB-58088.
      */
