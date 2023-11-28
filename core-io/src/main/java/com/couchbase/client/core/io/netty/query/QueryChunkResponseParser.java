@@ -152,7 +152,8 @@ public class QueryChunkResponseParser
         return new IndexExistsException(errorContext);
       } else if (code >= 4000 && code < 5000) {
         return new PlanningFailureException(errorContext);
-      } else if (code == 12004 || code == 12016 || (code == 5000 && message.matches("^.*index .+ not found.*"))) {
+      } else if (code == 12004 || code == 12016 || (code == 5000 && message.matches("^.*index .+ not found.*"))
+              || (code == 5000 && message.matches("^.*Index does not exist.*"))) {
         return new IndexNotFoundException(errorContext);
       } else if (code == 5000 && message.matches("^.*Index .*already exist.*")) {
         return new IndexExistsException(errorContext);
