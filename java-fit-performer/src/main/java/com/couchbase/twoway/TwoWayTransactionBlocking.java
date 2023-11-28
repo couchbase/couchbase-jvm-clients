@@ -56,14 +56,18 @@ import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.OptionsUtil;
 import com.couchbase.utils.ResultValidation;
 import io.grpc.stub.StreamObserver;
-import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Version of TwoWayTransaction that uses the blocking API.
@@ -316,9 +320,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasParallelize()) {
             final CommandBatch request = op.getParallelize();
 
-            performCommandBatch(request, (parallelOpAndIndex) -> Mono.fromRunnable(() -> {
+            performCommandBatch(request, (parallelOpAndIndex) -> {
                 performOperation(connection, ctx, parallelOpAndIndex.getT2(), toTest, performanceMode, "parallel" + parallelOpAndIndex.getT1() + " ");
-            }).then()).block();
+            });
         } else if (op.hasInsertRegularKv()) {
             final CommandInsertRegularKV request = op.getInsertRegularKv();
             final Collection collection = connection.collection(request.getDocId());
@@ -427,4 +431,63 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         }
     }
 
+    private void performCommandBatch(CommandBatch request, Consumer<Tuple2<Long, TransactionCommand>> call) {
+        logger.info("Running {} operations, concurrency={}", request.getCommandsCount(), request.getParallelism());
+
+        var threads = new ArrayList<Thread>(request.getParallelism());
+        var thrownError = new AtomicReference<RuntimeException>();
+        var commandIdx = new AtomicInteger();
+
+        for (int threadIdx = 0; threadIdx < request.getParallelism(); threadIdx++) {
+            final Long x = (long) threadIdx;
+
+            var thread = new Thread(() -> {
+                logger.info("{} thread started", x);
+                while (true) {
+                    var nextCommandIdx = commandIdx.getAndIncrement();
+                    if (nextCommandIdx < request.getCommandsCount()) {
+                        var command = request.getCommands(nextCommandIdx);
+                        try {
+                            call.accept(Tuples.of(x, command));
+                            logger.info("{} A parallel op {} has finished", x, command.getCommandCase());
+                        } catch (Throwable err) {
+                            logger.info("{} A parallel op {} has errored with {}", x, command.getCommandCase(), err.toString());
+                            // Only store the first thrown error
+                            if (err instanceof RuntimeException) {
+                                thrownError.compareAndSet(null, (RuntimeException) err);
+                            } else {
+                                thrownError.compareAndSet(null, new RuntimeException(err));
+                            }
+                            break;
+                        }
+                    }
+                    else {
+                        break;
+                    }
+                }
+                logger.info("{} thread finished", x);
+            });
+
+            threads.add(thread);
+        }
+
+        threads.forEach(Thread::start);
+        threads.forEach(thread -> {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+
+            if (thrownError.get() != null) {
+                logger.info("Rethrowing error {}", thrownError.get().toString());
+                throw thrownError.get();
+            }
+        });
+
+        if (thrownError.get() == null) {
+            logger.info("Reached end of operations with nothing throwing");
+        }
+    }
 }

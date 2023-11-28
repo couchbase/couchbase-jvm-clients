@@ -24,6 +24,7 @@ import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 // [start:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
 // [end:3.3.2]
+import com.couchbase.client.core.transaction.util.MonoBridge;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.ReactiveTransactionAttemptContext;
@@ -54,6 +55,7 @@ import io.grpc.stub.StreamObserver;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -62,6 +64,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -359,5 +362,33 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
 
                     .then();
         });
+    }
+
+    private Mono<?> performCommandBatch(CommandBatch request, Function<Tuple2<Long, TransactionCommand>, Mono<?>> call) {
+        return Flux.fromIterable(request.getCommandsList())
+                .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
+                        request.getCommandsCount(), request.getParallelism()))
+                .index()
+                .parallel(request.getParallelism())
+                .runOn(Schedulers.boundedElastic())
+                .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
+                        .doOnNext(v -> logger.info("{} A parallel op {} has finished", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
+                        .doOnCancel(() -> logger.info("{} A parallel op {} has been cancelled", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
+                        .doOnError(err -> {
+                            logger.info("{} A parallel op {} has errored with {}", parallelOp.getT1(), parallelOp.getT2().getCommandCase(), err.getMessage());
+                            transientLogInterruptedException(err);
+                        }))
+                .sequential()
+                .then(Mono.fromRunnable(() -> {
+                    logger.info("Reached end of operations with nothing throwing");
+                }))
+                .doOnError(e -> {
+                    logger.info("An op threw {}", e.toString());
+                    transientLogInterruptedException(e);
+                })
+                .then()
+                .doOnNext(v -> logger.info("All parallel ops have finished"))
+                .doOnCancel(() -> logger.info("Parallel ops have been cancelled"))
+                .doOnError(v -> logger.info("Parallel ops have errored"));
     }
 }

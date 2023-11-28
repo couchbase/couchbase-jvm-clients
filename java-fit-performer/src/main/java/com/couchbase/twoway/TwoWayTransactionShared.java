@@ -500,26 +500,4 @@ public abstract class TwoWayTransactionShared {
             throw new InternalPerformerFailure(new DecodingFailureException(e));
         }
     }
-
-    protected Mono<?> performCommandBatch(CommandBatch request, Function<Tuple2<Long, TransactionCommand>, Mono<?>> call) {
-        return Flux.fromIterable(request.getCommandsList())
-                .doOnSubscribe(s -> logger.info("Running {} operations, concurrency={}",
-                        request.getCommandsCount(), request.getParallelism()))
-                .index()
-                .parallel(request.getParallelism())
-                .runOn(Schedulers.boundedElastic())
-                .concatMap(parallelOp -> new MonoBridge<>(call.apply(parallelOp), "not-used", this, null).external()
-                        .doOnNext(v -> logger.info("{} A parallel op {} has finished", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
-                        .doOnCancel(() -> logger.info("{} A parallel op {} has been cancelled", parallelOp.getT1(), parallelOp.getT2().getCommandCase()))
-                        .doOnError(err -> logger.info("{} A parallel op {} has errored with {}", parallelOp.getT1(), parallelOp.getT2().getCommandCase(), err.getMessage())))
-                .sequential()
-                .then(Mono.fromRunnable(() -> {
-                    logger.info("Reached end of operations with nothing throwing");
-                }))
-                .doOnError(e -> logger.info("An op threw {}", e.toString()))
-                .then()
-                .doOnNext(v -> logger.info("All parallel ops have finished"))
-                .doOnCancel(() -> logger.info("Parallel ops have been cancelled"))
-                .doOnError(v -> logger.info("Parallel ops have errored"));
-    }
 }

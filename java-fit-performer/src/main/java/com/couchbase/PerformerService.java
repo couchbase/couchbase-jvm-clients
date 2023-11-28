@@ -86,6 +86,7 @@ import reactor.core.publisher.Hooks;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -506,11 +507,14 @@ public class PerformerService extends CorePerformer {
 
         // Setup global error handlers
         Hooks.onErrorDropped(err -> {
-            globalError.set("Hook dropped (raised async so could have been in an earlier test): " + err + " cause: " + (err.getCause() != null ? err.getCause().getMessage() : "-"));
-            logger.warn(err.toString());
-            for (var ex : err.getStackTrace()) {
-                logger.warn(ex.toString());
-            }
+            // We intentionally don't set globalError here.
+            // In a reactive chain, if one operation fails, any parallel operations are cancelled.
+            // If those operations subsuquently hit an error, it has nowhere to go (as the original
+            // chain has already had an error raised on it), and so it's raised on the global error
+            // handle (e.g. here).  Though unfortunate, this is standard reactor UX, and shouldn't
+            // be regarded as a test failure.
+            logger.info("Async hook drop (probably fine, will happen if multiple concurrent operations in a reactor chain fail): {}\n\t{}",
+                    err.toString(), Arrays.stream(err.getStackTrace()).map(StackTraceElement::toString).collect(Collectors.joining("\n\t")));
         });
 
         // Blockhound is disabled as it causes an immediate runtime error on Jenkins
