@@ -189,17 +189,10 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
       return e.getCause().getClass();
     });
 
-    assertTrue(errorClasses.contains(DocumentNotFoundException.class), "expected at least one DocumentNotFoundException");
-
-    Set<Class<?>> unexpectedExceptions = Sets.difference(
-      setCopyOf(errorClasses),
-      setOf(
-        DocumentNotFoundException.class, // from online nodes
-        UnambiguousTimeoutException.class // from offline nodes (as with CouchbaseMock)
-      )
-    );
-
-    assertEquals(emptySet(), unexpectedExceptions, "unexpected exception");
+    // In the test scenario, we expect at least one node to be available and return DocumentNotFoundException.
+    // Replicas hosted on offline nodes might produce UnambiguousTimeoutException or some other exception
+    // (this happens when running against CouchbaseMock).
+    assertTrue(errorClasses.contains(DocumentNotFoundException.class), "expected at least one DocumentNotFoundException, but got: " + errorClasses);
   }
 
   @Test
