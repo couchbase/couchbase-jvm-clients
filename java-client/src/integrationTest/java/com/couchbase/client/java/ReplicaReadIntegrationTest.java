@@ -17,6 +17,10 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
+import com.couchbase.client.core.deps.com.google.common.collect.Sets;
+import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -31,8 +35,11 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -40,8 +47,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.setCopyOf;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -49,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * This integration test verifies all different ways a replica read can be used.
@@ -126,16 +138,80 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     assertEquals("Hello, World!", results.get(1).contentAs(String.class));
   }
 
+  private static String absentId() {
+    return "this document does not exist";
+  }
+
+  @Test
+  void blockingGetAnyThrowsWhenNotFound() {
+    assertThrows(DocumentUnretrievableException.class, () -> collection.getAnyReplica(absentId()));
+  }
+
+  @Test
+  void blockingGetAllReturnsEmptyStreamWhenNotFound() {
+    assertEquals(
+      emptyList(),
+      collection.getAllReplicas(absentId()).collect(Collectors.toList())
+    );
+  }
+
+  @Test
+  void asyncGetAnyReturnsFailedFutureWhenNotFound() throws InterruptedException {
+    ExecutionException err = assertThrows(ExecutionException.class, () -> collection.async().getAnyReplica(absentId()).get());
+    assertInstanceOf(DocumentUnretrievableException.class, err.getCause());
+
+    // Also check the exception type seen in a "whenComplete" callback.
+    // It's a different type: CompletionException vs ExecutionException.
+    // Checking this because it's possible to get it wrong when using
+    // the reactive API to emulate the current behavior of the async API,
+    // which is something we may want to do for Protostellar.
+    AtomicReference<Throwable> ref = new AtomicReference<>();
+    CountDownLatch latch = new CountDownLatch(1);
+    collection.async().getAnyReplica(absentId())
+      .whenComplete((result, error) -> {
+        ref.set(error != null ? error : new AssertionError("expected future to complete with error, but it did not."));
+        latch.countDown();
+      });
+    assertTrue(latch.await(60, TimeUnit.SECONDS), "timed out waiting for count down latch");
+    assertInstanceOf(CompletionException.class, ref.get());
+    assertInstanceOf(DocumentUnretrievableException.class, ref.get().getCause());
+  }
+
+  @Test
+  void asyncGetAllReturnsListOfFailedFuturesWhenNotFound() throws Exception {
+    List<CompletableFuture<GetReplicaResult>> futures = collection.async().getAllReplicas(absentId()).get();
+
+    // one result for each replica, plus 1 for active
+    assertEquals(config().numReplicas() + 1, futures.size());
+
+    List<Class<?>> errorClasses = transform(futures, future -> {
+      ExecutionException e = assertThrows(ExecutionException.class, future::get);
+      return e.getCause().getClass();
+    });
+
+    assertTrue(errorClasses.contains(DocumentNotFoundException.class), "expected at least one DocumentNotFoundException");
+
+    Set<Class<?>> unexpectedExceptions = Sets.difference(
+      setCopyOf(errorClasses),
+      setOf(
+        DocumentNotFoundException.class, // from online nodes
+        UnambiguousTimeoutException.class // from offline nodes (as with CouchbaseMock)
+      )
+    );
+
+    assertEquals(emptySet(), unexpectedExceptions, "unexpected exception");
+  }
+
   @Test
   void reactiveGetAnyReturnsEmptyMonoWhenNotFound() throws Exception {
-    assertNull(collection.reactive().getAnyReplica("this document does not exist").block());
+    assertNull(collection.reactive().getAnyReplica(absentId()).block());
   }
 
   @Test
   void reactiveGetAllReturnsEmptyFluxWhenNotFound() throws Exception {
     assertEquals(emptyList(),
         collection.reactive()
-            .getAllReplicas("this document does not exist")
+            .getAllReplicas(absentId())
             .collectList()
             .block());
   }
