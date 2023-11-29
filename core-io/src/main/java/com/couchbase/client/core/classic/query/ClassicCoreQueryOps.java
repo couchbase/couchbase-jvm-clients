@@ -23,7 +23,6 @@ import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
-import com.couchbase.client.core.api.query.CoreQueryProfile;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
@@ -303,7 +302,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("args", opts.positionalParameters());
     }
 
-    if (opts.scanConsistency() != null && opts.scanConsistency() != CoreQueryScanConsistency.NOT_BOUNDED) {
+    if (opts.scanConsistency() != null) {
       json.put("scan_consistency", opts.scanConsistency().toString());
     }
 
@@ -325,7 +324,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("scan_consistency", "at_plus");
     }
 
-    if (opts.profile() != null && opts.profile() != CoreQueryProfile.OFF) {
+    if (opts.profile() != null) {
       json.put("profile", opts.profile().toString());
     }
 
