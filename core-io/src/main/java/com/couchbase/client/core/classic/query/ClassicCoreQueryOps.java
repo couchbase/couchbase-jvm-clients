@@ -288,13 +288,12 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
         throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
       }
 
-      opts.namedParameters().fieldNames().forEachRemaining(key -> {
-        JsonNode value = opts.namedParameters().get(key);
-        if (key.charAt(0) != '$') {
-          json.put('$' + key, value);
-        } else {
-          json.put(key, value);
-        }
+      opts.namedParameters().fields().forEachRemaining(param -> {
+        String key = param.getKey();
+        json.set(
+            key.charAt(0) == '$' ? key : '$' + key,
+            param.getValue()
+        );
       });
     }
 
