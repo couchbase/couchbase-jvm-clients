@@ -252,6 +252,7 @@ private fun BucketSettings.toFit(): FitBucketSettings.Builder {
             COUCHSTORE -> storageBackend = FitStorageBackend.COUCHSTORE
             MAGMA -> storageBackend = FitStorageBackend.MAGMA
             StorageBackend.of("undefined") -> {} // don't set; ephemeral / memcached
+            StorageBackend.of("") -> {} // don't set; old server doesn't know about storage backends
             else -> unrecognized("storage backend", sdk.storageBackend)
         }
 
