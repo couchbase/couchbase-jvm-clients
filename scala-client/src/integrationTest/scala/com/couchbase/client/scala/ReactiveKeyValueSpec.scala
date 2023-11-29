@@ -149,8 +149,8 @@ class ReactiveKeyValueSpec extends ScalaIntegrationTest {
 
     wrap(coll.get(docId, GetOptions().withExpiry(true))) match {
       case Success(result) => assert(result.expiry.isDefined)
-      case Failure(err) => assert(false, s"unexpected error $err")
-      case _            => assert(false, s"unexpected error")
+      case Failure(err)    => assert(false, s"unexpected error $err")
+      case _               => assert(false, s"unexpected error")
     }
   }
 
