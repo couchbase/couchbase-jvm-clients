@@ -16,17 +16,19 @@
 package com.couchbase.client.performer.scala.util
 
 import com.couchbase.client.protocol.shared.{ClusterConnectionCreateRequest, DocLocation}
+import com.couchbase.client.protocol.transactions.DocId
 import com.couchbase.client.scala.{Bucket, Cluster, ClusterOptions, Collection}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-class ClusterConnection(req: ClusterConnectionCreateRequest) {
+class ClusterConnection(req: ClusterConnectionCreateRequest,
+                        getCluster: () => ClusterConnection) {
   private val logger = LoggerFactory.getLogger(classOf[ClusterConnection])
   private val hostname = req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
-  val (cluster, env) = OptionsUtil.convertClusterConfig(req) match {
+  val (cluster, env) = OptionsUtil.convertClusterConfig(req, getCluster) match {
     case Some(env) =>
       val built = env.build.get
       val opts = ClusterOptions.create(req.getClusterUsername, req.getClusterPassword).environment(built)
@@ -50,6 +52,14 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
     }
 
     collection(coll)
+  }
+
+  def collection(docId: DocId): Collection = {
+      collection(com.couchbase.client.protocol.shared.Collection.newBuilder
+              .setBucketName(docId.getBucketName)
+              .setScopeName(docId.getScopeName)
+              .setCollectionName(docId.getCollectionName)
+              .build)
   }
 
   def collection(coll: com.couchbase.client.protocol.shared.Collection): Collection = {
