@@ -290,7 +290,7 @@ public abstract class TwoWayTransactionShared {
             }
         } else {
             if (!req.getExpectDocPresent()) {
-                logger.info("Document exists but isn't supported too");
+                logger.info("Document exists but isn't supposed to");
                 throw new TestFailure(new DocumentExistsException(null));
             } else {
                 handleGetResult(request, out.get(), cc);
