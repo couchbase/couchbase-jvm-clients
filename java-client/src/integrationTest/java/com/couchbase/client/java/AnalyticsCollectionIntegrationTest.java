@@ -33,7 +33,6 @@ import com.couchbase.client.java.manager.collection.CollectionManager;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
@@ -67,7 +66,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(
   missesCapabilities = {Capabilities.ANALYTICS, Capabilities.COLLECTIONS},
   clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES,
   isProtostellar = true
 )
 class AnalyticsCollectionIntegrationTest extends JavaIntegrationTest {

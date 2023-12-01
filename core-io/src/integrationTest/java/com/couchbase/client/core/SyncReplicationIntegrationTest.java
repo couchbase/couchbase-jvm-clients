@@ -23,7 +23,6 @@ import com.couchbase.client.core.msg.kv.UpsertRequest;
 import com.couchbase.client.core.msg.kv.UpsertResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,8 +67,7 @@ class SyncReplicationIntegrationTest extends CoreIntegrationTest {
     nodesLessThan = 2,
     replicasLessThan = 1,
     replicasGreaterThan = 1,
-    missesCapabilities = { Capabilities.SYNC_REPLICATION },
-    clusterTypes = ClusterType.CAVES
+    missesCapabilities = { Capabilities.SYNC_REPLICATION }
   )
   void upsertSuccessfullyToMajority() throws Exception {
     String id = UUID.randomUUID().toString();

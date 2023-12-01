@@ -27,7 +27,6 @@ import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.result.SearchRowLocations;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
@@ -58,7 +57,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Disabled
 @Flaky
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH,
-  clusterTypes = ClusterType.CAVES,
   clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101
 )
 class SearchIntegrationTest extends JavaIntegrationTest {

@@ -34,7 +34,7 @@ import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
 @IgnoreWhen(
-  clusterTypes = Array(ClusterType.MOCKED, ClusterType.CAVES),
+  clusterTypes = Array(ClusterType.MOCKED),
   clusterVersionEquals = AVOID_MB_55617,
   missesCapabilities = Array(Capabilities.VIEWS)
 )

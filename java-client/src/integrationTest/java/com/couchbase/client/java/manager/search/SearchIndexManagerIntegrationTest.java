@@ -24,7 +24,6 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,7 +42,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(missesCapabilities = Capabilities.SEARCH,
-  clusterTypes = ClusterType.CAVES,
   clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101,
   isProtostellar = true
 )

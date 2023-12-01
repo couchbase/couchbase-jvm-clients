@@ -66,7 +66,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus.CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
 import static com.couchbase.client.core.util.CbCollections.listOf;
-import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.java.kv.MutateInOptions.mutateInOptions;
 import static com.couchbase.client.java.kv.MutateInSpec.upsert;
 import static java.util.Collections.emptyMap;
@@ -432,7 +431,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void removeXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
                 Arrays.asList(MutateInSpec.remove("x.foo").xattr()));
@@ -452,7 +450,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void replaceStringXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create().put("foo", "bar"),
                 Arrays.asList(MutateInSpec.replace("x.foo", "bar2").xattr()));
@@ -523,7 +520,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellar = true)
+    @IgnoreWhen(isProtostellar = true)
     void xattrOpsAreReordered() {
       JsonObject content = JsonObject.create();
       String docId = prepareXattr(content);
@@ -545,7 +542,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void insertExpandMacroXattrDoNotFlag() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", "${Mutation.CAS}").xattr()));
@@ -569,7 +565,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES}, isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro support
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED}, isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro support
     void insertExpandMacroSEQ_NOXattr() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo", MutateInMacro.SEQ_NO).xattr()));
@@ -585,7 +581,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
     void insertXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.insert("x.foo.baz", "bar2").xattr().createPath()));
@@ -648,7 +644,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
     void counterAddXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.increment("x.foo", 5).xattr().createPath()));
@@ -656,7 +652,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
+    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372 - xattr support
     void counterMinusXattrCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccessXattr(JsonObject.create(),
                 Arrays.asList(MutateInSpec.decrement("x.foo", 3).xattr().createPath()));
@@ -692,7 +688,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void arrayAppendCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.arrayAppend("foo", Arrays.asList("world")).createPath()));
@@ -700,7 +695,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void arrayPrependCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.arrayPrepend("foo", Arrays.asList("world")).createPath()));
@@ -724,7 +718,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterAddCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.increment("foo", 5).createPath()));
@@ -732,7 +725,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void counterMinusCreatePath() {
         JsonObject updatedContent = checkSingleOpSuccess(JsonObject.create(),
                 Arrays.asList(MutateInSpec.decrement("foo", 3).createPath()));
@@ -741,7 +733,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES})
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED})
     void expiration() {
         JsonObject content = JsonObject.create().put("hello", "world");
         String docId = prepare(content);
@@ -800,7 +792,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
 
     @Test
-    @IgnoreWhen(clusterTypes = ClusterType.CAVES)
     void twoCommandsOneFails() {
         JsonObject content = JsonObject.create()
           .put("foo1", "bar_orig_1")
@@ -817,7 +808,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
         assertEquals("bar_orig_1", updated.getString("foo1"));
     }
 
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
             clusterVersionIsEqualToOrAbove = "7.6.0",   // Support added in MB-57864
             isProtostellarWillWorkLater = true)         // Needs ING-372 - expandMacro
     @Test
@@ -839,7 +830,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     @Test
     @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED,
-      clusterTypes = ClusterType.CAVES,
       // createAsDeleted not supported by Protostellar
       isProtostellar = true)
     void createAsDeletedCanAccess() {
@@ -867,7 +857,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
 
     @Test
     @IgnoreWhen(missesCapabilities = Capabilities.CREATE_AS_DELETED,
-      clusterTypes = ClusterType.CAVES,
       // Protostellar does not support createAsDeleted
       isProtostellar = true)
     void createAsDeletedCanInsertOnTop() {
@@ -1230,7 +1219,7 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
     // For MB-50742 and MB-50425 - it's intermittent so run a few times
-    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+    @IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
         // 7.1.0-2216 is required for the MB-50425 fix.  Use this capability as a stand-in for 7.1.
         missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT},
       isProtostellarWillWorkLater = true) // Needs ING-372 - expandMacro support

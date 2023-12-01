@@ -75,7 +75,7 @@ public class CollectionManagerErrorIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(missesCapabilities = {Capabilities.COLLECTIONS},
     hasCapabilities = {Capabilities.SERVERLESS},
-    clusterTypes = {ClusterType.CAVES, ClusterType.CAPELLA},
+    clusterTypes = {ClusterType.CAPELLA},
     isProtostellarWillWorkLater = true) // Needs JVMCBC-1395
   void failsUnderMemcachedBuckets() {
     String bucketName = UUID.randomUUID().toString();

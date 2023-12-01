@@ -52,7 +52,6 @@ import static com.couchbase.client.java.manager.query.WatchQueryIndexesOptions.w
 import static com.couchbase.client.test.Capabilities.CLUSTER_LEVEL_QUERY;
 import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.QUERY;
-import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -66,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Very similar to the {@link QueryIndexManagerIntegrationTest}, but this one tests with scope and collection support.
  */
-@IgnoreWhen(clusterTypes = { CAVES, MOCKED },
+@IgnoreWhen(clusterTypes = { MOCKED },
   missesCapabilities = { QUERY, COLLECTIONS, CLUSTER_LEVEL_QUERY },
   clusterVersionIsBelow = REQUIRE_MB_50132
 )

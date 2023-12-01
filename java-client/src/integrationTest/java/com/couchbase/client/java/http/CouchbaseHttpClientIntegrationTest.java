@@ -28,7 +28,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.UUID;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -36,7 +35,7 @@ import static com.couchbase.client.java.http.HttpPutOptions.httpPutOptions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES},
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED},
   isProtostellar = true)
 class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
 

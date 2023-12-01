@@ -25,24 +25,25 @@ import com.couchbase.client.java.analytics.AnalyticsStatus;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.List;
 
 import static com.couchbase.client.java.analytics.AnalyticsOptions.analyticsOptions;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the basic functionality of analytics queries in an end-to-end fashion.
  */
 @IgnoreWhen(
   missesCapabilities = Capabilities.ANALYTICS,
-  clusterTypes = ClusterType.CAVES,
   isProtostellar = true
 )
 class AnalyticsIntegrationTest extends JavaIntegrationTest {

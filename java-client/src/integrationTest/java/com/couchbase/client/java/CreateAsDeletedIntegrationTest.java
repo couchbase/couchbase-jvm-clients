@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -30,7 +29,6 @@ import com.couchbase.client.java.kv.MutateInSpec;
 import com.couchbase.client.java.kv.StoreSemantics;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,12 +39,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test the CreateAsDeleted flag added with MB-37374 in 6.6.
@@ -150,14 +145,12 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstone() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void getRegularTombstone() {
     String id = docId();
     coll.upsert(id, JsonObject.create());
@@ -175,7 +168,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverTombstoneWithTxnXattr() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -184,7 +176,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverTombstoneWithoutTxnXattr() {
     String id = docId();
     upsertEmptyTombstone(coll, id);
@@ -193,7 +184,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void insertTombstoneOverExistingDoc() {
     String id = docId();
     createRegularDoc(coll, id, JsonObject.create());
@@ -202,7 +192,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void replaceTombstoneWithTxnXattrWithCAS() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -219,7 +208,7 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES, missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
+  @IgnoreWhen(missesCapabilities = {Capabilities.SUBDOC_REVIVE_DOCUMENT})
   void replaceTombstoneWithTxnXattrWithCASWhichHasChanged_71Plus() {
     String id = docId();
     insertTombstoneWithTxnXattr(coll, id, JsonObject.create());
@@ -259,7 +248,6 @@ class CreateAsDeletedIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES)
   void upsertTombstone() {
     String id = docId();
     upsertTombstoneWithTxnXattr(coll, id, JsonObject.create());

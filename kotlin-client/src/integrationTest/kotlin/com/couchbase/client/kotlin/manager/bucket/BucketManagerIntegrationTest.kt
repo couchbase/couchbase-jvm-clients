@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
 
-@IgnoreWhen(clusterTypes = [ClusterType.MOCKED, ClusterType.CAVES])
+@IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
 internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     private val buckets: BucketManager by lazy { cluster.buckets }
 

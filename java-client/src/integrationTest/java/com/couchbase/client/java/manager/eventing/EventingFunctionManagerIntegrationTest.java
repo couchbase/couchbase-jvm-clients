@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES , ClusterType.CAPELLA},
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA},
         missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING},
         clusterVersionIsBelow = "7.1.2",
         isProtostellar = true) // MB-52649

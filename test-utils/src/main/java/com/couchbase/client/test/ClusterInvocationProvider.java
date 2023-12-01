@@ -16,7 +16,11 @@
 
 package com.couchbase.client.test;
 
-import org.junit.jupiter.api.extension.*;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.platform.commons.support.AnnotationSupport;
 
 import java.util.Optional;
@@ -32,7 +36,7 @@ import java.util.Optional;
  * @since 2.0.0
  */
 public class ClusterInvocationProvider
-  implements AfterAllCallback, ParameterResolver, ExecutionCondition, BeforeEachCallback, AfterEachCallback {
+  implements ParameterResolver, ExecutionCondition {
 
   /**
    * Identifier for the container in the root store.
@@ -51,20 +55,6 @@ public class ClusterInvocationProvider
       testCluster.start();
       return testCluster;
     });
-  }
-
-  @Override
-  public void afterAll(ExtensionContext context) throws Exception {
-    TestCluster testCluster = accessAndMaybeInitTestCluster(context);
-
-    if (testCluster.type() == ClusterType.CAVES) {
-      CavesTestCluster ctc = (CavesTestCluster) testCluster;
-      try {
-        ctc.endTesting();
-      } catch (Exception exception) {
-        throw new RuntimeException("Failed to end caves testing", exception);
-      }
-    }
   }
 
   /**
@@ -156,29 +146,5 @@ public class ClusterInvocationProvider
 
     }
     return ConditionEvaluationResult.enabled("Test is allowed to run based on @IgnoreWhen");
-  }
-
-  @Override
-  public void afterEach(final ExtensionContext context) throws Exception {
-    Optional<Caves> annotation = AnnotationSupport.findAnnotation(context.getElement(), Caves.class);
-    if (annotation.isPresent()) {
-      TestCluster testCluster = accessAndMaybeInitTestCluster(context);
-      if (testCluster.type() == ClusterType.CAVES) {
-        CavesTestCluster ctc = (CavesTestCluster) testCluster;
-        ctc.endTest();
-      }
-    }
-  }
-
-  @Override
-  public void beforeEach(final ExtensionContext context) throws Exception {
-    Optional<Caves> annotation = AnnotationSupport.findAnnotation(context.getElement(), Caves.class);
-    if (annotation.isPresent()) {
-      TestCluster testCluster = accessAndMaybeInitTestCluster(context);
-      if (testCluster.type() == ClusterType.CAVES) {
-        CavesTestCluster ctc = (CavesTestCluster) testCluster;
-        ctc.startTest(annotation.get().value());
-      }
-    }
   }
 }

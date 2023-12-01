@@ -40,7 +40,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.util.*
+import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -53,7 +53,7 @@ private const val REQUIRE_MB_50132 = "7.1.0"
 private val watchTimeout = 15.seconds
 
 @IgnoreWhen(
-    clusterTypes = [ClusterType.CAVES, ClusterType.MOCKED],
+    clusterTypes = [ClusterType.MOCKED],
     missesCapabilities = [Capabilities.QUERY],
     clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
     clusterVersionIsBelow = REQUIRE_MB_50132

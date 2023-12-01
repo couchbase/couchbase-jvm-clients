@@ -48,7 +48,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration.Companion.minutes
 
-@IgnoreWhen(clusterTypes = [ClusterType.MOCKED, ClusterType.CAVES])
+@IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
 internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
     private val users: UserManager by lazy { cluster.users }
 

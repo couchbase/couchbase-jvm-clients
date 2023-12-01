@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @IgnoreWhen(
   missesCapabilities = { Capabilities.QUERY, Capabilities.COLLECTIONS },
-  clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES },
+  clusterTypes = { ClusterType.MOCKED },
   clusterVersionIsBelow = REQUIRE_MB_50132,
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER
 )

@@ -25,7 +25,6 @@ import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION
 import com.couchbase.client.test.Capabilities.USER_GROUPS
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
@@ -42,7 +41,7 @@ import org.slf4j.LoggerFactory
 private val log = LoggerFactory.getLogger(GroupManagerIntegrationTest::class.java)
 
 @IgnoreWhen(
-    clusterTypes = [MOCKED, CAVES],
+    clusterTypes = [MOCKED],
     missesCapabilities = [USER_GROUPS, ENTERPRISE_EDITION],
 )
 internal class GroupManagerIntegrationTest : KotlinIntegrationTest() {

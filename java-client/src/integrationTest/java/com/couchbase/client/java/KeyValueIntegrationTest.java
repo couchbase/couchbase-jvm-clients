@@ -614,7 +614,6 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
 
   @Test
   @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY,
-    clusterTypes = ClusterType.CAVES,
     clusterVersionEquals = "7.5.0") // Need ING-434
   void upsertCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
@@ -640,7 +639,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
   void replaceCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "foo", upsertOptions().expiry(NEAR_FUTURE_INSTANT));
@@ -653,7 +652,7 @@ class KeyValueIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY, clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(missesCapabilities = Capabilities.PRESERVE_EXPIRY)
   void subdocCanPreserveExpiry() {
     String id = UUID.randomUUID().toString();
 

@@ -24,20 +24,12 @@ import com.couchbase.client.java.collections.support.TestObject;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.ArrayListOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static junit.framework.TestCase.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -45,11 +37,14 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.UUID;
 
-import static org.junit.Assert.assertTrue;
+import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@IgnoreWhen(clusterTypes = ClusterType.CAVES)
 class CouchbaseArrayListTest extends JavaIntegrationTest {
 
     private static Cluster cluster;

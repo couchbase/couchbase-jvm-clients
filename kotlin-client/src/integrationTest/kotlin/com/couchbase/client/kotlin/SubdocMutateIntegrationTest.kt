@@ -29,7 +29,6 @@ import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.insert
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.Capabilities
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -47,7 +46,7 @@ import java.time.temporal.ChronoUnit.SECONDS
 /**
  * Ported from the Scala SubdocMutateSpec tests. Please keep in sync.
  */
-@IgnoreWhen(clusterTypes = [MOCKED, CAVES])
+@IgnoreWhen(clusterTypes = [MOCKED])
 internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
 
     private suspend fun getContent(docId: String): ObjectNode = collection.get(docId).contentAs()

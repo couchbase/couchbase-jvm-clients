@@ -153,7 +153,6 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
         fun `throws when doc is too deep`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, deeplyNested(128, "foo"))
@@ -171,7 +170,6 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
         fun `throws when path is too deep`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, mapOf("magicWord" to "xyzzy"))
@@ -212,7 +210,6 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
         fun `throws when path is invalid`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, mapOf("magicWord" to "xyzzy"))
@@ -266,7 +263,6 @@ internal class LookupInIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
         fun `fails when doc is too deep`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, deeplyNested(128))

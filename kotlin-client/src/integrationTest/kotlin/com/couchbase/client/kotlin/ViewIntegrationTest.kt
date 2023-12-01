@@ -28,7 +28,6 @@ import com.couchbase.client.kotlin.view.ViewScanConsistency.Companion.requestPlu
 import com.couchbase.client.kotlin.view.ViewSelection.Companion.keys
 import com.couchbase.client.kotlin.view.execute
 import com.couchbase.client.test.Capabilities
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
 import com.couchbase.client.test.ServerVersions.AVOID_MB_55617
@@ -46,7 +45,7 @@ private const val VIEW_NAME = "all"
 private const val VIEW_WITH_REDUCE_NAME = "all_red"
 
 @Suppress("DEPRECATION")
-@IgnoreWhen(clusterTypes = [MOCKED, CAVES], clusterVersionEquals = AVOID_MB_55617, missesCapabilities = [Capabilities.VIEWS])
+@IgnoreWhen(clusterTypes = [MOCKED], clusterVersionEquals = AVOID_MB_55617, missesCapabilities = [Capabilities.VIEWS])
 internal class ViewIntegrationTest : KotlinIntegrationTest() {
 
     private val viewIndexes by lazy { bucket.viewIndexes }

@@ -641,7 +641,7 @@ class SubdocIntegrationTest extends JavaIntegrationTest {
 
   // JVMCBC-728
   @Test
-  @IgnoreWhen(missesCapabilities = Capabilities.SYNC_REPLICATION, clusterTypes = ClusterType.CAVES)
+  @IgnoreWhen(missesCapabilities = Capabilities.SYNC_REPLICATION)
   void subdocCASWithDurability() {
     JsonObject initial = JsonObject.create().put("mutated", 0);
     String id = UUID.randomUUID().toString();

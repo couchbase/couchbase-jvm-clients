@@ -56,7 +56,7 @@ internal class CollectionManagerErrorIntegrationTest : KotlinIntegrationTest() {
     @IgnoreWhen(
         missesCapabilities = [Capabilities.COLLECTIONS],
         hasCapabilities = [Capabilities.SERVERLESS],
-        clusterTypes = [ClusterType.CAVES, ClusterType.CAPELLA],
+        clusterTypes = [ClusterType.CAPELLA],
     )
     fun `throws FeatureNotAvailableException for memcached buckets`(): Unit = runBlocking {
         val memcachedBucketName = "memcached-" + UUID.randomUUID().toString().substring(0, 6)

@@ -20,13 +20,11 @@ import com.couchbase.client.java.batch.BatchHelper;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -40,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Verifies the functionality of the {@link BatchHelper}.
  */
-@IgnoreWhen(clusterTypes = ClusterType.CAVES,
+@IgnoreWhen(
   isProtostellar = true,  // Not currently supported as it uses Core directly
   clusterVersionEquals = "7.5.0" // Disabled until JCBC-2065 is addressed
 )

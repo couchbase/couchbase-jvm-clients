@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.GroupNotFoundException;
-import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -33,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @IgnoreWhen(
-  clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
+  clusterTypes = { ClusterType.MOCKED, ClusterType.CAPELLA },
   missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION},
   isProtostellar = true
 )

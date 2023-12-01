@@ -40,11 +40,9 @@ import com.couchbase.client.java.query.QueryStatus;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -71,8 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(
   missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
-  clusterVersionIsBelow = REQUIRE_MB_50132,
-  clusterTypes = ClusterType.CAVES
+  clusterVersionIsBelow = REQUIRE_MB_50132
 )
 class QueryIntegrationTest extends JavaIntegrationTest {
 

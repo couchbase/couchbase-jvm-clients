@@ -22,13 +22,10 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -57,7 +54,7 @@ class QueryErrorIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellar = true)
+  @IgnoreWhen(isProtostellar = true)
   void includesHttpStatusCodeInErrorContext() {
     ParsingFailureException ex = assertThrows(ParsingFailureException.class, () -> cluster.query("select 1="));
     assertTrue(ex.getMessage().contains("\"httpStatus\":400"));

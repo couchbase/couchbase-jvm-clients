@@ -66,10 +66,7 @@ import static com.couchbase.client.java.manager.analytics.DropDataverseAnalytics
 import static com.couchbase.client.java.manager.analytics.DropIndexAnalyticsOptions.dropIndexAnalyticsOptions;
 import static com.couchbase.client.java.manager.analytics.GetLinksAnalyticsOptions.getLinksAnalyticsOptions;
 import static com.couchbase.client.test.Capabilities.ANALYTICS;
-import static com.couchbase.client.test.Capabilities.COLLECTIONS;
 import static com.couchbase.client.test.Capabilities.SUBDOC_REPLACE_BODY_WITH_XATTR;
-import static com.couchbase.client.test.Capabilities.SUBDOC_REVIVE_DOCUMENT;
-import static com.couchbase.client.test.ClusterType.CAVES;
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptyList;
@@ -84,7 +81,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @Disabled
 @Flaky
-@IgnoreWhen(clusterTypes = {MOCKED, CAVES},
+@IgnoreWhen(clusterTypes = {MOCKED},
   missesCapabilities = ANALYTICS,
   isProtostellar = true
 )

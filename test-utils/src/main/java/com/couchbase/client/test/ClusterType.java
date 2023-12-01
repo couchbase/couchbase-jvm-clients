@@ -19,6 +19,5 @@ public enum ClusterType {
   CONTAINERIZED,
   MOCKED,
   UNMANAGED,
-  CAVES,
-  CAPELLA
+  CAPELLA,
 }

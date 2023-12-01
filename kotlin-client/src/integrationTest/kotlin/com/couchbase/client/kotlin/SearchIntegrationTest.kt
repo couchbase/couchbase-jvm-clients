@@ -31,7 +31,6 @@ import com.couchbase.client.kotlin.search.execute
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.waitForService
 import com.couchbase.client.test.Capabilities.SEARCH
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -49,7 +48,7 @@ import kotlin.time.Duration.Companion.seconds
 
 
 @Disabled("due to flakiness in CI environment")
-@IgnoreWhen(missesCapabilities = [SEARCH], clusterTypes = [CAVES], clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
+@IgnoreWhen(missesCapabilities = [SEARCH], clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101)
 internal class SearchIntegrationTest : KotlinIntegrationTest() {
 
     private val indexName by lazy { "idx-" + config().bucketname() }

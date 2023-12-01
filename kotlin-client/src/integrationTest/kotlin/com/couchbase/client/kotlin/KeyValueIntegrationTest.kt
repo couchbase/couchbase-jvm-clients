@@ -41,7 +41,6 @@ import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.replace
 import com.couchbase.client.kotlin.kv.StoreSemantics.Companion.upsert
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.test.ClusterType
-import com.couchbase.client.test.ClusterType.CAVES
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -239,7 +238,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [CAVES])
         fun `projection fails when document is too deep`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, deeplyNested(128, "foo"))
@@ -247,7 +245,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [CAVES])
         fun `projection fails when document is binary`(): Unit = runBlocking {
             val id = nextId()
             collection.upsert(id, Content.binary("xyzzy".toByteArray()))
@@ -752,7 +749,6 @@ internal class KeyValueIntegrationTest : KotlinIntegrationTest() {
         }
 
         @Test
-        @IgnoreWhen(clusterTypes = [CAVES])
         fun `can upsert macro`(): Unit = runBlocking {
             val id = nextId()
 

@@ -17,20 +17,18 @@
 package com.couchbase.client.java.manager.user;
 
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.UserNotFoundException;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
-import com.couchbase.client.test.Services;
 import com.couchbase.client.test.ClusterType;
-import com.couchbase.client.test.Util;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-
+import com.couchbase.client.test.Util;
 import com.couchbase.mock.deps.org.apache.http.auth.AuthScope;
 import com.couchbase.mock.deps.org.apache.http.auth.UsernamePasswordCredentials;
 import com.couchbase.mock.deps.org.apache.http.client.CredentialsProvider;
@@ -40,11 +38,11 @@ import com.couchbase.mock.deps.org.apache.http.impl.client.BasicCredentialsProvi
 import com.couchbase.mock.deps.org.apache.http.impl.client.CloseableHttpClient;
 import com.couchbase.mock.deps.org.apache.http.impl.client.HttpClientBuilder;
 import com.couchbase.mock.deps.org.apache.http.util.EntityUtils;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -63,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA},
+@IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA},
   isProtostellarWillWorkLater = true // User management not yet in Protostellar
 )
 class UserManagerIntegrationTest extends JavaIntegrationTest {

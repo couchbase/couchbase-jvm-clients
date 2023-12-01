@@ -23,7 +23,6 @@ import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
-import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -36,7 +35,7 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
-@IgnoreWhen(missesCapabilities = [Capabilities.COLLECTIONS], clusterTypes = [ClusterType.CAVES])
+@IgnoreWhen(missesCapabilities = [Capabilities.COLLECTIONS])
 internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
     private val manager: CollectionManager by lazy { bucket.collections }
 

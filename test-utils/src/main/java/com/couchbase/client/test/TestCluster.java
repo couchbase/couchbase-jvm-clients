@@ -19,10 +19,10 @@ package com.couchbase.client.test;
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import okhttp3.Response;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import okhttp3.Response;
 
 import java.io.IOException;
 import java.net.URL;
@@ -63,8 +63,6 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       return new MockTestCluster(properties);
     } else if (clusterType.equals("unmanaged")) {
       return new UnmanagedTestCluster(properties);
-    } else if (clusterType.equals("caves")) {
-      return new CavesTestCluster(properties);
     } else {
       throw new IllegalStateException("Unsupported test cluster type: " + clusterType);
     }

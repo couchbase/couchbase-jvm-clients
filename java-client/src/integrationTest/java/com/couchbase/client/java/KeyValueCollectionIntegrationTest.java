@@ -23,7 +23,6 @@ import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.manager.collection.CollectionSpec;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
-import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -59,7 +58,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = ClusterType.CAVES, isProtostellarWillWorkLater = true) // Fails as CNG is not yet waiting for the collection to be ready before continuing
+  @IgnoreWhen(isProtostellarWillWorkLater = true) // Fails as CNG is not yet waiting for the collection to be ready before continuing
   void recognizesCollectionAfterCreation() {
     String collId = UUID.randomUUID().toString().substring(0, 10);
     CollectionSpec collectionSpec = CollectionSpec.create(collId, DEFAULT_SCOPE);

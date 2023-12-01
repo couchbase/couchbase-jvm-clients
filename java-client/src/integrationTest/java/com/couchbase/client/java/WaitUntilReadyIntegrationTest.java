@@ -88,7 +88,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES, ClusterType.CAPELLA },
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAPELLA },
     isProtostellarWillWorkLater = true) // Fails with BucketNotFoundException as a) bucket.waitUntilReady() currently a no-op in PS and b) ops currently raise NOT_FOUND and are not retried
   void handlesCreatingBucketDuringWaitUntilReady()  {
     ExecutorService es = Executors.newFixedThreadPool(1);
@@ -135,7 +135,7 @@ public class WaitUntilReadyIntegrationTest extends JavaIntegrationTest {
   @Disabled
   @Flaky
   @RepeatedTest(3) // first time often succeeds regardless
-  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAVES })
+  @IgnoreWhen(clusterTypes = { ClusterType.MOCKED })
   void waitsForNewlyCreatedBucket() {
     String bucketName = UUID.randomUUID().toString();
     Cluster cluster = createCluster();

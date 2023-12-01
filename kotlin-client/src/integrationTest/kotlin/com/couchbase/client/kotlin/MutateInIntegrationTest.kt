@@ -35,7 +35,6 @@ import org.junit.jupiter.api.assertThrows
 internal class MutateInIntegrationTest : KotlinIntegrationTest() {
 
     @Test
-    @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
     fun `can decrement counter below zero`(): Unit = runBlocking {
         val id = nextId()
         collection.upsert(id, Content.json("{}"))
@@ -52,7 +51,6 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
     fun `fails on counter overflow`(): Unit = runBlocking {
         val id = nextId()
         collection.upsert(id, mapOf("foo" to 1))
@@ -62,7 +60,6 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
     fun `fails on counter not integer`(): Unit = runBlocking {
         val id = nextId()
         collection.upsert(id, Content.json("""{"foo":1.0}"""))
@@ -91,7 +88,6 @@ internal class MutateInIntegrationTest : KotlinIntegrationTest() {
     }
 
     @Test
-    @IgnoreWhen(clusterTypes = [ClusterType.CAVES])
     fun `counter works`(): Unit = runBlocking {
         val id = nextId()
         run {
