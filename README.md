@@ -146,7 +146,9 @@ cd scala-client && mvn scala:doc
 ### IntelliJ
 Scala code is automatically formatted on compile with the tool `scalafmt`.  To make IntelliJ use the same settings:
 
-Editor -> Code Style -> Scala, change formatter to scalafmt
-and check [Reformat on file save](https://scalameta.org/scalafmt/docs/installation.html#format-on-save)
+In Editor -> Code Style -> Scala:
+* Change formatter to scalafmt.
+* Click 'disable' next to the EditorConfig warning.
+* Check [Reformat on file save](https://scalameta.org/scalafmt/docs/installation.html#format-on-save).
 
 (`mvn validate` can be used from command-line to force reformat)
