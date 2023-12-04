@@ -94,7 +94,16 @@ class ScalaPerformer extends CorePerformer {
       val supported = new Supported
       val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
       response.setTransactionsProtocolVersion("2.0")
-      response.setLibraryVersion(VersionUtil.introspectSDKVersionScala)
+      val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
+      val sdkVersion = if (sdkVersionRaw == null) {
+        // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
+        logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
+        "1.5.0"
+      }
+      else {
+        sdkVersionRaw
+      }
+      response.setLibraryVersion(sdkVersion)
 
       Extension.SUPPORTED.asScala
         .filterNot(v =>

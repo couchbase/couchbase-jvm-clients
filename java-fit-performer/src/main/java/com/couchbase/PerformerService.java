@@ -128,7 +128,13 @@ public class PerformerService extends CorePerformer {
     @Override
     protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response) {
         response.addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps());
-        response.setLibraryVersion(VersionUtil.introspectSDKVersionJava());
+        var sdkVersion = VersionUtil.introspectSDKVersionJava();
+        if (sdkVersion == null) {
+            // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
+            sdkVersion = "3.5.0";
+            logger.warn("Unable to introspect the sdk version, forcing it to {}", sdkVersion);
+        }
+        response.setLibraryVersion(sdkVersion);
 
         // [start:3.3.0]
         for (Extension ext : Extension.SUPPORTED) {
