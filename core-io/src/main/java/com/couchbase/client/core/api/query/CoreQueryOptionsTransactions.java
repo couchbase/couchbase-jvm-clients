@@ -236,7 +236,7 @@ public class CoreQueryOptionsTransactions implements CoreQueryOptions {
 
   @Override
   public CoreQueryScanConsistency scanConsistency() {
-    return original == null ? CoreQueryScanConsistency.NOT_BOUNDED : original.scanConsistency();
+    return original == null ? null : original.scanConsistency();
   }
 
   @Override
