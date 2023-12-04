@@ -51,6 +51,7 @@ import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ResultsUtil;
 import com.couchbase.utils.HooksUtil;
 // [end:3.3.0]
+import com.couchbase.client.performer.core.util.VersionUtil;
 import com.couchbase.client.protocol.observability.SpanCreateRequest;
 import com.couchbase.client.protocol.observability.SpanCreateResponse;
 import com.couchbase.client.protocol.observability.SpanFinishRequest;
@@ -74,7 +75,6 @@ import com.couchbase.client.protocol.shared.EchoResponse;
 import com.couchbase.utils.Capabilities;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.OptionsUtil;
-import com.couchbase.utils.VersionUtil;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -128,7 +128,7 @@ public class PerformerService extends CorePerformer {
     @Override
     protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response) {
         response.addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps());
-        response.setLibraryVersion(VersionUtil.introspectSDKVersion());
+        response.setLibraryVersion(VersionUtil.introspectSDKVersionJava());
 
         // [start:3.3.0]
         for (Extension ext : Extension.SUPPORTED) {

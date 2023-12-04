@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.utils;
-
-import com.couchbase.InternalPerformerFailure;
+package com.couchbase.client.performer.core.util;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -30,8 +28,35 @@ public class VersionUtil {
     private VersionUtil() {
     }
 
-    public static
-    @Nullable String introspectSDKVersion() {
+    public static @Nullable String introspectSDKVersionJava() {
+        return introspectSDKVersion("couchbase-java", "3");
+    }
+
+    public static @Nullable String introspectSDKVersionScala() {
+        return introspectSDKVersion("couchbase-scala", "1");
+    }
+
+    public static @Nullable String introspectSDKVersionKotlin() {
+        return introspectSDKVersion("couchbase-kotlin", "1");
+    }
+
+    private static @Nullable String introspectSDKVersion(String match, String replace) {
+        // Try to get the actual SDK version first.  This might only work if the performer was compiled against a
+        // specific version of the SDK, which is usually only the case when performance testing.
+        String sdkVersion = introspectImplVersion(match);
+        if (sdkVersion != null) {
+            return sdkVersion;
+        }
+        // If that fails, fallback to looking for the core-io version, and then manipulate it into the SDK version
+        // it's likely mapped to.
+        String coreVersion = introspectImplVersion("couchbase-java-core");
+        if (coreVersion != null) {
+            return replace + coreVersion.substring(1);
+        }
+        return null;
+    }
+
+    private static @Nullable String introspectImplVersion(String match) {
         try {
             Enumeration<URL> resources = VersionUtil.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
             while (resources.hasMoreElements()) {
@@ -45,17 +70,15 @@ public class VersionUtil {
                     continue;
                 }
                 for (Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
-                    System.out.println(entry.getKey());
-                    if (entry.getKey().equals("couchbase-java")) {
+                    if (entry.getKey().equals(match)) {
                         return entry.getValue().getValue("Impl-Version");
                     }
                 }
             }
-            // TODO ESI throw new InternalPerformerFailure(new RuntimeException("Unable to introspect library version"));
-            return "3.3.0";
+            return null;
         } catch (IOException err) {
             // Sometimes see "NoSuchFileException: /proc/136/fd/4" on performance runs
-            return "3.3.0";
+            return null;
         }
     }
 }

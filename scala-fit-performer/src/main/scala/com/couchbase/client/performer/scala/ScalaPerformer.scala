@@ -26,12 +26,14 @@ import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.performer.scala.util.HooksUtil
 import com.couchbase.utils.ResultsUtil
+import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 // [end:1.5.0]
 
+import com.couchbase.client.performer.core.util.VersionUtil
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.logging.{LogRedaction, RedactionLevel}
 import com.couchbase.client.performer.core.CorePerformer
-import com.couchbase.client.performer.core.commands.{SdkCommandExecutor, TransactionCommandExecutor}
+import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection}
 import com.couchbase.client.protocol.performer.{Caps, PerformerCapsFetchResponse}
@@ -92,6 +94,7 @@ class ScalaPerformer extends CorePerformer {
       val supported = new Supported
       val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
       response.setTransactionsProtocolVersion("2.0")
+      response.setLibraryVersion(VersionUtil.introspectSDKVersionScala)
 
       Extension.SUPPORTED.asScala
         .filterNot(v =>

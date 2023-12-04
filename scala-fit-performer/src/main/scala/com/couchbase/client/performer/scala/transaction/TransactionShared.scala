@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.{ConcurrentLinkedQueue, CountDownLatch, TimeUnit}
 import java.util.function.Supplier
 import scala.collection.JavaConversions._
-import scala.compat.java8.OptionConverters._
+import scala.jdk.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 object TransactionShared {
