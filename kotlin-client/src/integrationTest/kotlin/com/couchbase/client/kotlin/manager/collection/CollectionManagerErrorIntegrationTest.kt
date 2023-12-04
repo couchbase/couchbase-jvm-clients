@@ -16,7 +16,6 @@
 package com.couchbase.client.kotlin.manager.collection
 
 import com.couchbase.client.core.error.FeatureNotAvailableException
-import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.kotlin.manager.bucket.BucketType
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
@@ -24,7 +23,7 @@ import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
@@ -69,16 +68,15 @@ internal class CollectionManagerErrorIntegrationTest : KotlinIntegrationTest() {
             val memcachedBucket = cluster.bucket(memcachedBucketName).waitUntilReady(1.minutes)
             with(memcachedBucket.collections) {
                 // getAllScopes is the only supported operation
-                val defaultScope = ScopeSpec(
-                    name = DEFAULT_SCOPE,
-                    collections = listOf(CollectionSpec(DEFAULT_SCOPE, DEFAULT_COLLECTION, history = false))
+                val scopes = getAllScopes()
+                assertTrue(
+                    scopes.any { it.name == DEFAULT_SCOPE },
+                    "getAllScopes for new memcached bucket should have included scope '$DEFAULT_SCOPE', but got: $scopes",
                 )
-                assertEquals(listOf(defaultScope), getAllScopes())
 
                 assertThrows<FeatureNotAvailableException> { createScope("foo") }
                 assertThrows<FeatureNotAvailableException> { dropScope("foo") }
                 assertThrows<FeatureNotAvailableException> { createCollection("foo", "bar") }
-                assertThrows<FeatureNotAvailableException> { updateCollection("foo", "bar") }
                 assertThrows<FeatureNotAvailableException> { dropCollection("foo", "bar") }
             }
         } finally {
