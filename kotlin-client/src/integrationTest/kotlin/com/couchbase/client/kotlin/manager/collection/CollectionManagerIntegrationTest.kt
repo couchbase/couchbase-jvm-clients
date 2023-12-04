@@ -23,6 +23,7 @@ import com.couchbase.client.core.util.ConsistencyUtil
 import com.couchbase.client.kotlin.util.KotlinIntegrationTest
 import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
+import com.couchbase.client.test.ClusterVersion
 import com.couchbase.client.test.IgnoreWhen
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -64,7 +65,19 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
         manager.createCollection(spec)
         waitUntil { manager.collectionExists(spec.scopeName, spec.name) }
         ConsistencyUtil.waitUntilCollectionPresent(cluster.core, bucket.name, spec.scopeName, spec.name)
-        return spec.copy(history = false)
+
+        // There's an unfortunate inconsistency between how the bucket and collection managers
+        // server APIs treat the "history" flag when history preservation is not supported.
+        // For a non-magma bucket, the bucket manager API always omits historyRetentionCollectionDefault,
+        // so this field of the BucketSetting is always null for non-magma buckets.
+        // The collection manager, on the other hand, happily tells us history=false for all collections
+        // (except the default collection), regardless of whether the bucket type supports history.
+
+        // On pre-7.2.0 clusters (which don't support history) make sure the returned spec's
+        // `history` field is null, not false. From 7.2.0 onward, set it to true or false.
+        val historyDefault = cluster.buckets.getBucket(bucket.name).historyRetentionCollectionDefault ?: false
+        val serverSupportsHistory = config().clusterVersion() >= ClusterVersion(7, 2, 0, false)
+        return spec.copy(history = if (serverSupportsHistory) historyDefault else null)
     }
 
     @Test
@@ -118,6 +131,7 @@ internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
 
             createTempScope(scopeName)
             assertEquals(ScopeSpec(scopeName, emptyList()), getScope(scopeName))
+
 
             val expectedCollections = listOf(createTempCollection(scopeName, collectionName))
             assertEquals(ScopeSpec(scopeName, expectedCollections), getScope(scopeName))
