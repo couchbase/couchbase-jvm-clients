@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.performer.kotlin.query
 
-import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.Scope
 import com.couchbase.client.kotlin.query.QueryParameters
 import com.couchbase.client.kotlin.query.QueryProfile
@@ -203,8 +202,8 @@ class QueryHelper {
                         .build()
                 })
 
-            md.signature?.let { metaData.signature = ByteString.copyFrom(Mapper.encodeAsBytes(it)) }
-            md.profile?.let { metaData.profile = ByteString.copyFrom(Mapper.encodeAsBytes(it)) }
+            md.signatureBytes?.let { metaData.signature = ByteString.copyFrom(it) }
+            md.profileBytes?.let { metaData.profile = ByteString.copyFrom(it) }
 
             md.metrics?.let { metrics ->
                 metaData.setMetrics(

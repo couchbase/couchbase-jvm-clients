@@ -69,11 +69,21 @@ public class QueryMetadata internal constructor(
     public val status: QueryStatus
         get() = QueryStatus.from(core.status().name)
 
+    @Deprecated(
+        "This accessor throws an exception if the signature returned by the query engine is not a JSON Object." +
+                " Please use `signatureBytes` instead."
+    )
     public val signature: Map<String, Any?>?
         get() = core.signature().parseAsMap().orElse(null)
 
+    public val signatureBytes: ByteArray?
+        get() = core.signature().orElse(null)
+
     public val profile: Map<String, Any?>?
         get() = core.profile().parseAsMap().orElse(null)
+
+    public val profileBytes: ByteArray?
+        get() = core.profile().orElse(null)
 
     public val metrics: QueryMetrics?
         get() = core.metrics().map { QueryMetrics(it) }.orElse(null)
@@ -82,7 +92,7 @@ public class QueryMetadata internal constructor(
         get() = core.warnings().map { QueryWarning(it) }
 
     override fun toString(): String {
-        return "QueryMetadata(requestId='$requestId', clientContextId='$clientContextId', status=$status, signature=$signature, profile=$profile, metrics=$metrics, warnings=$warnings)"
+        return "QueryMetadata(requestId='$requestId', clientContextId='$clientContextId', status=$status, signature=${signatureBytes?.toStringUtf8()}, profile=${profileBytes?.toStringUtf8()}, metrics=$metrics, warnings=$warnings)"
     }
 }
 
