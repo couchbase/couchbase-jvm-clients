@@ -23,8 +23,7 @@ import com.couchbase.client.scala.kv.UpsertOptions
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory
-import org.junit.Assert.fail
-import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows}
+import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, fail}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{Test, TestInstance}
 
