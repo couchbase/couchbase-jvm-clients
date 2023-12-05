@@ -64,14 +64,18 @@ public class QueryMetaData {
     }
 
     /**
-     * Returns the signature as returned by the query engine which is then decoded to {@link JsonObject}
+     * Returns the signature returned by the query engine, parsed as a {@link JsonObject},
+     * or an empty optional if no signature is available.
      * <p>
-     * It is returned as an Optional which will be empty if no signature information is available.
+     * A signature describes the "shape" of the query results.
+     * <p>
+     * For cases where the signature is not known to be a JSON Object,
+     * please use {@link #signatureBytes()} instead.
      *
-     * @throws DecodingFailureException when the signature cannot be decoded successfully
+     * @throws DecodingFailureException if the signature is not a JSON Object.
      */
     public Optional<JsonObject> signature() {
-      return internal.signature().map(v -> {
+      return signatureBytes().map(v -> {
         try {
           return JacksonTransformers.MAPPER.readValue(v, JsonObject.class);
         } catch (IOException ex) {
@@ -80,6 +84,17 @@ public class QueryMetaData {
       });
     }
 
+    /**
+     * Returns a byte array containing the signature returned by the query engine,
+     * or an empty optional if no signature is available.
+     * <p>
+     * The byte array contains JSON describing the "shape" of the query results.
+     * For most queries it's a JSON Object, but it can be any JSON type.
+     */
+    @Stability.Uncommitted
+    public Optional<byte[]> signatureBytes() {
+      return internal.signature();
+    }
 
     /**
      * Returns the profiling information returned by the query engine which is then decoded to {@link JsonObject}
@@ -96,6 +111,16 @@ public class QueryMetaData {
           throw new DecodingFailureException(ex);
         }
       });
+    }
+
+    /**
+     * Returns a byte array containing the profiling information returned by the query engine,
+     * or an empty optional if no profiling information is available.
+     * <p>
+     * The byte array contains a JSON Object.
+     */
+    public Optional<byte[]> profileBytes() {
+      return internal.profile();
     }
 
     /**
