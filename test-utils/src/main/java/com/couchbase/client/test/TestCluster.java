@@ -57,9 +57,7 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
     loadFromEnv(properties);
     String clusterType = properties.getProperty("cluster.type");
 
-    if (clusterType.equals("containerized")) {
-      return new ContainerizedTestCluster(properties);
-    } else if (clusterType.equals("mocked")) {
+    if (clusterType.equals("mocked")) {
       return new MockTestCluster(properties);
     } else if (clusterType.equals("unmanaged")) {
       return new UnmanagedTestCluster(properties);
