@@ -23,6 +23,7 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 import reactor.util.function.Tuple2;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -31,7 +32,9 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class RepeatTest {
 
@@ -341,7 +344,7 @@ class RepeatTest {
         needsRollback = false;
       }
       void run() {
-        assertFalse("Rollback not performed", needsRollback);
+        assertFalse(needsRollback, "Rollback not performed");
         needsRollback = true;
       }
     }
@@ -350,7 +353,7 @@ class RepeatTest {
       .withApplicationContext(appContext)
       .doOnRepeat(context -> {
         AppContext ac = context.applicationContext();
-        assertNotNull("Application context not propagated", ac);
+        assertNotNull(ac, "Application context not propagated");
         ac.rollback();
       });
 

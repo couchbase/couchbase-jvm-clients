@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RedactableArgumentTest {
   private static RedactionLevel origLevel;

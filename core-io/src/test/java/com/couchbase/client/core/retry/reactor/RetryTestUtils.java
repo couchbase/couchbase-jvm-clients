@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.retry.reactor;
 
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +33,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import org.reactivestreams.Publisher;
-
-import reactor.core.publisher.Flux;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RetryTestUtils {
 
@@ -55,12 +54,12 @@ public class RetryTestUtils {
     int randomValues = 0;
     for (IterationContext<?> context : retries) {
       long backoffMs = context.backoff().toMillis();
-      assertTrue("Unexpected delay " + backoffMs, backoffMs >= firstMs && backoffMs <= maxMs);
+      assertTrue(backoffMs >= firstMs && backoffMs <= maxMs, "Unexpected delay " + backoffMs);
       if (backoffMs != firstMs && backoffMs != prevMs)
         randomValues++;
       prevMs = backoffMs;
     }
-    assertTrue("Delays not random", randomValues >= 2); // Allow for at most one edge case.
+    assertTrue(randomValues >= 2, "Delays not random"); // Allow for at most one edge case.
   }
 
   static <T> void testReuseInParallel(int threads, int iterations,
@@ -77,7 +76,7 @@ public class RetryTestUtils {
       public BackoffDelay apply(IterationContext<?> context) {
         Duration backoff = context.backoff();
         if (latch.getCount() > 0) {
-          assertNull("Wrong context, backoff must be null", backoff);
+          assertNull(backoff, "Wrong context, backoff must be null");
           backoff = Duration.ofMillis(nextBackoff.incrementAndGet());
           backoffCounts.put(backoff.toMillis(), 1);
           latch.countDown();
@@ -88,7 +87,7 @@ public class RetryTestUtils {
             // ignore, errors are handled later
           }
         } else {
-          assertNotNull("Wrong context, backoff must not be null", backoff);
+          assertNotNull(backoff, "Wrong context, backoff must not be null");
           long index = backoff.toMillis();
           backoffCounts.put(index, backoffCounts.get(index) + 1);
         }

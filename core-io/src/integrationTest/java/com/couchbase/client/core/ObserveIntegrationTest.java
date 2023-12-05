@@ -17,7 +17,6 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.ReplicaNotConfiguredException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.InsertRequest;
@@ -28,7 +27,9 @@ import com.couchbase.client.core.service.kv.Observe;
 import com.couchbase.client.core.service.kv.ObserveContext;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -36,8 +37,8 @@ import java.util.UUID;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ObserveIntegrationTest extends CoreIntegrationTest {
 

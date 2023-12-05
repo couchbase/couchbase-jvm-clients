@@ -34,9 +34,9 @@ import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.Ignore;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -180,8 +180,7 @@ class SubDocumentGetIntegrationTest extends CoreIntegrationTest {
     singleGetOpCheckExpectedFailure("I am not json!", "no_exist", DocumentNotJsonException.class);
   }
 
-  // Fails against real server, passes against mock
-  @Ignore
+  @Disabled("Fails against real server, passes against mock")
   void notJsonMulti() {
     List<SubdocGetRequest.Command> commands = Arrays.asList(
       new SubdocGetRequest.Command(SubdocCommandType.GET, "foo",  false, 0),

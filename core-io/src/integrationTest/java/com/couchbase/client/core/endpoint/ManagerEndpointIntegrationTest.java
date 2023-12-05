@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
 
