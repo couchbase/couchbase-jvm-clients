@@ -359,7 +359,7 @@ case class QueryOptions(
         case Some(QueryProfile.Off)     => CoreQueryProfile.OFF
         case Some(QueryProfile.Phases)  => CoreQueryProfile.PHASES
         case Some(QueryProfile.Timings) => CoreQueryProfile.TIMINGS
-        case _                          => CoreQueryProfile.OFF
+        case _                          => null
       }
 
       override def raw(): JsonNode = x.raw match {
@@ -381,7 +381,7 @@ case class QueryOptions(
 
       override def scanConsistency(): CoreQueryScanConsistency = x.scanConsistency match {
         case Some(_: QueryScanConsistency.RequestPlus) => CoreQueryScanConsistency.REQUEST_PLUS
-        case _                                         => CoreQueryScanConsistency.NOT_BOUNDED
+        case _                                         => null
       }
 
       override def flexIndex(): Boolean = x.flexIndex
