@@ -27,9 +27,12 @@ object Capabilities {
     out.add(Caps.SDK_PRESERVE_EXPIRY)
     // [end:1.1.5]
 
-    // [start:1.4.1]
+    // Range scan was actually introduced in 1.4.1, but in volatile status, and the API
+    // changed afterwards due to SDK-RFC changes.  Since we don't perf test this feature
+    // currently, just setting it to recent SDK version.
+    // [start:1.5.0]
     out.add(Caps.SDK_KV_RANGE_SCAN)
-    // [end:1.4.1]
+    // [end:1.5.0]
 
     out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT)
 

@@ -30,9 +30,9 @@ import scala.util.Try
 // [start:1.2.4]
 import com.couchbase.client.performer.scala.eventing.EventingHelper
 // [end:1.2.4]
-// [start:1.4.1]
+// [start:1.5.0]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
-// [end:1.4.1]
+// [end:1.5.0]
 import com.couchbase.client.scala.kv._
 // [start:1.4.11]
 import com.couchbase.client.performer.scala.manager.BucketManagerHelper
@@ -147,7 +147,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    // [start:1.4.1]
+    // [start:1.5.0]
     } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection).reactive
@@ -176,7 +176,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
               .setStreamId(streamer.streamId)
           )
       )
-    // [end:1.4.1]
+    // [end:1.5.0]
     } else if (op.hasClusterCommand) {
         val clc = op.getClusterCommand
         val cluster = connection.cluster.reactive

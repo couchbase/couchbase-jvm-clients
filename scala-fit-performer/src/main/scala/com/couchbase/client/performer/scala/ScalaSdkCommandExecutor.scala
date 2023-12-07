@@ -42,9 +42,9 @@ import scala.concurrent.duration.DurationInt
 import com.couchbase.client.performer.scala.eventing.EventingHelper
 import com.couchbase.client.performer.scala.search.SearchHelper
 // [end:1.2.4]
-// [start:1.4.1]
+// [start:1.5.0]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
-// [end:1.4.1]
+// [end:1.5.0]
 import com.couchbase.client.scala.kv._
 import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.google.protobuf.ByteString
@@ -173,7 +173,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    // [start:1.4.1]
+    // [start:1.5.0]
     } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection)
@@ -202,7 +202,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
               .setStreamId(streamer.streamId)
           )
       )
-    // [end:1.4.1]
+    // [end:1.5.0]
     } else if (op.hasClusterCommand) {
         val clc = op.getClusterCommand
 
@@ -353,7 +353,7 @@ object ScalaSdkCommandExecutor {
     }
   }
 
-  // [start:1.4.1]
+  // [start:1.5.0]
   def processScanResult(request: Scan, r: ScanResult): com.couchbase.client.protocol.run.Result = {
     val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder
       .setId(r.id)
@@ -445,7 +445,7 @@ object ScalaSdkCommandExecutor {
       }
     } else throw new UnsupportedOperationException("Unknown scan type")
   }
-  // [end:1.4.1]
+  // [end:1.5.0]
 
   def convertContent(content: shared.Content): Content = {
     if (content.hasPassthroughString) ContentString(content.getPassthroughString)
@@ -582,7 +582,7 @@ object ScalaSdkCommandExecutor {
     } else null
   }
 
-  // [start:1.4.1]
+  // [start:1.5.0]
   def createOptions(request: com.couchbase.client.protocol.sdk.kv.rangescan.Scan) = {
     if (request.hasOptions) {
       val opts = request.getOptions
@@ -602,7 +602,7 @@ object ScalaSdkCommandExecutor {
       out
     } else null
   }
-  // [end:1.4.1]
+  // [end:1.5.0]
 
   def convertTranscoder(transcoder: shared.Transcoder): Transcoder = {
     if (transcoder.hasRawJson) RawJsonTranscoder.Instance
