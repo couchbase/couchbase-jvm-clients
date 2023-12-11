@@ -381,6 +381,7 @@ case class QueryOptions(
 
       override def scanConsistency(): CoreQueryScanConsistency = x.scanConsistency match {
         case Some(_: QueryScanConsistency.RequestPlus) => CoreQueryScanConsistency.REQUEST_PLUS
+        case Some(QueryScanConsistency.NotBounded)     => CoreQueryScanConsistency.NOT_BOUNDED
         case _                                         => null
       }
 
