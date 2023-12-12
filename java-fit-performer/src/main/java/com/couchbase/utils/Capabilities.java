@@ -46,8 +46,8 @@ public class Capabilities {
         out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT);
         // [end:3.4.3]
 
-        // Actually the SDK hasSDK_LOOKUP_IN had various forms of FTS since 3.0.0, but we're not performance testing it currently
-        // so it's not worth trying to keep the various flavours compiling.
+        // Actually the SDK has had various forms of FTS since 3.0.0, but we're not performance testing it currently
+        // so it's not worth trying to keep the various minor API additions compiling.
         // [start:3.4.5]
         out.add(Caps.SDK_SEARCH);
         out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT);
@@ -70,6 +70,8 @@ public class Capabilities {
         out.add(Caps.SDK_KV);
         // [start:3.5.1]
         out.add(Caps.SDK_DOCUMENT_NOT_LOCKED);
+        // This was added long before this release, but we are not performance testing it.
+        out.add(Caps.SDK_CIRCUIT_BREAKERS);
         // [end:3.5.1]
 
         // [start:3.6.0]

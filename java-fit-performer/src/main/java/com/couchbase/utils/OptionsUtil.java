@@ -19,6 +19,9 @@ import com.couchbase.InternalPerformerFailure;
 import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
+// [start:3.5.1]
+import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
+// [end:3.5.1]
 import com.couchbase.client.core.env.IoConfig;
 // [start:3.2.0]
 import com.couchbase.client.core.env.LoggingMeterConfig;
@@ -44,6 +47,7 @@ import com.couchbase.client.java.transactions.config.TransactionsConfig;
 // [end:3.3.0]
 import com.couchbase.client.metrics.opentelemetry.OpenTelemetryMeter;
 import com.couchbase.client.protocol.observability.Attribute;
+import com.couchbase.client.protocol.sdk.circuit_breaker.ServiceConfig;
 import com.couchbase.client.protocol.shared.ClusterConfig;
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
 import com.couchbase.client.protocol.transactions.CommandQuery;
@@ -234,6 +238,36 @@ public class OptionsUtil {
             if (ioConfig == null) ioConfig = IoConfig.builder();
             ioConfig.idleHttpConnectionTimeout(Duration.ofSeconds(cc.getIdleHttpConnectionTimeoutSecs()));
         }
+        // [start:3.5.1]
+        if (cc.hasCircuitBreakerConfig()) {
+            if (ioConfig == null) ioConfig = IoConfig.builder();
+            var cbcc = cc.getCircuitBreakerConfig();
+            if (cbcc.hasKv()) {
+                ioConfig.kvCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getKv(), cb));
+            }
+            if (cbcc.hasQuery()) {
+                ioConfig.queryCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getQuery(), cb));
+            }
+            if (cbcc.hasView()) {
+                ioConfig.viewCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getView(), cb));
+            }
+            if (cbcc.hasSearch()) {
+                ioConfig.searchCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getSearch(), cb));
+            }
+            if (cbcc.hasAnalytics()) {
+                ioConfig.analyticsCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getAnalytics(), cb));
+            }
+            if (cbcc.hasManager()) {
+                ioConfig.managerCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getManager(), cb));
+            }
+            if (cbcc.hasEventing()) {
+                ioConfig.eventingCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getEventing(), cb));
+            }
+            if (cbcc.hasBackup()) {
+                ioConfig.backupCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getBackup(), cb));
+            }
+        }
+        // [end:3.5.1]
 
         if (ioConfig != null) {
             clusterEnvironment.ioConfig(ioConfig);
@@ -242,6 +276,30 @@ public class OptionsUtil {
             clusterEnvironment.timeoutConfig(timeoutConfig);
         }
     }
+
+    // [start:3.5.1]
+    private static void applyCircuitBreakerConfig(ServiceConfig cbc, CircuitBreakerConfig.Builder cb) {
+        if (cbc.hasEnabled()) {
+            cb.enabled(cbc.getEnabled());
+        }
+        if (cbc.hasVolumeThreshold()) {
+            cb.volumeThreshold(cbc.getVolumeThreshold());
+        }
+        if (cbc.hasErrorThresholdPercentage()) {
+            cb.errorThresholdPercentage(cbc.getErrorThresholdPercentage());
+        }
+        if (cbc.hasSleepWindowMs()) {
+            cb.sleepWindow(Duration.ofMillis(cbc.getSleepWindowMs()));
+        }
+        if (cbc.hasRollingWindowMs()) {
+            cb.rollingWindow(Duration.ofMillis(cbc.getRollingWindowMs()));
+        }
+        if (cbc.hasCanaryTimeoutMs()) {
+            // Even though the Java SDK was the pathfinding one for this RFC, oddly it doesn't have this param.
+            throw new UnsupportedOperationException("Canary timeout not supported");
+        }
+    }
+    // [end:3.5.1]
 
     private static void applyTransactionsConfig(ClusterConnectionCreateRequest request, Supplier<ClusterConnection> getCluster, ClusterEnvironment.Builder clusterEnvironment) {
         var tc = request.getClusterConfig().getTransactionsConfig();
