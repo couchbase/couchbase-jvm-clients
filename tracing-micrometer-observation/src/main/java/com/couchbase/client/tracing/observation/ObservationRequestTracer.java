@@ -75,12 +75,19 @@ public class ObservationRequestTracer implements RequestTracer {
   public RequestSpan requestSpan(String operationName, RequestSpan parent) {
     try {
       CouchbaseSenderContext senderContext = new CouchbaseSenderContext(operationName);
+      Observation parentObservation = null;
       if (parent != null) {
-        senderContext.setParentObservation(castObservation(parent));
+        parentObservation = castObservation(parent);
+        senderContext.setParentObservation(parentObservation);
       }
-      Observation observation = Observation.createNotStarted(TracingIdentifiers.METER_OPERATIONS, () -> senderContext, observationRegistry)
-        .contextualName(operationName);
-      return ObservationRequestSpan.wrap(observation.start());
+      parentObservation = parentObservation != null ? parentObservation : Observation.NOOP;
+      // We're making the parent observation current, so that any user / framework
+      // intermediate spans won't be treated as current.
+      return parentObservation.scoped(() -> {
+        Observation observation = Observation.createNotStarted(TracingIdentifiers.METER_OPERATIONS, () -> senderContext, observationRegistry)
+          .contextualName(operationName);
+        return ObservationRequestSpan.wrap(observation.start());
+      });
     } catch (Exception ex) {
       throw new TracerException("Failed to create ObservationRequestSpan", ex);
     }
