@@ -18,6 +18,7 @@ package com.couchbase.client.performer.scala
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.perf.{Counters, PerRun}
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
+import com.couchbase.client.performer.scala.Content.{ContentJson, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer}
@@ -92,7 +93,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
         if (options == null) collection.get(docId).block()
         else collection.get(docId, options).block()
       result.setElapsedNanos(System.nanoTime - start)
-      if (op.getReturnResult) populateResult(request, result, r)
+      if (op.getReturnResult) populateResult(Some(request.getContentAs), result, r)
       else setSuccess(result)
     } else if (op.hasRemove) {
       val request    = op.getRemove

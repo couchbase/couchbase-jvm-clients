@@ -58,6 +58,12 @@ object Capabilities {
     out.add(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
     // [end:1.4.11]
 
+    // We don't currently performance test these, so to reduce tagging just run them from a recent SDK version onwards.
+    // [start:1.5.0]
+    out.add(Caps.SDK_KV)
+    out.add(Caps.SDK_DOCUMENT_NOT_LOCKED)
+    // [end:1.5.0]
+
     out
   }
 

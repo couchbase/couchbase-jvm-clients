@@ -20,11 +20,11 @@ import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner
 import com.couchbase.client.performer.core.commands.{BatchExecutor, TransactionCommandExecutor}
+import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertContent
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.transaction.TransactionShared.ExpectSuccess
 import com.couchbase.client.performer.scala.util.{ClusterConnection, OptionsUtil, ResultValidation}
-import com.couchbase.client.performer.scala.{ContentJson, ContentString}
 import com.couchbase.client.protocol.shared.API
 import com.couchbase.client.protocol.transactions.{ExpectedResult, TransactionCommand, TransactionCreateRequest, TransactionStreamPerformerToDriver}
 import com.couchbase.client.scala.json.JsonObject
@@ -149,6 +149,10 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             case ContentString(value) =>
               ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
             case ContentJson(value) =>
+              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
+            case ContentByteArray(value) =>
+              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
+            case ContentNull(value) =>
               ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
           }
         }
