@@ -53,6 +53,14 @@ Prefer @Nullable, unless Optional offers a clear advantage.
 
 For example, if a field is used exclusively by an accessor that returns Optional, it's reasonable for the field to be an Optional, so the accessor doesn't need to create a new Optional on every call.
 
+Note that any class ultimately accessed by the Couchbase Spark Connector needs to implement Serializable, and Optional is not Serializable.
+This will apply to any class in core-io that is ultimately in a Scala SDK object being returned to the user.
+
+References:
+
+* https://issues.couchbase.com/browse/JVMCBC-1458[JVMCBC-1458]
+* https://stackoverflow.com/questions/24547673/why-java-util-optional-is-not-serializable-how-to-serialize-the-object-with-suc/24564612#24564612[StackOverflow post]
+
 == Constructors
 
 Constructors should verify that parameters not annotated as @Nullable are actually non-null.

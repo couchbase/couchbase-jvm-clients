@@ -20,10 +20,12 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import reactor.util.annotation.Nullable;
 
+import java.io.Serializable;
+
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-public abstract class CoreKvResult {
+public abstract class CoreKvResult implements Serializable {
   private final CoreKeyspace keyspace;
   private final String key;
   private final CoreKvResponseMetadata meta;

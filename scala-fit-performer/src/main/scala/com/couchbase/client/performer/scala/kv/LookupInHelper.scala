@@ -4,12 +4,8 @@ import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertException, setSuccess}
-import com.couchbase.client.performer.scala.util.{
-  ClusterConnection,
-  ContentAsUtil,
-  ScalaFluxStreamer,
-  ScalaIteratorStreamer
-}
+import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaFluxStreamer, ScalaIteratorStreamer}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.kv.lookupin
 import com.couchbase.client.protocol.sdk.{CollectionLevelCommand, Command}
@@ -356,6 +352,7 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "SCBC-417: Scala SDK does not support accessDeleted"
         )
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -373,6 +370,7 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -389,6 +387,7 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -399,6 +398,7 @@ object LookupInHelper {
       out: com.couchbase.client.protocol.run.Result.Builder,
       result: LookupInResult
   ): Unit = {
+    assertIsSerializable(result)
     val specResults = Range(0, request.getSpecCount)
       .map(i => {
         val spec = request.getSpec(i)
@@ -460,6 +460,7 @@ object LookupInHelper {
       specs: Seq[com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpec],
       result: LookupInReplicaResult
   ): com.couchbase.client.protocol.sdk.kv.lookupin.LookupInReplicaResult = {
+    assertIsSerializable(result)
     val specResults = specs.zipWithIndex
       .map(x => {
         val spec = x._1

@@ -19,13 +19,14 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 
+import java.io.Serializable;
 import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-public final class CoreKeyspace {
+public final class CoreKeyspace implements Serializable {
   private final String bucket;
   private final String scope;
   private final String collection;

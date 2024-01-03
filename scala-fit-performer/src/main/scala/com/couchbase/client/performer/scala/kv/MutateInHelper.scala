@@ -21,6 +21,7 @@ import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertContent, convertDurability, convertExpiry, setSuccess}
+import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
 import com.couchbase.client.performer.scala.{Content, ScalaSdkCommandExecutor}
 import com.couchbase.client.protocol.run.Result
@@ -308,6 +309,7 @@ object MutateInHelper {
       // [start:1.5.0]
       if (opts.hasCreateAsDeleted) out = out.createAsDeleted(opts.getCreateAsDeleted)
       // [end:1.5.0]
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -331,6 +333,7 @@ object MutateInHelper {
       out: com.couchbase.client.protocol.run.Result.Builder,
       result: MutateInResult
   ): Unit = {
+    assertIsSerializable(result)
     val specResults = Range(0, request.getSpecCount)
       .map(i => {
         val spec = request.getSpec(i)

@@ -20,6 +20,7 @@ package com.couchbase.client.performer.scala.kv
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertException, convertTranscoder, setSuccess}
+import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaFluxStreamer, ScalaIteratorStreamer}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.{CollectionLevelCommand, Command}
@@ -250,6 +251,7 @@ object GetReplicaHelper {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -263,6 +265,7 @@ object GetReplicaHelper {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -272,6 +275,7 @@ object GetReplicaHelper {
       value: GetReplicaResult,
       streamId: Option[String] = None
   ): com.couchbase.client.protocol.sdk.kv.GetReplicaResult = {
+    assertIsSerializable(value)
     val builder = com.couchbase.client.protocol.sdk.kv.GetReplicaResult.newBuilder
       .setCas(value.cas)
 

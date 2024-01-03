@@ -15,11 +15,8 @@
  */
 package com.couchbase.client.performer.scala.query
 
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
-    convertDuration,
-    convertMutationState,
-    setSuccess
-}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertDuration, convertMutationState, setSuccess}
+import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.{ClusterLevelCommand, Command, ScopeLevelCommand}
@@ -182,6 +179,7 @@ object QueryHelper {
                 out = out.preserveExpiry(opts.getPreserveExpiry)
                 // [end:1.2.5]
             }
+            assertIsSerializable(out)
             Some(out)
         } else None
     }
@@ -191,7 +189,7 @@ object QueryHelper {
                                       out: com.couchbase.client.protocol.run.Result.Builder,
                                       result: com.couchbase.client.scala.query.QueryResult
                               ): Unit = {
-
+        assertIsSerializable(result)
         val content = ContentAsUtil
                 .contentTypeSeq(
                     request.getContentAs,

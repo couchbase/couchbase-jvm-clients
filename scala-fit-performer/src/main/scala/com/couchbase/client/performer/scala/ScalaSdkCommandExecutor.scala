@@ -25,6 +25,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
+import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 // [start:1.5.0]
 import com.couchbase.client.performer.scala.kv.{GetReplicaHelper, MutateInHelper}
 // [end:1.5.0]
@@ -518,6 +519,7 @@ object ScalaSdkCommandExecutor {
 
   // [start:1.5.0]
   def processScanResult(request: Scan, r: ScanResult): com.couchbase.client.protocol.run.Result = {
+    assertIsSerializable(r)
     val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder
       .setId(r.id)
       .setIdOnly(r.idOnly)
@@ -646,6 +648,7 @@ object ScalaSdkCommandExecutor {
         case Right(expiry) => out.expiry(expiry)
       }
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -658,6 +661,7 @@ object ScalaSdkCommandExecutor {
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasCas) out = out.cas(opts.getCas)
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -672,6 +676,7 @@ object ScalaSdkCommandExecutor {
       if (opts.getProjectionCount > 0)
         out = out.project(opts.getProjectionList.asByteStringList().toSeq.map(v => v.toStringUtf8))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -712,6 +717,7 @@ object ScalaSdkCommandExecutor {
       // [start:1.1.5]
       if (opts.hasPreserveExpiry) out = out.preserveExpiry(opts.getPreserveExpiry)
       // [end:1.1.5]
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -751,6 +757,7 @@ object ScalaSdkCommandExecutor {
       // [start:1.1.5]
       if (opts.hasPreserveExpiry) out = out.preserveExpiry(opts.getPreserveExpiry)
       // [end:1.1.5]
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -772,6 +779,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasBatchTimeLimit) throw new UnsupportedOperationException("Cannot support batch time limit");
       // Will add when adding support for Caps.OBSERVABILITY_1.
       // if (opts.hasParentSpanId) out = out.parentSpan(spans.get(opts.getParentSpanId))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -785,6 +793,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -795,6 +804,7 @@ object ScalaSdkCommandExecutor {
       var out = UnlockOptions()
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -805,6 +815,7 @@ object ScalaSdkCommandExecutor {
       var out = ExistsOptions()
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -815,6 +826,7 @@ object ScalaSdkCommandExecutor {
       var out = TouchOptions()
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -826,6 +838,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -837,6 +850,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -848,6 +862,7 @@ object ScalaSdkCommandExecutor {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
       out
     } else null
   }
@@ -864,6 +879,7 @@ object ScalaSdkCommandExecutor {
         case Left(expiry) => out.expiry(expiry)
         case Right(expiry) => out.expiry(expiry)
       }
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -880,6 +896,7 @@ object ScalaSdkCommandExecutor {
         case Left(expiry) => out.expiry(expiry)
         case Right(expiry) => out.expiry(expiry)
       }
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -892,6 +909,7 @@ object ScalaSdkCommandExecutor {
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasCas) out = out.cas(opts.getCas)
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -904,6 +922,7 @@ object ScalaSdkCommandExecutor {
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasCas) out = out.cas(opts.getCas)
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
+      assertIsSerializable(out)
       Some(out)
     } else None
   }
@@ -926,6 +945,7 @@ object ScalaSdkCommandExecutor {
       result: com.couchbase.client.protocol.run.Result.Builder,
       value: MutationResult
   ): Unit = {
+    assertIsSerializable(result)
     val builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder.setCas(value.cas)
     value.mutationToken.foreach(
       mt =>
@@ -945,6 +965,7 @@ object ScalaSdkCommandExecutor {
       result: com.couchbase.client.protocol.run.Result.Builder,
       value: GetResult
   ): Unit = {
+    assertIsSerializable(result)
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
 
@@ -973,6 +994,7 @@ object ScalaSdkCommandExecutor {
                       result: com.couchbase.client.protocol.run.Result.Builder,
                       value: ExistsResult
                     ): Unit = {
+    assertIsSerializable(value)
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
       .setExistsResult(com.couchbase.client.protocol.sdk.kv.ExistsResult.newBuilder
         .setCas(value.cas)
@@ -983,6 +1005,7 @@ object ScalaSdkCommandExecutor {
                       result: com.couchbase.client.protocol.run.Result.Builder,
                       value: CounterResult
                     ): Unit = {
+    assertIsSerializable(value)
     val builder = com.couchbase.client.protocol.sdk.kv.CounterResult.newBuilder
       .setCas(value.cas)
       .setContent(value.content)
@@ -1021,6 +1044,7 @@ object ScalaSdkCommandExecutor {
   }
 
   def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
+    assertIsSerializable(raw)
     val ret = com.couchbase.client.protocol.shared.Exception.newBuilder
 
     if (raw.isInstanceOf[CouchbaseException] || raw.isInstanceOf[UnsupportedOperationException]) {
@@ -1068,7 +1092,7 @@ object ScalaSdkCommandExecutor {
             }
             options = options.serviceTypes(services)
         }
-
+        assertIsSerializable(options)
         options
     }
 }

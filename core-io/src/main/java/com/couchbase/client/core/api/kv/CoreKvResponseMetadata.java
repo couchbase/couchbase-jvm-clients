@@ -20,15 +20,15 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import reactor.util.annotation.Nullable;
 
+import java.io.Serializable;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
-@SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 @Stability.Internal
-public final class CoreKvResponseMetadata {
-  private final OptionalInt readUnits;
-  private final OptionalInt writeUnits;
-  private final OptionalLong serverDuration;
+public final class CoreKvResponseMetadata implements Serializable {
+  private final @Nullable Integer readUnits;
+  private final @Nullable Integer writeUnits;
+  private final @Nullable Long serverDuration;
 
   public static final CoreKvResponseMetadata NONE = new CoreKvResponseMetadata(-1, -1, -1);
 
@@ -45,20 +45,20 @@ public final class CoreKvResponseMetadata {
   }
 
   private CoreKvResponseMetadata(int readUnits, int writeUnits, long serverDuration) {
-    this.readUnits = readUnits < 0 ? OptionalInt.empty() : OptionalInt.of(readUnits);
-    this.writeUnits = writeUnits < 0 ? OptionalInt.empty() : OptionalInt.of(writeUnits);
-    this.serverDuration = serverDuration < 0 ? OptionalLong.empty() : OptionalLong.of(serverDuration);
+    this.readUnits = readUnits < 0 ? null : readUnits;
+    this.writeUnits = writeUnits < 0 ? null : writeUnits;
+    this.serverDuration = serverDuration < 0 ? null : serverDuration;
   }
 
-  public OptionalInt readUnits() {
+  public @Nullable Integer readUnits() {
     return readUnits;
   }
 
-  public OptionalInt writeUnits() {
+  public @Nullable Integer writeUnits() {
     return writeUnits;
   }
 
-  public OptionalLong serverDuration() {
+  public @Nullable Long serverDuration() {
     return serverDuration;
   }
 

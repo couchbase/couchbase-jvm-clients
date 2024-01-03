@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.io;
 
+import reactor.util.annotation.Nullable;
+
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -29,15 +32,15 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 2.0.0
  */
-public class CollectionIdentifier {
+public class CollectionIdentifier implements Serializable {
 
   public static final String DEFAULT_SCOPE = "_default";
   public static final String DEFAULT_COLLECTION = "_default";
 
   private final String bucket;
   private final boolean isDefault;
-  private final Optional<String> scope;
-  private final Optional<String> collection;
+  private final @Nullable String scope;
+  private final @Nullable String collection;
 
   public static CollectionIdentifier fromDefault(String bucket) {
     return new CollectionIdentifier(bucket, Optional.of(DEFAULT_SCOPE), Optional.of(DEFAULT_COLLECTION));
@@ -49,8 +52,8 @@ public class CollectionIdentifier {
     requireNonNull(collection);
 
     this.bucket = bucket;
-    this.scope = scope;
-    this.collection = collection;
+    this.scope = scope.orElse(null);
+    this.collection = collection.orElse(null);
     this.isDefault = Optional.of(DEFAULT_SCOPE).equals(scope) && Optional.of(DEFAULT_COLLECTION).equals(collection);
   }
 
@@ -59,11 +62,11 @@ public class CollectionIdentifier {
   }
 
   public Optional<String> scope() {
-    return scope;
+    return Optional.ofNullable(scope);
   }
 
   public Optional<String> collection() {
-    return collection;
+    return Optional.ofNullable(collection);
   }
 
   public boolean isDefault() {
