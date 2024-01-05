@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io;
 
+import com.couchbase.client.core.annotation.Stability;
 import reactor.util.annotation.Nullable;
 
 import java.io.Serializable;
@@ -32,6 +33,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @since 2.0.0
  */
+@Stability.Internal
 public class CollectionIdentifier implements Serializable {
 
   public static final String DEFAULT_SCOPE = "_default";
