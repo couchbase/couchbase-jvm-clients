@@ -127,10 +127,10 @@ object QueryHelper {
                 out = out.readonly(opts.getReadonly)
             }
             if (opts.getParametersPositionalCount > 0) {
-                out = out.parameters(QueryParameters.Positional(opts.getParametersPositionalList.asScala: _*))
+                out = out.parameters(QueryParameters.Positional(opts.getParametersPositionalList.asScala.toList: _*))
             }
             if (opts.getParametersNamedCount > 0) {
-                out = out.parameters(QueryParameters.Named(opts.getParametersNamedMap.asScala))
+                out = out.parameters(QueryParameters.Named(opts.getParametersNamedMap.asScala.toMap))
             }
             if (opts.getParametersNamedCount > 0 && opts.getParametersPositionalCount > 0) {
                 throw new UnsupportedOperationException(
@@ -189,7 +189,7 @@ object QueryHelper {
                                       out: com.couchbase.client.protocol.run.Result.Builder,
                                       result: com.couchbase.client.scala.query.QueryResult
                               ): Unit = {
-        assertIsSerializable(result)
+        // Skipping assertIsSerializable: QueryResult is not serializable but the Spark Connector does not return it directly.
         val content = ContentAsUtil
                 .contentTypeSeq(
                     request.getContentAs,

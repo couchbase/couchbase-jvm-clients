@@ -21,15 +21,16 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import reactor.util.annotation.Nullable;
 
+import java.io.Serializable;
 import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 @Stability.Internal
-public class CoreMutationResult extends CoreKvResult {
+public class CoreMutationResult extends CoreKvResult implements Serializable {
   private final long cas;
-  private final Optional<MutationToken> mutationToken;
+  private final @Nullable MutationToken mutationToken;
 
   public CoreMutationResult(
       @Nullable CoreKvResponseMetadata meta,
@@ -40,7 +41,7 @@ public class CoreMutationResult extends CoreKvResult {
   ) {
     super(keyspace, key, meta);
     this.cas = cas;
-    this.mutationToken = requireNonNull(mutationToken);
+    this.mutationToken = requireNonNull(mutationToken).orElse(null);
   }
 
   public long cas() {
@@ -48,6 +49,6 @@ public class CoreMutationResult extends CoreKvResult {
   }
 
   public Optional<MutationToken> mutationToken() {
-    return mutationToken;
+    return Optional.ofNullable(mutationToken);
   }
 }

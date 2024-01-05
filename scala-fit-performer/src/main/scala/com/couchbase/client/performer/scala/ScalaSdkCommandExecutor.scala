@@ -519,7 +519,7 @@ object ScalaSdkCommandExecutor {
 
   // [start:1.5.0]
   def processScanResult(request: Scan, r: ScanResult): com.couchbase.client.protocol.run.Result = {
-    assertIsSerializable(r)
+    // Skipping assertIsSerializable: ScanResult is not Serializable, but also not currently used by the Spark Connector.
     val builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder
       .setId(r.id)
       .setIdOnly(r.idOnly)
@@ -945,7 +945,7 @@ object ScalaSdkCommandExecutor {
       result: com.couchbase.client.protocol.run.Result.Builder,
       value: MutationResult
   ): Unit = {
-    assertIsSerializable(result)
+    assertIsSerializable(value)
     val builder = com.couchbase.client.protocol.sdk.kv.MutationResult.newBuilder.setCas(value.cas)
     value.mutationToken.foreach(
       mt =>
@@ -965,7 +965,7 @@ object ScalaSdkCommandExecutor {
       result: com.couchbase.client.protocol.run.Result.Builder,
       value: GetResult
   ): Unit = {
-    assertIsSerializable(result)
+    assertIsSerializable(value)
     val builder = com.couchbase.client.protocol.sdk.kv.GetResult.newBuilder
       .setCas(value.cas)
 
@@ -1044,7 +1044,7 @@ object ScalaSdkCommandExecutor {
   }
 
   def convertException(raw: Throwable): com.couchbase.client.protocol.shared.Exception = {
-    assertIsSerializable(raw)
+    // We don't need to check assertIsSerializable for exceptions (luckily, as many of them are not serializable).
     val ret = com.couchbase.client.protocol.shared.Exception.newBuilder
 
     if (raw.isInstanceOf[CouchbaseException] || raw.isInstanceOf[UnsupportedOperationException]) {

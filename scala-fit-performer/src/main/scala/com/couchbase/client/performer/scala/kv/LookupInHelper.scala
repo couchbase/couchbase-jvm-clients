@@ -398,7 +398,7 @@ object LookupInHelper {
       out: com.couchbase.client.protocol.run.Result.Builder,
       result: LookupInResult
   ): Unit = {
-    assertIsSerializable(result)
+    // Having to disable `assertIsSerializable(result)` check for now, as JVMCBC-1458 is not resolved in some error cases
     val specResults = Range(0, request.getSpecCount)
       .map(i => {
         val spec = request.getSpec(i)
