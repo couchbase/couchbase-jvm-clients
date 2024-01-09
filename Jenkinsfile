@@ -475,6 +475,38 @@ pipeline {
                 }
 
 
+        stage('Platform testing (ARM RHEL 9, mock, openjdk 17)') {
+                    agent { label 'qe-rhel9-arm64' }
+                    environment {
+                        JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
+                        PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
+                    }
+                    when {
+                        beforeAgent true;
+                        expression
+                                { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                    }
+                    steps {
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                            cleanupWorkspace()
+                            installJDKIfNeeded(OPENJDK, OPENJDK_17)
+                            dir('couchbase-jvm-clients') {
+                                doCheckout(REFSPEC)
+                                // Cbdyn not available on this machine
+                                script {
+                                    shWithEcho("make deps-only")
+                                    shWithEcho("./mvnw --fail-at-end clean install --batch-mode")
+                                }
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                        }
+                    }
+                }
+
 
         // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
