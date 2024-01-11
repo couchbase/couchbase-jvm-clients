@@ -460,7 +460,7 @@ object LookupInHelper {
       specs: Seq[com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpec],
       result: LookupInReplicaResult
   ): com.couchbase.client.protocol.sdk.kv.lookupin.LookupInReplicaResult = {
-    assertIsSerializable(result)
+    // Cannot assertIsSerializable here due to JVMCBC-1458
     val specResults = specs.zipWithIndex
       .map(x => {
         val spec = x._1

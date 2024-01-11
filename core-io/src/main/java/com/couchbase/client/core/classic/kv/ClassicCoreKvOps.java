@@ -784,6 +784,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
     return subdocGetAllReplicasReactive(common.withParentSpan(getAnySpan), key, commands)
         .next()
+        .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(key, collectionIdentifier))))
         .doFinally(signalType -> getAnySpan.end());
   }
 

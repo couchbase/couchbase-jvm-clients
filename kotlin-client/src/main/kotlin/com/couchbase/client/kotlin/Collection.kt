@@ -68,6 +68,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import reactor.core.publisher.Flux
 import java.util.*
@@ -635,9 +636,8 @@ public class Collection internal constructor(
         val coreResult = kvOps.subdocGetAnyReplicaReactive(
             common.toCore(),
             id,
-            spec.commands,
-        ).awaitFirstOrNull()
-            ?: throw DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionId))
+            spec.commands
+        ).awaitFirst()
 
         return LookupInReplicaResult(coreResult, defaultJsonSerializer, spec)
     }
