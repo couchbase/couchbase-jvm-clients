@@ -15,11 +15,10 @@
  */
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.{Volatile, Internal}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.Transcoder
-import com.couchbase.client.scala.json
 
 import scala.concurrent.duration.Duration
 
@@ -30,7 +29,8 @@ case class LookupInOptions(
     private[scala] val timeout: Duration = Duration.MinusInf,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
-    private[scala] val transcoder: Option[Transcoder] = None
+    private[scala] val transcoder: Option[Transcoder] = None,
+    private[scala] val accessDeleted: Option[Boolean] = None,
 ) {
 
   /** Couchbase documents optionally can have an expiration field set, e.g. when they will
@@ -95,6 +95,15 @@ case class LookupInOptions(
     */
   def transcoder(value: Transcoder): LookupInOptions = {
     copy(transcoder = Some(value))
+  }
+
+  /** For internal use only: allows access to deleted documents that are in 'tombstone' form.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Internal
+  def accessDeleted(value: Boolean): LookupInOptions = {
+    copy(accessDeleted = Some(value))
   }
 
   /** Provides some control over how the SDK handles failures.  Will default to `retryStrategy()`

@@ -349,9 +349,7 @@ object LookupInHelper {
       if (opts.hasTimeoutMillis)
         out = out.timeout(Duration.create(opts.getTimeoutMillis, TimeUnit.MILLISECONDS))
       if (opts.hasAccessDeleted)
-        throw new UnsupportedOperationException(
-          "SCBC-417: Scala SDK does not support accessDeleted"
-        )
+        out = out.accessDeleted(opts.getAccessDeleted)
       assertIsSerializable(out)
       Some(out)
     } else None

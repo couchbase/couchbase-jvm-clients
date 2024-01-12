@@ -282,7 +282,8 @@ class AsyncCollection(
       timeout: Duration,
       retryStrategy: RetryStrategy,
       transcoder: Transcoder,
-      parentSpan: Option[RequestSpan]
+      parentSpan: Option[RequestSpan],
+      accessDeleted: Option[Boolean]
   ): Future[LookupInResult] = {
     var commands = LookupInSpec.map(spec)
     if (withExpiry) {
@@ -299,7 +300,7 @@ class AsyncCollection(
           makeCommonOptions(timeout, retryStrategy, parentSpan.orNull),
           id,
           commands.asJava,
-          false
+          accessDeleted.getOrElse(false)
         )
     ).flatMap(result => {
       val (fieldsWithoutExp, expTime) = if (withExpiry) {
@@ -485,7 +486,8 @@ class AsyncCollection(
       timeout,
       options.retryStrategy.getOrElse(environment.retryStrategy),
       options.transcoder.getOrElse(environment.transcoder),
-      options.parentSpan
+      options.parentSpan,
+      options.accessDeleted
     )
   }
 
