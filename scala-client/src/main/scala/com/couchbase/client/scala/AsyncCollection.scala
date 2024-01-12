@@ -504,7 +504,7 @@ class AsyncCollection(
       options: GetAnyReplicaOptions
   ): Future[GetReplicaResult] = {
     convert(kvOps.getAnyReplicaReactive(convert(options), id))
-      .map(result => convertReplica(result, environment, None))
+      .map(result => convertReplica(result, environment, options.transcoder))
       .toFuture
   }
 
@@ -540,7 +540,7 @@ class AsyncCollection(
     // no option but to block & buffer the stream and return already completed/failed Futures.
     // Users that require a true streaming solution should use the reactive version.
     convert(kvOps.getAllReplicasReactive(convert(options), id))
-      .map(result => convertReplica(result, environment, None))
+      .map(result => convertReplica(result, environment, options.transcoder))
       .collectSeq()
       .block(options.timeout)
       .map(result => Future.successful(result))

@@ -487,7 +487,7 @@ class ReactiveCollection(async: AsyncCollection) {
       options: GetAnyReplicaOptions
   ): SMono[GetReplicaResult] = {
     convert(kvOps.getAnyReplicaReactive(convert(options), id))
-      .map(result => convertReplica(result, environment, None))
+      .map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Retrieves all available versions of the document.
@@ -509,7 +509,7 @@ class ReactiveCollection(async: AsyncCollection) {
       options: GetAllReplicasOptions
   ): SFlux[GetReplicaResult] = {
     convert(kvOps.getAllReplicasReactive(convert(options), id))
-      .map(result => convertReplica(result, environment, None))
+      .map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Updates the expiry of the document with the given id.
