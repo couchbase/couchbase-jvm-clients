@@ -322,14 +322,7 @@ class AsyncCollection(
         result.tombstone
       )
 
-      if (modified.fields().size() == 1
-          && modified.fields().get(0).`type`() != SubdocCommandType.EXISTS
-          && modified.fields().get(0).error().isPresent) {
-        // The Scala SDK deviates from the RFC, returning an error if there's a single-operation lookupIn that fails.  To preserve behavioural compatibility, cannot change it.
-        Future.failed(modified.fields().get(0).error().get())
-      } else {
-        Future.successful(LookupInResult(modified, expTime, transcoder))
-      }
+      Future.successful(LookupInResult(modified, expTime, transcoder))
     })
   }
 
