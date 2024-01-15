@@ -38,6 +38,7 @@ import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
 import com.couchbase.client.core.json.Mapper;
@@ -133,6 +134,8 @@ public final class ClassicCoreCollectionManagerOps implements CoreCollectionMana
         if (error.matches(".*Collection.+not found.*") || error.contains("collection_not_found")) {
           throw CollectionNotFoundException.forCollection(collectionName);
         }
+
+        throw new InvalidArgumentException("Server error reported: " + error, null, null);
       }
 
       if (error.contains("Method Not Allowed")) {
