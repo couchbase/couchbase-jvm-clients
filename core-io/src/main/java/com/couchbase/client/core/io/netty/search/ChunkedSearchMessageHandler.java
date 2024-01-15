@@ -29,7 +29,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import java.util.Optional;
 
 class ChunkedSearchMessageHandler
-        extends ChunkedMessageHandler<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse, SearchRequest> {
+        extends ChunkedMessageHandler<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse, ServerSearchRequest> {
 
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
 

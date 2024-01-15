@@ -23,6 +23,7 @@ import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
+import com.couchbase.client.protocol.sdk.Command;
 import com.couchbase.utils.ContentAsUtil;
 import static com.couchbase.JavaSdkCommandExecutor.*;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_GET_ALL_REPLICAS;
@@ -51,7 +52,7 @@ import com.couchbase.query.QueryIndexManagerHelper;
 // [start:3.4.5]
 import com.couchbase.search.SearchHelper;
 
-import static com.couchbase.search.SearchHelper.handleSearchReactive;
+import static com.couchbase.search.SearchHelper.handleSearchQueryReactive;
 // [end:3.4.5]
 import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
@@ -65,6 +66,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
+// [start:3.6.0]
+import static com.couchbase.search.SearchHelper.handleSearchReactive;
+// [end:3.6.0]
 
 
 /**
@@ -199,377 +203,486 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 return Mono.just(result.build());
                 // [end:3.4.1]
             } else if (op.hasClusterCommand()) {
-                var clc = op.getClusterCommand();
-                var cluster = connection.cluster().reactive();
-
-              if (clc.hasWaitUntilReady()) {
-                var request = clc.getWaitUntilReady();
-                logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
-                var timeout = Duration.ofMillis(request.getTimeoutMillis());
-
-                Mono<Void> response;
-
-                if (request.hasOptions()) {
-                  var options = waitUntilReadyOptions(request);
-                  response = cluster.waitUntilReady(timeout, options);
-
-                } else {
-                  response = cluster.waitUntilReady(timeout);
-                }
-
-                return response.then(Mono.fromCallable(() -> {
-                  setSuccess(result);
-                  return result.build();
-                }));
-
-              }
-              // [start:3.2.4]
-              else if (clc.hasBucketManager()) {
-                return BucketManagerHelper.handleBucketManagerReactive(cluster, spans, op, result);
-              }
-              // [end:3.2.4]
-              // [start:3.2.1]
-              else if (clc.hasEventingFunctionManager()) {
-                return EventingHelper.handleEventingFunctionManagerReactive(cluster, spans, op, result);
-              }
-              // [end:3.2.1]
-
-                // [start:3.4.3]
-                if (clc.hasQueryIndexManager()) {
-                  return QueryIndexManagerHelper.handleClusterQueryIndexManagerReactive(cluster, spans, op, result);
-                }
-                // [end:3.4.3]
-
-                // [start:3.4.5]
-                if (clc.hasSearch()) {
-                  // Streaming, so intentionally does not return a result.
-                  return handleSearchReactive(connection.cluster(), null, spans, clc.getSearch(), perRun)
-                          .ofType(Result.class);
-                } else if (clc.hasSearchIndexManager()) {
-                  // Skipping testing the reactive API as this is tertiary functionality, and the reactive API wraps the
-                  // same underlying logic as the blocking API.
-                  return Mono.fromSupplier(() -> SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op));
-                }
-                // [end:3.4.5]
-
-                if (clc.hasQuery()) {
-                    var request = clc.getQuery();
-                    String query = request.getStatement();
-
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-
-                    Mono<ReactiveQueryResult> queryResult;
-                    if (request.hasOptions()) queryResult = connection.cluster().reactive().query(query, createOptions(request, spans));
-                    else queryResult = connection.cluster().reactive().query(query);
-
-                    return returnQueryResult(request, queryResult, result, start);
-                }
-
+              return handleClusterLevelCommand(op, perRun, result);
             } else if (op.hasBucketCommand()) {
-              var blc = op.getBucketCommand();
-              var bucket = connection.cluster().reactive().bucket(blc.getBucketName());
-
-              if (blc.hasWaitUntilReady()) {
-                var request = blc.getWaitUntilReady();
-
-                logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
-
-                var timeout = Duration.ofMillis(request.getTimeoutMillis());
-
-                Mono<Void> response;
-
-                if (request.hasOptions()) {
-                  var options = waitUntilReadyOptions(request);
-                  response = bucket.waitUntilReady(timeout, options);
-                } else {
-                  response = bucket.waitUntilReady(timeout);
-                }
-
-                return response.then(Mono.fromCallable(() -> {
-                  setSuccess(result);
-                  return result.build();
-                }));
-              }
-              // [start:3.4.12]
-              else if (blc.hasCollectionManager()) {
-                return CollectionManagerHelper.handleCollectionManagerReactive(connection.cluster().reactive(), spans, op, result);
-              }
-              // [end:3.4.12]
+              return handleBucketLevelCommand(op, perRun, result);
             } else if (op.hasScopeCommand()) {
-                var slc = op.getScopeCommand();
-                var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
-
-                // [start:3.0.9]
-                if (slc.hasQuery()) {
-                    var request = slc.getQuery();
-                    String query = request.getStatement();
-
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-
-                    Mono<ReactiveQueryResult> queryResult;
-                    if (request.hasOptions()) queryResult = scope.reactive().query(query, createOptions(request, spans));
-                    else queryResult = scope.reactive().query(query);
-
-                    return returnQueryResult(request, queryResult, result, start);
-                }
-                // [end:3.0.9]
-
-                // [start:3.4.5]
-                if (slc.hasSearch()) {
-                    return handleSearchReactive(connection.cluster(), scope, spans, slc.getSearch(), perRun)
-                            .ofType(Result.class);
-                } else if (slc.hasSearchIndexManager()) {
-                    return Mono.fromSupplier(() -> SearchHelper.handleScopeSearchIndexManager(scope, spans, op));
-                }
-                // [end:3.4.5]
+              return handleScopeLevelCommand(op, perRun, result);
             } else if (op.hasCollectionCommand()) {
-                var clc = op.getCollectionCommand();
-
-                ReactiveCollection collection = null;
-                if (clc.hasCollection()) {
-                    collection = connection.cluster()
-                            .bucket(clc.getCollection().getBucketName())
-                            .scope(clc.getCollection().getScopeName())
-                            .collection(clc.getCollection().getCollectionName())
-                            .reactive();
-                }
-
-                // [start:3.4.3]
-                if (clc.hasQueryIndexManager()) {
-                    return QueryIndexManagerHelper.handleCollectionQueryIndexManagerReactive(collection, spans, op, result);
-                }
-                // [end:3.4.3]
-
-                if (clc.hasGetAndLock()) {
-                    var request = clc.getGetAndLock();
-                    var docId = getDocId(request.getLocation());
-                    var duration = request.getDuration();
-                    var options = createOptions(request, spans);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Mono<GetResult> gr;
-                    if (options == null) gr = collection.getAndLock(docId, Duration.ofSeconds(duration.getSeconds()));
-                    else gr = collection.getAndLock(docId, Duration.ofSeconds(duration.getSeconds()),options);
-                    return gr.map(r -> {
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        if (op.getReturnResult()) populateResult(request.getContentAs(), result, r);
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasUnlock()) {
-                    var request = clc.getUnlock();
-                    var docId = getDocId(request.getLocation());
-                    var cas = request.getCas();
-                    var options = createOptions(request, spans);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Mono<Void> gr;
-                    if (options == null) gr = collection.unlock(docId, cas);
-                    else gr = collection.unlock(docId, cas ,options);
-                    return gr.then(Mono.fromCallable(() -> {
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        setSuccess(result);
-                        return result.build();
-                    }));
-                }
-
-                if (clc.hasGetAndTouch()) {
-                    var request = clc.getGetAndTouch();
-                    var docId = getDocId(request.getLocation());
-                    Duration expiry;
-                    if (request.getExpiry().hasAbsoluteEpochSecs()) {
-                        expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-                    }
-                    else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-                    var options = createOptions(request, spans);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Mono<GetResult> gr;
-                    if (options == null) gr = collection.getAndTouch(docId, expiry);
-                    else gr = collection.getAndTouch(docId, expiry, options);
-                    return gr.map(r -> {
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        if (op.getReturnResult()) populateResult(request.getContentAs(), result, r);
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasTouch()) {
-                    var request = clc.getTouch();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request, spans);
-                    Duration expiry;
-                    if (request.getExpiry().hasAbsoluteEpochSecs()) {
-                        expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-                    }
-                    else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Mono<MutationResult> mr;
-                    if (options == null) mr = collection.touch(docId, expiry);
-                    else mr = collection.touch(docId, expiry, options);
-                    return mr.map(r -> {
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        if (op.getReturnResult()) populateResult(result, r);
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasExists()) {
-                    var request = clc.getExists();
-                    var docId = getDocId(request.getLocation());
-                    var exists = collection.exists(docId);
-                    return exists.map(r -> {
-                        if (op.getReturnResult()) populateResult(result, r);
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasMutateIn()) {
-                    var request = clc.getMutateIn();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    Mono<MutateInResult> mr;
-                    if (options == null) mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList() );
-                    else mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList(), options);
-                    return mr.map(r -> {
-                        if (op.getReturnResult()) populateResult(result, r, request);
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasGetAllReplicas()) {
-                    var request = clc.getGetAllReplicas();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Flux<GetReplicaResult> results;
-                    if (options == null) results = collection.getAllReplicas(docId);
-                    else results = collection.getAllReplicas(docId, options);
-                    result.setElapsedNanos(System.nanoTime() - start);
-                    var streamer = new FluxStreamer<>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
-                            (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
-                            this::convertException);
-                    perRun.streamerOwner().addAndStart(streamer);
-                    result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
-                            .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
-                                    .setType(STREAM_KV_GET_ALL_REPLICAS)
-                                    .setStreamId(streamer.streamId())));
-                    return Mono.just(result.build());
-                }
-
-                if (clc.hasGetAnyReplica()) {
-                    var request = clc.getGetAnyReplica();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    Mono<GetReplicaResult> gr;
-                    if (options == null) gr = collection.getAnyReplica(docId);
-                    else gr = collection.getAnyReplica(docId, options);
-                    return gr.map(r -> {
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        if (op.getReturnResult()) populateResult(result, r, request.getContentAs());
-                        else setSuccess(result);
-                        return result.build();
-                    });
-                }
-
-                if (clc.hasBinary()) {
-
-                    var blc = clc.getBinary();
-
-                    if (blc.hasIncrement()) {
-                        var request = blc.getIncrement();
-                        var docId = getDocId(request.getLocation());
-                        var options = createOptions(request);
-                        result.setInitiated(getTimeNow());
-                        long start = System.nanoTime();
-                        Mono<CounterResult> cr;
-                        if (options == null) cr = collection.binary().increment(docId);
-                        else cr = collection.binary().increment(docId, options);
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        return cr.map(r -> {
-                            if (op.getReturnResult()) populateResult(result, r);
-                            else setSuccess(result);
-                            return result.build();
-                        });
-                    }
-
-                    if (blc.hasDecrement()) {
-                        var request = blc.getDecrement();
-                        var docId = getDocId(request.getLocation());
-                        var options = createOptions(request);
-                        result.setInitiated(getTimeNow());
-                        long start = System.nanoTime();
-                        Mono<CounterResult> cr;
-                        if (options == null) cr = collection.binary().decrement(docId);
-                        else cr = collection.binary().decrement(docId, options);
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        return cr.map(r -> {
-                            if (op.getReturnResult()) populateResult(result, r);
-                            else setSuccess(result);
-                            return result.build();
-                        });
-                    }
-
-                    if (blc.hasAppend()) {
-                        var request = blc.getAppend();
-                        var docId = getDocId(request.getLocation());
-                        var options = createOptions(request);
-                        result.setInitiated(getTimeNow());
-                        long start = System.nanoTime();
-                        Mono<MutationResult> mr;
-                        if (options == null) mr = collection.binary().append(docId, request.getContent().toByteArray());
-                        else mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        return mr.map(r -> {
-                            if (op.getReturnResult()) populateResult(result, r);
-                            else setSuccess(result);
-                            return result.build();
-                        });
-                    }
-
-                    if (blc.hasPrepend()) {
-                        var request = blc.getPrepend();
-                        var docId = getDocId(request.getLocation());
-                        var options = createOptions(request);
-                        result.setInitiated(getTimeNow());
-                        long start = System.nanoTime();
-                        Mono<MutationResult> mr;
-                        if (options == null)
-                            mr = collection.binary().prepend(docId, request.getContent().toByteArray());
-                        else mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
-                        result.setElapsedNanos(System.nanoTime() - start);
-                        return mr.map(r -> {
-                            if (op.getReturnResult()) populateResult(result, r);
-                            else setSuccess(result);
-                            return result.build();
-                        });
-                    }
-                }
-
-                if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
-                    return LookupInHelper.handleLookupInReactive(perRun, connection, op, this::getDocId, spans);
-                }
+              return handleCollectionLevelCommand(op, perRun, result);
             } else {
-                return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
+              return Mono.error(new UnsupportedOperationException(new IllegalArgumentException("Unknown operation")));
             }
-
-          return Mono.error(new UnsupportedOperationException());
         });
     }
 
-    @Override
+  private Mono<Result> handleCollectionLevelCommand(Command op, PerRun perRun, Result.Builder result) {
+    var clc = op.getCollectionCommand();
+
+    ReactiveCollection collection = null;
+    if (clc.hasCollection()) {
+      collection = connection.cluster()
+              .bucket(clc.getCollection().getBucketName())
+              .scope(clc.getCollection().getScopeName())
+              .collection(clc.getCollection().getCollectionName())
+              .reactive();
+    }
+
+    // [start:3.4.3]
+    if (clc.hasQueryIndexManager()) {
+      return QueryIndexManagerHelper.handleCollectionQueryIndexManagerReactive(collection, spans, op, result);
+    }
+    // [end:3.4.3]
+
+    if (clc.hasGetAndLock()) {
+      var request = clc.getGetAndLock();
+      var docId = getDocId(request.getLocation());
+      var duration = request.getDuration();
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Mono<GetResult> gr;
+      if (options == null) {
+        gr = collection.getAndLock(docId, Duration.ofSeconds(duration.getSeconds()));
+      } else {
+        gr = collection.getAndLock(docId, Duration.ofSeconds(duration.getSeconds()), options);
+      }
+      return gr.map(r -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) {
+          populateResult(request.getContentAs(), result, r);
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasUnlock()) {
+      var request = clc.getUnlock();
+      var docId = getDocId(request.getLocation());
+      var cas = request.getCas();
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Mono<Void> gr;
+      if (options == null) {
+        gr = collection.unlock(docId, cas);
+      } else {
+        gr = collection.unlock(docId, cas, options);
+      }
+      return gr.then(Mono.fromCallable(() -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        setSuccess(result);
+        return result.build();
+      }));
+    }
+
+    if (clc.hasGetAndTouch()) {
+      var request = clc.getGetAndTouch();
+      var docId = getDocId(request.getLocation());
+      Duration expiry;
+      if (request.getExpiry().hasAbsoluteEpochSecs()) {
+        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+      } else {
+        expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      }
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Mono<GetResult> gr;
+      if (options == null) {
+        gr = collection.getAndTouch(docId, expiry);
+      } else {
+        gr = collection.getAndTouch(docId, expiry, options);
+      }
+      return gr.map(r -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) {
+          populateResult(request.getContentAs(), result, r);
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasTouch()) {
+      var request = clc.getTouch();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request, spans);
+      Duration expiry;
+      if (request.getExpiry().hasAbsoluteEpochSecs()) {
+        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+      } else {
+        expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      }
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Mono<MutationResult> mr;
+      if (options == null) {
+        mr = collection.touch(docId, expiry);
+      } else {
+        mr = collection.touch(docId, expiry, options);
+      }
+      return mr.map(r -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) {
+          populateResult(result, r);
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasExists()) {
+      var request = clc.getExists();
+      var docId = getDocId(request.getLocation());
+      var exists = collection.exists(docId);
+      return exists.map(r -> {
+        if (op.getReturnResult()) {
+          populateResult(result, r);
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasMutateIn()) {
+      var request = clc.getMutateIn();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      Mono<MutateInResult> mr;
+      if (options == null) {
+        mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList());
+      } else {
+        mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList(), options);
+      }
+      return mr.map(r -> {
+        if (op.getReturnResult()) {
+          populateResult(result, r, request);
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasGetAllReplicas()) {
+      var request = clc.getGetAllReplicas();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Flux<GetReplicaResult> results;
+      if (options == null) {
+        results = collection.getAllReplicas(docId);
+      } else {
+        results = collection.getAllReplicas(docId, options);
+      }
+      result.setElapsedNanos(System.nanoTime() - start);
+      var streamer = new FluxStreamer<>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+              (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
+              this::convertException);
+      perRun.streamerOwner().addAndStart(streamer);
+      result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+              .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
+                      .setType(STREAM_KV_GET_ALL_REPLICAS)
+                      .setStreamId(streamer.streamId())));
+      return Mono.just(result.build());
+    }
+
+    if (clc.hasGetAnyReplica()) {
+      var request = clc.getGetAnyReplica();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Mono<GetReplicaResult> gr;
+      if (options == null) {
+        gr = collection.getAnyReplica(docId);
+      } else {
+        gr = collection.getAnyReplica(docId, options);
+      }
+      return gr.map(r -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) {
+          populateResult(result, r, request.getContentAs());
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
+    if (clc.hasBinary()) {
+
+      var blc = clc.getBinary();
+
+      if (blc.hasIncrement()) {
+        var request = blc.getIncrement();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        Mono<CounterResult> cr;
+        if (options == null) {
+          cr = collection.binary().increment(docId);
+        } else {
+          cr = collection.binary().increment(docId, options);
+        }
+        result.setElapsedNanos(System.nanoTime() - start);
+        return cr.map(r -> {
+          if (op.getReturnResult()) {
+            populateResult(result, r);
+          } else {
+            setSuccess(result);
+          }
+          return result.build();
+        });
+      }
+
+      if (blc.hasDecrement()) {
+        var request = blc.getDecrement();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        Mono<CounterResult> cr;
+        if (options == null) {
+          cr = collection.binary().decrement(docId);
+        } else {
+          cr = collection.binary().decrement(docId, options);
+        }
+        result.setElapsedNanos(System.nanoTime() - start);
+        return cr.map(r -> {
+          if (op.getReturnResult()) {
+            populateResult(result, r);
+          } else {
+            setSuccess(result);
+          }
+          return result.build();
+        });
+      }
+
+      if (blc.hasAppend()) {
+        var request = blc.getAppend();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        Mono<MutationResult> mr;
+        if (options == null) {
+          mr = collection.binary().append(docId, request.getContent().toByteArray());
+        } else {
+          mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
+        }
+        result.setElapsedNanos(System.nanoTime() - start);
+        return mr.map(r -> {
+          if (op.getReturnResult()) {
+            populateResult(result, r);
+          } else {
+            setSuccess(result);
+          }
+          return result.build();
+        });
+      }
+
+      if (blc.hasPrepend()) {
+        var request = blc.getPrepend();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        Mono<MutationResult> mr;
+        if (options == null) {
+          mr = collection.binary().prepend(docId, request.getContent().toByteArray());
+        } else {
+          mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
+        }
+        result.setElapsedNanos(System.nanoTime() - start);
+        return mr.map(r -> {
+          if (op.getReturnResult()) {
+            populateResult(result, r);
+          } else {
+            setSuccess(result);
+          }
+          return result.build();
+        });
+      }
+    }
+
+    if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
+      return LookupInHelper.handleLookupInReactive(perRun, connection, op, this::getDocId, spans);
+    }
+
+    return Mono.error(new UnsupportedOperationException("Unknown command " + op));
+  }
+
+  private Mono<Result> handleScopeLevelCommand(Command op, PerRun perRun, Result.Builder result) {
+    var slc = op.getScopeCommand();
+    var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
+
+    // [start:3.0.9]
+    if (slc.hasQuery()) {
+      var request = slc.getQuery();
+      String query = request.getStatement();
+
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+
+      Mono<ReactiveQueryResult> queryResult;
+      if (request.hasOptions()) {
+        queryResult = scope.reactive().query(query, createOptions(request, spans));
+      } else {
+        queryResult = scope.reactive().query(query);
+      }
+
+      return returnQueryResult(request, queryResult, result, start);
+    }
+    // [end:3.0.9]
+
+    // [start:3.4.5]
+    if (slc.hasSearch()) {
+      return handleSearchQueryReactive(connection.cluster(), scope, spans, slc.getSearch(), perRun)
+              .ofType(Result.class);
+    } else if (slc.hasSearchIndexManager()) {
+      return Mono.fromSupplier(() -> SearchHelper.handleScopeSearchIndexManager(scope, spans, op));
+    }
+    // [end:3.4.5]
+
+    // [start:3.6.0]
+    if (slc.hasSearchV2()) {
+      // Streaming, so intentionally does not return a result.
+      return handleSearchReactive(connection.cluster(), scope, spans, slc.getSearchV2(), perRun)
+              .ofType(Result.class);
+    }
+    // [end:3.6.0]
+
+    return Mono.error(new UnsupportedOperationException("Unknown command " + op));
+  }
+
+  private Mono<Result> handleBucketLevelCommand(Command op, PerRun perRun, Result.Builder result) {
+    var blc = op.getBucketCommand();
+    var bucket = connection.cluster().reactive().bucket(blc.getBucketName());
+
+    if (blc.hasWaitUntilReady()) {
+      var request = blc.getWaitUntilReady();
+
+      logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
+
+      var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+      Mono<Void> response;
+
+      if (request.hasOptions()) {
+        var options = waitUntilReadyOptions(request);
+        response = bucket.waitUntilReady(timeout, options);
+      } else {
+        response = bucket.waitUntilReady(timeout);
+      }
+
+      return response.then(Mono.fromCallable(() -> {
+        setSuccess(result);
+        return result.build();
+      }));
+    }
+    // [start:3.4.12]
+    else if (blc.hasCollectionManager()) {
+      return CollectionManagerHelper.handleCollectionManagerReactive(connection.cluster().reactive(), spans, op, result);
+    }
+    // [end:3.4.12]
+
+    return Mono.error(new UnsupportedOperationException("Unknown command " + op));
+  }
+
+  private Mono<Result> handleClusterLevelCommand(Command op, PerRun perRun, Result.Builder result) {
+    var clc = op.getClusterCommand();
+    var cluster = connection.cluster().reactive();
+
+    if (clc.hasWaitUntilReady()) {
+      var request = clc.getWaitUntilReady();
+      logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
+      var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+      Mono<Void> response;
+
+      if (request.hasOptions()) {
+        var options = waitUntilReadyOptions(request);
+        response = cluster.waitUntilReady(timeout, options);
+
+      } else {
+        response = cluster.waitUntilReady(timeout);
+      }
+
+      return response.then(Mono.fromCallable(() -> {
+        setSuccess(result);
+        return result.build();
+      }));
+
+    }
+    // [start:3.2.4]
+    else if (clc.hasBucketManager()) {
+      return BucketManagerHelper.handleBucketManagerReactive(cluster, spans, op, result);
+    }
+    // [end:3.2.4]
+    // [start:3.2.1]
+    else if (clc.hasEventingFunctionManager()) {
+      return EventingHelper.handleEventingFunctionManagerReactive(cluster, spans, op, result);
+    }
+    // [end:3.2.1]
+
+    // [start:3.4.3]
+    if (clc.hasQueryIndexManager()) {
+      return QueryIndexManagerHelper.handleClusterQueryIndexManagerReactive(cluster, spans, op, result);
+    }
+    // [end:3.4.3]
+
+    // [start:3.4.5]
+    if (clc.hasSearch()) {
+      // Streaming, so intentionally does not return a result.
+      return handleSearchQueryReactive(connection.cluster(), null, spans, clc.getSearch(), perRun)
+              .ofType(Result.class);
+    }
+
+    if (clc.hasSearchIndexManager()) {
+      // Skipping testing the reactive API as this is tertiary functionality, and the reactive API wraps the
+      // same underlying logic as the blocking API.
+      return Mono.fromSupplier(() -> SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op));
+    }
+    // [end:3.4.5]
+
+    // [start:3.6.0]
+    if (clc.hasSearchV2()) {
+      // Streaming, so intentionally does not return a result.
+      return handleSearchReactive(connection.cluster(), null, spans, clc.getSearchV2(), perRun)
+              .ofType(Result.class);
+    }
+    // [end:3.6.0]
+
+    if (clc.hasQuery()) {
+      var request = clc.getQuery();
+      String query = request.getStatement();
+
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+
+      Mono<ReactiveQueryResult> queryResult;
+      if (request.hasOptions()) {
+        queryResult = connection.cluster().reactive().query(query, createOptions(request, spans));
+      } else {
+        queryResult = connection.cluster().reactive().query(query);
+      }
+
+      return returnQueryResult(request, queryResult, result, start);
+    }
+
+    return Mono.error(new UnsupportedOperationException("Unknown command " + op));
+  }
+
+  @Override
     protected Exception convertException(Throwable raw) {
         return convertExceptionShared(raw);
     }

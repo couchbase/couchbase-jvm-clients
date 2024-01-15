@@ -33,7 +33,7 @@ import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
 import com.couchbase.client.core.msg.chunk.ChunkedResponse;
-import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterAll;
@@ -118,7 +118,7 @@ class ChunkedHandlerSwitcherTest {
       channel.write(genericSearchRequest);
       assertNonChunkedInPipeline(channel);
 
-      SearchRequest searchRequest = mock(SearchRequest.class);
+      ServerSearchRequest searchRequest = mock(ServerSearchRequest.class);
       when(searchRequest.retryStrategy()).thenReturn(FailFastRetryStrategy.INSTANCE);
       channel.write(searchRequest);
       assertChunkedInPipeline(channel);
@@ -133,7 +133,7 @@ class ChunkedHandlerSwitcherTest {
   private EmbeddedChannel setupChannel() {
     EmbeddedChannel channel = new EmbeddedChannel();
     channel.pipeline().addFirst(ChunkedHandlerSwitcher.SWITCHER_IDENTIFIER, new TestChunkedHandlerSwitcher(
-      new TestChunkedMessageHandler(), new TestNonChunkedMessageHandler(), SearchRequest.class
+      new TestChunkedMessageHandler(), new TestNonChunkedMessageHandler(), ServerSearchRequest.class
     ));
 
     assertNotNull(channel.pipeline().get(TestChunkedHandlerSwitcher.class));

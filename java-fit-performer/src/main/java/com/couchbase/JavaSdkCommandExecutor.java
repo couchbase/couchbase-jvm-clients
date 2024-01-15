@@ -37,6 +37,7 @@ import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.kv.PersistTo;
 import com.couchbase.client.java.kv.ReplicateTo;
 import com.couchbase.client.java.query.*;
+import com.couchbase.client.protocol.sdk.Command;
 import com.couchbase.client.protocol.sdk.collection.mutatein.MutateIn;
 import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInMacro;
 import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpecResult;
@@ -73,8 +74,11 @@ import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
 // [start:3.4.5]
 import com.couchbase.search.SearchHelper;
-import static com.couchbase.search.SearchHelper.handleSearchBlocking;
+import static com.couchbase.search.SearchHelper.handleSearchQueryBlocking;
 // [end:3.4.5]
+// [start:3.6.0]
+import static com.couchbase.search.SearchHelper.handleSearchBlocking;
+// [end:3.6.0]
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -205,319 +209,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                             .setStreamId(streamer.streamId())));
         // [end:3.4.1]
         } else if (op.hasClusterCommand()) {
-            var clc = op.getClusterCommand();
-
-          if (clc.hasWaitUntilReady()) {
-            var request = clc.getWaitUntilReady();
-            logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
-            var timeout = Duration.ofMillis(request.getTimeoutMillis());
-
-            if (request.hasOptions()) {
-              var options = waitUntilReadyOptions(request);
-              connection.cluster().waitUntilReady(timeout, options);
-
-            } else {
-              connection.cluster().waitUntilReady(timeout);
-            }
-
-            setSuccess(result);
-
-          }
-          // [start:3.2.4]
-          else if (clc.hasBucketManager()) {
-            BucketManagerHelper.handleBucketManger(connection.cluster(), spans, op, result);
-          }
-          // [end:3.2.4]
-          // [start:3.2.1]
-          else if (clc.hasEventingFunctionManager()) {
-            EventingHelper.handleEventingFunctionManager(connection.cluster(), spans, op, result);
-          }
-          // [end:3.2.1]
-
-            // [start:3.4.3]
-            if (clc.hasQueryIndexManager()) {
-              QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster(), spans, op, result);
-            }
-            // [end:3.4.3]
-
-            // [start:3.4.5]
-            if (clc.hasSearch()) {
-                com.couchbase.client.protocol.sdk.search.Search command = clc.getSearch();
-                return handleSearchBlocking(connection.cluster(), null, spans, command);
-            }
-            else if (clc.hasSearchIndexManager()) {
-              return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
-            }
-            // [end:3.4.5]
-
-            if (clc.hasQuery()) {
-                var query = clc.getQuery().getStatement();
-                QueryResult qr;
-                if (clc.getQuery().hasOptions()) {
-                    qr = connection.cluster().query(query, createOptions(clc.getQuery(), spans));
-                }
-                else {
-                    qr = connection.cluster().query(query);
-                }
-                populateResult(clc.getQuery(), result, qr);
-            }
-
+            return handleClusterLevelCommand(op, result);
         } else if (op.hasBucketCommand()) {
-          var blc = op.getBucketCommand();
-          var bucket = connection.cluster().bucket(blc.getBucketName());
-
-          if (blc.hasWaitUntilReady()) {
-            var request = blc.getWaitUntilReady();
-
-            logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
-
-            var timeout = Duration.ofMillis(request.getTimeoutMillis());
-
-            if (request.hasOptions()) {
-              var options = waitUntilReadyOptions(request);
-              bucket.waitUntilReady(timeout, options);
-
-            } else {
-              bucket.waitUntilReady(timeout);
-            }
-
-            setSuccess(result);
-          }
-
-          // [start:3.4.12]
-          else if (blc.hasCollectionManager()) {
-            CollectionManagerHelper.handleCollectionManager(connection.cluster(), spans, op, result);
-          }
-          // [end:3.4.12]
-
+            return handleBucketLevelCommand(op, result);
         } else if (op.hasScopeCommand()) {
-          var slc = op.getScopeCommand();
-          var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
-
-          // [start:3.0.9]
-          if (slc.hasQuery()) {
-            var query = slc.getQuery().getStatement();
-            QueryResult qr;
-            if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery(), spans));
-            else qr = scope.query(query);
-            populateResult(slc.getQuery(), result, qr);
-          }
-          // [end:3.0.9]
-
-          // [start:3.4.5]
-          if (slc.hasSearch()) {
-            com.couchbase.client.protocol.sdk.search.Search command = slc.getSearch();
-            return handleSearchBlocking(connection.cluster(), scope, spans, command);
-          } else if (slc.hasSearchIndexManager()) {
-            return SearchHelper.handleScopeSearchIndexManager(scope, spans, op);
-          }
-          // [end:3.4.5]
+            return handleScopeLevelCommand(op, result);
         } else if (op.hasCollectionCommand()) {
-          var clc = op.getCollectionCommand();
-
-          Collection collection = null;
-          if (clc.hasCollection()) {
-            collection = connection.cluster()
-                    .bucket(clc.getCollection().getBucketName())
-                    .scope(clc.getCollection().getScopeName())
-                    .collection(clc.getCollection().getCollectionName());
-          }
-
-            // [start:3.4.3]
-            if (clc.hasQueryIndexManager()) {
-                QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
-            }
-            // [end:3.4.3]
-
-            if (clc.hasGetAndLock()) {
-                var request = clc.getGetAndLock();
-                var docId = getDocId(request.getLocation());
-                var duration = Duration.ofSeconds(clc.getGetAndLock().getDuration().getSeconds());
-                var options = createOptions(request, spans);
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                GetResult gr;
-                if (options == null) gr = collection.getAndLock(docId, duration);
-                else gr = collection.getAndLock(docId, duration, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
-                else setSuccess(result);
-            }
-
-            if (clc.hasUnlock()) {
-                var request = clc.getUnlock();
-                var docId = getDocId(request.getLocation());
-                var cas = request.getCas();
-                var options = createOptions(request, spans);
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                if (options == null) collection.unlock(docId, cas);
-                else collection.unlock(docId, cas, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                setSuccess(result);
-            }
-
-            if (clc.hasGetAndTouch()) {
-                var request = clc.getGetAndTouch();
-                var docId = getDocId(request.getLocation());
-                Duration expiry;
-                if (request.getExpiry().hasAbsoluteEpochSecs()) {
-                    expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-                var options = createOptions(request, spans);
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                GetResult gr;
-                if (options == null) gr = collection.getAndTouch(docId, expiry);
-                else gr = collection.getAndTouch(docId, expiry, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
-                else setSuccess(result);
-            }
-
-            if (clc.hasTouch()) {
-                var request = clc.getTouch();
-                var docId = getDocId(request.getLocation());
-                var options = createOptions(request, spans);
-                Duration expiry;
-                if (request.getExpiry().hasAbsoluteEpochSecs()) {
-                    expiry = Duration.between(Instant.now(),Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                MutationResult mr;
-                if (options == null) mr = collection.touch(docId, expiry);
-                else mr = collection.touch(docId, expiry , options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                if (op.getReturnResult()) populateResult(result, mr);
-                else setSuccess(result);
-            }
-
-            if (clc.hasExists()) {
-                var request = clc.getExists();
-                var docId = getDocId(request.getLocation());
-                var options = createOptions(request);
-                ExistsResult exists;
-                if (options == null) exists = collection.exists(docId);
-                else exists = collection.exists(docId , options);
-                if (op.getReturnResult()) populateResult(result, exists);
-                else setSuccess(result);
-            }
-
-            if (clc.hasMutateIn()) {
-                var request = clc.getMutateIn();
-                var docId = getDocId(request.getLocation());
-                var options = createOptions(request);
-                var requestList = request.getSpecList().stream().map(JavaSdkCommandExecutor::convertMutateInSpec).toList();
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                MutateInResult mr;
-                if (options == null) mr = collection.mutateIn(docId, requestList);
-                else mr = collection.mutateIn(docId, requestList, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                if (op.getReturnResult()) populateResult(result, mr, request);
-                else setSuccess(result);
-            }
-
-            if (clc.hasBinary()) {
-                var blc = clc.getBinary();
-
-                if (blc.hasIncrement()) {
-                    var request = blc.getIncrement();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    CounterResult cr;
-                    if (options == null) cr = collection.binary().increment(docId);
-                    else cr = collection.binary().increment(docId, options);
-                    result.setElapsedNanos(System.nanoTime() - start);
-                    if (op.getReturnResult()) populateResult(result, cr);
-                    else setSuccess(result);
-                }
-
-                if (blc.hasDecrement()) {
-                    var request = blc.getDecrement();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    CounterResult cr;
-                    if (options == null) cr = collection.binary().decrement(docId);
-                    else cr = collection.binary().decrement(docId, options);
-                    result.setElapsedNanos(System.nanoTime() - start);
-                    if (op.getReturnResult()) populateResult(result, cr);
-                    else setSuccess(result);
-                }
-
-                if (blc.hasAppend()) {
-                    var request = blc.getAppend();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    MutationResult mr;
-                    if (options == null) mr = collection.binary().append(docId, request.getContent().toByteArray());
-                    else mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
-                    result.setElapsedNanos(System.nanoTime() - start);
-                    if (op.getReturnResult()) populateResult(result, mr);
-                    else setSuccess(result);
-                }
-
-                if (blc.hasPrepend()) {
-                    var request = blc.getPrepend();
-                    var docId = getDocId(request.getLocation());
-                    var options = createOptions(request);
-                    result.setInitiated(getTimeNow());
-                    long start = System.nanoTime();
-                    MutationResult mr;
-                    if (options == null) mr = collection.binary().prepend(docId, request.getContent().toByteArray());
-                    else mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
-                    result.setElapsedNanos(System.nanoTime() - start);
-                    if (op.getReturnResult()) populateResult(result, mr);
-                    else setSuccess(result);
-                }
-            }
-
-            if (clc.hasGetAllReplicas()) {
-                var request = clc.getGetAllReplicas();
-                var docId = getDocId(request.getLocation());
-                var options = createOptions(request);
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                Stream<GetReplicaResult> results;
-                if (options == null) results = collection.getAllReplicas(docId);
-                else results = collection.getAllReplicas(docId, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                var streamer = new StreamStreamer<GetReplicaResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
-                        (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
-                        (Throwable err) -> convertException(err));
-                perRun.streamerOwner().addAndStart(streamer);
-                result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
-                        .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
-                                .setType(STREAM_KV_GET_ALL_REPLICAS)
-                                .setStreamId(streamer.streamId())));
-            }
-
-            if (clc.hasGetAnyReplica()) {
-                var request = clc.getGetAnyReplica();
-                var docId = getDocId(request.getLocation());
-                var options = createOptions(request);
-                result.setInitiated(getTimeNow());
-                long start = System.nanoTime();
-                GetReplicaResult mr;
-                if (options == null) mr = collection.getAnyReplica(docId);
-                else mr = collection.getAnyReplica(docId, options);
-                result.setElapsedNanos(System.nanoTime() - start);
-                if (op.getReturnResult()) populateResult(result, mr, request.getContentAs());
-                else setSuccess(result);
-            }
-
-            if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
-                result = LookupInHelper.handleLookupIn(perRun, connection, op, this::getDocId, spans);
-            }
+            return handleCollectionLevelCommand(op, perRun, result);
         } else {
             throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"));
         }
@@ -525,7 +223,342 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         return result.build();
     }
 
-    public static MutateInSpec convertMutateInSpec(com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpec requestSpec) {
+  private Result handleCollectionLevelCommand(Command op, PerRun perRun, Result.Builder result) {
+    var clc = op.getCollectionCommand();
+
+    Collection collection = null;
+    if (clc.hasCollection()) {
+      collection = connection.cluster()
+              .bucket(clc.getCollection().getBucketName())
+              .scope(clc.getCollection().getScopeName())
+              .collection(clc.getCollection().getCollectionName());
+    }
+
+    // [start:3.4.3]
+    if (clc.hasQueryIndexManager()) {
+      QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
+    }
+    // [end:3.4.3]
+
+    if (clc.hasGetAndLock()) {
+      var request = clc.getGetAndLock();
+      var docId = getDocId(request.getLocation());
+      var duration = Duration.ofSeconds(clc.getGetAndLock().getDuration().getSeconds());
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      GetResult gr;
+      if (options == null) gr = collection.getAndLock(docId, duration);
+      else gr = collection.getAndLock(docId, duration, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
+      else setSuccess(result);
+    }
+
+    if (clc.hasUnlock()) {
+      var request = clc.getUnlock();
+      var docId = getDocId(request.getLocation());
+      var cas = request.getCas();
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      if (options == null) collection.unlock(docId, cas);
+      else collection.unlock(docId, cas, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      setSuccess(result);
+    }
+
+    if (clc.hasGetAndTouch()) {
+      var request = clc.getGetAndTouch();
+      var docId = getDocId(request.getLocation());
+      Duration expiry;
+      if (request.getExpiry().hasAbsoluteEpochSecs()) {
+        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+      } else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      var options = createOptions(request, spans);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      GetResult gr;
+      if (options == null) gr = collection.getAndTouch(docId, expiry);
+      else gr = collection.getAndTouch(docId, expiry, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
+      else setSuccess(result);
+    }
+
+    if (clc.hasTouch()) {
+      var request = clc.getTouch();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request, spans);
+      Duration expiry;
+      if (request.getExpiry().hasAbsoluteEpochSecs()) {
+        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
+      } else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      MutationResult mr;
+      if (options == null) mr = collection.touch(docId, expiry);
+      else mr = collection.touch(docId, expiry, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(result, mr);
+      else setSuccess(result);
+    }
+
+    if (clc.hasExists()) {
+      var request = clc.getExists();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      ExistsResult exists;
+      if (options == null) exists = collection.exists(docId);
+      else exists = collection.exists(docId, options);
+      if (op.getReturnResult()) populateResult(result, exists);
+      else setSuccess(result);
+    }
+
+    if (clc.hasMutateIn()) {
+      var request = clc.getMutateIn();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      var requestList = request.getSpecList().stream().map(JavaSdkCommandExecutor::convertMutateInSpec).toList();
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      MutateInResult mr;
+      if (options == null) mr = collection.mutateIn(docId, requestList);
+      else mr = collection.mutateIn(docId, requestList, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(result, mr, request);
+      else setSuccess(result);
+    }
+
+    if (clc.hasBinary()) {
+      var blc = clc.getBinary();
+
+      if (blc.hasIncrement()) {
+        var request = blc.getIncrement();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        CounterResult cr;
+        if (options == null) cr = collection.binary().increment(docId);
+        else cr = collection.binary().increment(docId, options);
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) populateResult(result, cr);
+        else setSuccess(result);
+      }
+
+      if (blc.hasDecrement()) {
+        var request = blc.getDecrement();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        CounterResult cr;
+        if (options == null) cr = collection.binary().decrement(docId);
+        else cr = collection.binary().decrement(docId, options);
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) populateResult(result, cr);
+        else setSuccess(result);
+      }
+
+      if (blc.hasAppend()) {
+        var request = blc.getAppend();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        MutationResult mr;
+        if (options == null) mr = collection.binary().append(docId, request.getContent().toByteArray());
+        else mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) populateResult(result, mr);
+        else setSuccess(result);
+      }
+
+      if (blc.hasPrepend()) {
+        var request = blc.getPrepend();
+        var docId = getDocId(request.getLocation());
+        var options = createOptions(request);
+        result.setInitiated(getTimeNow());
+        long start = System.nanoTime();
+        MutationResult mr;
+        if (options == null) mr = collection.binary().prepend(docId, request.getContent().toByteArray());
+        else mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) populateResult(result, mr);
+        else setSuccess(result);
+      }
+    }
+
+    if (clc.hasGetAllReplicas()) {
+      var request = clc.getGetAllReplicas();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      Stream<GetReplicaResult> results;
+      if (options == null) results = collection.getAllReplicas(docId);
+      else results = collection.getAllReplicas(docId, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      var streamer = new StreamStreamer<GetReplicaResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+              (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
+              (Throwable err) -> convertException(err));
+      perRun.streamerOwner().addAndStart(streamer);
+      result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+              .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
+                      .setType(STREAM_KV_GET_ALL_REPLICAS)
+                      .setStreamId(streamer.streamId())));
+    }
+
+    if (clc.hasGetAnyReplica()) {
+      var request = clc.getGetAnyReplica();
+      var docId = getDocId(request.getLocation());
+      var options = createOptions(request);
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+      GetReplicaResult mr;
+      if (options == null) mr = collection.getAnyReplica(docId);
+      else mr = collection.getAnyReplica(docId, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(result, mr, request.getContentAs());
+      else setSuccess(result);
+    }
+
+    if (clc.hasLookupIn() || clc.hasLookupInAllReplicas() || clc.hasLookupInAnyReplica()) {
+      result = LookupInHelper.handleLookupIn(perRun, connection, op, this::getDocId, spans);
+    }
+    return result.build();
+  }
+
+  private Result handleScopeLevelCommand(Command op, Result.Builder result) {
+    var slc = op.getScopeCommand();
+    var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
+
+    // [start:3.0.9]
+    if (slc.hasQuery()) {
+      var query = slc.getQuery().getStatement();
+      QueryResult qr;
+      if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery(), spans));
+      else qr = scope.query(query);
+      populateResult(slc.getQuery(), result, qr);
+    }
+    // [end:3.0.9]
+
+    // [start:3.4.5]
+    if (slc.hasSearch()) {
+      com.couchbase.client.protocol.sdk.search.Search command = slc.getSearch();
+      return handleSearchQueryBlocking(connection.cluster(), scope, spans, command);
+    } else if (slc.hasSearchIndexManager()) {
+      return SearchHelper.handleScopeSearchIndexManager(scope, spans, op);
+    }
+    // [end:3.4.5]
+
+    // [start:3.6.0]
+    if (slc.hasSearchV2()) {
+      return handleSearchBlocking(connection.cluster(), scope, spans, slc.getSearchV2());
+    }
+    // [end:3.6.0]
+
+    throw new UnsupportedOperationException("Unknown scope-level command");
+  }
+
+  private Result handleBucketLevelCommand(Command op, Result.Builder result) {
+    var blc = op.getBucketCommand();
+    var bucket = connection.cluster().bucket(blc.getBucketName());
+
+    if (blc.hasWaitUntilReady()) {
+      var request = blc.getWaitUntilReady();
+
+      logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis() + " milliseconds.");
+
+      var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+      if (request.hasOptions()) {
+        var options = waitUntilReadyOptions(request);
+        bucket.waitUntilReady(timeout, options);
+
+      } else {
+        bucket.waitUntilReady(timeout);
+      }
+
+      setSuccess(result);
+    }
+
+    // [start:3.4.12]
+    else if (blc.hasCollectionManager()) {
+      CollectionManagerHelper.handleCollectionManager(connection.cluster(), spans, op, result);
+    }
+    // [end:3.4.12]
+
+    return result.build();
+  }
+
+  private Result handleClusterLevelCommand(Command op, Result.Builder result) {
+    var clc = op.getClusterCommand();
+
+    if (clc.hasWaitUntilReady()) {
+      var request = clc.getWaitUntilReady();
+      logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis() + " milliseconds.");
+      var timeout = Duration.ofMillis(request.getTimeoutMillis());
+
+      if (request.hasOptions()) {
+        var options = waitUntilReadyOptions(request);
+        connection.cluster().waitUntilReady(timeout, options);
+
+      } else {
+        connection.cluster().waitUntilReady(timeout);
+      }
+
+      setSuccess(result);
+
+    }
+    // [start:3.2.4]
+    else if (clc.hasBucketManager()) {
+      BucketManagerHelper.handleBucketManger(connection.cluster(), spans, op, result);
+    }
+    // [end:3.2.4]
+    // [start:3.2.1]
+    else if (clc.hasEventingFunctionManager()) {
+      EventingHelper.handleEventingFunctionManager(connection.cluster(), spans, op, result);
+    }
+    // [end:3.2.1]
+
+    // [start:3.4.3]
+    if (clc.hasQueryIndexManager()) {
+      QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster(), spans, op, result);
+    }
+    // [end:3.4.3]
+
+    // [start:3.4.5]
+    if (clc.hasSearch()) {
+      com.couchbase.client.protocol.sdk.search.Search command = clc.getSearch();
+      return handleSearchQueryBlocking(connection.cluster(), null, spans, command);
+    } else if (clc.hasSearchIndexManager()) {
+      return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
+    }
+    // [end:3.4.5]
+
+    if (clc.hasQuery()) {
+      var query = clc.getQuery().getStatement();
+      QueryResult qr;
+      if (clc.getQuery().hasOptions()) {
+        qr = connection.cluster().query(query, createOptions(clc.getQuery(), spans));
+      } else {
+        qr = connection.cluster().query(query);
+      }
+      populateResult(clc.getQuery(), result, qr);
+    }
+
+    // [start:3.6.0]
+    if (clc.hasSearchV2()) {
+      return handleSearchBlocking(connection.cluster(), null, spans, clc.getSearchV2());
+    }
+    // [end:3.6.0]
+
+    return result.build();
+  }
+
+  public static MutateInSpec convertMutateInSpec(com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpec requestSpec) {
         if (requestSpec.hasUpsert()) {
             var spec = MutateInSpec.upsert(
                     requestSpec.getUpsert().getPath(),

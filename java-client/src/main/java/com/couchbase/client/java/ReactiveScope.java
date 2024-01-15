@@ -19,6 +19,9 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
+import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
@@ -33,7 +36,10 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.SearchRequest;
 import com.couchbase.client.java.search.result.ReactiveSearchResult;
+import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.vector.VectorSearch;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
@@ -192,7 +198,52 @@ public class ReactiveScope {
   }
 
   /**
+   * Performs a request against the Full Text Search (FTS) service, with default {@link SearchOptions}.
+   * <p>
+   * This can be used to perform a traditional FTS query, and/or a vector search.
+   * <p>
+   * This method is for scoped FTS indexes.  To work with global indexes, use {@link ReactiveCluster} instead.
+   *
+   * @param searchRequest the request, in the form of a {@link SearchRequest}
+   * @return the {@link SearchResult} once the response arrives successfully, inside a {@link Mono}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Mono<ReactiveSearchResult> search(final String indexName, final SearchRequest searchRequest) {
+    return search(indexName, searchRequest, DEFAULT_SEARCH_OPTIONS);
+  }
+
+  /**
+   * Performs a request against the Full Text Search (FTS) service, with custom {@link SearchOptions}.
+   * <p>
+   * This can be used to perform a traditional FTS query, and/or a vector search.
+   * <p>
+   * This method is for scoped FTS indexes.  To work with global indexes, use {@link ReactiveCluster} instead.
+   *
+   * @param searchRequest the request, in the form of a {@link SearchRequest}
+   * @return the {@link SearchResult} once the response arrives successfully, inside a {@link Mono}.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public Mono<ReactiveSearchResult> search(final String indexName, final SearchRequest searchRequest, final SearchOptions options) {
+    notNull(searchRequest, "SearchRequest", () -> new ReducedSearchErrorContext(indexName, null));
+    notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, null));
+    CoreSearchRequest coreRequest = searchRequest.toCore();
+    SearchOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+    return asyncScope.searchOps.searchReactive(indexName, coreRequest, opts)
+      .map(r -> new ReactiveSearchResult(r, serializer));
+  }
+
+  /**
    * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   * <p>
+   * This method is for scoped FTS indexes.  To work with global indexes, use {@link ReactiveCluster} instead.
+   * <p>
+   * New users should consider the newer {@link #search(String, SearchRequest)} interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+   * and/or can also be used to perform a {@link VectorSearch}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link ReactiveSearchResult} once the response arrives successfully, inside a {@link Mono}
@@ -203,6 +254,11 @@ public class ReactiveScope {
 
   /**
    * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   * <p>
+   * This method is for scoped FTS indexes.  To work with global indexes, use {@link ReactiveCluster} instead.
+   * <p>
+   * New users should consider the newer {@link #search(String, SearchRequest)} interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+   * and/or can also be used to perform a {@link VectorSearch}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.

@@ -72,6 +72,10 @@ public class Capabilities {
         out.add(Caps.SDK_DOCUMENT_NOT_LOCKED);
         // [end:3.5.1]
 
+        // [start:3.6.0]
+        out.add(Caps.SDK_VECTOR_SEARCH);
+        // [end:3.6.0]
+
         return out;
     }
 }

@@ -25,6 +25,7 @@ import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.performer.core.stream.Streamer;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.search.StreamingSearchResult;
+import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.client.protocol.streams.Config;
 import com.couchbase.client.protocol.streams.RequestItemsRequest;
 import com.couchbase.search.SearchHelper;
@@ -32,6 +33,7 @@ import org.reactivestreams.Subscription;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.SignalType;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,10 +52,10 @@ public class ReactiveSearchResultStreamer extends Streamer<SearchRow> {
                                       PerRun perRun,
                                       String streamId,
                                       Config streamConfig,
-                                      com.couchbase.client.protocol.sdk.search.Search command,
+                                      @Nullable ContentAs fieldsAs,
                                       Function<Throwable, com.couchbase.client.protocol.shared.Exception> convertException) {
     super(perRun, streamId, streamConfig, (row) -> {
-      var converted = SearchHelper.convertRow(row, command);
+      var converted = SearchHelper.convertRow(row, fieldsAs);
       return com.couchbase.client.protocol.run.Result.newBuilder()
               .setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                       .setSearchStreamingResult(com.couchbase.client.protocol.sdk.search.StreamingSearchResult.newBuilder()

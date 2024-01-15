@@ -17,18 +17,13 @@ package com.couchbase.client.core.api.search;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
+import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
 import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
 import com.couchbase.client.core.api.search.result.CoreSearchResult;
 import reactor.core.publisher.Mono;
 
 @Stability.Internal
 public interface CoreSearchOps {
-  default CoreSearchResult searchQueryBlocking(String indexName,
-                                               CoreSearchQuery query,
-                                               CoreSearchOptions options) {
-    return searchQueryAsync(indexName, query, options).toBlocking();
-  }
-
   CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName,
                                                        CoreSearchQuery query,
                                                        CoreSearchOptions options);
@@ -36,4 +31,12 @@ public interface CoreSearchOps {
   Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName,
                                                      CoreSearchQuery query,
                                                      CoreSearchOptions options);
+
+  CoreAsyncResponse<CoreSearchResult> searchAsync(String indexName,
+                                                  CoreSearchRequest searchRequest,
+                                                  CoreSearchOptions options);
+
+  Mono<CoreReactiveSearchResult> searchReactive(String indexName,
+                                                CoreSearchRequest searchRequest,
+                                                CoreSearchOptions options);
 }

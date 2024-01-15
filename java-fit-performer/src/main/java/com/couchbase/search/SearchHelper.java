@@ -40,6 +40,7 @@ import com.couchbase.client.java.manager.search.UpsertSearchIndexOptions;
 import com.couchbase.client.java.search.HighlightStyle;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.SearchRequest;
 import com.couchbase.client.java.search.SearchScanConsistency;
 import com.couchbase.client.java.search.facet.DateRange;
 import com.couchbase.client.java.search.facet.NumericRange;
@@ -53,6 +54,10 @@ import com.couchbase.client.java.search.sort.SearchFieldMode;
 import com.couchbase.client.java.search.sort.SearchFieldType;
 import com.couchbase.client.java.search.sort.SearchGeoDistanceUnits;
 import com.couchbase.client.java.search.sort.SearchSort;
+import com.couchbase.client.java.search.vector.VectorQuery;
+import com.couchbase.client.java.search.vector.VectorQueryCombination;
+import com.couchbase.client.java.search.vector.VectorSearch;
+import com.couchbase.client.java.search.vector.VectorSearchOptions;
 import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;
@@ -79,6 +84,7 @@ import com.couchbase.client.protocol.sdk.search.SearchFragments;
 import com.couchbase.client.protocol.sdk.search.SearchMetaData;
 import com.couchbase.client.protocol.sdk.search.SearchMetrics;
 import com.couchbase.client.protocol.sdk.search.SearchRowLocation;
+import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.stream.ReactiveSearchResultStreamer;
 import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
@@ -86,7 +92,6 @@ import com.google.protobuf.Timestamp;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -109,12 +114,11 @@ public class SearchHelper {
   }
 
   @Nullable
-  static SearchOptions convertSearchOptions(Search command, ConcurrentHashMap<String, RequestSpan> spans) {
-    if (!command.hasOptions()) {
+  static SearchOptions convertSearchOptions(boolean hasOptions, com.couchbase.client.protocol.sdk.search.SearchOptions o, ConcurrentHashMap<String, RequestSpan> spans) {
+    if (!hasOptions) {
       return null;
     }
 
-    var o = command.getOptions();
     var opts = SearchOptions.searchOptions();
 
     if (o.hasLimit()) {
@@ -604,14 +608,14 @@ public class SearchHelper {
     return Coordinate.ofLonLat(location.getLon(), location.getLat());
   }
 
-  public static Result handleSearchBlocking(Cluster cluster,
-                                            @Nullable Scope scope,
-                                            ConcurrentHashMap<String, RequestSpan> spans,
-                                            com.couchbase.client.protocol.sdk.search.Search command) {
+  public static Result handleSearchQueryBlocking(Cluster cluster,
+                                                 @Nullable Scope scope,
+                                                 ConcurrentHashMap<String, RequestSpan> spans,
+                                                 com.couchbase.client.protocol.sdk.search.Search command) {
     var q = command.getQuery();
 
     var query = SearchHelper.convertSearchQuery(q);
-    var options = SearchHelper.convertSearchOptions(command, spans);
+    var options = SearchHelper.convertSearchOptions(command.hasOptions(), command.getOptions(), spans);
 
     var result = Result.newBuilder();
     result.setInitiated(getTimeNow());
@@ -636,21 +640,21 @@ public class SearchHelper {
     result.setElapsedNanos(System.nanoTime() - start);
 
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-            .setSearchBlockingResult(convertResult(r, command)));
+            .setSearchBlockingResult(convertResult(r, command.hasFieldsAs() ? command.getFieldsAs() : null)));
 
     return result.build();
   }
 
-  public static Mono<Void> handleSearchReactive(Cluster cluster,
-                                                @Nullable Scope scope,
-                                                ConcurrentHashMap<String, RequestSpan> spans,
-                                                com.couchbase.client.protocol.sdk.search.Search command,
-                                                PerRun perRun) {
+  public static Mono<Void> handleSearchQueryReactive(Cluster cluster,
+                                                     @Nullable Scope scope,
+                                                     ConcurrentHashMap<String, RequestSpan> spans,
+                                                     com.couchbase.client.protocol.sdk.search.Search command,
+                                                     PerRun perRun) {
     return Mono.defer(() -> {
       var q = command.getQuery();
 
       var query = SearchHelper.convertSearchQuery(q);
-      var options = SearchHelper.convertSearchOptions(command, spans);
+      var options = SearchHelper.convertSearchOptions(command.hasOptions(), command.getOptions(), spans);
 
       var result = Result.newBuilder();
       result.setInitiated(getTimeNow());
@@ -678,7 +682,7 @@ public class SearchHelper {
                 perRun,
                 command.getStreamConfig().getStreamId(),
                 command.getStreamConfig(),
-                command,
+                command.hasFieldsAs() ? command.getFieldsAs() : null,
                 JavaSdkCommandExecutor::convertExceptionShared);
         result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
                 .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
@@ -690,9 +694,94 @@ public class SearchHelper {
     }).then();
   }
 
-  private static BlockingSearchResult convertResult(SearchResult result, com.couchbase.client.protocol.sdk.search.Search command) {
+  // [start:3.6.0]
+  public static Result handleSearchBlocking(Cluster cluster,
+                                            @Nullable Scope scope,
+                                            ConcurrentHashMap<String, RequestSpan> spans,
+                                            com.couchbase.client.protocol.sdk.search.SearchWrapper command) {
+    var search = command.getSearch();
+    var request = SearchHelper.convertSearchRequest(search.getRequest());
+    var options = SearchHelper.convertSearchOptions(search.hasOptions(), search.getOptions(), spans);
+
+    var result = Result.newBuilder();
+    result.setInitiated(getTimeNow());
+    long start = System.nanoTime();
+
+    SearchResult r;
+    if (scope == null) {
+      if (options != null) {
+        r = cluster.search(search.getIndexName(), request, options);
+      } else {
+        r = cluster.search(search.getIndexName(), request);
+      }
+    } else {
+      if (options != null) {
+        r = scope.search(search.getIndexName(), request, options);
+      } else {
+        r = scope.search(search.getIndexName(), request);
+      }
+    }
+
+    result.setElapsedNanos(System.nanoTime() - start);
+
+    result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+            .setSearchBlockingResult(convertResult(r, command.hasFieldsAs() ? command.getFieldsAs() : null)));
+
+    return result.build();
+  }
+
+  public static Mono<Void> handleSearchReactive(Cluster cluster,
+                                                @Nullable Scope scope,
+                                                ConcurrentHashMap<String, RequestSpan> spans,
+                                                com.couchbase.client.protocol.sdk.search.SearchWrapper command,
+                                                PerRun perRun) {
+    return Mono.defer(() -> {
+      var search = command.getSearch();
+      var request = SearchHelper.convertSearchRequest(search.getRequest());
+      var options = SearchHelper.convertSearchOptions(search.hasOptions(), search.getOptions(), spans);
+
+      var result = Result.newBuilder();
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
+
+      Mono<ReactiveSearchResult> r;
+      if (scope == null) {
+        if (options != null) {
+          r = cluster.reactive().search(search.getIndexName(), request, options);
+        } else {
+          r = cluster.reactive().search(search.getIndexName(), request);
+        }
+      } else {
+        if (options != null) {
+          r = scope.reactive().search(search.getIndexName(), request, options);
+        } else {
+          r = scope.reactive().search(search.getIndexName(), request);
+        }
+      }
+
+      return r.doOnNext(re -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+
+        var streamer = new ReactiveSearchResultStreamer(re,
+                perRun,
+                command.getStreamConfig().getStreamId(),
+                command.getStreamConfig(),
+                command.hasFieldsAs() ? command.getFieldsAs() : null,
+                JavaSdkCommandExecutor::convertExceptionShared);
+        result.setStream(com.couchbase.client.protocol.streams.Signal.newBuilder()
+                .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
+                        .setType(STREAM_FULL_TEXT_SEARCH)
+                        .setStreamId(streamer.streamId())));
+        perRun.resultsStream().enqueue(result.build());
+        perRun.streamerOwner().addAndStart(streamer);
+      });
+    }).then();
+  }
+  // [end:3.6.0]
+
+  private static BlockingSearchResult convertResult(SearchResult result, @Nullable ContentAs fieldsAs) {
     return BlockingSearchResult.newBuilder()
-            .addAllRows(result.rows().stream().map(v -> convertRow(v, command)).toList())
+            .addAllRows(result.rows().stream().map(v -> convertRow(v, fieldsAs)).toList())
             .setMetaData(convertMetaData(result.metaData()))
             .setFacets(convertFacets(result.facets()))
             .build();
@@ -729,7 +818,7 @@ public class SearchHelper {
             .build();
   }
 
-  public static com.couchbase.client.protocol.sdk.search.SearchRow convertRow(SearchRow v, com.couchbase.client.protocol.sdk.search.Search command) {
+  public static com.couchbase.client.protocol.sdk.search.SearchRow convertRow(SearchRow v, @Nullable ContentAs fieldsAs) {
     var builder = com.couchbase.client.protocol.sdk.search.SearchRow.newBuilder()
             .setIndex(v.index())
             .setId(v.id())
@@ -763,8 +852,8 @@ public class SearchHelper {
               .toList());
     });
 
-    if (command.hasFieldsAs()) {
-      var content = ContentAsUtil.contentType(command.getFieldsAs(),
+    if (fieldsAs != null) {
+      var content = ContentAsUtil.contentType(fieldsAs,
               () -> v.fieldsAs(byte[].class),
               () -> v.fieldsAs(String.class),
               () -> v.fieldsAs(JsonObject.class),
@@ -1347,4 +1436,58 @@ public class SearchHelper {
 
     return out;
   }
+
+  // [start:3.6.0]
+  private static SearchRequest convertSearchRequest(com.couchbase.client.protocol.sdk.search.SearchRequest sr) {
+    if (sr.hasSearchQuery()) {
+      var out = SearchRequest.create(convertSearchQuery(sr.getSearchQuery()));
+      if (sr.hasVectorSearch()) {
+        out.vectorSearch(convertVectorSearch(sr.getVectorSearch()));
+      }
+      return out;
+    }
+    else if (sr.hasVectorSearch()) {
+      return SearchRequest.create(convertVectorSearch(sr.getVectorSearch()));
+    }
+    return SearchRequest.create((SearchQuery) null);
+  }
+
+  private static VectorSearch convertVectorSearch(com.couchbase.client.protocol.sdk.search.VectorSearch vs) {
+    var vectors = vs.getVectorQueryList().stream()
+            .map(v -> {
+              var buffer = new float[v.getVectorQueryCount()];
+              for (int i = 0; i < v.getVectorQueryList().size(); i++) {
+                buffer[i] = v.getVectorQuery(i);
+              }
+              var out = VectorQuery.create(v.getVectorFieldName(), buffer);
+              if (v.hasOptions()) {
+                var opts = v.getOptions();
+                if (opts.hasNumCandidates()) {
+                  out = out.numCandidates(opts.getNumCandidates());
+                }
+                if (opts.hasBoost()) {
+                  out = out.boost(opts.getBoost());
+                }
+              }
+              return out;
+            })
+            .toList();
+    if (vs.hasOptions()) {
+      return VectorSearch.create(vectors, convertVectorSearchOptions(vs.getOptions()));
+    }
+    return VectorSearch.create(vectors);
+  }
+
+  private static VectorSearchOptions convertVectorSearchOptions(com.couchbase.client.protocol.sdk.search.VectorSearchOptions options) {
+    var out = VectorSearchOptions.vectorSearchOptions();
+    if (options.hasVectorQueryCombination()) {
+      out = out.vectorQueryCombination(switch (options.getVectorQueryCombination()) {
+        case AND -> VectorQueryCombination.AND;
+        case OR -> VectorQueryCombination.OR;
+        default -> throw new UnsupportedOperationException("Unknown VectorQueryCombination");
+      });
+    }
+    return out;
+  }
+  // [end:3.6.0]
 }

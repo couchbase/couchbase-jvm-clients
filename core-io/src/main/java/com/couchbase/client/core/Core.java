@@ -83,7 +83,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
@@ -1092,8 +1092,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         bucketName = request.bucket();
         scopeName = query.scope();
         collectionName = null;
-      } else if (request instanceof SearchRequest) {
-        SearchRequest search = (SearchRequest) request;
+      } else if (request instanceof ServerSearchRequest) {
+        ServerSearchRequest search = (ServerSearchRequest) request;
         if (search.scope() != null) {
           bucketName = search.scope().bucketName();
           scopeName = search.scope().scopeName();

@@ -28,7 +28,6 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
-import com.couchbase.client.core.msg.search.SearchRequest;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
@@ -49,7 +48,9 @@ import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
+import com.couchbase.client.java.search.SearchRequest;
 import com.couchbase.client.java.search.result.SearchResult;
+import com.couchbase.client.java.search.vector.VectorSearch;
 import com.couchbase.client.java.transactions.Transactions;
 
 import java.io.Closeable;
@@ -433,7 +434,46 @@ public class Cluster implements Closeable {
   }
 
   /**
+   * Performs a request against the Full Text Search (FTS) service, with default {@link SearchOptions}.
+   * <p>
+   * This can be used to perform a traditional FTS query, and/or a vector search.
+   * <p>
+   * This method is for global FTS indexes.  For scoped indexes, use {@link Scope} instead.
+   *
+   * @param searchRequest the request, in the form of a {@link SearchRequest}
+   * @return the {@link SearchResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public SearchResult search(final String indexName, final SearchRequest searchRequest) {
+    return search(indexName, searchRequest, DEFAULT_SEARCH_OPTIONS);
+  }
+
+  /**
+   * Performs a request against the Full Text Search (FTS) service, with custom {@link SearchOptions}.
+   * <p>
+   * This can be used to perform a traditional FTS query, and/or a vector search.
+   * <p>
+   * This method is for global FTS indexes.  For scoped indexes, use {@link Scope} instead.
+   *
+   * @param searchRequest the request, in the form of a {@link SearchRequest}
+   * @return the {@link SearchResult} once the response arrives successfully.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  @Stability.Volatile
+  public SearchResult search(final String indexName, final SearchRequest searchRequest, final SearchOptions options) {
+    return block(asyncCluster.search(indexName, searchRequest, options));
+  }
+
+  /**
    * Performs a Full Text Search (FTS) query with default {@link SearchOptions}.
+   * <p>
+   * This method is for global FTS indexes.  For scoped indexes, use {@link Scope} instead.
+   * <p>
+   * New users should consider the newer {@link #search(String, SearchRequest)} interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+   * and/or can also be used to perform a {@link VectorSearch}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @return the {@link SearchResult} once the response arrives successfully.
@@ -446,6 +486,11 @@ public class Cluster implements Closeable {
 
   /**
    * Performs a Full Text Search (FTS) query with custom {@link SearchOptions}.
+   * <p>
+   * This method is for global FTS indexes.  For scoped indexes, use {@link Scope} instead.
+   * <p>
+   * New users should consider the newer {@link #search(String, SearchRequest)} interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+   * and/or can also be used to perform a {@link VectorSearch}.
    *
    * @param query the query, in the form of a {@link SearchQuery}
    * @param options the custom options for this query.

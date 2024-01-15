@@ -41,7 +41,7 @@ public abstract class CoreSearchQuery {
 
   public ObjectNode export() {
     ObjectNode out = Mapper.createObjectNode();
-    injectParams(out);
+    injectParamsAndBoost(out);
     return out;
   }
 

@@ -41,7 +41,8 @@ import java.util.TreeMap;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
-public class SearchRequest extends BaseRequest<SearchResponse>
+// This would generally be called just "SearchRequest", but that's now an externally presented concept in the API.
+public class ServerSearchRequest extends BaseRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
 
     private final String indexName;
@@ -49,8 +50,8 @@ public class SearchRequest extends BaseRequest<SearchResponse>
     private final Authenticator authenticator;
     private final CoreBucketAndScope scope;
 
-    public SearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
-                         String indexName, byte[] content, final RequestSpan span, @Nullable CoreBucketAndScope scope) {
+    public ServerSearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
+                               String indexName, byte[] content, final RequestSpan span, @Nullable CoreBucketAndScope scope) {
         super(timeout, ctx, retryStrategy, span);
         this.indexName = indexName;
         this.content = content;

@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
+import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
 import com.couchbase.client.core.api.search.result.CoreDateRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
@@ -40,7 +41,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
-import com.couchbase.client.core.msg.search.SearchRequest;
+import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.core.publisher.Flux;
@@ -56,6 +57,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
@@ -74,40 +76,13 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
-
-    SearchRequest request = searchRequest(indexName, query, options);
-    core.send(request);
-    return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
-            .flatMap(response -> response.rows()
-                    .map(CoreSearchRow::fromResponse)
-                    .collectList()
-                    .flatMap(rows -> response
-                            .trailer()
-                            .map(trailer -> new CoreSearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
-                    )
-            )
-            .doOnNext(ignored -> request.context().logicallyComplete())
-            .doOnError(err -> request.context().logicallyComplete(err))
-            .toFuture(), () -> {
-    });
+    return searchAsyncShared(searchRequest(indexName, query, options));
   }
 
   @Override
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
-
-    SearchRequest request = searchRequest(indexName, query, options);
-    core.send(request);
-    return Mono.fromFuture(request.response())
-            .map(response -> {
-              Flux<CoreSearchRow> rows = response.rows().map(CoreSearchRow::fromResponse);
-              Mono<CoreSearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
-              Mono<Map<String, CoreSearchFacetResult>> facets = response.trailer().map(ClassicCoreSearchOps::parseFacets);
-              return new CoreReactiveSearchResult(rows, facets, meta);
-
-            })
-            .doOnNext(ignored -> request.context().logicallyComplete())
-            .doOnError(err -> request.context().logicallyComplete(err));
+    return searchReactiveShared(searchRequest(indexName, query, options));
   }
 
   private static Map<String, CoreSearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {
@@ -156,14 +131,14 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     return core.context().environment();
   }
 
-  private SearchRequest searchRequest(String indexName, CoreSearchQuery query, CoreSearchOptions opts) {
+  private ServerSearchRequest searchRequest(String indexName, CoreSearchQuery query, CoreSearchOptions opts) {
     notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query));
     Duration timeout = opts.commonOptions().timeout().orElse(environment().timeoutConfig().searchTimeout());
 
     ObjectNode params = query.export();
     ObjectNode toSend = Mapper.createObjectNode();
     toSend.set("query", params);
-    injectOptions(indexName, toSend, timeout, opts);
+    injectOptions(indexName, toSend, timeout, opts, false);
     byte[] bytes = toSend.toString().getBytes(StandardCharsets.UTF_8);
 
     RetryStrategy retryStrategy = opts.commonOptions().retryStrategy().orElse(environment().retryStrategy());
@@ -171,7 +146,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     RequestSpan span = environment()
             .requestTracer()
             .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
-    SearchRequest request = new SearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);
+    ServerSearchRequest request = new ServerSearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);
     request.context().clientContext(opts.commonOptions().clientContext());
     return request;
   }
@@ -185,7 +160,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   }
 
   @Stability.Internal
-  public static void injectOptions(String indexName, ObjectNode queryJson, Duration timeout, CoreSearchOptions opts) {
+  public static void injectOptions(String indexName, ObjectNode queryJson, Duration timeout, CoreSearchOptions opts, boolean disableShowRequest) {
     if (opts.limit() != null && opts.limit() >= 0) {
       queryJson.put("size", opts.limit());
     }
@@ -283,5 +258,68 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
         queryJson.set(fieldName, raw.get(fieldName));
       }
     }
+
+    if (disableShowRequest) {
+        queryJson.put("showrequest", false);
+    }
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSearchResult> searchAsync(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
+    return searchAsyncShared(searchRequestV2(indexName, searchRequest, options));
+  }
+
+  @Override
+  public Mono<CoreReactiveSearchResult> searchReactive(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
+    return searchReactiveShared(searchRequestV2(indexName, searchRequest, options));
+  }
+
+  private CoreAsyncResponse<CoreSearchResult> searchAsyncShared(ServerSearchRequest request) {
+    core.send(request);
+    return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
+        .flatMap(response -> response.rows()
+            .map(CoreSearchRow::fromResponse)
+            .collectList()
+            .flatMap(rows -> response
+                .trailer()
+                .map(trailer -> new CoreSearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
+            )
+        )
+        .doOnNext(ignored -> request.context().logicallyComplete())
+        .doOnError(err -> request.context().logicallyComplete(err))
+        .toFuture(), () -> {
+    });
+  }
+
+  public Mono<CoreReactiveSearchResult> searchReactiveShared(ServerSearchRequest request) {
+    core.send(request);
+    return Mono.fromFuture(request.response())
+        .map(response -> {
+          Flux<CoreSearchRow> rows = response.rows().map(CoreSearchRow::fromResponse);
+          Mono<CoreSearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
+          Mono<Map<String, CoreSearchFacetResult>> facets = response.trailer().map(ClassicCoreSearchOps::parseFacets);
+          return new CoreReactiveSearchResult(rows, facets, meta);
+
+        })
+        .doOnNext(ignored -> request.context().logicallyComplete())
+        .doOnError(err -> request.context().logicallyComplete(err));
+  }
+
+  private ServerSearchRequest searchRequestV2(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions opts) {
+    notNull(indexName, "indexName");
+    Duration timeout = opts.commonOptions().timeout().orElse(environment().timeoutConfig().searchTimeout());
+
+    ObjectNode topLevel = searchRequest.toJson();
+    injectOptions(indexName, topLevel, timeout, opts, true);
+    byte[] bytes = topLevel.toString().getBytes(StandardCharsets.UTF_8);
+
+    RetryStrategy retryStrategy = opts.commonOptions().retryStrategy().orElse(environment().retryStrategy());
+
+    RequestSpan span = environment()
+        .requestTracer()
+        .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
+    ServerSearchRequest request = new ServerSearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);
+    request.context().clientContext(opts.commonOptions().clientContext());
+    return request;
   }
 }

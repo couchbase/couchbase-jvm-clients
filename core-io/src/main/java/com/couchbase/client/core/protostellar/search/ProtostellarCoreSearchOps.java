@@ -32,6 +32,7 @@ import com.couchbase.client.core.api.search.facet.CoreNumericRange;
 import com.couchbase.client.core.api.search.facet.CoreNumericRangeFacet;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 import com.couchbase.client.core.api.search.facet.CoreTermFacet;
+import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
 import com.couchbase.client.core.api.search.result.CoreDateRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
@@ -50,6 +51,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessorsStreaming;
 import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
@@ -202,6 +204,24 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
         return Mono.error(err);
       }
     });
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreSearchResult> searchAsync(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
+    if (searchRequest.vectorSearch != null) {
+      throw new FeatureNotAvailableException("Vector search is not currently available in couchbase2://");
+    }
+
+    return searchQueryAsync(indexName, searchRequest.searchQuery, options);
+  }
+
+  @Override
+  public Mono<CoreReactiveSearchResult> searchReactive(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
+    if (searchRequest.vectorSearch != null) {
+      throw new FeatureNotAvailableException("Vector search is not currently available in couchbase2://");
+    }
+
+    return searchQueryReactive(indexName, searchRequest.searchQuery, options);
   }
 
   private static Map<String, CoreSearchFacetResult> parseFacets(SearchQueryResponse response) {

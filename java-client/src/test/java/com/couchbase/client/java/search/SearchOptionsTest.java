@@ -36,7 +36,7 @@ class SearchOptionsTest {
 
   private JsonObject test(SearchOptions opts) {
     ObjectNode out = Mapper.createObjectNode();
-    ClassicCoreSearchOps.injectOptions("indexName", out, Duration.ofSeconds(1), opts.build());
+    ClassicCoreSearchOps.injectOptions("indexName", out, Duration.ofSeconds(1), opts.build(), false);
     return JsonObject.fromJson(out.toString());
   }
 
