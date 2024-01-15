@@ -24,9 +24,10 @@ import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertMuta
 import com.couchbase.client.performer.scala.util.ContentAsUtil
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.search.MatchOperator.{SEARCH_MATCH_OPERATOR_AND, SEARCH_MATCH_OPERATOR_OR}
-import com.couchbase.client.protocol.sdk.search.{Search, SearchGeoDistanceUnits}
+import com.couchbase.client.protocol.sdk.search.SearchGeoDistanceUnits
 import com.couchbase.client.protocol.sdk.search.SearchScanConsistency.SEARCH_SCAN_CONSISTENCY_NOT_BOUNDED
 import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndexes
+import com.couchbase.client.protocol.shared.ContentAs
 import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.search.SearchIndex
@@ -51,10 +52,10 @@ object SearchHelper {
   private val DefaultRetryStrategy     = BestEffortRetryStrategy.INSTANCE
 
   private[search] def convertSearchOptions(
-      command: com.couchbase.client.protocol.sdk.search.Search
+      hasOptions: Boolean,
+      o: com.couchbase.client.protocol.sdk.search.SearchOptions
   ): Option[SearchOptions] = {
-    if (!command.hasOptions) return None
-    val o    = command.getOptions
+    if (!hasOptions) return None
     var opts = SearchOptions()
     if (o.hasLimit) opts = opts.limit(o.getLimit)
     if (o.hasSkip) opts = opts.skip(o.getSkip)
@@ -406,13 +407,13 @@ object SearchHelper {
     }
   }
 
-  def handleSearchBlocking(
+  def handleSearchQueryBlocking(
       cluster: Cluster,
       command: com.couchbase.client.protocol.sdk.search.Search
   ): Result.Builder = {
     val q       = command.getQuery
     val query   = SearchHelper.convertSearchQuery(q)
-    val options = SearchHelper.convertSearchOptions(command)
+    val options = SearchHelper.convertSearchOptions(command.hasOptions, command.getOptions)
     val result  = Result.newBuilder
     result.setInitiated(getTimeNow)
     val start = System.nanoTime
@@ -423,17 +424,89 @@ object SearchHelper {
     result.setElapsedNanos(System.nanoTime - start)
     result.setSdk(
       com.couchbase.client.protocol.sdk.Result.newBuilder
-        .setSearchBlockingResult(convertResult(r, command))
+        .setSearchBlockingResult(convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None))
     )
     result
   }
 
+  // [start:1.6.0]
+  def handleSearchBlocking(
+                                 cluster: Cluster,
+                                 command: com.couchbase.client.protocol.sdk.search.SearchWrapper
+                               ): Result.Builder = {
+    val search = command.getSearch
+    val request = SearchHelper.convertSearchRequest(search.getRequest)
+    val options = SearchHelper.convertSearchOptions(search.hasOptions, search.getOptions)
+    val result = Result.newBuilder
+    result.setInitiated(getTimeNow)
+    val start = System.nanoTime
+    val r = options match {
+      case Some(opts) => cluster.search(search.getIndexName, request, opts).get
+      case _ => cluster.search(search.getIndexName, request).get
+    }
+    result.setElapsedNanos(System.nanoTime - start)
+    result.setSdk(
+      com.couchbase.client.protocol.sdk.Result.newBuilder
+        .setSearchBlockingResult(convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None))
+    )
+    result
+  }
+
+  def convertVectorSearch(vectorSearch: com.couchbase.client.protocol.sdk.search.VectorSearch): com.couchbase.client.scala.search.vector.VectorSearch = {
+    var out = com.couchbase.client.scala.search.vector.VectorSearch(vectorSearch.getVectorQueryList.asScala
+    .map(convertVectorQuery))
+    if (vectorSearch.hasOptions) {
+      val opts = vectorSearch.getOptions
+      if (opts.hasVectorQueryCombination) {
+        val vqc: com.couchbase.client.scala.search.vector.VectorQueryCombination = opts.getVectorQueryCombination match {
+          case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.AND =>
+            com.couchbase.client.scala.search.vector.VectorQueryCombination.And
+          case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.OR =>
+            com.couchbase.client.scala.search.vector.VectorQueryCombination.Or
+          case _ => throw new UnsupportedOperationException()
+        }
+        out = out.vectorSearchOptions(com.couchbase.client.scala.search.vector.VectorSearchOptions()
+          .vectorQueryCombination(vqc))
+      }
+    }
+    out
+  }
+
+  def convertVectorQuery(vq: com.couchbase.client.protocol.sdk.search.VectorQuery): com.couchbase.client.scala.search.vector.VectorQuery = {
+    val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+    var out = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    if (vq.hasOptions) {
+      val opts = vq.getOptions
+      if (opts.hasNumCandidates) out = out.numCandidates(opts.getNumCandidates)
+      if (opts.hasBoost) out = out.boost(opts.getBoost)
+    }
+    out
+  }
+
+  def convertSearchRequest(request: com.couchbase.client.protocol.sdk.search.SearchRequest): com.couchbase.client.scala.search.vector.SearchRequest = {
+    if (request.hasSearchQuery) {
+      var out = com.couchbase.client.scala.search.vector.SearchRequest.searchQuery(convertSearchQuery(request.getSearchQuery))
+      if (request.hasVectorSearch) {
+        out = out.vectorSearch(convertVectorSearch(request.getVectorSearch))
+      }
+      out
+    } else if (request.hasVectorSearch) {
+      com.couchbase.client.scala.search.vector.SearchRequest.vectorSearch(convertVectorSearch(request.getVectorSearch))
+    } else {
+      com.couchbase.client.scala.search.vector.SearchRequest.searchQuery(null)
+    }
+  }
+
+
+  // [end:1.6.0]
+
+
   private def convertResult(
       result: SearchResult,
-      command: com.couchbase.client.protocol.sdk.search.Search
+      fieldsAs: Option[ContentAs]
   ): com.couchbase.client.protocol.sdk.search.BlockingSearchResult =
     com.couchbase.client.protocol.sdk.search.BlockingSearchResult.newBuilder
-      .addAllRows(result.rows.map(v => convertRow(v, command)).asJava)
+      .addAllRows(result.rows.map(v => convertRow(v, fieldsAs)).asJava)
       .setMetaData(convertMetaData(result.metaData))
       .setFacets(convertFacets(result.facets))
       .build
@@ -477,7 +550,7 @@ object SearchHelper {
 
   def convertRow(
       v: SearchRow,
-      command: Search
+      fieldsAs: Option[ContentAs]
   ): com.couchbase.client.protocol.sdk.search.SearchRow = {
     val builder = com.couchbase.client.protocol.sdk.search.SearchRow.newBuilder
       .setIndex(v.index)
@@ -513,19 +586,22 @@ object SearchHelper {
           .asJava
       )
     })
-    if (command.hasFieldsAs) {
-        val content = ContentAsUtil.contentType(command.getFieldsAs,
-            () => v.fieldsAs[Array[Byte]],
-            () => v.fieldsAs[String],
-            () => v.fieldsAs[JsonObject],
-            () => v.fieldsAs[JsonArray],
-            () => v.fieldsAs[Boolean],
-            () => v.fieldsAs[Int],
-            () => v.fieldsAs[Double])
-      content match {
-        case Failure(exception) => throw exception
-        case Success(value)     => builder.setFields(value)
-      }
+
+    fieldsAs match {
+      case Some(fa) =>
+        val content = ContentAsUtil.contentType(fa,
+          () => v.fieldsAs[Array[Byte]],
+          () => v.fieldsAs[String],
+          () => v.fieldsAs[JsonObject],
+          () => v.fieldsAs[JsonArray],
+          () => v.fieldsAs[Boolean],
+          () => v.fieldsAs[Int],
+          () => v.fieldsAs[Double])
+        content match {
+          case Failure(exception) => throw exception
+          case Success(value) => builder.setFields(value)
+        }
+      case _ =>
     }
     builder.build
   }

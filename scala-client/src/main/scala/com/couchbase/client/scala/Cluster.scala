@@ -17,6 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.transaction.CoreTransactionsReactive
@@ -39,6 +40,7 @@ import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryRes
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
+import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.transactions.Transactions
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.util.AsyncUtils
@@ -207,16 +209,61 @@ class Cluster private[scala] (
     )
   }
 
+  /** Performs a Full Text Search (FTS) query against the cluster, using default options.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    *
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest
+  ): Try[SearchResult] = {
+    search(indexName, request, SearchOptions())
+  }
+
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @param options   see [[com.couchbase.client.scala.search.SearchOptions]]
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest,
+      options: SearchOptions
+  ): Try[SearchResult] = {
+    AsyncUtils.block(async.search(indexName, request, options))
+  }
+
   /** Performs a Full Text Search (FTS) query against the cluster.
     *
     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
     * [[Cluster.async]] for an asynchronous version.
     *
+    * New users should consider the newer `search(String, SearchRequest)` interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+    * and/or can also be used to perform a [[com.couchbase.client.scala.search.vector.VectorSearch]].
+    *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
     * @param options           the FTS query to execute.  See [[com.couchbase.client.scala.search.SearchOptions]] for how to construct
-    *
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
@@ -236,11 +283,13 @@ class Cluster private[scala] (
     * This overload provides only the most commonly used options.  If you need to configure something more
     * esoteric, use the overload that takes a [[com.couchbase.client.scala.search.SearchOptions]] instead, which supports all available options.
     *
+    * New users should consider the newer `search(String, SearchRequest)` interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+    * and/or can also be used to perform a [[com.couchbase.client.scala.search.vector.VectorSearch]].
+    *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
     * @param timeout   how long the operation is allowed to take
-    *
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */

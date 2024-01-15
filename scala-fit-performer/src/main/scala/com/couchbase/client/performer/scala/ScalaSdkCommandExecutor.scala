@@ -235,7 +235,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         }
         // [start:1.2.4]
         else if (clc.hasSearch) {
-            result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearch)
+            result = SearchHelper.handleSearchQueryBlocking(connection.cluster, clc.getSearch)
         } else if (clc.hasSearchIndexManager) {
             result = SearchHelper.handleClusterSearchIndexManager(connection.cluster, op)
         }
@@ -268,6 +268,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         else if (clc.hasQuery) {
           result = QueryHelper.handleClusterQuery(connection, op, clc)
         }
+        // [start:1.6.0]
+        else if (clc.hasSearchV2) {
+          result = SearchHelper.handleSearchBlocking(connection.cluster, clc.getSearchV2)
+        }
+        // [end:1.6.0]
         else throw new UnsupportedOperationException("Unknown cluster command")
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand

@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
@@ -43,6 +44,7 @@ import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.ReactiveSearchResult
+import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.transactions.{ReactiveTransactions, Transactions}
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
@@ -207,17 +209,67 @@ class ReactiveCluster(val async: AsyncCluster) {
     analyticsQuery(statement, opts)
   }
 
+  /** Performs a Full Text Search (FTS) query against the cluster, using default options.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    *
+    * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest
+  ): SMono[ReactiveSearchResult] = {
+    search(indexName, request, SearchOptions())
+  }
+
+  /** Performs a Full Text Search (FTS) query against the cluster.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @param options   see [[com.couchbase.client.scala.search.SearchOptions]]
+    * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    *         returned rows
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest,
+      options: SearchOptions
+  ): SMono[ReactiveSearchResult] = {
+    request.toCore match {
+      case Failure(err) => SMono.raiseError(err)
+      case Success(req) =>
+        convert(async.searchOps.searchReactive(indexName, req, options.toCore))
+          .map(result => ReactiveSearchResult(result))
+    }
+  }
+
   /** Performs a Full Text Search (FTS) query against the cluster.
     *
     * This is a reactive API.  See [[Cluster.async]] for an asynchronous version of this API, and
     * [[Cluster]] for a blocking version.
     *
+    * New users should consider the newer `search(String, SearchRequest)` interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+    * and/or can also be used to perform a [[com.couchbase.client.scala.search.vector.VectorSearch]].
+    *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
     * @param options           the FTS query to execute.  See [[com.couchbase.client.scala.search.SearchOptions]] for how to construct
-    *
-    * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
   def searchQuery(
@@ -237,12 +289,14 @@ class ReactiveCluster(val async: AsyncCluster) {
     * This overload provides only the most commonly used options.  If you need to configure something more
     * esoteric, use the overload that takes a [[com.couchbase.client.scala.search.SearchOptions]] instead, which supports all available options.
     *
+    * New users should consider the newer `search(String, SearchRequest)` interface instead, which can do both the traditional FTS {@link SearchQuery} that this method performs,
+    * and/or can also be used to perform a [[com.couchbase.client.scala.search.vector.VectorSearch]].
+    *
     * @param indexName         the name of the search index to use
     * @param query             the FTS query to execute.  See
     *                          [[com.couchbase.client.scala.search.queries.SearchQuery]] for more
     * @param timeout   how long the operation is allowed to take
-    *
-    * @return a `Mono` containing a [[search.result.ReactiveSearchResult]] which includes a Flux giving streaming access to any
+    * @return a `Mono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
   def searchQuery(

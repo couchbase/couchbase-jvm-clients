@@ -64,6 +64,10 @@ object Capabilities {
     out.add(Caps.SDK_DOCUMENT_NOT_LOCKED)
     // [end:1.5.0]
 
+    // [start:1.6.0]
+    out.add(Caps.SDK_VECTOR_SEARCH)
+    // [end:1.6.0]
+
     out
   }
 
