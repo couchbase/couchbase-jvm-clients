@@ -60,6 +60,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -86,6 +87,13 @@ public class CoreProtostellar implements CoreCouchbaseOps {
     notNull(connectionString, "connectionString");
 
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE2);
+
+    if (connectionString.hosts().size() != 1) {
+      throw InvalidArgumentException.fromMessage(
+        "Connection string with scheme '" + ConnectionString.Scheme.COUCHBASE2.name().toLowerCase(Locale.ROOT) +
+          "' must have exactly one host, but got: " + connectionString.original()
+      );
+    }
 
     ConnectionString.UnresolvedSocket first = connectionString.hosts().get(0);
     first.portType().ifPresent(type -> {
