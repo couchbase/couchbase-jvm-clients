@@ -94,7 +94,7 @@ public class ScopeSpec {
   @Override
   public String toString() {
     return "ScopeSpec{" +
-      "name='" + redactMeta(name) +
+      "name='" + redactMeta(name) + '\'' +
       ", collectionSpecs=" + collectionSpecs +
       '}';
   }

@@ -163,7 +163,7 @@ public class CollectionSpec {
     return "CollectionSpec{" +
       "name='" + redactMeta(name) + '\'' +
       ", scopeName='" + redactMeta(scopeName) + '\'' +
-      ", maxExpiry=" + redactMeta(maxExpiry.getSeconds()) + '\'' +
+      ", maxExpiry=" + redactMeta(maxExpiry.getSeconds()) +
       ", history=" + redactMeta(history) +
       '}';
   }
