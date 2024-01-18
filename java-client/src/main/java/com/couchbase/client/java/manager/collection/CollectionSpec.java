@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.collection;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import reactor.util.annotation.Nullable;
@@ -31,6 +32,25 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * The {@link CollectionSpec} describes properties of a collection that can be managed.
  */
 public class CollectionSpec {
+
+  /**
+   * A special collection "max expiry" value that means the collection's
+   * max expiry is always the same as the bucket's max expiry.
+   * <p>
+   * Use the bucket management API to discover the actual expiry value.
+   */
+  @Stability.Volatile
+  public static final Duration SAME_EXPIRY_AS_BUCKET = Duration.ZERO;
+
+  /**
+   * A special collection "max expiry" value that means documents in the collection
+   * never expire, regardless of the bucket's max expiry setting.
+   * <p>
+   * Requires Couchbase Server 7.6 or later.
+   */
+  @SinceCouchbase("7.6")
+  @Stability.Volatile
+  public static final Duration NEVER_EXPIRE = Duration.ofSeconds(-1);
 
   /**
    * The name of the collection.
@@ -57,14 +77,28 @@ public class CollectionSpec {
    *
    * @param name the name of the collection.
    * @param scopeName the name of the parent scope.
-   * @param maxExpiry the maximum expiry, or {@link Duration#ZERO} if none.
+   * @param maxExpiry the maximum expiry, or {@link #NEVER_EXPIRE}, or {@link #SAME_EXPIRY_AS_BUCKET}.
    * @param history whether history retention is enabled on this collection.
    */
   private CollectionSpec(String name, String scopeName, Duration maxExpiry, @Nullable Boolean history) {
     this.name = notNullOrEmpty(name, "Name");
     this.scopeName = notNullOrEmpty(scopeName, "Scope Name");
-    this.maxExpiry = notNull(maxExpiry, "Max Expiry");
+    this.maxExpiry = internExpiry(notNull(maxExpiry, "Max Expiry"));
     this.history = history;
+  }
+
+  /**
+   * Allows using reference equality (==) to compare {@link #maxExpiry()}
+   * against the special expiry values.
+   */
+  private static Duration internExpiry(Duration d) {
+    if (d.equals(SAME_EXPIRY_AS_BUCKET)) {
+      return SAME_EXPIRY_AS_BUCKET;
+    }
+    if (d.equals(NEVER_EXPIRE)) {
+      return NEVER_EXPIRE;
+    }
+    return d;
   }
 
   /**
@@ -85,7 +119,7 @@ public class CollectionSpec {
    * @return the created {@link CollectionSpec}.
    */
   public static CollectionSpec create(final String name, final String scopeName) {
-    return new CollectionSpec(name, scopeName, Duration.ZERO, null);
+    return new CollectionSpec(name, scopeName, SAME_EXPIRY_AS_BUCKET, null);
   }
 
   /**
@@ -143,7 +177,11 @@ public class CollectionSpec {
   }
 
   /**
-   * The max expiry for this collection, {@link Duration#ZERO} otherwise.
+   * The max expiry for documents in this collection,
+   * or a non-positive duration indicating special expiry behavior.
+   *
+   * @see #SAME_EXPIRY_AS_BUCKET
+   * @see #NEVER_EXPIRE
    */
   @Stability.Volatile
   public Duration maxExpiry() {

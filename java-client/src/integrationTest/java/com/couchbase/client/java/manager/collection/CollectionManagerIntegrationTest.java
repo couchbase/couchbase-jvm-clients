@@ -37,9 +37,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.couchbase.client.java.manager.collection.CreateCollectionSettings.createCollectionSettings;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
@@ -226,6 +228,38 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
     collections.dropCollection(collectionSpec1.scopeName(), collectionSpec1.name());
     collections.dropCollection(collectionSpec2.scopeName(), collectionSpec2.name());
+  }
+
+  @Test
+  @IgnoreWhen(clusterVersionIsBelow = "7.6")
+  void expiryCanBeNeverExpire() {
+    String scopeName = randomString();
+    collections.createScope(scopeName);
+    ConsistencyUtil.waitUntilScopePresent(cluster.core(), config().bucketname(), scopeName);
+
+    String collectionName = randomString();
+    collections.createCollection(
+      scopeName,
+      collectionName,
+      createCollectionSettings()
+        .maxExpiry(CollectionSpec.NEVER_EXPIRE)
+    );
+
+    ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), config().bucketname(), scopeName, collectionName);
+
+    CollectionSpec spec = getCollection(scopeName, collectionName);
+
+    // assertSame instead of assertEquals, so users can write:
+    //   if (spec.maxExpiry() == NEVER_EXPIRE)
+    assertSame(CollectionSpec.NEVER_EXPIRE, spec.maxExpiry());
+  }
+
+  private CollectionSpec getCollection(String scopeName, String collectionName) {
+    return collections.getAllScopes().stream()
+      .filter(scope -> scope.name().equals(scopeName))
+      .flatMap(scope -> scope.collections().stream()
+        .filter(collection -> collection.name().equals(collectionName))
+      ).findFirst().orElseThrow(() -> new CollectionNotFoundException(scopeName + "." + collectionName));
   }
 
   @Test

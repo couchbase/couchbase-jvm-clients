@@ -41,6 +41,13 @@ public class UpdateCollectionSettings {
     return new UpdateCollectionSettings();
   }
 
+  /**
+   * The max expiry for documents in this collection,
+   * or a non-positive duration indicating special expiry behavior.
+   *
+   * @see CollectionSpec#SAME_EXPIRY_AS_BUCKET
+   * @see CollectionSpec#NEVER_EXPIRE
+   */
   public UpdateCollectionSettings maxExpiry(Duration maxExpiry) {
     this.maxExpiry = maxExpiry;
     return this;
