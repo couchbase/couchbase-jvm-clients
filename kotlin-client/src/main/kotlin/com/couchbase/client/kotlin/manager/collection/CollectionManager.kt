@@ -50,7 +50,10 @@ public class CollectionManager internal constructor(bucket: Bucket) {
      *
      * @param scopeName Name of the parent scope. This scope must already exist.
      * @param collectionName Name of the collection to create.
-     * @param maxExpiry Maximum expiry for documents in the collection, or null if unlimited.
+     * @param maxExpiry Maximum expiry for documents in the collection.
+     * [Duration.ZERO] (or null) means the collection's max expiry is always the same as the bucket's max expiry.
+     * If using Couchbase Server 7.6 or later, [CollectionSpec.NEVER_EXPIRE] (or -1 seconds)
+     * means documents in the collection never expire, regardless of the bucket's max expiry.
      *
      * @throws ScopeNotFoundException if the parent scope does not exist.
      * @throws CollectionExistsException if there is already a collection with the same name in the parent scope.
@@ -98,7 +101,11 @@ public class CollectionManager internal constructor(bucket: Bucket) {
      *
      * @param scopeName Name of the parent scope. This scope must already exist.
      * @param collectionName Name of the collection to update. This collection must already exist.
-     * @param maxExpiry New value for the maximum expiry for documents in the collection ([Duration.ZERO] means "no expiry"), or null to leave unmodified.
+     * @param maxExpiry New value for the maximum expiry for documents in the collection.
+     * Pass null to leave unmodified.
+     * Pass [Duration.ZERO] to have the collection's max expiry always be the same as the bucket's max expiry.
+     * If using Couchbase Server 7.6 or later, pass [CollectionSpec.NEVER_EXPIRE] (or -1 seconds)
+     * to have documents in the collection never expire, regardless of the bucket's max expiry.
      * @param history New value for history preservation for this collection, or null to leave unmodified.
      *
      * @throws ScopeNotFoundException if the parent scope does not exist.

@@ -16,14 +16,21 @@
 
 package com.couchbase.client.kotlin.manager.collection
 
+import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.manager.collection.CollectionSpec.Companion.NEVER_EXPIRE
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Information about a collection.
  *
  * @property scopeName Name of the parent scope
  * @property name Name of the collection
- * @property maxExpiry Maximum expiry for documents in the collection, or null if unlimited.
+ * @property maxExpiry Maximum expiry for documents in the collection.
+ * Null means the collection's max expiry is always the same as the bucket's max expiry.
+ * A duration equal to [NEVER_EXPIRE] (-1 seconds) means documents in the collection never expire,
+ * regardless of the bucket's max expiry.
  */
 public class CollectionSpec(
     public val scopeName: String,
@@ -31,6 +38,18 @@ public class CollectionSpec(
     public val maxExpiry: Duration? = null,
     public val history: Boolean? = null,
 ) {
+    public companion object {
+        /**
+         * A special collection "max expiry" value that means documents in the collection
+         * never expire, regardless of the bucket's max expiry setting.
+         *
+         * Requires Couchbase Server 7.6 or later.
+         */
+        @SinceCouchbase("7.6")
+        @VolatileCouchbaseApi
+        public val NEVER_EXPIRE: Duration = (-1).seconds
+    }
+
     @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
     public constructor(
         scopeName: String,
