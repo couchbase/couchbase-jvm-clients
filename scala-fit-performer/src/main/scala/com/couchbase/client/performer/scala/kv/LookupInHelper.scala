@@ -348,8 +348,10 @@ object LookupInHelper {
       var out  = LookupInOptions()
       if (opts.hasTimeoutMillis)
         out = out.timeout(Duration.create(opts.getTimeoutMillis, TimeUnit.MILLISECONDS))
+      // [start:3.6.0]
       if (opts.hasAccessDeleted)
         out = out.accessDeleted(opts.getAccessDeleted)
+      // [end:3.6.0]
       assertIsSerializable(out)
       Some(out)
     } else None
