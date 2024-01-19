@@ -441,6 +441,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery(), spans));
       else qr = scope.query(query);
       populateResult(slc.getQuery(), result, qr);
+      return result.build();
     }
     // [end:3.0.9]
 
