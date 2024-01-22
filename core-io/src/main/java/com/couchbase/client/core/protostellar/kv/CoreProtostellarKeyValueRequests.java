@@ -137,7 +137,7 @@ public class CoreProtostellarKeyValueRequests {
       TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_LOCK, CoreDurability.NONE, opts.parentSpan().orElse(null)),
       timeout,
-      true,
+      false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext(),
       0);
@@ -172,7 +172,7 @@ public class CoreProtostellarKeyValueRequests {
       TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH,
       createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_GET_AND_TOUCH, CoreDurability.NONE, opts.parentSpan().orElse(null)),
       timeout,
-      true,
+      false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext(),
       0);
