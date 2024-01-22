@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
- * A VectorSearch allows one or more individual {@link VectorQuery>s to be executed.
+ * A VectorSearch allows one or more individual {@link VectorQuery}s to be executed.
  */
 @Stability.Volatile
 public class VectorSearch {
