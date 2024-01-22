@@ -214,7 +214,7 @@ public class Cluster internal constructor(
         get() = UserManager(core, httpClient)
 
     /**
-     * A manager for administering N1QL indexes.
+     * A manager for administering SQL++ indexes.
      *
      * For Couchbase Server 7 and later, please use [Collection.queryIndexes] instead.
      */
@@ -249,7 +249,7 @@ public class Cluster internal constructor(
      * Generates a diagnostic report on the current state of the cluster from the SDKs point of view.
      *
      * This operation does not perform any I/O. It uses only the last known state of the cluster
-     * to assemble the report. For example, if no N1QL query has been executed, the Query service's
+     * to assemble the report. For example, if no SQL++ query has been executed, the Query service's
      * socket pool might be empty, and as result not show up in the report.
      *
      * If you wish to actively assess the health of the cluster by performing I/O,
@@ -440,7 +440,7 @@ public class Cluster internal constructor(
 
     /**
      * Returns a Flow which may be collected to execute a cluster-level
-     * N1QL query and process the results.
+     * SQL++ query and process the results.
      *
      * The returned Flow is cold, meaning the query is not executed unless
      * the Flow is collected. If you collect the flow multiple times,
@@ -454,11 +454,11 @@ public class Cluster internal constructor(
      * lambda to invoke when each row is received from the server:
      * `Flow<QueryFlowItem>.execute { row -> ... }`.
      *
-     * @param statement the N1QL statement to execute.
+     * @param statement the SQL++ statement to execute.
      *
      * @param common options common to all requests.
      *
-     * @param parameters parameters to the N1QL statement.
+     * @param parameters parameters to the SQL++ statement.
      *
      * @param preserveExpiry pass true if you want the query engine to preserve
      * existing expiration times for any documents modified by this query.
@@ -473,7 +473,7 @@ public class Cluster internal constructor(
      * tell the server to wait for the indexer to catch up with a certain
      * state of the K/V service before executing the query.
      *
-     * @param readonly pass true if the N1QL statement does not modify documents.
+     * @param readonly pass true if the SQL++ statement does not modify documents.
      * This allows the client to retry the query if necessary.
      *
      * @param adhoc pass false if this is a commonly used query that should be

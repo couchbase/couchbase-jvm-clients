@@ -43,7 +43,7 @@ internal fun quickstart() {
         val collection = bucket.defaultCollection()
 
         runBlocking {
-            // Perform a N1QL query
+            // Perform a SQL++ query
             val queryResult = cluster
                 .query("select * from `travel-sample` limit 3")
                 .execute()

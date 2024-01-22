@@ -23,7 +23,7 @@ import com.couchbase.client.core.msg.kv.MutationTokenAggregator
  * Aggregation of [MutationToken]s from [MutationResult]s.
  *
  * Used for specifying advanced scan consistency requirements
- * for N1QL or FTS queries.
+ * for SQL++ or Full-Text Search queries.
  *
  * Thread-safe.
  */
@@ -62,8 +62,8 @@ public class MutationState private constructor(
     }
 
     /**
-     * Exports the this mutation state into a universal format,
-     * which can be used either to serialize it into a N1QL query
+     * Exports this mutation state into a universal format,
+     * which can be used either to serialize it into a SQL++ query
      * or to send it over the network to a different application/SDK.
      */
     public fun export(): Map<String, Any?> = tokens.export()

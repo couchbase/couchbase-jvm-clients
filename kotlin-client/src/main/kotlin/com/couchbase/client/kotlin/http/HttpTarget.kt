@@ -52,7 +52,7 @@ public class HttpTarget internal constructor(
         public fun manager(): HttpTarget = HttpTarget(ServiceType.MANAGER)
 
         /**
-         * Target the N1QL Query service (port 8093 by default).
+         * Target the SQL++ Query service (port 8093 by default).
          */
         public fun query(): HttpTarget = HttpTarget(ServiceType.QUERY)
 

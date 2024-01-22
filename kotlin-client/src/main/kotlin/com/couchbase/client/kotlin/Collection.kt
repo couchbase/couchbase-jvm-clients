@@ -104,7 +104,7 @@ public class Collection internal constructor(
     public val binary: BinaryCollection = BinaryCollection(this)
 
     /**
-     * A manager for administering this collection's N1QL indexes.
+     * A manager for administering this collection's SQL++ indexes.
      *
      * Requires Couchbase Server 7.0 or later. For earlier versions,
      * please use [Cluster.queryIndexes].
