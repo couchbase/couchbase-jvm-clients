@@ -430,6 +430,8 @@ public class OptionsUtil {
                 clusterEnvironment.meter(OpenTelemetryMeter.wrap(openTelemetry));
             }
             if (oc.hasTracing()) {
+                // [end:3.2.0]
+                // [start:3.5.0]
                 final SdkTracerProvider tracerProviderForShutdown = tracerProvider;
                 onClusterConnectionClose.add(() -> {
                     logger.info("Shutting down tracer provider");
@@ -438,6 +440,8 @@ public class OptionsUtil {
                 });
                 var tracer = OpenTelemetryRequestTracer.wrap(openTelemetry);
                 clusterEnvironment.requestTracer(tracer);
+                // [end:3.5.0]
+                // [start:3.2.0]
             }
         }
 

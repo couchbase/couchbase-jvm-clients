@@ -40,7 +40,6 @@ import com.couchbase.client.java.manager.search.UpsertSearchIndexOptions;
 import com.couchbase.client.java.search.HighlightStyle;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
-import com.couchbase.client.java.search.SearchRequest;
 import com.couchbase.client.java.search.SearchScanConsistency;
 import com.couchbase.client.java.search.facet.DateRange;
 import com.couchbase.client.java.search.facet.NumericRange;
@@ -54,10 +53,13 @@ import com.couchbase.client.java.search.sort.SearchFieldMode;
 import com.couchbase.client.java.search.sort.SearchFieldType;
 import com.couchbase.client.java.search.sort.SearchGeoDistanceUnits;
 import com.couchbase.client.java.search.sort.SearchSort;
+// [start:3.6.0]
 import com.couchbase.client.java.search.vector.VectorQuery;
 import com.couchbase.client.java.search.vector.VectorQueryCombination;
 import com.couchbase.client.java.search.vector.VectorSearch;
 import com.couchbase.client.java.search.vector.VectorSearchOptions;
+import com.couchbase.client.java.search.SearchRequest;
+// [end:3.6.0]
 import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;

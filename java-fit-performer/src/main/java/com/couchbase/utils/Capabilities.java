@@ -63,9 +63,11 @@ public class Capabilities {
         out.add(Caps.SDK_LOOKUP_IN);
         out.add(Caps.SDK_LOOKUP_IN_REPLICAS);
 
-        // [start:3.4.10]
+        // We supported observability before this, but as we have to fix the version of tracing-opentelemetry module used by the performer, we hit
+        // issues related to not having GrpcAwareRequestTracer.
+        // [start:3.5.0]
         out.add(Caps.SDK_OBSERVABILITY_RFC_REV_24);
-        // [end:3.4.10]
+        // [end:3.5.0]
 
         out.add(Caps.SDK_KV);
         // [start:3.5.1]
