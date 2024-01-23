@@ -32,7 +32,6 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.MutationState;
-import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryOptionsUtil;
 import com.couchbase.client.java.search.facet.SearchFacet;
 import com.couchbase.client.java.search.result.SearchResult;
@@ -86,7 +85,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    *
    * @param key   the parameter name (key of the JSON property)  or empty.
    * @param value the parameter value (value of the JSON property).
-   * @return the same {@link QueryOptions} for chaining purposes.
+   * @return the same {@link SearchOptions} for chaining purposes.
    */
   public SearchOptions raw(final String key, final Object value) {
     notNullOrEmpty(key, "Key");
@@ -210,7 +209,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * consistency tuning previously set.
    *
    * @param consistency the simple consistency to use.
-   * @return this SearchQuery for chaining.
+   * @return this {@link SearchOptions} for chaining.
    */
   public SearchOptions scanConsistency(SearchScanConsistency consistency) {
     this.consistency = consistency;
@@ -222,7 +221,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
    * Sets mutation tokens this query should be consistent with.
    *
    * @param consistentWith the mutation state to be consistent with.
-   * @return this {@link QueryOptions} for chaining.
+   * @return this {@link SearchOptions} for chaining.
    */
   public SearchOptions consistentWith(final MutationState consistentWith) {
     this.consistentWith = consistentWith;
