@@ -21,6 +21,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 @Stability.Internal
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoreNumericRangeSearchFacetResult extends CoreAbstractSearchFacetResult {
@@ -35,7 +37,7 @@ public class CoreNumericRangeSearchFacetResult extends CoreAbstractSearchFacetRe
       @JsonProperty("other") long other,
       @JsonProperty("numeric_ranges") List<CoreSearchNumericRange> numericRanges) {
     super(name, field, total, missing, other);
-    this.numericRanges = numericRanges;
+    this.numericRanges = numericRanges == null ? emptyList() : numericRanges;
   }
 
   public List<CoreSearchNumericRange> numericRanges() {

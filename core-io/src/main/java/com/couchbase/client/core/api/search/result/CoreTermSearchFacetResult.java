@@ -22,6 +22,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 @Stability.Internal
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoreTermSearchFacetResult extends CoreAbstractSearchFacetResult {
@@ -37,7 +39,7 @@ public class CoreTermSearchFacetResult extends CoreAbstractSearchFacetResult {
       @JsonProperty("other") long other,
       @JsonProperty("terms") List<CoreSearchTermRange> terms) {
     super(name, field, total, missing, other);
-    this.terms = terms;
+    this.terms = terms == null ? emptyList() : terms;
   }
 
   public List<CoreSearchTermRange> terms() {

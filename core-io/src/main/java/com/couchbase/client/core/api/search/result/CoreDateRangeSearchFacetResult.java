@@ -22,6 +22,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 
 import java.util.List;
 
+import static java.util.Collections.emptyList;
+
 @Stability.Internal
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CoreDateRangeSearchFacetResult extends CoreAbstractSearchFacetResult {
@@ -37,7 +39,7 @@ public class CoreDateRangeSearchFacetResult extends CoreAbstractSearchFacetResul
       @JsonProperty("other") long other,
       @JsonProperty("date_ranges") List<CoreSearchDateRange> dateRanges) {
     super(name, field, total, missing, other);
-    this.dateRanges = dateRanges;
+    this.dateRanges = dateRanges == null ? emptyList() : dateRanges;
   }
 
   public List<CoreSearchDateRange> dateRanges() {
