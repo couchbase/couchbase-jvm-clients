@@ -244,7 +244,7 @@ private[scala] object CoreCommonConverters {
       Option(in.`type`),
       Option(convert(in.params.asScala.toMap)),
       Option(in.sourceUuid),
-      Option(convert(in.sourceParams.asScala.toMap)),
+      Option(convert(Option(in.sourceParams).map(_.asScala).getOrElse(Map()).toMap)),
       Option(in.sourceType),
       Option(convert(in.planParams.asScala.toMap))
     )

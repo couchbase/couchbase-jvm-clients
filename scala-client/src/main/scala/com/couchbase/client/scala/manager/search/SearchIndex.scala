@@ -63,15 +63,16 @@ case class SearchIndex(
   private val DefaultType       = "fulltext-index"
 
   private[scala] def toJson: String = {
-    val output = JsonObject.create
-    uuid.foreach(v => output.put("uuid", v))
-    output.put("name", name)
-    output.put("sourceName", sourceName)
-    output.put("type", typ.getOrElse(DefaultType))
-    output.put("sourceType", sourceType.getOrElse(DefaultSourceType))
-    params.foreach(v => output.put("params", v))
-    sourceParams.foreach(v => output.put("sourceParams", v))
-    planParams.foreach(v => output.put("planParams", v))
+    val output = ujson.Obj()
+
+    uuid.foreach(v => output.update("uuid", v))
+    output.update("name", name)
+    output.update("sourceName", sourceName)
+    output.update("type", typ.getOrElse(DefaultType))
+    output.update("sourceType", sourceType.getOrElse(DefaultSourceType))
+    params.foreach(v => output.update("params", v))
+    sourceParams.foreach(v => output.update("sourceParams", v))
+    planParams.foreach(v => output.update("planParams", v))
     output.toString
   }
 

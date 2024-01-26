@@ -50,7 +50,7 @@ case class VectorSearchOptions private (
   private[scala] def toCore: CoreVectorSearchOptions =
     new CoreVectorSearchOptions(vectorQueryCombination.map {
       case VectorQueryCombination.And => CoreVectorQueryCombination.AND
-      case VectorQueryCombination.Or => CoreVectorQueryCombination.AND
+      case VectorQueryCombination.Or  => CoreVectorQueryCombination.OR
     }.orNull)
 }
 
