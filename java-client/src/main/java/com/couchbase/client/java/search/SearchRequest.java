@@ -87,7 +87,9 @@ public class SearchRequest {
 
   @Stability.Internal
   public CoreSearchRequest toCore() {
-    return new CoreSearchRequest(searchQuery == null ? MatchNoneQuery.matchNone().toCore() : searchQuery.toCore(),
-      vectorSearch == null ? null : vectorSearch.toCore());
+    return new CoreSearchRequest(
+      searchQuery == null ? null : searchQuery.toCore(),
+      vectorSearch == null ? null : vectorSearch.toCore()
+    );
   }
 }

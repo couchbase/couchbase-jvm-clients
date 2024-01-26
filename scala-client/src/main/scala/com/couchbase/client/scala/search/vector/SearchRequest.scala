@@ -84,7 +84,7 @@ case class SearchRequest private (
       case None =>
         Success(
           new CoreSearchRequest(
-            searchQuery.getOrElse(MatchNoneQuery()).toCore,
+            searchQuery.map(_.toCore).orNull,
             vectorSearch.map(_.toCore).orNull
           )
         )

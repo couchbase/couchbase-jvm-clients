@@ -34,7 +34,7 @@ public class CoreSearchRequest {
     if (searchQuery == null && vectorSearch == null) {
       throw new InvalidArgumentException("At least one of searchQuery and vectorSearch must be specified", null, null);
     }
-    this.searchQuery = searchQuery;
+    this.searchQuery = searchQuery == null ? new CoreMatchNoneQuery(null) : searchQuery;
     this.vectorSearch = vectorSearch;
   }
 
