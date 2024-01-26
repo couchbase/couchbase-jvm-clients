@@ -16,19 +16,25 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.manager.search.AsyncScopeSearchIndexManager
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.result.SearchResult
+import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import java.util.Optional
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase scope resource.
   *
@@ -51,9 +57,15 @@ class AsyncScope private[scala] (
 ) {
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val queryOps                      = couchbaseOps.queryOps()
+  private[scala] val searchOps =
+    couchbaseOps.searchOps(new CoreBucketAndScope(bucketName, scopeName))
 
   /** The name of this scope. */
   def name = scopeName
+
+  /** Allows managing scoped FTS indexes. */
+  lazy val searchIndexes =
+    new AsyncScopeSearchIndexManager(new CoreBucketAndScope(bucketName, scopeName), couchbaseOps)
 
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection: AsyncCollection =
@@ -144,6 +156,51 @@ class AsyncScope private[scala] (
           case Failure(err)     => Future.failed(err)
         }
       case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest
+  ): Future[SearchResult] = {
+    search(indexName, request, SearchOptions())
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @param options   see [[com.couchbase.client.scala.search.SearchOptions]]
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest,
+      options: SearchOptions
+  ): Future[SearchResult] = {
+    request.toCore match {
+      case Failure(err) => Future.failed(err)
+      case Success(req) =>
+        convert(searchOps.searchAsync(indexName, req, options.toCore))
+          .map(result => SearchResult(result))
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,20 @@ package com.couchbase.client.scala.manager.search
 
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
-import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.util.DurationConversions._
+import reactor.core.scala.publisher.SMono
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.util.Try
 
 /** Allows indexes for Full Text Search (FTS) to be managed.
   *
-  * This interface is for global indexes.  For scoped indexes, use [[ScopeSearchIndexManager]].
+  * This interface is for scoped indexes.  For global indexes, use [[ReactiveSearchIndexManager]].
   */
-class SearchIndexManager(private[scala] val async: AsyncSearchIndexManager) {
+@Stability.Volatile
+class ReactiveScopeSearchIndexManager(private[scala] val async: AsyncScopeSearchIndexManager)(
+    implicit val ec: ExecutionContext
+) {
   private val DefaultTimeout: Duration            = async.DefaultTimeout
   private val DefaultRetryStrategy: RetryStrategy = async.DefaultRetryStrategy
 
@@ -36,87 +38,87 @@ class SearchIndexManager(private[scala] val async: AsyncSearchIndexManager) {
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[SearchIndex] = {
-    Collection.block(async.getIndex(indexName, timeout, retryStrategy))
+  ): SMono[SearchIndex] = {
+    SMono.fromFuture(async.getIndex(indexName, timeout, retryStrategy))
   }
 
   def getAllIndexes(
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Seq[SearchIndex]] = {
-    Collection.block(async.getAllIndexes(timeout, retryStrategy))
+  ): SMono[Seq[SearchIndex]] = {
+    SMono.fromFuture(async.getAllIndexes(timeout, retryStrategy))
   }
 
   def upsertIndex(
       indexDefinition: SearchIndex,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.upsertIndex(indexDefinition, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.upsertIndex(indexDefinition, timeout, retryStrategy))
   }
 
   def dropIndex(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.dropIndex(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.dropIndex(indexName, timeout, retryStrategy))
   }
 
   def getIndexedDocumentsCount(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Long] = {
-    Collection.block(async.getIndexedDocumentsCount(indexName, timeout, retryStrategy))
+  ): SMono[Long] = {
+    SMono.fromFuture(async.getIndexedDocumentsCount(indexName, timeout, retryStrategy))
   }
 
   def pauseIngest(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.pauseIngest(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.pauseIngest(indexName, timeout, retryStrategy))
   }
 
   def resumeIngest(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.resumeIngest(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.resumeIngest(indexName, timeout, retryStrategy))
   }
 
   def allowQuerying(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.allowQuerying(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.allowQuerying(indexName, timeout, retryStrategy))
   }
 
   def disallowQuerying(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.disallowQuerying(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.disallowQuerying(indexName, timeout, retryStrategy))
   }
 
   def freezePlan(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.freezePlan(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.freezePlan(indexName, timeout, retryStrategy))
   }
 
   def unfreezePlan(
       indexName: String,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Unit] = {
-    Collection.block(async.unfreezePlan(indexName, timeout, retryStrategy))
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.unfreezePlan(indexName, timeout, retryStrategy))
   }
 
   def analyzeDocument(
@@ -124,7 +126,7 @@ class SearchIndexManager(private[scala] val async: AsyncSearchIndexManager) {
       document: JsonObject,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy
-  ): Try[Seq[JsonObject]] = {
-    Collection.block(async.analyzeDocument(indexName, document, timeout, retryStrategy))
+  ): SMono[Seq[JsonObject]] = {
+    SMono.fromFuture(async.analyzeDocument(indexName, document, timeout, retryStrategy))
   }
 }

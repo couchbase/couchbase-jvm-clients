@@ -35,8 +35,10 @@ case class VectorSearch private (
     copy(vectorSearchOptions = Some(vectorSearchOptions))
 
   private[scala] def toCore: CoreVectorSearch =
-    new CoreVectorSearch(vectorQueries.map(_.toCore).toList.asJava,
-      vectorSearchOptions.map(_.toCore).orNull)
+    new CoreVectorSearch(
+      vectorQueries.map(_.toCore).toList.asJava,
+      vectorSearchOptions.map(_.toCore).orNull
+    )
 }
 
 @Volatile

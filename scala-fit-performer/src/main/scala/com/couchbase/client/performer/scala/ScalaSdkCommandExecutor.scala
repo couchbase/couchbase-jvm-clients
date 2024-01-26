@@ -308,7 +308,14 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       if (slc.hasQuery) {
         result = QueryHelper.handleScopeQuery(scope.get, op, slc)
       }
-    } else if (op.hasCollectionCommand) {
+      // [start:1.6.0]
+      else if (slc.hasSearchIndexManager) {
+        result = SearchHelper.handleScopeSearchIndexManager(scope.get, op)
+      } else if (slc.hasSearchV2) {
+        result = SearchHelper.handleScopeSearchBlocking(scope.get, slc.getSearchV2)
+      }
+      // [end:1.6.0]
+   } else if (op.hasCollectionCommand) {
       val clc  = op.getCollectionCommand
       val collection = if (clc.hasCollection) {
           val coll = clc.getCollection
@@ -1014,7 +1021,7 @@ object ScalaSdkCommandExecutor {
     val builder = com.couchbase.client.protocol.sdk.kv.CounterResult.newBuilder
       .setCas(value.cas)
       .setContent(value.content)
-    
+
     value.mutationToken.foreach(
       mt =>
         builder.setMutationToken(
@@ -1025,7 +1032,7 @@ object ScalaSdkCommandExecutor {
             .setBucketName(mt.bucketName)
         )
     )
-    
+
     result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder
       .setCounterResult(builder))
   }

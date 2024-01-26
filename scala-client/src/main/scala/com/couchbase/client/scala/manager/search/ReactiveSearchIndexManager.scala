@@ -18,6 +18,7 @@ package com.couchbase.client.scala.manager.search
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
+import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.scala.publisher.SMono
 
@@ -26,8 +27,9 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 /** Allows indexes for Full Text Search (FTS) to be managed.
+  *
+  * This interface is for global indexes.  For scoped indexes, use [[ReactiveScopeSearchIndexManager]].
   */
-@Stability.Volatile
 class ReactiveSearchIndexManager(private[scala] val async: AsyncSearchIndexManager)(
     implicit val ec: ExecutionContext
 ) {
@@ -63,5 +65,70 @@ class ReactiveSearchIndexManager(private[scala] val async: AsyncSearchIndexManag
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
     SMono.fromFuture(async.dropIndex(indexName, timeout, retryStrategy))
+  }
+
+  def getIndexedDocumentsCount(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Long] = {
+    SMono.fromFuture(async.getIndexedDocumentsCount(indexName, timeout, retryStrategy))
+  }
+
+  def pauseIngest(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.pauseIngest(indexName, timeout, retryStrategy))
+  }
+
+  def resumeIngest(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.resumeIngest(indexName, timeout, retryStrategy))
+  }
+
+  def allowQuerying(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.allowQuerying(indexName, timeout, retryStrategy))
+  }
+
+  def disallowQuerying(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.disallowQuerying(indexName, timeout, retryStrategy))
+  }
+
+  def freezePlan(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.freezePlan(indexName, timeout, retryStrategy))
+  }
+
+  def unfreezePlan(
+      indexName: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Unit] = {
+    SMono.fromFuture(async.unfreezePlan(indexName, timeout, retryStrategy))
+  }
+
+  def analyzeDocument(
+      indexName: String,
+      document: JsonObject,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy
+  ): SMono[Seq[JsonObject]] = {
+    SMono.fromFuture(async.analyzeDocument(indexName, document, timeout, retryStrategy))
   }
 }

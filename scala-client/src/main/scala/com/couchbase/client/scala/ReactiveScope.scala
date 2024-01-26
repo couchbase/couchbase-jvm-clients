@@ -16,11 +16,19 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.manager.search.{
+  ReactiveScopeSearchIndexManager,
+  ScopeSearchIndexManager
+}
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.result.{ReactiveSearchResult, SearchResult}
+import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.SMono
 
@@ -43,6 +51,9 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
 
   /** The name of this scope. */
   def name = async.name
+
+  /** Allows managing scoped FTS indexes. */
+  lazy val searchIndexes = new ReactiveScopeSearchIndexManager(async.searchIndexes)
 
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection: ReactiveCollection = {
@@ -113,6 +124,51 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
           case Failure(err)     => SMono.error(err)
         }
       case _ => SMono.error(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+    }
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest
+  ): SMono[ReactiveSearchResult] = {
+    search(indexName, request, SearchOptions())
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @param options   see [[com.couchbase.client.scala.search.SearchOptions]]
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest,
+      options: SearchOptions
+  ): SMono[ReactiveSearchResult] = {
+    request.toCore match {
+      case Failure(err) => SMono.raiseError(err)
+      case Success(req) =>
+        convert(async.searchOps.searchReactive(indexName, req, options.toCore))
+          .map(result => ReactiveSearchResult(result))
     }
   }
 }

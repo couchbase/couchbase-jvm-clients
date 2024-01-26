@@ -44,6 +44,11 @@ object Capabilities {
     // [start:1.4.5]
     out.add(Caps.SDK_SEARCH)
     // [end:1.4.5]
+    // [start:1.6.0]
+    out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
+    out.add(Caps.SDK_SCOPE_SEARCH)
+    out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
+    // [end:1.6.0]
 
     //TODO: fully implement eventing function manager - Scala performer only supports getFunction currently
     out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER)

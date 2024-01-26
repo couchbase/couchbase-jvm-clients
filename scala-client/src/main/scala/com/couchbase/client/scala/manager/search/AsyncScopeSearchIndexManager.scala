@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.couchbase.client.scala.manager.search
 
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.json.Mapper
@@ -32,12 +33,16 @@ import scala.jdk.CollectionConverters._
 
 /** Allows Full Text Search (FTS) indexes to be managed.
   *
-  * This interface is for global indexes.  For scoped indexes, use [[AsyncScopeSearchIndexManager]].
+  * This interface is for scoped indexes.  For global indexes, use [[AsyncSearchIndexManager]].
   */
-class AsyncSearchIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps)(
+@Stability.Volatile
+class AsyncScopeSearchIndexManager private[scala] (
+    private[scala] val scope: CoreBucketAndScope,
+    private[scala] val couchbaseOps: CoreCouchbaseOps
+)(
     implicit val ec: ExecutionContext
 ) {
-  private val internal = couchbaseOps.clusterSearchIndexManager()
+  private val internal = couchbaseOps.scopeSearchIndexManager(scope)
   private[scala] val DefaultTimeout: Duration =
     couchbaseOps.asCore().context().environment().timeoutConfig().managementTimeout()
   private[scala] val DefaultRetryStrategy: RetryStrategy =

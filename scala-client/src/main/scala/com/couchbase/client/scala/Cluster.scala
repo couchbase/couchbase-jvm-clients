@@ -209,9 +209,11 @@ class Cluster private[scala] (
     )
   }
 
-  /** Performs a Full Text Search (FTS) query against the cluster, using default options.
+  /** Performs a Full Text Search (FTS) query, using default options.
     *
     * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access global FTS indexes, and [[Scope.search]] for scoped indexes.
     *
     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
     * [[Cluster.async]] for an asynchronous version.
@@ -230,9 +232,11 @@ class Cluster private[scala] (
     search(indexName, request, SearchOptions())
   }
 
-  /** Performs a Full Text Search (FTS) query against the cluster.
+  /** Performs a Full Text Search (FTS) query.
     *
     * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access global FTS indexes, and [[Scope.search]] for scoped indexes.
     *
     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
     * [[Cluster.async]] for an asynchronous version.

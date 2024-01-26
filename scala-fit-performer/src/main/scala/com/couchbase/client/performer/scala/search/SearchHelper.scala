@@ -20,22 +20,44 @@ package com.couchbase.client.performer.scala.search
 
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertMutationState, setSuccess}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
+  convertMutationState,
+  setSuccess
+}
 import com.couchbase.client.performer.scala.util.ContentAsUtil
 import com.couchbase.client.protocol.run.Result
-import com.couchbase.client.protocol.sdk.search.MatchOperator.{SEARCH_MATCH_OPERATOR_AND, SEARCH_MATCH_OPERATOR_OR}
+import com.couchbase.client.protocol.sdk.search.MatchOperator.{
+  SEARCH_MATCH_OPERATOR_AND,
+  SEARCH_MATCH_OPERATOR_OR
+}
 import com.couchbase.client.protocol.sdk.search.SearchGeoDistanceUnits
 import com.couchbase.client.protocol.sdk.search.SearchScanConsistency.SEARCH_SCAN_CONSISTENCY_NOT_BOUNDED
 import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndexes
 import com.couchbase.client.protocol.shared.ContentAs
-import com.couchbase.client.scala.Cluster
+import com.couchbase.client.scala.{Cluster, Scope}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.search.facet.SearchFacet
-import com.couchbase.client.scala.search.facet.SearchFacet.{DateRange, DateRangeFacet, NumericRange, NumericRangeFacet, TermFacet}
+import com.couchbase.client.scala.search.facet.SearchFacet.{
+  DateRange,
+  DateRangeFacet,
+  NumericRange,
+  NumericRangeFacet,
+  TermFacet
+}
 import com.couchbase.client.scala.search.queries.{MatchOperator, SearchQuery}
-import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchMetaData, SearchResult, SearchRow}
-import com.couchbase.client.scala.search.sort.{FieldSortMissing, FieldSortMode, FieldSortType, SearchSort}
+import com.couchbase.client.scala.search.result.{
+  SearchFacetResult,
+  SearchMetaData,
+  SearchResult,
+  SearchRow
+}
+import com.couchbase.client.scala.search.sort.{
+  FieldSortMissing,
+  FieldSortMode,
+  FieldSortType,
+  SearchSort
+}
 import com.couchbase.client.scala.search.{HighlightStyle, SearchOptions, SearchScanConsistency}
 import com.google.protobuf.{ByteString, Timestamp}
 
@@ -201,10 +223,10 @@ object SearchHelper {
       opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
       // [end:1.4.5]
       // [start:<1.4.5]
-/*
+      /*
       throw new UnsupportedOperationException()
       // [end:<1.4.5]
-*/
+     */
     }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
     if (o.getRawCount > 0) opts = opts.raw(o.getRawMap.asScala.toMap)
@@ -424,57 +446,95 @@ object SearchHelper {
     result.setElapsedNanos(System.nanoTime - start)
     result.setSdk(
       com.couchbase.client.protocol.sdk.Result.newBuilder
-        .setSearchBlockingResult(convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None))
+        .setSearchBlockingResult(
+          convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None)
+        )
     )
     result
   }
 
   // [start:1.6.0]
   def handleSearchBlocking(
-                                 cluster: Cluster,
-                                 command: com.couchbase.client.protocol.sdk.search.SearchWrapper
-                               ): Result.Builder = {
-    val search = command.getSearch
+      cluster: Cluster,
+      command: com.couchbase.client.protocol.sdk.search.SearchWrapper
+  ): Result.Builder = {
+    val search  = command.getSearch
     val request = SearchHelper.convertSearchRequest(search.getRequest)
     val options = SearchHelper.convertSearchOptions(search.hasOptions, search.getOptions)
-    val result = Result.newBuilder
+    val result  = Result.newBuilder
     result.setInitiated(getTimeNow)
     val start = System.nanoTime
     val r = options match {
       case Some(opts) => cluster.search(search.getIndexName, request, opts).get
-      case _ => cluster.search(search.getIndexName, request).get
+      case _          => cluster.search(search.getIndexName, request).get
     }
     result.setElapsedNanos(System.nanoTime - start)
     result.setSdk(
       com.couchbase.client.protocol.sdk.Result.newBuilder
-        .setSearchBlockingResult(convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None))
+        .setSearchBlockingResult(
+          convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None)
+        )
     )
     result
   }
 
-  def convertVectorSearch(vectorSearch: com.couchbase.client.protocol.sdk.search.VectorSearch): com.couchbase.client.scala.search.vector.VectorSearch = {
-    var out = com.couchbase.client.scala.search.vector.VectorSearch(vectorSearch.getVectorQueryList.asScala
-    .map(convertVectorQuery))
+  def handleScopeSearchBlocking(
+      scope: Scope,
+      command: com.couchbase.client.protocol.sdk.search.SearchWrapper
+  ): Result.Builder = {
+    val search  = command.getSearch
+    val request = SearchHelper.convertSearchRequest(search.getRequest)
+    val options = SearchHelper.convertSearchOptions(search.hasOptions, search.getOptions)
+    val result  = Result.newBuilder
+    result.setInitiated(getTimeNow)
+    val start = System.nanoTime
+    val r = options match {
+      case Some(opts) => scope.search(search.getIndexName, request, opts).get
+      case _          => scope.search(search.getIndexName, request).get
+    }
+    result.setElapsedNanos(System.nanoTime - start)
+    result.setSdk(
+      com.couchbase.client.protocol.sdk.Result.newBuilder
+        .setSearchBlockingResult(
+          convertResult(r, if (command.hasFieldsAs) Some(command.getFieldsAs) else None)
+        )
+    )
+    result
+  }
+
+  def convertVectorSearch(
+      vectorSearch: com.couchbase.client.protocol.sdk.search.VectorSearch
+  ): com.couchbase.client.scala.search.vector.VectorSearch = {
+    var out = com.couchbase.client.scala.search.vector.VectorSearch(
+      vectorSearch.getVectorQueryList.asScala
+        .map(convertVectorQuery)
+    )
     if (vectorSearch.hasOptions) {
       val opts = vectorSearch.getOptions
       if (opts.hasVectorQueryCombination) {
-        val vqc: com.couchbase.client.scala.search.vector.VectorQueryCombination = opts.getVectorQueryCombination match {
-          case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.AND =>
-            com.couchbase.client.scala.search.vector.VectorQueryCombination.And
-          case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.OR =>
-            com.couchbase.client.scala.search.vector.VectorQueryCombination.Or
-          case _ => throw new UnsupportedOperationException()
-        }
-        out = out.vectorSearchOptions(com.couchbase.client.scala.search.vector.VectorSearchOptions()
-          .vectorQueryCombination(vqc))
+        val vqc: com.couchbase.client.scala.search.vector.VectorQueryCombination =
+          opts.getVectorQueryCombination match {
+            case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.AND =>
+              com.couchbase.client.scala.search.vector.VectorQueryCombination.And
+            case com.couchbase.client.protocol.sdk.search.VectorQueryCombination.OR =>
+              com.couchbase.client.scala.search.vector.VectorQueryCombination.Or
+            case _ => throw new UnsupportedOperationException()
+          }
+        out = out.vectorSearchOptions(
+          com.couchbase.client.scala.search.vector
+            .VectorSearchOptions()
+            .vectorQueryCombination(vqc)
+        )
       }
     }
     out
   }
 
-  def convertVectorQuery(vq: com.couchbase.client.protocol.sdk.search.VectorQuery): com.couchbase.client.scala.search.vector.VectorQuery = {
+  def convertVectorQuery(
+      vq: com.couchbase.client.protocol.sdk.search.VectorQuery
+  ): com.couchbase.client.scala.search.vector.VectorQuery = {
     val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
-    var out = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     if (vq.hasOptions) {
       val opts = vq.getOptions
       if (opts.hasNumCandidates) out = out.numCandidates(opts.getNumCandidates)
@@ -483,23 +543,25 @@ object SearchHelper {
     out
   }
 
-  def convertSearchRequest(request: com.couchbase.client.protocol.sdk.search.SearchRequest): com.couchbase.client.scala.search.vector.SearchRequest = {
+  def convertSearchRequest(
+      request: com.couchbase.client.protocol.sdk.search.SearchRequest
+  ): com.couchbase.client.scala.search.vector.SearchRequest = {
     if (request.hasSearchQuery) {
-      var out = com.couchbase.client.scala.search.vector.SearchRequest.searchQuery(convertSearchQuery(request.getSearchQuery))
+      var out = com.couchbase.client.scala.search.vector.SearchRequest
+        .searchQuery(convertSearchQuery(request.getSearchQuery))
       if (request.hasVectorSearch) {
         out = out.vectorSearch(convertVectorSearch(request.getVectorSearch))
       }
       out
     } else if (request.hasVectorSearch) {
-      com.couchbase.client.scala.search.vector.SearchRequest.vectorSearch(convertVectorSearch(request.getVectorSearch))
+      com.couchbase.client.scala.search.vector.SearchRequest
+        .vectorSearch(convertVectorSearch(request.getVectorSearch))
     } else {
       com.couchbase.client.scala.search.vector.SearchRequest.searchQuery(null)
     }
   }
 
-
   // [end:1.6.0]
-
 
   private def convertResult(
       result: SearchResult,
@@ -589,17 +651,19 @@ object SearchHelper {
 
     fieldsAs match {
       case Some(fa) =>
-        val content = ContentAsUtil.contentType(fa,
+        val content = ContentAsUtil.contentType(
+          fa,
           () => v.fieldsAs[Array[Byte]],
           () => v.fieldsAs[String],
           () => v.fieldsAs[JsonObject],
           () => v.fieldsAs[JsonArray],
           () => v.fieldsAs[Boolean],
           () => v.fieldsAs[Int],
-          () => v.fieldsAs[Double])
+          () => v.fieldsAs[Double]
+        )
         content match {
           case Failure(exception) => throw exception
-          case Success(value) => builder.setFields(value)
+          case Success(value)     => builder.setFields(value)
         }
       case _ =>
     }
@@ -614,6 +678,17 @@ object SearchHelper {
     if (!sim.hasShared) throw new UnsupportedOperationException
     handleSearchIndexManagerBlockingShared(cluster, command, sim.getShared)
   }
+
+  // [start:1.6.0]
+  def handleScopeSearchIndexManager(
+      scope: Scope,
+      command: com.couchbase.client.protocol.sdk.Command
+  ): com.couchbase.client.protocol.run.Result.Builder = {
+    val sim = command.getScopeCommand.getSearchIndexManager
+    if (!sim.hasShared) throw new UnsupportedOperationException
+    handleScopeSearchIndexManagerBlockingShared(scope, command, sim.getShared)
+  }
+  // [end:1.6.0]
 
   private def handleSearchIndexManagerBlockingShared(
       cluster: Cluster,
@@ -674,10 +749,10 @@ object SearchHelper {
       setSuccess(result)
       // [end:1.4.5]
       // [start:<1.4.5]
-/*
+      /*
       throw new UnsupportedOperationException()
       // [end:<1.4.5]
-*/
+     */
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
 
@@ -694,6 +769,361 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
+      // [start:1.6.0]
+    } else if (command.hasGetIndexedDocumentsCount) {
+      val req = command.getGetIndexedDocumentsCount
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val count = cluster.searchIndexes
+        .getIndexedDocumentsCount(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      result.setSdk(
+        com.couchbase.client.protocol.sdk.Result.newBuilder
+          .setSearchIndexManagerResult(
+            com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder
+              .setIndexedDocumentCounts(count.toInt)
+          )
+      )
+    } else if (command.hasPauseIngest) {
+      val req = command.getPauseIngest
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .pauseIngest(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasResumeIngest) {
+      val req = command.getResumeIngest
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .resumeIngest(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasAllowQuerying) {
+      val req = command.getAllowQuerying
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .allowQuerying(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasDisallowQuerying) {
+      val req = command.getDisallowQuerying
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .disallowQuerying(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasFreezePlan) {
+      val req = command.getFreezePlan
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .freezePlan(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasUnfreezePlan) {
+      val req = command.getUnfreezePlan
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .unfreezePlan(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasAnalyzeDocument) {
+      val req = command.getAnalyzeDocument
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      cluster.searchIndexes
+        .analyzeDocument(
+          req.getIndexName,
+          JsonObject.fromJson(req.getDocument.toStringUtf8),
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+      // [end:1.6.0]
+    } else
+      throw new UnsupportedOperationException(
+        "Unknown FTS operation"
+      )
+
+    result
+  }
+
+  // [start:1.6.0]
+  private def handleScopeSearchIndexManagerBlockingShared(
+      scope: Scope,
+      op: com.couchbase.client.protocol.sdk.Command,
+      command: com.couchbase.client.protocol.sdk.search.indexmanager.Command
+  ) = {
+    val result = Result.newBuilder
+    if (command.hasGetIndex) {
+      val req = command.getGetIndex
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val index = scope.searchIndexes
+        .getIndex(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      if (op.getReturnResult) populateResult(result, index)
+      else setSuccess(result)
+    } else if (command.hasGetAllIndexes) {
+      val req = command.getGetAllIndexes
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val indexes = scope.searchIndexes
+        .getAllIndexes(
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      if (op.getReturnResult) populateResult(result, indexes)
+      else setSuccess(result)
+    } else if (command.hasUpsertIndex) {
+      val req = command.getUpsertIndex
+
+      val converted = SearchIndex.fromJson(req.getIndexDefinition.toStringUtf8).get
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .upsertIndex(
+          converted,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasDropIndex) {
+      val req = command.getDropIndex
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .dropIndex(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+      // [start:1.6.0]
+    } else if (command.hasGetIndexedDocumentsCount) {
+      val req = command.getGetIndexedDocumentsCount
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      val count = scope.searchIndexes
+        .getIndexedDocumentsCount(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      result.setSdk(
+        com.couchbase.client.protocol.sdk.Result.newBuilder
+          .setSearchIndexManagerResult(
+            com.couchbase.client.protocol.sdk.search.indexmanager.Result.newBuilder
+              .setIndexedDocumentCounts(count.toInt)
+          )
+      )
+    } else if (command.hasPauseIngest) {
+      val req = command.getPauseIngest
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .pauseIngest(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasResumeIngest) {
+      val req = command.getResumeIngest
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .resumeIngest(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasAllowQuerying) {
+      val req = command.getAllowQuerying
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .allowQuerying(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasDisallowQuerying) {
+      val req = command.getDisallowQuerying
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .disallowQuerying(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasFreezePlan) {
+      val req = command.getFreezePlan
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .freezePlan(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasUnfreezePlan) {
+      val req = command.getUnfreezePlan
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .unfreezePlan(
+          req.getIndexName,
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+    } else if (command.hasAnalyzeDocument) {
+      val req = command.getAnalyzeDocument
+
+      result.setInitiated(getTimeNow)
+      val start = System.nanoTime
+      scope.searchIndexes
+        .analyzeDocument(
+          req.getIndexName,
+          JsonObject.fromJson(req.getDocument.toStringUtf8),
+          if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
+            Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
+          else DefaultManagementTimeout,
+          DefaultRetryStrategy
+        )
+        .get
+      result.setElapsedNanos(System.nanoTime - start)
+      setSuccess(result)
+      // [end:1.6.0]
     } else
       throw new UnsupportedOperationException(
         "The Scala SDK doesn't support several tertiary FTS index operations"
@@ -701,6 +1131,7 @@ object SearchHelper {
 
     result
   }
+  // [end:1.6.0]
 
   private def populateResult(result: Result.Builder, indexes: Seq[SearchIndex]): Unit = {
     result.setSdk(

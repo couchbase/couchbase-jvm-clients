@@ -19,7 +19,11 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
+import com.couchbase.client.scala.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
+import com.couchbase.client.scala.search.SearchOptions
+import com.couchbase.client.scala.search.result.SearchResult
+import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.util.AsyncUtils
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import reactor.core.scala.publisher.SMono
@@ -42,6 +46,9 @@ class Scope private[scala] (val async: AsyncScope, val bucketName: String) {
 
   /** Access a Reactive version of this API. */
   lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)
+
+  /** Allows managing scoped FTS indexes. */
+  lazy val searchIndexes = new ScopeSearchIndexManager(async.searchIndexes)
 
   /** The name of this scope. */
   def name: String = async.name
@@ -97,5 +104,51 @@ class Scope private[scala] (val async: AsyncScope, val bucketName: String) {
       options: AnalyticsOptions = AnalyticsOptions.Default
   ): Try[AnalyticsResult] = {
     AsyncUtils.block(async.analyticsQuery(statement, options))
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest
+  ): Try[SearchResult] = {
+    search(indexName, request, SearchOptions())
+  }
+
+  /** Performs a Full Text Search (FTS) query.
+    *
+    * This can be used to perform a traditional FTS query, and/or a vector search.
+    *
+    * Use this to access scoped FTS indexes, and [[Cluster.search]] for global indexes.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param indexName the name of the search index to use
+    * @param request   the request to send to the FTS service.
+    * @param options   see [[com.couchbase.client.scala.search.SearchOptions]]
+    * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  @Volatile
+  def search(
+      indexName: String,
+      request: SearchRequest,
+      options: SearchOptions
+  ): Try[SearchResult] = {
+    AsyncUtils.block(async.search(indexName, request, options))
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,16 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
 /** Allows indexes for Full Text Search (FTS) to be managed.
   *
-  * This interface is for global indexes.  For scoped indexes, use [[ScopeSearchIndexManager]].
+  * This interface is for scoped indexes.  For global indexes, use [[SearchIndexManager]].
   */
-class SearchIndexManager(private[scala] val async: AsyncSearchIndexManager) {
+@Stability.Volatile
+class ScopeSearchIndexManager(private[scala] val async: AsyncScopeSearchIndexManager) {
   private val DefaultTimeout: Duration            = async.DefaultTimeout
   private val DefaultRetryStrategy: RetryStrategy = async.DefaultRetryStrategy
 
