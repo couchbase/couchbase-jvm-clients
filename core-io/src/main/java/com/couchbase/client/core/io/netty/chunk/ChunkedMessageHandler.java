@@ -35,6 +35,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
@@ -139,7 +140,7 @@ public abstract class ChunkedMessageHandler
     this.pipelined = endpoint.pipelined();
 
     if (pipelined) {
-      throw new UnsupportedOperationException("The ChunkedMessageHandler does not support pipelining, this is a bug!");
+      throw new CouchbaseException("The ChunkedMessageHandler does not support pipelining, this is a bug!");
     }
   }
 

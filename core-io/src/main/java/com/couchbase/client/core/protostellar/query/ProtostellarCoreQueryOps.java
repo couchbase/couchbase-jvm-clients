@@ -32,6 +32,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.json.Mapper;
@@ -329,7 +330,7 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
     JsonNode raw = opts.raw();
     if (raw != null && !raw.isEmpty()) {
-      throw new UnsupportedOperationException("Raw options cannot be used together with Protostellar");
+      throw new FeatureNotAvailableException("Raw options cannot be used together with Protostellar");
     }
 
     if (tuning != null) {

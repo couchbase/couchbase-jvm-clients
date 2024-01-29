@@ -33,6 +33,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanType;
@@ -375,6 +376,6 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   private static RuntimeException unsupported() {
-    return new UnsupportedOperationException("Not currently supported");
+    return new FeatureNotAvailableException("Not currently supported in couchbase2");
   }
 }

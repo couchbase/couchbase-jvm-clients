@@ -18,9 +18,12 @@ package com.couchbase.client.core.protostellar;
 import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.google.protobuf.Any;
+import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.InvalidProtocolBufferException;
+import com.couchbase.client.core.deps.com.google.rpc.DebugInfo;
 import com.couchbase.client.core.deps.com.google.rpc.ErrorInfo;
 import com.couchbase.client.core.deps.com.google.rpc.PreconditionFailure;
+import com.couchbase.client.core.deps.com.google.rpc.RequestInfo;
 import com.couchbase.client.core.deps.com.google.rpc.ResourceInfo;
 import com.couchbase.client.core.deps.io.grpc.StatusRuntimeException;
 import com.couchbase.client.core.deps.io.grpc.protobuf.StatusProto;
@@ -35,6 +38,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentNotLockedException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -58,9 +62,14 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.retry.RetryOrchestratorProtostellar;
 import com.couchbase.client.core.retry.RetryReason;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.util.annotation.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.deps.io.grpc.Status.Code;
 
@@ -69,18 +78,18 @@ public class CoreProtostellarErrorHandlingUtil {
   private CoreProtostellarErrorHandlingUtil() {
   }
 
-  private static final String PRECONDITION_CAS = "CAS";
   private static final String PRECONDITION_LOCKED = "LOCKED";
+  private static final String PRECONDITION_NOT_LOCKED = "NOT_OCKED";
   private static final String PRECONDITION_PATH_MISMATCH = "PATH_MISMATCH";
   private static final String PRECONDITION_DOC_NOT_JSON = "DOC_NOT_JSON";
   private static final String PRECONDITION_DOC_TOO_DEEP = "DOC_TOO_DEEP";
   private static final String PRECONDITION_VALUE_OUT_OF_RANGE = "VALUE_OUT_OF_RANGE";
-  // Not currently used as it's unclear what exception this maps to.
-  private static final String PRECONDITION_PATH_VALUE_OUT_OF_RANGE = "PATH_VALUE_OUT_OF_RANGE";
   private static final String PRECONDITION_VALUE_TOO_LARGE = "VALUE_TOO_LARGE";
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
   private static final String TYPE_URL_ERROR_INFO = "type.googleapis.com/google.rpc.ErrorInfo";
+  private static final String TYPE_URL_DEBUG_INFO = "type.googleapis.com/google.rpc.DebugInfo";
+  private static final String TYPE_URL_REQUEST_INFO = "type.googleapis.com/google.rpc.RequestInfo";
 
   private static final String RESOURCE_TYPE_DOCUMENT = "document";
   private static final String RESOURCE_TYPE_SEARCH_INDEX = "searchindex";
@@ -124,6 +133,7 @@ public class CoreProtostellarErrorHandlingUtil {
     if (t != null) {
       com.couchbase.client.core.deps.io.grpc.Status stat = t.getStatus();
       code = stat.getCode();
+      context.put("lastException", t.getMessage());
     } else {
       if (status.getCode() < Code.values().length) {
         code = Code.values()[status.getCode()];
@@ -134,93 +144,128 @@ public class CoreProtostellarErrorHandlingUtil {
     context.put("details", status.getDetailsCount());
 
     if (status.getDetailsCount() > 0) {
-      Any details = status.getDetails(0);
-      String typeUrl = details.getTypeUrl();
+      // Check for diagnostic info
+      for (int i = 0; i < status.getDetailsList().size(); i++) {
+        Any details = status.getDetails(i);
+        String typeUrl = details.getTypeUrl();
 
-      // https://github.com/grpc/grpc-web/issues/399#issuecomment-443248907
-      try {
-        if (typeUrl.equals(TYPE_URL_PRECONDITION_FAILURE)) {
-          PreconditionFailure info = PreconditionFailure.parseFrom(details.getValue());
+        try {
+          if (typeUrl.equals(TYPE_URL_DEBUG_INFO)) {
+            Map<String, Object> detail = new HashMap<>();
 
-          if (info.getViolationsCount() > 0) {
-            PreconditionFailure.Violation violation = info.getViolations(0);
-            String type = violation.getType();
+            DebugInfo info = DebugInfo.parseFrom(details.getValue());
+            detail.put("detail", info.getDetail());
+            detail.put("stackTrace", info.getStackEntriesList().asByteStringList()
+              .stream()
+              .map(ByteString::toStringUtf8)
+              .collect(Collectors.toList()));
 
-            if (type.equals(PRECONDITION_LOCKED)) {
-              return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.KV_LOCKED);
-            } else if (type.equals(PRECONDITION_PATH_MISMATCH)) {
-              return ProtostellarRequestBehaviour.fail(new PathMismatchException(context));
-            } else if (type.equals(PRECONDITION_DOC_NOT_JSON)) {
-              return ProtostellarRequestBehaviour.fail(new DocumentNotJsonException(context));
-            } else if (type.equals(PRECONDITION_DOC_TOO_DEEP)) {
-              return ProtostellarRequestBehaviour.fail(new DocumentTooDeepException(context));
-            } else if (type.equals(PRECONDITION_VALUE_OUT_OF_RANGE)) {
-              return ProtostellarRequestBehaviour.fail(new ValueInvalidException(context));
-            } else if (type.equals(PRECONDITION_VALUE_TOO_LARGE)) {
-              return ProtostellarRequestBehaviour.fail(new ValueTooLargeException(context));
-            }
+            context.put("debugInfo", detail);
+          } else if (typeUrl.equals(TYPE_URL_REQUEST_INFO)) {
+            Map<String, Object> detail = new HashMap<>();
+
+            RequestInfo info = RequestInfo.parseFrom(details.getValue());
+            detail.put("requestId", info.getRequestId());
+            detail.put("servingData", info.getServingData());
+
+            context.put("requestInfo", detail);
           }
-        } else if (typeUrl.equals(TYPE_URL_RESOURCE_INFO)) {
-          ResourceInfo info = ResourceInfo.parseFrom(details.getValue());
-
-          String resourceName = info.getResourceName();
-          String resourceType = info.getResourceType();
-
-          if (resourceName != null) {
-            context.put("resourceName", info.getResourceName());
-          }
-          context.put("resourceType", info.getResourceType());
-
-          if (code == Code.NOT_FOUND) {
-            if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
-              return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
-            } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
-              || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
-              || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
-              return ProtostellarRequestBehaviour.fail(IndexNotFoundException.withMessageAndErrorContext(status.getMessage(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
-              return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
-              return ProtostellarRequestBehaviour.fail(new ScopeNotFoundException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
-              return ProtostellarRequestBehaviour.fail(new CollectionNotFoundException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
-              return ProtostellarRequestBehaviour.fail(new PathNotFoundException(null));
-            }
-          } else if (code == Code.ALREADY_EXISTS) {
-            if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
-              return ProtostellarRequestBehaviour.fail(new DocumentExistsException(context));
-            } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
-              || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
-              || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
-              return ProtostellarRequestBehaviour.fail(new IndexExistsException(status.getMessage(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
-              return ProtostellarRequestBehaviour.fail(new BucketExistsException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
-              return ProtostellarRequestBehaviour.fail(new ScopeExistsException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
-              return ProtostellarRequestBehaviour.fail(new CollectionExistsException(info.getResourceName(), context));
-            } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
-              return ProtostellarRequestBehaviour.fail(new PathExistsException(context));
-            }
-          }
-
-          // If the code or resourceType are not understood, will intentionally fallback to a CouchbaseException.
-        } else if (typeUrl.equals(TYPE_URL_ERROR_INFO)) {
-          ErrorInfo info = ErrorInfo.parseFrom(details.getValue());
-
-          String reason = info.getReason();
-
-          context.put("reason", reason);
-
-          if (code == Code.ABORTED) {
-            if (reason.equals(REASON_CAS_MISMATCH)) {
-              return ProtostellarRequestBehaviour.fail(new CasMismatchException(context));
-            }
-          }
+        } catch (InvalidProtocolBufferException e) {
+          // Silently ignore
         }
-      } catch (InvalidProtocolBufferException e) {
-        return ProtostellarRequestBehaviour.fail(new DecodingFailureException("Failed to decode GRPC response", e));
+      }
+
+      {
+        Any details = status.getDetails(0);
+        String typeUrl = details.getTypeUrl();
+
+        // https://github.com/grpc/grpc-web/issues/399#issuecomment-443248907
+        try {
+          if (typeUrl.equals(TYPE_URL_PRECONDITION_FAILURE)) {
+            PreconditionFailure info = PreconditionFailure.parseFrom(details.getValue());
+
+            if (info.getViolationsCount() > 0) {
+              PreconditionFailure.Violation violation = info.getViolations(0);
+              String type = violation.getType();
+
+              if (type.equals(PRECONDITION_LOCKED)) {
+                return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.KV_LOCKED);
+              } else if (type.equals(PRECONDITION_NOT_LOCKED)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentNotLockedException(context));
+              } else if (type.equals(PRECONDITION_PATH_MISMATCH)) {
+                return ProtostellarRequestBehaviour.fail(new PathMismatchException(context));
+              } else if (type.equals(PRECONDITION_DOC_NOT_JSON)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentNotJsonException(context));
+              } else if (type.equals(PRECONDITION_DOC_TOO_DEEP)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentTooDeepException(context));
+              } else if (type.equals(PRECONDITION_VALUE_OUT_OF_RANGE)) {
+                return ProtostellarRequestBehaviour.fail(new ValueInvalidException(context));
+              } else if (type.equals(PRECONDITION_VALUE_TOO_LARGE)) {
+                return ProtostellarRequestBehaviour.fail(new ValueTooLargeException(context));
+              }
+            }
+          } else if (typeUrl.equals(TYPE_URL_RESOURCE_INFO)) {
+            ResourceInfo info = ResourceInfo.parseFrom(details.getValue());
+
+            String resourceName = info.getResourceName();
+            String resourceType = info.getResourceType();
+
+            if (resourceName != null) {
+              context.put("resourceName", info.getResourceName());
+            }
+            context.put("resourceType", info.getResourceType());
+
+            if (code == Code.NOT_FOUND) {
+              if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentNotFoundException(context));
+              } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
+                || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
+                || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
+                return ProtostellarRequestBehaviour.fail(IndexNotFoundException.withMessageAndErrorContext(status.getMessage(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
+                return ProtostellarRequestBehaviour.fail(new BucketNotFoundException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
+                return ProtostellarRequestBehaviour.fail(new ScopeNotFoundException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
+                return ProtostellarRequestBehaviour.fail(new CollectionNotFoundException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
+                return ProtostellarRequestBehaviour.fail(new PathNotFoundException(null));
+              }
+            } else if (code == Code.ALREADY_EXISTS) {
+              if (resourceType.equals(RESOURCE_TYPE_DOCUMENT)) {
+                return ProtostellarRequestBehaviour.fail(new DocumentExistsException(context));
+              } else if (resourceType.equals(RESOURCE_TYPE_QUERY_INDEX)
+                || resourceType.equals(RESOURCE_TYPE_SEARCH_INDEX)
+                || resourceType.equals(RESOURCE_TYPE_ANALYTICS_INDEX)) {
+                return ProtostellarRequestBehaviour.fail(new IndexExistsException(status.getMessage(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_BUCKET)) {
+                return ProtostellarRequestBehaviour.fail(new BucketExistsException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_SCOPE)) {
+                return ProtostellarRequestBehaviour.fail(new ScopeExistsException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_COLLECTION)) {
+                return ProtostellarRequestBehaviour.fail(new CollectionExistsException(info.getResourceName(), context));
+              } else if (resourceType.equals(RESOURCE_TYPE_PATH)) {
+                return ProtostellarRequestBehaviour.fail(new PathExistsException(context));
+              }
+            }
+
+            // If the code or resourceType are not understood, will intentionally fallback to a CouchbaseException.
+          } else if (typeUrl.equals(TYPE_URL_ERROR_INFO)) {
+            ErrorInfo info = ErrorInfo.parseFrom(details.getValue());
+
+            String reason = info.getReason();
+
+            context.put("reason", reason);
+
+            if (code == Code.ABORTED) {
+              if (reason.equals(REASON_CAS_MISMATCH)) {
+                return ProtostellarRequestBehaviour.fail(new CasMismatchException(context));
+              }
+            }
+          }
+        } catch (InvalidProtocolBufferException e) {
+          return ProtostellarRequestBehaviour.fail(new DecodingFailureException("Failed to decode GRPC response", e));
+        }
       }
     }
 
@@ -253,7 +298,7 @@ public class CoreProtostellarErrorHandlingUtil {
       case UNIMPLEMENTED:
         return ProtostellarRequestBehaviour.fail(new FeatureNotAvailableException(status.getMessage(), t));
       case UNAVAILABLE:
-        return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.ENDPOINT_NOT_AVAILABLE);
+        return RetryOrchestratorProtostellar.shouldRetry(core, request, RetryReason.SERVICE_NOT_AVAILABLE);
       case OK:
         return ProtostellarRequestBehaviour.success();
       default:

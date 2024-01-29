@@ -44,6 +44,8 @@ import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
@@ -216,7 +218,7 @@ public class ProtostellarEndpoint {
           .trustManager(securityConfig.trustCertificates())
           .build();
       } else {
-        throw new UnsupportedOperationException();
+        throw new CouchbaseException("Internal bug - should not reach here");
       }
     } catch (SSLException e) {
       throw new SecurityException(e);
