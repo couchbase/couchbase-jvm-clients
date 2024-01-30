@@ -29,10 +29,14 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.protostellar.ProtostellarKeyValueRequest;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.protostellar.kv.v1.CompressionEnabled;
 import com.couchbase.client.protostellar.kv.v1.GetAndLockRequest;
 import com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest;
 import com.couchbase.client.protostellar.kv.v1.GetRequest;
@@ -43,8 +47,6 @@ import com.couchbase.client.protostellar.kv.v1.ReplaceRequest;
 import com.couchbase.client.protostellar.kv.v1.TouchRequest;
 import com.couchbase.client.protostellar.kv.v1.UnlockRequest;
 import com.couchbase.client.protostellar.kv.v1.UpsertRequest;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
 
 import java.time.Duration;
 import java.util.List;
@@ -83,7 +85,8 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                    CoreKeyspace keyspace,
                                                                                                    String key,
                                                                                                    List<String> projections,
-                                                                                                   boolean withExpiry) {
+                                                                                                   boolean withExpiry,
+                                                                                                   CompressionConfig compressionConfig) {
     validateGetParams(opts, key, projections, withExpiry);
 
     GetRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetRequest.newBuilder()
@@ -91,6 +94,10 @@ public class CoreProtostellarKeyValueRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key);
+
+    if (compressionConfig.enabled()) {
+      request.setCompression(CompressionEnabled.COMPRESSION_ENABLED_OPTIONAL);
+    }
 
     if (!projections.isEmpty()) {
       request.addAllProject(projections);
@@ -116,20 +123,25 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                                  CoreCommonOptions opts,
                                                                                                                  CoreKeyspace keyspace,
                                                                                                                  String key,
-                                                                                                                 Duration lockTime) {
+                                                                                                                 Duration lockTime,
+                                                                                                                 CompressionConfig compressionConfig) {
+
     validateGetAndLockParams(opts, key, lockTime);
 
-    GetAndLockRequest request = com.couchbase.client.protostellar.kv.v1.GetAndLockRequest.newBuilder()
+    GetAndLockRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetAndLockRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setLockTime((int) lockTime.toMillis())
-      .build();
+      .setLockTime((int) lockTime.toMillis());
+
+    if (compressionConfig.enabled()) {
+      request.setCompression(CompressionEnabled.COMPRESSION_ENABLED_OPTIONAL);
+    }
 
     Duration timeout = CoreProtostellarUtil.kvTimeout(opts.timeout(), core);
 
-    return new ProtostellarKeyValueRequest<>(request,
+    return new ProtostellarKeyValueRequest<>(request.build(),
       core,
       keyspace,
       key,
@@ -147,7 +159,9 @@ public class CoreProtostellarKeyValueRequests {
                                                                                                                    CoreCommonOptions opts,
                                                                                                                    CoreKeyspace keyspace,
                                                                                                                    String key,
-                                                                                                                   CoreExpiry expiry) {
+                                                                                                                   CoreExpiry expiry,
+                                                                                                                   CompressionConfig compressionConfig) {
+
     validateGetAndTouchParams(opts, key, expiry);
 
     GetAndTouchRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest.newBuilder()
@@ -155,6 +169,10 @@ public class CoreProtostellarKeyValueRequests {
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key);
+
+    if (compressionConfig.enabled()) {
+      request.setCompression(CompressionEnabled.COMPRESSION_ENABLED_OPTIONAL);
+    }
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
@@ -184,20 +202,27 @@ public class CoreProtostellarKeyValueRequests {
                                                                  String key,
                                                                  Supplier<CoreEncodedContent> content,
                                                                  CoreDurability durability,
-                                                                 CoreExpiry expiry) {
+                                                                 CoreExpiry expiry,
+                                                                 CompressionConfig compressionConfig) {
     validateInsertParams(opts, key, content, durability, expiry);
 
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, durability, opts.parentSpan().orElse(null));
 
-    Tuple2<CoreEncodedContent, Long> encoded = encodedContent(core, content, span);
+    ProtostellarCoreEncodedContent encoded = encodedContent(core, content, span, compressionConfig);
 
     InsertRequest.Builder request = InsertRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentFlags(encoded.getT1().flags());
+      .setContentFlags(encoded.flags());
+
+    if (encoded.compressed()) {
+      request.setContentCompressed(encoded.bytes());
+    }
+    else {
+      request.setContentUncompressed(encoded.bytes());
+    }
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
@@ -222,7 +247,7 @@ public class CoreProtostellarKeyValueRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext(),
-      encoded.getT2());
+      encoded.flags());
   }
 
   public static ProtostellarRequest<ReplaceRequest> replaceRequest(CoreProtostellar core,
@@ -233,20 +258,27 @@ public class CoreProtostellarKeyValueRequests {
                                                                    long cas,
                                                                    CoreDurability durability,
                                                                    CoreExpiry expiry,
-                                                                   boolean preserveExpiry) {
+                                                                   boolean preserveExpiry,
+                                                                   CompressionConfig compressionConfig) {
     validateReplaceParams(opts, key, content, cas, durability, expiry, preserveExpiry);
 
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_REPLACE, durability, opts.parentSpan().orElse(null));
 
-    Tuple2<CoreEncodedContent, Long> encoded = encodedContent(core, content, span);
+    ProtostellarCoreEncodedContent encoded = encodedContent(core, content, span, compressionConfig);
 
     ReplaceRequest.Builder request = ReplaceRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentFlags(encoded.getT1().flags());
+      .setContentFlags(encoded.flags());
+
+    if (encoded.compressed()) {
+      request.setContentCompressed(encoded.bytes());
+    }
+    else {
+      request.setContentUncompressed(encoded.bytes());
+    }
 
     if (cas != 0) {
       request.setCas(cas);
@@ -277,7 +309,7 @@ public class CoreProtostellarKeyValueRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext(),
-      encoded.getT2());
+      encoded.encodingTimeNanos());
   }
 
   public static ProtostellarRequest<UpsertRequest> upsertRequest(CoreProtostellar core,
@@ -287,21 +319,28 @@ public class CoreProtostellarKeyValueRequests {
                                                                  Supplier<CoreEncodedContent> content,
                                                                  CoreDurability durability,
                                                                  CoreExpiry expiry,
-                                                                 boolean preserveExpiry) {
+                                                                 boolean preserveExpiry,
+                                                                 CompressionConfig compressionConfig) {
     validateUpsertParams(opts, key, content, durability, expiry, preserveExpiry);
 
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_KV_UPSERT, durability, opts.parentSpan().orElse(null));
 
-    Tuple2<CoreEncodedContent, Long> encoded = encodedContent(core, content, span);
+    ProtostellarCoreEncodedContent encoded = encodedContent(core, content, span, compressionConfig);
 
     UpsertRequest.Builder request = UpsertRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setContentUncompressed(ByteString.copyFrom(encoded.getT1().encoded()))
-      .setContentFlags(encoded.getT1().flags())
+      .setContentFlags(encoded.flags())
       .setPreserveExpiryOnExisting(preserveExpiry);
+
+    if (encoded.compressed()) {
+      request.setContentCompressed(encoded.bytes());
+    }
+    else {
+      request.setContentUncompressed(encoded.bytes());
+    }
 
     expiry.when(
       absolute -> request.setExpiryTime(toExpiryTime(absolute)),
@@ -326,20 +365,34 @@ public class CoreProtostellarKeyValueRequests {
       false,
       opts.retryStrategy().orElse(core.context().environment().retryStrategy()),
       opts.clientContext(),
-      encoded.getT2());
+      encoded.encodingTimeNanos());
   }
 
-  private static Tuple2<CoreEncodedContent, Long> encodedContent(CoreProtostellar core, Supplier<CoreEncodedContent> content, RequestSpan span) {
+  private static ProtostellarCoreEncodedContent encodedContent(CoreProtostellar core, Supplier<CoreEncodedContent> content, RequestSpan span, CompressionConfig compressionConfig) {
     RequestSpan encodeSpan = CbTracing.newSpan(core.context().environment().requestTracer(), TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     CoreEncodedContent encoded;
+    boolean compressed = false;
+    ByteString out = null;
     try {
       encoded = content.get();
+
+      if (compressionConfig.enabled() && encoded.encoded().length >= compressionConfig.minSize()) {
+        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(encoded.encoded(), compressionConfig.minRatio());
+        if (maybeCompressed != null) {
+          out = ByteString.copyFrom(maybeCompressed.array());
+          compressed = true;
+        }
+      }
+
+      if (out == null) {
+        out = ByteString.copyFrom(encoded.encoded());
+      }
     } finally {
       encodeSpan.end();
     }
 
-    return Tuples.of(encoded, System.nanoTime() - start);
+    return new ProtostellarCoreEncodedContent(out, encoded.flags(), compressed, System.nanoTime() - start);
   }
 
   public static ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.RemoveRequest> removeRequest(CoreProtostellar core,

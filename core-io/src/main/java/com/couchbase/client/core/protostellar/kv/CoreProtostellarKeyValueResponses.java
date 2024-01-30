@@ -26,6 +26,8 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
+import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
+import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.MutationToken;
@@ -104,11 +106,19 @@ public class CoreProtostellarKeyValueResponses {
     return mutationToken;
   }
 
+  private static byte[] convertContent(boolean hasContentCompressed, ByteString contentCompressed, ByteString contentUncompressed) {
+    if (hasContentCompressed) {
+      byte[] bytes = contentCompressed.toByteArray();
+      return Snappy.uncompress(bytes, 0, bytes.length);
+    }
+    return contentUncompressed.toByteArray();
+  }
+
   public static CoreGetResult convertResponse(CoreKeyspace keyspace, String key, GetResponse response) {
     return new CoreGetResult(CoreKvResponseMetadata.NONE,
       keyspace,
       key,
-      response.getContentUncompressed().toByteArray(),
+      convertContent(response.hasContentCompressed(), response.getContentCompressed(), response.getContentUncompressed()),
       response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
@@ -119,7 +129,7 @@ public class CoreProtostellarKeyValueResponses {
     return new CoreGetResult(CoreKvResponseMetadata.NONE,
       keyspace,
       key,
-      response.getContentUncompressed().toByteArray(),
+      convertContent(response.hasContentCompressed(), response.getContentCompressed(), response.getContentUncompressed()),
       response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
@@ -130,7 +140,7 @@ public class CoreProtostellarKeyValueResponses {
     return new CoreGetResult(CoreKvResponseMetadata.NONE,
       keyspace,
       key,
-      response.getContentUncompressed().toByteArray(),
+      convertContent(response.hasContentCompressed(), response.getContentCompressed(), response.getContentUncompressed()),
       response.getContentFlags(),
       response.getCas(),
       CoreProtostellarUtil.convertExpiry(response.hasExpiry(), response.getExpiry()),
