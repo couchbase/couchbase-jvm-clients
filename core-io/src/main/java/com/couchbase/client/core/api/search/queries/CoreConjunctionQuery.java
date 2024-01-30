@@ -52,15 +52,19 @@ public class CoreConjunctionQuery extends CoreAbstractCompoundQuery {
 
   @Override
   public Query asProtostellar() {
+    return Query.newBuilder().setConjunctionQuery(asConjunctionProtostellar()).build();
+  }
+
+  public ConjunctionQuery asConjunctionProtostellar() {
     ConjunctionQuery.Builder query = ConjunctionQuery.newBuilder()
-            .addAllQueries(childQueries.stream()
-                    .map(CoreSearchQuery::asProtostellar)
-                    .collect(Collectors.toList()));
+        .addAllQueries(childQueries.stream()
+            .map(CoreSearchQuery::asProtostellar)
+            .collect(Collectors.toList()));
 
     if (boost != null) {
       query.setBoost(boost.floatValue());
     }
 
-    return Query.newBuilder().setConjunctionQuery(query).build();
+    return query.build();
   }
 }

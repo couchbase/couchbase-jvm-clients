@@ -18,6 +18,7 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.protostellar.search.v1.DateRangeQuery;
 import com.couchbase.client.protostellar.search.v1.Query;
 import reactor.util.annotation.Nullable;
@@ -83,14 +84,14 @@ public class CoreDateRangeQuery extends CoreSearchQuery {
           builder.setStartDate(start);
           if (inclusiveStart != null) {
               // Requires ING-381
-              throw new UnsupportedOperationException("inclusiveStart is not currently supported in DateRangeQuery for Protostellar");
+              throw new FeatureNotAvailableException("inclusiveStart is not currently supported in DateRangeQuery for couchbase2");
           }
       }
       if (end != null) {
           builder.setEndDate(end);
           if (inclusiveEnd != null) {
               // Requires ING-381
-              throw new UnsupportedOperationException("inclusiveStart is not currently supported in DateRangeQuery for Protostellar");
+              throw new FeatureNotAvailableException("inclusiveStart is not currently supported in DateRangeQuery for couchbase2");
           }
       }
       if (dateTimeParser != null) {

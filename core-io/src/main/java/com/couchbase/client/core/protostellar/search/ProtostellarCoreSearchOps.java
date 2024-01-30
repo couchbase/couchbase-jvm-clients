@@ -95,12 +95,11 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public class ProtostellarCoreSearchOps implements CoreSearchOps {
   private final CoreProtostellar core;
+  private final @Nullable CoreBucketAndScope scope;
 
   public ProtostellarCoreSearchOps(CoreProtostellar core, @Nullable CoreBucketAndScope scope) {
     this.core = requireNonNull(core);
-
-    // scope is silently ignored as it requires ING-381.
-    // throwing here would require creating a new CoreSearchOps object on every search operation.
+    this.scope = scope;
   }
 
   @Override
@@ -108,7 +107,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
                                                               CoreSearchQuery search,
                                                               CoreSearchOptions options) {
 
-    ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, search, options);
+    ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, search, options, scope);
 
     CoreAsyncResponse<List<SearchQueryResponse>> responses = CoreProtostellarAccessorsStreaming.async(core,
       request,
@@ -159,7 +158,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
                                                             CoreSearchOptions options) {
     return Mono.defer(() -> {
       try {
-        ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, query, options);
+        ProtostellarRequest<SearchQueryRequest> request = request(core, indexName, query, options, scope);
 
         Sinks.One<CoreReactiveSearchResult> out = Sinks.one();
 
@@ -366,7 +365,8 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
   private static ProtostellarRequest<SearchQueryRequest> request(CoreProtostellar core,
                                                                  String indexName,
                                                                  CoreSearchQuery query,
-                                                                 CoreSearchOptions opts) {
+                                                                 CoreSearchOptions opts,
+                                                                 @Nullable CoreBucketAndScope scope) {
     notNull(indexName, "IndexName");
     notNull(query, "Query");
     notNull(opts, "SearchOptions");
@@ -378,6 +378,11 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
     SearchQueryRequest.Builder request = SearchQueryRequest.newBuilder()
       .setIndexName(indexName)
       .setQuery(query.asProtostellar());
+
+    if (scope != null) {
+      request.setBucketName(scope.bucketName());
+      request.setScopeName(scope.scopeName());
+    }
 
     if (opts.consistency() != null) {
       if (opts.consistency() == CoreSearchScanConsistency.NOT_BOUNDED) {

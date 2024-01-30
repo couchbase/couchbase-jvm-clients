@@ -70,34 +70,35 @@ public class CoreMatchQuery extends CoreSearchQuery {
         }
     }
 
-    @Override
-    public Query asProtostellar() {
-        MatchQuery.Builder builder = MatchQuery.newBuilder();
-        // Requires ING-381
-        // .setMatch(match);
+  @Override
+  public Query asProtostellar() {
+    MatchQuery.Builder builder = MatchQuery.newBuilder()
+        .setValue(match);
 
-        throw new UnsupportedOperationException("MatchQuery is not currently supported in Protostellar");
-
-//        if (field != null) {
-//            builder.setField(field);
-//        }
-//
-//        if (analyzer != null) {
-//            builder.setAnalyzer(analyzer);
-//        }
-//
-//        if (prefixLength != null) {
-//            builder.setPrefixLength(prefixLength);
-//        }
-//
-//        if (fuzziness != null) {
-//            builder.setFuzziness(fuzziness);
-//        }
-//
-//        if (operator != null) {
-//            builder.setOperator(operator == CoreMatchOperator.OR ? MatchQuery.Operator.OR : MatchQuery.Operator.AND);
-//        }
-//
-//        return Query.newBuilder().setMatchQuery(builder).build();
+    if (boost != null) {
+      builder.setBoost(boost.floatValue());
     }
+
+    if (field != null) {
+      builder.setField(field);
+    }
+
+    if (analyzer != null) {
+      builder.setAnalyzer(analyzer);
+    }
+
+    if (fuzziness != null) {
+      builder.setFuzziness(fuzziness);
+    }
+
+    if (operator != null) {
+      builder.setOperator(operator == CoreMatchOperator.OR ? MatchQuery.Operator.OPERATOR_OR : MatchQuery.Operator.OPERATOR_AND);
+    }
+
+    if (prefixLength != null) {
+      builder.setPrefixLength(prefixLength);
+    }
+
+    return Query.newBuilder().setMatchQuery(builder).build();
+  }
 }

@@ -79,17 +79,22 @@ public class CoreBooleanQuery extends CoreSearchQuery {
   public Query asProtostellar() {
     BooleanQuery.Builder query = BooleanQuery.newBuilder();
 
-    boolean mustIsEmpty = must == null || must.childQueries().isEmpty();
-    boolean mustNotIsEmpty = mustNot == null || mustNot.childQueries().isEmpty();
-    boolean shouldIsEmpty = should == null || should.childQueries().isEmpty();
+    if (must != null) {
+      query.setMust(must.asConjunctionProtostellar());
+    }
 
-    // Needs ING-381
-    throw new UnsupportedOperationException("BooleanQuery is not currently supported in Protostellar");
+    if (mustNot != null) {
+      query.setMustNot(mustNot.asDisjunctionProtostellar());
+    }
 
-//        if (boost != null) {
-//            query.setBoost(boost.floatValue());
-//        }
-//
-//        return Query.newBuilder().setBooleanQuery(query).build();
+    if (should != null) {
+      query.setShould(should.asDisjunctionProtostellar());
+    }
+
+    if (boost != null) {
+        query.setBoost(boost.floatValue());
+    }
+
+    return Query.newBuilder().setBooleanQuery(query).build();
   }
 }

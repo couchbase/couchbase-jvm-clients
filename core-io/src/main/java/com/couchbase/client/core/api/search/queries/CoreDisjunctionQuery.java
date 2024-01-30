@@ -63,10 +63,14 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
 
   @Override
   public Query asProtostellar() {
+    return Query.newBuilder().setDisjunctionQuery(asDisjunctionProtostellar()).build();
+  }
+
+  public DisjunctionQuery asDisjunctionProtostellar() {
     DisjunctionQuery.Builder query = DisjunctionQuery.newBuilder()
-            .addAllQueries(childQueries.stream()
-                    .map(CoreSearchQuery::asProtostellar)
-                    .collect(Collectors.toList()));
+        .addAllQueries(childQueries.stream()
+            .map(CoreSearchQuery::asProtostellar)
+            .collect(Collectors.toList()));
 
     if (min != null && min > 1) {
       query.setMinimum(min);
@@ -76,7 +80,7 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
       query.setBoost(boost.floatValue());
     }
 
-    return Query.newBuilder().setDisjunctionQuery(query).build();
+    return query.build();
   }
 
 }
