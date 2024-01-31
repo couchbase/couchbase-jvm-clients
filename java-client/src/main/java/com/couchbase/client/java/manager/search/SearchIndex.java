@@ -23,10 +23,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-
-import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 
 
 /**
@@ -166,30 +163,7 @@ public class SearchIndex {
   }
 
   public String toJson() {
-    Map<String, Object> output = new HashMap<>();
-    // A UUID is server-assigned.  It must be specified on an update, and must not be specified on a create.
-    if (uuid != null) {
-      output.put("uuid", uuid);
-    }
-    output.put("name", name);
-    output.put("sourceName", sourceName);
-    output.put("type", type == null ? "fulltext-index" : type);
-    output.put("sourceType", sourceType == null ? "couchbase" : sourceType);
-
-    if (!isNullOrEmpty(params))  {
-      output.put("params", params);
-    }
-    if (!isNullOrEmpty(planParams)) {
-      output.put("planParams", planParams);
-    }
-    if (!isNullOrEmpty(sourceParams)) {
-      output.put("sourceParams", sourceParams);
-    }
-    if (sourceUuid != null) {
-      output.put("sourceUUID", sourceUuid);
-    }
-
-    return Mapper.encodeAsString(output);
+    return SearchIndexManagerUtil.convert(this).toJson();
   }
 
   @Override
