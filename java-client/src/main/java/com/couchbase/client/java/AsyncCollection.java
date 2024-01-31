@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
@@ -678,6 +679,7 @@ public class AsyncCollection {
    * @return a list of results from the active and the replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
                                                                                           final List<LookupInSpec> specs) {
     return lookupInAllReplicas(id, specs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
@@ -692,6 +694,7 @@ public class AsyncCollection {
    * @return a list of results from the active and the replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
                                                                                           final List<LookupInSpec> specs,
                                                                                           final LookupInAllReplicasOptions options) {
@@ -719,6 +722,7 @@ public class AsyncCollection {
    * @return a future containing the first available replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs) {
     return lookupInAnyReplica(id, specs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
   }
@@ -732,6 +736,7 @@ public class AsyncCollection {
    * @return a future containing the first available replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs, final LookupInAnyReplicaOptions options) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     notNull(options, "LookupInAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
@@ -802,6 +807,7 @@ public class AsyncCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<List<ScanResult>> scan(final ScanType scanType) {
     return scan(scanType, ScanOptions.scanOptions());
   }
@@ -816,6 +822,7 @@ public class AsyncCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public CompletableFuture<List<ScanResult>> scan(final ScanType scanType, final ScanOptions options) {
     notNull(scanType, "ScanType", () -> ReducedKeyValueErrorContext.create(null, collectionIdentifier()));
     ScanOptions.Built opts = notNull(options, "ScanOptions",

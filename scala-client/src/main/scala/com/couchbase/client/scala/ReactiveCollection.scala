@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.core.io.CollectionIdentifier
@@ -392,6 +393,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
     *
     * $Same */
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -415,6 +417,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
     *
     * $Same */
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -436,6 +439,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * This variant will read and return all replicas of the document.
     *
     * $Same */
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -459,6 +463,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * This variant will read and return all replicas of the document.
     *
     * $Same */
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -563,6 +568,7 @@ class ReactiveCollection(async: AsyncCollection) {
     * Uses default options.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType): SFlux[ScanResult] = {
     scan(scanType, ScanOptions())
   }
@@ -570,6 +576,7 @@ class ReactiveCollection(async: AsyncCollection) {
   /** Initiates a KV range scan, which will return a stream of KV documents.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
     async.scanRequest(scanType, opts)
   }

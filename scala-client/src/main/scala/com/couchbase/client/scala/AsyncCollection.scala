@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.{CoreExpiry, CoreSubdocGetCommand, CoreSubdocGetResult}
@@ -553,6 +554,7 @@ class AsyncCollection(
     *
     * $Same
     */
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -569,6 +571,7 @@ class AsyncCollection(
     *
     * $Same
     */
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -590,6 +593,7 @@ class AsyncCollection(
     *
     * $Same
     */
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -610,6 +614,7 @@ class AsyncCollection(
     *
     * $Same
     */
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -736,6 +741,7 @@ class AsyncCollection(
     * Uses default options.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType): Future[Iterator[ScanResult]] = {
     scan(scanType, ScanOptions())
   }
@@ -743,6 +749,7 @@ class AsyncCollection(
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType, opts: ScanOptions): Future[Iterator[ScanResult]] = {
     scanRequest(scanType, opts).collectSeq
       .map(v => v.iterator)

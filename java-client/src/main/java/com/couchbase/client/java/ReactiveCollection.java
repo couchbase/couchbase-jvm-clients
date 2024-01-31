@@ -17,11 +17,9 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
-import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
-import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
-import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
@@ -713,6 +711,7 @@ public class ReactiveCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Flux<ScanResult> scan(final ScanType scanType) {
     return scan(scanType, ScanOptions.scanOptions());
   }
@@ -727,6 +726,7 @@ public class ReactiveCollection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Flux<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
     notNull(scanType, "ScanType",
         () -> ReducedKeyValueErrorContext.create(null, asyncCollection.collectionIdentifier()));
@@ -750,6 +750,7 @@ public class ReactiveCollection {
    * @return a flux of results from all replicas
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs) {
     return lookupInAllReplicas(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
   }
@@ -766,6 +767,7 @@ public class ReactiveCollection {
    * @return a flux of results from all replicas
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs, LookupInAllReplicasOptions options) {
     notNull(options, "LookupInAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     LookupInAllReplicasOptions.Built opts = options.build();
@@ -783,6 +785,7 @@ public class ReactiveCollection {
    * @return a mono containing the first available replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Mono<LookupInReplicaResult> lookupInAnyReplica(String id, List<LookupInSpec> lookupInSpecs) {
     return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
   }
@@ -797,6 +800,7 @@ public class ReactiveCollection {
    * @return a mono containing the first available replica.
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Mono<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
     notNull(options, "LookupInAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
     LookupInAnyReplicaOptions.Built opts = options.build();

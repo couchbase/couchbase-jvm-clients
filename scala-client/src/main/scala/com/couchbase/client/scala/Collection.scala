@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.core.io.CollectionIdentifier
@@ -753,6 +754,7 @@ class Collection(
     * @param timeout $Timeout
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
     **/
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -774,6 +776,7 @@ class Collection(
     * @param options $Options
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
    **/
+  @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -798,6 +801,7 @@ class Collection(
     * @param timeout $Timeout
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
    **/
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -822,6 +826,7 @@ class Collection(
     * @param options $Options
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
    **/
+  @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -967,6 +972,7 @@ class Collection(
     * Uses default options.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType): Try[Iterator[ScanResult]] = {
     scan(scanType, ScanOptions())
   }
@@ -974,6 +980,7 @@ class Collection(
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
     */
   @Volatile
+  @SinceCouchbase("7.6")
   def scan(scanType: ScanType, opts: ScanOptions): Try[Iterator[ScanResult]] = {
     block(async.scan(scanType, opts))
   }

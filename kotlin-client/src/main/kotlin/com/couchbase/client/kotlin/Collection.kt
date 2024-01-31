@@ -198,6 +198,7 @@ public class Collection internal constructor(
      * Might affect performance, but does not change the results of this method.
      */
     @VolatileCouchbaseApi
+    @SinceCouchbase("7.6")
     public fun scanDocuments(
         type: ScanType = ScanType.range(),
         common: CommonOptions = CommonOptions.Default,
@@ -221,6 +222,7 @@ public class Collection internal constructor(
      * Like [scanDocuments], but returns only document IDs instead of full documents.
      */
     @VolatileCouchbaseApi
+    @SinceCouchbase("7.6")
     public fun scanIds(
         type: ScanType = ScanType.range(),
         common: CommonOptions = CommonOptions.Default,

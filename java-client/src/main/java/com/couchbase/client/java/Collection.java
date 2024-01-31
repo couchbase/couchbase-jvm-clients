@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
@@ -798,6 +799,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs) {
     return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
   }
@@ -814,6 +816,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
     return block(asyncCollection.lookupInAnyReplica(id, lookupInSpecs, options));
   }
@@ -994,6 +997,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Stream<ScanResult> scan(final ScanType scanType) {
     return scan(scanType, ScanOptions.scanOptions());
   }
@@ -1008,6 +1012,7 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Stream<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
     return reactive().scan(scanType, options).toStream();
   }
