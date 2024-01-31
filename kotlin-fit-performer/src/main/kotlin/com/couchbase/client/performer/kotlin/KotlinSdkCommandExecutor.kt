@@ -44,6 +44,7 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.manager.handleCollectionManager
+import com.couchbase.client.performer.kotlin.manager.handleSearchIndexManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.ContentAsUtil
@@ -331,6 +332,8 @@ class KotlinSdkCommandExecutor(
                     handleBucketManager(connection.cluster, op, result)
                 } else if (clc.hasQuery()) {
                     result = QueryHelper.handleClusterQuery(connection, op, clc)
+                } else if (clc.hasSearchIndexManager()) {
+                    handleSearchIndexManager(connection.cluster, op, result)
                 } else {
                     throw UnsupportedOperationException(IllegalArgumentException("Unknown cluster-level operation"))
                 }

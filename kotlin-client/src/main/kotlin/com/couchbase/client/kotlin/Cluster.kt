@@ -61,6 +61,7 @@ import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.internal.requireUnique
 import com.couchbase.client.kotlin.manager.bucket.BucketManager
 import com.couchbase.client.kotlin.manager.query.QueryIndexManager
+import com.couchbase.client.kotlin.manager.search.SearchIndexManager
 import com.couchbase.client.kotlin.manager.user.UserManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
@@ -221,6 +222,16 @@ public class Cluster internal constructor(
     public val queryIndexes: QueryIndexManager = QueryIndexManager(this)
 
     /**
+     * A manager for administering cluster-level Full-Text Search indexes.
+     *
+     * New applications using Couchbase Server 7.6 or later should consider
+     * managing search indexes and searching at the scope level instead
+     * of the cluster level. See [Scope.searchIndexes].
+     */
+    @UncommittedCouchbaseApi
+    public val searchIndexes: SearchIndexManager = SearchIndexManager(couchbaseOps.clusterSearchIndexManager())
+
+    /**
      * Pings the Couchbase cluster's global services.
      * (To ping bucket-level services like KV as well, use [Bucket.ping] instead.)
      *
@@ -269,7 +280,7 @@ public class Cluster internal constructor(
 
     /**
      * Returns a Flow which can be collected to execute a Full-Text Search query
-     * and process the results.
+     * against a cluster-level index.
      *
      * The returned Flow is cold, meaning the query is not executed unless
      * the Flow is collected. If you collect the flow multiple times,

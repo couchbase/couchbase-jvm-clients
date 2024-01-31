@@ -18,6 +18,7 @@ package com.couchbase.client.kotlin
 
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
@@ -27,8 +28,10 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.toOptional
+import com.couchbase.client.kotlin.manager.search.SearchIndexManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -57,6 +60,15 @@ public class Scope(
 
     private val analyticsExecutor
         get() = AnalyticsExecutor(couchbaseOps.asCore(), this)
+
+    /**
+     * A manager for administering scope-level Full-Text Search indexes.
+     */
+    @UncommittedCouchbaseApi
+    @SinceCouchbase("7.6")
+    public val searchIndexes: SearchIndexManager = SearchIndexManager(
+        couchbaseOps.scopeSearchIndexManager(CoreBucketAndScope(bucket.name, name))
+    )
 
     /**
      * Opens a collection for this scope.

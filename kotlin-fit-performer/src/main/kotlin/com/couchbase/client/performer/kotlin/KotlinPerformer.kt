@@ -52,6 +52,8 @@ class KotlinPerformer : CorePerformer() {
             // [start:1.2.0]
             .addSdkImplementationCaps(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
             // [end:1.2.0]
+            .addSdkImplementationCaps(Caps.SDK_SEARCH)
+            .addSdkImplementationCaps(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
     }
 
