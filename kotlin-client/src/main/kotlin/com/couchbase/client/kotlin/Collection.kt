@@ -605,7 +605,7 @@ public class Collection internal constructor(
      * @sample com.couchbase.client.kotlin.samples.subdocLookup
      * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
-    @SinceCouchbase("7.5")
+    @SinceCouchbase("7.6")
     @UncommittedCouchbaseApi
     public suspend inline fun <T, L : LookupInSpec> lookupInAnyReplica(
         id: String,
@@ -626,7 +626,7 @@ public class Collection internal constructor(
      *
      * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
-    @SinceCouchbase("7.5")
+    @SinceCouchbase("7.6")
     @UncommittedCouchbaseApi
     public suspend fun lookupInAnyReplica(
         id: String,
@@ -646,7 +646,7 @@ public class Collection internal constructor(
      * Like [lookupIn], but sends the request to all replicas in addition to the active.
      * Returns the results from all available sources.
      */
-    @SinceCouchbase("7.5")
+    @SinceCouchbase("7.6")
     @UncommittedCouchbaseApi
     public fun lookupInAllReplicas(
         id: String,

@@ -198,7 +198,7 @@ public enum ServerFeature {
    * a document to be accepted by a replica node and will return
    * the replica for the document.
    */
-  @SinceCouchbase("7.5")
+  @SinceCouchbase("7.6")
   SUBDOC_READ_REPLICA(0x1c),
 
   /**
