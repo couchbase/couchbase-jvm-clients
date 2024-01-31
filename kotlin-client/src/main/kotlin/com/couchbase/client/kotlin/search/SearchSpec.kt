@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Couchbase, Inc.
+ * Copyright 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,65 +16,50 @@
 
 package com.couchbase.client.kotlin.search
 
-import com.couchbase.client.core.api.search.CoreSearchQuery
-import com.couchbase.client.core.api.search.queries.CoreBooleanFieldQuery
-import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
-import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery
-import com.couchbase.client.core.api.search.queries.CoreCustomQuery
-import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery
-import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery
-import com.couchbase.client.core.api.search.queries.CoreDocIdQuery
-import com.couchbase.client.core.api.search.queries.CoreGeoBoundingBoxQuery
-import com.couchbase.client.core.api.search.queries.CoreGeoDistanceQuery
-import com.couchbase.client.core.api.search.queries.CoreGeoPolygonQuery
-import com.couchbase.client.core.api.search.queries.CoreMatchAllQuery
-import com.couchbase.client.core.api.search.queries.CoreMatchNoneQuery
-import com.couchbase.client.core.api.search.queries.CoreMatchOperator
-import com.couchbase.client.core.api.search.queries.CoreMatchPhraseQuery
-import com.couchbase.client.core.api.search.queries.CoreMatchQuery
-import com.couchbase.client.core.api.search.queries.CoreNumericRangeQuery
-import com.couchbase.client.core.api.search.queries.CorePhraseQuery
-import com.couchbase.client.core.api.search.queries.CorePrefixQuery
-import com.couchbase.client.core.api.search.queries.CoreQueryStringQuery
-import com.couchbase.client.core.api.search.queries.CoreRegexpQuery
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest
-import com.couchbase.client.core.api.search.queries.CoreTermQuery
-import com.couchbase.client.core.api.search.queries.CoreTermRangeQuery
-import com.couchbase.client.core.api.search.queries.CoreWildcardQuery
-import com.couchbase.client.kotlin.search.GeoShape.Companion.circle
-import com.couchbase.client.kotlin.search.SearchQuery.Companion.matchPhrase
-import com.couchbase.client.kotlin.search.SearchQuery.Companion.term
+import com.couchbase.client.core.api.search.vector.CoreVectorQueryCombination
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.MatchOperator
 import java.time.Instant
 
 /**
- * A non-vector [Full-Text Search query](https://docs.couchbase.com/server/current/fts/fts-supported-queries.html)
+ * A search specification ("spec" for short) that tells the server
+ * what to look for during a Full-Text Search.
  *
- * See also: [SearchSpec].
+ * Generally speaking, there are two different types of spec:
+ * 1. A non-vector query represented by a [SearchQuery].
+ * 2. A vector query represented by a [VectorQuery].
+ *
+ * Create instances of either type by calling [SearchSpec]
+ * companion factory methods.
+ *
+ * To create a mixed-mode search that combines a vector search
+ * with a non-vector search, use [SearchSpec.mixedMode].
+ *
+ * @sample com.couchbase.client.kotlin.samples.searchSpecSimpleSearchQuery
+ * @sample com.couchbase.client.kotlin.samples.searchSpecSimpleVectorQuery
+ * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
+ * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
+ * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
  */
-public sealed class SearchQuery : SearchSpec() {
-    internal abstract val core: CoreSearchQuery
-    internal abstract fun withBoost(boost: Double?): SearchQuery
-
-    override val coreRequest: CoreSearchRequest
-        get() = CoreSearchRequest(this.core, null)
-
-    /**
-     * Returns a new query that decorates this one with the given boost multiplier.
-     * Has no effect unless this query is used in a disjunction or conjunction.
-     */
-    public infix fun boost(boost: Number): SearchQuery = this.withBoost(boost.toDouble())
-
-    /**
-     * Returns the JSON representation of this query condition.
-     */
-    public override fun toString(): String = core.export().toString()
+@VolatileCouchbaseApi
+public sealed class SearchSpec {
+    internal abstract val coreRequest: CoreSearchRequest
 
     public companion object {
-        public enum class MatchOperator(internal val core: CoreMatchOperator) {
-            AND(CoreMatchOperator.AND),
-            OR(CoreMatchOperator.OR),
-            ;
-        }
+
+        /**
+         * Combines the non-vector [searchQuery] with a vector query, using logical OR.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
+         */
+        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
+        public fun mixedMode(
+            searchQuery: SearchQuery,
+            vectorQuery: VectorSearchSpec,
+        ): SearchSpec = MixedModeSearchSpec(searchQuery, vectorQuery)
 
         /**
          * A [Match query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-match.html).
@@ -118,20 +103,7 @@ public sealed class SearchQuery : SearchSpec() {
             operator: MatchOperator = MatchOperator.OR,
             fuzziness: Int = 0,
             prefixLength: Int = 0,
-        ): SearchQuery = MatchQuery(match, field, analyzer, operator, fuzziness, prefixLength)
-
-        internal data class MatchQuery(
-            val match: String,
-            val field: String,
-            val analyzer: String?,
-            val operator: MatchOperator,
-            val fuzziness: Int,
-            val prefixLength: Int,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreMatchQuery(match, field, analyzer, prefixLength, fuzziness, operator.core, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.match(match, field, analyzer, operator, fuzziness, prefixLength)
 
         /**
          * A [Match Phrase query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-match-phrase.html)
@@ -159,17 +131,7 @@ public sealed class SearchQuery : SearchSpec() {
             matchPhrase: String,
             field: String = "_all",
             analyzer: String? = null,
-        ): SearchQuery = MatchPhraseQuery(matchPhrase, field, analyzer)
-
-        internal data class MatchPhraseQuery(
-            val matchPhrase: String,
-            val field: String = "_all",
-            val analyzer: String? = null,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreMatchPhraseQuery(matchPhrase, field, analyzer, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.matchPhrase(matchPhrase, field, analyzer)
 
         /**
          * A [Term query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-term.html)
@@ -201,18 +163,7 @@ public sealed class SearchQuery : SearchSpec() {
             field: String = "_all",
             fuzziness: Int = 0,
             prefixLength: Int = 0,
-        ): SearchQuery = TermQuery(term, field, fuzziness, prefixLength)
-
-        internal data class TermQuery(
-            val term: String,
-            val field: String,
-            val fuzziness: Int,
-            val prefixLength: Int,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreTermQuery(term, field, fuzziness, prefixLength, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.term(term, field, fuzziness, prefixLength)
 
         /**
          * A [Phrase query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-phrase.html)
@@ -238,16 +189,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun phrase(
             terms: List<String>,
             field: String = "_all",
-        ): SearchQuery = PhraseQuery(terms, field)
-
-        internal data class PhraseQuery(
-            val terms: List<String>,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CorePhraseQuery(terms, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.phrase(terms, field)
 
         /**
          * A [Prefix query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-prefix-query.html)
@@ -262,16 +204,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun prefix(
             prefix: String,
             field: String = "_all",
-        ): SearchQuery = PrefixQuery(prefix, field)
-
-        internal data class PrefixQuery(
-            val prefix: String,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CorePrefixQuery(prefix, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.prefix(prefix, field)
 
         /**
          * A [Regexp query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-regexp.html)
@@ -288,16 +221,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun regexp(
             regexp: String,
             field: String = "_all",
-        ): SearchQuery = RegexpQuery(regexp, field)
-
-        internal data class RegexpQuery(
-            val regexp: String,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreRegexpQuery(regexp, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.regexp(regexp, field)
 
         /**
          * A [Wildcard query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-wildcard.html)
@@ -313,16 +237,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun wildcard(
             term: String,
             field: String = "_all",
-        ): SearchQuery = WildcardQuery(term, field)
-
-        internal data class WildcardQuery(
-            val term: String,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreWildcardQuery(term, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.wildcard(term, field)
 
         /**
          * A [Query String query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-query-string-query.html).
@@ -334,15 +249,8 @@ public sealed class SearchQuery : SearchSpec() {
          */
         public fun queryString(
             queryString: String,
-        ): SearchQuery = QueryStringQuery(queryString)
+        ): SearchQuery = SearchQuery.queryString(queryString)
 
-        internal data class QueryStringQuery(
-            val queryString: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreQueryStringQuery(queryString, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
 
         /**
          * A [Boolean Field query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-field-query.html).
@@ -351,16 +259,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun booleanField(
             bool: Boolean,
             field: String,
-        ): SearchQuery = BooleanFieldQuery(bool, field)
-
-        internal data class BooleanFieldQuery(
-            val bool: Boolean,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreBooleanFieldQuery(bool, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.booleanField(bool, field)
 
         /**
          * A [DocId query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-DocID-query.html).
@@ -368,15 +267,7 @@ public sealed class SearchQuery : SearchSpec() {
          */
         public fun documentId(
             ids: List<String>,
-        ): SearchQuery = DocumentIdQuery(ids)
-
-        internal data class DocumentIdQuery(
-            val ids: List<String>,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreDocIdQuery(boost, ids)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.documentId(ids)
 
         /**
          * A [Term Range query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-term-range.html)
@@ -387,19 +278,7 @@ public sealed class SearchQuery : SearchSpec() {
             inclusiveMin: Boolean = true,
             max: String? = null,
             inclusiveMax: Boolean = false,
-        ): SearchQuery = TermRangeQuery(field, min, inclusiveMin, max, inclusiveMax)
-
-        internal data class TermRangeQuery(
-            val field: String,
-            val min: String?,
-            val inclusiveMin: Boolean,
-            val max: String?,
-            val inclusiveMax: Boolean,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreTermRangeQuery(min, max, inclusiveMin, inclusiveMax, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.termRange(field, min, inclusiveMin, max, inclusiveMax)
 
         /**
          * A [Numeric Range query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-numeric-range.html)
@@ -410,19 +289,7 @@ public sealed class SearchQuery : SearchSpec() {
             inclusiveMin: Boolean = true,
             max: Number? = null,
             inclusiveMax: Boolean = false,
-        ): SearchQuery = NumericRangeQuery(field, min, inclusiveMin, max, inclusiveMax)
-
-        internal data class NumericRangeQuery(
-            val field: String,
-            val min: Number?,
-            val inclusiveMin: Boolean,
-            val max: Number?,
-            val inclusiveMax: Boolean,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreNumericRangeQuery(min?.toDouble(), max?.toDouble(), inclusiveMin, inclusiveMax, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.numericRange(field, min, inclusiveMin, max, inclusiveMax)
 
         /**
          * A [Date Range query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-date-range.html)
@@ -433,19 +300,7 @@ public sealed class SearchQuery : SearchSpec() {
             inclusiveStart: Boolean = true,
             end: Instant? = null,
             inclusiveEnd: Boolean = false,
-        ): SearchQuery = DateRangeQuery(field, start, inclusiveStart, end, inclusiveEnd)
-
-        internal data class DateRangeQuery(
-            val field: String,
-            val start: Instant?,
-            val inclusiveStart: Boolean,
-            val end: Instant?,
-            val inclusiveEnd: Boolean,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreDateRangeQuery(start?.toString(), end?.toString(), inclusiveStart, inclusiveEnd, null, field, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.dateRange(field, start, inclusiveStart, end, inclusiveEnd)
 
         /**
          * A [Geo Point Distance query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-geo-point-distance.html)
@@ -456,7 +311,7 @@ public sealed class SearchQuery : SearchSpec() {
             location: GeoPoint,
             distance: GeoDistance,
             field: String = "_all",
-        ): SearchQuery = geoShape(circle(location, distance), field)
+        ): SearchQuery = geoShape(GeoShape.circle(location, distance), field)
 
         /**
          * A [Geo Bounded Rectangle query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-geo-bounded-rectangle.html)
@@ -468,21 +323,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun geoShape(
             shape: GeoShape,
             field: String = "_all",
-        ): SearchQuery = GeoShapeQuery(shape, field)
-
-        internal data class GeoShapeQuery(
-            val shape: GeoShape,
-            val field: String,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = when (shape) {
-                is GeoCircle -> CoreGeoDistanceQuery(shape.center.core, shape.radius.serialize(), field, boost)
-                is GeoPolygon -> CoreGeoPolygonQuery(shape.vertices.map { it.core }, field, boost)
-                is GeoRectangle -> CoreGeoBoundingBoxQuery(shape.topLeft.core, shape.bottomRight.core, field, boost)
-            }
-
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.geoShape(shape, field)
 
         /**
          * Searches for documents that don't match [query].
@@ -497,14 +338,14 @@ public sealed class SearchQuery : SearchSpec() {
         public fun conjunction(
             firstConjunct: SearchQuery,
             vararg remainingConjuncts: SearchQuery,
-        ): ConjunctionQuery = conjunction(listOf(firstConjunct, *remainingConjuncts))
+        ): ConjunctionQuery = SearchQuery.conjunction(firstConjunct, *remainingConjuncts)
 
         /**
          * A [Conjunction query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-conjuncts-disjuncts.html)
          *
          * Searches for documents that match all the [conjuncts] (child queries joined by AND).
          */
-        public fun conjunction(conjuncts: List<SearchQuery>): ConjunctionQuery = ConjunctionQuery(conjuncts)
+        public fun conjunction(conjuncts: List<SearchQuery>): ConjunctionQuery = SearchQuery.conjunction(conjuncts)
 
         /**
          * A [Disjunction query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-conjuncts-disjuncts.html)
@@ -516,7 +357,7 @@ public sealed class SearchQuery : SearchSpec() {
             firstDisjunct: SearchQuery,
             vararg remainingDisjuncts: SearchQuery,
             min: Int = 1,
-        ): DisjunctionQuery = disjunction(listOf(firstDisjunct, *remainingDisjuncts), min)
+        ): DisjunctionQuery = SearchQuery.disjunction(firstDisjunct, remainingDisjuncts = remainingDisjuncts, min)
 
         /**
          * A [Disjunction query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-conjuncts-disjuncts.html)
@@ -527,7 +368,7 @@ public sealed class SearchQuery : SearchSpec() {
         public fun disjunction(
             disjuncts: List<SearchQuery>,
             min: Int = 1,
-        ): DisjunctionQuery = DisjunctionQuery(disjuncts, min)
+        ): DisjunctionQuery = SearchQuery.disjunction(disjuncts, min)
 
         /**
          * A [Boolean query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-boolean-query.html)
@@ -540,102 +381,106 @@ public sealed class SearchQuery : SearchSpec() {
             must: ConjunctionQuery? = null,
             should: DisjunctionQuery? = null,
             mustNot: DisjunctionQuery? = null,
-        ): SearchQuery = BooleanQuery(must, should, mustNot)
-
-        internal data class BooleanQuery(
-            val must: ConjunctionQuery?,
-            val should: DisjunctionQuery?,
-            val mustNot: DisjunctionQuery?,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreBooleanQuery(must?.core, mustNot?.core, should?.core, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        ): SearchQuery = SearchQuery.boolean(must, should, mustNot)
 
         /**
          * [A Match All query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-match-all.html)
          *
          * A query that matches all indexed documents.
          */
-        public fun matchAll(): SearchQuery = MatchAllQuery()
-
-        internal data class MatchAllQuery(
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreMatchAllQuery(boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        public fun matchAll(): SearchQuery = SearchQuery.matchAll()
 
         /**
          * [A Match None query](https://docs.couchbase.com/server/current/fts/fts-supported-queries-match-none.html)
          *
          * A query that matches nothing.
          */
-        public fun matchNone(): SearchQuery = MatchNoneQuery()
-
-        internal data class MatchNoneQuery(
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreMatchNoneQuery(boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        public fun matchNone(): SearchQuery = SearchQuery.matchNone()
 
         /**
-         * Escape hatch for specifying a custom query condition supported
-         * by Couchbase Server but not by this version of the SDK.
+         * A Vector query.
          *
-         * The [customizer] lambda populates a map that gets converted to JSON.
+         * Vector queries can be ANDed or ORed together to create a compound vector query by passing
+         * them to [SearchSpec.allOf] or [SearchSpec.anyOf].
          *
-         * Example:
-         * ```
-         * val query = custom {
-         *     put("wildcard", "foo?ball)
-         *     put("field", "sport")
-         * }
-         * ```
-         * yields the query JSON:
-         * ```
-         * {
-         *     "wildcard": "foo?ball",
-         *     "field": "sport"
-         * }
-         * ```
+         * To combine the results of a vector query with the results of a non-vector query,
+         * use [SearchSpec.mixedMode].
+         *
+         * @param vector The vector to compare against.
+         * @param field The document field to search.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecSimpleVectorQuery
+         * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
+         * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
          */
-        public fun custom(customizer: MutableMap<String, Any?>.() -> Unit): SearchQuery {
-            val params: MutableMap<String, Any?> = mutableMapOf()
-            params.customizer()
-            return CustomQuery(params)
-        }
+        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
+        public fun vector(
+            field: String,
+            vector: FloatArray,
+            numCandidates: Int = 3,
+        ): VectorQuery = InternalVectorQuery(vector.clone(), field, numCandidates)
 
-        internal data class CustomQuery(
-            val params: Map<String, Any?>,
-            val boost: Double? = null,
-        ) : SearchQuery() {
-            override val core = CoreCustomQuery(params, boost)
-            override fun withBoost(boost: Double?) = copy(boost = boost)
-        }
+        /**
+         * Combines vector queries using logical OR.
+         *
+         * **CAVEAT:** Nested compound vector queries like `"A or (B and C)"` are not supported.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
+         */
+        @VolatileCouchbaseApi
+        public fun anyOf(
+            vectorQueries: List<VectorQuery>,
+        ): VectorSearchSpec = CompoundVectorSearchSpec(vectorQueries, CoreVectorQueryCombination.OR)
+
+        /**
+         * Combines vector queries using logical OR.
+         *
+         * **CAVEAT:** Nested compound vector queries like `"A or (B and C)"` are not supported.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
+         */
+        @VolatileCouchbaseApi
+        public fun anyOf(
+            first: VectorQuery,
+            vararg remaining: VectorQuery,
+        ): VectorSearchSpec = anyOf(listOf(first, *remaining))
+
+        /**
+         * Combines vector queries using logical AND.
+         *
+         * **CAVEAT:** Nested compound vector queries like `"A or (B and C)"` are not supported.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
+         */
+        @VolatileCouchbaseApi
+        public fun allOf(
+            vectorQueries: List<VectorQuery>,
+        ): VectorSearchSpec = CompoundVectorSearchSpec(vectorQueries, CoreVectorQueryCombination.AND)
+
+        /**
+         * Combines vector queries using logical AND.
+         *
+         * **CAVEAT:** Nested compound vector queries like `"A or (B and C)"` are not supported.
+         *
+         * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
+         */
+        @VolatileCouchbaseApi
+        public fun allOf(
+            first: VectorQuery,
+            vararg remaining: VectorQuery,
+        ): VectorSearchSpec = allOf(listOf(first, *remaining))
+
     }
 }
 
-/**
- * Create an instance using [SearchQuery.conjunction].
- */
-public class ConjunctionQuery internal constructor(
-    private val conjuncts: List<SearchQuery>,
-    boost: Double? = null,
-) : SearchQuery() {
-    override val core = CoreConjunctionQuery(conjuncts.map { it.core }, boost)
-    override fun withBoost(boost: Double?) = ConjunctionQuery(conjuncts, boost)
-}
-
-/**
- * Create an instance using [SearchQuery.disjunction].
- */
-public class DisjunctionQuery internal constructor(
-    private val disjuncts: List<SearchQuery>,
-    private val min: Int = 1,
-    boost: Double? = null,
-) : SearchQuery() {
-    override val core = CoreDisjunctionQuery(disjuncts.map { it.core }, min, boost)
-    override fun withBoost(boost: Double?) = DisjunctionQuery(disjuncts, min, boost)
+internal class MixedModeSearchSpec(
+    private val searchQuery: SearchQuery,
+    private val vectorQuery: VectorSearchSpec,
+) : SearchSpec() {
+    override val coreRequest: CoreSearchRequest
+        get() = CoreSearchRequest(
+            searchQuery.coreRequest.searchQuery,
+            vectorQuery.coreRequest.vectorSearch,
+        )
 }

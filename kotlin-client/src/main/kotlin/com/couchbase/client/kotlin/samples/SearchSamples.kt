@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:Suppress("UNUSED_VARIABLE")
+
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
@@ -25,17 +27,65 @@ import com.couchbase.client.kotlin.search.SearchResult
 import com.couchbase.client.kotlin.search.SearchSort
 import com.couchbase.client.kotlin.search.SearchSort.Companion.byField
 import com.couchbase.client.kotlin.search.SearchSort.Companion.byId
+import com.couchbase.client.kotlin.search.SearchSpec
+import com.couchbase.client.kotlin.search.VectorQuery
 import com.couchbase.client.kotlin.search.execute
 
-internal suspend fun searchQuerySimple(cluster: Cluster) {
+internal fun searchSpecSimpleSearchQuery() {
+    // A search specification for a `match` query.
+    val spec: SearchQuery = SearchSpec.match("pizza", field = "description")
+}
+
+internal fun searchSpecSimpleVectorQuery(floatArray: FloatArray) {
+    // A search specification for a single vector query.
+    val spec: VectorQuery = SearchSpec.vector("reviews", floatArray)
+}
+
+internal fun searchSpecVectorAnyOf(floatArray: FloatArray, otherFloatArray: FloatArray) {
+    // A search specification that ORs together multiple vector queries.
+    val spec = SearchSpec.anyOf(
+        SearchSpec.vector("review", floatArray),
+        SearchSpec.vector("review", otherFloatArray),
+    )
+}
+
+internal fun searchSpecVectorAllOf(floatArray: FloatArray, otherFloatArray: FloatArray) {
+    // A search specification that ANDs together multiple vector queries.
+    val spec = SearchSpec.allOf(
+        SearchSpec.vector("review", floatArray),
+        SearchSpec.vector("review", otherFloatArray),
+    )
+}
+
+internal fun searchSpecMixedMode(floatArray: FloatArray) {
+    // A search specification that ORs a non-vector `match` query
+    // with a vector query.
+    val spec = SearchSpec.mixedMode(
+        SearchSpec.match("pizza"),
+        SearchSpec.vector("review", floatArray),
+    )
+}
+
+internal suspend fun searchSimpleVector(clusterOrScope: Cluster, floatArray: FloatArray) {
+    // A simple vector search.
+    val result = clusterOrScope.search(
+        indexName = "my-index",
+        fields = listOf("*"), // return all stored fields
+        spec = SearchSpec.vector("vectorFieldName", floatArray),
+    ).execute()
+
+    result.rows.forEach { println(it) }
+}
+
+internal suspend fun searchSimple(clusterOrScope: Cluster) {
     // A simple search query against the "travel-sample" sample bucket.
     // Requires the "description" field to be indexed (stored).
-    val result = cluster.searchQuery(
+    val result = clusterOrScope.search(
         indexName = "travel-sample-index-hotel-description",
 
         fields = listOf("*"), // return all stored fields
 
-        query = SearchQuery.match(
+        spec = SearchSpec.match(
             match = "beautiful", // look for this term
             field = "description", // limit the query to this field
         ),
@@ -43,7 +93,7 @@ internal suspend fun searchQuerySimple(cluster: Cluster) {
         highlight = Highlight.html(), // return matching fragments
     ).execute()
 
-    checkSearchQueryResultForPartialFailure(result)  // see other sample
+    checkSearchResultForPartialFailure(result)  // see other sample
 
     println(result.metadata)
     result.rows.forEach { row ->
@@ -56,7 +106,7 @@ internal suspend fun searchQuerySimple(cluster: Cluster) {
     }
 }
 
-internal suspend fun searchQueryWithFacets(cluster: Cluster) {
+internal suspend fun searchQueryWithFacets(clusterOrScope: Cluster) {
     // Searching with facets.
 
     // Assumes the "beer-sample" sample bucket is installed,
@@ -76,9 +126,9 @@ internal suspend fun searchQueryWithFacets(cluster: Cluster) {
     // Find the 5 most frequent values in the "category" field.
     val beerType = SearchFacet.term("category", size = 5)
 
-    val result = cluster.searchQuery(
+    val result = clusterOrScope.search(
         indexName = "beer-search",
-        query = SearchQuery.matchAll(),
+        spec = SearchSpec.matchAll(),
         facets = listOf(abv, beerType),
     ).execute()
 
@@ -112,7 +162,7 @@ internal fun searchTieredSort() {
     val sameSort = SearchSort.of(listOf(byField("foo"), byId()))
 }
 
-internal fun checkSearchQueryResultForPartialFailure(searchResult: SearchResult) {
+internal fun checkSearchResultForPartialFailure(searchResult: SearchResult) {
     // Checking a SearchResult for partial failure
     val errors = searchResult.metadata.errors
     val metrics = searchResult.metadata.metrics

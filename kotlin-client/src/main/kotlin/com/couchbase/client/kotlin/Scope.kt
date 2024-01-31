@@ -20,16 +20,31 @@ import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.api.query.CoreQueryContext
+import com.couchbase.client.core.api.search.CoreHighlightStyle
+import com.couchbase.client.core.api.search.CoreSearchKeyset
+import com.couchbase.client.core.api.search.CoreSearchOps
+import com.couchbase.client.core.api.search.CoreSearchOptions
+import com.couchbase.client.core.api.search.CoreSearchScanConsistency
+import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.sort.CoreSearchSort
+import com.couchbase.client.core.api.shared.CoreMutationState
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.error.FeatureNotAvailableException
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.analytics.AnalyticsFlowItem
 import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
+import com.couchbase.client.kotlin.internal.requireUnique
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
@@ -40,7 +55,24 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.QueryExecutor
+import com.couchbase.client.kotlin.search.Direction
+import com.couchbase.client.kotlin.search.Highlight
+import com.couchbase.client.kotlin.search.Score
+import com.couchbase.client.kotlin.search.SearchFacet
+import com.couchbase.client.kotlin.search.SearchFlowItem
+import com.couchbase.client.kotlin.search.SearchMetadata
+import com.couchbase.client.kotlin.search.SearchPage
+import com.couchbase.client.kotlin.search.SearchResult
+import com.couchbase.client.kotlin.search.SearchRow
+import com.couchbase.client.kotlin.search.SearchScanConsistency
+import com.couchbase.client.kotlin.search.SearchSort
+import com.couchbase.client.kotlin.search.SearchSpec
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactive.awaitSingle
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -49,6 +81,7 @@ public class Scope(
     public val bucket: Bucket,
 ) {
     internal val couchbaseOps: CoreCouchbaseOps = bucket.couchbaseOps
+    private val searchOps = couchbaseOps.searchOps(CoreBucketAndScope(bucket.name, name))
 
     private val collectionCache = ConcurrentHashMap<String, Collection>()
 
@@ -289,5 +322,213 @@ public class Scope(
             clientContextId,
             raw
         )
+    }
+
+    /**
+     * Returns a Flow which can be collected to execute a Full-Text Search
+     * (vector, non-vector, or mixed-mode) against a scope-level index.
+     *
+     * The returned Flow is cold, meaning the query is not executed unless
+     * the Flow is collected. If you collect the flow multiple times,
+     * the query is executed each time.
+     *
+     * The extension function `Flow<SearchFlowItem>.execute()` may be used
+     * when the results are known to fit in memory. It simply collects the flow
+     * into a [SearchResult].
+     *
+     * For larger query results, prefer the streaming version which takes a
+     * lambda to invoke when each row is received from the server:
+     * `Flow<SearchFlowItem>.execute { row -> ... }`.
+     *
+     * @param indexName Index to search.
+     *
+     * @param spec Condition a document must match in order to be included in the search results.
+     *
+     * @param page Specifies which rows of the search result to return.
+     *
+     * @param limit Number of rows to return (page size).
+     *
+     * @param sort Specifies how the results should be sorted.
+     * For tiered sort (sort by X then by Y) see [SearchSort.then].
+     *
+     * @param fields Stored fields to include in the result rows, or `listOf("*")`
+     * to include all stored fields.
+     *
+     * @param facets Specifies the facets to include in the search results.
+     * A facet counts the number of documents in the full, unpaginated search results
+     * that meet certain criteria. Facet results may be retrieved from either
+     * [SearchResult] or [SearchMetadata], whichever is more convenient.
+     *
+     * @param highlight Specifies whether to include fragments of text
+     * with the matching search term highlighted. If highlighting is requested,
+     * the result also includes location information for matched terms.
+     *
+     * @param includeLocations If true, triggers the inclusion of location information
+     * for matched terms. If highlighting is requested, locations are always included
+     * and this parameter has no effect.
+     *
+     * @param score The scoring algorithm to use.
+     *
+     * @param explain If true, [SearchRow.explanation] holds the bytes of a JSON Object
+     * describing how the score was calculated.
+     *
+     * @param collections If not empty, only search within the named collections.
+     * Requires an index defined on a non-default scope containing the collections.
+     *
+     * @param consistency Specifies whether to wait for the index to catch up with the
+     * latest versions of certain documents. The default (unbounded) is fast, but means
+     * the results might not reflect the latest document mutations.
+     *
+     * @param serializer Default serializer to use for [SearchRow.fieldsAs].
+     * If not specified, defaults to the cluster environment's default serializer.
+     *
+     * @param raw The keys and values in this map are added to the query specification JSON.
+     * This is an "escape hatch" for sending arguments supported by Couchbase Server, but not
+     * by this version of the SDK.
+     *
+     * @sample com.couchbase.client.kotlin.samples.searchSimple
+     * @sample com.couchbase.client.kotlin.samples.checkSearchResultForPartialFailure
+     * @sample com.couchbase.client.kotlin.samples.searchQueryWithFacets
+     * @sample com.couchbase.client.kotlin.samples.searchSimpleVector
+     * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
+     */
+    @VolatileCouchbaseApi
+    @SinceCouchbase("7.6")
+    public fun search(
+        indexName: String,
+        spec: SearchSpec,
+        common: CommonOptions = CommonOptions.Default,
+        page: SearchPage = SearchPage.startAt(offset = 0),
+        limit: Int? = null,
+        sort: SearchSort = SearchSort.byScore(Direction.DESCENDING),
+        fields: List<String> = emptyList(),
+        facets: List<SearchFacet> = emptyList(),
+        highlight: Highlight = Highlight.none(),
+        includeLocations: Boolean = false,
+        score: Score = Score.default(),
+        explain: Boolean = false,
+        @SinceCouchbase("7.0") collections: List<String> = emptyList(),
+        consistency: SearchScanConsistency = SearchScanConsistency.notBounded(),
+        serializer: JsonSerializer? = null,
+        raw: Map<String, Any?> = emptyMap(),
+    ): Flow<SearchFlowItem> = searchOps.search(
+        indexName = indexName,
+        spec = spec,
+        common = common,
+        page = page,
+        limit = limit,
+        sort = sort,
+        fields = fields,
+        facets = facets,
+        highlight = highlight,
+        includeLocations = includeLocations,
+        score = score,
+        explain = explain,
+        collections = collections,
+        consistency = consistency,
+        serializer = serializer ?: bucket.env.jsonSerializer,
+        raw = raw,
+    )
+}
+
+internal fun CoreSearchOps.search(
+    indexName: String,
+    spec: SearchSpec,
+    common: CommonOptions,
+    page: SearchPage,
+    limit: Int?,
+    sort: SearchSort,
+    fields: List<String>,
+    facets: List<SearchFacet>,
+    highlight: Highlight,
+    includeLocations: Boolean,
+    score: Score,
+    explain: Boolean,
+    @SinceCouchbase("7.0") collections: List<String>,
+    consistency: SearchScanConsistency,
+    serializer: JsonSerializer,
+    raw: Map<String, Any?>,
+): Flow<SearchFlowItem> {
+
+    requireUnique(facets.map { it.name }) { duplicate ->
+        "Each facet used in a request must have a unique name, but got multiple facts named '$duplicate'."
+    }
+
+    val opts = object : CoreSearchOptions {
+        override fun collections() = collections
+
+        override fun consistency(): CoreSearchScanConsistency? =
+            when (consistency) {
+                is SearchScanConsistency.NotBounded -> CoreSearchScanConsistency.NOT_BOUNDED
+                is SearchScanConsistency.ConsistentWith -> null
+            }
+
+        override fun consistentWith(): CoreMutationState? =
+            when (consistency) {
+                is SearchScanConsistency.NotBounded -> null
+                is SearchScanConsistency.ConsistentWith -> CoreMutationState(consistency.tokens)
+            }
+
+        override fun disableScoring(): Boolean = score is Score.None
+
+        override fun explain(): Boolean? = explain
+
+        override fun facets(): Map<String, CoreSearchFacet> {
+            if (facets.isEmpty()) return emptyMap()
+            val map = mutableMapOf<String, CoreSearchFacet>()
+            facets.forEach { map[it.name] = it.core }
+            return map
+        }
+
+        override fun fields(): List<String> = fields
+
+        override fun highlightFields(): List<String> = when (highlight) {
+            is Highlight.Companion.None -> emptyList()
+            is Highlight.Companion.Specific -> highlight.fields
+        }
+
+        override fun highlightStyle(): CoreHighlightStyle? = when (highlight) {
+            is Highlight.Companion.None -> null
+            is Highlight.Companion.Specific -> {
+                when (highlight.style?.name?.uppercase()) {
+                    null -> CoreHighlightStyle.SERVER_DEFAULT
+                    "HTML" -> CoreHighlightStyle.HTML
+                    "ANSI" -> CoreHighlightStyle.ANSI
+                    else -> throw FeatureNotAvailableException("Highlight style '${highlight.style}' not supported")
+                }
+            }
+        }
+
+        override fun limit(): Int? = limit
+
+        override fun raw(): JsonNode? {
+            return if (raw.isEmpty()) null else Mapper.convertValue(raw, ObjectNode::class.java)
+        }
+
+        override fun skip(): Int? = (page as? SearchPage.StartAt)?.offset
+        override fun searchBefore(): CoreSearchKeyset? = (page as? SearchPage.SearchBefore)?.keyset?.core
+        override fun searchAfter(): CoreSearchKeyset? = (page as? SearchPage.SearchAfter)?.keyset?.core
+
+        override fun sort(): List<CoreSearchSort> = sort.core
+
+        override fun includeLocations(): Boolean? = includeLocations
+
+        override fun commonOptions(): CoreCommonOptions = common.toCore()
+    }
+
+    return flow {
+        val response = searchReactive(
+            indexName,
+            spec.coreRequest,
+            opts,
+        ).awaitSingle()
+
+        emitAll(response.rows().asFlow()
+            .map { SearchRow.from(it, serializer) })
+
+        val coreMetadata = response.metaData().awaitSingle()
+        val coreFacets = response.facets().awaitSingle()
+
+        emit(SearchMetadata(coreMetadata, coreFacets))
     }
 }
