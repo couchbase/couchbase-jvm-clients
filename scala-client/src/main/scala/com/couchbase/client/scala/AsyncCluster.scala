@@ -23,6 +23,7 @@ import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.{
   asConnectionString,
@@ -50,6 +51,8 @@ import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.search.vector.SearchRequest
+import com.couchbase.client.scala.transactions.AsyncTransactions
+import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, _}
 import com.couchbase.client.scala.util.FutureConversions
@@ -120,6 +123,15 @@ class AsyncCluster(
 
   @Stability.Uncommitted
   lazy val eventingFunctions = new AsyncEventingFunctionManager(env, couchbaseOps)
+
+  @Stability.Uncommitted
+  lazy val transactions = new AsyncTransactions(
+    new CoreTransactionsReactive(
+      core,
+      env.transactionsConfig.map(v => v.toCore).getOrElse(TransactionsConfig().toCore)
+    ),
+    env
+  )
 
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *

@@ -51,7 +51,7 @@ import scala.util.{Failure, Success, Try}
   */
 class AsyncScope private[scala] (
     scopeName: String,
-    bucketName: String,
+    val bucketName: String,
     private[scala] val couchbaseOps: CoreCouchbaseOps,
     private[scala] val environment: ClusterEnvironment
 ) {

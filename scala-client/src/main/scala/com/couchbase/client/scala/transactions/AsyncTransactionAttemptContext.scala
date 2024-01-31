@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Couchbase, Inc.
+ * Copyright 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.scala.transactions;
+package com.couchbase.client.scala.transactions
 
 import com.couchbase.client.core.api.query.{CoreQueryContext, CoreQueryOptions}
-import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.cnc.TracingIdentifiers.{
   TRANSACTION_OP_INSERT,
   TRANSACTION_OP_REMOVE,
   TRANSACTION_OP_REPLACE
 }
+import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
+import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.FutureConversions
-import com.couchbase.client.scala.{ReactiveCollection, ReactiveScope}
-import reactor.core.scala.publisher.SMono
+import com.couchbase.client.scala.{AsyncCollection, AsyncScope}
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success};
 
 /**
@@ -41,9 +42,11 @@ import scala.util.{Failure, Success};
   *                        of types that are supported 'out of the box' is available at
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
-class ReactiveTransactionAttemptContext private[scala] (
-    private[client] val internal: CoreTransactionAttemptContext
+class AsyncTransactionAttemptContext private[scala] (
+    private val internal: CoreTransactionAttemptContext,
+    private val environment: ClusterEnvironment
 ) {
+  implicit val executionContext: ExecutionContext = environment.ec
 
   /**
     * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
@@ -54,9 +57,9 @@ class ReactiveTransactionAttemptContext private[scala] (
     * @param id         the document's ID
     * @return a <code>TransactionGetResult</code> containing the document
     */
-  def get(collection: ReactiveCollection, id: String): SMono[TransactionGetResult] = {
+  def get(collection: AsyncCollection, id: String): Future[TransactionGetResult] = {
     FutureConversions
-      .javaMonoToScalaMono(internal.get(collection.collectionIdentifier, id))
+      .javaMonoToScalaFuture(internal.get(collection.collectionIdentifier, id))
       .map(TransactionGetResult)
   }
 
@@ -68,21 +71,22 @@ class ReactiveTransactionAttemptContext private[scala] (
     * @param content       $SupportedTypes
     * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
     */
-  def insert[T](collection: ReactiveCollection, id: String, content: T)(
+  def insert[T](collection: AsyncCollection, id: String, content: T)(
       implicit serializer: JsonSerializer[T]
-  ): SMono[TransactionGetResult] = {
+  ): Future[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
     encode(content, span, serializer, internal.core.context) match {
-      case Failure(exception) => SMono.raiseError(exception)
+      case Failure(exception) => Future.failed(exception)
       case Success(encoded) =>
-        FutureConversions
-          .javaMonoToScalaMono(
-            internal.insert(collection.collectionIdentifier, id, encoded, new SpanWrapper(span))
-          )
-          .map(TransactionGetResult)
-          .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
-          .doOnTerminate(() => span.end())
+        closeSpan(
+          span,
+          FutureConversions
+            .javaMonoToScalaFuture(
+              internal.insert(collection.collectionIdentifier, id, encoded, new SpanWrapper(span))
+            )
+            .map(TransactionGetResult)
+        )
     }
   }
 
@@ -96,33 +100,57 @@ class ReactiveTransactionAttemptContext private[scala] (
     */
   def replace[T](doc: TransactionGetResult, content: T)(
       implicit serializer: JsonSerializer[T]
-  ): SMono[TransactionGetResult] = {
+  ): Future[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
     encode(content, span, serializer, internal.core.context) match {
-      case Failure(exception) => SMono.raiseError(exception)
+      case Failure(exception) => Future.failed(exception)
       case Success(encoded) =>
-        FutureConversions
-          .javaMonoToScalaMono(internal.replace(doc.internal, encoded, new SpanWrapper(span)))
-          .map(TransactionGetResult)
-          .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
-          .doOnTerminate(() => span.end())
+        closeSpan(
+          span,
+          FutureConversions
+            .javaMonoToScalaFuture(internal.replace(doc.internal, encoded, new SpanWrapper(span)))
+            .map(TransactionGetResult)
+        )
     }
+  }
+
+  private def closeSpan[T](
+      span: RequestSpan,
+      future: Future[TransactionGetResult]
+  ): Future[TransactionGetResult] = {
+    future.onComplete {
+      case Failure(_) =>
+        span.status(RequestSpan.StatusCode.ERROR)
+        span.end()
+      case Success(_) =>
+        span.end()
+    }
+    future
   }
 
   /**
     * Removes the specified <code>doc</code>.
     * <p>
+    *
     * @param doc - the doc to be removed
     */
-  def remove(doc: TransactionGetResult): SMono[Unit] = {
+  def remove(doc: TransactionGetResult): Future[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE)
-    FutureConversions
-      .javaMonoToScalaMono(internal.remove(doc.internal, new SpanWrapper(span)))
-      .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
-      .doOnTerminate(() => span.end())
-      .`then`()
+    val out = FutureConversions
+      .javaMonoToScalaFuture(internal.remove(doc.internal, new SpanWrapper(span)))
+      .map(_ => ())
+
+    out.onComplete {
+      case Failure(_) =>
+        span.status(RequestSpan.StatusCode.ERROR)
+        span.end()
+      case Success(_) =>
+        span.end()
+    }
+
+    out
   }
 
   /**
@@ -137,7 +165,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     */
   def query(
       statement: String
-  ): SMono[TransactionQueryResult] = {
+  ): Future[TransactionQueryResult] = {
     query(null, statement, null)
   }
 
@@ -154,7 +182,7 @@ class ReactiveTransactionAttemptContext private[scala] (
   def query(
       statement: String,
       options: TransactionQueryOptions
-  ): SMono[TransactionQueryResult] = {
+  ): Future[TransactionQueryResult] = {
     query(null, statement, options)
   }
 
@@ -172,9 +200,9 @@ class ReactiveTransactionAttemptContext private[scala] (
     * cause the attempt to fail.
     */
   def query(
-      scope: ReactiveScope,
+      scope: AsyncScope,
       statement: String
-  ): SMono[TransactionQueryResult] = {
+  ): Future[TransactionQueryResult] = {
     query(scope, statement, null)
   }
 
@@ -192,22 +220,19 @@ class ReactiveTransactionAttemptContext private[scala] (
     * cause the attempt to fail.
     */
   def query(
-      scope: ReactiveScope,
+      scope: AsyncScope,
       statement: String,
       options: TransactionQueryOptions
-  ): SMono[TransactionQueryResult] = {
+  ): Future[TransactionQueryResult] = {
     val opts: CoreQueryOptions = Option(options).map(v => v.toCore).orNull
     FutureConversions
-      .javaMonoToScalaMono(
+      .javaMonoToScalaFuture(
         internal.queryBlocking(
           statement,
           if (scope == null) null else CoreQueryContext.of(scope.bucketName, scope.name),
           opts,
           false
         )
-      )
-      .publishOn(
-        internal.core().context().environment().transactionsSchedulers().schedulerBlocking()
       )
       .map(TransactionQueryResult)
   }

@@ -44,7 +44,7 @@ case class TransactionQueryResult private[scala] (private val internal: CoreQuer
   }
 
   /**
-    * Returns the {@link QueryMetaData} giving access to the additional metadata associated with this query.
+    * Returns the [[QueryMetaData]] giving access to the additional metadata associated with this query.
     */
   def metaData(): QueryMetaData = {
     CoreCommonConverters.convert(internal.metaData())
