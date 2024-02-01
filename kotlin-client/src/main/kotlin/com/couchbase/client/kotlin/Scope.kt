@@ -31,7 +31,7 @@ import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.toOptional
-import com.couchbase.client.kotlin.manager.search.SearchIndexManager
+import com.couchbase.client.kotlin.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.kotlin.query.QueryFlowItem
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
@@ -66,7 +66,7 @@ public class Scope(
      */
     @UncommittedCouchbaseApi
     @SinceCouchbase("7.6")
-    public val searchIndexes: SearchIndexManager = SearchIndexManager(
+    public val searchIndexes: ScopeSearchIndexManager = ScopeSearchIndexManager(
         couchbaseOps.scopeSearchIndexManager(CoreBucketAndScope(bucket.name, name))
     )
 
