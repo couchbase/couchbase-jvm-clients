@@ -127,6 +127,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.SUBDOC_READ_REPLICA,
         ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION,
         ServerFeature.DUPLEX,
+        ServerFeature.DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP,
         ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF
       );
 
