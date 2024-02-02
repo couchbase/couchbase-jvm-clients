@@ -20,7 +20,7 @@
     <properties>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.source>17</maven.compiler.source>
-        <exec.mainClass>com.couchbase.PerformerService</exec.mainClass>
+        <exec.mainClass>com.couchbase.JavaPerformer</exec.mainClass>
     </properties>
 
     <dependencies>
@@ -102,7 +102,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.couchbase.PerformerService</mainClass>
+                            <mainClass>com.couchbase.JavaPerformer</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

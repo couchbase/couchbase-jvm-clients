@@ -17,7 +17,7 @@
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
-import com.couchbase.PerformerService;
+import com.couchbase.JavaPerformer;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
@@ -100,7 +100,7 @@ public class ResultsUtil {
                     response.addLog(l.toString()));
         }
 
-        String globalError = PerformerService.globalError.getAndSet(null);
+        String globalError = JavaPerformer.globalError.getAndSet(null);
         if (globalError != null) {
             response.setPerformerSpecificValidation(globalError);
         }

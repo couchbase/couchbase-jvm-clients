@@ -96,8 +96,8 @@ import java.util.stream.Collectors;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 
-public class PerformerService extends CorePerformer {
-    private static final Logger logger = LoggerFactory.getLogger(PerformerService.class);
+public class JavaPerformer extends CorePerformer {
+    private static final Logger logger = LoggerFactory.getLogger(JavaPerformer.class);
     private static final ConcurrentHashMap<String, ClusterConnection> clusterConnections = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, RequestSpan> spans = new ConcurrentHashMap<>();
 
@@ -546,7 +546,7 @@ public class PerformerService extends CorePerformer {
         LogRedaction.setRedactionLevel(RedactionLevel.PARTIAL);
 
         Server server = ServerBuilder.forPort(port)
-                .addService(new PerformerService())
+                .addService(new JavaPerformer())
                 .build();
         server.start();
         logger.info("Server Started at {}", server.getPort());
