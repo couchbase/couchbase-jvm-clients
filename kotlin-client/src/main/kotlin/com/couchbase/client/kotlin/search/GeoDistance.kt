@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin.search
 
 import com.couchbase.client.core.api.search.sort.CoreSearchGeoDistanceUnits
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 public enum class GeoDistanceUnit(
     internal val value: String,
@@ -43,6 +44,25 @@ public class GeoDistance(
         public inline val Int.yards: GeoDistance get() = GeoDistance(this, GeoDistanceUnit.YARDS)
         public inline val Int.miles: GeoDistance get() = GeoDistance(this, GeoDistanceUnit.MILES)
         public inline val Int.nauticalMiles: GeoDistance get() = GeoDistance(this, GeoDistanceUnit.NAUTICAL_MILES)
+
+        @VolatileCouchbaseApi
+        public fun parse(formatted: String): GeoDistance {
+            val result = distanceRegex.matchEntire(formatted)
+                ?: throw IllegalArgumentException(
+                    "Malformed GeoDistance string." +
+                            " Expected an integer followed immediately by a unit name (or abbreviation)," +
+                            " but got: '$formatted')"
+                )
+
+            val value = result.groups["value"]!!.value.toInt()
+            val unitName = result.groups["unit"]!!.value
+
+            val unit = unitNameMap[unitName]
+                ?: throw IllegalArgumentException(
+                    "Malformed GeoDistance string. Unit must be one of ${unitNameMap.keys}, but got: '$unitName'"
+                )
+            return GeoDistance(value, unit)
+        }
     }
 
     internal fun serialize(): String {
@@ -53,3 +73,12 @@ public class GeoDistance(
         return serialize()
     }
 }
+
+private val distanceRegex = Regex("""(?<value>\d+)(?<unit>\w+)""")
+
+private val unitNameMap = GeoDistanceUnit.values().flatMap {
+    listOf(
+        it.value to it, // abbreviated name
+        it.core.identifier() to it, // full name
+    )
+}.toMap()

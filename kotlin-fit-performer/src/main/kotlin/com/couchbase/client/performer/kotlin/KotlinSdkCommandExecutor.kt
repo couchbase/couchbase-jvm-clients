@@ -42,10 +42,12 @@ import com.couchbase.client.performer.core.perf.Counters
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil
+import com.couchbase.client.performer.kotlin.manager.ClusterOrScope
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.manager.handleCollectionManager
 import com.couchbase.client.performer.kotlin.manager.handleSearchIndexManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
+import com.couchbase.client.performer.kotlin.query.SearchHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.ContentAsUtil
 import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.createCommon
@@ -332,8 +334,10 @@ class KotlinSdkCommandExecutor(
                     handleBucketManager(connection.cluster, op, result)
                 } else if (clc.hasQuery()) {
                     result = QueryHelper.handleClusterQuery(connection, op, clc)
+                } else if (clc.hasSearch() || clc.hasSearchV2()) {
+                    result = SearchHelper.handleClusterSearch(connection, clc)
                 } else if (clc.hasSearchIndexManager()) {
-                    handleSearchIndexManager(connection.cluster, op, result)
+                    result = handleSearchIndexManager(ClusterOrScope(cluster = connection.cluster), op)
                 } else {
                     throw UnsupportedOperationException(IllegalArgumentException("Unknown cluster-level operation"))
                 }
@@ -365,8 +369,12 @@ class KotlinSdkCommandExecutor(
             } else if (op.hasScopeCommand()) {
                 val slc = op.scopeCommand
                 val scope = connection.cluster.bucket(slc.scope.bucketName).scope(slc.scope.scopeName)
-
-                result = QueryHelper.handleScopeQuery(scope, op, slc)
+                result = when {
+                    slc.hasSearchIndexManager() -> handleSearchIndexManager(ClusterOrScope(scope = scope), op)
+                    slc.hasQuery() -> QueryHelper.handleScopeQuery(scope, op, slc)
+                    slc.hasSearch() || slc.hasSearchV2() -> SearchHelper.handleScopeSearch(scope, slc)
+                    else -> throw UnsupportedOperationException(IllegalArgumentException("Unknown scope-level operation: $slc"))
+                }
             } else {
                 throw UnsupportedOperationException(IllegalArgumentException("Unknown operation"))
             }

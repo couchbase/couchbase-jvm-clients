@@ -20,8 +20,10 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.Cluster
+import com.couchbase.client.kotlin.Scope
+import com.couchbase.client.kotlin.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.kotlin.manager.search.SearchIndex
-import com.couchbase.client.protocol.run.Result
+import com.couchbase.client.kotlin.manager.search.SearchIndexManager
 import com.couchbase.client.protocol.sdk.Command
 import com.couchbase.client.protocol.sdk.search.indexmanager.AllowQuerying
 import com.couchbase.client.protocol.sdk.search.indexmanager.AnalyzeDocument
@@ -39,80 +41,130 @@ import com.couchbase.client.protocol.sdk.search.indexmanager.UnfreezePlan
 import com.couchbase.client.protocol.sdk.search.indexmanager.UpsertIndex
 import com.google.protobuf.ByteString
 import kotlin.text.Charsets.UTF_8
+import com.couchbase.client.protocol.run.Result as FitResult
 import com.couchbase.client.protocol.sdk.Result as FitSdkResult
 import com.couchbase.client.protocol.sdk.search.indexmanager.Result as FitIndexManagerResult
 import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndex as FitSearchIndex
 
-suspend fun handleSearchIndexManager(cluster: Cluster, command: Command, result: Result.Builder) {
-    if (!command.clusterCommand.searchIndexManager.hasShared()) TODO()
-    val sim = command.clusterCommand.searchIndexManager.shared
+suspend fun handleSearchIndexManager(target: ClusterOrScope, command: Command): FitResult.Builder {
+    val sim =
+        if (target.cluster != null) command.clusterCommand.searchIndexManager.shared
+        else command.scopeCommand.searchIndexManager.shared
+
+    val result = FitResult.newBuilder()
 
     when {
-        sim.hasGetIndex() -> getIndex(cluster, sim.getIndex, result)
-        sim.hasGetAllIndexes() -> getAllIndexes(cluster, sim.getAllIndexes, result)
-        sim.hasUpsertIndex() -> upsertIndex(cluster, sim.upsertIndex, result)
-        sim.hasDropIndex() -> dropIndex(cluster, sim.dropIndex, result)
-        sim.hasGetIndexedDocumentsCount() -> getIndexedDocumentCount(cluster, sim.getIndexedDocumentsCount, result)
-        sim.hasPauseIngest() -> pauseIngest(cluster, sim.pauseIngest, result)
-        sim.hasResumeIngest() -> resumeIngest(cluster, sim.resumeIngest, result)
-        sim.hasFreezePlan() -> freezePlan(cluster, sim.freezePlan, result)
-        sim.hasUnfreezePlan() -> unfreezePlan(cluster, sim.unfreezePlan, result)
-        sim.hasAllowQuerying() -> allowQuerying(cluster, sim.allowQuerying, result)
-        sim.hasDisallowQuerying() -> disallowQuerying(cluster, sim.disallowQuerying, result)
-        sim.hasAnalyzeDocument() -> analyzeDocument(cluster, sim.analyzeDocument, result)
+        sim.hasGetIndex() -> getIndex(target, sim.getIndex, result)
+        sim.hasGetAllIndexes() -> getAllIndexes(target, sim.getAllIndexes, result)
+        sim.hasUpsertIndex() -> upsertIndex(target, sim.upsertIndex, result)
+        sim.hasDropIndex() -> dropIndex(target, sim.dropIndex, result)
+        sim.hasGetIndexedDocumentsCount() -> getIndexedDocumentCount(target, sim.getIndexedDocumentsCount, result)
+        sim.hasPauseIngest() -> pauseIngest(target, sim.pauseIngest, result)
+        sim.hasResumeIngest() -> resumeIngest(target, sim.resumeIngest, result)
+        sim.hasFreezePlan() -> freezePlan(target, sim.freezePlan, result)
+        sim.hasUnfreezePlan() -> unfreezePlan(target, sim.unfreezePlan, result)
+        sim.hasAllowQuerying() -> allowQuerying(target, sim.allowQuerying, result)
+        sim.hasDisallowQuerying() -> disallowQuerying(target, sim.disallowQuerying, result)
+        sim.hasAnalyzeDocument() -> analyzeDocument(target, sim.analyzeDocument, result)
     }
+
+    if (!result.hasSdk()) result.success()
+
+    return result
 }
 
 
-suspend fun allowQuerying(cluster: Cluster, req: AllowQuerying, result: Result.Builder) {
-    cluster.searchIndexes.allowQuerying(req.indexName)
-    result.success()
+suspend fun allowQuerying(target: ClusterOrScope, req: AllowQuerying, result: FitResult.Builder) {
+    target.exec(
+        { allowQuerying(req.indexName) },
+        { allowQuerying(req.indexName) },
+    )
 }
 
-suspend fun disallowQuerying(cluster: Cluster, req: DisallowQuerying, result: Result.Builder) {
-    cluster.searchIndexes.disallowQuerying(req.indexName)
-    result.success()
+suspend fun disallowQuerying(target: ClusterOrScope, req: DisallowQuerying, result: FitResult.Builder) {
+    target.exec(
+        { disallowQuerying(req.indexName) },
+        { disallowQuerying(req.indexName) },
+    )
 }
 
-suspend fun freezePlan(cluster: Cluster, req: FreezePlan, result: Result.Builder) {
-    cluster.searchIndexes.freezePlan(req.indexName)
-    result.success()
+suspend fun freezePlan(target: ClusterOrScope, req: FreezePlan, result: FitResult.Builder) {
+    target.exec(
+        { freezePlan(req.indexName) },
+        { freezePlan(req.indexName) },
+    )
 }
 
-suspend fun unfreezePlan(cluster: Cluster, req: UnfreezePlan, result: Result.Builder) {
-    cluster.searchIndexes.unfreezePlan(req.indexName)
-    result.success()
+suspend fun unfreezePlan(target: ClusterOrScope, req: UnfreezePlan, result: FitResult.Builder) {
+    target.exec(
+        { unfreezePlan(req.indexName) },
+        { unfreezePlan(req.indexName) },
+    )
 }
 
-suspend fun pauseIngest(cluster: Cluster, req: PauseIngest, result: Result.Builder) {
-    cluster.searchIndexes.pauseIngest(req.indexName)
-    result.success()
+suspend fun pauseIngest(target: ClusterOrScope, req: PauseIngest, result: FitResult.Builder) {
+    target.exec(
+        { pauseIngest(req.indexName) },
+        { pauseIngest(req.indexName) },
+    )
 }
 
-suspend fun resumeIngest(cluster: Cluster, req: ResumeIngest, result: Result.Builder) {
-    cluster.searchIndexes.resumeIngest(req.indexName)
-    result.success()
+suspend fun resumeIngest(target: ClusterOrScope, req: ResumeIngest, result: FitResult.Builder) {
+    target.exec(
+        { resumeIngest(req.indexName) },
+        { resumeIngest(req.indexName) },
+    )
 }
 
-suspend fun getIndexedDocumentCount(cluster: Cluster, req: GetIndexedDocumentsCount, result: Result.Builder) {
+suspend fun getIndexedDocumentCount(target: ClusterOrScope, req: GetIndexedDocumentsCount, result: FitResult.Builder) {
+    val count = target.exec(
+        { getIndexedDocumentsCount(req.indexName) },
+        { getIndexedDocumentsCount(req.indexName) }
+    )
+
     result.success {
-        indexedDocumentCounts = cluster.searchIndexes.getIndexedDocumentsCount(req.indexName)
+        indexedDocumentCounts = count
             .toInt() // FIT bug, should be long.
     }
 }
 
-suspend fun upsertIndex(cluster: Cluster, req: UpsertIndex, result: Result.Builder) {
-    cluster.searchIndexes.upsertIndex(SearchIndex.fromJson(req.indexDefinition.toString(UTF_8)))
-    result.success()
+
+data class ClusterOrScope(
+    val cluster: Cluster? = null,
+    val scope: Scope? = null,
+) {
+    init {
+        require(cluster != null || scope != null)
+        require(cluster == null || scope == null)
+    }
+
+    suspend fun <R> exec(
+        clusterBlock: suspend SearchIndexManager.() -> R,
+        scopeBlock: suspend ScopeSearchIndexManager.() -> R,
+    ) = if (cluster != null) cluster.searchIndexes.clusterBlock() else scope!!.searchIndexes.scopeBlock()
 }
 
-suspend fun dropIndex(cluster: Cluster, req: DropIndex, result: Result.Builder) {
-    cluster.searchIndexes.dropIndex(req.indexName)
-    result.success()
+suspend fun upsertIndex(target: ClusterOrScope, req: UpsertIndex, result: FitResult.Builder) {
+    val index = SearchIndex.fromJson(req.indexDefinition.toString(UTF_8))
+    target.exec(
+        { upsertIndex(index) },
+        { upsertIndex(index) },
+    )
 }
 
-suspend fun getAllIndexes(cluster: Cluster, req: GetAllIndexes, result: Result.Builder) {
-    val sdkResult = cluster.searchIndexes.getAllIndexes()
+suspend fun dropIndex(target: ClusterOrScope, req: DropIndex, result: FitResult.Builder) {
+    target.exec(
+        { dropIndex(req.indexName) },
+        { dropIndex(req.indexName) },
+    )
+}
+
+suspend fun getAllIndexes(target: ClusterOrScope, req: GetAllIndexes, result: FitResult.Builder) {
+    val sdkResult = target.exec(
+        { getAllIndexes() },
+        { getAllIndexes() },
+    )
+
     result.success {
         setIndexes(
             SearchIndexes.newBuilder()
@@ -121,13 +173,21 @@ suspend fun getAllIndexes(cluster: Cluster, req: GetAllIndexes, result: Result.B
     }
 }
 
-suspend fun getIndex(cluster: Cluster, req: GetIndex, result: Result.Builder) {
-    val sdkResult = cluster.searchIndexes.getIndex(req.indexName)
+suspend fun getIndex(target: ClusterOrScope, req: GetIndex, result: FitResult.Builder) {
+    val sdkResult = target.exec(
+        { getIndex(req.indexName) },
+        { getIndex(req.indexName) },
+    )
+
     result.success { index = sdkResult.toFit() }
 }
 
-suspend fun analyzeDocument(cluster: Cluster, req: AnalyzeDocument, result: Result.Builder) {
-    val sdkResult = cluster.searchIndexes.analyzeDocument(req.indexName, req.document.toByteArray())
+suspend fun analyzeDocument(target: ClusterOrScope, req: AnalyzeDocument, result: FitResult.Builder) {
+    val sdkResult = target.exec(
+        { analyzeDocument(req.indexName, req.document.toByteArray()) },
+        { analyzeDocument(req.indexName, req.document.toByteArray()) },
+    )
+
     val jsonArray = Mapper.decodeIntoTree(sdkResult) as ArrayNode
     val listOfByteArrays = jsonArray.map { Mapper.encodeAsBytes(it).toByteString() }
 
@@ -136,13 +196,13 @@ suspend fun analyzeDocument(cluster: Cluster, req: AnalyzeDocument, result: Resu
     }
 }
 
-private suspend fun Result.Builder.success(block: suspend FitIndexManagerResult.Builder.() -> Unit) {
+private suspend fun FitResult.Builder.success(block: suspend FitIndexManagerResult.Builder.() -> Unit) {
     val r = FitIndexManagerResult.newBuilder()
     r.block()
     setSdk(FitSdkResult.newBuilder().setSearchIndexManagerResult(r))
 }
 
-private fun Result.Builder.success() {
+private fun FitResult.Builder.success() {
     setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder().setSuccess(true))
 }
 
