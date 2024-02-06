@@ -195,6 +195,7 @@ class AsyncScopeSearchIndexManager private[scala] (
       .map(
         _.asScala
           .map(result => JsonObject.fromJson(result.toString))
+          .toSeq
       )
   }
 }

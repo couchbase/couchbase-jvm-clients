@@ -190,6 +190,7 @@ class AsyncSearchIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps)
       .map(
         _.asScala
           .map(result => JsonObject.fromJson(result.toString))
+          .toSeq
       )
   }
 }
