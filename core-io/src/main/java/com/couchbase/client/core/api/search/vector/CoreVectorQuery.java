@@ -18,6 +18,7 @@ package com.couchbase.client.core.api.search.vector;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import reactor.util.annotation.Nullable;
 
@@ -41,6 +42,13 @@ public class CoreVectorQuery {
     this.numCandidates = numCandidates;
     this.field = notNullOrEmpty(field, "Field");
     this.boost = boost;
+
+    if (numCandidates != null && numCandidates < 1) {
+      throw InvalidArgumentException.fromMessage("If numCandidates is specified it must be >= 1");
+    }
+    if (vector.length == 0) {
+      throw InvalidArgumentException.fromMessage("A vector query must have at least one member");
+    }
   }
 
   public ObjectNode toJson() {
