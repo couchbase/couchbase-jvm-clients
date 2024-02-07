@@ -9,7 +9,7 @@
 
     <groupId>com.couchbase.client</groupId>
     <artifactId>tracing-opentelemetry-deps</artifactId>
-    <version>1.3.3</version>
+    <version>1.4.0-SNAPSHOT</version><!--REL-->
     <packaging>jar</packaging>
 
     <name>OpenTelemetry Interoperability Dependencies</name>
