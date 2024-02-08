@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>kotlin-client</artifactId>
-    <version>1.4.0-SNAPSHOT</version><!--REL-->
+    <version>1.3.0-SNAPSHOT</version><!--REL-->
 
     <name>Couchbase Kotlin SDK</name>
     <description>The official Couchbase Kotlin SDK</description>
