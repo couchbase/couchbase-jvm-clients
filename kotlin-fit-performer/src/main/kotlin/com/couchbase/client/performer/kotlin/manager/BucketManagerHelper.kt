@@ -66,7 +66,7 @@ suspend fun dropBucket(cluster: Cluster, request: DropBucketRequest, result: Res
 }
 
 suspend fun flushBucket(cluster: Cluster, request: FlushBucketRequest, result: Result.Builder) {
-    cluster.buckets.dropBucket(request.bucketName)
+    cluster.buckets.flushBucket(request.bucketName)
     result.success()
 }
 
