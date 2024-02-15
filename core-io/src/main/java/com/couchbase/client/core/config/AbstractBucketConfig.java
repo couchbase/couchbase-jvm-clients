@@ -128,7 +128,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
                 case "kv":
                     result.put(ServiceType.KV, filtered);
                     break;
-                case "fts":
+                case "search":
                     result.put(ServiceType.SEARCH, filtered);
                     break;
                 case "cbas":

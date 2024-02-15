@@ -19,6 +19,9 @@ package com.couchbase.client.core.api.manager.search;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+
 @Stability.Internal
 public class ClassicCoreClusterSearchIndexManager extends ClassicCoreBaseSearchIndexManager {
   @Stability.Internal
@@ -29,5 +32,11 @@ public class ClassicCoreClusterSearchIndexManager extends ClassicCoreBaseSearchI
   @Override
   String indexesPath() {
     return "/api/index";
+  }
+
+  @Override
+  CompletableFuture<Void> initialCheck(Duration timeout) {
+    // no-op
+    return CompletableFuture.completedFuture(null);
   }
 }

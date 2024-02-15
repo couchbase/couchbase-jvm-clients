@@ -31,6 +31,7 @@ import com.couchbase.client.core.api.search.result.CoreSearchResult;
 import com.couchbase.client.core.api.search.result.CoreSearchRow;
 import com.couchbase.client.core.api.search.result.CoreSearchStatus;
 import com.couchbase.client.core.api.search.result.CoreTermSearchFacetResult;
+import com.couchbase.client.core.api.search.util.SearchCapabilityCheck;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
@@ -55,6 +56,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -66,6 +68,11 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   private static final byte[] NULL = new byte[]{'n', 'u', 'l', 'l'};
 
   private final Core core;
+
+  /**
+   * Determines whether this is being used for global search indexes (accessed from the Cluster level), or scoped
+   * search indexes (accessed from the Scope level).
+   */
   private final @Nullable CoreBucketAndScope scope;
 
   public ClassicCoreSearchOps(Core core, @Nullable CoreBucketAndScope scope) {
@@ -73,16 +80,36 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     this.scope = scope;
   }
 
+  CoreAsyncResponse<Void> preflightCheckScopedIndexes(Duration timeout) {
+    if (scope != null) {
+      return new CoreAsyncResponse<>(SearchCapabilityCheck.scopedSearchIndexCapabilityCheck(core, timeout), () -> {
+      });
+    }
+    return new CoreAsyncResponse<>(CompletableFuture.completedFuture(null), () -> {
+    });
+  }
+
+  CoreAsyncResponse<Void> preflightCheckVectorIndexes(boolean requiresVectorIndexSupport, Duration timeout) {
+    if (requiresVectorIndexSupport) {
+      return new CoreAsyncResponse<>(SearchCapabilityCheck.vectorSearchCapabilityCheck(core, timeout), () -> {
+      });
+    }
+    return new CoreAsyncResponse<>(CompletableFuture.completedFuture(null), () -> {
+    });
+  }
+
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
-    return searchAsyncShared(searchRequest(indexName, query, options));
+    Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
+    return searchAsyncShared(searchRequest(indexName, query, options), false, timeout);
   }
 
   @Override
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
-    return searchReactiveShared(searchRequest(indexName, query, options));
+    Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
+    return searchReactiveShared(searchRequest(indexName, query, options), false, timeout);
   }
 
   private static Map<String, CoreSearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {
@@ -260,49 +287,59 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     }
 
     if (disableShowRequest) {
-        queryJson.put("showrequest", false);
+      queryJson.put("showrequest", false);
     }
   }
 
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchAsync(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
-    return searchAsyncShared(searchRequestV2(indexName, searchRequest, options));
+    Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
+    return searchAsyncShared(searchRequestV2(indexName, searchRequest, options), searchRequest.vectorSearch != null, timeout);
   }
 
   @Override
   public Mono<CoreReactiveSearchResult> searchReactive(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
-    return searchReactiveShared(searchRequestV2(indexName, searchRequest, options));
+    Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
+    return searchReactiveShared(searchRequestV2(indexName, searchRequest, options), searchRequest.vectorSearch != null, timeout);
   }
 
-  private CoreAsyncResponse<CoreSearchResult> searchAsyncShared(ServerSearchRequest request) {
-    core.send(request);
-    return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
-        .flatMap(response -> response.rows()
-            .map(CoreSearchRow::fromResponse)
-            .collectList()
-            .flatMap(rows -> response
-                .trailer()
-                .map(trailer -> new CoreSearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
-            )
-        )
-        .doOnNext(ignored -> request.context().logicallyComplete())
-        .doOnError(err -> request.context().logicallyComplete(err))
-        .toFuture(), () -> {
-    });
+  private CoreAsyncResponse<CoreSearchResult> searchAsyncShared(ServerSearchRequest request, boolean requiresVectorIndexSupport, Duration timeout) {
+    return preflightCheckScopedIndexes(timeout)
+            .flatMap(ignore -> preflightCheckVectorIndexes(requiresVectorIndexSupport, timeout))
+            .flatMap(ignore -> {
+              core.send(request);
+              return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
+                      .flatMap(response -> response.rows()
+                              .map(CoreSearchRow::fromResponse)
+                              .collectList()
+                              .flatMap(rows -> response
+                                      .trailer()
+                                      .map(trailer -> new CoreSearchResult(rows, parseFacets(trailer), parseMeta(response, trailer)))
+                              )
+                      )
+                      .doOnNext(ignored -> request.context().logicallyComplete())
+                      .doOnError(err -> request.context().logicallyComplete(err))
+                      .toFuture(), () -> {
+              });
+            });
   }
 
-  public Mono<CoreReactiveSearchResult> searchReactiveShared(ServerSearchRequest request) {
-    core.send(request);
-    return Mono.fromFuture(request.response())
-        .map(response -> {
-          Flux<CoreSearchRow> rows = response.rows().map(CoreSearchRow::fromResponse);
-          Mono<CoreSearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
-          Mono<Map<String, CoreSearchFacetResult>> facets = response.trailer().map(ClassicCoreSearchOps::parseFacets);
-          return new CoreReactiveSearchResult(rows, facets, meta);
+  public Mono<CoreReactiveSearchResult> searchReactiveShared(ServerSearchRequest request, boolean requiresVectorIndexSupport, Duration timeout) {
+    return preflightCheckScopedIndexes(timeout).toMono()
+            .then(Mono.defer(() -> preflightCheckVectorIndexes(requiresVectorIndexSupport, timeout).toMono()))
+            .then(Mono.defer(() -> {
+              core.send(request);
+              return Mono.fromFuture(request.response())
+                      .map(response -> {
+                        Flux<CoreSearchRow> rows = response.rows().map(CoreSearchRow::fromResponse);
+                        Mono<CoreSearchMetaData> meta = response.trailer().map(trailer -> parseMeta(response, trailer));
+                        Mono<Map<String, CoreSearchFacetResult>> facets = response.trailer().map(ClassicCoreSearchOps::parseFacets);
+                        return new CoreReactiveSearchResult(rows, facets, meta);
 
-        })
-        .doOnNext(ignored -> request.context().logicallyComplete())
-        .doOnError(err -> request.context().logicallyComplete(err));
+                      })
+                      .doOnNext(ignored -> request.context().logicallyComplete())
+                      .doOnError(err -> request.context().logicallyComplete(err));
+            }));
   }
 
   private ServerSearchRequest searchRequestV2(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions opts) {
@@ -316,8 +353,8 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     RetryStrategy retryStrategy = opts.commonOptions().retryStrategy().orElse(environment().retryStrategy());
 
     RequestSpan span = environment()
-        .requestTracer()
-        .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
+            .requestTracer()
+            .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
     ServerSearchRequest request = new ServerSearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);
     request.context().clientContext(opts.commonOptions().clientContext());
     return request;

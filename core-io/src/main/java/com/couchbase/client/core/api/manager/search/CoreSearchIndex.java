@@ -20,10 +20,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
@@ -174,6 +178,52 @@ public class CoreSearchIndex {
     }
 
     return Mapper.encodeAsString(output);
+  }
+
+  boolean containsVectorMappings() {
+    JsonNode json = Mapper.decodeIntoTree(toJson().getBytes(StandardCharsets.UTF_8));
+    if (json.has("params")) {
+      JsonNode params = json.get("params");
+      if (params.isObject() && params.has("mapping")) {
+        JsonNode mapping = params.get("mapping");
+        if (mapping.isObject() && mapping.has("types")) {
+          JsonNode types = mapping.get("types");
+          if (types.isObject()) {
+            Iterator<String> typesFieldNames = types.fieldNames();
+            while (typesFieldNames.hasNext()) {
+              String typesFieldName = typesFieldNames.next();
+              JsonNode type = types.get(typesFieldName);
+              if (type.isObject() && type.has("properties")) {
+                JsonNode properties = type.get("properties");
+                Iterator<String> propertiesFieldNames = properties.fieldNames();
+                while (propertiesFieldNames.hasNext()) {
+                  String propertiesFieldName = propertiesFieldNames.next();
+                  JsonNode property = properties.get(propertiesFieldName);
+                  if (property.has("fields")) {
+                    JsonNode fields = property.get("fields");
+                    if (fields.isArray()) {
+                      ArrayNode fieldsArray = ((ArrayNode) fields);
+                      for (int i = 0; i < fieldsArray.size(); i++) {
+                        JsonNode field = fieldsArray.get(i);
+                        if (field.has("type")) {
+                          JsonNode typ = field.get("type");
+                          if (typ.isTextual()) {
+                            if (typ.textValue().equals("vector")) {
+                              return true;
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   @Override

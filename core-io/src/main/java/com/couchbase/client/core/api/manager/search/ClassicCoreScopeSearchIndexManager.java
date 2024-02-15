@@ -19,7 +19,11 @@ package com.couchbase.client.core.api.manager.search;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.client.core.api.search.util.SearchCapabilityCheck;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
 public class ClassicCoreScopeSearchIndexManager extends ClassicCoreBaseSearchIndexManager {
@@ -39,5 +43,10 @@ public class ClassicCoreScopeSearchIndexManager extends ClassicCoreBaseSearchInd
             scope.bucketName(),
             scope.scopeName()
     );
+  }
+
+  @Override
+  CompletableFuture<Void> initialCheck(Duration timeout) {
+    return SearchCapabilityCheck.scopedSearchIndexCapabilityCheck(core, timeout);
   }
 }

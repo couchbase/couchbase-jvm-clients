@@ -24,7 +24,9 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue
  */
 public enum ClusterCapabilities {
 
-  ENHANCED_PREPARED_STATEMENTS("enhancedPreparedStatements");
+  ENHANCED_PREPARED_STATEMENTS("enhancedPreparedStatements"),
+  SCOPED_SEARCH_INDEX("scopedSearchIndex"),
+  VECTOR_SEARCH("vectorSearch");
 
   private final String raw;
 

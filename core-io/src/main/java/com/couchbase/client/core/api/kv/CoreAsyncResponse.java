@@ -69,7 +69,19 @@ public final class CoreAsyncResponse<T> {
     return toFuture().thenApply(fn);
   }
 
+  public <U> CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletableFuture<U>> fn) {
+    return toFuture().thenCompose(fn);
+  }
+
   public <U> CoreAsyncResponse<U> map(Function<? super T, ? extends U> fn) {
     return new CoreAsyncResponse<>(thenApply(fn), cancellationTask);
+  }
+
+  public <U> CoreAsyncResponse<U> flatMap(Function<? super T, ? extends CoreAsyncResponse<U>> fn) {
+    CompletableFuture<U> mapped = thenCompose(result -> {
+      CoreAsyncResponse<U> r = fn.apply(result);
+      return r.toFuture();
+    });
+    return new CoreAsyncResponse<>(mapped, cancellationTask);
   }
 }
