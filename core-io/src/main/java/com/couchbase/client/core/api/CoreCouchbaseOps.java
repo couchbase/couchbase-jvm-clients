@@ -110,7 +110,7 @@ public interface CoreCouchbaseOps {
   @Deprecated
   default Core asCore() {
     if (!(this instanceof Core)) {
-      throw new FeatureNotAvailableException("Not yet supported in Protostellar.");
+      throw new FeatureNotAvailableException("Not yet supported when using couchbase2 protocol.");
     }
     return (Core) this;
   }
