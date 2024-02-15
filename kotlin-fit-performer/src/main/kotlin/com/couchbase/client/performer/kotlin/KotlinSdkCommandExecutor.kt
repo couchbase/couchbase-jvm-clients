@@ -47,7 +47,7 @@ import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.manager.handleCollectionManager
 import com.couchbase.client.performer.kotlin.manager.handleSearchIndexManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
-import com.couchbase.client.performer.kotlin.query.SearchHelper
+import com.couchbase.client.performer.kotlin.search.SearchHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.ContentAsUtil
 import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.createCommon
