@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,62 +14,69 @@
  * limitations under the License.
  */
 
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ * Changes by Couchbase:
+ *
+ * - Modified to expect Couchbase InvalidArgumentException instead of java.lang.IllegalArgumentException
+ * - Modified use JUnit 5.
+ */
+
 package com.couchbase.client.core.retry.reactor;
 
 import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 public class BackoffTest {
 
   @Test
-  void toStringZero() {
-    assertEquals("Backoff{ZERO}", Backoff.zero().toString());
+  public void toStringZero() {
+    assertThat(Backoff.zero().toString()).isEqualTo("Backoff{ZERO}");
   }
 
   @Test
-  void toStringFixed() {
-    assertEquals("Backoff{fixed=123ms}", Backoff.fixed(Duration.ofMillis(123)).toString());
+  public void toStringFixed() {
+    assertThat(Backoff.fixed(Duration.ofMillis(123)).toString())
+      .isEqualTo("Backoff{fixed=123ms}");
   }
 
   @Test
-  void toStringExponentialWithMax() {
-    assertEquals(
-      "Backoff{exponential,min=1ms,max=123ms,factor=8,basedOnPreviousValue=false}",
-      Backoff.exponential(Duration.ofMillis(1), Duration.ofMillis(123), 8, false).toString()
-    );
+  public void toStringExponentialWithMax() {
+    assertThat(Backoff.exponential(Duration.ofMillis(1), Duration.ofMillis(123),
+      8, false).toString())
+      .isEqualTo("Backoff{exponential,min=1ms,max=123ms,factor=8,basedOnPreviousValue=false}");
   }
 
   @Test
-  void toStringExponentialNoMax() {
-    assertEquals(
-      "Backoff{exponential,min=1ms,max=NONE,factor=8,basedOnPreviousValue=false}",
-      Backoff.exponential(Duration.ofMillis(1), null, 8, false).toString());
+  public void toStringExponentialNoMax() {
+    assertThat(Backoff.exponential(Duration.ofMillis(1), null,
+      8, false).toString())
+      .isEqualTo("Backoff{exponential,min=1ms,max=NONE,factor=8,basedOnPreviousValue=false}");
   }
 
   @Test
-  void toStringExponentialWithMaxDependsPrevious() {
-    assertEquals(
-      "Backoff{exponential,min=1ms,max=123ms,factor=8,basedOnPreviousValue=true}",
-      Backoff.exponential(Duration.ofMillis(1), Duration.ofMillis(123), 8, true).toString()
-    );
+  public void toStringExponentialWithMaxDependsPrevious() {
+    assertThat(Backoff.exponential(Duration.ofMillis(1), Duration.ofMillis(123),
+      8, true).toString())
+      .isEqualTo("Backoff{exponential,min=1ms,max=123ms,factor=8,basedOnPreviousValue=true}");
   }
 
   @Test
-  void toStringExponentialNoMaxDependsPrevious() {
-    assertEquals(
-      "Backoff{exponential,min=1ms,max=NONE,factor=8,basedOnPreviousValue=true}",
-      Backoff.exponential(Duration.ofMillis(1), null, 8, true).toString()
-    );
+  public void toStringExponentialNoMaxDependsPrevious() {
+    assertThat(Backoff.exponential(Duration.ofMillis(1), null,
+      8, true).toString())
+      .isEqualTo("Backoff{exponential,min=1ms,max=NONE,factor=8,basedOnPreviousValue=true}");
   }
 
+  //TODO 4 tests below have very similar structure and could benefit from JUnitParams
   @Test
-  void exponentialDoesntThrowArithmeticException_explicitMax() {
+  public void exponentialDoesntThrowArithmeticException_explicitMax() {
     final Duration EXPLICIT_MAX = Duration.ofSeconds(100_000);
     final Duration INIT = Duration.ofSeconds(10);
 
@@ -77,6 +84,7 @@ public class BackoffTest {
 
     BackoffDelay delay = null;
     IterationContext<String> context = null;
+    //note: reaches max in about 15 iterations
     for (int i = 0; i < 71; i++) {
       if (i == 0) {
         delay = new BackoffDelay(INIT, EXPLICIT_MAX, INIT);
@@ -84,24 +92,30 @@ public class BackoffTest {
       else {
         context = new DefaultContext<>(null, i, delay, null);
         delay = backoff.apply(context);
+
+        RandomJitter jitter = new RandomJitter(0.5d);
+        assertThat(jitter.highJitterBound(delay, 250))
+          .as("jitter applied without exception in round #" + i)
+          .isNotNegative();
       }
     }
 
-    assertNotNull(context);
-    assertEquals(delay.delay, EXPLICIT_MAX);
-    assertEquals(context.iteration(), 70);
-    assertEquals(context.backoff(), EXPLICIT_MAX);
+    assertThat(context).isNotNull();
+    assertThat(delay.delay).isEqualTo(EXPLICIT_MAX);
+    assertThat(context.iteration()).isEqualTo(70);
+    assertThat(context.backoff()).isEqualTo(EXPLICIT_MAX);
   }
 
   @Test
-  void exponentialDoesntThrowArithmeticException_noSpecificMax() {
+  public void exponentialDoesntThrowArithmeticException_noSpecificMax() {
     final Duration INIT = Duration.ofSeconds(10);
-    final Duration EXPECTED_MAX = Duration.ofSeconds(Long.MAX_VALUE);
+    final Duration EXPECTED_MAX = Duration.ofMillis(Long.MAX_VALUE);
 
     Backoff backoff = Backoff.exponential(INIT, null, 2, false);
 
     BackoffDelay delay = null;
     IterationContext<String> context = null;
+    //note: reaches max in about 50 iterations
     for (int i = 0; i < 71; i++) {
       if (i == 0) {
         delay = new BackoffDelay(INIT, null, INIT);
@@ -109,17 +123,22 @@ public class BackoffTest {
       else {
         context = new DefaultContext<>(null, i, delay, null);
         delay = backoff.apply(context);
+
+        RandomJitter jitter = new RandomJitter(0.5d);
+        assertThat(jitter.highJitterBound(delay, 250))
+          .as("jitter applied without exception in round #" + i)
+          .isNotNegative();
       }
     }
 
-    assertNotNull(context);
-    assertEquals(delay.delay, EXPECTED_MAX);
-    assertEquals(context.iteration(), 70);
-    assertEquals(context.backoff(), EXPECTED_MAX);
+    assertThat(context).isNotNull();
+    assertThat(delay.delay).isEqualTo(EXPECTED_MAX);
+    assertThat(context.iteration()).isEqualTo(70);
+    assertThat(context.backoff()).isEqualTo(EXPECTED_MAX);
   }
 
   @Test
-  void exponentialDoesntThrowArithmeticException_explicitMaxDependsOnPrevious() {
+  public void exponentialDoesntThrowArithmeticException_explicitMaxDependsOnPrevious() {
     final Duration EXPLICIT_MAX = Duration.ofSeconds(100_000);
     final Duration INIT = Duration.ofSeconds(10);
 
@@ -127,6 +146,7 @@ public class BackoffTest {
 
     BackoffDelay delay = null;
     IterationContext<String> context = null;
+    //note: reaches max in about 15 iterations
     for (int i = 0; i < 71; i++) {
       if (i == 0) {
         delay = new BackoffDelay(INIT, EXPLICIT_MAX, INIT);
@@ -134,24 +154,30 @@ public class BackoffTest {
       else {
         context = new DefaultContext<>(null, i, delay, null);
         delay = backoff.apply(context);
+
+        RandomJitter jitter = new RandomJitter(0.5d);
+        assertThat(jitter.highJitterBound(delay, 250))
+          .as("jitter applied without exception in round #" + i)
+          .isNotNegative();
       }
     }
 
-    assertNotNull(context);
-    assertEquals(delay.delay, EXPLICIT_MAX);
-    assertEquals(context.iteration(), 70);
-    assertEquals(context.backoff(), EXPLICIT_MAX);
+    assertThat(context).isNotNull();
+    assertThat(delay.delay).isEqualTo(EXPLICIT_MAX);
+    assertThat(context.iteration()).isEqualTo(70);
+    assertThat(context.backoff()).isEqualTo(EXPLICIT_MAX);
   }
 
   @Test
-  void exponentialDoesntThrowArithmeticException_noSpecificMaxDependsOnPrevious() {
+  public void exponentialDoesntThrowArithmeticException_noSpecificMaxDependsOnPrevious() {
     final Duration INIT = Duration.ofSeconds(10);
-    final Duration EXPECTED_MAX = Duration.ofSeconds(Long.MAX_VALUE);
+    final Duration EXPECTED_MAX = Duration.ofMillis(Long.MAX_VALUE);
 
     Backoff backoff = Backoff.exponential(INIT, null, 2, true);
 
     BackoffDelay delay = null;
     IterationContext<String> context = null;
+    //note: reaches max in about 50 iterations
     for (int i = 0; i < 71; i++) {
       if (i == 0) {
         delay = new BackoffDelay(INIT, null, INIT);
@@ -159,27 +185,59 @@ public class BackoffTest {
       else {
         context = new DefaultContext<>(null, i, delay, null);
         delay = backoff.apply(context);
+
+        RandomJitter jitter = new RandomJitter(0.5d);
+        assertThat(jitter.highJitterBound(delay, 250))
+          .as("jitter applied without exception in round #" + i)
+          .isNotNegative();
       }
     }
 
-    assertNotNull(context);
-    assertEquals(delay.delay, EXPECTED_MAX);
-    assertEquals(context.iteration(), 70);
-    assertEquals(context.backoff(), EXPECTED_MAX);
+    assertThat(context).isNotNull();
+    assertThat(delay.delay).isEqualTo(EXPECTED_MAX);
+    assertThat(context.iteration()).isEqualTo(70);
+    assertThat(context.backoff()).isEqualTo(EXPECTED_MAX);
   }
 
   @Test
-  void exponentialRejectsMaxLowerThanFirst() {
-    InvalidArgumentException ex = assertThrows(InvalidArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, false));
-    assertEquals("maxBackoff must be >= firstBackoff", ex.getMessage());
-    ex = assertThrows(InvalidArgumentException.class, () -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, true));
-    assertEquals("maxBackoff must be >= firstBackoff", ex.getMessage());
+  public void exponentialRejectsMaxLowerThanFirst() {
+    assertThatExceptionOfType(InvalidArgumentException.class)
+      .isThrownBy(() -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, false))
+      .as("not based on previous value")
+      .withMessage("maxBackoff must be >= firstBackoff");
+
+    assertThatExceptionOfType(InvalidArgumentException.class)
+      .isThrownBy(() -> Backoff.exponential(Duration.ofSeconds(2), Duration.ofSeconds(1), 1, true))
+      .as("based on previous value")
+      .withMessage("maxBackoff must be >= firstBackoff");
+  }
+
+  @Test
+  public void exponentialRejectsMaxGreaterThanLongMaxMilliseconds() {
+    assertThatExceptionOfType(InvalidArgumentException.class)
+      .isThrownBy(() -> Backoff.exponential(Duration.ofSeconds(2),
+        Duration.ofMillis(Long.MAX_VALUE).plusMillis(10),
+        1, false))
+      .as("not based on previous value")
+      .withMessage("maxBackoff must be less than Long.MAX_VALUE milliseconds");
+
+    assertThatExceptionOfType(InvalidArgumentException.class)
+      .isThrownBy(() -> Backoff.exponential(Duration.ofSeconds(2),
+        Duration.ofMillis(Long.MAX_VALUE).plusMillis(10),
+        1, true))
+      .as("based on previous value")
+      .withMessage("maxBackoff must be less than Long.MAX_VALUE milliseconds");
   }
 
   @Test
   public void exponentialAcceptsMaxEqualToFirst() {
-    assertDoesNotThrow(() -> Backoff.exponential(Duration.ofSeconds(1), Duration.ofSeconds(1), 1, false));
-    assertDoesNotThrow(() -> Backoff.exponential(Duration.ofSeconds(1), Duration.ofSeconds(1), 1, true));
+    assertThatCode(() -> Backoff.exponential(Duration.ofSeconds(1), Duration.ofSeconds(1), 1, false))
+      .as("not based on previous value")
+      .doesNotThrowAnyException();
+
+    assertThatCode(() -> Backoff.exponential(Duration.ofSeconds(1), Duration.ofSeconds(1), 1, true))
+      .as("based on previous value")
+      .doesNotThrowAnyException();
   }
 
 }

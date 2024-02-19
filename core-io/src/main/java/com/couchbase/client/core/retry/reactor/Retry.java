@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,21 +14,30 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.retry.reactor;
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ * Changes by Couchbase:
+ *
+ * - Modified `apply` and added `toReactorRetry` for JCBC-1678.
+ * - Modified deprecation notice to not refer to a specific Reactor Addons version.
+ */
 
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Scheduler;
+package com.couchbase.client.core.retry.reactor;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import org.reactivestreams.Publisher;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+
 /**
- * Retry function that may be used with retryWhen in Flux and Mono.
- * <p>
- * This class is deprecated since reactor now ships with its own retry logic.
+ * Retry function that may be used with {@link Flux#retryWhen(reactor.util.retry.Retry)} and {@link
+ * Mono#retryWhen(reactor.util.retry.Retry)}, after conversion via {@link reactor.util.retry.Retry#withThrowable(Function)}.
  * <p>
  * Each change in configuration returns a new instance (copy configuration), which
  * makes {@link Retry} suitable for creating configuration templates that can be fine
@@ -40,12 +49,15 @@ import java.util.function.Predicate;
  *   retry = Retry.anyOf(IOException.class)
  *                 .randomBackoff(Duration.ofMillis(100), Duration.ofSeconds(60))
  *                 .withApplicationContext(appContext)
- *                 .doOnRetry(context -&gt; context.applicationContext().rollback());
+ *                 .doOnRetry(context -> context.applicationContext().rollback());
  *   flux.retryWhen(retry);
  * </code></pre>
  *
  * @param <T> Application context type
+ * @deprecated Use equivalent features of reactor-core like
+ * {@link reactor.util.retry.RetrySpec} and {@link reactor.util.retry.RetryBackoffSpec} instead.
  */
+@Deprecated
 public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 
 	/**
@@ -55,7 +67,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 	 * @return retry function that retries on any exception
 	 */
 	static <T> Retry<T> any() {
-		return DefaultRetry.create(context -> true);
+		return DefaultRetry.<T>create(context -> true);
 	}
 
 	/**
@@ -79,7 +91,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 			}
 			return false;
 		};
-		return DefaultRetry.create(predicate);
+		return DefaultRetry.<T>create(predicate);
 	}
 
 	/**
@@ -103,7 +115,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 			}
 			return true;
 		};
-		return DefaultRetry.create(predicate);
+		return DefaultRetry.<T>create(predicate);
 	}
 
 	/**
@@ -271,7 +283,7 @@ public interface Retry<T> extends Function<Flux<Throwable>, Publisher<Long>> {
 		return backoff(Backoff.exponential(firstBackoff, maxBackoff, 3, true)).jitter(Jitter.random());
 	}
 
-	/**
+ 	/**
 	 * Transforms the source into a retrying {@link Flux} based on the properties
 	 * configured for this function.
 	 * <p>

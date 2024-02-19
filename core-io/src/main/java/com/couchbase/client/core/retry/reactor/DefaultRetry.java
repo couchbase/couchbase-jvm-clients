@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2017-2022 VMware Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,18 +14,33 @@
  * limitations under the License.
  */
 
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ * Changes by Couchbase:
+ *
+ * - Removed logging, in favor of external logging with EventBus.
+ * - Modified deprecation notice to not refer to a specific Reactor Addons version.
+ * - Throws Couchbase InvalidArgumentException instead of java.lang.IllegalArgumentException.
+ */
 package com.couchbase.client.core.retry.reactor;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import com.couchbase.client.core.error.InvalidArgumentException;
+import org.reactivestreams.Publisher;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+
+/**
+ * @deprecated Use equivalent features of reactor-core like
+ * {@link reactor.util.retry.RetrySpec} and {@link reactor.util.retry.RetryBackoffSpec} instead.
+ */
+@Deprecated
 public class DefaultRetry<T> extends AbstractRetry<T, Throwable> implements Retry<T> {
 
 	static final Consumer<? super RetryContext<?>> NOOP_ON_RETRY = r -> {};

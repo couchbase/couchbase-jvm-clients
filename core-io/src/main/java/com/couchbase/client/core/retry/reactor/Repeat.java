@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2017-2021 VMware Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.retry.reactor;
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ * Changes by Couchbase:
+ *
+ * - Throws Couchbase InvalidArgumentException instead of java.lang.IllegalArgumentException.
+ */
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Scheduler;
+package com.couchbase.client.core.retry.reactor;
 
 import java.time.Duration;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import com.couchbase.client.core.error.InvalidArgumentException;
+import org.reactivestreams.Publisher;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 
 /**
  * Repeat function that may be used with {@link Flux#repeatWhen(Function)},
@@ -43,6 +51,13 @@ import java.util.function.Predicate;
  *                  .doOnRepeat(context -&gt; context.applicationContext().rollback());
  *   flux.repeatWhen(repeat);
  * </code></pre>
+ *
+ * @apiNote Repeat can be directly created with a maximum number of attempts, yet there
+ * is a {@link #repeatMax(long)} method to change that post-construction, for the case
+ * where one wants to fine tune that aspect for specific use-cases. For instance, the
+ * default configuration could be an unlimited amount of attempts ({@link Long#MAX_VALUE})
+ * with a global {@link #timeout(Duration)}, but for some specific cases you might want
+ * to change both the timeout and limit the attempts.
  *
  * @param <T> Application context type
  */

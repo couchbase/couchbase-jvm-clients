@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017 Pivotal Software Inc, All Rights Reserved.
+ * Copyright (c) 2017-2021 VMware Inc. or its affiliates, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,19 +14,29 @@
  * limitations under the License.
  */
 
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ * Changes by Couchbase:
+ *
+ * - Removed logging, in favor of external logging with EventBus.
+ * - Changed retryMono to return Mono instead of Publisher instead of Mono
+ *   (workaround for JVMCBC-967).
+ */
+
 package com.couchbase.client.core.retry.reactor;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.function.Function;
 
 import com.couchbase.client.core.scheduler.SchedulerClock;
 import org.reactivestreams.Publisher;
+
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.function.Function;
 
 public abstract class AbstractRetry<T, S> implements Function<Flux<S>, Publisher<Long>> {
 
