@@ -234,7 +234,7 @@ public class ScopeSearchIndexManager {
    * @param name the name of the search index.  This should just be the index name, rather than "bucket.scope.indexName".
    */
   public void disallowQuerying(String name, DisallowQueryingSearchIndexOptions options) {
-    internal.disallowQuerying(name, options);
+    block(internal.disallowQuerying(name, options));
   }
 
   /**
@@ -252,7 +252,7 @@ public class ScopeSearchIndexManager {
    * @param name the name of the search index.  This should just be the index name, rather than "bucket.scope.indexName".
    */
   public void freezePlan(String name, FreezePlanSearchIndexOptions options) {
-    internal.freezePlan(name, options);
+    block(internal.freezePlan(name, options));
   }
 
   /**
