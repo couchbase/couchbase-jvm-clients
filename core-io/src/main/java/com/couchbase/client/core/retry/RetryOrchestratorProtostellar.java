@@ -21,9 +21,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
 import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
-import com.couchbase.client.core.error.AmbiguousTimeoutException;
-import com.couchbase.client.core.error.UnambiguousTimeoutException;
-import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.protostellar.ProtostellarBaseRequest;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
@@ -47,18 +44,8 @@ public class RetryOrchestratorProtostellar {
     }
 
     try {
-      RetryAction retryAction;
-
-      // The 99% case is that the retry strategy is the default BestEffortRetryStrategy.INSTANCE.  We can avoid turning the ProtostellarRequest into a Request in this case (Request is required by
-      // the RetryStrategy public API).
-      if (request.retryStrategy() == BestEffortRetryStrategy.INSTANCE) {
-        retryAction = RetryAction.withDuration(Duration.ofMillis(50));
-      }
-      else {
-        ProtostellarBaseRequest wrapper = new ProtostellarBaseRequest(core, request);
-
-        retryAction = request.retryStrategy().shouldRetry(wrapper, reason).get();
-      }
+      ProtostellarBaseRequest wrapper = new ProtostellarBaseRequest(core, request);
+      RetryAction retryAction = request.retryStrategy().shouldRetry(wrapper, reason).get();
 
       Optional<Duration> duration = retryAction.duration();
       if (duration.isPresent()) {
