@@ -31,7 +31,7 @@
         <log4j-slf4j-impl.version>2.20.0</log4j-slf4j-impl.version>
 
         <jackson.version>2.16.0</jackson.version>
-        <reactor.version>3.5.8</reactor.version>
+        <reactor.version>3.6.3</reactor.version>
         <reactive-streams.version>1.0.4</reactive-streams.version>
         <blockhound.version>1.0.8.RELEASE</blockhound.version>
         <slf4j.version>1.7.36</slf4j.version>
