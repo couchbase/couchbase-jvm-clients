@@ -52,6 +52,7 @@ import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
 import com.couchbase.client.core.util.Bytes;
+import com.couchbase.client.core.util.IntMap;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -1043,18 +1044,20 @@ public enum MemcacheProtocol {
   }
 
   public enum Magic {
-    REQUEST((byte) 0x80),
-    RESPONSE((byte) 0x81),
-    FLEXIBLE_REQUEST((byte) 0x08),
-    FLEXIBLE_RESPONSE((byte) 0x18),
-    SERVER_PUSH_REQUEST((byte) 0x82),
-    SERVER_PUSH_RESPONSE((byte) 0x83),
+    REQUEST(0x80),
+    RESPONSE(0x81),
+    FLEXIBLE_REQUEST(0x08),
+    FLEXIBLE_RESPONSE(0x18),
+    SERVER_PUSH_REQUEST(0x82),
+    SERVER_PUSH_RESPONSE(0x83),
     ;
+
+    private static final IntMap<Magic> codeToValue = IntMap.from(Magic.class, it -> it.magic() & 0xff);
 
     private final byte magic;
 
-    Magic(byte magic) {
-      this.magic = magic;
+    Magic(int magic) {
+      this.magic = (byte) require8Bit(magic);
     }
 
     /**
@@ -1072,21 +1075,7 @@ public enum MemcacheProtocol {
 
     @Nullable
     public static Magic of(byte input) {
-      switch (input) {
-        case (byte) 0x80:
-          return Magic.REQUEST;
-        case (byte) 0x81:
-          return Magic.RESPONSE;
-        case (byte) 0x08:
-          return Magic.FLEXIBLE_REQUEST;
-        case (byte) 0x18:
-          return Magic.FLEXIBLE_RESPONSE;
-        case (byte) 0x82:
-          return Magic.SERVER_PUSH_REQUEST;
-        case (byte) 0x83:
-          return Magic.SERVER_PUSH_RESPONSE;
-      }
-      return null;
+      return codeToValue.get(input);
     }
 
     public boolean isFlexible() {
@@ -1100,15 +1089,17 @@ public enum MemcacheProtocol {
   }
 
   public enum ServerPushOpcode {
-    CLUSTERMAP_CHANGE_NOTIFICATION((byte) 0x01),
-    AUTHENTICATE((byte) 0x02),
-    ACTIVE_EXTERNAL_USERS((byte) 0x03),
+    CLUSTERMAP_CHANGE_NOTIFICATION(0x01),
+    AUTHENTICATE(0x02),
+    ACTIVE_EXTERNAL_USERS(0x03),
     ;
+
+    private static final IntMap<ServerPushOpcode> codeToValue = IntMap.from(ServerPushOpcode.class, it -> it.opcode() & 0xff);
 
     private final byte opcode;
 
-    ServerPushOpcode(byte opcode) {
-      this.opcode = opcode;
+    ServerPushOpcode(int opcode) {
+      this.opcode = (byte) require8Bit(opcode);
     }
 
     /**
@@ -1122,16 +1113,7 @@ public enum MemcacheProtocol {
 
     @Nullable
     public static ServerPushOpcode of(final byte input) {
-      switch (input) {
-        case (byte) 0x01:
-          return CLUSTERMAP_CHANGE_NOTIFICATION;
-        case (byte) 0x02:
-          return AUTHENTICATE;
-        case (byte) 0x03:
-          return ACTIVE_EXTERNAL_USERS;
-        default:
-          return null;
-      }
+      return codeToValue.get(input);
     }
   }
 
@@ -1142,144 +1124,147 @@ public enum MemcacheProtocol {
     /**
      * The get command.
      */
-    GET((byte) 0x00),
+    GET(0x00),
     /**
      * The set (upsert) command.
      */
-    SET((byte) 0x01),
+    SET(0x01),
     /**
      * The add (insert) command.
      */
-    ADD((byte) 0x02),
+    ADD(0x02),
     /**
      * The replace command.
      */
-    REPLACE((byte) 0x03),
+    REPLACE(0x03),
     /**
      * The delete (remove) command.
      */
-    DELETE((byte) 0x04),
+    DELETE(0x04),
     /**
      * Increment binary counter.
      */
-    INCREMENT((byte) 0x05),
+    INCREMENT(0x05),
     /**
      * Decrement binary counter.
      */
-    DECREMENT((byte) 0x06),
+    DECREMENT(0x06),
     /**
      * The noop command.
      */
-    NOOP((byte) 0x0a),
+    NOOP(0x0a),
     /**
      * Binary append.
      */
-    APPEND((byte) 0x0e),
+    APPEND(0x0e),
     /**
      * Binary prepend.
      */
-    PREPEND((byte) 0x0f),
+    PREPEND(0x0f),
     /**
      * The hello command used during bootstrap to negoatiate the features.
      */
-    HELLO((byte) 0x1f),
+    HELLO(0x1f),
     /**
      * Command used to fetch the error map during the bootstrap process.
      */
-    ERROR_MAP((byte) 0xfe),
+    ERROR_MAP(0xfe),
     /**
      * Command used to select a specific bucket on a connection.
      */
-    SELECT_BUCKET((byte) 0x89),
+    SELECT_BUCKET(0x89),
     /**
      * List all SASL auth mechanisms the server supports.
      */
-    SASL_LIST_MECHS((byte) 0x20),
+    SASL_LIST_MECHS(0x20),
     /**
      * Initial auth step in the SASL negotiation.
      */
-    SASL_AUTH((byte) 0x21),
+    SASL_AUTH(0x21),
     /**
      * Subsequent steps in the SASL negotiation.
      */
-    SASL_STEP((byte) 0x22),
+    SASL_STEP(0x22),
     /**
      * Returns the current configuration for the bucket ("cccp").
      */
-    GET_CONFIG((byte) 0xb5),
+    GET_CONFIG(0xb5),
     /**
      * Returns the ID of a collection/scope combination
      */
-    COLLECTIONS_GET_CID((byte) 0xbb),
+    COLLECTIONS_GET_CID(0xbb),
     /**
      * Subdocument lookup with more than one element.
      */
-    SUBDOC_MULTI_LOOKUP((byte) 0xd0),
+    SUBDOC_MULTI_LOOKUP(0xd0),
     /**
      * Subdocument multi mutation.
      */
-    SUBDOC_MULTI_MUTATE((byte) 0xd1),
+    SUBDOC_MULTI_MUTATE(0xd1),
     /**
      * Allows to get a document and reset its expiry at the same time.
      */
-    GET_AND_TOUCH((byte) 0x1d),
+    GET_AND_TOUCH(0x1d),
     /**
      * Allows to get a document and perform a write lock at the same time.
      */
-    GET_AND_LOCK((byte) 0x94),
+    GET_AND_LOCK(0x94),
     /**
      * Performs an observe call with the CAS option.
      */
-    OBSERVE_CAS((byte) 0x92),
+    OBSERVE_CAS(0x92),
     /**
      * Performs an observe call via sequence numbers.
      */
-    OBSERVE_SEQ((byte) 0x91),
+    OBSERVE_SEQ(0x91),
     /**
      * A replica get operation.
      */
-    GET_REPLICA((byte) 0x83),
+    GET_REPLICA(0x83),
     /**
      * Touch command sets a new expiration.
      */
-    TOUCH((byte) 0x1c),
+    TOUCH(0x1c),
     /**
      * Unlocks a write locked document.
      */
-    UNLOCK((byte) 0x95),
+    UNLOCK(0x95),
     /**
      * Deletes (tombstones) a document while setting metadata.
      */
-    DELETE_WITH_META((byte) 0xa8),
+    DELETE_WITH_META(0xa8),
     /**
      * Returns the collections manifest for a bucket.
      */
-    COLLECTIONS_GET_MANIFEST((byte) 0xba),
+    COLLECTIONS_GET_MANIFEST(0xba),
 
     /**
      * Fetches metadata for a document
      */
-    GET_META((byte) 0xa0),
+    GET_META(0xa0),
     /**
      * Create a new range scan.
      */
     @SinceCouchbase("7.2")
-    RANGE_SCAN_CREATE((byte) 0xda),
+    RANGE_SCAN_CREATE(0xda),
     /**
      * Get more results from a range scan.
      */
     @SinceCouchbase("7.2")
-    RANGE_SCAN_CONTINUE((byte) 0xdb),
+    RANGE_SCAN_CONTINUE(0xdb),
     /**
      * Cancel a range scan. (Not required if scan completes normally.)
      */
     @SinceCouchbase("7.2")
-    RANGE_SCAN_CANCEL((byte) 0xdc);
+    RANGE_SCAN_CANCEL(0xdc),
+    ;
+
+    private static final IntMap<Opcode> codeToValue = IntMap.from(Opcode.class, it -> it.opcode() & 0xff);
 
     private final byte opcode;
 
-    Opcode(byte opcode) {
-      this.opcode = opcode;
+    Opcode(int opcode) {
+      this.opcode = (byte) require8Bit(opcode);
     }
 
     /**
@@ -1293,75 +1278,7 @@ public enum MemcacheProtocol {
 
     @Nullable
     public static Opcode of(final byte input) {
-      switch (input) {
-        case (byte) 0x00:
-          return Opcode.GET;
-        case (byte) 0x01:
-          return Opcode.SET;
-        case (byte) 0x02:
-          return Opcode.ADD;
-        case (byte) 0x03:
-          return Opcode.REPLACE;
-        case (byte) 0x04:
-          return Opcode.DELETE;
-        case (byte) 0x05:
-          return Opcode.INCREMENT;
-        case (byte) 0x06:
-          return Opcode.DECREMENT;
-        case (byte) 0x0a:
-          return Opcode.NOOP;
-        case (byte) 0x0e:
-          return Opcode.APPEND;
-        case (byte) 0x0f:
-          return Opcode.PREPEND;
-        case (byte) 0x1f:
-          return Opcode.HELLO;
-        case (byte) 0xfe:
-          return Opcode.ERROR_MAP;
-        case (byte) 0x89:
-          return Opcode.SELECT_BUCKET;
-        case (byte) 0x20:
-          return Opcode.SASL_LIST_MECHS;
-        case (byte) 0x21:
-          return Opcode.SASL_AUTH;
-        case (byte) 0x22:
-          return Opcode.SASL_STEP;
-        case (byte) 0xb5:
-          return Opcode.GET_CONFIG;
-        case (byte) 0xbb:
-          return Opcode.COLLECTIONS_GET_CID;
-        case (byte) 0xd0:
-          return Opcode.SUBDOC_MULTI_LOOKUP;
-        case (byte) 0xd1:
-          return Opcode.SUBDOC_MULTI_MUTATE;
-        case (byte) 0x1d:
-          return Opcode.GET_AND_TOUCH;
-        case (byte) 0x94:
-          return Opcode.GET_AND_LOCK;
-        case (byte) 0x92:
-          return Opcode.OBSERVE_CAS;
-        case (byte) 0x91:
-          return Opcode.OBSERVE_SEQ;
-        case (byte) 0x83:
-          return Opcode.GET_REPLICA;
-        case (byte) 0x1c:
-          return Opcode.TOUCH;
-        case (byte) 0x95:
-          return Opcode.UNLOCK;
-        case (byte) 0xa8:
-          return Opcode.DELETE_WITH_META;
-        case (byte) 0xba:
-          return Opcode.COLLECTIONS_GET_MANIFEST;
-        case (byte) 0xa0:
-          return Opcode.GET_META;
-        case (byte) 0xda:
-          return Opcode.RANGE_SCAN_CREATE;
-        case (byte) 0xdb:
-          return Opcode.RANGE_SCAN_CONTINUE;
-        case (byte) 0xdc:
-          return Opcode.RANGE_SCAN_CANCEL;
-      }
-      return null;
+      return codeToValue.get(input);
     }
   }
 
@@ -1369,171 +1286,171 @@ public enum MemcacheProtocol {
     /**
      * Successful message.
      */
-    SUCCESS((short) 0x00),
+    SUCCESS(0x00),
     /**
      * Entity not found.
      */
-    NOT_FOUND((short) 0x01),
+    NOT_FOUND(0x01),
     /**
      * The key exists in the cluster (with another CAS value).
      */
-    EXISTS((short) 0x02),
+    EXISTS(0x02),
     /**
      * Resource too big.
      */
-    TOO_BIG((short) 0x03),
+    TOO_BIG(0x03),
     /**
      * Invalid request sent.
      */
-    INVALID_REQUEST((short) 0x04),
+    INVALID_REQUEST(0x04),
     /**
      * Not stored for some reason.
      */
-    NOT_STORED((short) 0x05),
+    NOT_STORED(0x05),
     /**
      * Not my vbucket.
      */
-    NOT_MY_VBUCKET((short) 0x07),
+    NOT_MY_VBUCKET(0x07),
     /**
      * No bucket selected.
      */
-    NO_BUCKET((short) 0x08),
+    NO_BUCKET(0x08),
     /**
      * Resource is locked.
      */
-    LOCKED((short) 0x09),
+    LOCKED(0x09),
     /**
      * Authentication error.
      */
-    AUTH_ERROR((short) 0x20),
+    AUTH_ERROR(0x20),
     /**
      * When sampling, this error indicates the collection does not have enough keys to satisfy the requested sample size.
      */
-    RANGE_ERROR((short) 0x22),
+    RANGE_ERROR(0x22),
     /**
      * Access problem.
      */
-    ACCESS_ERROR((short) 0x24),
+    ACCESS_ERROR(0x24),
     /**
      * The server/kv engine is not initialized yet.
      */
-    NOT_INITIALIZED((byte) 0x25),
+    NOT_INITIALIZED(0x25),
     /**
      * A server-internal error has been reported.
      */
-    INTERNAL_SERVER_ERROR((short) 0x84),
+    INTERNAL_SERVER_ERROR(0x84),
     /**
      * The server could temporarily not fulfill the requrst.
      */
-    TEMPORARY_FAILURE((short) 0x86),
+    TEMPORARY_FAILURE(0x86),
     /**
      * The server is busy for some reason.
      */
-    SERVER_BUSY((short) 0x85),
+    SERVER_BUSY(0x85),
     /**
      * Unknown command.
      */
-    UNKNOWN_COMMAND((short) 0x81),
+    UNKNOWN_COMMAND(0x81),
     /**
      * The server is out of memory.
      */
-    OUT_OF_MEMORY((short) 0x82),
+    OUT_OF_MEMORY(0x82),
     /**
      * Not supported.
      */
-    NOT_SUPPORTED((short) 0x83),
+    NOT_SUPPORTED(0x83),
     /**
      * The provided path does not exist in the document
      */
-    SUBDOC_PATH_NOT_FOUND((short) 0xc0),
+    SUBDOC_PATH_NOT_FOUND(0xc0),
     /**
      * One of path components treats a non-dictionary as a dictionary, or a non-array as an array, or value the path points to is not a number
      */
-    SUBDOC_PATH_MISMATCH((short) 0xc1),
+    SUBDOC_PATH_MISMATCH(0xc1),
     /**
      * The path's syntax was incorrect
      */
-    SUBDOC_PATH_INVALID((short) 0xc2),
+    SUBDOC_PATH_INVALID(0xc2),
     /**
      * The path provided is too large: either the string is too long, or it contains too many components
      */
-    SUBDOC_PATH_TOO_BIG((short) 0xc3),
+    SUBDOC_PATH_TOO_BIG(0xc3),
     /**
      * The document has too many levels to parse
      */
-    SUBDOC_DOC_TOO_DEEP((short) 0xc4),
+    SUBDOC_DOC_TOO_DEEP(0xc4),
     /**
      * The value provided will invalidate the JSON if inserted
      */
-    SUBDOC_VALUE_CANTINSERT((short) 0xc5),
+    SUBDOC_VALUE_CANTINSERT(0xc5),
     /**
      * The existing document is not valid JSON
      */
-    SUBDOC_DOC_NOT_JSON((short) 0xc6),
+    SUBDOC_DOC_NOT_JSON(0xc6),
     /**
      * The existing number is out of the valid range for arithmetic operations
      */
-    SUBDOC_NUM_RANGE((short) 0xc7),
+    SUBDOC_NUM_RANGE(0xc7),
     /**
      * The operation would result in a number outside the valid range
      */
-    SUBDOC_DELTA_RANGE((short) 0xc8),
+    SUBDOC_DELTA_RANGE(0xc8),
     /**
      * The requested operation requires the path to not already exist, but it exists
      */
-    SUBDOC_PATH_EXISTS((short) 0xc9),
+    SUBDOC_PATH_EXISTS(0xc9),
     /**
      * Inserting the value would cause the document to be too deep
      */
-    SUBDOC_VALUE_TOO_DEEP((short) 0xca),
+    SUBDOC_VALUE_TOO_DEEP(0xca),
     /**
      * An invalid combination of commands was specified
      */
-    SUBDOC_INVALID_COMBO((short) 0xcb),
+    SUBDOC_INVALID_COMBO(0xcb),
     /**
      * Specified key was successfully found, but one or more path operations failed
      */
-    SUBDOC_MULTI_PATH_FAILURE((short) 0xcc),
+    SUBDOC_MULTI_PATH_FAILURE(0xcc),
     /**
      * An invalid combination of operationSpecified key was successfully found, but one or more path operations faileds, using macros when not using extended attributes
      */
-    SUBDOC_XATTR_INVALID_FLAG_COMBO((short)  0xce),
+    SUBDOC_XATTR_INVALID_FLAG_COMBO(0xce),
     /**
      * Only single xattr key may be accessed at the same time
      */
-    SUBDOC_XATTR_INVALID_KEY_COMBO((short) 0xcf),
+    SUBDOC_XATTR_INVALID_KEY_COMBO(0xcf),
     /**
      * The server has no knowledge of the requested macro
      */
-    SUBDOC_XATTR_UNKNOWN_MACRO((short) 0xd0),
+    SUBDOC_XATTR_UNKNOWN_MACRO(0xd0),
     /**
      * Unknown virtual attribute.
      */
-    SUBDOC_XATTR_UNKNOWN_VATTR((short) 0xd1),
+    SUBDOC_XATTR_UNKNOWN_VATTR(0xd1),
     /**
      * Cannot modify virtual attribute.
      */
-    SUBDOC_XATTR_CANNOT_MODIFY_VATTR((short) 0xd2),
+    SUBDOC_XATTR_CANNOT_MODIFY_VATTR(0xd2),
     /**
      * The subdoc operation completed successfully on the deleted document
      */
-    SUBDOC_SUCCESS_DELETED_DOCUMENT((short) 0xcd),
+    SUBDOC_SUCCESS_DELETED_DOCUMENT(0xcd),
     /**
      * The subdoc operation found the deleted document, but one or more path operations failed.
      */
-    SUBDOC_MULTI_PATH_FAILURE_DELETED((short) 0xd3),
+    SUBDOC_MULTI_PATH_FAILURE_DELETED(0xd3),
     /**
      * Invalid ordering of the extended attributes.
      */
-    SUBDOC_INVALID_XATTR_ORDER((short) 0xd4),
+    SUBDOC_INVALID_XATTR_ORDER(0xd4),
     /**
      * ReviveDocument flag has been used on a document that's already alive.
      */
-    SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS((short) 0xd6),
+    SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS(0xd6),
     /**
      * Invalid request. Returned if an invalid durability level is specified.
      */
-    DURABILITY_INVALID_LEVEL((short) 0xa0),
+    DURABILITY_INVALID_LEVEL(0xa0),
 
     /**
      * Valid request, but given durability requirements are impossible to achieve.
@@ -1542,7 +1459,7 @@ public enum MemcacheProtocol {
      * C=number of configured nodes, durability becomes impossible if floor((C + 1) / 2)
      * nodes or greater are offline.</p>
      */
-    DURABILITY_IMPOSSIBLE((short) 0xa1),
+    DURABILITY_IMPOSSIBLE(0xa1),
 
     /**
      * Returned if an attempt is made to mutate a key which already has a SyncWrite pending.
@@ -1550,7 +1467,7 @@ public enum MemcacheProtocol {
      * <p>Transient, the client would typically retry (possibly with backoff). Similar to
      * ELOCKED.</p>
      */
-    SYNC_WRITE_IN_PROGRESS((short) 0xa2),
+    SYNC_WRITE_IN_PROGRESS(0xa2),
 
     /**
      * Returned if the requested key has a SyncWrite which is being re-committed.
@@ -1558,98 +1475,101 @@ public enum MemcacheProtocol {
      * <p>Transient, the client would typically retry (possibly with backoff). Similar to
      * ELOCKED.</p>
      */
-    SYNC_WRITE_RE_COMMIT_IN_PROGRESS((short) 0xa4),
+    SYNC_WRITE_RE_COMMIT_IN_PROGRESS(0xa4),
 
     /**
      * The SyncWrite request has not completed in the specified time and has ambiguous result.
      *
      * <p>it may Succeed or Fail; but the final value is not yet known.</p>
      */
-    SYNC_WRITE_AMBIGUOUS((short) 0xa3),
+    SYNC_WRITE_AMBIGUOUS(0xa3),
 
     /**
      * The scan was cancelled whilst returning data. This could be the only status
      * if the cancel was noticed before a key/value was loaded.
      */
-    RANGE_SCAN_CANCELLED((short) 0xa5),
+    RANGE_SCAN_CANCELLED(0xa5),
     /**
      * Scan has not reached the end key; more data maybe available.
      * Client should issue another range scan continue request.
      */
-    RANGE_SCAN_MORE((short) 0xa6),
+    RANGE_SCAN_MORE(0xa6),
     /**
      * Scan has reached the end of the range.
      */
-    RANGE_SCAN_COMPLETE((short) 0xa7),
+    RANGE_SCAN_COMPLETE(0xa7),
 
     /**
      * The vbuuid as part of the snapshot requirements does not align with the server.
      */
-    VBUUID_NOT_EQUAL((short) 0xa8),
+    VBUUID_NOT_EQUAL(0xa8),
 
     /**
      * The collection ID provided is unknown, maybe it changed or got dropped.
      */
-    UNKNOWN_COLLECTION((short) 0x88),
+    UNKNOWN_COLLECTION(0x88),
 
     /**
      * No collections manifest has been set on the server.
      */
-    NO_COLLECTIONS_MANIFEST((short) 0x89),
+    NO_COLLECTIONS_MANIFEST(0x89),
 
     /**
      * Bucket Manifest update could not be applied to vbucket(s).
      */
-    CANNOT_APPLY_COLLECTIONS_MANIFEST((short) 0x8a),
+    CANNOT_APPLY_COLLECTIONS_MANIFEST(0x8a),
 
     /**
      * We have a collection's manifest which is from the future. This means
      * they we have a uid that is greater than the servers.
      */
-    COLLECTIONS_MANIFEST_AHEAD((short) 0x8b),
+    COLLECTIONS_MANIFEST_AHEAD(0x8b),
 
     /**
      * Operation attempted with an unknown scope.
      */
-    UNKNOWN_SCOPE((short) 0x8c),
+    UNKNOWN_SCOPE(0x8c),
 
     /**
      * Rate limited: Network Ingress.
      */
-    RATE_LIMITED_NETWORK_INGRESS((short) 0x30),
+    RATE_LIMITED_NETWORK_INGRESS(0x30),
 
     /**
      * Rate limited: Network Egress.
      */
-    RATE_LIMITED_NETWORK_EGRESS((short) 0x31),
+    RATE_LIMITED_NETWORK_EGRESS(0x31),
 
     /**
      * Rate limited: Max Connections.
      */
-    RATE_LIMITED_MAX_CONNECTIONS((short) 0x32),
+    RATE_LIMITED_MAX_CONNECTIONS(0x32),
 
     /**
      * Rate limited: Max Commands.
      */
-    RATE_LIMITED_MAX_COMMANDS((short) 0x33),
+    RATE_LIMITED_MAX_COMMANDS(0x33),
 
     /**
      * The scope contains too much data.
      */
-    SCOPE_SIZE_LIMIT_EXCEEDED((short) 0x34),
+    SCOPE_SIZE_LIMIT_EXCEEDED(0x34),
 
     /**
      * Resource is not locked.
-     *
+     * <p>
      * Added in 7.6.0 under MB-58088.
      */
-    NOT_LOCKED((short) 0x0e),
+    @SinceCouchbase("7.6")
+    NOT_LOCKED(0x0e),
     ;
+
+    private static final IntMap<Status> codeToValue = IntMap.from(Status.class, it -> it.status & 0xffff);
 
     private final short status;
 
-    Status(short status) {
-      this.status = status;
+    Status(int status) {
+      this.status = (short) require16Bit(status);
     }
 
     /**
@@ -1663,133 +1583,8 @@ public enum MemcacheProtocol {
 
     @Nullable
     public static Status of(short input) {
-      switch (input) {
-        case 0x00:
-          return SUCCESS;
-        case 0x01:
-          return NOT_FOUND;
-        case 0x02:
-          return EXISTS;
-        case 0x03:
-          return TOO_BIG;
-        case 0x04:
-          return INVALID_REQUEST;
-        case 0x05:
-          return NOT_STORED;
-        case 0x07:
-          return NOT_MY_VBUCKET;
-        case 0x08:
-          return NO_BUCKET;
-        case 0x09:
-          return LOCKED;
-        case 0x20:
-          return AUTH_ERROR;
-        case 0x22:
-          return RANGE_ERROR;
-        case 0x24:
-          return ACCESS_ERROR;
-        case 0x25:
-          return NOT_INITIALIZED;
-        case 0x84:
-          return INTERNAL_SERVER_ERROR;
-        case 0x85:
-          return SERVER_BUSY;
-        case 0x86:
-          return TEMPORARY_FAILURE;
-        case 0x81:
-          return UNKNOWN_COMMAND;
-        case 0x82:
-          return OUT_OF_MEMORY;
-        case 0x83:
-          return NOT_SUPPORTED;
-        case 0xc0:
-          return SUBDOC_PATH_NOT_FOUND;
-        case 0xc1:
-          return SUBDOC_PATH_MISMATCH;
-        case 0xc2:
-          return SUBDOC_PATH_INVALID;
-        case 0xc3:
-          return SUBDOC_PATH_TOO_BIG;
-        case 0xc4:
-          return SUBDOC_DOC_TOO_DEEP;
-        case 0xc5:
-          return SUBDOC_VALUE_CANTINSERT;
-        case 0xc6:
-          return SUBDOC_DOC_NOT_JSON;
-        case 0xc7:
-          return SUBDOC_NUM_RANGE;
-        case 0xc8:
-          return SUBDOC_DELTA_RANGE;
-        case 0xc9:
-          return SUBDOC_PATH_EXISTS;
-        case 0xca:
-          return SUBDOC_VALUE_TOO_DEEP;
-        case 0xcb:
-          return SUBDOC_INVALID_COMBO;
-        case 0xcc:
-          return SUBDOC_MULTI_PATH_FAILURE;
-        case 0xce:
-          return SUBDOC_XATTR_INVALID_FLAG_COMBO;
-        case 0xcf:
-          return SUBDOC_XATTR_INVALID_KEY_COMBO;
-        case 0xd0:
-          return SUBDOC_XATTR_UNKNOWN_MACRO;
-        case 0xd1:
-          return SUBDOC_XATTR_UNKNOWN_VATTR;
-        case 0xd2:
-          return SUBDOC_XATTR_CANNOT_MODIFY_VATTR;
-        case 0xcd:
-          return SUBDOC_SUCCESS_DELETED_DOCUMENT;
-        case 0xd3:
-          return SUBDOC_MULTI_PATH_FAILURE_DELETED;
-        case 0xd4:
-          return SUBDOC_INVALID_XATTR_ORDER;
-        case 0xd6:
-          return SUBDOC_CAN_ONLY_REVIVE_DELETED_DOCUMENTS;
-        case 0xa0:
-          return DURABILITY_INVALID_LEVEL;
-        case 0xa1:
-          return DURABILITY_IMPOSSIBLE;
-        case 0xa2:
-          return SYNC_WRITE_IN_PROGRESS;
-        case 0xa4:
-          return SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
-        case 0xa3:
-          return SYNC_WRITE_AMBIGUOUS;
-        case 0xa5:
-          return RANGE_SCAN_CANCELLED;
-        case 0xa6:
-          return RANGE_SCAN_MORE;
-        case 0xa7:
-          return RANGE_SCAN_COMPLETE;
-        case 0xa8:
-          return VBUUID_NOT_EQUAL;
-        case 0x88:
-          return UNKNOWN_COLLECTION;
-        case 0x89:
-          return NO_COLLECTIONS_MANIFEST;
-        case 0x8a:
-          return CANNOT_APPLY_COLLECTIONS_MANIFEST;
-        case 0x8b:
-          return COLLECTIONS_MANIFEST_AHEAD;
-        case 0x8c:
-          return UNKNOWN_SCOPE;
-        case 0x30:
-          return RATE_LIMITED_NETWORK_INGRESS;
-        case 0x31:
-          return RATE_LIMITED_NETWORK_EGRESS;
-        case 0x32:
-          return RATE_LIMITED_MAX_CONNECTIONS;
-        case 0x33:
-          return RATE_LIMITED_MAX_COMMANDS;
-        case 0x34:
-          return SCOPE_SIZE_LIMIT_EXCEEDED;
-        case 0xe:
-          return NOT_LOCKED;
-      }
-      return null;
+      return codeToValue.get(input);
     }
-
   }
 
   public enum Datatype {
@@ -1814,13 +1609,6 @@ public enum MemcacheProtocol {
 
     Datatype(int bitmask) {
       this.bitmask = (byte) require8Bit(bitmask);
-    }
-
-    private static int require8Bit(int value) {
-      if ((value & 0xff) != value) {
-        throw new IllegalArgumentException("Expected a value that fits in 8 bits, but got: 0x" + Integer.toHexString(value));
-      }
-      return value;
     }
 
     /**
@@ -1875,5 +1663,19 @@ public enum MemcacheProtocol {
     public static boolean contains(int bitfield, Datatype type) {
       return (bitfield & type.bitmask) != 0;
     }
+  }
+
+  private static int require8Bit(int value) {
+    if ((value & 0xff) != value) {
+      throw new IllegalArgumentException("Expected a value that fits in 8 bits, but got: 0x" + Integer.toHexString(value));
+    }
+    return value;
+  }
+
+  private static int require16Bit(int value) {
+    if ((value & 0xffff) != value) {
+      throw new IllegalArgumentException("Expected a value that fits in 16 bits, but got: 0x" + Integer.toHexString(value));
+    }
+    return value;
   }
 }

@@ -58,6 +58,18 @@ public interface IntMap<E> {
   }
 
   /**
+   * Reinterprets the byte as a positive integer, then returns the value
+   * associated with the given integer, or null if not found.
+   *
+   * @param key the byte associated with the value to return
+   */
+  @Nullable
+  default E get(byte key) {
+    // reinterpret as positive integer
+    return get(key & 0xff);
+  }
+
+  /**
    * Returns a new instance where the values are the values of the given enum class,
    * and the associated key is derived by applying the given function to the value.
    *
