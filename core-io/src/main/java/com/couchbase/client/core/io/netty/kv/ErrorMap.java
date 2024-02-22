@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.annotation.
 import com.couchbase.client.core.json.Mapper;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +55,10 @@ import java.util.Set;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ErrorMap implements Comparable<ErrorMap> {
+
+  private static final Comparator<ErrorMap> naturalOrder = Comparator
+    .comparingInt(ErrorMap::version)
+    .thenComparingInt(ErrorMap::revision);
 
   private static final ObjectReader objectReader = Mapper.reader().forType(ErrorMap.class)
     .with(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL)
@@ -99,19 +104,7 @@ public class ErrorMap implements Comparable<ErrorMap> {
 
   @Override
   public int compareTo(ErrorMap o) {
-    if (version < o.version()) {
-      return -1;
-    } else if (version > o.version()) {
-      return 1;
-    }
-
-    if (revision < o.revision()) {
-      return -1;
-    } else if (revision > o.revision()) {
-      return 1;
-    }
-
-    return 0;
+    return naturalOrder.compare(this, o);
   }
 
   public int version() {
