@@ -438,9 +438,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (slc.hasQuery()) {
       var query = slc.getQuery().getStatement();
       QueryResult qr;
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
       if (slc.getQuery().hasOptions()) qr = scope.query(query, createOptions(slc.getQuery(), spans));
       else qr = scope.query(query);
-      populateResult(slc.getQuery(), result, qr);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(slc.getQuery(), result, qr);
+      else setSuccess(result);
       return result.build();
     }
     // [end:3.0.9]
@@ -542,12 +546,16 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasQuery()) {
       var query = clc.getQuery().getStatement();
       QueryResult qr;
+      result.setInitiated(getTimeNow());
+      long start = System.nanoTime();
       if (clc.getQuery().hasOptions()) {
         qr = connection.cluster().query(query, createOptions(clc.getQuery(), spans));
       } else {
         qr = connection.cluster().query(query);
       }
-      populateResult(clc.getQuery(), result, qr);
+      result.setElapsedNanos(System.nanoTime() - start);
+      if (op.getReturnResult()) populateResult(clc.getQuery(), result, qr);
+      else setSuccess(result);
     }
 
     // [start:3.6.0]
