@@ -63,6 +63,8 @@ import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.UnsignedLEB128;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +79,7 @@ import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAtt
 import static com.couchbase.client.core.io.netty.TracingUtils.setNumericOperationId;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_LATER;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
@@ -91,6 +94,8 @@ import static java.util.Collections.emptySet;
  * @since 2.0.0
  */
 public class KeyValueMessageHandler extends ChannelDuplexHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(KeyValueMessageHandler.class);
 
   /**
    * Stores the {@link CoreContext} for use.
@@ -332,6 +337,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     }
 
     boolean isRangeScanContinue = (Request<?>) request instanceof RangeScanContinueRequest;
+
+    if (errorUnknown && errorCode != null && errorCode.attributes().contains(FETCH_CONFIG)) {
+      log.warn("Refreshing cluster config in response to error code {} ; details={}", statusCode, errorCode);
+      endpointContext.core().configurationProvider().signalConfigChanged();
+    }
 
     if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {
       handleNotMyVbucket(request, response);
