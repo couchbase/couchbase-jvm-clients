@@ -739,16 +739,24 @@ class AsyncCollection(
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
     *
     * Uses default options.
+    *
+    * '''CAVEAT:'''This method is suitable for use cases that require relatively
+    * low concurrency and tolerate relatively high latency.
+    * If your application does many scans at once, or requires low latency results,
+    * we recommend using SQL++ (with a primary index on the collection) instead.
     */
-  @Volatile
   @SinceCouchbase("7.6")
   def scan(scanType: ScanType): Future[Iterator[ScanResult]] = {
     scan(scanType, ScanOptions())
   }
 
   /** Initiates a KV range scan, which will return a non-blocking stream of KV documents.
+    *
+    * '''CAVEAT:'''This method is suitable for use cases that require relatively
+    * low concurrency and tolerate relatively high latency.
+    * If your application does many scans at once, or requires low latency results,
+    * we recommend using SQL++ (with a primary index on the collection) instead.
     */
-  @Volatile
   @SinceCouchbase("7.6")
   def scan(scanType: ScanType, opts: ScanOptions): Future[Iterator[ScanResult]] = {
     scanRequest(scanType, opts).collectSeq

@@ -182,6 +182,11 @@ public class Collection internal constructor(
      * - Every document whose ID is within a lexicographic [ScanType.range].
      * - A random [ScanType.sample] of documents.
      *
+     * **CAVEAT:** This method is suitable for use cases that require relatively
+     * low concurrency and tolerate relatively high latency.
+     * If your application does many scans at once, or requires low latency results,
+     * we recommend using SQL++ (with a primary index on the collection) instead.
+     *
      * @param type Specifies which documents to include in the scan results.
      * Defaults to every document in the collection.
      *
@@ -197,7 +202,6 @@ public class Collection internal constructor(
      * The value is per partition (vbucket), so multiply by 1024 when calculating memory requirements.
      * Might affect performance, but does not change the results of this method.
      */
-    @VolatileCouchbaseApi
     @SinceCouchbase("7.6")
     public fun scanDocuments(
         type: ScanType = ScanType.range(),
@@ -220,8 +224,12 @@ public class Collection internal constructor(
 
     /**
      * Like [scanDocuments], but returns only document IDs instead of full documents.
+     *
+     * **CAVEAT:** This method is suitable for use cases that require relatively
+     * low concurrency and tolerate relatively high latency.
+     * If your application does many scans at once, or requires low latency results,
+     * we recommend using SQL++ (with a primary index on the collection) instead.
      */
-    @VolatileCouchbaseApi
     @SinceCouchbase("7.6")
     public fun scanIds(
         type: ScanType = ScanType.range(),

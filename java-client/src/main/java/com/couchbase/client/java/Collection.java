@@ -990,13 +990,17 @@ public class Collection {
 
   /**
    * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with default options.
+   * <p>
+   * <b>CAVEAT:</b> This method is suitable for use cases that require relatively
+   * low concurrency and tolerate relatively high latency.
+   * If your application does many scans at once, or requires low latency results,
+   * we recommend using SQL++ (with a primary index on the collection) instead.
    *
    * @param scanType the type or range scan to perform.
    * @return a stream of {@link ScanResult ScanResults} (potentially empty).
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Stream<ScanResult> scan(final ScanType scanType) {
     return scan(scanType, ScanOptions.scanOptions());
@@ -1004,6 +1008,11 @@ public class Collection {
 
   /**
    * Returns a stream of {@link ScanResult ScanResults} performing a Key-Value range scan with custom options.
+   * <p>
+   * <b>CAVEAT:</b> This method is suitable for use cases that require relatively
+   * low concurrency and tolerate relatively high latency.
+   * If your application does many scans at once, or requires low latency results,
+   * we recommend using SQL++ (with a primary index on the collection) instead.
    *
    * @param scanType the type or range scan to perform.
    * @param options a {@link ScanOptions} to customize the behavior of the scan operation.
@@ -1011,7 +1020,6 @@ public class Collection {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Stream<ScanResult> scan(final ScanType scanType, final ScanOptions options) {
     return reactive().scan(scanType, options).toStream();

@@ -566,16 +566,24 @@ class ReactiveCollection(async: AsyncCollection) {
   /** Initiates a KV range scan, which will return a stream of KV documents.
     *
     * Uses default options.
+    *
+    * '''CAVEAT:'''This method is suitable for use cases that require relatively
+    * low concurrency and tolerate relatively high latency.
+    * If your application does many scans at once, or requires low latency results,
+    * we recommend using SQL++ (with a primary index on the collection) instead.
     */
-  @Volatile
   @SinceCouchbase("7.6")
   def scan(scanType: ScanType): SFlux[ScanResult] = {
     scan(scanType, ScanOptions())
   }
 
   /** Initiates a KV range scan, which will return a stream of KV documents.
+    *
+    * '''CAVEAT:'''This method is suitable for use cases that require relatively
+    * low concurrency and tolerate relatively high latency.
+    * If your application does many scans at once, or requires low latency results,
+    * we recommend using SQL++ (with a primary index on the collection) instead.
     */
-  @Volatile
   @SinceCouchbase("7.6")
   def scan(scanType: ScanType, opts: ScanOptions): SFlux[ScanResult] = {
     async.scanRequest(scanType, opts)
