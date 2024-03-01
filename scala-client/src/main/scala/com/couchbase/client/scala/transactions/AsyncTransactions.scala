@@ -28,8 +28,10 @@ import scala.concurrent.Future
   * An asynchronous version of [[Transactions]], allowing transactions to be created and run in an asynchronous
   * manner using [[scala.concurrent.Future]].
   */
-class AsyncTransactions private[scala](private val internal: CoreTransactionsReactive,
-                                       private val env: ClusterEnvironment) {
+class AsyncTransactions private[scala] (
+    private val internal: CoreTransactionsReactive,
+    private val env: ClusterEnvironment
+) {
 
   /**
     * Runs the supplied transactional logic until success or failure.
@@ -66,9 +68,9 @@ class AsyncTransactions private[scala](private val internal: CoreTransactionsRea
   }
 
   private def run(
-                   transactionLogic: (AsyncTransactionAttemptContext) => Future[Unit],
-                   options: Option[TransactionOptions] = None
-                 ): Future[TransactionResult] = {
+      transactionLogic: (AsyncTransactionAttemptContext) => Future[Unit],
+      options: Option[TransactionOptions] = None
+  ): Future[TransactionResult] = {
     val opts = options.map(v => v.toCore).orNull
 
     FutureConversions

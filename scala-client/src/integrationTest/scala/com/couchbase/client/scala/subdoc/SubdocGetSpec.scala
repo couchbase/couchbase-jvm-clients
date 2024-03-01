@@ -179,8 +179,8 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     val insertResult = coll.insert(docId, content).get
 
     coll.lookupIn(docId, Array(get("not_exist"))) match {
-      case Success(result)                     => assert(!result.exists(0))
-      case Failure(err)                        => assert(false, s"unexpected error $err")
+      case Success(result) => assert(!result.exists(0))
+      case Failure(err)    => assert(false, s"unexpected error $err")
     }
   }
 

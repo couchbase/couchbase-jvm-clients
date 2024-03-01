@@ -30,7 +30,7 @@ case class LookupInOptions(
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val transcoder: Option[Transcoder] = None,
-    private[scala] val accessDeleted: Option[Boolean] = None,
+    private[scala] val accessDeleted: Option[Boolean] = None
 ) {
 
   /** Couchbase documents optionally can have an expiration field set, e.g. when they will
