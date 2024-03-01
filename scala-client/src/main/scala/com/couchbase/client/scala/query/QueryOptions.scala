@@ -288,7 +288,7 @@ case class QueryOptions(
     *
     * The default is not set
     *
-    * This feature works from Couchbase Server 7.1.0 onwards.
+    * This feature works from Couchbase Server 7.6.0 onwards.
     *
     * @return a copy of this with the change applied, for chaining.
     */
