@@ -757,7 +757,6 @@ public class ReactiveCollection {
    * @param lookupInSpecs
    * @return a flux of results from all replicas
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs) {
     return lookupInAllReplicas(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
@@ -774,7 +773,6 @@ public class ReactiveCollection {
    * @param id the document id.
    * @return a flux of results from all replicas
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Flux<LookupInReplicaResult> lookupInAllReplicas(String id, List<LookupInSpec> lookupInSpecs, LookupInAllReplicasOptions options) {
     notNull(options, "LookupInAllReplicasOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));
@@ -792,7 +790,6 @@ public class ReactiveCollection {
    * @param id the document id.
    * @return a mono containing the first available replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Mono<LookupInReplicaResult> lookupInAnyReplica(String id, List<LookupInSpec> lookupInSpecs) {
     return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
@@ -807,7 +804,6 @@ public class ReactiveCollection {
    * @param options the custom options.
    * @return a mono containing the first available replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public Mono<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
     notNull(options, "LookupInAnyReplicaOptions", () -> ReducedKeyValueErrorContext.create(id, asyncCollection.collectionIdentifier()));

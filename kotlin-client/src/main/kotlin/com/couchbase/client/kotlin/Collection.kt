@@ -33,7 +33,6 @@ import com.couchbase.client.core.kv.*
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
@@ -616,7 +615,6 @@ public class Collection internal constructor(
      * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
     @SinceCouchbase("7.6")
-    @UncommittedCouchbaseApi
     public suspend inline fun <T, L : LookupInSpec> lookupInAnyReplica(
         id: String,
         spec: L,
@@ -637,7 +635,6 @@ public class Collection internal constructor(
      * @sample com.couchbase.client.kotlin.samples.subdocLookupWithoutLambda
      */
     @SinceCouchbase("7.6")
-    @UncommittedCouchbaseApi
     public suspend fun lookupInAnyReplica(
         id: String,
         spec: LookupInSpec,
@@ -657,7 +654,6 @@ public class Collection internal constructor(
      * Returns the results from all available sources.
      */
     @SinceCouchbase("7.6")
-    @UncommittedCouchbaseApi
     public fun lookupInAllReplicas(
         id: String,
         spec: LookupInSpec,

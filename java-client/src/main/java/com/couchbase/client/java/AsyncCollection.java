@@ -678,7 +678,6 @@ public class AsyncCollection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return a list of results from the active and the replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
                                                                                           final List<LookupInSpec> specs) {
@@ -693,7 +692,6 @@ public class AsyncCollection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return a list of results from the active and the replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public CompletableFuture<List<CompletableFuture<LookupInReplicaResult>>> lookupInAllReplicas(final String id,
                                                                                           final List<LookupInSpec> specs,
@@ -721,7 +719,6 @@ public class AsyncCollection {
    * @param specs the spec which specifies the type of lookups to perform.
    * @return a future containing the first available replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs) {
     return lookupInAnyReplica(id, specs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
@@ -735,7 +732,6 @@ public class AsyncCollection {
    * @param options the custom options.
    * @return a future containing the first available replica.
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public CompletableFuture<LookupInReplicaResult> lookupInAnyReplica(final String id, final List<LookupInSpec> specs, final LookupInAnyReplicaOptions options) {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));

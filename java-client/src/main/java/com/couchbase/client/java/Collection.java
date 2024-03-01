@@ -763,7 +763,7 @@ public class Collection {
    * @throws FeatureNotAvailableException if none of the requests return SUCCESS
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Stream<LookupInReplicaResult> lookupInAllReplicas(final String id, final List<LookupInSpec> lookupInSpecs) {
     return lookupInAllReplicas(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ALL_REPLICA_OPTIONS);
   }
@@ -783,7 +783,7 @@ public class Collection {
    * @throws FeatureNotAvailableException if none of the requests return SUCCESS
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
+  @SinceCouchbase("7.6")
   public Stream<LookupInReplicaResult> lookupInAllReplicas(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAllReplicasOptions options) {
     return reactiveCollection.lookupInAllReplicas(id, lookupInSpecs, options).toStream();
   }
@@ -798,7 +798,6 @@ public class Collection {
    * @throws FeatureNotAvailableException if none of the requests return SUCCESS
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs) {
     return lookupInAnyReplica(id, lookupInSpecs, DEFAULT_LOOKUP_IN_ANY_REPLICA_OPTIONS);
@@ -815,7 +814,6 @@ public class Collection {
    * @throws FeatureNotAvailableException if none of the requests return SUCCESS
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
   @SinceCouchbase("7.6")
   public LookupInReplicaResult lookupInAnyReplica(final String id, final List<LookupInSpec> lookupInSpecs, final LookupInAnyReplicaOptions options) {
     return block(asyncCollection.lookupInAnyReplica(id, lookupInSpecs, options));
