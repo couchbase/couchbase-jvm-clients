@@ -47,8 +47,7 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
 
   @Override
   protected void injectParams(ObjectNode input) {
-    if (min != null && min > 1) {
-      // We use min > 1 as the default minimum is 1 anyway.
+    if (min != null) {
       input.put("min", min);
     }
 
@@ -72,7 +71,7 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
             .map(CoreSearchQuery::asProtostellar)
             .collect(Collectors.toList()));
 
-    if (min != null && min > 1) {
+    if (min != null) {
       query.setMinimum(min);
     }
 
