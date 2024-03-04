@@ -16,6 +16,7 @@
 
 package com.couchbase.client.performer.kotlin.util
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import com.couchbase.client.core.env.SecurityConfig
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.Collection
@@ -76,6 +77,7 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
 
 private val ClusterConfig.trustSource: TrustSource
     get() = when {
+        hasInsecure() && insecure -> TrustSource.factory(InsecureTrustManagerFactory.INSTANCE)
         hasCertPath() -> TrustSource.certificate(Path(certPath))
         hasCert() -> TrustSource.certificates(SecurityConfig.decodeCertificates(listOf(cert)))
         else -> TrustSource.certificates(SecurityConfig.defaultCaCertificates())

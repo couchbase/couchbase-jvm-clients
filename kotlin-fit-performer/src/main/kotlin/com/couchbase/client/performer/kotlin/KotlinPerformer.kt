@@ -58,6 +58,7 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
+            .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_INSECURE)
     }
 
     override fun clusterConnectionCreate(
