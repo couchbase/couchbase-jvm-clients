@@ -210,7 +210,7 @@ object OptionsUtil {
         securityConfig = SecurityConfig()
       }
       // Cannot use enableCertificateVerification as it was added later
-      securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
+      securityConfig = securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
     }
     // [end:1.2.1]
     if (cc.hasCert) {
