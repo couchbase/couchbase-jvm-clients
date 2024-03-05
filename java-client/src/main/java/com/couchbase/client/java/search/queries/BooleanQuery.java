@@ -32,6 +32,21 @@ public class BooleanQuery extends SearchQuery {
     @Nullable private DisjunctionQuery mustNot;
     @Nullable private DisjunctionQuery should;
 
+/**
+ * Affects the behavior of the BooleanQuery depending on the operators.
+ * The three BooleanQuery operators are `must_not`, `should` and `must`.
+ * With a `should` operator, the behaviour is different for different cases.
+ * The presence or absence of `must_not` does not affect the `should` operator's behavior.
+ * <ul>
+ * <li>1: With `should` operator and without `must` operator
+ *        in this case min=0 is same as min=1, which is at least one of the clause
+ *        should match for document to be added as part of resultSet.
+ * <li>2: With both `should` and `must` operators
+ *        m=0 means, clauses in `should` will only be used for scoring and not as a document selection
+ *        criteria m!=0 means, atleast m clauses must match for document to be eligible to be in resultSet.
+ * </li>
+ * </ul>
+ */
     public BooleanQuery shouldMin(int minForShould) {
         if (this.should == null) {
           this.should = new DisjunctionQuery();
