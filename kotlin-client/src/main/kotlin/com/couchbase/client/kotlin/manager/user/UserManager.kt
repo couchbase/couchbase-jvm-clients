@@ -28,7 +28,6 @@ import com.couchbase.client.core.error.UserNotFoundException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.http.CouchbaseHttpClient
 import com.couchbase.client.kotlin.http.CouchbaseHttpResponse
 import com.couchbase.client.kotlin.http.HttpBody
@@ -238,7 +237,6 @@ public class UserManager(
      * unless [Cluster.connect] was given a [PasswordAuthenticator] that dynamically
      * supplies the new password (see [PasswordAuthenticator.builder]).
      */
-    @UncommittedCouchbaseApi
     public suspend fun changePassword(
         newPassword: String,
         common: CommonOptions = CommonOptions.Default,
