@@ -41,7 +41,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.requireUnique
@@ -97,7 +96,6 @@ public class Scope(
     /**
      * A manager for administering scope-level Full-Text Search indexes.
      */
-    @UncommittedCouchbaseApi
     @SinceCouchbase("7.6")
     public val searchIndexes: ScopeSearchIndexManager = ScopeSearchIndexManager(
         couchbaseOps.scopeSearchIndexManager(CoreBucketAndScope(bucket.name, name))

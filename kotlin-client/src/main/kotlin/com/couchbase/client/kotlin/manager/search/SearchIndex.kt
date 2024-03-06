@@ -17,13 +17,11 @@
 package com.couchbase.client.kotlin.manager.search
 
 import com.couchbase.client.core.api.manager.search.CoreSearchIndex
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 
 
 /**
  * A Full-Text Search index definition.
  */
-@VolatileCouchbaseApi
 public class SearchIndex(
     public val name: String,
     public val sourceName: String,

@@ -213,7 +213,6 @@ public class Cluster internal constructor(
      * managing search indexes and searching at the scope level instead
      * of the cluster level. See [Scope.searchIndexes].
      */
-    @UncommittedCouchbaseApi
     public val searchIndexes: SearchIndexManager = SearchIndexManager(couchbaseOps.clusterSearchIndexManager())
 
     /**

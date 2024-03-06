@@ -23,11 +23,9 @@ import com.couchbase.client.core.error.IndexExistsException
 import com.couchbase.client.core.error.IndexNotFoundException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.CommonOptions
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import kotlinx.coroutines.future.await
 
-@UncommittedCouchbaseApi
 public class ScopeSearchIndexManager internal constructor(
     private val core: CoreSearchIndexManager
 ) {
