@@ -19,7 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery;
 import reactor.util.annotation.Nullable;
 
-@Stability.Volatile
+@Stability.Uncommitted
 public class VectorQuery {
   private final float[] vectorQuery;
   private final String vectorField;

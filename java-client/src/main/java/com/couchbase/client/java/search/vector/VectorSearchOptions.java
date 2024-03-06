@@ -22,7 +22,7 @@ import reactor.util.annotation.Nullable;
 /**
  * Options related to executing a {@link VectorSearch}.
  */
-@Stability.Volatile
+@Stability.Uncommitted
 public class VectorSearchOptions {
   private @Nullable VectorQueryCombination vectorQueryCombination;
 

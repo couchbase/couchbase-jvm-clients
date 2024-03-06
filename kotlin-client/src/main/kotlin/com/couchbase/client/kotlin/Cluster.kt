@@ -39,7 +39,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
 import com.couchbase.client.kotlin.diagnostics.PingResult
@@ -439,7 +438,7 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.searchSimpleVector
      * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
      */
-    @VolatileCouchbaseApi
+    @UncommittedCouchbaseApi
     public fun search(
         indexName: String,
         spec: SearchSpec,

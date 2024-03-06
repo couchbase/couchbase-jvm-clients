@@ -15,10 +15,10 @@
  */
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.java.search.queries.MatchNoneQuery;
 import com.couchbase.client.java.search.vector.VectorSearch;
 import reactor.util.annotation.Nullable;
 
@@ -29,7 +29,7 @@ import reactor.util.annotation.Nullable;
  * <p>
  * If both are provided, the FTS service will merge the results.
  */
-@Stability.Volatile
+@Stability.Uncommitted
 public class SearchRequest {
 
   private @Nullable SearchQuery searchQuery;
@@ -77,6 +77,7 @@ public class SearchRequest {
    *
    * @return this, for chaining purposes.
    */
+  @SinceCouchbase("7.6")
   public SearchRequest vectorSearch(VectorSearch vectorSearch) {
     if (this.vectorSearch != null) {
       throw new InvalidArgumentException("A VectorSearch has already been specified.  Note that a single VectorSearch can take multiple VectorQuery objects, allowing multiple vector queries to be run.", null, null);

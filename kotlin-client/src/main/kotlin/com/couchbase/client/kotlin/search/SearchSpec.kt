@@ -19,7 +19,7 @@ package com.couchbase.client.kotlin.search
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest
 import com.couchbase.client.core.api.search.vector.CoreVectorQueryCombination
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
+import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.MatchOperator
 import java.time.Instant
 
@@ -43,7 +43,7 @@ import java.time.Instant
  * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
  * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
  */
-@VolatileCouchbaseApi
+@UncommittedCouchbaseApi
 public sealed class SearchSpec {
     internal abstract val coreRequest: CoreSearchRequest
 
@@ -54,7 +54,6 @@ public sealed class SearchSpec {
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
          */
-        @VolatileCouchbaseApi
         @SinceCouchbase("7.6")
         public fun mixedMode(
             searchQuery: SearchQuery,
@@ -413,7 +412,6 @@ public sealed class SearchSpec {
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
          * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
          */
-        @VolatileCouchbaseApi
         @SinceCouchbase("7.6")
         public fun vector(
             field: String,
@@ -428,7 +426,7 @@ public sealed class SearchSpec {
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
          */
-        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
         public fun anyOf(
             vectorQueries: List<VectorQuery>,
         ): VectorSearchSpec = CompoundVectorSearchSpec(vectorQueries, CoreVectorQueryCombination.OR)
@@ -440,7 +438,7 @@ public sealed class SearchSpec {
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
          */
-        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
         public fun anyOf(
             first: VectorQuery,
             vararg remaining: VectorQuery,
@@ -453,7 +451,7 @@ public sealed class SearchSpec {
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
          */
-        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
         public fun allOf(
             vectorQueries: List<VectorQuery>,
         ): VectorSearchSpec = CompoundVectorSearchSpec(vectorQueries, CoreVectorQueryCombination.AND)
@@ -465,7 +463,7 @@ public sealed class SearchSpec {
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
          */
-        @VolatileCouchbaseApi
+        @SinceCouchbase("7.6")
         public fun allOf(
             first: VectorQuery,
             vararg remaining: VectorQuery,

@@ -16,12 +16,12 @@
 
 package com.couchbase.client.scala.search.vector
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.CoreVectorSearch
 import scala.collection.JavaConverters._
 
 /** Allows one or more [[VectorQuery]]s to be executed. */
-@Volatile
+@Uncommitted
 case class VectorSearch private (
     private val vectorQueries: Iterable[VectorQuery],
     private val vectorSearchOptions: Option[VectorSearchOptions] = None
@@ -41,7 +41,7 @@ case class VectorSearch private (
     )
 }
 
-@Volatile
+@Uncommitted
 object VectorSearch {
 
   /** Create a [[VectorSearch]] containing a single [[VectorQuery]]. */

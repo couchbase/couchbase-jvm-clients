@@ -17,7 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.Authenticator
@@ -264,7 +264,7 @@ class AsyncCluster(
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Volatile
+  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest
@@ -286,7 +286,7 @@ class AsyncCluster(
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Volatile
+  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest,

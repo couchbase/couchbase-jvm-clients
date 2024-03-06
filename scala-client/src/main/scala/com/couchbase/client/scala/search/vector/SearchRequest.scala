@@ -16,7 +16,8 @@
 
 package com.couchbase.client.scala.search.vector
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.scala.search.queries.{MatchNoneQuery, SearchQuery}
@@ -27,7 +28,7 @@ import scala.util.{Failure, Success, Try}
   *
   * If both are provided, the FS service will merge the results.
   */
-@Volatile
+@Uncommitted
 case class SearchRequest private (
     private val searchQuery: Option[SearchQuery] = None,
     private val vectorSearch: Option[VectorSearch] = None,
@@ -40,6 +41,7 @@ case class SearchRequest private (
     *
     * @return a copy of this, for chaining.
     */
+  @SinceCouchbase("7.6")
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest = {
     this.vectorSearch match {
       case Some(_) =>
@@ -91,7 +93,7 @@ case class SearchRequest private (
     }
 }
 
-@Volatile
+@Uncommitted
 object SearchRequest {
 
   /** Execute an FTS [[SearchQuery]]. */

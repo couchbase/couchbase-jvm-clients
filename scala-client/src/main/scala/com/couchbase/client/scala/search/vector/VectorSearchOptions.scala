@@ -16,14 +16,14 @@
 
 package com.couchbase.client.scala.search.vector
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.{
   CoreVectorQueryCombination,
   CoreVectorSearchOptions
 }
 
 /** Specifies how multiple [[VectorQuery]]s in a [[VectorSearch]] are combined. */
-@Volatile
+@Uncommitted
 sealed trait VectorQueryCombination
 object VectorQueryCombination {
 
@@ -35,7 +35,7 @@ object VectorQueryCombination {
 }
 
 /** Options related to executing a [[VectorSearch]]. */
-@Volatile
+@Uncommitted
 case class VectorSearchOptions private (
     private val vectorQueryCombination: Option[VectorQueryCombination] = None
 ) {

@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
@@ -209,7 +210,8 @@ public class ReactiveScope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
+  @SinceCouchbase("7.6")
   public Mono<ReactiveSearchResult> search(final String indexName, final SearchRequest searchRequest) {
     return search(indexName, searchRequest, DEFAULT_SEARCH_OPTIONS);
   }
@@ -226,7 +228,8 @@ public class ReactiveScope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Volatile
+  @Stability.Uncommitted
+  @SinceCouchbase("7.6")
   public Mono<ReactiveSearchResult> search(final String indexName, final SearchRequest searchRequest, final SearchOptions options) {
     notNull(searchRequest, "SearchRequest", () -> new ReducedSearchErrorContext(indexName, null));
     notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, null));

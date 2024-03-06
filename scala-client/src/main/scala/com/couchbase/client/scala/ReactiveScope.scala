@@ -17,7 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
@@ -137,7 +137,8 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Volatile
+  @Uncommitted
+  @SinceCouchbase("7.6")
   def search(
       indexName: String,
       request: SearchRequest
@@ -157,7 +158,8 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Volatile
+  @Uncommitted
+  @SinceCouchbase("7.6")
   def search(
       indexName: String,
       request: SearchRequest,

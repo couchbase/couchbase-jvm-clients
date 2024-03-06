@@ -18,7 +18,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.diagnostics.{DiagnosticsResult, PingResult}
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
@@ -222,7 +222,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  @Volatile
+  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest
@@ -243,7 +243,7 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  @Volatile
+  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest,

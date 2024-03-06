@@ -16,11 +16,11 @@
 
 package com.couchbase.client.scala.search.vector
 
-import com.couchbase.client.core.annotation.Stability.Volatile
+import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery
 
 /** Represents a vector query. */
-@Volatile
+@Uncommitted
 case class VectorQuery private (
     private val vectorQuery: Array[Float],
     private val vectorField: String,
@@ -53,7 +53,7 @@ case class VectorQuery private (
     )
 }
 
-@Volatile
+@Uncommitted
 object VectorQuery {
   def apply(vectorField: String, vectorQuery: Array[Float]): VectorQuery =
     new VectorQuery(vectorQuery, vectorField)
