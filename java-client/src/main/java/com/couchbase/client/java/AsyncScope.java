@@ -18,6 +18,7 @@ package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
@@ -35,7 +36,6 @@ import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
-import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
@@ -373,7 +373,7 @@ public class AsyncScope {
   /**
    * Allows managed scope FTS indexes.
    */
-  @Stability.Volatile
+  @SinceCouchbase("7.6")
   public AsyncScopeSearchIndexManager searchIndexes() {
     return new AsyncScopeSearchIndexManager(couchbaseOps, this, cluster);
   }

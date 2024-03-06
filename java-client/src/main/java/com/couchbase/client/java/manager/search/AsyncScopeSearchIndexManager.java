@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.search;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
@@ -52,7 +51,6 @@ import static java.util.Objects.requireNonNull;
  * <p> 
  * All management is done with scope FTS indexes.  For global FTS indexes, use @{@link AsyncSearchIndexManager}.
  */
-@Stability.Volatile
 public class AsyncScopeSearchIndexManager {
   private final CoreSearchIndexManager internal;
 

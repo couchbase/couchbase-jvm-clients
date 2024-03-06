@@ -17,6 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
@@ -274,7 +275,7 @@ public class Scope {
   /**
    * Allows management of scope FTS indexes.
    */
-  @Stability.Volatile
+  @SinceCouchbase("7.6")
   public ScopeSearchIndexManager searchIndexes() {
     return new ScopeSearchIndexManager(asyncScope.searchIndexes());
   }
