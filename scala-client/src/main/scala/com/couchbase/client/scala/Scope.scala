@@ -16,6 +16,7 @@
 
 package com.couchbase.client.scala
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
@@ -48,6 +49,7 @@ class Scope private[scala] (val async: AsyncScope, val bucketName: String) {
   lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)
 
   /** Allows managing scoped FTS indexes. */
+  @SinceCouchbase("7.6")
   lazy val searchIndexes = new ScopeSearchIndexManager(async.searchIndexes)
 
   /** The name of this scope. */

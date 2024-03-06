@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.manager.CoreBucketAndScope
@@ -64,6 +65,7 @@ class AsyncScope private[scala] (
   def name = scopeName
 
   /** Allows managing scoped FTS indexes. */
+  @SinceCouchbase("7.6")
   lazy val searchIndexes =
     new AsyncScopeSearchIndexManager(new CoreBucketAndScope(bucketName, scopeName), couchbaseOps)
 

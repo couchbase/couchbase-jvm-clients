@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.search
 
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.JsonObject
 import reactor.core.scala.publisher.SMono
@@ -27,7 +26,6 @@ import scala.concurrent.duration.Duration
   *
   * This interface is for scoped indexes.  For global indexes, use [[ReactiveSearchIndexManager]].
   */
-@Stability.Volatile
 class ReactiveScopeSearchIndexManager(private[scala] val async: AsyncScopeSearchIndexManager)(
     implicit val ec: ExecutionContext
 ) {

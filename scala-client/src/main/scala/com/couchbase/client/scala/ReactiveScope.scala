@@ -16,14 +16,12 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
-import com.couchbase.client.scala.manager.search.{
-  ReactiveScopeSearchIndexManager,
-  ScopeSearchIndexManager
-}
+import com.couchbase.client.scala.manager.search.ReactiveScopeSearchIndexManager
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
 import com.couchbase.client.scala.search.SearchOptions
@@ -53,6 +51,7 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
   def name = async.name
 
   /** Allows managing scoped FTS indexes. */
+  @SinceCouchbase("7.6")
   lazy val searchIndexes = new ReactiveScopeSearchIndexManager(async.searchIndexes)
 
   /** Opens and returns the default collection on this scope. */

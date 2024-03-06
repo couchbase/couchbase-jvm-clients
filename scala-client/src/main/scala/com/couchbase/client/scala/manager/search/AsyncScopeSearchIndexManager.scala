@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.search
 
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
@@ -35,7 +34,6 @@ import scala.jdk.CollectionConverters._
   *
   * This interface is for scoped indexes.  For global indexes, use [[AsyncSearchIndexManager]].
   */
-@Stability.Volatile
 class AsyncScopeSearchIndexManager private[scala] (
     private[scala] val scope: CoreBucketAndScope,
     private[scala] val couchbaseOps: CoreCouchbaseOps

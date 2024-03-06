@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.search
 
-import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.json.JsonObject
@@ -27,7 +26,6 @@ import scala.util.Try
   *
   * This interface is for scoped indexes.  For global indexes, use [[SearchIndexManager]].
   */
-@Stability.Volatile
 class ScopeSearchIndexManager(private[scala] val async: AsyncScopeSearchIndexManager) {
   private val DefaultTimeout: Duration            = async.DefaultTimeout
   private val DefaultRetryStrategy: RetryStrategy = async.DefaultRetryStrategy
