@@ -366,7 +366,7 @@ public class Cluster implements Closeable {
   }
 
   /**
-   * Provides access to the eventing function management services.
+   * Provides access to the eventing function management services for functions in the admin scope.
    */
   @Stability.Uncommitted
   public EventingFunctionManager eventingFunctions() {

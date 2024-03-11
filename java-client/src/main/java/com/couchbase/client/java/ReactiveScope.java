@@ -32,6 +32,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.eventing.ReactiveScopeEventingFunctionManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.ReactiveQueryResult;
@@ -277,4 +278,12 @@ public class ReactiveScope {
             .map(result -> new ReactiveSearchResult(result, serializer));
   }
 
+  /**
+   * Provides access to the eventing function management services for functions in this scope.
+   */
+  @Stability.Volatile
+  @SinceCouchbase("7.1")
+  public ReactiveScopeEventingFunctionManager eventingFunctions() {
+    return new ReactiveScopeEventingFunctionManager(asyncScope.eventingFunctions());
+  }
 }

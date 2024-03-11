@@ -44,6 +44,7 @@ import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
+import com.couchbase.client.java.manager.eventing.AsyncScopeEventingFunctionManager;
 import com.couchbase.client.java.manager.search.AsyncScopeSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -378,5 +379,14 @@ public class AsyncScope {
   @SinceCouchbase("7.6")
   public AsyncScopeSearchIndexManager searchIndexes() {
     return new AsyncScopeSearchIndexManager(couchbaseOps, this, cluster);
+  }
+
+  /**
+   * Provides access to the eventing function management services for functions in this scope.
+   */
+  @Stability.Volatile
+  @SinceCouchbase("7.1")
+  public AsyncScopeEventingFunctionManager eventingFunctions() {
+    return new AsyncScopeEventingFunctionManager(core(), this.cluster, new CoreBucketAndScope(bucketName, name()));
   }
 }

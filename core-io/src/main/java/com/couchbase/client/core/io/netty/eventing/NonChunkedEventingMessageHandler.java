@@ -27,6 +27,7 @@ import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
+import java.util.Locale;
 import java.util.Map;
 
 public class NonChunkedEventingMessageHandler extends NonChunkedHttpMessageHandler {
@@ -65,6 +66,9 @@ public class NonChunkedEventingMessageHandler extends NonChunkedHttpMessageHandl
       } else if (content.contains("ERR_APP_NOT_UNDEPLOYED")) {
         return new EventingFunctionDeployedException("Eventing function deployed", errorContext);
       } else if (content.contains("ERR_BUCKET_MISSING")) {
+        if (content.toLowerCase(Locale.ROOT).contains("scope not defined")) {
+          return new ScopeNotFoundException("", errorContext);
+        }
         return new BucketNotFoundException("", errorContext);
       }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Couchbase, Inc.
+ * Copyright 2024 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,16 +36,16 @@ import static com.couchbase.client.java.manager.eventing.GetAllFunctionsOptions.
 /**
  * Performs management operations on {@link EventingFunction EventingFunctions}.
  */
-@Stability.Uncommitted
-public class EventingFunctionManager {
+@Stability.Volatile
+public class ScopeEventingFunctionManager {
 
   /**
    * The underlying async function manager which performs the actual ops and does the conversions.
    */
-  private final AsyncEventingFunctionManager asyncManager;
+  private final AsyncScopeEventingFunctionManager asyncManager;
 
   /**
-   * Creates a new {@link EventingFunctionManager}.
+   * Creates a new {@link ScopeEventingFunctionManager}.
    * <p>
    * This API is not intended to be called by the user directly, use {@link Cluster#eventingFunctions()}
    * instead.
@@ -53,7 +53,7 @@ public class EventingFunctionManager {
    * @param asyncManager the underlying async manager that performs the ops.
    */
   @Stability.Internal
-  public EventingFunctionManager(AsyncEventingFunctionManager asyncManager) {
+  public ScopeEventingFunctionManager(AsyncScopeEventingFunctionManager asyncManager) {
     this.asyncManager = asyncManager;
   }
 

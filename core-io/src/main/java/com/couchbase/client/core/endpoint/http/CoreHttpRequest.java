@@ -53,6 +53,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.endpoint.http.CoreHttpTimeoutHelper.resolveTimeout;
@@ -209,6 +210,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
 
     private HttpHeaders headers = EmptyHttpHeaders.INSTANCE;
     private String spanName; // nullable
+    @Nullable private Consumer<RequestSpan> attributeSetter;
     private Map<String, Object> spanAttributes; // nullable
     private Boolean idempotent; // nullable
     private boolean bypassExceptionTranslation;
@@ -235,6 +237,14 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     public Builder trace(String spanName) {
       this.spanName = spanName;
       return this;
+    }
+
+    public Builder trace(
+      @Nullable String spanName,
+      @Nullable Consumer<RequestSpan> attributeSetter
+    ) {
+      this.attributeSetter = attributeSetter;
+      return trace(spanName);
     }
 
     public Builder traceAttr(String attributeName, Object attributeValue) {
@@ -317,6 +327,9 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
           span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
         }
         CbTracing.setAttributes(span, spanAttributes);
+        if (attributeSetter != null) {
+          attributeSetter.accept(span);
+        }
       }
 
       return new CoreHttpRequest(

@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.context.ErrorContext;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Volatile
@@ -29,8 +30,12 @@ public class ScopeNotFoundException extends CouchbaseException {
 
   @Stability.Internal
   public ScopeNotFoundException(String scopeName, @Nullable ErrorContext context) {
-    super("Scope [" + redactMeta(scopeName) + "] not found.", context);
+    super("Scope" + formatName(scopeName) + " not found.", context);
     this.scopeName = requireNonNull(scopeName);
+  }
+
+  private static String formatName(String name) {
+    return isNullOrEmpty(name) ? "" : " [" + redactMeta(name) + "]";
   }
 
   public static ScopeNotFoundException forScope(String scopeName) {

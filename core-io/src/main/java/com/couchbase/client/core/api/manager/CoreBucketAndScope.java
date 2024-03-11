@@ -18,6 +18,8 @@ package com.couchbase.client.core.api.manager;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.Objects;
+
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -36,5 +38,18 @@ public class CoreBucketAndScope {
 
   public String bucketName() {
     return bucketName;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CoreBucketAndScope that = (CoreBucketAndScope) o;
+    return bucketName.equals(that.bucketName) && scopeName.equals(that.scopeName);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(bucketName, scopeName);
   }
 }

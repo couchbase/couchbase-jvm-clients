@@ -27,6 +27,7 @@ import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.AnalyticsResult;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.env.ClusterEnvironment;
+import com.couchbase.client.java.manager.eventing.ScopeEventingFunctionManager;
 import com.couchbase.client.java.manager.search.ScopeSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
 import com.couchbase.client.java.query.QueryOptions;
@@ -45,7 +46,6 @@ import static com.couchbase.client.java.AsyncUtils.block;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_ANALYTICS_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_QUERY_OPTIONS;
 import static com.couchbase.client.java.ReactiveCluster.DEFAULT_SEARCH_OPTIONS;
-import static com.couchbase.client.java.query.QueryAccessor.convertCoreQueryError;
 
 /**
  * The scope identifies a group of collections and allows high application
@@ -282,5 +282,14 @@ public class Scope {
   @SinceCouchbase("7.6")
   public ScopeSearchIndexManager searchIndexes() {
     return new ScopeSearchIndexManager(asyncScope.searchIndexes());
+  }
+
+  /**
+   * Provides access to the eventing function management services for functions in this scope.
+   */
+  @Stability.Volatile
+  @SinceCouchbase("7.1")
+  public ScopeEventingFunctionManager eventingFunctions() {
+    return new ScopeEventingFunctionManager(asyncScope.eventingFunctions());
   }
 }

@@ -320,11 +320,11 @@ public class AsyncCluster {
   }
 
   /**
-   * Provides access to the eventing function management services.
+   * Provides access to the eventing function management services for functions in the admin scope.
    */
   @Stability.Uncommitted
   public AsyncEventingFunctionManager eventingFunctions() {
-    return new AsyncEventingFunctionManager(core(), this);
+    return new AsyncEventingFunctionManager(core(), this, null);
   }
 
   /**
