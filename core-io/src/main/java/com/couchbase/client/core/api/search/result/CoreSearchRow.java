@@ -211,6 +211,7 @@ public class CoreSearchRow {
             ", explanation=" + new String(explanation, UTF_8) +
             ", locations=" + redactUser(locations) +
             ", fragments=" + redactUser(fragments) +
+            ", fields=" + (fields == null ? null : redactUser(new String(fields, UTF_8))) +
             '}';
   }
 }
