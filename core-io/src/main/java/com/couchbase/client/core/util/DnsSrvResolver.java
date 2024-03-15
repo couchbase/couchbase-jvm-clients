@@ -110,6 +110,7 @@ public class DnsSrvResolver {
       synchronized (ResolverConfig.class) {
         ResolverConfig.refresh();
         return LookupSession.defaultBuilder()
+          .clearCaches() // Must not cache negative lookup results
           .resolver(this.nameserver == null ? new ExtendedResolver() : new ExtendedResolver(new String[]{nameserver}))
           .searchPath(ResolverConfig.getCurrentConfig().searchPath())
           .executor(executor)
