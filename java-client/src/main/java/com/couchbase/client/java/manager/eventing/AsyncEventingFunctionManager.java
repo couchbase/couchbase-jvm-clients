@@ -647,12 +647,9 @@ public class AsyncEventingFunctionManager {
     }
     if (settings.has("language_compatibility")) {
       String compat = settings.get("language_compatibility").asText();
-      if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_0_0.toString())) {
-        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_0_0);
-      } else if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_5_0.toString())) {
-        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_5_0);
-      } else if (compat.equals(EventingFunctionLanguageCompatibility.VERSION_6_6_2.toString())) {
-        settingsBuilder.languageCompatibility(EventingFunctionLanguageCompatibility.VERSION_6_6_2);
+      EventingFunctionLanguageCompatibility compatVersion = EventingFunctionLanguageCompatibility.parse(compat);
+      if (compatVersion != null) {
+        settingsBuilder.languageCompatibility(compatVersion);
       }
     }
     if (settings.has("lcb_inst_capacity")) {
