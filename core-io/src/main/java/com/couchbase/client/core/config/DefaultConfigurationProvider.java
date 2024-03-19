@@ -48,6 +48,7 @@ import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.BucketNotReadyDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.NoAccessDuringConfigLoadException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.error.TimeoutException;
@@ -973,9 +974,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
             boolean bucketNotFound = f instanceof BucketNotFoundDuringLoadException;
             boolean bucketNotReady = f instanceof BucketNotReadyDuringLoadException;
+            boolean noAccess = f instanceof NoAccessDuringConfigLoadException;
 
-            // For bucket not found or not ready wait a bit longer, retry the rest quickly
-            Duration delay = bucketNotFound || bucketNotReady
+            // For some, wait a bit longer; retry the rest quickly.
+            Duration delay = bucketNotFound || bucketNotReady || noAccess
               ? Duration.ofMillis(500)
               : Duration.ofMillis(1);
             eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));

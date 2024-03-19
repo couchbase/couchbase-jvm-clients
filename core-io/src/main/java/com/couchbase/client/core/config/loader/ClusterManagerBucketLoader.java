@@ -21,7 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.error.NoAccessDuringConfigLoadException;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -72,10 +72,14 @@ public class ClusterManagerBucketLoader extends BaseBucketLoader {
     }).map(response -> {
       if (response.status().success()) {
         return response.config();
-      } else if (response.status() == ResponseStatus.NOT_FOUND) {
-        throw new BucketNotFoundDuringLoadException("Bucket [\"" + redactMeta(bucket) + "\"] not found during loading");
-      } else {
-        throw new ConfigException("Received error status from ClusterManagerBucketLoader: " + response);
+      }
+      switch (response.status()) {
+        case NOT_FOUND:
+          throw new BucketNotFoundDuringLoadException("Bucket [\"" + redactMeta(bucket) + "\"] not found during loading");
+        case NO_ACCESS:
+          throw new NoAccessDuringConfigLoadException("Client was denied access to bucket [\"" + redactMeta(bucket) + "\"] during config loading. Common causes include invalid credentials or insufficient permissions.");
+        default:
+          throw new ConfigException("Received error status from ClusterManagerBucketLoader: " + response);
       }
     });
   }
