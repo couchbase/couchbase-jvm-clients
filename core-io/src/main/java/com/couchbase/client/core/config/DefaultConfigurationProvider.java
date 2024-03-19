@@ -74,6 +74,7 @@ import reactor.util.retry.Retry;
 
 import javax.naming.NamingException;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -83,6 +84,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -962,31 +964,47 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
           return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
         })
-        .retryWhen(
-          Retry.from(companion -> companion.flatMap(rs -> {
-            final Throwable f = rs.failure();
-            if (shutdown.get()) {
-              return Mono.error(new AlreadyShutdownException());
-            }
-            if (f instanceof UnsupportedConfigMechanismException) {
-              return Mono.error(Exceptions.propagate(f));
-            }
-
-            boolean bucketNotFound = f instanceof BucketNotFoundDuringLoadException;
-            boolean bucketNotReady = f instanceof BucketNotReadyDuringLoadException;
-            boolean noAccess = f instanceof NoAccessDuringConfigLoadException;
-
-            // For some, wait a bit longer; retry the rest quickly.
-            Duration delay = bucketNotFound || bucketNotReady || noAccess
-              ? Duration.ofMillis(500)
-              : Duration.ofMillis(1);
-            eventBus.publish(new BucketOpenRetriedEvent(name, delay, core.context(), f));
-            return Mono
-              .just(rs.totalRetries())
-              .delayElement(delay, core.context().environment().scheduler());
-          })))
+        // Exponential backoff for certain errors.
+        .retryWhen(Retry
+          .backoff(Long.MAX_VALUE, Duration.ofMillis(500))
+          .maxBackoff(Duration.ofSeconds(10))
+          .filter(bucketConfigLoadRetryFilter(name, t -> isInstanceOfAnyOf(t,
+            BucketNotFoundDuringLoadException.class,
+            BucketNotReadyDuringLoadException.class,
+            NoAccessDuringConfigLoadException.class
+          )))
+        )
+        // Short fixed delay for the others we want to retry.
+        .retryWhen(Retry
+          .fixedDelay(Long.MAX_VALUE, Duration.ofMillis(10))
+          .filter(bucketConfigLoadRetryFilter(name, t -> !(t instanceof UnsupportedConfigMechanismException)))
+        )
       )
       .next();
+  }
+
+  /**
+   * Wraps a retry filter with common logic that checks for shutdown and publishes events.
+   */
+  private Predicate<? super Throwable> bucketConfigLoadRetryFilter(
+    String bucketName,
+    Predicate<? super Throwable> errorFilter
+  ) {
+    return t -> {
+      if (shutdown.get()) {
+        throw new AlreadyShutdownException();
+      }
+
+      boolean retry = errorFilter.test(t);
+      if (retry) {
+        eventBus.publish(new BucketOpenRetriedEvent(bucketName, Duration.ZERO, core.context(), t));
+      }
+      return retry;
+    };
+  }
+
+  private static boolean isInstanceOfAnyOf(Object o, Class<?>... candidates) {
+    return Arrays.stream(candidates).anyMatch(it -> it.isInstance(o));
   }
 
   private Mono<ProposedGlobalConfigContext> fetchGlobalConfigs(final Set<SeedNode> seedNodes, final boolean tls,
