@@ -26,6 +26,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,13 +77,13 @@ class BaseBucketLoaderTest {
       }
     };
 
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
       .thenReturn(Mono.empty());
 
     when(core.serviceState(eq(SEED), eq(SERVICE), eq(Optional.of(BUCKET)))).thenReturn(Optional.of(Flux.empty()));
 
-    ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET, Optional.empty()).block();
-    BucketConfig config = BucketConfigParser.parse(ctx.config(), core.context().environment(), ctx.origin());
+    ProposedBucketConfigContext ctx = loader.load(SEED, PORT, BUCKET).block();
+    BucketConfig config = BucketConfigParser.parse(ctx.config(), StandardMemcachedHashingStrategy.INSTANCE, ctx.origin());
     assertEquals("default", config.name());
     assertEquals(1073, config.rev());
   }
@@ -95,10 +96,10 @@ class BaseBucketLoaderTest {
         return Mono.error(new IllegalStateException("Not expected to be called!"));
       }
     };
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
       .thenReturn(Mono.error(new CouchbaseException("Some error during service ensure")));
 
-    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET, Optional.empty()).block());
+    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET).block());
   }
 
   @Test
@@ -110,10 +111,10 @@ class BaseBucketLoaderTest {
       }
     };
 
-    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET)), eq(Optional.empty())))
+    when(core.ensureServiceAt(eq(SEED), eq(SERVICE), eq(PORT), eq(Optional.of(BUCKET))))
       .thenReturn(Mono.empty());
 
-    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET, Optional.empty()).block());
+    assertThrows(ConfigException.class, () -> loader.load(SEED, PORT, BUCKET).block());
   }
 
 }

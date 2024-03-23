@@ -41,7 +41,6 @@ import com.couchbase.client.core.config.refresher.GlobalRefresher;
 import com.couchbase.client.core.config.refresher.KeyValueBucketRefresher;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
@@ -62,6 +61,8 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
@@ -86,7 +87,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
@@ -151,8 +151,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private final CollectionMap collectionMap = new CollectionMap();
-
-  private final AtomicBoolean alternateAddrChecked = new AtomicBoolean(false);
 
   private volatile boolean globalConfigLoadInProgress = false;
   private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
@@ -257,14 +255,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @param mappedKvPort the port of the kv loader.
    * @param mappedManagerPort the port for the manager.
    * @param name the name of the bucket.
-   * @param alternateAddress the alternate address, if present.
    * @return returns the bucket config context if present, or an error.
    */
-  protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(NodeIdentifier identifier, int mappedKvPort,
-                                                                      int mappedManagerPort, String name,
-                                                                      Optional<String> alternateAddress) {
+  protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(
+    NodeIdentifier identifier,
+    int mappedKvPort,
+    int mappedManagerPort,
+    String name
+  ) {
     return keyValueLoader
-      .load(identifier, mappedKvPort, name, alternateAddress)
+      .load(identifier, mappedKvPort, name)
       .onErrorResume(t -> {
         boolean removedWhileOpInFlight = t instanceof ConfigException
           && t.getCause() instanceof RequestCanceledException
@@ -275,7 +275,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return Mono.error(t);
         }
         return clusterManagerLoader.load(
-          identifier, mappedManagerPort, name, alternateAddress
+          identifier, mappedManagerPort, name
         );
       })
       .flatMap(ctx -> {
@@ -286,48 +286,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return Mono.just(ctx);
         }
       });
-  }
-
-  /**
-   * Maps a logical address to its alternate address, if present.
-   *
-   * @param a the input address.
-   * @param seed the seed node to check against.
-   * @param tls if TLS is enabled or not.
-   * @param alternatePorts where to store the alternate ports as a side effect.
-   * @return the mapped hostname.
-   */
-  private String mapAlternateAddress(final String a, final SeedNode seed, final boolean tls,
-                                     final AtomicReference<Map<ServiceType, Integer>> alternatePorts) {
-    ClusterConfig c = currentConfig;
-    if (c.globalConfig() != null) {
-      for (PortInfo pi : c.globalConfig().portInfos()) {
-        if (seed.address().equals(pi.hostname())) {
-          alternatePorts.set(tls
-            ? pi.alternateAddresses().get(a).sslServices()
-            : pi.alternateAddresses().get(a).services()
-          );
-          return pi.alternateAddresses().get(a).hostname();
-        }
-      }
-    }
-
-    List<NodeInfo> nodeInfos = c
-      .bucketConfigs()
-      .values()
-      .stream()
-      .flatMap(bc -> bc.nodes().stream()).collect(Collectors.toList());
-    for (NodeInfo ni : nodeInfos) {
-      if (ni.hostname().equals(seed.address())) {
-        alternatePorts.set(tls
-          ? ni.alternateAddresses().get(a).sslServices()
-          : ni.alternateAddresses().get(a).services()
-        );
-        return ni.alternateAddresses().get(a).hostname();
-      }
-    }
-
-    return null;
   }
 
   @Override
@@ -368,12 +326,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        BucketConfig config = BucketConfigParser.parse(
-          ctx.config(),
-          core.context().environment(),
-          ctx.origin()
-        );
+        ClusterTopologyWithBucket cluster = core.parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
+        BucketConfig config = LegacyConfigHelper.toLegacyBucketConfig(cluster);
         checkAndApplyConfig(config, ctx.forcesOverride());
+
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
           core.context(),
@@ -410,8 +366,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        GlobalConfig config = GlobalConfigParser.parse(ctx.config(), ctx.origin());
+        ClusterTopology topology = core.parseClusterTopology(ctx.config(), ctx.origin());
+        GlobalConfig config = new GlobalConfig(topology);
         checkAndApplyConfig(config, ctx.forcesOverride());
+
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
           core.context(),
@@ -614,7 +572,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new BucketConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setBucketConfig(newConfig);
-    checkAlternateAddress();
     updateSeedNodeList();
     pushConfig(false);
   }
@@ -640,7 +597,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), newConfig));
     currentConfig.setGlobalConfig(newConfig);
-    checkAlternateAddress();
     updateSeedNodeList();
     pushConfig(false);
   }
@@ -702,85 +658,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     if (!seedNodes.isEmpty()) {
       eventBus.publish(new SeedNodesUpdatedEvent(core.context(), currentSeedNodes(), seedNodes));
       setSeedNodes(seedNodes);
-    }
-  }
-
-  /**
-   * Check and apply alternate address setting if it hasn't been done already.
-   */
-  private synchronized void checkAlternateAddress() {
-    if (alternateAddrChecked.compareAndSet(false, true)) {
-      String resolved = determineNetworkResolution(
-        extractAlternateAddressInfos(currentConfig),
-        core.context().environment().ioConfig().networkResolution(),
-        currentSeedNodes().stream().map(SeedNode::address).collect(Collectors.toSet())
-      );
-      core.context().alternateAddress(Optional.ofNullable(resolved));
-    }
-  }
-
-  /**
-   * Helper method to turn either the port info or the node info into a list of hosts to use for the
-   * alternate address resolution.
-   *
-   * @return a list of hostname/alternate address mappings.
-   */
-  public static List<AlternateAddressHolder> extractAlternateAddressInfos(final ClusterConfig config) {
-    Stream<AlternateAddressHolder> holders;
-
-    if (config.globalConfig() != null) {
-      holders = config
-        .globalConfig()
-        .portInfos()
-        .stream()
-        .map(pi -> new AlternateAddressHolder(pi.hostname(), pi.alternateAddresses()));
-    } else {
-      holders = config.bucketConfigs()
-        .values()
-        .stream()
-        .flatMap(bc -> bc.nodes().stream())
-        .map(ni -> new AlternateAddressHolder(ni.hostname(), ni.alternateAddresses()));
-    }
-
-    return holders.collect(Collectors.toList());
-  }
-
-  /**
-   * Helper method to figure out which network resolution should be used.
-   * <p>
-   * If DEFAULT is selected, then null is returned which is equal to the "internal" or default
-   * config mode. If AUTO is used then we perform the select heuristic based off of the seed
-   * hosts given. All other resolution settings (i.e. EXTERNAL) are returned directly and are
-   * considered to be part of the alternate address configs.
-   *
-   * @param nodes the list of nodes to check.
-   * @param nr the network resolution setting from the environment
-   * @param seedHosts the seed hosts from bootstrap for autoconfig.
-   * @return the found setting if external is used, null if internal/default is used.
-   */
-  public static String determineNetworkResolution(final List<AlternateAddressHolder> nodes, final NetworkResolution nr,
-                                                  final Set<String> seedHosts) {
-    if (nr.equals(NetworkResolution.DEFAULT)) {
-      return null;
-    } else if (nr.equals(NetworkResolution.AUTO)) {
-      for (AlternateAddressHolder info : nodes) {
-        if (seedHosts.contains(info.hostname())) {
-          return null;
-        }
-
-        Map<String, AlternateAddress> aa = info.alternateAddresses();
-        if (aa != null && !aa.isEmpty()) {
-          for (Map.Entry<String, AlternateAddress> entry : aa.entrySet()) {
-            AlternateAddress alternateAddress = entry.getValue();
-            if (alternateAddress != null && seedHosts.contains(alternateAddress.hostname())) {
-              return entry.getKey();
-            }
-          }
-        }
-      }
-      return null;
-    } else {
-      return nr.name();
     }
   }
 
@@ -936,7 +813,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
                                                               final boolean tls) {
     int kvPort = tls ? DEFAULT_KV_TLS_PORT : DEFAULT_KV_PORT;
     int managerPort = tls ? DEFAULT_MANAGER_TLS_PORT : DEFAULT_MANAGER_PORT;
-    final Optional<String> alternate = core.context().alternateAddress();
 
     return Flux
       .range(1, Math.min(MAX_PARALLEL_LOADERS, seedNodes.size()))
@@ -947,22 +823,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         .flatMap(seed -> {
           NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
 
-          final AtomicReference<Map<ServiceType, Integer>> alternatePorts = new AtomicReference<>();
-          final Optional<String> alternateAddress = alternate.map(a -> mapAlternateAddress(a, seed, tls, alternatePorts));
+          final int mappedKvPort = seed.kvPort().orElse(kvPort);
+          final int mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
 
-          final int mappedKvPort;
-          final int mappedManagerPort;
-
-          if (alternateAddress.isPresent()) {
-            Map<ServiceType, Integer> ports = alternatePorts.get();
-            mappedKvPort = ports.get(ServiceType.KV);
-            mappedManagerPort = ports.get(ServiceType.MANAGER);
-          } else {
-            mappedKvPort = seed.kvPort().orElse(kvPort);
-            mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
-          }
-
-          return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name, alternateAddress);
+          return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name);
         })
         // Exponential backoff for certain errors.
         .retryWhen(Retry
@@ -1085,28 +949,6 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     if (emitResult != Sinks.EmitResult.OK) {
       eventBus.publish(new SeedNodesUpdateFailedEvent(core.context(), emitResult));
-    }
-  }
-
-  /**
-   * This class is needed since both port info and node info need to be abstracted for alternate address resolving.
-   */
-  public static class AlternateAddressHolder {
-
-    private final String hostname;
-    private final Map<String, AlternateAddress> alternateAddresses;
-
-    AlternateAddressHolder(final String hostname, final Map<String, AlternateAddress> alternateAddresses) {
-      this.hostname = hostname;
-      this.alternateAddresses = alternateAddresses;
-    }
-
-    public String hostname() {
-      return hostname;
-    }
-
-    public Map<String, AlternateAddress> alternateAddresses() {
-      return alternateAddresses;
     }
   }
 

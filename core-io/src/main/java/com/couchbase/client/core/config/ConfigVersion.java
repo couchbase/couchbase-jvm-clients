@@ -22,6 +22,10 @@ import reactor.util.annotation.NonNull;
 import java.util.Comparator;
 import java.util.Objects;
 
+/**
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.TopologyRevision
+ */
+@Deprecated
 @Stability.Internal
 public class ConfigVersion implements Comparable<ConfigVersion> {
   /**

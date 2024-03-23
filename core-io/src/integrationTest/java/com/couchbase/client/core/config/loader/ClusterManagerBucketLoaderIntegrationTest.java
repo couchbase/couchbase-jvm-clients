@@ -33,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
-import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,8 +79,7 @@ class ClusterManagerBucketLoaderIntegrationTest extends CoreIntegrationTest {
     ProposedBucketConfigContext ctx = loader.load(
       new NodeIdentifier(config.hostname(), port),
       port,
-      config().bucketname(),
-      Optional.empty()
+      config().bucketname()
     ).block();
     assertNotNull(ctx);
 

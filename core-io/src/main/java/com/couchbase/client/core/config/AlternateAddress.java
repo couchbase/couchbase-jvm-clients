@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import java.util.HashMap;
 import java.util.Map;
 
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AlternateAddress {
 

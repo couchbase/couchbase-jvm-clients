@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreat
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,13 +35,22 @@ import java.util.Set;
  * operations without having a bucket open (and as a result fetch a bucket config). It only contains a subset
  * of what can be found in a bucket config, since it contains only what necessary to locate cluster-level
  * features and capabilities.</p>
+ *
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.ClusterTopology}
  */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GlobalConfig {
 
   private final ConfigVersion version;
   private final List<PortInfo> portInfos;
   private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
+
+  public GlobalConfig(ClusterTopology topology) {
+    this.version = LegacyConfigHelper.toLegacy(topology.revision());
+    this.portInfos = LegacyConfigHelper.getPortInfos(topology);
+    this.clusterCapabilities = LegacyConfigHelper.getClusterCapabilities(topology);
+  }
 
   @JsonCreator
   public GlobalConfig(

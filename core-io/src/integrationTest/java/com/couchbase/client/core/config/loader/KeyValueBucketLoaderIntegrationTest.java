@@ -28,8 +28,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -66,8 +64,7 @@ class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
     ProposedBucketConfigContext loaded = loader.load(
       new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV),
-      config().bucketname(),
-      Optional.empty()
+      config().bucketname()
     ).block();
 
     assertNotNull(loaded);

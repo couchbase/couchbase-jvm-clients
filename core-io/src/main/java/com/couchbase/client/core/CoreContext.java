@@ -55,11 +55,6 @@ public class CoreContext extends AbstractContext {
   private final Authenticator authenticator;
 
   /**
-   * If present, contains the alternate address identifier that is used.
-   */
-  private volatile Optional<String> alternateAddress = Optional.empty();
-
-  /**
   * Creates a new {@link CoreContext}.
   *
   * @param id the core id.
@@ -87,10 +82,12 @@ public class CoreContext extends AbstractContext {
   }
 
   /**
-   * Returns the alternate address identifier, if present.
+   * @deprecated Always return an empty optional. Alternate addresses
+   * are now resolved immediately when parsing cluster topology.
    */
+  @Deprecated
   public Optional<String> alternateAddress() {
-    return alternateAddress;
+    return Optional.empty();
   }
 
   /**
@@ -101,18 +98,13 @@ public class CoreContext extends AbstractContext {
   }
 
   /**
-   * Sets the alternate address on this context.
-   *
-   * <p>This is internal API and will alter the behavior of the system. Do not call this API if you
-   * are not 100% sure what you are doing!</p>
-   *
-   * @param alternateAddress the alternate address identifier, or empty if none available.
+   * @deprecated This method does not do anything.
    * @return the same {@link CoreContext} for chaining purposes.
    */
   @Stability.Internal
+  @Deprecated
   public CoreContext alternateAddress(final Optional<String> alternateAddress) {
     notNull(alternateAddress, "Alternate Address Identifier");
-    this.alternateAddress = alternateAddress;
     return this;
   }
 
@@ -126,7 +118,6 @@ public class CoreContext extends AbstractContext {
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     input.put("coreId", "0x" + Long.toHexString(id));
-    alternateAddress.ifPresent(a -> input.put("alternateIdentifier", a));
   }
 
 }

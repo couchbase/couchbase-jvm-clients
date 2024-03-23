@@ -93,7 +93,6 @@ public class Node implements Stateful<NodeState> {
   private final Authenticator authenticator;
   private final Map<String, Map<ServiceType, Service>> services;
   private final AtomicBoolean disconnect;
-  private final Optional<String> alternateAddress;
 
   /**
    * Holds the endpoint states and as a result the internal service state.
@@ -105,18 +104,16 @@ public class Node implements Stateful<NodeState> {
    */
   private final AtomicEnumSet<ServiceType> enabledServices = AtomicEnumSet.noneOf(ServiceType.class);
 
-  public static Node create(final CoreContext ctx, final NodeIdentifier identifier,
-                            final Optional<String> alternateAddress) {
-    return new Node(ctx, identifier, alternateAddress);
+  public static Node create(final CoreContext ctx, final NodeIdentifier identifier) {
+    return new Node(ctx, identifier);
   }
 
-  protected Node(final CoreContext ctx, final NodeIdentifier identifier, final Optional<String> alternateAddress) {
+  protected Node(final CoreContext ctx, final NodeIdentifier identifier) {
     this.identifier = identifier;
-    this.ctx = new NodeContext(ctx, identifier, alternateAddress);
+    this.ctx = new NodeContext(ctx, identifier);
     this.authenticator = ctx.authenticator();
     this.services = new ConcurrentHashMap<>();
     this.disconnect = new AtomicBoolean(false);
-    this.alternateAddress = alternateAddress;
     this.serviceStates = CompositeStateful.create(NodeState.DISCONNECTED, serviceStates -> {
       if (serviceStates.isEmpty()) {
         return NodeState.DISCONNECTED;
@@ -238,7 +235,7 @@ public class Node implements Stateful<NodeState> {
       }
 
       HostAndPort newServiceAddress = new HostAndPort(
-        alternateAddress.orElseGet(identifier::address),
+        identifier.address(),
         port
       );
 
@@ -522,7 +519,6 @@ public class Node implements Stateful<NodeState> {
       ", ctx=" + ctx +
       ", services=" + services +
       ", disconnect=" + disconnect +
-      ", alternateAddress=" + redactSystem(alternateAddress) +
       ", serviceStates=" + serviceStates +
       ", enabledServices=" + enabledServices +
       '}';

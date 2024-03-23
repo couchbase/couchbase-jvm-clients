@@ -63,7 +63,7 @@ public class GlobalLoader {
    */
   public Mono<ProposedGlobalConfigContext> load(final NodeIdentifier seed, final int port) {
     return core
-      .ensureServiceAt(seed, ServiceType.KV, port, Optional.empty(), Optional.empty())
+      .ensureServiceAt(seed, ServiceType.KV, port, Optional.empty())
       .then(discoverConfig(seed))
       .map(config -> new String(config, UTF_8))
       .map(config -> config.replace("$HOST", seed.address()))

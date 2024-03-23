@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
 
@@ -300,6 +301,6 @@ class CouchbaseBucketConfigTest {
         if (origin != null) {
             raw = raw.replace("$HOST", origin);
         }
-        return (CouchbaseBucketConfig) BucketConfigParser.parse(raw, null, origin);
+        return (CouchbaseBucketConfig) BucketConfigParser.parse(raw, StandardMemcachedHashingStrategy.INSTANCE, origin);
     }
 }

@@ -39,7 +39,10 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Service addresses for one node of a Couchbase Server cluster.
+ *
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.HostAndServicePorts}
  */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NodeInfo implements KetamaRingNode {
 

@@ -26,7 +26,10 @@ import java.util.Set;
 
 /**
  * Represents a Couchbase Bucket Configuration.
+ *
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.BucketTopology}
  */
+@Deprecated
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,
   property = "nodeLocator")

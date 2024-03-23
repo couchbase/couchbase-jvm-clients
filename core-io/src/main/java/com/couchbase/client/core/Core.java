@@ -53,7 +53,6 @@ import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedE
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
-import com.couchbase.client.core.config.AlternateAddress;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
@@ -94,6 +93,10 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.NetworkSelector;
+import com.couchbase.client.core.topology.PortSelector;
+import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
@@ -125,7 +128,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
-import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static java.util.Objects.requireNonNull;
 
@@ -228,6 +230,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final Set<SeedNode> seedNodes;
 
+  private final TopologyParser topologyParser;
+
   private final List<BeforeSendRequestCallback> beforeSendRequestCallbacks;
 
   /**
@@ -283,6 +287,14 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     this.connectionString = requireNonNull(connectionString);
     this.seedNodes = seedNodesFromConnectionString(connectionString, environment);
+    this.topologyParser = new TopologyParser(
+      NetworkSelector.create(
+        environment.ioConfig().networkResolution(),
+        this.seedNodes
+      ),
+      environment.securityConfig().tlsEnabled() ? PortSelector.TLS : PortSelector.NON_TLS,
+      environment.ioConfig().memcachedHashingStrategy()
+    );
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -325,6 +337,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
+  }
+
+  @Stability.Internal
+  public ClusterTopology parseClusterTopology(String clusterConfig, String originHost) {
+    return topologyParser.parse(clusterConfig, originHost);
   }
 
   private static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final CoreEnvironment env) {
@@ -548,13 +565,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * @param serviceType the service type to enable if not enabled already.
    * @param port the port where the service is listening on.
    * @param bucket if the service is bound to a bucket, it needs to be provided.
-   * @param alternateAddress if an alternate address is present, needs to be provided since it is passed down
-   *                         to the node and its services.
    * @return a {@link Mono} which completes once initiated.
    */
   @Stability.Internal
-  public Mono<Void> ensureServiceAt(final NodeIdentifier identifier, final ServiceType serviceType, final int port,
-                                    final Optional<String> bucket, final Optional<String> alternateAddress) {
+  public Mono<Void> ensureServiceAt(
+    final NodeIdentifier identifier,
+    final ServiceType serviceType,
+    final int port,
+    final Optional<String> bucket
+  ) {
     if (shutdown.get()) {
       // We don't want do add a node if we are already shutdown!
       return Mono.empty();
@@ -564,7 +583,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .fromIterable(nodes)
       .filter(n -> n.identifier().equals(identifier))
       .switchIfEmpty(Mono.defer(() -> {
-        Node node = createNode(identifier, alternateAddress);
+        Node node = createNode(identifier);
         nodes.add(node);
         return Mono.just(node);
       }))
@@ -621,11 +640,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * <p>This method is here so it can be overridden in tests.</p>
    *
    * @param identifier the identifier for the node.
-   * @param alternateAddress the alternate address if present.
    * @return the created node instance.
    */
-  protected Node createNode(final NodeIdentifier identifier, final Optional<String> alternateAddress) {
-    return Node.create(coreContext, identifier, alternateAddress);
+  protected Node createNode(final NodeIdentifier identifier) {
+    return Node.create(coreContext, identifier);
   }
 
   /**
@@ -803,21 +821,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
 
-          Map<ServiceType, Integer> aServices = null;
-          Optional<String> alternateAddress = coreContext.alternateAddress();
-          String aHost = null;
-          if (alternateAddress.isPresent()) {
-            AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
-            aHost = aa.hostname();
-            aServices = tls ? aa.sslServices() : aa.services();
-          }
-
-          if (aServices == null || aServices.isEmpty()) {
-            aServices = tls ? ni.sslPorts() : ni.ports();
-          }
-
-          final String alternateHost = aHost;
-          final Map<ServiceType, Integer> services = aServices;
+          final Map<ServiceType, Integer> services = tls ? ni.sslPorts() : ni.ports();
 
           Flux<Void> serviceRemoveFlux = Flux
             .fromArray(ServiceType.values())
@@ -844,8 +848,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
               ni.identifier(),
               s.getKey(),
               s.getValue(),
-              Optional.empty(),
-              Optional.ofNullable(alternateHost))
+              Optional.empty())
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
@@ -875,22 +878,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
 
-          Map<ServiceType, Integer> aServices = null;
-          Optional<String> alternateAddress = coreContext.alternateAddress();
-          String aHost = null;
-          if (alternateAddress.isPresent()) {
-            AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
-            aHost = aa.hostname();
-            aServices = tls ? aa.sslServices() : aa.services();
-          }
-
-
-          if (isNullOrEmpty(aServices)) {
-            aServices = tls ? ni.sslServices() : ni.services();
-          }
-
-          final String alternateHost = aHost;
-          final Map<ServiceType, Integer> services = aServices;
+          final Map<ServiceType, Integer> services = tls ? ni.sslServices() : ni.services();
 
           Flux<Void> serviceRemoveFlux = Flux
             .fromArray(ServiceType.values())
@@ -916,8 +904,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
               ni.identifier(),
               s.getKey(),
               s.getValue(),
-              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty(),
-              Optional.ofNullable(alternateHost))
+              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,

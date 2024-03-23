@@ -29,8 +29,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
-import static java.util.Collections.unmodifiableSet;
 
+@Deprecated
 public abstract class AbstractBucketConfig implements BucketConfig {
 
     private final String uuid;
@@ -39,12 +39,41 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final String uri;
     private final String streamingUri;
     private final List<NodeInfo> nodeInfo;
-    private final Set<ServiceType> enabledServices;
     private final Set<BucketCapabilities> bucketCapabilities;
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final String origin;
     private final List<PortInfo> portInfos;
     private final ConfigVersion version;
+
+    /**
+     * A "dumb" constructor that assigns the given values
+     * directly to the corresponding fields, without any funny business.
+     */
+    protected AbstractBucketConfig(
+        String uuid,
+        String name,
+        BucketNodeLocator locator,
+        String uri,
+        String streamingUri,
+        List<NodeInfo> nodeInfo,
+        Set<BucketCapabilities> bucketCapabilities,
+        Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities,
+        String origin,
+        List<PortInfo> portInfos,
+        ConfigVersion version
+    ) {
+        this.uuid = uuid;
+        this.name = name;
+        this.locator = locator;
+        this.uri = uri;
+        this.streamingUri = streamingUri;
+        this.nodeInfo = nodeInfo;
+        this.bucketCapabilities = bucketCapabilities;
+        this.clusterCapabilities = clusterCapabilities;
+        this.origin = origin;
+        this.portInfos = portInfos;
+        this.version = version;
+    }
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
                                    List<NodeInfo> nodeInfos, List<PortInfo> portInfos,
@@ -63,12 +92,6 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.version = new ConfigVersion(revEpoch, rev);
         this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
-        Set<ServiceType> es = EnumSet.noneOf(ServiceType.class);
-        for (NodeInfo info : nodeInfo) {
-          es.addAll(info.services().keySet());
-          es.addAll(info.sslServices().keySet());
-        }
-        this.enabledServices = unmodifiableSet(es);
     }
 
     static Set<BucketCapabilities> convertBucketCapabilities(final List<BucketCapabilities> input) {
@@ -244,7 +267,16 @@ public abstract class AbstractBucketConfig implements BucketConfig {
 
     @Override
     public boolean serviceEnabled(ServiceType type) {
-        return enabledServices.contains(type);
+      for (NodeInfo info : nodeInfo) {
+        if (info.services().containsKey(type)) {
+          return true;
+        }
+        if (info.sslServices().containsKey(type)) {
+          return true;
+        }
+      }
+
+      return false;
     }
 
     @Override

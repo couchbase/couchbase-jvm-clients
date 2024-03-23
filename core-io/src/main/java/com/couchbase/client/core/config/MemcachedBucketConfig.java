@@ -20,8 +20,9 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonIn
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
-import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.KetamaRing;
 
 import java.util.List;
@@ -32,6 +33,10 @@ import java.util.SortedMap;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
+/**
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.MemcachedBucketTopology}
+ */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MemcachedBucketConfig extends AbstractBucketConfig {
 
@@ -40,7 +45,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
     /**
      * Creates a new {@link MemcachedBucketConfig}.
      *
-     * @param env the environment to use.
+     * @param hashingStrategy the hashing strategy to use.
      * @param rev the revision of the config.
      * @param name the name of the bucket.
      * @param uri the URI for this bucket.
@@ -50,7 +55,7 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
      */
     @JsonCreator
     public MemcachedBucketConfig(
-            @JacksonInject("env") CoreEnvironment env,
+            @JacksonInject("memcachedHashingStrategy") MemcachedHashingStrategy hashingStrategy,
             @JsonProperty("rev") long rev,
             @JsonProperty("revEpoch") long revEpoch,
             @JsonProperty("uuid") String uuid,
@@ -67,7 +72,31 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
 
         this.ketamaRing = KetamaRing.create(
             nodes(),
-            env.ioConfig().memcachedHashingStrategy()
+            hashingStrategy
+        );
+    }
+
+    public MemcachedBucketConfig(
+        ClusterTopologyWithBucket cluster,
+        MemcachedHashingStrategy hashingStrategy
+    ) {
+        super(
+            cluster.bucket().uuid(),
+            cluster.bucket().name(),
+            BucketNodeLocator.KETAMA,
+            LegacyConfigHelper.uri(cluster.bucket()),
+            LegacyConfigHelper.streamingUri(cluster.bucket()),
+            LegacyConfigHelper.getNodeInfosForBucket(cluster),
+            LegacyConfigHelper.toLegacy(cluster.bucket().capabilities()),
+            LegacyConfigHelper.getClusterCapabilities(cluster),
+            "<origin-does-not-matter>",
+            LegacyConfigHelper.getPortInfos(cluster),
+            LegacyConfigHelper.toLegacy(cluster.revision())
+        );
+
+        this.ketamaRing = KetamaRing.create(
+            nodes(),
+            hashingStrategy
         );
     }
 

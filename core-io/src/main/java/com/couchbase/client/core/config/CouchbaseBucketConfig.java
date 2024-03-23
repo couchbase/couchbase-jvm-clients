@@ -16,30 +16,52 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.error.ConfigException;
-import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonInject;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
+import com.couchbase.client.core.topology.PartitionMap;
+import com.couchbase.client.core.topology.TopologyHelper;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
+import static com.couchbase.client.core.config.LegacyConfigHelper.getClusterCapabilities;
+import static com.couchbase.client.core.config.LegacyConfigHelper.getNodeInfosForBucket;
+import static com.couchbase.client.core.config.LegacyConfigHelper.getPortInfos;
+import static com.couchbase.client.core.config.LegacyConfigHelper.toLegacy;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.util.CbCollections.filter;
+import static com.couchbase.client.core.util.CbCollections.transform;
 
+/**
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.CouchbaseBucketTopology}
+ */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
     public static final int PARTITION_NOT_EXISTENT = -2;
 
-    private final PartitionInfo partitionInfo;
+    private final int numberOfReplicas;
+    private final int numberOfPartitions;
+
     private final List<NodeInfo> partitionHosts;
-    private final Set<String> nodesWithPrimaryPartitions;
+    private final Set<String> hostsWithPrimaryPartitions;
+
+    private final List<Partition> partitions;
+    private final List<Partition> forwardPartitions;
 
     private final boolean tainted;
     private final boolean ephemeral;
@@ -72,11 +94,15 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
       @JacksonInject("origin") String origin) {
         super(uuid, name, BucketNodeLocator.VBUCKET, uri, streamingUri, nodeInfos, portInfos, bucketCapabilities,
           origin, clusterCapabilities, rev, revEpoch);
-        this.partitionInfo = partitionInfo;
+
+        this.numberOfReplicas = partitionInfo.numberOfReplicas();
+        this.numberOfPartitions = partitionInfo.partitions().size();
+        this.partitions = partitionInfo.partitions();
+        this.forwardPartitions = partitionInfo.forwardPartitions();
         this.tainted = partitionInfo.tainted();
         List<NodeInfo> extendedNodeInfos = this.nodes(); // includes ports for SSL services
         this.partitionHosts = buildPartitionHosts(extendedNodeInfos, partitionInfo);
-        this.nodesWithPrimaryPartitions = buildNodesWithPrimaryPartitions(nodeInfos, partitionInfo.partitions());
+        this.hostsWithPrimaryPartitions = buildNodesWithPrimaryPartitions(nodeInfos, partitionInfo.partitions());
 
         // When ephemeral buckets were introduced, a "bucketType" field was not part of the config. In recent
         // servers (added in 7.1.0, same time when magma got introduced) there is a new bucketType available
@@ -89,6 +115,61 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             // we are running an old version of couchbase which doesn't have ephemeral buckets at all.
             this.ephemeral = bucketCapabilities != null && !bucketCapabilities.contains(BucketCapabilities.COUCHAPI);
         }
+    }
+
+    @Stability.Internal
+    public CouchbaseBucketConfig(ClusterTopologyWithBucket cluster) {
+        super(
+          cluster.bucket().uuid(),
+          cluster.bucket().name(),
+          BucketNodeLocator.VBUCKET,
+          LegacyConfigHelper.uri(cluster.bucket()),
+          LegacyConfigHelper.streamingUri(cluster.bucket()),
+          getNodeInfosForBucket(cluster),
+          toLegacy(cluster.bucket().capabilities()),
+          getClusterCapabilities(cluster),
+          "<origin-not-required>",
+          getPortInfos(cluster),
+          LegacyConfigHelper.toLegacy(cluster.revision())
+        );
+
+        CouchbaseBucketTopology bucket = (CouchbaseBucketTopology) cluster.bucket();
+
+        this.ephemeral = bucket.ephemeral();
+        this.numberOfPartitions = bucket.numberOfPartitions();
+        this.numberOfReplicas = bucket.numberOfReplicas();
+        this.tainted = bucket.partitionsForward().isPresent();
+
+        this.partitions = toLegacyPartitions(bucket.partitions(), numberOfReplicas);
+        this.forwardPartitions = bucket.partitionsForward()
+          .map(it -> toLegacyPartitions(it, numberOfReplicas))
+          .orElse(null);
+
+        this.partitionHosts = filter(
+          getNodeInfosForBucket(cluster),
+          it -> it.sslServices().containsKey(ServiceType.KV) || it.services().containsKey(ServiceType.KV)
+        );
+
+        this.hostsWithPrimaryPartitions = new HashSet<>();
+        bucket.partitions().values().forEach(partitionTopology ->
+          partitionTopology.active().ifPresent(it -> this.hostsWithPrimaryPartitions.add(it.host()))
+        );
+    }
+
+    private static List<Partition> toLegacyPartitions(
+      PartitionMap map,
+      int numberOfReplicas
+    ) {
+        return transform(map.values(), it -> {
+            short[] replicas = new short[numberOfReplicas];
+            for (int i = 0; i < numberOfReplicas; i++) {
+                replicas[i] = (short) it.nodeIndexForReplica(0).orElse(PARTITION_NOT_EXISTENT);
+            }
+            return new Partition(
+              (short) it.nodeIndexForActive().orElse(PARTITION_NOT_EXISTENT),
+              replicas
+            );
+        });
     }
 
     /**
@@ -171,7 +252,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     }
 
     public int numberOfReplicas() {
-        return partitionInfo.numberOfReplicas();
+        return numberOfReplicas;
     }
 
     @Override
@@ -180,15 +261,15 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     }
 
     public boolean hasPrimaryPartitionsOnNode(final String hostname) {
-        return nodesWithPrimaryPartitions.contains(hostname);
+        return hostsWithPrimaryPartitions.contains(hostname);
     }
 
     public short nodeIndexForActive(int partition, boolean useFastForward) {
         if (useFastForward && !hasFastForwardMap()) {
             throw new IllegalStateException("Could not get index from FF-Map, none found in this config.");
         }
+        List<Partition> partitions = useFastForward ? forwardPartitions : this.partitions;
 
-        List<Partition> partitions = useFastForward ? partitionInfo.forwardPartitions() : partitionInfo.partitions();
         try {
             return partitions.get(partition).active();
         } catch (IndexOutOfBoundsException ex) {
@@ -201,7 +282,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             throw new IllegalStateException("Could not get index from FF-Map, none found in this config.");
         }
 
-        List<Partition> partitions = useFastForward ? partitionInfo.forwardPartitions() : partitionInfo.partitions();
+        List<Partition> partitions = useFastForward ? forwardPartitions : this.partitions;
 
         try {
             return partitions.get(partition).replica(replica);
@@ -212,7 +293,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     }
 
     public int numberOfPartitions() {
-        return partitionInfo.partitions().size();
+        return numberOfPartitions;
     }
 
     public NodeInfo nodeAtIndex(int nodeIndex) {
@@ -226,7 +307,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
     @Override
     public boolean hasFastForwardMap() {
-        return partitionInfo.hasFastForwardMap();
+        return forwardPartitions != null;
     }
 
     public boolean ephemeral() {
@@ -240,10 +321,19 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
             + ", locator=" + locator()
             + ", uri='" + redactMeta(uri()) + '\''
             + ", streamingUri='" + redactMeta(streamingUri()) + '\''
+            + ", numberOfReplicas=" + numberOfReplicas
             + ", nodes=" + redactSystem(nodes())
-            + ", partitionInfo=" + partitionInfo
+            + ", partitions=" + prettyPartitions()
             + ", tainted=" + tainted
             + ", version=" + version()
             + '}';
+    }
+
+    private String prettyPartitions() {
+      SortedMap<Integer, String> sortedPartitions = new TreeMap<>();
+      for (int i =0; i < partitions.size(); i++) {
+        sortedPartitions.put(i, partitions.get(i).toString());
+      }
+      return TopologyHelper.compressKeyRuns(sortedPartitions).toString();
     }
 }

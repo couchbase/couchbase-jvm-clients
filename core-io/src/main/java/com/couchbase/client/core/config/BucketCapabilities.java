@@ -23,9 +23,10 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue
  * Describes the bucket capabilities in an abstract fashion as provided by
  * the server.
  *
- * @author Michael Nitschinger
  * @since 1.4.3
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.BucketCapability}
  */
+@Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)
 public enum BucketCapabilities {
 
@@ -43,6 +44,7 @@ public enum BucketCapabilities {
     CREATE_AS_DELETED("tombstonedUserXAttrs"),
     SUBDOC_REPLACE_BODY_WITH_XATTR("subdoc.ReplaceBodyWithXattr"),
     SUBDOC_REVIVE_DOCUMENT("subdoc.ReviveDocument"),
+    DCP_IGNORE_PURGED_TOMBSTONES("dcp.IgnorePurgedTombstones"),
     RANGE_SCAN("rangeScan"),
     SUBDOC_READ_REPLICA("subdoc.ReplicaRead"),
     NON_DEDUPED_HISTORY("nonDedupedHistory");

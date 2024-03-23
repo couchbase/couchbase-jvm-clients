@@ -20,9 +20,15 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.Deserializa
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.InjectableValues;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.topology.ClusterTopology;
 
 import java.io.IOException;
 
+/**
+ * @see GlobalConfig#GlobalConfig(ClusterTopology)
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.TopologyParser}
+ */
+@Deprecated
 public class GlobalConfigParser {
   /**
    * Parse a raw configuration into a {@link GlobalConfig}.

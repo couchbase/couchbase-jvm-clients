@@ -26,10 +26,7 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -95,10 +92,9 @@ public abstract class BaseBucketLoader implements BucketLoader {
    * @return if successful, returns a config. It fails the mono otherwise.
    */
   @Override
-  public Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, final int port, final String bucket,
-                                                final Optional<String> alternateAddress) {
+  public Mono<ProposedBucketConfigContext> load(final NodeIdentifier seed, final int port, final String bucket) {
     return core
-      .ensureServiceAt(seed, serviceType, port, Optional.of(bucket), alternateAddress)
+      .ensureServiceAt(seed, serviceType, port, Optional.of(bucket))
       .then(ensureServiceConnected(seed, serviceType, Optional.of(bucket)))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))

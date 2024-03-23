@@ -16,10 +16,9 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -40,13 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link BucketConfigParser}.
  */
 class MemcachedBucketConfigTest {
-
-    private static final CoreEnvironment ENV = CoreEnvironment.create();
-
-    @AfterAll
-    static void cleanup() {
-        ENV.shutdown();
-    }
 
     /**
      * The config loaded has 4 nodes, but only two are data nodes. This tests checks that the ketama
@@ -141,7 +133,7 @@ class MemcachedBucketConfigTest {
     private static MemcachedBucketConfig readConfig(final String path) {
         return (MemcachedBucketConfig) BucketConfigParser.parse(
             readResource(path, MemcachedBucketConfigTest.class),
-            ENV,
+            StandardMemcachedHashingStrategy.INSTANCE,
             null
         );
     }

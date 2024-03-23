@@ -16,6 +16,10 @@
 
 package com.couchbase.client.core.config;
 
+/**
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.PartitionTopology}
+ */
+@Deprecated
 public class Partition {
 
     private final short active;

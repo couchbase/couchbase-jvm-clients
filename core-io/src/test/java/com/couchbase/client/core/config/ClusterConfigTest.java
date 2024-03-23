@@ -16,19 +16,30 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ClusterConfigTest {
+
+  private static PortInfo minimalPortInfo(String host) {
+    return new PortInfo(mapOf("mgmt", 8091), host, emptyMap());
+  }
+
+  private static NodeInfo minimalNodeInfo(String host, int port) {
+    return new NodeInfo("", new HostAndPort(host, port).format(), emptyMap(), emptyMap());
+  }
 
   @Test
   void returnsEmptyAllNodeAddresses() {
@@ -41,15 +52,16 @@ class ClusterConfigTest {
     ClusterConfig config = new ClusterConfig();
 
     GlobalConfig gc = mock(GlobalConfig.class);
-    when(gc.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(Collections.emptyMap(), "hostname1", Collections.emptyMap()),
-      new PortInfo(Collections.emptyMap(), "hostname2", Collections.emptyMap())
+    when(gc.portInfos()).thenReturn(listOf(
+      minimalPortInfo("hostname1"),
+      minimalPortInfo("hostname2")
     ));
     config.setGlobalConfig(gc);
 
-    Set<String> expected = new HashSet<>();
-    expected.add("hostname1");
-    expected.add("hostname2");
+    Set<String> expected = setOf(
+      "hostname1",
+      "hostname2"
+    );
 
     assertEquals(expected, config.allNodeAddresses());
   }
@@ -60,17 +72,18 @@ class ClusterConfigTest {
 
     BucketConfig bc = mock(BucketConfig.class);
     when(bc.name()).thenReturn("bucket-name");
-    when(bc.nodes()).thenReturn(Arrays.asList(
-      new NodeInfo("", "hostname1:11210", Collections.emptyMap(), Collections.emptyMap()),
-      new NodeInfo("", "hostname2:11210", Collections.emptyMap(), Collections.emptyMap()),
-      new NodeInfo("", "hostname3:11210", Collections.emptyMap(), Collections.emptyMap())
+    when(bc.nodes()).thenReturn(listOf(
+      minimalNodeInfo("hostname1", 11210),
+      minimalNodeInfo("hostname2", 11210),
+      minimalNodeInfo("hostname3", 11210)
     ));
     config.setBucketConfig(bc);
 
-    Set<String> expected = new HashSet<>();
-    expected.add("hostname1");
-    expected.add("hostname2");
-    expected.add("hostname3");
+    Set<String> expected = setOf(
+      "hostname1",
+      "hostname2",
+      "hostname3"
+    );
 
     assertEquals(expected, config.allNodeAddresses());
   }
@@ -81,24 +94,25 @@ class ClusterConfigTest {
 
     GlobalConfig gc = mock(GlobalConfig.class);
     when(gc.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(Collections.emptyMap(), "hostname1", Collections.emptyMap()),
-      new PortInfo(Collections.emptyMap(), "hostname2", Collections.emptyMap())
+      minimalPortInfo("hostname1"),
+      minimalPortInfo("hostname2")
     ));
     config.setGlobalConfig(gc);
 
     BucketConfig bc = mock(BucketConfig.class);
     when(bc.name()).thenReturn("bucket-name");
-    when(bc.nodes()).thenReturn(Arrays.asList(
-      new NodeInfo("", "hostname1:11210", Collections.emptyMap(), Collections.emptyMap()),
-      new NodeInfo("", "hostname2:11210", Collections.emptyMap(), Collections.emptyMap()),
-      new NodeInfo("", "hostname3:11210", Collections.emptyMap(), Collections.emptyMap())
+    when(bc.nodes()).thenReturn(listOf(
+      minimalNodeInfo("hostname1", 11210),
+      minimalNodeInfo("hostname2", 11210),
+      minimalNodeInfo("hostname3", 11210)
     ));
     config.setBucketConfig(bc);
 
-    Set<String> expected = new HashSet<>();
-    expected.add("hostname1");
-    expected.add("hostname2");
-    expected.add("hostname3");
+    Set<String> expected = setOf(
+      "hostname1",
+      "hostname2",
+      "hostname3"
+    );
 
     assertEquals(expected, config.allNodeAddresses());
   }

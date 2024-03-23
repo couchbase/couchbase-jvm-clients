@@ -23,6 +23,8 @@ import reactor.util.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -337,5 +339,22 @@ public class CbCollections {
     List<E> result = new ArrayList<>();
     original.forEach(it -> result.add(requireNonNull(it, "List may not contain null.")));
     return unmodifiableList(result);
+  }
+
+  /**
+   * Like {@link EnumSet#copyOf}, but does not explode when given an empty collection.
+   */
+  public static <T extends Enum<T>> EnumSet<T> newEnumSet(Class<T> elementClass, Iterable<T> source) {
+    EnumSet<T> result = EnumSet.noneOf(elementClass);
+    for (T t : source) {
+      result.add(t);
+    }
+    return result;
+  }
+
+  public static <K extends Enum<K>, V> EnumMap<K, V> newEnumMap(Class<K> keyClass, Map<K, V> source) {
+    EnumMap<K, V> result = new EnumMap<>(keyClass);
+    result.putAll(source);
+    return result;
   }
 }
