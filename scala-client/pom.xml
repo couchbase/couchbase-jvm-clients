@@ -94,12 +94,6 @@
             <version>${scala.play-json.version}</version>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.scalacheck</groupId>
-            <artifactId>scalacheck_${scala.compat.version}</artifactId>
-            <version>1.17.0</version>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
