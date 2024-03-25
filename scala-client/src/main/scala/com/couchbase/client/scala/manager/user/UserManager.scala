@@ -16,7 +16,6 @@
 
 package com.couchbase.client.scala.manager.user
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.util.DurationConversions._
@@ -24,7 +23,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-@Volatile
 class UserManager private[scala] (val async: AsyncUserManager) {
   private val defaultManagerTimeout = async.defaultManagerTimeout
   private val defaultRetryStrategy  = async.defaultRetryStrategy

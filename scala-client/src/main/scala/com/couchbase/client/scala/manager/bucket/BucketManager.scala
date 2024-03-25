@@ -15,14 +15,13 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.concurrent.duration.Duration
 import scala.util.Try
-@Volatile
+
 class BucketManager(val async: AsyncBucketManager) {
   private val defaultManagerTimeout = async.defaultManagerTimeout
   private val defaultRetryStrategy  = async.defaultRetryStrategy

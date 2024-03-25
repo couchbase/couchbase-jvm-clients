@@ -18,7 +18,6 @@ package com.couchbase.client.scala.manager.user
 
 import java.time.Instant
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty
 import com.couchbase.client.scala.util.CouchbasePickler
 import upickle.default.{macroRW, ReadWriter => RW}
@@ -30,7 +29,6 @@ import upickle.default.{macroRW, ReadWriter => RW}
   * @param groups      any groups that the user belongs to
   * @param _roles       any roles directly assigned to the user (not those inherited through groups)
   */
-@Volatile
 case class User(
     username: String,
     displayName: String = "",
@@ -69,7 +67,6 @@ case class User(
 
 /** Associates a [[User]] with any derived properties, such as the effective roles inherited from groups.
   */
-@Volatile
 case class UserAndMetadata(
     @upickle.implicits.key("domain") domain: AuthDomain,
     @upickle.implicits.key("id") username: String,

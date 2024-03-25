@@ -17,7 +17,6 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.api.query.CoreQueryContext
@@ -172,7 +171,6 @@ class AsyncScope private[scala] (
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   @SinceCouchbase("7.6")
   def search(
       indexName: String,
@@ -193,7 +191,6 @@ class AsyncScope private[scala] (
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   @SinceCouchbase("7.6")
   def search(
       indexName: String,

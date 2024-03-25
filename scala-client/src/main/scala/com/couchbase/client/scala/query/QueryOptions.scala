@@ -17,7 +17,6 @@
 package com.couchbase.client.scala.query
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.query.{
   CoreQueryOptions,
   CoreQueryProfile,
@@ -75,7 +74,6 @@ case class QueryOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: RequestSpan): QueryOptions = {
     copy(parentSpan = Some(value))
   }

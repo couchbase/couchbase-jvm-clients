@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.durability.Durability
@@ -77,7 +76,6 @@ case class AppendOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: RequestSpan): AppendOptions = {
     copy(parentSpan = Some(value))
   }
@@ -90,7 +88,6 @@ case class AppendOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: Option[RequestSpan]): AppendOptions = {
     copy(parentSpan = value)
   }

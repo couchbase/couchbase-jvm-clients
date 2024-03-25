@@ -90,7 +90,6 @@ class Cluster private[scala] (
   @Stability.Uncommitted
   lazy val eventingFunctions = new EventingFunctionManager(async.eventingFunctions)
 
-  @Stability.Uncommitted
   lazy val transactions = new Transactions(
     new CoreTransactionsReactive(
       async.core,
@@ -224,7 +223,6 @@ class Cluster private[scala] (
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest
@@ -247,7 +245,6 @@ class Cluster private[scala] (
     * @return a `Try` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest,

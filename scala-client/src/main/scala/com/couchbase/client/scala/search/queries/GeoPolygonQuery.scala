@@ -25,7 +25,6 @@ import scala.jdk.CollectionConverters._
 /**
   * An FTS query that finds all matches inside a given search polygon.
   */
-@Stability.Uncommitted
 @SinceCouchbase("6.5.1")
 case class GeoPolygonQuery(
     private[scala] val coordinates: Seq[Coordinate],

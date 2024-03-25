@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.Transcoder
@@ -78,7 +77,6 @@ case class RemoveOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: RequestSpan): RemoveOptions = {
     copy(parentSpan = Some(value))
   }
@@ -91,7 +89,6 @@ case class RemoveOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: Option[RequestSpan]): RemoveOptions = {
     copy(parentSpan = value)
   }

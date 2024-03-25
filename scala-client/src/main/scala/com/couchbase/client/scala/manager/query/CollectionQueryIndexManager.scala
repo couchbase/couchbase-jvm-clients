@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.Collection
 
@@ -31,7 +30,6 @@ import scala.util.Try
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   */
-@Volatile
 class CollectionQueryIndexManager(async: AsyncCollectionQueryIndexManager)(
     implicit val ec: ExecutionContext
 ) {

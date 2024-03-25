@@ -25,7 +25,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-@Stability.Uncommitted
 class EventingFunctionManager(private val async: AsyncEventingFunctionManager) {
   private val DefaultTimeout       = async.DefaultTimeout
   private val DefaultRetryStrategy = async.DefaultRetryStrategy

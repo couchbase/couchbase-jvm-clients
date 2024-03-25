@@ -17,7 +17,6 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.codec.JsonSerializer
@@ -57,7 +56,6 @@ class ReactiveCollection(async: AsyncCollection) {
     new CollectionIdentifier(bucketName, Some(scopeName).asJava, Some(name).asJava)
 
   /** Manage query indexes for this collection */
-  @Volatile
   lazy val queryIndexes = new ReactiveCollectionQueryIndexManager(async.queryIndexes)
 
   def name: String       = async.name

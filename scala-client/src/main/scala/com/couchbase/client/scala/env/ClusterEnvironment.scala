@@ -220,7 +220,6 @@ object ClusterEnvironment {
       * @param propertyLoaders the custom property loaders.
       * @return this, for chaining purposes.
       */
-    @Volatile
     def loaders(
         propertyLoaders: Seq[PropertyLoader[
           com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {

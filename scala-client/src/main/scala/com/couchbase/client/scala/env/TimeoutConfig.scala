@@ -92,7 +92,6 @@ case class TimeoutConfig(
     *
     * @return this, for chaining
     */
-  @Stability.Volatile
   def kvScanTimeout(value: Duration): TimeoutConfig = {
     copy(kvScanTimeout = Some(value))
   }

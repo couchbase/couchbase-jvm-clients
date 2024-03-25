@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -30,7 +29,6 @@ import scala.concurrent.duration.Duration
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   */
-@Volatile
 class ReactiveCollectionQueryIndexManager(private val async: AsyncCollectionQueryIndexManager)(
     implicit val ec: ExecutionContext
 ) {

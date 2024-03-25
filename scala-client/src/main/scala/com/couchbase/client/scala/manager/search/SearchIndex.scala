@@ -100,7 +100,6 @@ object SearchIndex {
     SearchIndex(name, sourceName)
   }
 
-  @Stability.Volatile
   def fromJson(json: String): Try[SearchIndex] = {
     Try(CouchbasePickler.read[SearchIndex](json))
   }

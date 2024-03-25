@@ -124,7 +124,6 @@ class AsyncCluster(
   @Stability.Uncommitted
   lazy val eventingFunctions = new AsyncEventingFunctionManager(env, couchbaseOps)
 
-  @Stability.Uncommitted
   lazy val transactions = new AsyncTransactions(
     new CoreTransactionsReactive(
       core,
@@ -264,7 +263,6 @@ class AsyncCluster(
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest
@@ -286,7 +284,6 @@ class AsyncCluster(
     * @return a `Future` containing a `Success(SearchResult)` (which includes any returned rows) if successful,
     *         else a `Failure`
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest,

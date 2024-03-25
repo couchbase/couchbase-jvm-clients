@@ -18,7 +18,6 @@ package com.couchbase.client.scala.kv
 import java.time.Instant
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.Transcoder
@@ -86,7 +85,6 @@ case class ReplaceOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: RequestSpan): ReplaceOptions = {
     copy(parentSpan = Some(value))
   }
@@ -99,7 +97,6 @@ case class ReplaceOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: Option[RequestSpan]): ReplaceOptions = {
     copy(parentSpan = value)
   }

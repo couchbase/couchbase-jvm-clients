@@ -92,7 +92,6 @@ class ReactiveCluster(val async: AsyncCluster) {
   @Stability.Uncommitted
   lazy val eventingFunctions = new ReactiveEventingFunctionManager(async.eventingFunctions)
 
-  @Stability.Uncommitted
   lazy val transactions = new ReactiveTransactions(
     new CoreTransactionsReactive(
       async.core,
@@ -222,7 +221,6 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest
@@ -243,7 +241,6 @@ class ReactiveCluster(val async: AsyncCluster) {
     * @return an `SMono` containing a [[ReactiveSearchResult]] which includes a Flux giving streaming access to any
     *         returned rows
     */
-  @Uncommitted
   def search(
       indexName: String,
       request: SearchRequest,

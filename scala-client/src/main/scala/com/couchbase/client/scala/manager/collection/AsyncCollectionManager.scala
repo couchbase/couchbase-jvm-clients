@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.collection
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.AsyncBucket
 import com.couchbase.client.scala.util.CoreCommonConverters.makeCommonOptions
@@ -95,7 +94,6 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
       .map(_ => ())
   }
 
-  @Volatile
   def createCollection(
       scopeName: String,
       collectionName: String,
@@ -110,7 +108,6 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
     )
   }
 
-  @Volatile
   def createCollection(
       scopeName: String,
       collectionName: String,
@@ -130,7 +127,6 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
       .map(_ => ())
   }
 
-  @Volatile
   def updateCollection(
       scopeName: String,
       collectionName: String,
@@ -162,7 +158,6 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
     dropCollection(collection.scopeName, collection.name, timeout, retryStrategy)
   }
 
-  @Volatile
   def dropCollection(
       scopeName: String,
       collectionName: String
@@ -170,7 +165,6 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
     dropCollection(scopeName, collectionName, defaultManagerTimeout, defaultRetryStrategy)
   }
 
-  @Volatile
   def dropCollection(
       scopeName: String,
       collectionName: String,

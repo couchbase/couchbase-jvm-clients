@@ -24,7 +24,6 @@ import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-@Stability.Uncommitted
 class ReactiveEventingFunctionManager(private val async: AsyncEventingFunctionManager)(
     implicit ec: ExecutionContext
 ) {

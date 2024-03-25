@@ -77,7 +77,6 @@ case class LookupInResult private (
     * @param index the index of the subdoc value to retrieve.
     * @return the JSON content as a byte array
     */
-  @Stability.Uncommitted
   def contentAsBytes(index: Int): Try[Array[Byte]] = contentAs[Array[Byte]](index)
 
   /** Returns whether content has successfully been returned for a particular `LookupInSpec`.

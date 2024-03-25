@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import com.couchbase.client.core.annotation.Stability.{Internal, Volatile}
+import com.couchbase.client.core.annotation.Stability.Internal
 import com.couchbase.client.core.config
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.manager.bucket.{
@@ -33,7 +33,6 @@ import java.lang
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
-@Volatile
 sealed trait BucketType {
   def alias: String
 }
@@ -64,7 +63,7 @@ object BucketType {
         }
     )
 }
-@Volatile
+
 sealed trait EjectionMethod {
   def alias: String
 }
@@ -119,7 +118,6 @@ object EjectionMethod {
     )
 }
 
-@Volatile
 sealed trait CompressionMode {
   def alias: String
 }
@@ -191,7 +189,6 @@ object ConflictResolutionType {
     * In Couchbase Server 7.1, this feature is only available in "developer-preview" mode. See the UI XDCR settings
     * for the custom conflict resolution properties.
     */
-  @Volatile
   case object Custom extends ConflictResolutionType {
     override def alias: String = "custom"
   }
@@ -209,7 +206,6 @@ object ConflictResolutionType {
     )
 }
 
-@Volatile
 case class CreateBucketSettings(
     private[scala] val name: String,
     private[scala] val ramQuotaMB: Int,
@@ -365,7 +361,6 @@ case class CreateBucketSettings(
   }
 }
 
-@Volatile
 case class BucketSettings(
     name: String,
     flushEnabled: Boolean,

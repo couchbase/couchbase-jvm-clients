@@ -37,7 +37,6 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-@Stability.Uncommitted
 class AsyncEventingFunctionManager(
     private val env: ClusterEnvironment,
     private val couchbaseOps: CoreCouchbaseOps

@@ -28,7 +28,6 @@ import scala.util.{Failure, Success, Try}
   *
   * If both are provided, the FS service will merge the results.
   */
-@Uncommitted
 case class SearchRequest private (
     private val searchQuery: Option[SearchQuery] = None,
     private val vectorSearch: Option[VectorSearch] = None,
@@ -42,6 +41,7 @@ case class SearchRequest private (
     * @return a copy of this, for chaining.
     */
   @SinceCouchbase("7.6")
+  @Uncommitted
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest = {
     this.vectorSearch match {
       case Some(_) =>
@@ -93,7 +93,6 @@ case class SearchRequest private (
     }
 }
 
-@Uncommitted
 object SearchRequest {
 
   /** Execute an FTS [[SearchQuery]]. */
@@ -101,6 +100,7 @@ object SearchRequest {
     new SearchRequest(Some(searchQuery), None)
 
   /** Execute a [[VectorSearch]]. */
+  @Uncommitted
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest =
     new SearchRequest(None, Some(vectorSearch))
 }

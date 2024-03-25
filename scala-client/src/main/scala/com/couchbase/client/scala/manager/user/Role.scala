@@ -16,7 +16,6 @@
 
 package com.couchbase.client.scala.manager.user
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.scala.util.CouchbasePickler
 
 import scala.util.Try
@@ -30,7 +29,6 @@ import scala.util.Try
   * @param collection the name of the collection the role applies to.  If empty, the role applies to all
   *               collections on the scope
   */
-@Volatile
 case class Role(
     name: String,
     bucket: Option[String] = None,
@@ -88,7 +86,6 @@ private[scala] object Role {
   * @param displayName the role's display name
   * @param description the role's description
   */
-@Volatile
 case class RoleAndDescription(
     role: Role,
     displayName: String,
@@ -119,7 +116,6 @@ object RoleAndDescription {
   * @param typ  the type - "user" or "group"
   * @param name only present if the type is "group"
   */
-@Volatile
 case class Origin(@upickle.implicits.key("type") typ: String, name: Option[String] = None) {
 
   override def toString: String = name.map(n => typ + ":" + n).getOrElse(typ)
@@ -134,7 +130,6 @@ object Origin {
   * @param role    the role
   * @param origins the role's origins
   */
-@Volatile
 case class RoleAndOrigins(role: Role, origins: Seq[Origin]) {
 
   /** Returns true if this role is assigned specifically to the user (has origin "user"

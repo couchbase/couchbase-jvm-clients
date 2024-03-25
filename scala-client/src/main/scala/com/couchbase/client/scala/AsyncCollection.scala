@@ -16,7 +16,6 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.{CoreExpiry, CoreSubdocGetCommand, CoreSubdocGetResult}
 import com.couchbase.client.core.api.shared.CoreMutationState
@@ -101,7 +100,6 @@ class AsyncCollection(
   }
 
   /** Manage query indexes for this collection */
-  @Volatile
   lazy val queryIndexes = new AsyncCollectionQueryIndexManager(this, keyspace)
 
   val binary = new AsyncBinaryCollection(this)

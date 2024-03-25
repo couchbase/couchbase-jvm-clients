@@ -17,7 +17,6 @@
 package com.couchbase.client.scala.manager.user
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.retry.RetryStrategy
@@ -26,7 +25,6 @@ import com.couchbase.client.scala.util.DurationConversions._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
-@Volatile
 class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
     implicit val ec: ExecutionContext
 ) {

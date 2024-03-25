@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.collection
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.manager.collection.CoreCreateOrUpdateCollectionSettings
 import com.couchbase.client.scala.util.DurationConversions._
 
@@ -27,7 +26,6 @@ import scala.concurrent.duration.Duration
   * @param maxExpiry is the time for the TTL for new documents in the collection.  It defaults to no expiry.
   * @param history is whether history retention override is enabled on this collection.  If not set it will default to the bucket-level setting.
   */
-@Volatile
 case class CreateCollectionSettings(
     private[scala] val maxExpiry: Option[Duration] = None,
     private[scala] val history: Option[Boolean] = None
@@ -64,7 +62,6 @@ case class CreateCollectionSettings(
   * @param maxExpiry is the time for the TTL for new documents in the collection.  It defaults to no expiry.
   * @param history is whether history retention override is enabled on this collection.  If not set it will default to the bucket-level setting.
   */
-@Volatile
 case class UpdateCollectionSettings(
     maxExpiry: Option[Duration] = None,
     history: Option[Boolean] = None

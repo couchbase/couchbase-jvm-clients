@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -29,7 +28,6 @@ import java.time
 import java.util.Optional
 import scala.concurrent.duration.Duration
 
-@Volatile
 class ReactiveBucketManager(couchbaseOps: CoreCouchbaseOps) {
   private[scala] val defaultManagerTimeout =
     couchbaseOps.environment.timeoutConfig.managementTimeout

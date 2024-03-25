@@ -16,7 +16,6 @@
 package com.couchbase.client.scala.manager.query
 
 import com.couchbase.client.core.{Core, CoreKeyspace}
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.manager._
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
@@ -39,7 +38,6 @@ import scala.jdk.CollectionConverters._
   * @define RetryStrategy  provides some control over how the SDK handles failures.  Will default to `retryStrategy()`
   *                        in the provided [[com.couchbase.client.scala.env.ClusterEnvironment]].
   */
-@Volatile
 class AsyncCollectionQueryIndexManager(
     private[scala] val collection: AsyncCollection,
     private val keyspace: CoreKeyspace

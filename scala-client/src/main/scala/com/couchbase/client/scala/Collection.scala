@@ -17,7 +17,6 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.kv.CoreExpiry
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.codec._
@@ -118,7 +117,6 @@ class Collection(
   val binary = new BinaryCollection(async.binary)
 
   /** Manage query indexes for this collection */
-  @Volatile
   lazy val queryIndexes = new CollectionQueryIndexManager(async.queryIndexes)
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)

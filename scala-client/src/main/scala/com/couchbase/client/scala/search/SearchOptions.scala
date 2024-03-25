@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.search
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet
 import com.couchbase.client.core.api.search.sort.CoreSearchSort
 import com.couchbase.client.core.api.search.{
@@ -64,7 +63,6 @@ case class SearchOptions(
     *
     * @return a copy of this with the change applied, for chaining.
     */
-  @Volatile
   def parentSpan(value: RequestSpan): SearchOptions = {
     copy(parentSpan = Some(value))
   }

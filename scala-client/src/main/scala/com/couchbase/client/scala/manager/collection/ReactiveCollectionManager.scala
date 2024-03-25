@@ -16,7 +16,6 @@
 
 package com.couchbase.client.scala.manager.collection
 
-import com.couchbase.client.core.annotation.Stability.Volatile
 import com.couchbase.client.core.retry.RetryStrategy
 import reactor.core.scala.publisher.{SFlux, SMono}
 
@@ -56,7 +55,6 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     SMono.fromFuture(async.createCollection(collection, timeout, retryStrategy))
   }
 
-  @Volatile
   def createCollection(
       scopeName: String,
       collectionName: String,
@@ -71,7 +69,6 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     )
   }
 
-  @Volatile
   def createCollection(
       scopeName: String,
       collectionName: String,
@@ -84,7 +81,6 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     )
   }
 
-  @Volatile
   def updateCollection(
       scopeName: String,
       collectionName: String,
@@ -109,7 +105,6 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     SMono.fromFuture(async.dropCollection(collection, timeout, retryStrategy))
   }
 
-  @Volatile
   def dropCollection(
       scopeName: String,
       collectionName: String
@@ -117,7 +112,6 @@ class ReactiveCollectionManager(private[scala] val async: AsyncCollectionManager
     dropCollection(scopeName, collectionName, defaultManagerTimeout, defaultRetryStrategy)
   }
 
-  @Volatile
   def dropCollection(
       scopeName: String,
       collectionName: String,
