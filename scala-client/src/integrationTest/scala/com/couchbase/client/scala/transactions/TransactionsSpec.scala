@@ -19,13 +19,10 @@ import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transactions.config.TransactionOptions
-import com.couchbase.client.scala.transactions.error.{
-  TransactionCommitAmbiguousException,
-  TransactionFailedException
-}
+import com.couchbase.client.scala.transactions.error.{TransactionCommitAmbiguousException, TransactionFailedException}
 import com.couchbase.client.scala.{Cluster, Collection}
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{ClusterType, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.{BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -36,7 +33,9 @@ import scala.concurrent.duration._
 
 /** All transactions testing is done by FIT.  However currently the Scala performer only supports testing the blocking
   * API, so we do some basic testing of the async and reactive APIs here. */
-@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
+@IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED),
+    // Using COLLECTIONS as a proxy for 7.0, since some tests include query
+    missesCapabilities = Array(Capabilities.COLLECTIONS))
 @TestInstance(Lifecycle.PER_CLASS)
 class TransactionsSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
