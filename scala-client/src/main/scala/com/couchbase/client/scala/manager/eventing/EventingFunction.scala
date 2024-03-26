@@ -161,6 +161,8 @@ object EventingFunctionLanguageCompatibility {
   case object Version_6_5_0 extends EventingFunctionLanguageCompatibility
 
   case object Version_6_6_2 extends EventingFunctionLanguageCompatibility
+
+  case object Version_7_2_0 extends EventingFunctionLanguageCompatibility
 }
 
 case class EventingFunctionKeyspace(

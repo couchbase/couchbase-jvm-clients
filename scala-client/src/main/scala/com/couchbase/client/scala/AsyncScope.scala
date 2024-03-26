@@ -16,7 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.manager.CoreBucketAndScope
 import com.couchbase.client.core.api.query.CoreQueryContext
@@ -24,6 +24,7 @@ import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
 import com.couchbase.client.scala.env.ClusterEnvironment
+import com.couchbase.client.scala.manager.eventing.AsyncScopeEventingFunctionManager
 import com.couchbase.client.scala.manager.search.AsyncScopeSearchIndexManager
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
@@ -34,7 +35,7 @@ import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import java.util.Optional
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 /** Represents a Couchbase scope resource.
   *
@@ -61,12 +62,23 @@ class AsyncScope private[scala] (
     couchbaseOps.searchOps(new CoreBucketAndScope(bucketName, scopeName))
 
   /** The name of this scope. */
-  def name = scopeName
+  def name: String = scopeName
+
+  private val coreScope = new CoreBucketAndScope(bucketName, scopeName)
 
   /** Allows managing scoped FTS indexes. */
   @SinceCouchbase("7.6")
   lazy val searchIndexes =
-    new AsyncScopeSearchIndexManager(new CoreBucketAndScope(bucketName, scopeName), couchbaseOps)
+    new AsyncScopeSearchIndexManager(coreScope, couchbaseOps)
+
+  /** Allows managing eventing functions on this scope.
+    *
+    * For managing eventing functions at the admin scope ("*.*") level, see [[com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager]], accessed from
+    * [[AsyncCluster.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  @SinceCouchbase("7.1")
+  lazy val eventingFunctions = new AsyncScopeEventingFunctionManager(environment, couchbaseOps, coreScope)
 
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection: AsyncCollection =

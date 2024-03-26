@@ -16,9 +16,10 @@
 
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
+import com.couchbase.client.scala.manager.eventing.{EventingFunctionManager, ScopeEventingFunctionManager}
 import com.couchbase.client.scala.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import com.couchbase.client.scala.search.SearchOptions
@@ -53,6 +54,15 @@ class Scope private[scala] (val async: AsyncScope, val bucketName: String) {
 
   /** The name of this scope. */
   def name: String = async.name
+
+  /** Allows managing eventing functions on this scope.
+    *
+    * For managing eventing functions at the admin scope ("*.*") level, see [[EventingFunctionManager]], accessed from
+    * [[Cluster.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  @SinceCouchbase("7.1")
+  lazy val eventingFunctions = new ScopeEventingFunctionManager(async.eventingFunctions)
 
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): Collection = {

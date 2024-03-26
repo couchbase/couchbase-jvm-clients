@@ -73,9 +73,6 @@ import scala.util.{Failure, Success, Try}
   * These can be created through the functions in the companion object, or through [[Cluster.async]].
   *
   * @param environment the environment used to create this
-  * @param ec          an ExecutionContext to use for any Future.  Will be supplied automatically as long as
-  *                    resources are
-  *                    opened in the normal way, starting from functions in [[Cluster]]
   *
   * @author Graham Pople
   * @since 1.0.0

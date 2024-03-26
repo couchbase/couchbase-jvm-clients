@@ -16,10 +16,11 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, ReactiveAnalyticsResult}
+import com.couchbase.client.scala.manager.eventing.ReactiveScopeEventingFunctionManager
 import com.couchbase.client.scala.manager.search.ReactiveScopeSearchIndexManager
 import com.couchbase.client.scala.query.handlers.AnalyticsHandler
 import com.couchbase.client.scala.query.{QueryOptions, ReactiveQueryResult}
@@ -52,6 +53,15 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
   /** Allows managing scoped FTS indexes. */
   @SinceCouchbase("7.6")
   lazy val searchIndexes = new ReactiveScopeSearchIndexManager(async.searchIndexes)
+
+  /** Allows managing eventing functions on this scope.
+    *
+    * For managing eventing functions at the admin scope ("*.*") level, see [[com.couchbase.client.scala.manager.eventing.ReactiveEventingFunctionManager]], accessed from
+    * [[ReactiveCluster.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  @SinceCouchbase("7.1")
+  lazy val eventingFunctions = new ReactiveScopeEventingFunctionManager(async.eventingFunctions)
 
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection: ReactiveCollection = {

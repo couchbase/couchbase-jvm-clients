@@ -87,6 +87,11 @@ class Cluster private[scala] (
   lazy val analyticsIndexes =
     new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
 
+  /** Allows managing eventing functions at the admin scope ("*.*") level.
+    *
+    * For managing eventing functions on a specific scope, see [[ScopedEventingFunctionManager]], accessed from
+    * [[Scope.eventingFunctions]].
+    */
   @Stability.Uncommitted
   lazy val eventingFunctions = new EventingFunctionManager(async.eventingFunctions)
 
