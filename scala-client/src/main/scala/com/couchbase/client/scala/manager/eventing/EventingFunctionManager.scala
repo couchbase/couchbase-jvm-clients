@@ -32,8 +32,8 @@ import scala.util.Try
   * accessed from [[com.couchbase.client.scala.Scope.eventingFunctions]]
   */
 class EventingFunctionManager(private val async: AsyncEventingFunctionManager) {
-  private val DefaultTimeout       = async.DefaultTimeout
-  private val DefaultRetryStrategy = async.DefaultRetryStrategy
+  private[client] val DefaultTimeout       = async.DefaultTimeout
+  private[client] val DefaultRetryStrategy = async.DefaultRetryStrategy
 
   /** Upsert an eventing function into the admin scope ('*.*').
     *

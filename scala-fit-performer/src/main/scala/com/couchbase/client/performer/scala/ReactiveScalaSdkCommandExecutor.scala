@@ -28,9 +28,6 @@ import reactor.core.scala.publisher.SMono
 import scala.concurrent.duration.DurationInt
 import scala.runtime.Nothing$
 import scala.util.Try
-// [start:1.2.4]
-import com.couchbase.client.performer.scala.eventing.EventingHelper
-// [end:1.2.4]
 // [start:1.5.0]
 import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
 // [end:1.5.0]
@@ -206,11 +203,6 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
             return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
         }
         // [end:1.4.11]
-        // [start:1.2.4]
-        if (clc.hasEventingFunctionManager) {
-            return EventingHelper.handleEventingFunctionManagerReactive(cluster, op).block()
-        }
-        // [end:1.2.4]
     } else if (op.hasBucketCommand) {
         val blc = op.getBucketCommand
         val bucket = connection.cluster.reactive.bucket(blc.getBucketName)

@@ -25,6 +25,9 @@ import com.couchbase.client.performer.core.util.ErrorUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
+// [start:1.6.2]
+import com.couchbase.client.performer.scala.manager.EventingFunctionManagerHelper
+// [end:1.6.2]
 import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 // [start:1.5.0]
 import com.couchbase.client.performer.scala.kv.{GetReplicaHelper, MutateInHelper}
@@ -44,7 +47,6 @@ import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 
 import scala.concurrent.duration.DurationInt
 // [start:1.2.4]
-import com.couchbase.client.performer.scala.eventing.EventingHelper
 import com.couchbase.client.performer.scala.search.SearchHelper
 // [end:1.2.4]
 // [start:1.5.0]
@@ -260,11 +262,11 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
             result = BucketManagerHelper.handleBucketManager(connection.cluster, op)
         }
         // [end:1.4.11]
-        // [start:1.2.4]
+        // [start:1.6.2]
         else if (clc.hasEventingFunctionManager) {
-            result = EventingHelper.handleEventingFunctionManager(connection.cluster, op)
+            result = EventingFunctionManagerHelper.handleClusterEventingFunctionManager(connection.cluster, op).toBuilder
         }
-        // [end:1.2.4]
+        // [end:1.6.2]
         else if (clc.hasQuery) {
           result = QueryHelper.handleClusterQuery(connection, op, clc)
         }

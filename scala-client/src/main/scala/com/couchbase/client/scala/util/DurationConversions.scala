@@ -25,7 +25,7 @@ import scala.language.implicitConversions
   * @author Graham Pople
   * @since 1.0.0
   */
-private[scala] object DurationConversions {
+private[client] object DurationConversions {
   implicit def scalaDurationToJava(in: Duration): java.time.Duration = {
     java.time.Duration.ofNanos(in.toNanos)
   }
