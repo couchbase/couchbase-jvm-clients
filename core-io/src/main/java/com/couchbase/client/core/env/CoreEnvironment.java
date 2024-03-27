@@ -614,15 +614,15 @@ public class CoreEnvironment implements AutoCloseable {
 
   public static class Builder<SELF extends Builder<SELF>> {
 
-    private IoEnvironment.Builder ioEnvironment = IoEnvironment.builder();
-    private IoConfig.Builder ioConfig = IoConfig.builder();
-    private CompressionConfig.Builder compressionConfig = CompressionConfig.builder();
-    private SecurityConfig.Builder securityConfig = SecurityConfig.builder();
-    private TimeoutConfig.Builder timeoutConfig = TimeoutConfig.builder();
-    private LoggerConfig.Builder loggerConfig = LoggerConfig.builder();
-    private OrphanReporterConfig.Builder orphanReporterConfig = OrphanReporterConfig.builder();
-    private ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig = ThresholdLoggingTracerConfig.builder();
-    private LoggingMeterConfig.Builder loggingMeterConfig = LoggingMeterConfig.builder();
+    private IoEnvironment.Builder ioEnvironment = new IoEnvironment.Builder();
+    private IoConfig.Builder ioConfig = new IoConfig.Builder();
+    private CompressionConfig.Builder compressionConfig = new CompressionConfig.Builder();
+    private SecurityConfig.Builder securityConfig = new SecurityConfig.Builder();
+    private TimeoutConfig.Builder timeoutConfig = new TimeoutConfig.Builder();
+    private LoggerConfig.Builder loggerConfig = new LoggerConfig.Builder();
+    private OrphanReporterConfig.Builder orphanReporterConfig = new OrphanReporterConfig.Builder();
+    private ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig = new ThresholdLoggingTracerConfig.Builder();
+    private LoggingMeterConfig.Builder loggingMeterConfig = new LoggingMeterConfig.Builder();
     private Supplier<EventBus> eventBus = null;
     private Supplier<Scheduler> scheduler = null;
     private int schedulerThreadCount = Schedulers.DEFAULT_POOL_SIZE;

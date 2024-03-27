@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Configures the internal Timer, which asynchronous retries and timeouts fire on.
@@ -44,13 +45,26 @@ public class TimerConfig {
     numBuckets = builder.numBuckets;
   }
 
+  /**
+   * @deprecated Instead, please use
+   * {@link IoConfig.Builder#timerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   */
+  @Deprecated
   public static TimerConfig create() {
     return builder().build();
   }
 
+  /**
+   * @deprecated Instead of creating a new builder, please use
+   * {@link IoConfig.Builder#timerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
+
   public int numTimers() {
     return numTimers;
   }

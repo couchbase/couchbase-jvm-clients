@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Allows to configure the {@link LoggingMeter}.
@@ -41,14 +42,36 @@ public class LoggingMeterConfig {
   private final Duration emitInterval;
   private final boolean enabled;
 
+  /**
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#loggingMeterConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
 
+  /**
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#loggingMeterConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static LoggingMeterConfig create() {
     return builder().build();
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static LoggingMeterConfig disabled() {
     return enabled(false).build();
   }
@@ -63,11 +86,17 @@ public class LoggingMeterConfig {
    *
    * @param emitInterval the interval to use.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder emitInterval(final Duration emitInterval) {
     return builder().emitInterval(emitInterval);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder enabled(final boolean enabled) {
     return builder().enabled(enabled);
   }

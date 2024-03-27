@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class TimeoutConfig {
 
@@ -69,61 +70,127 @@ public class TimeoutConfig {
     backupTimeout = Optional.ofNullable(builder.backupTimeout).orElse(DEFAULT_BACKUP_TIMEOUT);
   }
 
+  /**
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#timeoutConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
 
+  /**
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#timeoutConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static TimeoutConfig create() {
     return builder().build();
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder kvTimeout(Duration kvTimeout) {
     return builder().kvTimeout(kvTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   @Stability.Volatile
   public static Builder kvDurableTimeout(Duration kvDurableTimeout) {
     return builder().kvDurableTimeout(kvDurableTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   @Stability.Volatile
   public static Builder kvScanTimeout(Duration kvScanTimeout) {
     return builder().kvScanTimeout(kvScanTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder managementTimeout(Duration managementTimeout) {
     return builder().managementTimeout(managementTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder queryTimeout(Duration queryTimeout) {
     return builder().queryTimeout(queryTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder viewTimeout(Duration viewTimeout) {
     return builder().viewTimeout(viewTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder searchTimeout(Duration searchTimeout) {
     return builder().searchTimeout(searchTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder analyticsTimeout(Duration analyticsTimeout) {
     return builder().analyticsTimeout(analyticsTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder connectTimeout(Duration connectTimeout) {
     return builder().connectTimeout(connectTimeout);
 
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder disconnectTimeout(Duration disconnectTimeout) {
     return builder().disconnectTimeout(disconnectTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder eventingTimeout(Duration eventingTimeout) {
     return builder().eventingTimeout(eventingTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   @Stability.Volatile
   public static Builder backupTimeout(Duration backupTimeout) {
     return builder().backupTimeout(backupTimeout);

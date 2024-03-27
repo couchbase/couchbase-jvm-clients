@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
@@ -97,16 +98,31 @@ public class IoEnvironment {
    * Creates the {@link IoEnvironment} with default settings.
    *
    * @return the created environment.
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#ioEnvironment(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static IoEnvironment create() {
-    return builder().build();
+    return new Builder().build();
   }
 
   /**
    * Creates a Builder for the {@link IoEnvironment} to customize its settings.
    *
    * @return the {@link Builder} to customize the settings.
+   *
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#ioEnvironment(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static IoEnvironment.Builder builder() {
     return new Builder();
   }
@@ -124,7 +140,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder managerEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().managerEventLoopGroup(eventLoopGroup);
   }
@@ -139,7 +157,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder kvEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().kvEventLoopGroup(eventLoopGroup);
   }
@@ -154,7 +174,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder queryEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().queryEventLoopGroup(eventLoopGroup);
   }
@@ -169,7 +191,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder analyticsEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().analyticsEventLoopGroup(eventLoopGroup);
   }
@@ -184,7 +208,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().searchEventLoopGroup(eventLoopGroup);
   }
@@ -199,7 +225,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder viewEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().viewEventLoopGroup(eventLoopGroup);
   }
@@ -214,7 +242,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().eventingEventLoopGroup(eventLoopGroup);
   }
@@ -229,7 +259,9 @@ public class IoEnvironment {
    *
    * @param eventLoopGroup the dedicated event loop group to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   @Stability.Volatile
   public static Builder backupEventLoopGroup(final EventLoopGroup eventLoopGroup) {
     return builder().backupEventLoopGroup(eventLoopGroup);
@@ -254,7 +286,9 @@ public class IoEnvironment {
    *
    * @param eventLoopThreadCount the number of event loops to use per pool.
    * @return the {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder eventLoopThreadCount(int eventLoopThreadCount) {
     return builder().eventLoopThreadCount(eventLoopThreadCount);
   }
@@ -268,7 +302,9 @@ public class IoEnvironment {
    *
    * @param nativeIoEnabled if native IO should be enabled or disabled.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enableNativeIo(boolean nativeIoEnabled) {
     return builder().enableNativeIo(nativeIoEnabled);
   }

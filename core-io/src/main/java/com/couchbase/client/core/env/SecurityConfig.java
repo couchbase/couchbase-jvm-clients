@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -98,7 +99,14 @@ public class SecurityConfig {
    * Creates a builder to customize the {@link SecurityConfig} configuration.
    *
    * @return the builder to customize.
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#securityConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
@@ -107,7 +115,14 @@ public class SecurityConfig {
    * Creates a {@link SecurityConfig} with the default configuration.
    *
    * @return the default security config.
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#securityConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static SecurityConfig create() {
     return new SecurityConfig(builder());
   }
@@ -117,7 +132,9 @@ public class SecurityConfig {
    *
    * @param tlsEnabled true if enabled, false otherwise.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enableTls(boolean tlsEnabled) {
     return builder().enableTls(tlsEnabled);
   }
@@ -131,7 +148,9 @@ public class SecurityConfig {
    *
    * @param hostnameVerificationEnabled set to true if it should be enabled, false for disabled.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enableHostnameVerification(boolean hostnameVerificationEnabled) {
     return builder().enableHostnameVerification(hostnameVerificationEnabled);
   }
@@ -141,7 +160,9 @@ public class SecurityConfig {
    *
    * @param nativeTlsEnabled true if it should be enabled, false otherwise.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enableNativeTls(boolean nativeTlsEnabled) {
     return builder().enableNativeTls(nativeTlsEnabled);
   }
@@ -151,7 +172,9 @@ public class SecurityConfig {
    *
    * @param certificates the list of certificates to load.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder trustCertificates(final List<X509Certificate> certificates) {
     return builder().trustCertificates(certificates);
   }
@@ -161,7 +184,9 @@ public class SecurityConfig {
    *
    * @param certificatePath the path to load the certificates from.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder trustCertificate(final Path certificatePath) {
     return builder().trustCertificate(certificatePath);
   }
@@ -171,7 +196,9 @@ public class SecurityConfig {
    *
    * @param trustStore the loaded trust store to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder trustStore(final KeyStore trustStore) {
     return builder().trustStore(trustStore);
   }
@@ -183,7 +210,9 @@ public class SecurityConfig {
    * @param trustStorePassword the password (can be null if not password protected).
    * @param trustStoreType the type of the trust store. If empty, the {@link KeyStore#getDefaultType()} will be used.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder trustStore(final Path trustStorePath, final String trustStorePassword,
                                    final Optional<String> trustStoreType) {
     return builder().trustStore(trustStorePath, trustStorePassword, trustStoreType);
@@ -197,7 +226,9 @@ public class SecurityConfig {
    *
    * @param trustManagerFactory the trust manager factory to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder trustManagerFactory(final TrustManagerFactory trustManagerFactory) {
     return builder().trustManagerFactory(trustManagerFactory);
   }
@@ -213,7 +244,9 @@ public class SecurityConfig {
    *
    * @param ciphers the custom list of ciphers to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder ciphers(final List<String> ciphers) {
     return  builder().ciphers(ciphers);
   }

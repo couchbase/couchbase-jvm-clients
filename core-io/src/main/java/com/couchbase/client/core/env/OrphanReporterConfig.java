@@ -23,6 +23,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Allows to customize the behavior of the {@link OrphanReporter}.
@@ -90,7 +91,14 @@ public class OrphanReporterConfig {
    * Allows to configure a custom {@link OrphanReporterConfig} through a Builder API.
    *
    * @return the builder to customize the config.
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#orphanReporterConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static OrphanReporterConfig.Builder builder() {
     return new OrphanReporterConfig.Builder();
   }
@@ -99,7 +107,14 @@ public class OrphanReporterConfig {
    * Creates the default config for the {@link OrphanReporter}.
    *
    * @return the default config.
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#orphanReporterConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static OrphanReporterConfig create() {
     return builder().build();
   }
@@ -109,7 +124,9 @@ public class OrphanReporterConfig {
    *
    * @param sampleSize the sample size to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder sampleSize(final int sampleSize) {
     return builder().sampleSize(sampleSize);
   }
@@ -119,7 +136,9 @@ public class OrphanReporterConfig {
    *
    * @param emitInterval the interval to use.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder emitInterval(final Duration emitInterval) {
     return builder().emitInterval(emitInterval);
   }
@@ -129,7 +148,9 @@ public class OrphanReporterConfig {
    *
    * @param queueLength the queue size to use.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder queueLength(final int queueLength) {
     return builder().queueLength(queueLength);
   }
@@ -139,7 +160,9 @@ public class OrphanReporterConfig {
    *
    * @param enabled the status of this reporter.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enabled(final boolean enabled) {
     return builder().enabled(enabled);
   }

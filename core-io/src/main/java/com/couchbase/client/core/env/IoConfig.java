@@ -101,54 +101,116 @@ public class IoConfig {
     timerConfig = builder.timerConfig.build();
   }
 
+  /**
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#ioConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static IoConfig create() {
     return builder().build();
   }
 
+  /**
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#ioConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static Builder builder() {
     return new IoConfig.Builder();
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder enableMutationTokens(boolean mutationTokensEnabled) {
     return builder().enableMutationTokens(mutationTokensEnabled);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder enableDnsSrv(boolean dnsSrvEnabled) {
     return builder().enableDnsSrv(dnsSrvEnabled);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder configPollInterval(Duration configPollInterval) {
     return builder().configPollInterval(configPollInterval);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder kvCircuitBreakerConfig(CircuitBreakerConfig.Builder kvCircuitBreakerConfig) {
     return builder().kvCircuitBreakerConfig(kvCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder queryCircuitBreakerConfig(CircuitBreakerConfig.Builder queryCircuitBreakerConfig) {
     return builder().queryCircuitBreakerConfig(queryCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder viewCircuitBreakerConfig(CircuitBreakerConfig.Builder viewCircuitBreakerConfig) {
     return builder().viewCircuitBreakerConfig(viewCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder searchCircuitBreakerConfig(CircuitBreakerConfig.Builder searchCircuitBreakerConfig) {
     return builder().searchCircuitBreakerConfig(searchCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder analyticsCircuitBreakerConfig(CircuitBreakerConfig.Builder analyticsCircuitBreakerConfig) {
     return builder().analyticsCircuitBreakerConfig(analyticsCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder managerCircuitBreakerConfig(CircuitBreakerConfig.Builder managerCircuitBreakerConfig) {
     return builder().managerCircuitBreakerConfig(managerCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder eventingCircuitBreakerConfig(CircuitBreakerConfig.Builder eventingCircuitBreakerConfig) {
     return builder().eventingCircuitBreakerConfig(eventingCircuitBreakerConfig);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   @Stability.Volatile
   public static Builder backupCircuitBreakerConfig(CircuitBreakerConfig.Builder backupCircuitBreakerConfig) {
     return builder().backupCircuitBreakerConfig(backupCircuitBreakerConfig);
@@ -164,35 +226,65 @@ public class IoConfig {
    * it will add more overhead due to traffic parsing, logging and analysis.
    *
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder captureTraffic(final ServiceType... serviceTypes) {
     return builder().captureTraffic(serviceTypes);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder networkResolution(final NetworkResolution networkResolution) {
     return builder().networkResolution(networkResolution);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder enableTcpKeepAlives(final boolean tcpKeepAliveEnabled) {
     return builder().enableTcpKeepAlives(tcpKeepAliveEnabled);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder tcpKeepAliveTime(final Duration tcpKeepAliveTime) {
     return builder().tcpKeepAliveTime(tcpKeepAliveTime);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder numKvConnections(int numKvConnections) {
     return builder().numKvConnections(numKvConnections);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder maxHttpConnections(int maxHttpConnections) {
     return builder().maxHttpConnections(maxHttpConnections);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder idleHttpConnectionTimeout(Duration idleHttpConnectionTimeout) {
     return builder().idleHttpConnectionTimeout(idleHttpConnectionTimeout);
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder configIdleRedialTimeout(Duration configIdleRedialTimeout) {
     return builder().configIdleRedialTimeout(configIdleRedialTimeout);
   }
@@ -208,7 +300,9 @@ public class IoConfig {
    *
    * @param memcachedHashingStrategy the strategy to use.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder memcachedHashingStrategy(MemcachedHashingStrategy memcachedHashingStrategy) {
     return builder().memcachedHashingStrategy(memcachedHashingStrategy);
   }
@@ -356,7 +450,7 @@ public class IoConfig {
     private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
     private Duration configIdleRedialTimeout = DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT;
     private MemcachedHashingStrategy memcachedHashingStrategy = DEFAULT_MEMCACHED_HASHING_STRATEGY;
-    private TimerConfig.Builder timerConfig = TimerConfig.builder();
+    private final TimerConfig.Builder timerConfig = new TimerConfig.Builder();
 
     public IoConfig build() {
       return new IoConfig(this);
@@ -672,7 +766,7 @@ public class IoConfig {
     }
 
     /**
-     * Configures the backup circuit breaker by passing its config builder to the given consumer.
+     * Configures the timer by passing its config builder to the given consumer.
      *
      * @return this, for chaining
      */

@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
@@ -74,7 +75,14 @@ public class LoggerConfig {
 
   /**
    * Returns a {@link Builder} which can be used to customize the different logging properties.
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#loggerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
@@ -83,7 +91,14 @@ public class LoggerConfig {
    * Creates a {@link LoggerConfig} with all the defaults (can be found in {@link Defaults}).
    *
    * @return the created, immutable logger config with defaults.
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#loggerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static LoggerConfig create() {
     return builder().build();
   }

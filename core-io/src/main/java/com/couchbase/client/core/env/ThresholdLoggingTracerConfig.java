@@ -22,6 +22,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class ThresholdLoggingTracerConfig {
 
@@ -50,14 +51,36 @@ public class ThresholdLoggingTracerConfig {
   private final Duration analyticsThreshold;
   private final Duration transactionsThreshold;
 
+  /**
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#thresholdLoggingTracerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static Builder builder() {
     return new Builder();
   }
 
+  /**
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#thresholdLoggingTracerConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
+   */
+  @Deprecated
   public static ThresholdLoggingTracerConfig create() {
     return builder().build();
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static ThresholdLoggingTracerConfig disabled() {
     return enabled(false).build();
   }
@@ -75,6 +98,10 @@ public class ThresholdLoggingTracerConfig {
     enabled = builder.enabled;
   }
 
+  /**
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
+   */
+  @Deprecated
   public static Builder enabled(final boolean enabled) {
     return builder().enabled(enabled);
   }
@@ -84,7 +111,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param sampleSize the sample size to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder sampleSize(final int sampleSize) {
     return builder().sampleSize(sampleSize);
   }
@@ -94,7 +123,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param emitInterval the interval to use.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder emitInterval(final Duration emitInterval) {
     return builder().emitInterval(emitInterval);
   }
@@ -105,7 +136,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param queueLength the queue size to use.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder queueLength(final int queueLength) {
     return builder().queueLength(queueLength);
   }
@@ -115,7 +148,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param kvThreshold the threshold to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder kvThreshold(final Duration kvThreshold) {
     return builder().kvThreshold(kvThreshold);
   }
@@ -125,7 +160,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param analyticsThreshold the threshold to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder analyticsThreshold(final Duration analyticsThreshold) {
     return builder().analyticsThreshold(analyticsThreshold);
   }
@@ -135,7 +172,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param queryThreshold the threshold to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder queryThreshold(final Duration queryThreshold) {
     return builder().queryThreshold(queryThreshold);
   }
@@ -145,7 +184,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param searchThreshold the threshold to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder searchThreshold(final Duration searchThreshold) {
     return builder().searchThreshold(searchThreshold);
   }
@@ -155,7 +196,9 @@ public class ThresholdLoggingTracerConfig {
    *
    * @param viewThreshold the threshold to set.
    * @return this builder for chaining.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder viewThreshold(final Duration viewThreshold) {
     return builder().viewThreshold(viewThreshold);
   }

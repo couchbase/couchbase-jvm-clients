@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Allows configuring and customizing the compression configuration.
@@ -51,7 +52,14 @@ public class CompressionConfig {
    * Creates a {@link CompressionConfig} with default arguments.
    *
    * @return a new {@link CompressionConfig}.
+   * @deprecated Instead, please use
+   * {@link CoreEnvironment.Builder#compressionConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static CompressionConfig create() {
     return builder().build();
   }
@@ -60,7 +68,14 @@ public class CompressionConfig {
    * This builder allows to customize a {@link CompressionConfig}.
    *
    * @return a builder to configure {@link CompressionConfig}.
+   * @deprecated Instead of creating a new builder, please use
+   * {@link CoreEnvironment.Builder#compressionConfig(Consumer)}
+   * and configure the builder passed to the consumer.
+   * Note: CoreEnvironment is a base class; you'll
+   * probably call that method via a subclass named
+   * {@code ClusterEnvironment}.
    */
+  @Deprecated
   public static Builder builder() {
     return new CompressionConfig.Builder();
   }
@@ -70,7 +85,9 @@ public class CompressionConfig {
    *
    * @param enabled true to enable, false otherwise.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder enable(boolean enabled) {
     return builder().enable(enabled);
   }
@@ -82,7 +99,9 @@ public class CompressionConfig {
    *
    * @param minSize minimum size in bytes.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder minSize(int minSize) {
     return builder().minSize(minSize);
   }
@@ -95,7 +114,9 @@ public class CompressionConfig {
    *
    * @param minRatio the minimum ratio.
    * @return this {@link Builder} for chaining purposes.
+   * @deprecated This method creates a new builder. Please see the deprecation notice on {@link #builder()}.
    */
+  @Deprecated
   public static Builder minRatio(double minRatio) {
     return builder().minRatio(minRatio);
   }
