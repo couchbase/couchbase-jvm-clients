@@ -638,12 +638,12 @@ public class CoreEnvironment implements AutoCloseable {
     protected Builder() { }
 
     /**
-     * Allows to configure the {@link IoEnvironment} through a provided builder.
+     * Passes the {@link IoEnvironment.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #ioEnvironment(IoEnvironment.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Allows customizing I/O thread pools and other resources.
+     * For more I/O settings, see: {@link #ioConfig(Consumer)}
      *
-     * @param builderConsumer the builder for the {@link IoEnvironment} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF ioEnvironment(final Consumer<IoEnvironment.Builder> builderConsumer) {
@@ -652,12 +652,12 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link IoConfig} through a provided builder.
+     * Passes the {@link IoConfig.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #ioConfig(IoConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * This is the main way to control how the SDK behaves at the lower levels.
+     * It allows customizing settings such as tcp keepalive, number of connections, circuit breakers, etc.
      *
-     * @param builderConsumer the builder for the {@link IoConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF ioConfig(final Consumer<IoConfig.Builder> builderConsumer) {
@@ -666,12 +666,14 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link CompressionConfig} through a provided builder.
+     * Passes the {@link CompressionConfig.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #compressionConfig(CompressionConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Allows customizing document value compression settings.
+     * <p>
+     * Usually this does not need to be tuned, but thresholds can be modified
+     * or compression can be disabled completely if needed.
      *
-     * @param builderConsumer the builder for the {@link CompressionConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF compressionConfig(final Consumer<CompressionConfig.Builder> builderConsumer) {
@@ -680,12 +682,14 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link SecurityConfig} through a provided builder.
+     * Passes the {@link SecurityConfig.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #securityConfig(SecurityConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Allows configuring everything related to TLS/encrypted connections.
+     * <p>
+     * Note that if you are looking to use client certificate authentication,
+     * please refer to the {@link CertificateAuthenticator} instead.
      *
-     * @param builderConsumer the builder for the {@link SecurityConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF securityConfig(final Consumer<SecurityConfig.Builder> builderConsumer) {
@@ -694,12 +698,14 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link TimeoutConfig} through a provided builder.
+     * Passes the {@link TimeoutConfig.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #timeoutConfig(TimeoutConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Allows customizing the default timeouts for all operations.
+     * <p>
+     * The default timeout can be overridden on a per-request basis
+     * using the "timeout" property of the request's option block.
      *
-     * @param builderConsumer the builder for the {@link TimeoutConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF timeoutConfig(final Consumer<TimeoutConfig.Builder> builderConsumer) {
@@ -708,12 +714,9 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link LoggerConfig} through a provided builder.
-     * <p>
-     * This method is preferred over {@link #loggerConfig(LoggerConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Passes the {@link LoggerConfig.Builder} to the provided consumer.
      *
-     * @param builderConsumer the builder for the {@link LoggerConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF loggerConfig(final Consumer<LoggerConfig.Builder> builderConsumer) {
@@ -722,12 +725,15 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link OrphanReporterConfig} through a provided builder.
+     * Passes the {@link OrphanReporterConfig.Builder} to the provided consumer.
      * <p>
-     * This method is preferred over {@link #orphanReporterConfig(OrphanReporterConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Allows customizing the behavior of the orphan response reporter.
+     * <p>
+     * The orphan reporter logs all responses that arrived when the requesting side is not listening anymore (usually
+     * because of a timeout). The config can be modified to tune certain properties like the sample size or the emit
+     * interval.
      *
-     * @param builderConsumer the builder for the {@link OrphanReporterConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF orphanReporterConfig(final Consumer<OrphanReporterConfig.Builder> builderConsumer) {
@@ -736,12 +742,9 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link ThresholdLoggingTracerConfig} through a provided builder.
-     * <p>
-     * This method is preferred over {@link #thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.Builder)} since
-     * then properties on an already existing configuration are not overridden.
+     * Passes the {@link ThresholdLoggingTracerConfig.Builder} to the provided consumer.
      *
-     * @param builderConsumer the builder for the {@link ThresholdLoggingTracerConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF thresholdLoggingTracerConfig(final Consumer<ThresholdLoggingTracerConfig.Builder> builderConsumer) {
@@ -750,12 +753,9 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * Allows to configure the {@link LoggingMeterConfig} through a provided builder.
-     * <p>
-     * This method is preferred over {@link #loggingMeterConfig(LoggingMeterConfig.Builder)} since then properties
-     * on an already existing configuration are not overridden.
+     * Passes the {@link LoggingMeterConfig.Builder} to the provided consumer.
      *
-     * @param builderConsumer the builder for the {@link LoggingMeterConfig} to customize.
+     * @param builderConsumer configures the builder.
      * @return this {@link Builder} for chaining purposes.
      */
     public SELF loggingMeterConfig(final Consumer<LoggingMeterConfig.Builder> builderConsumer) {
@@ -806,7 +806,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param ioEnvironment the IO environment to customize.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #ioEnvironment(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #ioEnvironment(Consumer)} instead.
      */
     @Deprecated
     public SELF ioEnvironment(final IoEnvironment.Builder ioEnvironment) {
@@ -842,7 +842,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param ioConfig the custom I/O config to use.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #ioConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #ioConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF ioConfig(final IoConfig.Builder ioConfig) {
@@ -868,7 +868,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param orphanReporterConfig the custom orphan reporter config.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #orphanReporterConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #orphanReporterConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF orphanReporterConfig(final OrphanReporterConfig.Builder orphanReporterConfig) {
@@ -886,7 +886,7 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     /**
-     * @deprecated Please use {@link #loggingMeterConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #loggingMeterConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF loggingMeterConfig(final LoggingMeterConfig.Builder loggingMeterConfig) {
@@ -903,7 +903,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param thresholdRequestTracerConfig the configuration which should be used.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF thresholdRequestTracerConfig(final ThresholdRequestTracerConfig.Builder thresholdRequestTracerConfig) {
@@ -922,7 +922,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param thresholdLoggingTracerConfig the configuration which should be used.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #thresholdLoggingTracerConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF thresholdLoggingTracerConfig(final ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig) {
@@ -942,7 +942,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param compressionConfig the custom compression config.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #compressionConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #compressionConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF compressionConfig(final CompressionConfig.Builder compressionConfig) {
@@ -967,7 +967,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param securityConfig the custom security config to use.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #securityConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #securityConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF securityConfig(final SecurityConfig.Builder securityConfig) {
@@ -991,7 +991,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param timeoutConfig the custom timeout config to use.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #timeoutConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #timeoutConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF timeoutConfig(final TimeoutConfig.Builder timeoutConfig) {
@@ -1016,7 +1016,7 @@ public class CoreEnvironment implements AutoCloseable {
      *
      * @param loggerConfig the custom logger config to use.
      * @return this {@link Builder} for chaining purposes.
-     * @deprecated Please use {@link #loggerConfig(Consumer)} instead.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #loggerConfig(Consumer)} instead.
      */
     @Deprecated
     public SELF loggerConfig(final LoggerConfig.Builder loggerConfig) {
