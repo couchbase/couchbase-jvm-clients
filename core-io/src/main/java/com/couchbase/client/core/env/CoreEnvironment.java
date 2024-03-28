@@ -151,12 +151,11 @@ public class CoreEnvironment implements AutoCloseable {
     return builder().build();
   }
 
-  public static CoreEnvironment.Builder builder() {
-    return new Builder();
+  public static CoreEnvironment.Builder<?> builder() {
+    return new Builder<>();
   }
 
-  @SuppressWarnings("unchecked")
-  protected CoreEnvironment(final Builder builder) {
+  protected CoreEnvironment(final Builder<?> builder) {
     new SystemPropertyPropertyLoader().load(builder);
 
     this.userAgent = defaultUserAgent();

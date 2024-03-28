@@ -86,7 +86,7 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @BeforeAll
     static void setup() {
-        cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(true)));
+        cluster = createCluster(env -> env.ioConfig(io -> io.enableMutationTokens(true)));
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 

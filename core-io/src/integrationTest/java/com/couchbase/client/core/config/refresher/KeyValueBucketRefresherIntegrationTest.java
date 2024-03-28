@@ -50,7 +50,7 @@ class KeyValueBucketRefresherIntegrationTest extends CoreIntegrationTest {
   @BeforeEach
   void beforeEach() {
     env = environment()
-      .ioConfig(IoConfig.configPollInterval(Duration.ofMillis(100)))
+      .ioConfig(io -> io.configPollInterval(Duration.ofMillis(100)))
       .build();
   }
 

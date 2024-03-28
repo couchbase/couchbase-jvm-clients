@@ -68,7 +68,7 @@ public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
    * Creates an environment builder that already has all the needed properties to bootstrap
    * set.
    */
-  protected static CoreEnvironment.Builder environment() {
+  protected static CoreEnvironment.Builder<?> environment() {
     return CoreEnvironment.builder();
   }
 

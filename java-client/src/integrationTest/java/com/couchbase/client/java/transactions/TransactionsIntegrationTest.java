@@ -68,7 +68,7 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
     @BeforeAll
     static void beforeAll() {
 
-        cluster = createCluster(env -> env.thresholdLoggingTracerConfig(ThresholdLoggingTracerConfig.builder().emitInterval(Duration.ofSeconds(1))));
+        cluster = createCluster(env -> env.thresholdLoggingTracerConfig(tracer -> tracer.emitInterval(Duration.ofSeconds(1))));
         Bucket bucket = cluster.bucket(config().bucketname());
         collection = bucket.defaultCollection();
 
@@ -86,8 +86,10 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
     @Test
     void testConfig() {
         ClusterEnvironment env = ClusterEnvironment.builder()
-                .ioConfig(IoConfig.enableMutationTokens(true)
-                        .analyticsCircuitBreakerConfig(CircuitBreakerConfig.enabled(true)))
+                .ioConfig(io -> io
+                        .enableMutationTokens(true)
+                        .analyticsCircuitBreakerConfig(breaker -> breaker.enabled(true))
+                )
                 .transactionsConfig(TransactionsConfig.durabilityLevel(DurabilityLevel.NONE)
                         .metadataCollection(TransactionKeyspace.create("bkt", "scp", "coll"))
                         .cleanupConfig(TransactionsCleanupConfig

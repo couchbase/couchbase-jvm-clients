@@ -114,7 +114,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(500)))
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(500)))
       .build();
     core = Core.create(environment, authenticator(), seeds);
 
@@ -144,7 +144,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     environment = CoreEnvironment.builder()
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(500)))
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(500)))
       .build();
     core = Core.create(environment, authenticator(), seeds);
 
@@ -169,7 +169,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     )));
 
     environment = CoreEnvironment.builder()
-      .timeoutConfig(TimeoutConfig
+      .timeoutConfig(timeout -> timeout
         .kvTimeout(kvTimeout)
         .managementTimeout(managementTimeout)
       )

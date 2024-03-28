@@ -120,7 +120,10 @@ class PasswordAuthenticatorTest {
 
     CoreEnvironment tlsEnvironment = CoreEnvironment.builder()
       .eventBus(new SimpleEventBus(true)) // event bus swallows warnings from insecure trust manager
-      .securityConfig(SecurityConfig.enableTls(true).trustManagerFactory(InsecureTrustManagerFactory.INSTANCE))
+      .securityConfig(security -> security
+        .enableTls(true)
+        .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
+      )
       .build();
 
     try {

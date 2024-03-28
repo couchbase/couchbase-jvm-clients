@@ -130,7 +130,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(10)))
       .build();
 
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
@@ -252,7 +252,7 @@ class BaseEndpointTest {
     SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     CoreEnvironment env = CoreEnvironment.builder()
       .eventBus(eventBus)
-      .timeoutConfig(TimeoutConfig.connectTimeout(Duration.ofMillis(10)))
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(10)))
       .build();
     CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
     ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,

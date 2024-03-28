@@ -290,9 +290,8 @@ class DefaultConfigurationProviderTest {
   @Test
   void forceDefaultModeIfDefault() {
     Core core = mock(Core.class);
-    CoreEnvironment environment = CoreEnvironment
-      .builder()
-      .ioConfig(IoConfig.networkResolution(NetworkResolution.DEFAULT))
+    CoreEnvironment environment = CoreEnvironment.builder()
+      .ioConfig(io -> io.networkResolution(NetworkResolution.DEFAULT))
       .build();
 
     CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));

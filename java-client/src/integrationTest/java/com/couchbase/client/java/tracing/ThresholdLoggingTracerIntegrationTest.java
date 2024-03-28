@@ -51,15 +51,14 @@ public class ThresholdLoggingTracerIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     eventBus = new SimpleEventBus(false);
 
-    ThresholdLoggingTracerConfig.Builder config = ThresholdLoggingTracerConfig
-      .enabled(true)
-      .kvThreshold(Duration.ofNanos(1))
-      .queryThreshold(Duration.ofNanos(1))
-      .emitInterval(Duration.ofSeconds(2));
-
     cluster = createCluster(env -> env
-        .thresholdLoggingTracerConfig(config)
-        .eventBus(eventBus));
+      .thresholdLoggingTracerConfig(tracer -> tracer
+        .enabled(true)
+        .kvThreshold(Duration.ofNanos(1))
+        .queryThreshold(Duration.ofNanos(1))
+        .emitInterval(Duration.ofSeconds(2))
+      )
+      .eventBus(eventBus));
 
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();

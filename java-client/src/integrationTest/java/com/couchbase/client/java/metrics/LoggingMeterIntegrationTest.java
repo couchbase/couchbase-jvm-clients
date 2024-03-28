@@ -49,8 +49,12 @@ class LoggingMeterIntegrationTest extends JavaIntegrationTest {
   static void beforeAll() {
     eventBus = new SimpleEventBus(false);
     cluster = createCluster(env -> env
-        .loggingMeterConfig(LoggingMeterConfig.enabled(true).emitInterval(Duration.ofSeconds(2)))
-        .eventBus(eventBus));
+      .loggingMeterConfig(meter -> meter
+        .enabled(true)
+        .emitInterval(Duration.ofSeconds(2))
+      )
+      .eventBus(eventBus)
+    );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
 

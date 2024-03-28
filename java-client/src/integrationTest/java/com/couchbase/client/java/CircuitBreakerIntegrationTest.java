@@ -65,7 +65,11 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
 
   @BeforeEach
   void beforeEach() {
-    cluster = createCluster(env -> env.ioConfig(IoConfig.kvCircuitBreakerConfig(CircuitBreakerConfig.enabled(true))));
+    cluster = createCluster(env -> env
+      .ioConfig(io -> io
+        .kvCircuitBreakerConfig(breaker -> breaker.enabled(true))
+      )
+    );
     Bucket bucket = cluster.bucket(config().bucketname());
     collection = bucket.defaultCollection();
     bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);

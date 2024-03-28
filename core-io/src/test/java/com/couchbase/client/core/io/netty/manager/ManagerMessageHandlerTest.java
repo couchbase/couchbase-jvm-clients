@@ -205,7 +205,7 @@ class ManagerMessageHandlerTest {
   @Test
   void disconnectsEndpointOnRedialTimeout() throws Exception {
     CoreEnvironment env = CoreEnvironment.builder()
-      .ioConfig(IoConfig.configIdleRedialTimeout(Duration.ofMillis(200)))
+      .ioConfig(io -> io.configIdleRedialTimeout(Duration.ofMillis(200)))
       .build();
 
     try {

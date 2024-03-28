@@ -56,6 +56,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -89,8 +90,8 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
    * @param config the security config to use.
    * @return a core environment, set up for encrypted networking.
    */
-  private CoreEnvironment secureEnvironment(final SecurityConfig.Builder config, EventBus customEventBus) {
-    CoreEnvironment.Builder builder = environment().securityConfig(config);
+  private CoreEnvironment secureEnvironment(final Consumer<SecurityConfig.Builder> config, EventBus customEventBus) {
+    CoreEnvironment.Builder<?> builder = environment().securityConfig(config);
 
     if (customEventBus != null) {
       builder.eventBus(customEventBus);
@@ -109,9 +110,12 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
 
   @Test
   void performsKeyValueIgnoringServerCert() throws Exception {
-    CoreEnvironment env = secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE), null);
+    CoreEnvironment env = secureEnvironment(
+      security -> security
+        .enableTls(true)
+        .trustManagerFactory(InsecureTrustManagerFactory.INSTANCE),
+      null
+    );
 
     Core core = createCore(env, authenticator(), secureSeeds());
 
@@ -129,13 +133,18 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     if (!config().clusterCerts().isPresent()) {
       fail("Cluster Certificate must be present for this test!");
     }
-    
+
     try (
       CoreEnvironment env = secureEnvironment(
-        SecurityConfig.enableTls(true).trustCertificates(config().clusterCerts().get()), null);
-        Core core = createCore(env, authenticator(), secureSeeds())) {
-          runKeyValueOperation(core, env);
-        }
+        security -> security
+          .enableTls(true)
+          .trustCertificates(config().clusterCerts().get()),
+        null
+      );
+      Core core = createCore(env, authenticator(), secureSeeds())
+    ) {
+      runKeyValueOperation(core, env);
+    }
   }
 
   @Flaky
@@ -157,10 +166,12 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       }
 
       String cipher = "TLS_AES_256_GCM_SHA384";
-      CoreEnvironment env = secureEnvironment(
-        SecurityConfig.enableTls(true).ciphers(Collections.singletonList(cipher))
+      CoreEnvironment env = secureEnvironment(security -> security
+          .enableTls(true)
+          .ciphers(Collections.singletonList(cipher))
           .trustCertificates(config().clusterCerts().get()),
-        null);
+        null
+      );
       try (Core core = createCore(env, authenticator(), secureSeeds())) {
         runKeyValueOperation(core, env);
       }
@@ -179,8 +190,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
     trustStore.setCertificateEntry("server", config().clusterCerts().get().get(0));
 
     try (
-      CoreEnvironment env = secureEnvironment(SecurityConfig.enableTls(true).trustStore(trustStore), null);
-      Core core = createCore(env, authenticator(), secureSeeds())) {
+      CoreEnvironment env = secureEnvironment(
+        security -> security
+          .enableTls(true)
+          .trustStore(trustStore),
+        null
+      );
+      Core core = createCore(env, authenticator(), secureSeeds())
+    ) {
         runKeyValueOperation(core, env);
     }
 
@@ -210,10 +227,13 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   @Test
   @SuppressWarnings("unchecked")
   void failsIfMoreThanOneTrustPresent() {
-    assertThrows(InvalidArgumentException.class, () -> secureEnvironment(SecurityConfig
-      .enableTls(true)
-      .trustManagerFactory(mock(TrustManagerFactory.class))
-      .trustCertificates(mock(List.class)), null)
+    assertThrows(InvalidArgumentException.class, () -> secureEnvironment(
+        security -> security
+          .enableTls(true)
+          .trustManagerFactory(mock(TrustManagerFactory.class))
+          .trustCertificates(mock(List.class)),
+        null
+      )
     );
   }
 
@@ -222,10 +242,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
   void failsIfWrongCertPresent() throws Exception {
     SimpleEventBus eventBus = new SimpleEventBus(true);
     try (
-      CoreEnvironment env = secureEnvironment(SecurityConfig.enableTls(true).trustCertificates(mock(List.class)),
-          eventBus);
-      Core core = Core.create(env, authenticator(), secureSeeds())) {
-
+      CoreEnvironment env = secureEnvironment(
+        security -> security
+          .enableTls(true)
+          .trustCertificates(mock(List.class)),
+        eventBus
+      );
+      Core core = Core.create(env, authenticator(), secureSeeds())
+    ) {
         core.openBucket(config().bucketname());
 
         waitUntilCondition(() -> {

@@ -138,7 +138,7 @@ class ObserveIntegrationTest extends JavaIntegrationTest {
   @IgnoreWhen(isProtostellar = true) // Does not support old-style observability
   @Test
   void disallowObserveWhenTokensDisabled() {
-    Cluster cluster = createCluster(env -> env.ioConfig(IoConfig.enableMutationTokens(false)));
+    Cluster cluster = createCluster(env -> env.ioConfig(io -> io.enableMutationTokens(false)));
     try {
       Bucket bucket = cluster.bucket(config().bucketname());
       Collection collection = bucket.defaultCollection();

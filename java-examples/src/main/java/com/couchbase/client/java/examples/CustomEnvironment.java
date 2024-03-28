@@ -83,7 +83,7 @@ public class CustomEnvironment {
     public static void shareEnvironmentBetweenClusters() {
 
         ClusterEnvironment sharedEnvironment = ClusterEnvironment.builder()
-            .timeoutConfig(TimeoutConfig.kvTimeout(Duration.ofSeconds(2)))
+            .timeoutConfig(timeout -> timeout.kvTimeout(Duration.ofSeconds(2)))
             .build(); // We built the environment, so we are responsible for shutting it down!
 
         Cluster cluster1 = Cluster.connect("127.0.0.1", clusterOptions("Administrator", "password")

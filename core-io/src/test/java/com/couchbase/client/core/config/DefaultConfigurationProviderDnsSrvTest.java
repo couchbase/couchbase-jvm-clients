@@ -141,9 +141,9 @@ class DefaultConfigurationProviderDnsSrvTest {
 
   @Test
   void ignoresSignalIfDnsSrvDisabled() throws Exception {
-    final CoreEnvironment environment = CoreEnvironment.builder().ioConfig(
-      IoConfig.builder().enableDnsSrv(false)
-    ).build();
+    final CoreEnvironment environment = CoreEnvironment.builder()
+      .ioConfig(io -> io.enableDnsSrv(false))
+      .build();
 
     try {
       Core core = mock(Core.class);

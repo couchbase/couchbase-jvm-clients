@@ -60,7 +60,10 @@ public class KeyValueBucketRefresherTest {
   @BeforeEach
   void beforeEach() {
     SimpleEventBus eventBus = new SimpleEventBus(true);
-    env = CoreEnvironment.builder().eventBus(eventBus).ioConfig(IoConfig.configPollInterval(FAST_CONFIG_POLL_INTERVAL)).build();
+    env = CoreEnvironment.builder()
+      .eventBus(eventBus)
+      .ioConfig(io -> io.configPollInterval(FAST_CONFIG_POLL_INTERVAL))
+      .build();
 
     CoreContext coreContext = mock(CoreContext.class);
     core = mock(Core.class);
