@@ -23,6 +23,7 @@
         <core-io-deps.version>1.7.1-SNAPSHOT</core-io-deps.version><!--REL-->
         <scala-client.version>1.7.1-SNAPSHOT</scala-client.version><!--REL-->
         <kotlin-client.version>1.4.1-SNAPSHOT</kotlin-client.version><!--REL-->
+        <columnar-java-client.version>0.1.0-SNAPSHOT</columnar-java-client.version><!--REL-->
         <tracing-opentelemetry.version>1.5.1-SNAPSHOT</tracing-opentelemetry.version><!--REL-->
         <metrics-opentelemetry.version>0.7.1-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
         <test-utils.version>1.7.1-SNAPSHOT</test-utils.version><!--REL-->
@@ -126,6 +127,11 @@
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
+                <artifactId>couchbase-columnar-java-client</artifactId>
+                <version>${columnar-java-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
                 <version>${test-utils.version}</version>
             </dependency>
@@ -200,6 +206,7 @@
         <module>tracing-opentelemetry</module>
         <module>metrics-opentelemetry</module>
         <module>metrics-micrometer</module>
+        <module>columnar-java-client</module>
         <!-- Uncomment next lines to include the FIT performers.  They are not included by default as they require
         a) an externally built lib and b) JDK 17 -->
 <!--         <module>core-fit-performer</module>-->
