@@ -32,21 +32,32 @@ public class BooleanQuery extends SearchQuery {
     @Nullable private DisjunctionQuery mustNot;
     @Nullable private DisjunctionQuery should;
 
-/**
- * Affects the behavior of the BooleanQuery depending on the operators.
- * The three BooleanQuery operators are `must_not`, `should` and `must`.
- * With a `should` operator, the behaviour is different for different cases.
- * The presence or absence of `must_not` does not affect the `should` operator's behavior.
- * <ul>
- * <li>1: With `should` operator and without `must` operator
- *        in this case min=0 is same as min=1, which is at least one of the clause
- *        should match for document to be added as part of resultSet.
- * <li>2: With both `should` and `must` operators
- *        m=0 means, clauses in `should` will only be used for scoring and not as a document selection
- *        criteria m!=0 means, atleast m clauses must match for document to be eligible to be in resultSet.
- * </li>
- * </ul>
- */
+    /**
+     * Specifies the minimum number of "{@link #should}" conditions a document
+     * has to meet in order to be included in the result set.
+     * <p>
+     * The default is zero, a special value that means different
+     * things depending on whether a "{@link #must}" condition is present:
+     * <ul>
+     *   <li>If there is <b>no</b> "must" condition, {@code shouldMin = 0}
+     *       is the same as {@code shouldMin = 1}. In this case,
+     *       a document has to meet at least one "should" condition
+     *       (and none of the "{@link #mustNot}" conditions) in order to
+     *       be included in the result set.
+     *   <li>If there is a "must" condition, {@code shouldMin = 0}
+     *       means the "should" conditions influence scoring
+     *       but are not used as document selection criteria.
+     *       In this case, only the "must" and "mustNot" conditions
+     *       affect whether a document is included in the result set.
+     * </ul>
+     *
+     * In other words, if your {@link BooleanQuery} has "must" conditions
+     * as well as "should" conditions, and you want the "should" conditions
+     * to affect which documents are included in the result set,
+     * then call this method to set {@code shouldMin} to a value greater than zero.
+     *
+     * @see #should(SearchQuery...)
+     */
     public BooleanQuery shouldMin(int minForShould) {
         if (this.should == null) {
           this.should = new DisjunctionQuery();
@@ -71,6 +82,9 @@ public class BooleanQuery extends SearchQuery {
         return this;
     }
 
+    /**
+     * @see #shouldMin(int)
+     */
     public BooleanQuery should(SearchQuery... shouldQueries) {
         if (this.should == null) {
           this.should = new DisjunctionQuery();
