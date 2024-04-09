@@ -53,7 +53,8 @@ public class HttpProtocol {
       return ResponseStatus.INVALID_ARGS;
     } else if (status.equals(HttpResponseStatus.INTERNAL_SERVER_ERROR)) {
       return ResponseStatus.INTERNAL_SERVER_ERROR;
-    } else if (status.equals(HttpResponseStatus.UNAUTHORIZED)) {
+    } else if (status.equals(HttpResponseStatus.UNAUTHORIZED)
+      || status.equals(HttpResponseStatus.FORBIDDEN)) {
       return ResponseStatus.NO_ACCESS;
     } else if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
       return ResponseStatus.TOO_MANY_REQUESTS;
