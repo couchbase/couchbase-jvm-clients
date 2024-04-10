@@ -30,6 +30,10 @@ import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.java.ReactiveCollection;
 import com.couchbase.client.java.ReactiveScope;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Transcoder;
+import com.couchbase.client.java.transactions.config.TransactionGetOptions;
+import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
+import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
 import reactor.core.publisher.Mono;
 
 import java.util.Objects;
@@ -68,8 +72,23 @@ public class ReactiveTransactionAttemptContext {
      * @return a <code>TransactionGetResult</code> containing the document
      */
     public Mono<TransactionGetResult> get(ReactiveCollection collection, String id) {
+        return get(collection, id, TransactionGetOptions.DEFAULT);
+    }
+
+    /**
+     * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
+     * <p>
+     * If the document does not exist it will throw a {@link DocumentNotFoundException}.
+     *
+     * @param collection the Couchbase collection the document exists on
+     * @param id         the document's ID
+     * @param options    options controlling the operation
+     * @return a <code>TransactionGetResult</code> containing the document
+     */
+    public Mono<TransactionGetResult> get(ReactiveCollection collection, String id, TransactionGetOptions options) {
+        TransactionGetOptions.Built built = options.build();
         return internal.get(makeCollectionIdentifier(collection.async()), id)
-                .map(result -> new TransactionGetResult(result, serializer()));
+            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()));
     }
 
     /**
@@ -81,14 +100,28 @@ public class ReactiveTransactionAttemptContext {
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
      */
     public Mono<TransactionGetResult> insert(ReactiveCollection collection, String id, Object content) {
+        return insert(collection, id, content, TransactionInsertOptions.DEFAULT);
+    }
+
+    /**
+     * Inserts a new document into the specified Couchbase <code>collection</code>.
+     *
+     * @param collection the Couchbase collection in which to insert the doc
+     * @param id         the document's unique ID
+     * @param content    the content to insert
+     * @param options    options controlling the operation
+     * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
+     */
+    public Mono<TransactionGetResult> insert(ReactiveCollection collection, String id, Object content, TransactionInsertOptions options) {
+        TransactionInsertOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span());
         span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
-        byte[] encoded = encode(content, span, serializer, internal.core().context());
+        Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
 
-        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded, new SpanWrapper(span))
-                .map(result -> new TransactionGetResult(result, serializer()))
-                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(() -> span.end());
+        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+            .doOnTerminate(() -> span.end());
     }
 
     private JsonSerializer serializer() {
@@ -104,13 +137,27 @@ public class ReactiveTransactionAttemptContext {
      * object is modified.
      */
     public Mono<TransactionGetResult> replace(TransactionGetResult doc, Object content) {
+        return replace(doc, content, TransactionReplaceOptions.DEFAULT);
+    }
+
+    /**
+     * Mutates the specified <code>doc</code> with new content.
+     *
+     * @param doc     the doc to be mutated
+     * @param content the content to replace the doc with
+     * @param options options controlling the operation
+     * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
+     * object is modified.
+     */
+    public Mono<TransactionGetResult> replace(TransactionGetResult doc, Object content, TransactionReplaceOptions options) {
+        TransactionReplaceOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
         span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
-        byte[] encoded = encode(content, span, serializer, internal.core().context());
-        return internal.replace(doc.internal(), encoded, new SpanWrapper(span))
-                .map(result -> new TransactionGetResult(result, serializer()))
-                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(() -> span.end());
+        Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
+        return internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+            .doOnTerminate(() -> span.end());
     }
 
     /**

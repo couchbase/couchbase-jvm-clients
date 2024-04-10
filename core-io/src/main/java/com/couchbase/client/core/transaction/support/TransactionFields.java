@@ -60,7 +60,8 @@ public class TransactionFields {
     // 1: "scope_name.collection_name"
     // 2: Just collection name - scope is in ATR_SCOPE_NAME
     public final static String ATR_COLL_NAME = TRANSACTION_INTERFACE_PREFIX + "atr.coll";
-    public final static String STAGED_DATA = TRANSACTION_INTERFACE_PREFIX + "op.stgd";
+    public final static String STAGED_DATA_JSON = TRANSACTION_INTERFACE_PREFIX + "op.stgd";
+    public final static String STAGED_DATA_BINARY = TRANSACTION_INTERFACE_PREFIX + "op.bin";
     public final static String OP = TRANSACTION_INTERFACE_PREFIX + "op.type";
 }
 

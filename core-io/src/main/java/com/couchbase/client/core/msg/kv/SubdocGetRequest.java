@@ -25,6 +25,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -56,6 +57,7 @@ import static java.util.Comparator.comparing;
 public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
+  private static final byte SUBDOC_FLAG_BINARY_VALUE = (byte) 0x20;
 
   private static final Comparator<Command> xattrsFirst = comparing(it -> !it.xattr());
 
@@ -90,6 +92,7 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         core.type(),
         core.path(),
         core.xattr(),
+        core.binary(),
         i
       ));
     }
@@ -129,11 +132,11 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
         // add the others if do the single lookup optimisation.
         // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
         // minimal performance gains, in return for additional client complexity.
-        body = commands.get(0).encode(alloc);
+        body = commands.get(0).encode(alloc, ctx.subdocBinaryXattr());
       } else {
         body = alloc.compositeBuffer(commands.size());
         for (Command command : commands) {
-          ByteBuf commandBuffer = command.encode(alloc);
+          ByteBuf commandBuffer = command.encode(alloc, ctx.subdocBinaryXattr());
           try {
             ((CompositeByteBuf) body).addComponent(commandBuffer);
             body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
@@ -241,25 +244,34 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
     private final String path;
     private final boolean xattr;
     private final int originalIndex;
+    private final boolean binary;
 
     public Command(SubdocCommandType type, String path, boolean xattr, int originalIndex) {
+      this(type, path, xattr, false, originalIndex);
+    }
+
+    public Command(SubdocCommandType type, String path, boolean xattr, boolean binary, int originalIndex) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
       this.originalIndex = originalIndex;
+      this.binary = binary;
     }
 
-    public ByteBuf encode(ByteBufAllocator alloc) {
+    public ByteBuf encode(ByteBufAllocator alloc, boolean binarySupported) {
       byte[] path = this.path.getBytes(UTF_8);
       int pathLength = path.length;
 
       ByteBuf buffer = alloc.buffer(4 + pathLength);
       buffer.writeByte(type.opcode());
+      byte flags = 0;
       if (xattr) {
-        buffer.writeByte(SUBDOC_FLAG_XATTR_PATH);
-      } else {
-        buffer.writeByte(0);
+        flags |= SUBDOC_FLAG_XATTR_PATH;
       }
+      if (binary && binarySupported) {
+        flags |= SUBDOC_FLAG_BINARY_VALUE;
+      }
+      buffer.writeByte(flags);
       buffer.writeShort(pathLength);
       buffer.writeBytes(path);
       return buffer;

@@ -35,7 +35,8 @@ public class TransactionLinks {
     // ID of the transaction that has staged content
     private final Optional<String> stagedTransactionId;
     private final Optional<String> stagedAttemptId;
-    private final Optional<String> stagedContent;
+    private final Optional<byte[]> stagedContentJson;
+    private final Optional<byte[]> stagedContentBinary;
     private final Optional<String> crc32OfStaging;
 
     // For {BACKUP_FIELDS}
@@ -46,6 +47,7 @@ public class TransactionLinks {
 
     private final Optional<ForwardCompatibility> forwardCompatibility;
     private final Optional<String> stagedOperationId;
+    private final Optional<Integer> stagedUserFlags;
 
     /**
      * This is not part of the transactional metadata.  It's here for legacy reasons and could be refactoring into
@@ -54,7 +56,8 @@ public class TransactionLinks {
     private final boolean isDeleted;
 
     public TransactionLinks(
-            Optional<String> stagedContent,
+            Optional<byte[]> stagedContentJson,
+            Optional<byte[]> stagedContentBinary,
             Optional<String> atrId,
             Optional<String> atrBucketName,
             Optional<String> atrScopeName,
@@ -68,8 +71,10 @@ public class TransactionLinks {
             boolean isDeleted,
             Optional<String> crc32OfStaging,
             Optional<ForwardCompatibility> forwardCompatibility,
-            Optional<String> stagedOperationId) {
-        this.stagedContent = Objects.requireNonNull(stagedContent);
+            Optional<String> stagedOperationId,
+            Optional<Integer> stagedUserFlags) {
+        this.stagedContentJson = Objects.requireNonNull(stagedContentJson);
+        this.stagedContentBinary = Objects.requireNonNull(stagedContentBinary);
         this.atrId = Objects.requireNonNull(atrId);
         this.stagedTransactionId = Objects.requireNonNull(stagedTransactionId);
         this.stagedAttemptId = Objects.requireNonNull(stagedAttemptId);
@@ -84,6 +89,7 @@ public class TransactionLinks {
         this.crc32OfStaging = Objects.requireNonNull(crc32OfStaging);
         this.forwardCompatibility = Objects.requireNonNull(forwardCompatibility);
         this.stagedOperationId = Objects.requireNonNull(stagedOperationId);
+        this.stagedUserFlags = stagedUserFlags;
     }
 
     /**
@@ -115,8 +121,21 @@ public class TransactionLinks {
     }
 
     @Stability.Internal
-    public Optional<String> stagedContent() {
-        return stagedContent;
+    public Optional<byte[]> stagedContentJsonOrBinary() {
+      if (stagedContentJson.isPresent()) {
+        return stagedContentJson;
+      }
+      return stagedContentBinary;
+    }
+
+    @Stability.Internal
+    public Optional<byte[]> stagedContentBinary() {
+      return stagedContentBinary;
+    }
+
+    @Stability.Internal
+    public Optional<byte[]> stagedContentJson() {
+      return stagedContentJson;
     }
 
     public Optional<String> atrBucketName() {
@@ -169,6 +188,10 @@ public class TransactionLinks {
         return stagedOperationId;
     }
 
+    public Optional<Integer> stagedUserFlags() {
+        return stagedUserFlags;
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("TransactionLinks{");
@@ -181,11 +204,13 @@ public class TransactionLinks {
         sb.append(",attemptId=").append(stagedAttemptId.orElse("none"));
         sb.append(",crc32Staging=").append(crc32OfStaging.orElse("none"));
         sb.append(",isDeleted=").append(isDeleted);
-        stagedContent.ifPresent(s ->
-                sb.append(",content=").append(s.length()).append("chars"));
+        stagedContentJson.ifPresent(s ->
+                sb.append(",content=").append(s.length).append("bytes"));
         sb.append(",op=").append(op.orElse("none"));
         sb.append(",fc=").append(forwardCompatibility.map(Object::toString).orElse("none"));
         sb.append(",opId=").append(stagedOperationId.orElse("none"));
+        sb.append(",binary=").append(stagedContentBinary.isPresent());
+        sb.append(",userFlags=").append(stagedUserFlags.map(Object::toString).orElse("none"));
         sb.append(",restore={");
         sb.append(casPreTxn.orElse("none"));
         sb.append(',');

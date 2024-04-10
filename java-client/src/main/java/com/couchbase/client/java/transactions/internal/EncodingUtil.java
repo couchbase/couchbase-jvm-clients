@@ -21,24 +21,37 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Transcoder;
+import reactor.util.annotation.Nullable;
+
+import static com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMMON_FLAGS;
+import static com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMPAT_FLAGS;
 
 @Stability.Internal
 public class EncodingUtil {
-  private EncodingUtil() {}
-
-  public static byte[] encode(Object content, RequestSpan span, JsonSerializer serializer, CoreContext coreContext) {
-    RequestSpan encoding = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
-
-    byte[] encoded;
-    try {
-      encoded = serializer.serialize(content);
-      encoding.end();
-    } catch (Throwable err) {
-      encoding.recordException(err);
-      encoding.status(RequestSpan.StatusCode.ERROR);
-      throw err;
+    private EncodingUtil() {
     }
-    return encoded;
-  }
+
+    public static Transcoder.EncodedValue encode(Object content, RequestSpan span, JsonSerializer serializer, @Nullable Transcoder transcoder, CoreContext coreContext) {
+        RequestSpan encoding = CbTracing.newSpan(coreContext, TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+
+        Transcoder.EncodedValue encoded;
+        try {
+            if (transcoder != null) {
+                encoded = transcoder.encode(content);
+            }
+            else {
+                byte[] bytes = serializer.serialize(content);
+                encoded = new Transcoder.EncodedValue(bytes, JSON_COMPAT_FLAGS);
+            }
+            encoding.end();
+        } catch (Throwable err) {
+            encoding.recordException(err);
+            encoding.status(RequestSpan.StatusCode.ERROR);
+            throw err;
+        }
+
+        return encoded;
+    }
 
 }

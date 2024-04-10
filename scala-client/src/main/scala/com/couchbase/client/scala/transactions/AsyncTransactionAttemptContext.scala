@@ -17,12 +17,9 @@
 package com.couchbase.client.scala.transactions
 
 import com.couchbase.client.core.api.query.{CoreQueryContext, CoreQueryOptions}
-import com.couchbase.client.core.cnc.TracingIdentifiers.{
-  TRANSACTION_OP_INSERT,
-  TRANSACTION_OP_REMOVE,
-  TRANSACTION_OP_REPLACE
-}
+import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
+import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
@@ -83,7 +80,7 @@ class AsyncTransactionAttemptContext private[scala] (
           span,
           FutureConversions
             .javaMonoToScalaFuture(
-              internal.insert(collection.collectionIdentifier, id, encoded, new SpanWrapper(span))
+              internal.insert(collection.collectionIdentifier, id, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span))
             )
             .map(TransactionGetResult)
         )
@@ -109,7 +106,7 @@ class AsyncTransactionAttemptContext private[scala] (
         closeSpan(
           span,
           FutureConversions
-            .javaMonoToScalaFuture(internal.replace(doc.internal, encoded, new SpanWrapper(span)))
+            .javaMonoToScalaFuture(internal.replace(doc.internal, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span)))
             .map(TransactionGetResult)
         )
     }

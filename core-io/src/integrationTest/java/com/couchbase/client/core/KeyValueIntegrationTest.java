@@ -154,7 +154,7 @@ class KeyValueIntegrationTest extends CoreIntegrationTest {
 
     Throwable t = assertThrows(InvalidArgumentException.class, () -> new SubdocMutateRequest(kvTimeout,
         core.context(), CollectionIdentifier.fromDefault(config().bucketname()), null, env.retryStrategy(), "foo",
-        insert, upsert, false, false, false, commands, expiry, preserveExpiry, 0, Optional.empty(), null));
+        insert, upsert, false, false, false, commands, expiry, preserveExpiry, 0, 0, Optional.empty(), null));
 
     assertTrue(t.getMessage().contains(expectedMessageSubstring));
   }

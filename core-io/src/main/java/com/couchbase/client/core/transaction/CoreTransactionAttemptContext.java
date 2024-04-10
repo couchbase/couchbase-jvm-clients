@@ -68,6 +68,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
@@ -92,6 +93,7 @@ import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
 import com.couchbase.client.core.transaction.components.OperationTypes;
 import com.couchbase.client.core.transaction.components.TransactionLinks;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
+import com.couchbase.client.core.transaction.forwards.Extension;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
 import com.couchbase.client.core.transaction.forwards.Supported;
@@ -150,6 +152,8 @@ import static com.couchbase.client.core.error.transaction.TransactionOperationFa
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.FinalErrorToRaise;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
+import static com.couchbase.client.core.msg.kv.CodecFlags.BINARY_COMMON_FLAGS;
+import static com.couchbase.client.core.msg.kv.CodecFlags.JSON_COMMON_FLAGS;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_AMBIGUOUS;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_ATR_FULL;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_CAS_MISMATCH;
@@ -182,6 +186,7 @@ public class CoreTransactionAttemptContext {
         }
     }
 
+    public static final byte[] NEAR_EMPTY_BYTE_ARRAY = new byte[]{'n','u','l','l'};
     public static final int TRANSACTION_STATE_BIT_COMMIT_NOT_ALLOWED = 0x1;
     public static final int TRANSACTION_STATE_BIT_APP_ROLLBACK_NOT_ALLOWED = 0x2;
     public static final int TRANSACTION_STATE_BIT_SHOULD_NOT_ROLLBACK = 0x4;
@@ -453,9 +458,9 @@ public class CoreTransactionAttemptContext {
                 boolean usable = ow.content != null;
                 LOGGER.info(attemptId, "found own-write of mutated doc %s, usable = %s", DebugUtil.docId(collection, id), usable);
                 if (usable) {
-                    // Use the staged content as the body.  The staged content in the output TransactionGetResult should not be used for anything so we are safe to pass null.
+                    // Use the staged content as the body.  The staged content & userFlags in the output TransactionGetResult should not be used for anything so we are safe to pass null & 0.
                     return unlock(lockToken, "found own-write of mutation")
-                            .then(Mono.just(Optional.of(createTransactionGetResult(ow.operationId, collection, id, ow.content, null, ow.cas,
+                            .then(Mono.just(Optional.of(createTransactionGetResult(ow.operationId, collection, id, ow.content, ow.stagedUserFlags, null, 0, ow.cas,
                                     ow.documentMetadata, ow.type.toString(), ow.crc32))));
                 }
             }
@@ -625,6 +630,7 @@ public class CoreTransactionAttemptContext {
 
                             ret = Optional.of(new CoreTransactionGetResult(id,
                                     content,
+                                    JSON_COMMON_FLAGS, // If fetching from query, currently is must be JSON (binary not supported)
                                     cas,
                                     collection,
                                     null,
@@ -724,24 +730,24 @@ public class CoreTransactionAttemptContext {
      * @param content    the content to insert
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResultInternal</code>
      */
-    public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content, SpanWrapper pspan) {
+    public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content, int flagsToStage, SpanWrapper pspan) {
 
         return doKVOperation("insert " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_INSERT, collection, id,
-                (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, span, lockToken));
+                (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, flagsToStage, span, lockToken));
     }
 
-    private Mono<CoreTransactionGetResult> insertInternal(String operationId, CollectionIdentifier collection, String id, byte[] content,
+    private Mono<CoreTransactionGetResult> insertInternal(String operationId, CollectionIdentifier collection, String id, byte[] content, int flagsToStage,
                                                           SpanWrapper span, ReactiveLock.Waiter lockToken) {
         return Mono.defer(() -> {
             if (queryModeLocked()) {
-                return insertWithQueryLocked(collection, id, content, lockToken, span);
+                return insertWithQueryLocked(collection, id, content, flagsToStage, lockToken, span);
             } else {
-                return insertWithKVLocked(operationId, collection, id, content, span, lockToken);
+                return insertWithKVLocked(operationId, collection, id, content, flagsToStage, span, lockToken);
             }
         });
     }
 
-    private Mono<CoreTransactionGetResult> insertWithKVLocked(String operationId, CollectionIdentifier collection, String id, byte[] content, SpanWrapper span, ReactiveLock.Waiter lockToken) {
+    private Mono<CoreTransactionGetResult> insertWithKVLocked(String operationId, CollectionIdentifier collection, String id, byte[] content, int flagsToStage, SpanWrapper span, ReactiveLock.Waiter lockToken) {
         assertLocked("insertWithKV");
         Optional<StagedMutation> existing = findStagedMutationLocked(collection, id);
 
@@ -766,15 +772,16 @@ public class CoreTransactionAttemptContext {
                         // Use the doc of the remove to ensure CAS
                         // It is ok to pass null for contentOfBody, since we are replacing a remove
                         return createStagedReplace(operationId, existing.get().collection, existing.get().id, existing.get().cas,
-                                existing.get().documentMetadata, existing.get().crc32, content, null, span, false);
+                                existing.get().documentMetadata, existing.get().crc32, content, flagsToStage, null, flagsToStage, span, false);
                     } else {
-                        return createStagedInsert(operationId, collection, id, content, span, Optional.empty());
+                        return createStagedInsert(operationId, collection, id, content, flagsToStage, span, Optional.empty());
                     }
                 }));
     }
 
-    private Mono<CoreTransactionGetResult> insertWithQueryLocked(CollectionIdentifier collection, String id, byte[] content, ReactiveLock.Waiter lockToken, SpanWrapper span) {
+    private Mono<CoreTransactionGetResult> insertWithQueryLocked(CollectionIdentifier collection, String id, byte[] content, int flags, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
+            requireNonBinaryContent(flags);
             ArrayNode params = Mapper.createArrayNode()
                     .add(makeKeyspace(collection))
                     .add(id)
@@ -824,7 +831,8 @@ public class CoreTransactionAttemptContext {
 
                         return CoreTransactionGetResult.createFromInsert(collection,
                                 id,
-                                content.toString().getBytes(StandardCharsets.UTF_8),
+                                content,
+                                flags,
                                 transactionId(),
                                 attemptId,
                                 null, null, null, null,
@@ -947,9 +955,9 @@ public class CoreTransactionAttemptContext {
      * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
      * object is modified.
      */
-    public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, SpanWrapper pspan) {
+    public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, int flags, SpanWrapper pspan) {
         return doKVOperation("replace " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
-                (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, span, lockToken));
+                (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, flags, span, lockToken));
     }
 
     private <T> Mono<T> createMonoBridge(String debug, Mono<T> internal) {
@@ -1070,18 +1078,19 @@ public class CoreTransactionAttemptContext {
     private Mono<CoreTransactionGetResult> replaceInternalLocked(String operationId,
                                                                  CoreTransactionGetResult doc,
                                                                  byte[] content,
+                                                                 int flags,
                                                                  SpanWrapper pspan,
                                                                  ReactiveLock.Waiter lockToken) {
         LOGGER.info(attemptId, "replace doc %s, operationId = %s", doc, operationId);
 
         if (queryModeLocked()) {
-            return replaceWithQueryLocked(doc, content, lockToken, pspan);
+            return replaceWithQueryLocked(doc, content, flags, lockToken, pspan);
         } else {
-            return replaceWithKVLocked(operationId, doc, content, pspan, lockToken);
+            return replaceWithKVLocked(operationId, doc, content, flags, pspan, lockToken);
         }
     }
 
-    private Mono<CoreTransactionGetResult> replaceWithKVLocked(String operationId, CoreTransactionGetResult doc, byte[] content, SpanWrapper pspan, ReactiveLock.Waiter lockToken) {
+    private Mono<CoreTransactionGetResult> replaceWithKVLocked(String operationId, CoreTransactionGetResult doc, byte[] content, int flags, SpanWrapper pspan, ReactiveLock.Waiter lockToken) {
         Optional<StagedMutation> existing = findStagedMutationLocked(doc);
         boolean mayNeedToWriteATR = state == AttemptState.NOT_STARTED;
 
@@ -1108,11 +1117,11 @@ public class CoreTransactionAttemptContext {
 
                             .then(Mono.defer(() -> {
                                 if (existing.isPresent() && existing.get().type == StagedMutationType.INSERT) {
-                                    return createStagedInsert(operationId, doc.collection(), doc.id(), content, pspan,
+                                    return createStagedInsert(operationId, doc.collection(), doc.id(), content, flags, pspan,
                                             Optional.of(doc.cas()));
                                 } else {
                                     return createStagedReplace(operationId, doc.collection(), doc.id(), doc.cas(),
-                                            doc.documentMetadata(), doc.crc32OfGet(), content, doc.contentAsBytes(), pspan, doc.links().isDeleted());
+                                            doc.documentMetadata(), doc.crc32OfGet(), content, flags, doc.contentAsBytes(), doc.userFlags(), pspan, doc.links().isDeleted());
                                 }
                             }));
                 }));
@@ -1166,8 +1175,16 @@ public class CoreTransactionAttemptContext {
         return atrCollection.get();
     }
 
-    private Mono<CoreTransactionGetResult> replaceWithQueryLocked(CoreTransactionGetResult doc, byte[] content, ReactiveLock.Waiter lockToken, SpanWrapper span) {
+    private void requireNonBinaryContent(int userFlags) {
+        if (CodecFlags.extractCommonFormatFlags(userFlags) == CodecFlags.CommonFlags.BINARY.ordinal()) {
+            RuntimeException cause = new FeatureNotAvailableException("Binary documents are only supported in a KV-only transaction");
+            throw operationFailed(createError().cause(cause).build());
+        }
+    }
+
+    private Mono<CoreTransactionGetResult> replaceWithQueryLocked(CoreTransactionGetResult doc, byte[] content, int flags, ReactiveLock.Waiter lockToken, SpanWrapper span) {
         return Mono.defer(() -> {
+            requireNonBinaryContent(flags);
             ObjectNode txData = makeTxdata();
             txData.put("scas", Long.toString(doc.cas()));
             doc.txnMeta().ifPresent(v -> txData.set("txnMeta", v));
@@ -1221,6 +1238,7 @@ public class CoreTransactionAttemptContext {
 
                         return new CoreTransactionGetResult(doc.id(),
                                 content,
+                                JSON_COMMON_FLAGS, // If using query, currently is must be JSON (binary not supported)
                                 cas,
                                 doc.collection(),
                                 null,
@@ -1448,7 +1466,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeAtrPending.apply(this)) // Testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, collection, atrId.get(), kvTimeoutMutating(),
-                                    false, true, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrPending"), span,
+                                    false, true, false, false, false, 0, BINARY_COMMON_FLAGS, durabilityLevel(), OptionsUtil.createClientContext("atrPending"), span,
                                     Arrays.asList(
                                             new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, prefix + "." + TransactionFields.ATR_FIELD_TRANSACTION_ID, serialize(transactionId()), true, true, false, 0),
                                             new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, prefix + "." + TransactionFields.ATR_FIELD_STATUS, serialize(AttemptState.PENDING.name()), false, true, false, 1),
@@ -1531,23 +1549,31 @@ public class CoreTransactionAttemptContext {
                         Optional<DocumentMetadata> documentMetadata,
                         Optional<String> crc32OfGet,
                         byte[] contentToStage,
-                        byte[] contentOfBody,
+                        int userFlagsOfContentToStage,
+                        byte[] contentOfExistingDocument,
+                        int userFlagsOfExistingDocument,
                         SpanWrapper pspan,
                         boolean accessDeleted) {
         return Mono.defer(() -> {
             assertNotLocked("createStagedReplace");
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_REPLACE_STAGE, pspan);
 
-            byte[] txn = createDocumentMetadata(OperationTypes.REPLACE, operationId, documentMetadata);
+            boolean isBinary = CodecFlags.extractCommonFormatFlags(userFlagsOfContentToStage) == CodecFlags.CommonFlags.BINARY.ordinal();
+            byte[] txn = createDocumentMetadata(OperationTypes.REPLACE, operationId, documentMetadata, userFlagsOfContentToStage);
 
             return hooks.beforeStagedReplace.apply(this, id) // test hook
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, true, false, cas, durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
+                            false, false, false, true, false, cas, userFlagsOfExistingDocument, durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn", txn, true, true, false, 0),
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.stgd", contentToStage, false, true, false, 1),
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
+                                    isBinary ? new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.stgd", NEAR_EMPTY_BYTE_ARRAY, false, true, false,  1)
+                                            : new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.bin", NEAR_EMPTY_BYTE_ARRAY, false, true, false, 1),
+                                    isBinary ? new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn.op.stgd", null, false, true, false,  2)
+                                            : new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn.op.bin", null, false, true, false, 2),
+                                    isBinary ? new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.bin", contentToStage, false, true, false, true, 3)
+                                            : new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.stgd", contentToStage, false, true, false, false, 3),
+                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 4)
                             )))
 
                     .publishOn(scheduler())
@@ -1569,17 +1595,18 @@ public class CoreTransactionAttemptContext {
 
                     // Save the new CAS
                     .flatMap(updatedDoc -> {
-                        CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id, contentToStage,
-                                contentOfBody, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
+                        CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id,
+                                contentOfExistingDocument, userFlagsOfExistingDocument, contentToStage, userFlagsOfContentToStage, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
                         return supportsReplaceBodyWithXattr(collection.bucket())
-                                .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet, supports ? null : contentToStage, StagedMutationType.REPLACE))
+                                .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet,
+                                        userFlagsOfExistingDocument, supports ? null : contentToStage, userFlagsOfContentToStage, StagedMutationType.REPLACE))
                                         .thenReturn(out));
                     })
 
                     .onErrorResume(err -> {
                         return handleErrorOnStagedMutation("replacing", collection, id, err, span, crc32OfGet,
                                 (newCas) -> createStagedReplace(operationId, collection, id, newCas, documentMetadata,
-                                        crc32OfGet, contentToStage, contentOfBody, pspan, accessDeleted));
+                                        crc32OfGet, contentToStage, userFlagsOfContentToStage, contentOfExistingDocument, userFlagsOfExistingDocument, pspan, accessDeleted));
                     })
 
                     .doOnError(err -> span.finish(err))
@@ -1597,14 +1624,17 @@ public class CoreTransactionAttemptContext {
                                                                 CollectionIdentifier collection,
                                                                 String id,
                                                                 @Nullable byte[] bodyContent,
+                                                                int currentUserFlags,
                                                                 @Nullable byte[] stagedContent,
+                                                                int stagedUserFlags,
                                                                 long cas,
                                                                 Optional<DocumentMetadata> documentMetadata,
                                                                 String opType,
                                                                 Optional<String> crc32OfFetch) {
-        String stagedContentAsStr = stagedContent == null ? null : new String(stagedContent, StandardCharsets.UTF_8);
+        boolean isBinary = CodecFlags.extractCommonFormatFlags(stagedUserFlags) == CodecFlags.CommonFlags.BINARY.ordinal();
         TransactionLinks links = new TransactionLinks(
-                Optional.ofNullable(stagedContentAsStr),
+                isBinary ? Optional.empty() : Optional.ofNullable(stagedContent),
+                !isBinary ? Optional.empty() : Optional.ofNullable(stagedContent),
                 atrId,
                 atrCollection.map(CollectionIdentifier::bucket),
                 atrCollection.flatMap(CollectionIdentifier::scope),
@@ -1618,10 +1648,13 @@ public class CoreTransactionAttemptContext {
                 true,
                 Optional.empty(),
                 Optional.empty(),
-                Optional.of(operationId)
+                Optional.of(operationId),
+                Optional.of(stagedUserFlags)
         );
-        CoreTransactionGetResult out = new CoreTransactionGetResult(id,
+
+        return new CoreTransactionGetResult(id,
                 bodyContent,
+                currentUserFlags,
                 cas,
                 collection,
                 links,
@@ -1629,16 +1662,19 @@ public class CoreTransactionAttemptContext {
                 Optional.empty(),
                 crc32OfFetch
         );
-
-        return out;
     }
 
     private byte[] createDocumentMetadata(String opType,
                                           String operationId,
-                                          Optional<DocumentMetadata> documentMetadata) {
+                                          Optional<DocumentMetadata> documentMetadata,
+                                          int userFlagsToStage) {
+        boolean isBinary = CodecFlags.extractCommonFormatFlags(userFlagsToStage) == CodecFlags.CommonFlags.BINARY.ordinal();
 
         ObjectNode op = Mapper.createObjectNode();
         op.put("type", opType);
+
+        ObjectNode aux = Mapper.createObjectNode();
+        aux.put("uf", userFlagsToStage);
 
         ObjectNode ret = Mapper.createObjectNode();
         ret.set("id", Mapper.createObjectNode()
@@ -1651,6 +1687,7 @@ public class CoreTransactionAttemptContext {
                 .put("scp", atrCollection.get().scope().orElse(DEFAULT_SCOPE))
                 .put("coll", atrCollection.get().collection().orElse(DEFAULT_COLLECTION)));
         ret.set("op", op);
+        ret.set("aux", aux);
 
         ObjectNode restore = Mapper.createObjectNode();
 
@@ -1660,6 +1697,19 @@ public class CoreTransactionAttemptContext {
 
         if (restore.size() > 0) {
             ret.set("restore", restore);
+        }
+
+        if (isBinary && (opType.equals(OperationTypes.REPLACE) || opType.equals(OperationTypes.INSERT))) {
+            ObjectNode fce = Mapper.createObjectNode()
+                    .put("e", Extension.EXT_BINARY_SUPPORT.value())
+                    .put("b", "f");
+            ArrayNode fcea = Mapper.createArrayNode().add(fce);
+            ObjectNode fc = Mapper.createObjectNode();
+            fc.set(ForwardCompatibilityStage.WRITE_WRITE_CONFLICT_INSERTING.value(), fcea);
+            fc.set(ForwardCompatibilityStage.WRITE_WRITE_CONFLICT_INSERTING_GET.value(), fcea);
+            fc.set(ForwardCompatibilityStage.GETS.value(), fcea);
+            fc.set(ForwardCompatibilityStage.CLEANUP_ENTRY.value(), fcea);
+            ret.set("fc", fc);
         }
 
         try {
@@ -1679,12 +1729,12 @@ public class CoreTransactionAttemptContext {
 
             LOGGER.info(attemptId, "about to remove doc %s with cas %d", DebugUtil.docId(doc), cas);
 
-            byte[] txn = createDocumentMetadata(OperationTypes.REMOVE, operationId, doc.documentMetadata());
+            byte[] txn = createDocumentMetadata(OperationTypes.REMOVE, operationId, doc.documentMetadata(), doc.userFlags());
 
             return hooks.beforeStagedRemove.apply(this, doc.id()) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, doc.collection(), doc.id(), kvTimeoutMutating(),
-                            false, false, false, accessDeleted, false, cas, durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
+                            false, false, false, accessDeleted, false, cas, doc.userFlags(), durabilityLevel(), OptionsUtil.createClientContext("createStagedReplace"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn", txn, true, true, false, 0),
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
@@ -1703,7 +1753,7 @@ public class CoreTransactionAttemptContext {
                         // Save so the staged mutation can be committed/rolled back with the correct CAS
                         doc.cas(response.cas());
                         return addStagedMutation(new StagedMutation(operationId, doc.id(), doc.collection(), doc.cas(),
-                                doc.documentMetadata(), doc.crc32OfGet(), null, StagedMutationType.REMOVE));
+                                doc.documentMetadata(), doc.crc32OfGet(), doc.userFlags(), null, 0 /* unused */, StagedMutationType.REMOVE));
                     })
 
                     .then()
@@ -1790,6 +1840,7 @@ public class CoreTransactionAttemptContext {
                                                                              CollectionIdentifier collection,
                                                                              String id,
                                                                              byte[] content,
+                                                                             int flags,
                                                                              SpanWrapper pspan) {
         String bp = "DocExists on " + DebugUtil.docId(collection, id) + ": ";
         MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
@@ -1834,7 +1885,7 @@ public class CoreTransactionAttemptContext {
                                         LOGGER.info(attemptId, "%s doc %s is a regular tombstone without txn metadata, proceeding to overwrite",
                                                 bp, DebugUtil.docId(collection, id));
 
-                                        return createStagedInsert(operationId, collection, id, content, pspan, Optional.of(r.cas()));
+                                        return createStagedInsert(operationId, collection, id, content, flags, pspan, Optional.of(r.cas()));
                                     } else if (!r.links().isDocumentInTransaction()) {
                                         LOGGER.info(attemptId, "%s doc %s exists but is not in txn, raising " +
                                                 "DocumentExistsException", bp, DebugUtil.docId(collection, id));
@@ -1848,7 +1899,8 @@ public class CoreTransactionAttemptContext {
                                                         bp, DebugUtil.docId(collection, id));
 
                                                 return addStagedMutation(new StagedMutation(operationId, r.id(), r.collection(), r.cas(),
-                                                        r.documentMetadata(), r.crc32OfGet(), r.links().stagedContent().get().getBytes(StandardCharsets.UTF_8), StagedMutationType.INSERT))
+                                                        // Since we are resolving an ambiguous write, `flags` should match with r.links().stagedContentJsonOrBinary()
+                                                        r.documentMetadata(), r.crc32OfGet(), flags, r.links().stagedContentJsonOrBinary().get(), flags, StagedMutationType.INSERT))
                                                         .thenReturn(r);
                                             }
 
@@ -1871,7 +1923,7 @@ public class CoreTransactionAttemptContext {
                                         // Will return Mono.empty if it's safe to overwrite, Mono.error otherwise
                                         else return checkAndHandleBlockingTxn(r, pspan, ForwardCompatibilityStage.WRITE_WRITE_CONFLICT_INSERTING, Optional.empty())
 
-                                                .then(overwriteStagedInsert(operationId, collection, id, content, pspan, bp, r, lir));
+                                                .then(overwriteStagedInsert(operationId, collection, id, content, flags, pspan, bp, r, lir));
                                     }
                                 }));
 
@@ -1889,6 +1941,7 @@ public class CoreTransactionAttemptContext {
                                                                  CollectionIdentifier collection,
                                                                  String id,
                                                                  byte[] content,
+                                                                 int flags,
                                                                  SpanWrapper pspan,
                                                                  String bp,
                                                                  CoreTransactionGetResult r,
@@ -1898,7 +1951,7 @@ public class CoreTransactionAttemptContext {
             CbPreconditions.check(r.links().op().get().equals(OperationTypes.INSERT));
 
             if (lir.isDeleted()) {
-                return createStagedInsert(operationId, collection, id, content, pspan, Optional.of(r.cas()));
+                return createStagedInsert(operationId, collection, id, content, flags, pspan, Optional.of(r.cas()));
             }
             else {
                 LOGGER.info(attemptId, "%s removing %s as it's a protocol 1.0 staged insert",
@@ -1927,7 +1980,7 @@ public class CoreTransactionAttemptContext {
                             return Mono.error(operationFailed(out.build()));
                         })
 
-                        .then(createStagedInsert(operationId, collection, id, content, pspan, Optional.empty()));
+                        .then(createStagedInsert(operationId, collection, id, content, flags, pspan, Optional.empty()));
             }
         });
     }
@@ -1945,13 +1998,15 @@ public class CoreTransactionAttemptContext {
                                                               CollectionIdentifier collection,
                                                               String id,
                                                               byte[] content,
+                                                              int flagsOfContentToStage,
                                                               SpanWrapper pspan,
                                                               Optional<Long> cas) {
         return Mono.defer(() -> {
             assertNotLocked("createStagedInsert");
             SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_INSERT_STAGE, pspan);
+            boolean isBinary = CodecFlags.extractCommonFormatFlags(flagsOfContentToStage) == CodecFlags.CommonFlags.BINARY.ordinal();
 
-            byte[] txn = createDocumentMetadata(OperationTypes.INSERT, operationId, Optional.empty());
+            byte[] txn = createDocumentMetadata(OperationTypes.INSERT, operationId, Optional.empty(), flagsOfContentToStage);
 
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "about to insert staged doc %s as shadow document, cas=%s, operationId=%s",
@@ -1962,11 +2017,12 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeStagedInsert.apply(this, id)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), !cas.isPresent(),
-                                    false, false, true, true, cas.orElse(0L), durabilityLevel(), OptionsUtil.createClientContext("createStagedInsert"), span,
+                                    false, false, true, true, cas.orElse(0L), flagsOfContentToStage, durabilityLevel(), OptionsUtil.createClientContext("createStagedInsert"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn", txn, true, true, false, 0),
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.stgd", content, false, true, false, 1),
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 2)
+                                    isBinary ? new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.bin", content, false, true, false, true, 3)
+                                            : new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.stgd", content, false, true, false, 3),
+                                    new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, "txn.op.crc32", serialize("${Mutation.value_crc32c}"), false, true, true, 4)
                             )))
 
                     .publishOn(scheduler())
@@ -1984,6 +2040,7 @@ public class CoreTransactionAttemptContext {
                         CoreTransactionGetResult out = CoreTransactionGetResult.createFromInsert(collection,
                                 id,
                                 content,
+                                flagsOfContentToStage,
                                 transactionId(),
                                 attemptId,
                                 atrId.get(),
@@ -1994,7 +2051,7 @@ public class CoreTransactionAttemptContext {
 
                         return supportsReplaceBodyWithXattr(collection.bucket())
                                 .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, out.id(), out.collection(), out.cas(),
-                                        out.documentMetadata(), Optional.empty(), supports ? null : content, StagedMutationType.INSERT))
+                                        out.documentMetadata(), Optional.empty(), flagsOfContentToStage, supports ? null : content, flagsOfContentToStage, StagedMutationType.INSERT))
                                         .thenReturn(out));
                     })
 
@@ -2016,14 +2073,14 @@ public class CoreTransactionAttemptContext {
                                 return setExpiryOvertimeModeAndFail(err, CoreTransactionAttemptContextHooks.HOOK_CREATE_STAGED_INSERT, ec);
                             } else if (ec == FAIL_AMBIGUOUS) {
                                 return Mono.delay(DEFAULT_DELAY_RETRYING_OPERATION, scheduler())
-                                        .then(createStagedInsert(operationId, collection, id, content, span, cas));
+                                        .then(createStagedInsert(operationId, collection, id, content, flagsOfContentToStage, span, cas));
                             } else if (ec == FAIL_TRANSIENT) {
                                 return Mono.error(operationFailed(out.retryTransaction().build()));
                             } else if (ec == FAIL_HARD) {
                                 return Mono.error(operationFailed(out.doNotRollbackAttempt().build()));
                             } else if (ec == FAIL_DOC_ALREADY_EXISTS
                                     || ec == FAIL_CAS_MISMATCH) {
-                                return handleDocExistsDuringStagedInsert(operationId, collection, id, content, span);
+                                return handleDocExistsDuringStagedInsert(operationId, collection, id, content, flagsOfContentToStage, span);
                             } else {
                                 return Mono.error(operationFailed(out.build()));
                             }
@@ -2423,7 +2480,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeAtrComplete.apply(this)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
-                            false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrComplete"), span,
+                            false, false, false, false, false, 0, BINARY_COMMON_FLAGS, durabilityLevel(), OptionsUtil.createClientContext("atrComplete"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                             )))
@@ -2626,8 +2683,8 @@ public class CoreTransactionAttemptContext {
             CollectionIdentifier collection = staged.collection;
 
             return Mono.fromRunnable(() -> {
-                LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s supportsReplaceBodyWithXattr=%s",
-                        DebugUtil.docId(collection, id), cas, insertMode, ambiguityResolutionMode, staged.supportsReplaceBodyWithXattr());
+                LOGGER.info(attemptId, "commit - committing doc %s, cas=%d, insertMode=%s, ambiguity-resolution=%s supportsReplaceBodyWithXattr=%s binary=%s userFlags=%d",
+                        DebugUtil.docId(collection, id), cas, insertMode, ambiguityResolutionMode, staged.supportsReplaceBodyWithXattr(), staged.isStagedBinary(), staged.stagedUserFlags);
 
                 checkExpiryDuringCommitOrRollbackLocked(CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC, Optional.of(id));
             })
@@ -2638,8 +2695,10 @@ public class CoreTransactionAttemptContext {
                         if (insertMode) {
                             if (staged.supportsReplaceBodyWithXattr()) {
                                 return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, true, true, false,
-                                        cas, durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span, Arrays.asList(
-                                                new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
+                                        cas, staged.stagedUserFlags, durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span, Arrays.asList(
+                                                staged.isStagedBinary()
+                                                        ? new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_BINARY, null, false, true, false, true, 0)
+                                                        : new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_JSON, null, false, true, false, false, 0),
                                                 new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
                                         ))
                                         .doOnNext(v -> {
@@ -2649,7 +2708,7 @@ public class CoreTransactionAttemptContext {
                                         .map(SubdocMutateResponse::cas);
                             }
                             else {
-                                return TransactionKVHandler.insert(core, collection, id, staged.content, kvTimeoutMutating(),
+                                return TransactionKVHandler.insert(core, collection, id, staged.content, staged.stagedUserFlags, kvTimeoutMutating(),
                                                 durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span)
                                         .doOnNext(v -> {
                                             addUnits(v.flexibleExtras());
@@ -2660,8 +2719,10 @@ public class CoreTransactionAttemptContext {
                         } else {
                             if (staged.supportsReplaceBodyWithXattr()) {
                                 return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, false, false, false,
-                                                cas, durabilityLevel(), OptionsUtil.createClientContext("commitDoc"), span, Arrays.asList(
-                                                        new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA, null, false, true, false, 0),
+                                                cas, staged.stagedUserFlags, durabilityLevel(), OptionsUtil.createClientContext("commitDoc"), span, Arrays.asList(
+                                                        staged.isStagedBinary()
+                                                                ? new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_BINARY, null, false, true, false, true, 0)
+                                                                : new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_JSON, null, false, true, false, false, 0),
                                                         new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 1)
                                                 ))
                                         .doOnNext(v -> {
@@ -2672,7 +2733,7 @@ public class CoreTransactionAttemptContext {
                             }
                             else {
                                 return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                                                false, false, false, false, false, cas, durabilityLevel(),
+                                                false, false, false, false, false, cas, staged.stagedUserFlags, durabilityLevel(),
                                                 OptionsUtil.createClientContext("commitDoc"), span,
                                                 Arrays.asList(
                                                         // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
@@ -3192,7 +3253,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeAtrCommit.apply(this)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
-                            false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrCommit"), span, specs))
+                            false, false, false, false, false, 0, BINARY_COMMON_FLAGS, durabilityLevel(), OptionsUtil.createClientContext("atrCommit"), span, specs))
 
                     .publishOn(scheduler())
 
@@ -3465,7 +3526,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeAtrRolledBack.apply(this))
 
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
-                            false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext(CoreTransactionAttemptContextHooks.HOOK_ATR_ROLLBACK_COMPLETE), span,
+                            false, false, false, false, false, 0, BINARY_COMMON_FLAGS, durabilityLevel(), OptionsUtil.createClientContext(CoreTransactionAttemptContextHooks.HOOK_ATR_ROLLBACK_COMPLETE), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, prefix, null, false, true, false, 0)
                                     )))
@@ -3531,7 +3592,7 @@ public class CoreTransactionAttemptContext {
                             case INSERT:
                                 return rollbackStagedInsertLocked(isAppRollback, span, staged.collection, staged.id, staged.cas);
                             default:
-                                return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, staged.collection, staged.id, staged.cas);
+                                return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, staged.collection, staged.id, staged.cas, staged.currentUserFlags);
                         }
                     })
 
@@ -3543,7 +3604,7 @@ public class CoreTransactionAttemptContext {
         });
     }
 
-    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper span, CollectionIdentifier collection, String id, long cas) {
+    private Mono<Void> rollbackStagedReplaceOrRemoveLocked(boolean isAppRollback, SpanWrapper span, CollectionIdentifier collection, String id, long cas, int userFlags) {
         return Mono.defer(() -> {
             return Mono.defer(() -> {
                 LOGGER.info(attemptId, "rolling back doc %s with cas %d by removing staged mutation",
@@ -3554,7 +3615,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeDocRolledBack.apply(this, id)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, false, false, cas, durabilityLevel(), OptionsUtil.createClientContext("rollbackDoc"), span,
+                            false, false, false, false, false, cas, userFlags, durabilityLevel(), OptionsUtil.createClientContext("rollbackDoc"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
@@ -3598,7 +3659,7 @@ public class CoreTransactionAttemptContext {
                             return Mono.empty();
                         } else if (ec == FAIL_CAS_MISMATCH) {
                             return handleDocChangedDuringRollback(span, id, collection,
-                                    (newCas) -> rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, collection, id, newCas));
+                                    (newCas) -> rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, collection, id, newCas, userFlags));
                         } else if (ec == FAIL_HARD) {
                             return Mono.error(operationFailed(isAppRollback, builder.doNotRollbackAttempt().build()));
                         } else {
@@ -3629,7 +3690,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeRollbackDeleteInserted.apply(this, id))
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, true, false, cas, durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span,
+                            false, false, false, true, false, cas, 0, durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
@@ -3716,7 +3777,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeRemoveStagedInsert.apply(this, id))
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, true, false, doc.cas(), durabilityLevel(), OptionsUtil.createClientContext("removeStagedInsert"), span,
+                            false, false, false, true, false, doc.cas(), doc.userFlags(), durabilityLevel(), OptionsUtil.createClientContext("removeStagedInsert"), span,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
@@ -3788,7 +3849,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeAtrAborted.apply(this)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, atrCollection.get(), atrId.get(), kvTimeoutMutating(),
-                            false, false, false, false, false, 0, durabilityLevel(), OptionsUtil.createClientContext("atrAbort"), span, specs))
+                            false, false, false, false, false, 0, BINARY_COMMON_FLAGS, durabilityLevel(), OptionsUtil.createClientContext("atrAbort"), span, specs))
 
                     .publishOn(scheduler())
 
@@ -4343,6 +4404,13 @@ public class CoreTransactionAttemptContext {
                                             final SpanWrapper span) {
         return Mono.defer(() -> {
             assertLocked("queryBeginWork");
+
+            stagedMutationsLocked.forEach(sm -> {
+                if (sm.isStagedBinary()) {
+                    RuntimeException cause = new FeatureNotAvailableException("Binary documents are only supported in a KV-only transaction");
+                    throw operationFailed(createError().cause(cause).build());
+                }
+            });
 
             ObjectNode txdata = makeQueryTxDataLocked();
 

@@ -17,6 +17,7 @@ package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.transaction.components.DocumentMetadata;
 import com.couchbase.client.core.transaction.util.DebugUtil;
 import reactor.util.annotation.Nullable;
@@ -33,6 +34,10 @@ public class StagedMutation {
     public final Optional<String> crc32;
     // The staged content.  Will be null iff cluster does not support ReplaceBodyWithXattr
     public final @Nullable byte[] content;
+    // What the document's user flags currently are.  (Will == stagedUserFlags in some cases, such as inserts)
+    public final int currentUserFlags;
+    // What the document's user flags will be set to post-transaction.
+    public final int stagedUserFlags;
     public final StagedMutationType type;
 
     public StagedMutation(String operationId,
@@ -41,7 +46,9 @@ public class StagedMutation {
                           long cas,
                           Optional<DocumentMetadata> documentMetadata,
                           Optional<String> crc32,
+                          int currentUserFlags,
                           byte[] content,
+                          int stagedUserFlags,
                           StagedMutationType type) {
         this.operationId = operationId;
         this.id = id;
@@ -49,7 +56,9 @@ public class StagedMutation {
         this.cas = cas;
         this.documentMetadata = documentMetadata;
         this.crc32 = crc32;
+        this.currentUserFlags = currentUserFlags;
         this.content = content;
+        this.stagedUserFlags = stagedUserFlags;
         this.type = type;
     }
 
@@ -60,5 +69,9 @@ public class StagedMutation {
 
     public boolean supportsReplaceBodyWithXattr() {
         return content == null;
+    }
+
+    public boolean isStagedBinary() {
+        return CodecFlags.extractCommonFormatFlags(stagedUserFlags) == CodecFlags.CommonFlags.BINARY.ordinal();
     }
 }

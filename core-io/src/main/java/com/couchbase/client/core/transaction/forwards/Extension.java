@@ -146,6 +146,11 @@ public enum Extension {
      * @since 3.4.1
      */
     EXT_QUERY_CONTEXT("QC"),
+
+    /**
+     * @since 3.6.2
+     */
+    EXT_BINARY_SUPPORT("BS"),
     ;
 
     private String value;

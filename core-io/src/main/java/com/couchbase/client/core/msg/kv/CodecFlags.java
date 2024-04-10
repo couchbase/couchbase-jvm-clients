@@ -104,6 +104,16 @@ public enum CodecFlags {
   }
 
   /**
+   * Returns just the 4 bit format field from the common flags.
+   *
+   * @param userFlags the full user flags flags to check.
+   * @return only the format portion of the common flags simple representation (4 bits).
+   */
+  public static int extractCommonFormatFlags(final int userFlags) {
+    return extractCommonFlags(userFlags) & 0x0f;
+  }
+
+  /**
    * Checks whether the upper 3 bits are set, indicating compression presence.
    *
    * It does this by shifting bits to the right until only the most significant

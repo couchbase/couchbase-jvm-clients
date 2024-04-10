@@ -19,9 +19,9 @@ package com.couchbase.client.core.transaction;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.transaction.components.DocumentMetadata;
 import com.couchbase.client.core.transaction.components.OperationTypes;
@@ -33,7 +33,6 @@ import reactor.util.annotation.Nullable;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
-
 
 /**
  * Represents a value fetched from Couchbase, along with additional transactional metadata.
@@ -63,13 +62,18 @@ public class CoreTransactionGetResult {
     private final CollectionIdentifier collection;
 
     private final Optional<JsonNode> txnMeta;
+    private final int userFlags;
 
     /**
+     * Note that it's intentionally obfuscated here as to whether both content and userFlags come from the document's current body, or staged in the transactional metadata.  The MAV read resolution
+     * has been performed by this point.
+     *
      * @param content will be nullable for tombstones, and some niche cases like REMOVE to REPLACE on same doc
      */
     @Stability.Internal
     public CoreTransactionGetResult(String id,
                                     @Nullable byte[] content,
+                                    int userFlags,
                                     long cas,
                                     CollectionIdentifier collection,
                                     @Nullable TransactionLinks links,
@@ -78,6 +82,7 @@ public class CoreTransactionGetResult {
                                     Optional<String> crc32OfGet) {
         this.id = Objects.requireNonNull(id);
         this.content = content;
+        this.userFlags = userFlags;
         this.cas = cas;
         this.collection = Objects.requireNonNull(collection);
         this.links = links;
@@ -90,6 +95,7 @@ public class CoreTransactionGetResult {
     public String toString() {
         final StringBuilder sb = new StringBuilder("TransactionGetResultInternal{");
         sb.append("id=").append(DebugUtil.docId(collection, id));
+        sb.append("userFlags=").append(userFlags);
         sb.append(",cas=").append(cas);
         sb.append(",bucket=").append(collection.bucket());
         sb.append(",scope=").append(collection.scope());
@@ -142,11 +148,16 @@ public class CoreTransactionGetResult {
     public Optional<String> crc32OfGet() {
         return crc32OfGet;
     }
+
+    public boolean isBinary() {
+      return links.stagedContentBinary().isPresent();
+    }
     
     @Stability.Internal
     static CoreTransactionGetResult createFromInsert(CollectionIdentifier collection,
                                                      String id,
                                                      byte[] content,
+                                                     int flagsToStage,
                                                      String transactionId,
                                                      String attemptId,
                                                      String atrId,
@@ -155,7 +166,8 @@ public class CoreTransactionGetResult {
                                                      String atrCollectionName,
                                                      long cas) {
         TransactionLinks links = new TransactionLinks(
-                Optional.of(new String(content, CharsetUtil.UTF_8)),
+                CodecFlags.extractCommonFormatFlags(flagsToStage) == CodecFlags.CommonFlags.JSON.ordinal() ? Optional.of(content) : Optional.empty(),
+                CodecFlags.extractCommonFormatFlags(flagsToStage) == CodecFlags.CommonFlags.BINARY.ordinal() ? Optional.of(content) : Optional.empty(),
                 Optional.ofNullable(atrId),
                 Optional.ofNullable(atrBucketName),
                 Optional.ofNullable(atrScopeName),
@@ -170,11 +182,13 @@ public class CoreTransactionGetResult {
                 Optional.empty(),
                 Optional.empty(),
                 // The staged operationId is only used after reading the document so is unimportant here
-                Optional.empty()
+                Optional.empty(),
+                Optional.of(flagsToStage)
         );
 
-        CoreTransactionGetResult out = new CoreTransactionGetResult(id,
+        return new CoreTransactionGetResult(id,
                 content,
+                flagsToStage,
                 cas,
                 collection,
                 links,
@@ -182,15 +196,14 @@ public class CoreTransactionGetResult {
                 Optional.empty(),
                 Optional.empty()
         );
-
-        return out;
     }
 
     @Stability.Internal
     public static CoreTransactionGetResult createFrom(CoreTransactionGetResult doc,
                                                       byte[] content) {
         TransactionLinks links = new TransactionLinks(
-                doc.links.stagedContent(),
+                doc.links.stagedContentJson(),
+                doc.links.stagedContentBinary(),
                 doc.links.atrId(),
                 doc.links.atrBucketName(),
                 doc.links.atrScopeName(),
@@ -204,11 +217,13 @@ public class CoreTransactionGetResult {
                 doc.links.isDeleted(),
                 doc.links.crc32OfStaging(),
                 doc.links.forwardCompatibility(),
-                doc.links.stagedOperationId()
+                doc.links.stagedOperationId(),
+                doc.links().stagedUserFlags()
         );
 
-        CoreTransactionGetResult out = new CoreTransactionGetResult(doc.id,
+        return new CoreTransactionGetResult(doc.id,
                 content,
+                doc.userFlags,
                 doc.cas,
                 doc.collection,
                 links,
@@ -216,8 +231,6 @@ public class CoreTransactionGetResult {
                 Optional.empty(),
                 doc.crc32OfGet
         );
-
-        return out;
 
     }
 
@@ -229,12 +242,14 @@ public class CoreTransactionGetResult {
         Optional<String> transactionId = Optional.empty();
         Optional<String> attemptId = Optional.empty();
         Optional<String> operationId = Optional.empty();
-        Optional<String> stagedContent = Optional.empty();
+        Optional<byte[]> stagedContentJson = Optional.empty();
+        Optional<byte[]> stagedContentBinary = Optional.empty();
         Optional<String> atrBucketName = Optional.empty();
         Optional<String> atrScopeName = Optional.empty();
         Optional<String> atrCollectionName = Optional.empty();
         Optional<String> crc32OfStaging = Optional.empty();
         Optional<ForwardCompatibility> forwardCompatibility = Optional.empty();
+        Optional<Integer> stagedUserFlags = Optional.empty();
 
         // Read from xattrs.txn.restore
         Optional<String> casPreTxn = Optional.empty();
@@ -279,8 +294,7 @@ public class CoreTransactionGetResult {
         // "txn.op.stgd"
         if (doc.values()[3].status().success()) {
             byte[] raw = doc.values()[3].value();
-            String str = new String(raw, CharsetUtil.UTF_8);
-            stagedContent = Optional.of(str);
+            stagedContentJson = Optional.of(raw);
         }
 
         // "txn.op.crc32"
@@ -315,18 +329,36 @@ public class CoreTransactionGetResult {
         Long exptimeFromDocument = restore.path("exptime").longValue();
         String crc32FromDocument = restore.path("value_crc32c").textValue();
 
-        byte[] content;
+        // $document.flags
+        int currentUserFlags = restore.path("flags").intValue();
+
+        // "txn.op.bin"
+        if (doc.values()[8].status().success()) {
+            byte[] raw = doc.values()[8].value();
+            stagedContentBinary = Optional.of(raw);
+        }
+
+        // "txn.aux"
+        if (doc.values()[9].status().success()) {
+            JsonNode aux = MAPPER.readValue(doc.values()[9].value(), JsonNode.class);
+            if (aux.has("uf")) {
+                stagedUserFlags = Optional.of(aux.get("uf").intValue());
+            }
+        }
+
+        byte[] bodyContent;
 
         // body
-        if (doc.values()[8].status().success()) {
-            content = doc.values()[8].value();
+        if (doc.values()[10].status().success()) {
+            bodyContent = doc.values()[10].value();
         }
         else {
-            content = new byte[] {};
+            bodyContent = new byte[] {};
         }
 
         TransactionLinks links = new TransactionLinks(
-                stagedContent,
+                stagedContentJson,
+                stagedContentBinary,
                 atrId,
                 atrBucketName,
                 atrScopeName,
@@ -340,26 +372,30 @@ public class CoreTransactionGetResult {
                 doc.isDeleted(),
                 crc32OfStaging,
                 forwardCompatibility,
-                operationId);
+                operationId,
+                stagedUserFlags);
 
         DocumentMetadata md = new DocumentMetadata(
                 casFromDocument,
                 revidFromDocument,
                 exptimeFromDocument);
 
-        CoreTransactionGetResult out = new CoreTransactionGetResult(documentId,
-                content,
+        return new CoreTransactionGetResult(documentId,
+                bodyContent,
+                currentUserFlags,
                 doc.cas(),
                 collection,
                 links,
                 Optional.of(md),
                 Optional.empty(),
                 Optional.of(crc32FromDocument));
-
-        return out;
     }
 
     public CollectionIdentifier collection() {
         return collection;
+    }
+
+    public int userFlags() {
+        return userFlags;
     }
 }

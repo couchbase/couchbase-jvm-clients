@@ -247,6 +247,15 @@ public enum ServerFeature {
    */
   @SinceCouchbase("7.6")
   CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF(0x1f),
+
+  /**
+   * The server allows:
+   * <p>
+   * a) Binary xattr fields to be read and written.
+   * b) User flags to be sent in sub-document mutation requests.
+   */
+  @SinceCouchbase("7.6.2")
+  SUBDOC_BINARY_XATTR(0x21),
   ;
 
   private static final EnumLookupTable<ServerFeature> lookupTable =

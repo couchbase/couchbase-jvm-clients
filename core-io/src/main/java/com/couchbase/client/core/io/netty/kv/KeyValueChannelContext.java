@@ -46,6 +46,7 @@ public class KeyValueChannelContext {
   private final CollectionMap collectionMap;
   private final ChannelId channelId;
   private final boolean getClusterConfigWithKnownVersion;
+  private final boolean subdocBinaryXattr;
 
   @Stability.Internal
   public KeyValueChannelContext(
@@ -68,6 +69,7 @@ public class KeyValueChannelContext {
     this.createAsDeleted = features.contains(ServerFeature.CREATE_AS_DELETED);
     this.preserveTtl = features.contains(ServerFeature.PRESERVE_TTL);
     this.getClusterConfigWithKnownVersion = features.contains(ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION);
+    this.subdocBinaryXattr = features.contains(ServerFeature.SUBDOC_BINARY_XATTR);
 
     if (syncReplication && !altRequest) {
       throw new IllegalArgumentException("If Synchronous Replication is enabled, the server also " +
@@ -123,6 +125,10 @@ public class KeyValueChannelContext {
 
   public boolean getClusterConfigWithKnownVersion() {
     return getClusterConfigWithKnownVersion;
+  }
+
+  public boolean subdocBinaryXattr() {
+    return subdocBinaryXattr;
   }
 
   /**

@@ -60,6 +60,7 @@ public class TransactionKVHandler {
                                               CollectionIdentifier collectionIdentifier,
                                               final String id,
                                               final byte[] transcodedContent,
+                                              final int flags,
                                               final Duration timeout,
                                               final Optional<DurabilityLevel> durabilityLevel,
                                               final Map<String, Object> clientContext,
@@ -71,7 +72,7 @@ public class TransactionKVHandler {
             InsertRequest request = new InsertRequest(id,
                     transcodedContent,
                     0,
-                    0,
+                    flags,
                     timeout,
                     core.context(),
                     collectionIdentifier,
@@ -189,6 +190,7 @@ public class TransactionKVHandler {
                                                       final boolean accessDeleted,
                                                       final boolean createAsDeleted,
                                                       long cas,
+                                                      int userFlags,
                                                       final Optional<DurabilityLevel> durabilityLevel,
                                                       final Map<String, Object> clientContext,
                                                       final SpanWrapper span,
@@ -203,6 +205,7 @@ public class TransactionKVHandler {
                 accessDeleted,
                 createAsDeleted,
                 cas,
+                userFlags,
                 durabilityLevel,
                 clientContext,
                 span,
@@ -220,6 +223,7 @@ public class TransactionKVHandler {
                                                       final boolean accessDeleted,
                                                       final boolean createAsDeleted,
                                                       long cas,
+                                                      int userFlags,
                                                       final Optional<DurabilityLevel> durabilityLevel,
                                                       final Map<String, Object> clientContext,
                                                       final SpanWrapper pspan,
@@ -255,6 +259,7 @@ public class TransactionKVHandler {
                         0,
                         false, // Preserve expiry only supported on 7.0+
                         cas,
+                        userFlags,
                         durabilityLevel,
                         span.span()
                 );

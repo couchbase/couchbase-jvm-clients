@@ -76,6 +76,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
   private static final byte SUBDOC_FLAG_EXPAND_MACRO = (byte) 0x10;
+  private static final byte SUBDOC_FLAG_BINARY_VALUE = (byte) 0x20;
 
   private static final byte SUBDOC_DOC_FLAG_MKDOC = (byte) 0x01;
   private static final byte SUBDOC_DOC_FLAG_ADD = (byte) 0x02;
@@ -91,6 +92,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   private final long expiration;
   private final boolean preserveExpiry;
   private final long cas;
+  private final int userFlags;
   private final List<Command> commands;
   private final String origKey;
   private final Optional<DurabilityLevel> syncReplicationType;
@@ -110,7 +112,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       storeSemantics == INSERT, storeSemantics == UPSERT, storeSemantics == REVIVE,
       accessDeleted, createAsDeleted,
       convertCommands(commands),
-      expiration, preserveExpiry, cas, syncReplicationType, span
+      expiration, preserveExpiry, cas,
+      // userFlags of 0 is sent because support for this field has been added to the server (from 7.6.2), but not yet the sub-document SDK API.  It is currently exclusively used by transactions.
+      // So we are just preserving the existing functionality, where userFlags was not sent.
+      0,
+      syncReplicationType, span
     );
   }
 
@@ -144,7 +150,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
                              final boolean accessDeleted, final boolean createAsDeleted,
                              final List<Command> commands, long expiration,
                              boolean preserveExpiry,
-                             long cas,
+                             long cas, int userFlags,
                              final Optional<DurabilityLevel> syncReplicationType, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
     this.insertDocument = insertDocument;
@@ -208,6 +214,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.expiration = expiration;
     this.preserveExpiry = preserveExpiry;
     this.cas = cas;
+    this.userFlags = userFlags;
     this.origKey = key;
     this.syncReplicationType = syncReplicationType;
     this.createAsDeleted = createAsDeleted;
@@ -236,11 +243,23 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       key = encodedKeyWithCollection(alloc, ctx);
 
       extras = alloc.buffer();
-      if (expiration != 0) {
+      if (userFlags != 0 && ctx.subdocBinaryXattr()) {
+        // If we are sending userFlags, have to send expiration also, so server can disambiguate between permutations of optional fields.
         extras.writeInt((int) expiration);
+        extras.writeInt(userFlags);
+      } else {
+        if (expiration != 0) {
+          extras.writeInt((int) expiration);
+        }
       }
       if (flags != 0) {
         extras.writeByte(flags);
+      }
+
+      for (Command command : commands) {
+        if (command.binary && !ctx.subdocBinaryXattr()) {
+          throw new FeatureNotAvailableException("Binary documents are only supported when using Couchbase Server 7.6.2 or above");
+        }
       }
 
       if (commands.size() == 1) {
@@ -372,10 +391,16 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     private final boolean createParent;
     private final boolean xattr;
     private final boolean expandMacro;
+    private final boolean binary;
     private final int originalIndex;
 
     public Command(SubdocCommandType type, String path, @Nullable byte[] fragment,
                    boolean createParent, boolean xattr, boolean expandMacro, int originalIndex) {
+      this(type, path,fragment, createParent, xattr, expandMacro, false, originalIndex);
+    }
+
+    public Command(SubdocCommandType type, String path, @Nullable byte[] fragment,
+      boolean createParent, boolean xattr, boolean expandMacro, boolean binary, int originalIndex) {
       this.type = type;
       this.path = path;
       this.xattr = xattr;
@@ -383,6 +408,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       this.createParent = createParent;
       this.expandMacro = expandMacro;
       this.originalIndex = originalIndex;
+      this.binary = binary;
     }
 
     public ByteBuf encode(final ByteBufAllocator alloc) {
@@ -400,6 +426,9 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       }
       if(expandMacro) {
         flags |= SUBDOC_FLAG_EXPAND_MACRO;
+      }
+      if(binary) {
+        flags |= SUBDOC_FLAG_BINARY_VALUE;
       }
       buffer.writeByte(flags);
       buffer.writeShort(pathLength);

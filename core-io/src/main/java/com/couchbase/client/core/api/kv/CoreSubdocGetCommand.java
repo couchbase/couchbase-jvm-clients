@@ -27,11 +27,17 @@ public class CoreSubdocGetCommand {
   private final SubdocCommandType type;
   private final String path;
   private final boolean xattr;
+  private final boolean binary;
 
   public CoreSubdocGetCommand(SubdocCommandType type, String path, boolean xattr) {
+    this(type, path, xattr, false);
+  }
+
+  public CoreSubdocGetCommand(SubdocCommandType type, String path, boolean xattr, boolean binary) {
     this.type = requireNonNull(type);
     this.path = requireNonNull(path);
     this.xattr = xattr;
+    this.binary = binary;
   }
 
   public SubdocCommandType type() {
@@ -44,6 +50,10 @@ public class CoreSubdocGetCommand {
 
   public boolean xattr() {
     return xattr;
+  }
+
+  public boolean binary() {
+    return binary;
   }
 
   @Override

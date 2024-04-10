@@ -90,7 +90,7 @@ public class DocumentGetter {
                                 return Mono.just(Optional.empty());
                             }
                             else {
-                                return Mono.just(Optional.of(CoreTransactionGetResult.createFrom(r, r.links().stagedContent().get().getBytes(UTF_8))));
+                                return Mono.just(Optional.of(CoreTransactionGetResult.createFrom(r, r.links().stagedContentJsonOrBinary().get())));
                             }
                         }
                         else if (resolvingMissingATREntry.equals(r.links().stagedAttemptId())) {
@@ -143,12 +143,14 @@ public class DocumentGetter {
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.id", true, 0),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.atr", true, 1),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.op.type", true, 2),
-                                new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.op.stgd", true, 3),
+                                new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.op.stgd", true, false, 3),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.op.crc32", true, 4),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.restore", true, 5),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.fc", true, 6),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "$document", true, 7),
-                                new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false, 8)
+                                new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.op.bin", true, true, 8),
+                                new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.aux", true, 9),
+                                new SubdocGetRequest.Command(SubdocCommandType.GET_DOC, "", false, 10)
                         ))
 
                 .map(fragment -> {
@@ -247,7 +249,7 @@ public class DocumentGetter {
             }
             else {
                 return Mono.just(Optional.of(CoreTransactionGetResult.createFrom(doc,
-                        doc.links().stagedContent().get().getBytes(UTF_8))));
+                        doc.links().stagedContentJsonOrBinary().get())));
             }
         } else {
             return ForwardCompatibility.check(core, ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, Supported.SUPPORTED)
@@ -262,7 +264,7 @@ public class DocumentGetter {
                                     return Mono.just(Optional.empty());
                                 } else {
                                     return Mono.just(Optional.of(CoreTransactionGetResult.createFrom(doc,
-                                            doc.links().stagedContent().get().getBytes(UTF_8))));
+                                            doc.links().stagedContentJsonOrBinary().get())));
                                 }
 
                             default:

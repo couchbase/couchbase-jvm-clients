@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
@@ -51,7 +52,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,25 +141,27 @@ public class TransactionsCleaner {
                                   CleanupRequest req,
                                   SpanWrapper pspan) {
         return doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
+            CbPreconditions.check(doc.links() != null);
             CbPreconditions.check(doc.links().isDocumentInTransaction());
-            CbPreconditions.check(doc.links().stagedContent().isPresent());
+            CbPreconditions.check(doc.links().stagedContentJsonOrBinary().isPresent());
 
-            byte[] content = doc.links().stagedContent().get().getBytes(StandardCharsets.UTF_8);
+            byte[] content = doc.links().stagedContentJsonOrBinary().get();
 
             return hooks.beforeCommitDoc.apply(doc.id()) // Testing hook
 
                     .then(Mono.defer(() -> {
                         if (lir.isDeleted()) {
-                            return TransactionKVHandler.insert(core, collection, doc.id(), content, kvDurableTimeout(),
+                            return TransactionKVHandler.insert(core, collection, doc.id(), content, doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan);
                         } else {
                             List<SubdocMutateRequest.Command> commands = Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 0),
+                                    // No need to set binary flag here even if document is binary - that's just for xattrs.
                                     new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", content, false, false, false, 1)
                             );
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
-                                    lir.isDeleted(), false, doc.cas(),
+                                    lir.isDeleted(), false, doc.cas(), doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
                                     commands);
                         }
@@ -188,7 +190,7 @@ public class TransactionsCleaner {
 
                     .then(TransactionKVHandler.mutateIn(core, collectionIdentifier, doc.id(), kvDurableTimeout(),
                                 false, false, false,
-                                lir.isDeleted(), false, doc.cas(),
+                                lir.isDeleted(), false, doc.cas(), doc.userFlags(),
                                 req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeTxnLinks"), pspan, Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
                             )))
@@ -239,7 +241,7 @@ public class TransactionsCleaner {
                         if (lir.isDeleted()) {
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
-                                    true, false, doc.cas(),
+                                    true, false, doc.cas(), doc.userFlags(),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
                                     Collections.singletonList(
                                             new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
@@ -485,7 +487,7 @@ public class TransactionsCleaner {
 
                 .then(TransactionKVHandler.mutateIn(core, atrCollection, atrId, kvDurableTimeout(),
                                 false, false, false,
-                                false, false, 0,
+                                false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
                                 req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeATREntry"), pspan, specs))
 
                 .doOnNext(v -> perEntryLog.debug(attemptId, "successfully removed ATR entry"))

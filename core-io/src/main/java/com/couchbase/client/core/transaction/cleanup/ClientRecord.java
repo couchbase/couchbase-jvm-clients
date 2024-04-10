@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.support.OptionsUtil;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
@@ -125,7 +126,7 @@ public class ClientRecord {
                         // cleaned up when it expires.
                         .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
                                 false, false, false,
-                                false, false, 0,
+                                false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
                                 Optional.empty(), OptionsUtil.createClientContext("Cleaner::removeClientFromCleanupSet"), null, Arrays.asList(
                                         new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
                                 )))
@@ -335,7 +336,7 @@ public class ClientRecord {
 
                                     // Use default timeout+durability, as this update is not mission critical.
                                     .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                                            false, false, false, false, false, 0,
+                                            false, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
                                             Optional.empty(), OptionsUtil.createClientContext("ClientRecord::processClient"), span, specs))
 
                                     .thenReturn(cr);
@@ -375,7 +376,7 @@ public class ClientRecord {
         return beforeCreateRecord(this) // testing hook
 
                 .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                        true, false, false, false, false, 0,
+                        true, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
                         Optional.empty(), OptionsUtil.createClientContext("ClientRecord::createClientRecord"), pspan, Arrays.asList(
                                 new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, FIELD_RECORDS + "." + FIELD_CLIENTS, "{}".getBytes(StandardCharsets.UTF_8), false, true, false, 0),
                                 new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 1))))

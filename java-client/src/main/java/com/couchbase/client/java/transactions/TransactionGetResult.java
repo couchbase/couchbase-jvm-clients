@@ -19,8 +19,10 @@ package com.couchbase.client.java.transactions;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.transaction.CoreTransactionGetResult;
 import com.couchbase.client.java.codec.JsonSerializer;
+import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonObject;
+import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
 
@@ -31,11 +33,13 @@ import java.util.Objects;
 public class TransactionGetResult {
     private final CoreTransactionGetResult internal;
     private final JsonSerializer serializer;
+    private final @Nullable Transcoder transcoder;
 
     @Stability.Internal
-    TransactionGetResult(CoreTransactionGetResult internal, JsonSerializer serializer) {
+    TransactionGetResult(CoreTransactionGetResult internal, JsonSerializer serializer, @Nullable Transcoder transcoder) {
         this.internal = Objects.requireNonNull(internal);
         this.serializer = Objects.requireNonNull(serializer);
+        this.transcoder = transcoder;
     }
 
     @Override
@@ -69,6 +73,9 @@ public class TransactionGetResult {
      * @param target the target class to decode the encoded content into.
      */
     public <T> T contentAs(final Class<T> target) {
+        if (transcoder != null) {
+            return transcoder.decode(target, internal.contentAsBytes(), internal.userFlags());
+        }
         return serializer.deserialize(target, internal.contentAsBytes());
     }
 

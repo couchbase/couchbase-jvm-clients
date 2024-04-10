@@ -36,9 +36,9 @@ public class LogDeferDocId {
         StringBuilder sb = new StringBuilder();
         sb.append(collection.bucket());
         sb.append('.');
-        sb.append(collection.scope());
+        sb.append(collection.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
         sb.append('.');
-        sb.append(collection.collection());
+        sb.append(collection.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
         sb.append('.');
         sb.append(docId);
         return RedactableArgument.redactUser(sb.toString()).toString();
