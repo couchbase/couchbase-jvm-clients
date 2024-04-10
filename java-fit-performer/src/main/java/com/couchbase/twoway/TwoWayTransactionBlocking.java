@@ -33,6 +33,10 @@ import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
 import com.couchbase.client.java.transactions.TransactionResult;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
+// [start:3.6.2]
+import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
+import static com.couchbase.client.java.transactions.config.TransactionReplaceOptions.transactionReplaceOptions;
+// [end:3.6.2]
 import com.couchbase.client.performer.core.commands.BatchExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.API;
@@ -64,6 +68,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * Version of TwoWayTransaction that uses the blocking API.
@@ -161,29 +166,49 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
 
         if (op.hasInsert()) {
             final CommandInsert request = op.getInsert();
-            var content = readJson(request.getContentJson());
+            var content = readContent(request.hasContentJson() ? request.getContentJson() : null, request.hasContent() ? request.getContent() : null);
             final Collection collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionInsertOptions(request);
 
             performOperation(dbg + "insert " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(),op.getDoNotPropagateError(), performanceMode,
                 () -> {
                     logger.info("{} Performing insert operation on {} on bucket {} on collection {}",
                             dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(), request.getDocId().getCollectionName());
-                    ctx.insert(collection,
-                        request.getDocId().getDocId(),
-                        content);
+                    if (options == null) {
+                        ctx.insert(collection,
+                                request.getDocId().getDocId(),
+                                content);
+                    }
+                    // [start:3.6.2]
+                    else {
+                        ctx.insert(collection,
+                                request.getDocId().getDocId(),
+                                content,
+                                options);
+                    }
+                    // [start:3.6.2]
                 });
         } else if (op.hasInsertV2()) {
             var request = op.getInsertV2();
             var content = JavaSdkCommandExecutor.content(request.getContent());
+            var options = TransactionOptionsUtil.transactionInsertOptions(request);
 
             performOperation(dbg + "insert-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         var collection = connection.collection(request.getLocation());
-                        ctx.insert(collection, executor.getDocId(request.getLocation()), content);
+                        if (options == null) {
+                            ctx.insert(collection, executor.getDocId(request.getLocation()), content);
+                        }
+                        // [start:3.6.2]
+                        else {
+                            ctx.insert(collection, executor.getDocId(request.getLocation()), content, options);
+                        }
+                        // [end:3.6.2]
                     });
         } else if (op.hasReplace()) {
             final CommandReplace request = op.getReplace();
-            var content = readJson(request.getContentJson());
+            var content = readContent(request.hasContentJson() ? request.getContentJson() : null, request.hasContent() ? request.getContent() : null);
+            var options = TransactionOptionsUtil.transactionReplaceOptions(request);
 
             performOperation(dbg + "replace " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                 () -> {
@@ -199,18 +224,33 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
                             throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
                         }
-                        ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
+                        if (options == null) {
+                          ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
+                        }
+                        // [start:3.6.2]
+                        else {
+                          ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
+                        };
+                        // [end:3.6.2]
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("{} Performing replace operation on docId {} to new content {} on collection {}",
                                 dbg, request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
                         final TransactionGetResult r = ctx.get(collection, request.getDocId().getDocId());
+                      if (options == null) {
                         ctx.replace(r, content);
+                      }
+                      // [start:3.6.2]
+                      else {
+                        ctx.replace(r, content, options);
+                      }
+                        // [end:3.6.2]
                     }
                 });
         } else if (op.hasReplaceV2()) {
             var request = op.getReplaceV2();
             var content = JavaSdkCommandExecutor.content(request.getContent());
+            var options = TransactionOptionsUtil.transactionReplaceOptions(request);
 
             performOperation(dbg + "replace-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
@@ -222,7 +262,14 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         } else {
                             var collection = connection.collection(request.getLocation());
                             var r = ctx.get(collection, executor.getDocId(request.getLocation()));
-                            ctx.replace(r, content);
+                            if (options != null) {
+                                ctx.replace(r, content);
+                            }
+                            // [start:3.6.2]
+                            else {
+                                ctx.replace(r, content, options);
+                            }
+                            // [end:3.6.2]
                         }
                     });
         } else if (op.hasRemove()) {
@@ -272,36 +319,60 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
         } else if (op.hasGet()) {
             final CommandGet request = op.getGet();
             final Collection collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionGetOptions(request);
 
             performOperation(dbg + "get " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         logger.info("{} Performing get operation on {} on bucket {} on collection {}", dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
-                        TransactionGetResult out = ctx.get(collection, request.getDocId().getDocId());
-                        handleGetResult(request, out, connection);
+                        TransactionGetResult out;
+                        if (options == null) {
+                            out = ctx.get(collection, request.getDocId().getDocId());
+                        }
+                        // [start:3.6.2]
+                        else {
+                            out = ctx.get(collection, request.getDocId().getDocId(), options);
+                        }
+                        handleGetResult(request, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                     });
         } else if (op.hasGetV2()) {
             var request = op.getGetV2();
+            var options = TransactionOptionsUtil.transactionGetOptions(request);
 
             performOperation(dbg + "get-v2", ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         var collection = connection.collection(request.getLocation());
-                        ctx.get(collection, executor.getDocId(request.getLocation()));
+                        if (options == null) {
+                            ctx.get(collection, executor.getDocId(request.getLocation()));
+                        }
+                        // [start:3.6.2]
+                        else {
+                            ctx.get(collection, executor.getDocId(request.getLocation()), options);
+                        }
+                        // [end:3.6.2]
                     });
         } else if (op.hasGetOptional()) {
             final CommandGetOptional req = op.getGetOptional();
             final CommandGet request = req.getGet();
             final Collection collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionGetOptions(request);
 
             performOperation(dbg + "get optional " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         logger.info("{} Performing getOptional operation on {} on bucket {} on collection {} ", dbg, request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
                         Optional<TransactionGetResult> out = Optional.empty();
                         try {
-                            out = Optional.of(ctx.get(collection, request.getDocId().getDocId()));
+                            if (options == null) {
+                                out = Optional.of(ctx.get(collection, request.getDocId().getDocId()));
+                            }
+                            // [start:3.6.2]
+                            else {
+                                out = Optional.of(ctx.get(collection, request.getDocId().getDocId(), options));
+                            }
+                            // [end:3.6.2]
                         }
                         catch (DocumentNotFoundException ignored) {
                         }
-                        handleGetOptionalResult(request, req, out, connection);
+                        handleGetOptionalResult(request, req, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                     });
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();

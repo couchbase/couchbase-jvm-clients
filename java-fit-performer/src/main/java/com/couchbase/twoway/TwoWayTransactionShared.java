@@ -17,6 +17,7 @@
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.EventSubscription;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
@@ -30,16 +31,20 @@ import com.couchbase.client.core.cnc.events.transaction.TransactionEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.util.MonoBridge;
 import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
+import com.couchbase.client.protocol.shared.Content;
+import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
 import com.couchbase.client.protocol.transactions.CommandBatch;
 import com.couchbase.client.protocol.transactions.CommandGet;
 import com.couchbase.client.protocol.transactions.CommandGetOptional;
 import com.couchbase.client.protocol.transactions.CommandSetLatch;
 import com.couchbase.client.protocol.transactions.CommandWaitOnLatch;
+import com.couchbase.client.protocol.shared.ContentAsPerformerValidation;
 import com.couchbase.client.protocol.transactions.DocStatus;
 import com.couchbase.client.protocol.transactions.ErrorWrapper;
 import com.couchbase.client.protocol.transactions.Event;
@@ -52,6 +57,7 @@ import com.couchbase.client.protocol.transactions.TransactionCreateRequest;
 import com.couchbase.client.protocol.transactions.TransactionException;
 import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
+import com.couchbase.utils.ContentAsUtil;
 import com.couchbase.utils.ResultsUtil;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
@@ -63,6 +69,7 @@ import reactor.util.function.Tuple2;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -280,7 +287,8 @@ public abstract class TwoWayTransactionShared {
     protected void handleGetOptionalResult(CommandGet request,
                                            CommandGetOptional req,
                                            Optional<TransactionGetResult> out,
-                                           ClusterConnection cc) {
+                                           ClusterConnection cc,
+                                           @Nullable ContentAsPerformerValidation contentAs) {
         if (!out.isPresent()) {
             if (req.getExpectDocPresent()) {
                 logger.info("Doc is missing but is supposed to exist");
@@ -293,19 +301,42 @@ public abstract class TwoWayTransactionShared {
                 logger.info("Document exists but isn't supposed to");
                 throw new TestFailure(new DocumentExistsException(null));
             } else {
-                handleGetResult(request, out.get(), cc);
+                handleGetResult(request, out.get(), cc, contentAs);
             }
         }
 
     }
 
-    protected void handleGetResult(CommandGet request, TransactionGetResult getResult, ClusterConnection cc) {
+    protected void handleGetResult(CommandGet request, TransactionGetResult getResult, ClusterConnection cc, @Nullable ContentAsPerformerValidation contentAs) {
         stashedGet.set(getResult);
 
         if (request.hasStashInSlot()) {
             stashedGetMap.put(request.getStashInSlot(), getResult);
             logger.info("Stashed {} in slot {}", getResult.id(), request.getStashInSlot());
             // stashedGetMap.forEach((k, v) -> logger.info("Stash: {}={}", k, v));
+        }
+
+        if (contentAs != null) {
+            var content = ContentAsUtil.contentType(
+                    contentAs.getContentAs(),
+                    () -> getResult.contentAs(byte[].class),
+                    () -> getResult.contentAs(String.class),
+                    () -> getResult.contentAs(JsonObject.class),
+                    () -> getResult.contentAs(JsonArray.class),
+                    () -> getResult.contentAs(Boolean.class),
+                    () -> getResult.contentAs(Integer.class),
+                    () -> getResult.contentAs(Double.class));
+
+            if (contentAs.getExpectSuccess() != content.isSuccess()) {
+                throw new TestFailure(new RuntimeException("ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess()));
+            }
+
+            if (contentAs.hasExpectedContentBytes()) {
+                byte[] bytes = ContentAsUtil.convert(content.value());
+                if (!Arrays.equals(contentAs.getExpectedContentBytes().toByteArray(), bytes)) {
+                    throw new TestFailure(new RuntimeException("Content bytes " + Arrays.toString(bytes) + " did not equal expected bytes " + contentAs.getExpectedContentBytes()));
+                }
+            }
         }
 
         if (!request.getExpectedContentJson().isEmpty()) {
@@ -326,10 +357,6 @@ public abstract class TwoWayTransactionShared {
                 logger.warn("Expected content {}, got content {}", expected, actual);
                 throw new TestFailure(new IllegalStateException("Did not get expected content"));
             }
-        }
-
-        if (request.getExpectedStatus() != DocStatus.DO_NOT_CHECK) {
-            logger.warn("Ignoring request to check doc status");
         }
     }
 
@@ -491,13 +518,23 @@ public abstract class TwoWayTransactionShared {
         }
     }
 
-    // To support CustomSerializer tests. We can't use JsonObject as CustomSerializer gets wrapped by a
-    // JsonValueSerializerWrapper, so JsonObject bypasses CustomSerializer.
-    protected static JsonNode readJson(String in) {
-        try {
-            return Mapper.reader().readValue(in, JsonNode.class);
-        } catch (IOException e) {
-            throw new InternalPerformerFailure(new DecodingFailureException(e));
+    // (N.b. to support CustomSerializer tests, we can't use JsonObject as CustomSerializer gets wrapped by a
+    // JsonValueSerializerWrapper, so JsonObject bypasses CustomSerializer.)
+    protected static Object readContent(@Nullable String contentJson, @Nullable Content content) {
+        if (contentJson != null && content != null) {
+            throw new RuntimeException("Bug - must specify exactly one type of content");
+        }
+
+        if (contentJson != null) {
+            try {
+                return Mapper.reader().readValue(contentJson, JsonNode.class);
+            } catch (IOException e) {
+                throw new InternalPerformerFailure(new DecodingFailureException(e));
+            }
+        } else if (content != null) {
+            return JavaSdkCommandExecutor.content(content);
+        } else {
+            throw new RuntimeException("Internal performer bug - must specify one type of content");
         }
     }
 }

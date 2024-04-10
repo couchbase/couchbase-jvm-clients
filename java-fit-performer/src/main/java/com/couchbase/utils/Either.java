@@ -61,4 +61,12 @@ public class Either<T, U> {
   public static <U> Either<RuntimeException, U> right(U t) {
     return new Either<RuntimeException, U>(null, t);
   }
+
+  @Override
+  public String toString() {
+    return "Either{" +
+            "left=" + left +
+            ", right=" + right +
+            '}';
+  }
 }

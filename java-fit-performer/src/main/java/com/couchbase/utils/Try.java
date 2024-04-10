@@ -46,4 +46,11 @@ public class Try<T> {
   public T value() {
     return internal.right();
   }
+
+  @Override
+  public String toString() {
+    return "Try{" +
+            "internal=" + internal +
+            '}';
+  }
 }

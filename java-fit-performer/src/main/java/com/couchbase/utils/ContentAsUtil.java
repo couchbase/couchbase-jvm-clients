@@ -114,4 +114,12 @@ public class ContentAsUtil {
       return new Try<>(err);
     }
   }
+
+  public static byte[] convert(ContentTypes content) {
+    if (content.hasContentAsBytes()) {
+      return content.getContentAsBytes().toByteArray();
+    } else if (content.hasContentAsString()) {
+      return content.getContentAsString().getBytes();
+    } else throw new UnsupportedOperationException("Cannot convert " + content);
+  }
 }

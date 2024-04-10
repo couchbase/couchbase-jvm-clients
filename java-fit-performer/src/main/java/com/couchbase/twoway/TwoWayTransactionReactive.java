@@ -144,18 +144,26 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
 
         if (op.hasInsert()) {
             final CommandInsert request = op.getInsert();
-            var content = readJson(request.getContentJson());
+            var content = readContent(request.hasContentJson() ? request.getContentJson() : null, request.hasContent() ? request.getContent() : null);
+            var options = TransactionOptionsUtil.transactionInsertOptions(request);
 
             final Collection collection = connection.collection(request.getDocId());
             return performOperation(waitIfNeeded, dbg + "insert " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(),op.getDoNotPropagateError(), performanceMode,
                 () -> {
                     logger.info("Performing insert operation on {} on bucket {} on collection {}",
-                            request.getDocId().getDocId(),request.getDocId().getBucketName(), request.getDocId().getCollectionName());
+                            request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
+                    // [start:3.6.2]
+                    if (options != null) {
+                        return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content, options).then();
+                    }
+                    // [end:3.6.2]
                     return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content).then();
                 });
         } else if (op.hasReplace()) {
             final CommandReplace request = op.getReplace();
-            var content = readJson(request.getContentJson());
+            var content = readContent(request.hasContentJson() ? request.getContentJson() : null, request.hasContent() ? request.getContent() : null);
+            var options = TransactionOptionsUtil.transactionReplaceOptions(request);
+
             return performOperation(waitIfNeeded, dbg + "replace " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                 () -> {
                     if (request.getUseStashedResult()) {
@@ -164,13 +172,25 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
                             throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
                         }
+                        // [start:3.6.2]
+                        if (options != null) {
+                            return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
+                        }
+                        // [end:3.6.2]
                         return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("Performing replace operation on docId {} to new content {} on collection {}",
                                 request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
                         return ctx.get(collection.reactive(), request.getDocId().getDocId())
-                                .flatMap(r -> ctx.replace(r, content))
+                                .flatMap(r -> {
+                                    // [start:3.6.2]
+                                    if (options != null) {
+                                        return ctx.replace(r, content, options);
+                                    }
+                                    // [end:3.6.2]
+                                    return ctx.replace(r, content);
+                                })
                                 .then();
                     }
                 });
@@ -189,7 +209,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
 
-                        logger.info("Performing remove operation on docId on collection {}",
+                        logger.info("Performing remove operation on docId {} on collection {}",
                                 request.getDocId().getDocId(), request.getDocId().getCollectionName());
                         return ctx.get(collection.reactive(), request.getDocId().getDocId())
                                         .flatMap(r -> ctx.remove(r));
@@ -203,27 +223,43 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
         } else if (op.hasGet()) {
             final CommandGet request = op.getGet();
             final Collection collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionGetOptions(request);
 
             return performOperation(waitIfNeeded, dbg + "get " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         logger.info("Performing get operation on {} on bucket {} on collection {}", request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
-                        return ctx.get(collection.reactive(), request.getDocId().getDocId())
-                                .doOnNext(out -> Mono.fromRunnable(() -> handleGetResult(request, out, connection)))
+                        return Mono.defer(() -> {
+                                    // [start:3.6.2]
+                                    if (options != null) {
+                                        return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
+                                    }
+                                    // [end:3.6.2]
+                                    return ctx.get(collection.reactive(), request.getDocId().getDocId());
+                                })
+                                .doOnNext(out -> handleGetResult(request, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
                                 .then();
                     });
         } else if (op.hasGetOptional()) {
             final CommandGetOptional req = op.getGetOptional();
             final CommandGet request = req.getGet();
             final Collection collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionGetOptions(request);
 
             return performOperation(waitIfNeeded, dbg + "get optional " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
                     () -> {
                         logger.info("Performing getOptional operation on {} on bucket {} on collection {} ", request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
-                        return ctx.get(collection.reactive(), request.getDocId().getDocId())
-                                .doOnNext(doc -> handleGetOptionalResult(request, req, Optional.of(doc), connection))
+                        return Mono.defer(() -> {
+                                    // [start:3.6.2]
+                                    if (options != null) {
+                                        return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
+                                    }
+                                    // [end:3.6.2]
+                                    return ctx.get(collection.reactive(), request.getDocId().getDocId());
+                                })
+                                .doOnNext(doc -> handleGetOptionalResult(request, req, Optional.of(doc), connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
                                 .onErrorResume(err -> {
                                     if (err instanceof DocumentNotFoundException) {
-                                        handleGetOptionalResult(request, req, Optional.empty(), connection);
+                                        handleGetOptionalResult(request, req, Optional.empty(), connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                                         return Mono.empty();
                                     }
                                     else {
@@ -320,7 +356,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
         }
     }
 
-    private static CoreTransactionLogger getLogger(ReactiveTransactionAttemptContext ctx) {
+  private static CoreTransactionLogger getLogger(ReactiveTransactionAttemptContext ctx) {
         try {
             var method = ReactiveTransactionAttemptContext.class.getDeclaredMethod("logger");
             method.setAccessible(true);
