@@ -66,7 +66,7 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
         this.cryptoManager = builder.cryptoManager
         jsonSerializer = builder.jsonSerializer ?: JacksonJsonSerializer(jsonMapper {
             addModule(Jdk8Module())
-            addModule(KotlinModule())
+            addModule(KotlinModule.Builder().build())
         })
         transcoder = builder.transcoder ?: JsonTranscoder(jsonSerializer)
     }
