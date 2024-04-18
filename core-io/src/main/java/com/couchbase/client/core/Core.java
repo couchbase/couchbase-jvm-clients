@@ -109,7 +109,6 @@ import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -810,32 +809,25 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
 
-          Set<Map.Entry<ServiceType, Integer>> aServices = null;
+          Map<ServiceType, Integer> aServices = null;
           Optional<String> alternateAddress = coreContext.alternateAddress();
           String aHost = null;
           if (alternateAddress.isPresent()) {
             AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
             aHost = aa.hostname();
-            aServices = tls ? aa.sslServices().entrySet() : aa.services().entrySet();
+            aServices = tls ? aa.sslServices() : aa.services();
           }
 
           if (aServices == null || aServices.isEmpty()) {
-            aServices = tls ? ni.sslPorts().entrySet() : ni.ports().entrySet();
+            aServices = tls ? ni.sslPorts() : ni.ports();
           }
 
           final String alternateHost = aHost;
-          final Set<Map.Entry<ServiceType, Integer>> services = aServices;
+          final Map<ServiceType, Integer> services = aServices;
 
           Flux<Void> serviceRemoveFlux = Flux
-            .fromIterable(Arrays.asList(ServiceType.values()))
-            .filter(s -> {
-              for (Map.Entry<ServiceType, Integer> inConfig : services) {
-                if (inConfig.getKey() == s) {
-                  return false;
-                }
-              }
-              return true;
-            })
+            .fromArray(ServiceType.values())
+            .filter(s -> !services.containsKey(s))
             .flatMap(s -> removeServiceFrom(
               ni.identifier(),
               s,
@@ -853,7 +845,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
 
           Flux<Void> serviceAddFlux = Flux
-            .fromIterable(services)
+            .fromIterable(services.entrySet())
             .flatMap(s -> ensureServiceAt(
               ni.identifier(),
               s.getKey(),
@@ -889,33 +881,26 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         .flatMap(ni -> {
           boolean tls = coreContext.environment().securityConfig().tlsEnabled();
 
-          Set<Map.Entry<ServiceType, Integer>> aServices = null;
+          Map<ServiceType, Integer> aServices = null;
           Optional<String> alternateAddress = coreContext.alternateAddress();
           String aHost = null;
           if (alternateAddress.isPresent()) {
             AlternateAddress aa = ni.alternateAddresses().get(alternateAddress.get());
             aHost = aa.hostname();
-            aServices = tls ? aa.sslServices().entrySet() : aa.services().entrySet();
+            aServices = tls ? aa.sslServices() : aa.services();
           }
 
 
           if (isNullOrEmpty(aServices)) {
-            aServices = tls ? ni.sslServices().entrySet() : ni.services().entrySet();
+            aServices = tls ? ni.sslServices() : ni.services();
           }
 
           final String alternateHost = aHost;
-          final Set<Map.Entry<ServiceType, Integer>> services = aServices;
+          final Map<ServiceType, Integer> services = aServices;
 
           Flux<Void> serviceRemoveFlux = Flux
-            .fromIterable(Arrays.asList(ServiceType.values()))
-            .filter(s -> {
-              for (Map.Entry<ServiceType, Integer> inConfig : services) {
-                if (inConfig.getKey() == s) {
-                  return false;
-                }
-              }
-              return true;
-            })
+            .fromArray(ServiceType.values())
+            .filter(s -> !services.containsKey(s))
             .flatMap(s -> removeServiceFrom(
               ni.identifier(),
               s,
@@ -932,7 +917,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             );
 
           Flux<Void> serviceAddFlux = Flux
-            .fromIterable(services)
+            .fromIterable(services.entrySet())
             .flatMap(s -> ensureServiceAt(
               ni.identifier(),
               s.getKey(),
