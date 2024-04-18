@@ -222,14 +222,14 @@ public class Node implements Stateful<NodeState> {
    */
   public synchronized Mono<Void> addService(final ServiceType type, final int port,
                                             final Optional<String> bucket) {
-    return Mono.defer(() -> {
+    return Mono.fromRunnable(() -> {
       if (disconnect.get()) {
         ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
           Event.Severity.DEBUG,
           ServiceAddIgnoredEvent.Reason.DISCONNECTED,
           ctx
         ));
-        return Mono.empty();
+        return;
       }
 
       String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
@@ -250,15 +250,14 @@ public class Node implements Stateful<NodeState> {
         ctx.environment().eventBus().publish(
           new ServiceAddedEvent(Duration.ofNanos(end - start), service.context())
         );
-        return Mono.empty();
-      } else {
-        ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
-          Event.Severity.VERBOSE,
-          ServiceAddIgnoredEvent.Reason.ALREADY_ADDED,
-          ctx
-        ));
-        return Mono.empty();
+        return;
       }
+
+      ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
+        Event.Severity.VERBOSE,
+        ServiceAddIgnoredEvent.Reason.ALREADY_ADDED,
+        ctx
+      ));
     });
   }
 
