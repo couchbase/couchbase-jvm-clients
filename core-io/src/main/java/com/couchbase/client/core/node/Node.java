@@ -233,11 +233,8 @@ public class Node implements Stateful<NodeState> {
       }
 
       String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
-      Map<ServiceType, Service> localMap = services.get(name);
-      if (localMap == null) {
-        localMap = new ConcurrentHashMap<>();
-        services.put(name, localMap);
-      }
+      Map<ServiceType, Service> localMap = services.computeIfAbsent(name, key -> new ConcurrentHashMap<>());
+
       if (!localMap.containsKey(type)) {
         long start = System.nanoTime();
         Service service = createService(type, port, bucket);
