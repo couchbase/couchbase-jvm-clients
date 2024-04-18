@@ -236,25 +236,25 @@ public class Node implements Stateful<NodeState> {
       String name = type.scope() == ServiceScope.CLUSTER ? GLOBAL_SCOPE : bucket.orElse(BUCKET_GLOBAL_SCOPE);
       Map<ServiceType, Service> localMap = services.computeIfAbsent(name, key -> new ConcurrentHashMap<>());
 
-      if (!localMap.containsKey(type)) {
-        NanoTimestamp start = NanoTimestamp.now();
-        Service service = createService(type, port, bucket);
-        serviceStates.register(service, service);
-        localMap.put(type, service);
-        enabledServices.set(enabledServices.get() | 1 << type.ordinal());
-        // todo: only return once the service is connected?
-        service.connect();
-        ctx.environment().eventBus().publish(
-          new ServiceAddedEvent(start.elapsed(), service.context())
-        );
+      if (localMap.containsKey(type)) {
+        ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
+          Event.Severity.VERBOSE,
+          ServiceAddIgnoredEvent.Reason.ALREADY_ADDED,
+          ctx
+        ));
         return;
       }
 
-      ctx.environment().eventBus().publish(new ServiceAddIgnoredEvent(
-        Event.Severity.VERBOSE,
-        ServiceAddIgnoredEvent.Reason.ALREADY_ADDED,
-        ctx
-      ));
+      NanoTimestamp start = NanoTimestamp.now();
+      Service service = createService(type, port, bucket);
+      serviceStates.register(service, service);
+      localMap.put(type, service);
+      enabledServices.set(enabledServices.get() | 1 << type.ordinal());
+      // todo: only return once the service is connected?
+      service.connect();
+      ctx.environment().eventBus().publish(
+        new ServiceAddedEvent(start.elapsed(), service.context())
+      );
     });
   }
 
