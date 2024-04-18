@@ -57,6 +57,7 @@ import com.couchbase.client.core.service.ViewServiceConfig;
 import com.couchbase.client.core.util.CompositeStateful;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.AtomicEnumSet;
 import com.couchbase.client.core.util.Stateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -67,7 +68,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
@@ -103,7 +103,7 @@ public class Node implements Stateful<NodeState> {
   /**
    * Contains the enabled {@link Service}s on a node level.
    */
-  private final AtomicInteger enabledServices = new AtomicInteger(0);
+  private final AtomicEnumSet<ServiceType> enabledServices = AtomicEnumSet.noneOf(ServiceType.class);
 
   public static Node create(final CoreContext ctx, final NodeIdentifier identifier,
                             final Optional<String> alternateAddress) {
@@ -264,7 +264,7 @@ public class Node implements Stateful<NodeState> {
       Service service = createService(type, newServiceAddress, bucket);
       serviceStates.register(service, service);
       localMap.put(type, service);
-      enabledServices.set(enabledServices.get() | 1 << type.ordinal());
+      enabledServices.add(type);
       // todo: only return once the service is connected?
       service.connect();
       ctx.environment().eventBus().publish(
@@ -313,7 +313,7 @@ public class Node implements Stateful<NodeState> {
       serviceStates.deregister(service);
       long start = System.nanoTime();
       if (serviceCanBeDisabled(service.type())) {
-        enabledServices.set(enabledServices.get() & ~(1 << service.type().ordinal()));
+        enabledServices.remove(service.type());
       }
       // todo: only return once the service is disconnected?
       service.disconnect();
@@ -425,11 +425,11 @@ public class Node implements Stateful<NodeState> {
    * @return true if enabled, false otherwise.
    */
   public boolean serviceEnabled(final ServiceType type) {
-    return (enabledServices.get() & (1 << type.ordinal())) != 0;
+    return enabledServices.contains(type);
   }
 
   public boolean hasServicesEnabled() {
-    return enabledServices.get() != 0;
+    return !enabledServices.isEmpty();
   }
 
   /**

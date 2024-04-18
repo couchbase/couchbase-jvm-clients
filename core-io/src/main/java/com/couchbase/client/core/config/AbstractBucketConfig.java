@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+import static java.util.Collections.unmodifiableSet;
 
 public abstract class AbstractBucketConfig implements BucketConfig {
 
@@ -38,7 +39,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final String uri;
     private final String streamingUri;
     private final List<NodeInfo> nodeInfo;
-    private final int enabledServices;
+    private final Set<ServiceType> enabledServices;
     private final Set<BucketCapabilities> bucketCapabilities;
     private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
     private final String origin;
@@ -62,16 +63,12 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.version = new ConfigVersion(revEpoch, rev);
         this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
-        int es = 0;
+        Set<ServiceType> es = EnumSet.noneOf(ServiceType.class);
         for (NodeInfo info : nodeInfo) {
-            for (ServiceType type : info.services().keySet()) {
-                es |= 1 << type.ordinal();
-            }
-            for (ServiceType type : info.sslServices().keySet()) {
-                es |= 1 << type.ordinal();
-            }
+          es.addAll(info.services().keySet());
+          es.addAll(info.sslServices().keySet());
         }
-        this.enabledServices = es;
+        this.enabledServices = unmodifiableSet(es);
     }
 
     static Set<BucketCapabilities> convertBucketCapabilities(final List<BucketCapabilities> input) {
@@ -247,7 +244,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
 
     @Override
     public boolean serviceEnabled(ServiceType type) {
-        return (enabledServices & (1 << type.ordinal())) != 0;
+        return enabledServices.contains(type);
     }
 
     @Override
