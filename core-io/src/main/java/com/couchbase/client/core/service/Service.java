@@ -21,6 +21,7 @@ import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.Stateful;
 
 import java.util.stream.Stream;
@@ -78,6 +79,16 @@ public interface Service extends Stateful<ServiceState> {
    * Returns diagnostics information for this service.
    */
   Stream<EndpointDiagnostics> diagnostics();
+
+  /**
+   * Returns the remote address for this service.
+   */
+  default HostAndPort address() {
+    return new HostAndPort(
+      context().remoteHostname(),
+      context().remotePort()
+    );
+  }
 
   @Stability.Internal
   Stream<InternalEndpointDiagnostics> internalDiagnostics();
