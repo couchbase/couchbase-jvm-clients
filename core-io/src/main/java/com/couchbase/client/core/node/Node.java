@@ -55,6 +55,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.service.ViewService;
 import com.couchbase.client.core.service.ViewServiceConfig;
 import com.couchbase.client.core.util.CompositeStateful;
+import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.Stateful;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -236,16 +237,15 @@ public class Node implements Stateful<NodeState> {
       Map<ServiceType, Service> localMap = services.computeIfAbsent(name, key -> new ConcurrentHashMap<>());
 
       if (!localMap.containsKey(type)) {
-        long start = System.nanoTime();
+        NanoTimestamp start = NanoTimestamp.now();
         Service service = createService(type, port, bucket);
         serviceStates.register(service, service);
         localMap.put(type, service);
         enabledServices.set(enabledServices.get() | 1 << type.ordinal());
         // todo: only return once the service is connected?
         service.connect();
-        long end = System.nanoTime();
         ctx.environment().eventBus().publish(
-          new ServiceAddedEvent(Duration.ofNanos(end - start), service.context())
+          new ServiceAddedEvent(start.elapsed(), service.context())
         );
         return;
       }
