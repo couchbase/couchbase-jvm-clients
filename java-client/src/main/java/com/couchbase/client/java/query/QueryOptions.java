@@ -101,12 +101,25 @@ public class QueryOptions extends CommonOptions<QueryOptions> {
   /**
    * Allows providing custom JSON key/value pairs for advanced usage.
    * <p>
-   * If available, it is recommended to use the methods on this object to customize the query. This method should
+   * If possible, it is recommended to use other methods on this object to customize the query. The "raw" method should
    * only be used if no such setter can be found (i.e. if an undocumented property should be set or you are using
    * an older client and a new server-configuration property has been added to the cluster).
    * <p>
-   * Note that the value will be passed through a JSON encoder, so do not provide already encoded JSON as the value. If
-   * you want to pass objects or arrays, you can use {@link JsonObject} and {@link JsonArray} respectively.
+   * Note that the value will be passed through a JSON encoder, so do not provide already encoded JSON as the value.
+   * The value must be one of the following types:
+   * <ul>
+   *   <li>String
+   *   <li>Integer
+   *   <li>Long
+   *   <li>Double
+   *   <li>Boolean
+   *   <li>BigInteger
+   *   <li>BigDecimal
+   *   <li>JsonObject
+   *   <li>JsonArray
+   *   <li>Map (with String keys, and values from this list)
+   *   <li>List (with element types from this list)
+   * </ul>
    *
    * @param key the parameter name (key of the JSON property)  or empty.
    * @param value the parameter value (value of the JSON property).

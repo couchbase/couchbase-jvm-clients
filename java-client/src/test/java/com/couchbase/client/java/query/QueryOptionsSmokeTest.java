@@ -16,13 +16,18 @@
 package com.couchbase.client.java.query;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
 import static com.couchbase.client.core.classic.query.ClassicCoreQueryOps.convertOptions;
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Basic smoke test for query options.
@@ -32,16 +37,14 @@ class QueryOptionsSmokeTest {
     @Test
     void testScanConsistency() {
         QueryOptions options = QueryOptions.queryOptions().scanConsistency(QueryScanConsistency.REQUEST_PLUS);
-        QueryOptions.Built opts = options.build();
-        ObjectNode queryJson = convertOptions(opts);
+        ObjectNode queryJson = toObjectNode(options);
         assertEquals(queryJson.get("scan_consistency").textValue(), "request_plus");
     }
 
     @Test
     void testProfile() {
         QueryOptions options = QueryOptions.queryOptions().profile(QueryProfile.TIMINGS);
-        QueryOptions.Built opts = options.build();
-        ObjectNode queryJson = convertOptions(opts);
+        ObjectNode queryJson = toObjectNode(options);
         assertEquals(queryJson.get("profile").textValue(), "timings");
     }
 
@@ -49,9 +52,46 @@ class QueryOptionsSmokeTest {
     void testClientContextId() {
         String randomId = UUID.randomUUID().toString();
         QueryOptions options = QueryOptions.queryOptions().clientContextId(randomId);
-        QueryOptions.Built opts = options.build();
-        ObjectNode queryJson = convertOptions(opts);
+        ObjectNode queryJson = toObjectNode(options);
         assertEquals(queryJson.get("client_context_id").textValue(), randomId);
     }
 
+    @Test
+    void canUseNestedJsonObjectsAsRawValue() {
+        QueryOptions options = QueryOptions.queryOptions().raw("foo", JsonObject.create().put("bar", JsonObject.create().put("magicWord", "xyzzy")));
+        ObjectNode queryJson = toObjectNode(options);
+        assertEquals("xyzzy", queryJson.path("foo").path("bar").path("magicWord").textValue());
+    }
+
+    @Test
+    void canUseNestedMapsAsRawValue() {
+        QueryOptions options = QueryOptions.queryOptions().raw("foo", mapOf("bar", mapOf("magicWord", "xyzzy")));
+        ObjectNode queryJson = toObjectNode(options);
+        assertEquals("xyzzy", queryJson.path("foo").path("bar").path("magicWord").textValue());
+    }
+
+    @Test
+    void canUseNestedJsonArraysAsRawValue() {
+        QueryOptions options = QueryOptions.queryOptions().raw("foo", JsonArray.from("bar", JsonArray.from("xyzzy")));
+        ObjectNode queryJson = toObjectNode(options);
+        assertEquals("xyzzy", queryJson.path("foo").path(1).path(0).textValue());
+    }
+
+    @Test
+    void canUseNestedListsAsRawValue() {
+        QueryOptions options = QueryOptions.queryOptions().raw("foo", listOf("bar", listOf("xyzzy")));
+        ObjectNode queryJson = toObjectNode(options);
+        assertEquals("xyzzy", queryJson.path("foo").path(1).path(0).textValue());
+    }
+
+    @Test
+    void rejectsPojoAsRawValue() {
+        QueryOptions options = QueryOptions.queryOptions().raw("foo", new Object());
+        assertThrows(InvalidArgumentException.class, () -> toObjectNode(options));
+    }
+
+    private static ObjectNode toObjectNode(QueryOptions options) {
+        QueryOptions.Built opts = options.build();
+        return convertOptions(opts);
+    }
 }
