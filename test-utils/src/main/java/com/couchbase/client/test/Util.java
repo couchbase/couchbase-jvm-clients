@@ -16,18 +16,16 @@
 
 package com.couchbase.client.test;
 
-import java.io.InputStream;
+import org.awaitility.core.ThrowingRunnable;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.MissingResourceException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
-import org.awaitility.core.ThrowingRunnable;
-import org.junit.jupiter.api.function.ThrowingSupplier;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.awaitility.Awaitility.with;
 
 /**
@@ -94,20 +92,16 @@ public class Util {
   }
 
   /**
-   * Reads a file from the resources folder (in the same path as the requesting test class).
+   * Reads a class path resource from a location relative to the given class's package.
    *
-   * <p>The class will be automatically loaded relative to the namespace and converted
-   * to a string.</p>
-   *
-   * @param filename the filename of the resource.
-   * @param clazz    the reference class.
-   * @return the loaded string.
+   * @param resourceName the name of the resource
+   * @param context the class whose {@link Class#getResourceAsStream(String)} method is used to load the resource.
+   * @return the resource as a string, decoded using UTF-8.
+   * @throws MissingResourceException if resource is not found.
+   * @see Resources
    */
-  public static String readResource(final String filename, final Class<?> clazz) {
-    String path = "/" + clazz.getPackage().getName().replace(".", "/") + "/" + filename;
-    InputStream stream = clazz.getResourceAsStream(path);
-    java.util.Scanner s = new java.util.Scanner(stream, UTF_8.name()).useDelimiter("\\A");
-    return s.hasNext() ? s.next() : "";
+  public static String readResource(final String resourceName, final Class<?> context) {
+    return Resources.from(context).getString(resourceName);
   }
 
   static String urlEncode(String s) {
