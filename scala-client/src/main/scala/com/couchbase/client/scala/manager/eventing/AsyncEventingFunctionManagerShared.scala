@@ -140,11 +140,11 @@ private[scala] class AsyncEventingFunctionManagerShared(
   }
 
   def undeployFunction(
-                        name: String,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy,
-                        parentSpan: Option[RequestSpan] = None
-                      ): Future[Unit] = {
+      name: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      parentSpan: Option[RequestSpan] = None
+  ): Future[Unit] = {
     coreManagerTry.flatMap(
       coreManager =>
         FutureConversions
@@ -233,7 +233,6 @@ private[scala] class AsyncEventingFunctionManagerShared(
     )
   }
 }
-
 
 private[scala] object AsyncEventingFunctionManagerShared {
   private def encodeFunction(function: EventingFunction): Array[Byte] = {

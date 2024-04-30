@@ -19,7 +19,10 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.api.query.CoreQueryContext
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsResult}
-import com.couchbase.client.scala.manager.eventing.{EventingFunctionManager, ScopeEventingFunctionManager}
+import com.couchbase.client.scala.manager.eventing.{
+  EventingFunctionManager,
+  ScopeEventingFunctionManager
+}
 import com.couchbase.client.scala.manager.search.ScopeSearchIndexManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult, ReactiveQueryResult}
 import com.couchbase.client.scala.search.SearchOptions

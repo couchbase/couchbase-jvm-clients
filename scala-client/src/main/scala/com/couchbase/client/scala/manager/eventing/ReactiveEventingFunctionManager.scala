@@ -109,11 +109,11 @@ class ReactiveEventingFunctionManager(private val async: AsyncEventingFunctionMa
     * @param parentSpan    controls the parent tracing span to use for the operation.
     */
   def undeployFunction(
-                        name: String,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy,
-                        parentSpan: Option[RequestSpan] = None
-                      ): SMono[Unit] = {
+      name: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      parentSpan: Option[RequestSpan] = None
+  ): SMono[Unit] = {
     SMono.fromFuture(async.undeployFunction(name, timeout, retryStrategy, parentSpan))
   }
 

@@ -78,7 +78,8 @@ class AsyncScope private[scala] (
     */
   @Stability.Uncommitted
   @SinceCouchbase("7.1")
-  lazy val eventingFunctions = new AsyncScopeEventingFunctionManager(environment, couchbaseOps, coreScope)
+  lazy val eventingFunctions =
+    new AsyncScopeEventingFunctionManager(environment, couchbaseOps, coreScope)
 
   /** Opens and returns the default collection on this scope. */
   private[scala] def defaultCollection: AsyncCollection =

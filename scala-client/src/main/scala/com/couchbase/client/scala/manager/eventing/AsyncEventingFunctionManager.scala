@@ -40,7 +40,7 @@ class AsyncEventingFunctionManager(
 ) {
   private[scala] val DefaultTimeout       = env.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = env.retryStrategy
-  private val internal = new AsyncEventingFunctionManagerShared(env, couchbaseOps, null)
+  private val internal                    = new AsyncEventingFunctionManagerShared(env, couchbaseOps, null)
 
   /** Upsert an eventing function into the admin scope ('*.*').
     *
@@ -114,11 +114,11 @@ class AsyncEventingFunctionManager(
     * @param parentSpan    controls the parent tracing span to use for the operation.
     */
   def undeployFunction(
-                        name: String,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy,
-                        parentSpan: Option[RequestSpan] = None
-                      ): Future[Unit] = {
+      name: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      parentSpan: Option[RequestSpan] = None
+  ): Future[Unit] = {
     internal.undeployFunction(name, timeout, retryStrategy)
   }
 

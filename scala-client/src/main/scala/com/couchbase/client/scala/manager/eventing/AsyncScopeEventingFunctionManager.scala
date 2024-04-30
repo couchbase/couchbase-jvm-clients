@@ -29,7 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /** This interface allows managing eventing functions that exist on a particular scope.
   *
-  * For working with eventing functions in the admin ("*.*") scope see [[EventingFunctionManager]], 
+  * For working with eventing functions in the admin ("*.*") scope see [[EventingFunctionManager]],
   * accessed from [[com.couchbase.client.scala.Cluster.eventingFunctions]]
   */
 @Stability.Uncommitted
@@ -43,7 +43,7 @@ class AsyncScopeEventingFunctionManager(
 ) {
   private[scala] val DefaultTimeout       = env.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = env.retryStrategy
-  private val internal = new AsyncEventingFunctionManagerShared(env, couchbaseOps, Some(scope))
+  private val internal                    = new AsyncEventingFunctionManagerShared(env, couchbaseOps, Some(scope))
 
   /** Upsert an eventing function into this scope.
     *
@@ -117,11 +117,11 @@ class AsyncScopeEventingFunctionManager(
     * @param parentSpan    controls the parent tracing span to use for the operation.
     */
   def undeployFunction(
-                        name: String,
-                        timeout: Duration = DefaultTimeout,
-                        retryStrategy: RetryStrategy = DefaultRetryStrategy,
-                        parentSpan: Option[RequestSpan] = None
-                      ): Future[Unit] = {
+      name: String,
+      timeout: Duration = DefaultTimeout,
+      retryStrategy: RetryStrategy = DefaultRetryStrategy,
+      parentSpan: Option[RequestSpan] = None
+  ): Future[Unit] = {
     internal.undeployFunction(name, timeout, retryStrategy)
   }
 

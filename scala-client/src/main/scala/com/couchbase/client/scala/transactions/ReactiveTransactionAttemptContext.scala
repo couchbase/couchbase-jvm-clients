@@ -18,7 +18,11 @@ package com.couchbase.client.scala.transactions;
 
 import com.couchbase.client.core.api.query.{CoreQueryContext, CoreQueryOptions}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
-import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
+import com.couchbase.client.core.cnc.TracingIdentifiers.{
+  TRANSACTION_OP_INSERT,
+  TRANSACTION_OP_REMOVE,
+  TRANSACTION_OP_REPLACE
+}
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
@@ -75,7 +79,13 @@ class ReactiveTransactionAttemptContext private[scala] (
       case Success(encoded) =>
         FutureConversions
           .javaMonoToScalaMono(
-            internal.insert(collection.collectionIdentifier, id, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span))
+            internal.insert(
+              collection.collectionIdentifier,
+              id,
+              encoded,
+              CodecFlags.JSON_COMPAT_FLAGS,
+              new SpanWrapper(span)
+            )
           )
           .map(TransactionGetResult)
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
@@ -100,7 +110,10 @@ class ReactiveTransactionAttemptContext private[scala] (
       case Failure(exception) => SMono.raiseError(exception)
       case Success(encoded) =>
         FutureConversions
-          .javaMonoToScalaMono(internal.replace(doc.internal, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span)))
+          .javaMonoToScalaMono(
+            internal
+              .replace(doc.internal, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span))
+          )
           .map(TransactionGetResult)
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
           .doOnTerminate(() => span.end())
