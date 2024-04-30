@@ -25,10 +25,16 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.Base64;
 import java.util.EnumSet;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -55,6 +61,12 @@ class PasswordAuthenticatorTest {
   }
 
   @Test
+  void passwordNotIncludedInToString() {
+    String pw = "swordfish";
+    assertFalse(new UsernameAndPassword("user", pw).toString().contains(pw));
+  }
+
+  @Test
   void shouldNotNegotiatePlainWithNonTlsByDefault() {
     PasswordAuthenticator authenticator = PasswordAuthenticator.create("user", "pass");
 
@@ -69,11 +81,128 @@ class PasswordAuthenticatorTest {
   }
 
   @Test
-  void allowsToEnablePlainInAddition() {
+  void canUseDeprecatedMethodsToSpecifyStaticCredentials() {
     PasswordAuthenticator authenticator = PasswordAuthenticator
       .builder()
       .username("user")
       .password("pass")
+      .build();
+
+    // should return the same cached String instance
+    assertSame(
+      authenticator.getAuthHeaderValue(),
+      authenticator.getAuthHeaderValue()
+    );
+  }
+
+  @Test
+  void canUseDeprecatedMethodsToSpecifyDynamicPassword() {
+    CountingSupplier<String> passwordSupplier = new CountingSupplier<>(() -> "pass");
+
+    PasswordAuthenticator authenticator = PasswordAuthenticator
+      .builder()
+      .username("user")
+      .password(passwordSupplier)
+      .build();
+
+    assertNotSame(
+      authenticator.getAuthHeaderValue(),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(
+      expectedAuthHeaderValue("user", "pass"),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(3, passwordSupplier.count());
+  }
+
+  @Test
+  void canUseDeprecatedMethodsToSpecifyDynamicUsernameAndPassword() {
+    CountingSupplier<String> usernameSupplier = new CountingSupplier<>(() -> "user");
+    CountingSupplier<String> passwordSupplier = new CountingSupplier<>(() -> "pass");
+
+    PasswordAuthenticator authenticator = PasswordAuthenticator
+      .builder()
+      .username(usernameSupplier)
+      .password(passwordSupplier)
+      .build();
+
+    assertNotSame(
+      authenticator.getAuthHeaderValue(),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(
+      expectedAuthHeaderValue("user", "pass"),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(3, usernameSupplier.count());
+    assertEquals(3, passwordSupplier.count());
+  }
+
+  @Test
+  void cachesEncodedFormOfStaticCredentials() {
+    PasswordAuthenticator authenticator = PasswordAuthenticator
+      .builder("user", "pass")
+      .build();
+
+    // should return the same cached String instance
+    assertSame(
+      authenticator.getAuthHeaderValue(),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(
+      expectedAuthHeaderValue("user", "pass"),
+      authenticator.getAuthHeaderValue()
+    );
+  }
+
+  @Test
+  void supplierInvokedEveryTime() {
+    CountingSupplier<UsernameAndPassword> supplier = new CountingSupplier<>(
+      () -> new UsernameAndPassword("user", "pass")
+    );
+
+    PasswordAuthenticator authenticator = PasswordAuthenticator
+      .builder(supplier)
+      .build();
+
+    // should not be cached, because dynamic!
+    assertNotSame(
+      authenticator.getAuthHeaderValue(),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(
+      expectedAuthHeaderValue("user", "pass"),
+      authenticator.getAuthHeaderValue()
+    );
+
+    assertEquals(3, supplier.count());
+  }
+
+  @Test
+  void depprecatedMethodsAreNotCompatibleWithModernConstructor() {
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder("user", "pass").username("foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder("user", "pass").username(() -> "foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder("user", "pass").password("foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder("user", "pass").password(() -> "foo"));
+
+    Supplier<UsernameAndPassword> supplier = () -> new UsernameAndPassword("user", "pass");
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder(supplier).username("foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder(supplier).username(() -> "foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder(supplier).password("foo"));
+    assertThrows(IllegalStateException.class, () -> PasswordAuthenticator.builder(supplier).password(() -> "foo"));
+  }
+
+  @Test
+  void allowsToEnablePlainInAddition() {
+    PasswordAuthenticator authenticator = PasswordAuthenticator
+      .builder("user", "pass")
       .enablePlainSaslMechanism()
       .build();
 
@@ -104,10 +233,10 @@ class PasswordAuthenticatorTest {
   @Test
   void onlyEnablePlainFailsIfPlainNotAvailable() {
     Exception e = assertThrows(Exception.class, () ->
-      PasswordAuthenticator.builder()
+      PasswordAuthenticator.builder("user", "pass")
         .setPlatformHasSaslPlain(() -> false)
         .onlyEnablePlainSaslMechanism()
-      );
+    );
     assertTrue(e.getMessage().contains("PLAIN"));
   }
 
@@ -140,4 +269,27 @@ class PasswordAuthenticatorTest {
     }
   }
 
+  private static String expectedAuthHeaderValue(String username, String password) {
+    byte[] encodeMe = (username + ":" + password).getBytes(UTF_8);
+    return "Basic " + Base64.getEncoder().encodeToString(encodeMe);
+  }
+
+  private static class CountingSupplier<T> implements Supplier<T> {
+    private final LongAdder count = new LongAdder();
+    private final Supplier<T> wrapped;
+
+    public CountingSupplier(Supplier<T> wrapped) {
+      this.wrapped = wrapped;
+    }
+
+    @Override
+    public T get() {
+      count.increment();
+      return wrapped.get();
+    }
+
+    public long count() {
+      return count.sum();
+    }
+  }
 }

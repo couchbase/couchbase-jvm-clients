@@ -27,6 +27,7 @@ import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslHelper;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 import java.util.Base64;
 import java.util.EnumSet;
@@ -36,30 +37,64 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static com.couchbase.client.core.io.netty.kv.sasl.SaslHelper.platformHasSaslPlain;
+import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Performs authentication against a couchbase server cluster using username and password.
+ * Performs authentication against a Couchbase server cluster using username and password.
  */
 public class PasswordAuthenticator implements Authenticator {
 
   private static final Set<SaslMechanism> DEFAULT_SASL_MECHANISMS =
     EnumSet.of(SaslMechanism.SCRAM_SHA512, SaslMechanism.SCRAM_SHA256, SaslMechanism.SCRAM_SHA1);
 
-  private final Supplier<String> username;
-  private final Supplier<String> password;
+
+  private final Supplier<UsernameAndPassword> usernameAndPassword;
   private final Set<SaslMechanism> allowedSaslMechanisms;
-  private final String cachedHttpAuthHeader;
+  @Nullable private final String cachedHttpAuthHeader;
 
   /**
    * Creates a new {@link Builder} which allows to customize this authenticator.
+   *
+   * @see #builder(String, String)
+   * @see #builder(Supplier)
+   * @deprecated Please use one of the "See Also" methods instead,
+   * to ensure all required builder properties are set.
    */
+  @Deprecated
   public static PasswordAuthenticator.Builder builder() {
     return new Builder();
+  }
+
+  /**
+   * Creates a builder for an authenticator that uses the given credentials.
+   */
+  public static PasswordAuthenticator.Builder builder(String username, String password) {
+    return new Builder(username, password);
+  }
+
+  /**
+   * Creates a builder for an authenticator that uses dynamic credentials.
+   * This enables updating credentials without having to restart your application.
+   * <p>
+   * <b>IMPORTANT:</b> The supplier's {@code get()} method must not do blocking IO.
+   * It is called from async contexts, where blocking IO can starve important SDK resources
+   * like async event loops.
+   * <p>
+   * Instead of blocking inside the supplier, the supplier should return a value
+   * from a volatile field.
+   * <p>
+   * One way to keep the supplier's value up to date is to schedule a recurring task
+   * that reads new credentials from an external source and stores them
+   * in the volatile field.
+   */
+  public static PasswordAuthenticator.Builder builder(Supplier<UsernameAndPassword> supplier) {
+    return new Builder(supplier);
   }
 
   /**
@@ -68,13 +103,15 @@ public class PasswordAuthenticator implements Authenticator {
    * @param username the username to use for all authentication.
    * @param password the password to use alongside the username.
    * @return the instantiated {@link PasswordAuthenticator}.
+   * @see #builder(String, String)
+   * @see #builder(Supplier)
    */
   public static PasswordAuthenticator create(final String username, final String password) {
-    return builder().username(username).password(password).build();
+    return builder(username, password).build();
   }
 
   /**
-   * Creates a LDAP compatible password authenticator which is INSECURE if not used with TLS.
+   * Creates an LDAP compatible password authenticator which is INSECURE if not used with TLS.
    * <p>
    * Please note that this is INSECURE and will leak user credentials on the wire to eavesdroppers. This should
    * only be enabled in trusted environments.
@@ -84,31 +121,30 @@ public class PasswordAuthenticator implements Authenticator {
    * @return the instantiated {@link PasswordAuthenticator}.
    */
   public static PasswordAuthenticator ldapCompatible(final String username, final String password) {
-    return builder().username(username).password(password).onlyEnablePlainSaslMechanism().build();
+    return builder(username, password).onlyEnablePlainSaslMechanism().build();
   }
 
   private PasswordAuthenticator(final Builder builder) {
-    this.username = notNull(builder.username, "username");
-    this.password = notNull(builder.password, "password");
-    this.allowedSaslMechanisms = notNull(builder.allowedSaslMechanisms, "allowedSaslMechanisms");
+    EnumSet<SaslMechanism> tempMechanisms = EnumSet.noneOf(SaslMechanism.class);
+    tempMechanisms.addAll(builder.allowedSaslMechanisms);
+    this.allowedSaslMechanisms = unmodifiableSet(tempMechanisms);
 
-    // We only pre-compute the http header if we get static credentials
-    if (username instanceof OwnedSupplier && password instanceof OwnedSupplier) {
-      cachedHttpAuthHeader = encodeAuthHttpHeader();
-    } else {
-      cachedHttpAuthHeader = null;
-    }
+    this.usernameAndPassword = builder.resolveUsernameAndPasswordSupplier();
+
+    // Only pre-compute the HTTP header if we get static credentials
+    cachedHttpAuthHeader = builder.dynamicCredentials ? null : encodeAuthHttpHeader(this.usernameAndPassword.get());
   }
 
-  /**
-   * Helper method to encode the authentication http header value from the username and password.
-   */
-  private String encodeAuthHttpHeader() {
-    final String password = this.password.get();
-    final String username = this.username.get();
+  // Visible for testing
+  String getAuthHeaderValue() {
+    return cachedHttpAuthHeader != null
+      ? cachedHttpAuthHeader
+      : encodeAuthHttpHeader(this.usernameAndPassword.get());
+  }
 
-    final String pw = password == null ? "" : password;
-    final String encoded = Base64.getEncoder().encodeToString((username + ":" + pw).getBytes(UTF_8));
+  private static String encodeAuthHttpHeader(UsernameAndPassword credentials) {
+    byte[] encodeMe = (credentials.username() + ":" + credentials.password()).getBytes(UTF_8);
+    String encoded = Base64.getEncoder().encodeToString(encodeMe);
     return "Basic " + encoded;
   }
 
@@ -116,12 +152,13 @@ public class PasswordAuthenticator implements Authenticator {
   public void authKeyValueConnection(final EndpointContext ctx, final ChannelPipeline pipeline) {
     boolean tls = ctx.environment().securityConfig().tlsEnabled();
     boolean forceSaslPlain = tls && platformHasSaslPlain();
+    UsernameAndPassword credentials = usernameAndPassword.get();
 
     pipeline.addLast(new SaslListMechanismsHandler(ctx));
     pipeline.addLast(new SaslAuthenticationHandler(
       ctx,
-      username.get(),
-      password.get(),
+      credentials.username(),
+      credentials.password(),
       forceSaslPlain ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
     ));
   }
@@ -130,7 +167,7 @@ public class PasswordAuthenticator implements Authenticator {
   public void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
     request.headers().add(
       HttpHeaderNames.AUTHORIZATION,
-      cachedHttpAuthHeader != null ? cachedHttpAuthHeader : encodeAuthHttpHeader()
+      getAuthHeaderValue()
     );
   }
 
@@ -142,7 +179,7 @@ public class PasswordAuthenticator implements Authenticator {
         executor.execute(() -> {
           try {
             Metadata headers = new Metadata();
-            headers.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), encodeAuthHttpHeader());
+            headers.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), getAuthHeaderValue());
             applier.apply(headers);
           } catch (Throwable e) {
             applier.fail(Status.UNAUTHENTICATED.withCause(e));
@@ -165,34 +202,74 @@ public class PasswordAuthenticator implements Authenticator {
     private Supplier<String> password;
     private Set<SaslMechanism> allowedSaslMechanisms = DEFAULT_SASL_MECHANISMS;
     private Supplier<Boolean> platformHasSaslPlain = SaslHelper::platformHasSaslPlain;
+    private Supplier<UsernameAndPassword> usernameAndPassword;
+
+    /**
+     * True if at least one property was specified using a supplier instead of a fixed value.
+     */
+    private boolean dynamicCredentials;
+
+    /**
+     * @see PasswordAuthenticator#builder(Supplier)
+     */
+    private Builder(Supplier<UsernameAndPassword> usernameAndPassword) {
+      this.usernameAndPassword = requireNonNull(usernameAndPassword);
+      this.dynamicCredentials = true;
+    }
+
+    /**
+     * @see PasswordAuthenticator#builder(String, String)
+     */
+    private Builder(String username, String password) {
+      UsernameAndPassword cached = new UsernameAndPassword(username, password);
+      this.usernameAndPassword = () -> cached;
+      this.dynamicCredentials = false;
+    }
+
+    /**
+     * @deprecated Please use {@link Builder(String, String) or {@link Builder(Supplier)} instead.
+     */
+    @Deprecated
+    public Builder() {
+    }
 
     /**
      * Specifies a static username that will be used for all authentication purposes.
      *
      * @param username the username to use.
      * @return this builder for chaining purposes.
+     * @see PasswordAuthenticator#builder(String, String)
+     * @see PasswordAuthenticator#builder(Supplier)
+     * @deprecated Please specify the username when creating the builder,
+     * using one of the "See Also" methods.
      */
+    @Deprecated
     public Builder username(final String username) {
+      requireDeprecatedConstructor();
       notNullOrEmpty(username, "Username");
-      return username(new OwnedSupplier<>(username));
+      this.username = () -> username;
+      return this;
     }
 
     /**
      * Specifies a dynamic username that will be used for all authentication purposes.
+     * This enables updating credentials without having to restart your application.
      * <p>
-     * Every time the SDK needs to authenticate against the server, it will re-evaluate the supplier. This means that
-     * you can pass in a supplier that dynamically loads a username from a (remote) source without taking the application
-     * down on a restart.
-     * <p>
-     * It is VERY IMPORTANT that this supplier must not block on IO. It is called in async contexts and blocking for
-     * a longer amount of time will stall SDK resources like async event loops.
+     * <b>IMPORTANT:</b> The supplier's {@code get()} method must not do blocking IO.
+     * See {@link PasswordAuthenticator#builder(Supplier)} for details about why this is
+     * important, and what to do instead of blocking IO.
      *
-     * @param username the username to use.
+     * @param username A supplier that returns the username to use.
      * @return this builder for chaining purposes.
+     * @deprecated This method does not support returning username and password as an atomic unit.
+     * Please use {@link PasswordAuthenticator#builder(Supplier)} instead.
      */
+    @Deprecated
     public Builder username(final Supplier<String> username) {
+      requireDeprecatedConstructor();
       notNull(username, "Username");
       this.username = username;
+      this.dynamicCredentials = true;
       return this;
     }
 
@@ -201,10 +278,17 @@ public class PasswordAuthenticator implements Authenticator {
      *
      * @param password the password to alongside for the username provided.
      * @return this builder for chaining purposes.
+     * @see PasswordAuthenticator#builder(String, String)
+     * @see PasswordAuthenticator#builder(Supplier)
+     * @deprecated Please specify the password when creating the builder,
+     * using one of the "See Also" methods.
      */
+    @Deprecated
     public Builder password(final String password) {
+      requireDeprecatedConstructor();
       notNullOrEmpty(password, "Password");
-      return password(new OwnedSupplier<>(password));
+      this.password = () -> password;
+      return this;
     }
 
     /**
@@ -219,10 +303,15 @@ public class PasswordAuthenticator implements Authenticator {
      *
      * @param password the password to alongside for the username provided.
      * @return this builder for chaining purposes.
+     * @deprecated This method does not support returning username and password as an atomic unit.
+     * Please use {@link PasswordAuthenticator#builder(Supplier)} instead.
      */
+    @Deprecated
     public Builder password(final Supplier<String> password) {
+      requireDeprecatedConstructor();
       notNull(password, "Password");
       this.password = password;
+      this.dynamicCredentials = true;
       return this;
     }
 
@@ -246,7 +335,7 @@ public class PasswordAuthenticator implements Authenticator {
         );
       }
 
-      this.allowedSaslMechanisms = allowedSaslMechanisms;
+      this.allowedSaslMechanisms = setCopyOf(allowedSaslMechanisms);
       return this;
     }
 
@@ -295,6 +384,46 @@ public class PasswordAuthenticator implements Authenticator {
     public PasswordAuthenticator build() {
       return new PasswordAuthenticator(this);
     }
-  }
 
+    private void requireDeprecatedConstructor() {
+      if (usernameAndPassword != null) {
+        throw new IllegalStateException("Username and password were specified when this builder was created, and cannot be changed.");
+      }
+    }
+
+    private Supplier<UsernameAndPassword> resolveUsernameAndPasswordSupplier() {
+      // This is where we'll end up if the user does not call any
+      // deprecated methods.
+      if (usernameAndPassword != null) {
+        return usernameAndPassword;
+      }
+
+      // Merge the separate username and password suppliers
+      // into a single Supplier<UsernameAndPassword>. Ugh.
+
+      notNull(username, "Must specify username");
+      notNull(password, "Must specify password");
+
+      if (!dynamicCredentials) {
+        // Eagerly get username and password from the suppliers,
+        // and use them to build a cached instance.
+        UsernameAndPassword cached = new UsernameAndPassword(
+          username.get(),
+          password.get()
+        );
+        return () -> cached;
+      }
+
+      // Username or password or both were specified using
+      // deprecated methods and independent suppliers.
+      // Stitch the suppliers together into a composite supplier.
+      //
+      // NOTE: This doesn't fix the problem of the username and password
+      // suppliers not being atomic, but there's no way to fix that.
+      return () -> new UsernameAndPassword(
+        username.get(),
+        password.get()
+      );
+    }
+  }
 }
