@@ -156,8 +156,6 @@ public class CoreEnvironment implements AutoCloseable {
   }
 
   protected CoreEnvironment(final Builder<?> builder) {
-    new SystemPropertyPropertyLoader().load(builder);
-
     this.userAgent = defaultUserAgent();
     this.maxNumRequestsInRetry = builder.maxNumRequestsInRetry;
     this.schedulerThreadCount = builder.schedulerThreadCount;
@@ -1183,6 +1181,22 @@ public class CoreEnvironment implements AutoCloseable {
         + registeredProfileNames());
     }
 
+    /**
+     * You might wonder why callers can't use
+     * {@link #load(PropertyLoader)} to load system properties.
+     * <p>
+     * It's because that method requires a raw builder type, while
+     * {@link SystemPropertyPropertyLoader}'s builder type
+     * has an unbounded wildcard.
+     * <p>
+     * Fixing the types would be a source-incompatible change.
+     * We'll get it right next time!
+     */
+    @Stability.Internal
+    public SELF loadSystemProperties() {
+      new SystemPropertyPropertyLoader().load(this);
+      return self();
+    }
   }
 
   /**

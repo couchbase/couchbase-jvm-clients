@@ -362,6 +362,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.loggingMeterConfig.foreach(v => coreBuilder.loggingMeterConfig(v.toCore))
   builder.transactionsConfig.foreach(v => coreBuilder.transactionsConfig(v.toCore))
 
+  coreBuilder.loadSystemProperties()
+
   private[scala] val coreEnv = new CoreEnvironment(coreBuilder)
 
   /** Returns the underlying (Java) core-io `CoreEnvironment` that is built from this.

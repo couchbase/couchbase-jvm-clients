@@ -769,6 +769,7 @@ public class Cluster internal constructor(
             envBuilder: ClusterEnvironment.Builder = ClusterEnvironment.builder(),
         ): Cluster {
             envBuilder.load(ConnectionStringPropertyLoader(connectionString))
+            envBuilder.loadSystemProperties()
             return doConnect(connectionString, authenticator, envBuilder.build(), ownsEnv = true)
         }
 

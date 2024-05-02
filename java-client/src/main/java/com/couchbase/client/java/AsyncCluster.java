@@ -213,6 +213,7 @@ public class AsyncCluster {
         opts.environmentCustomizer().accept(builder);
       }
       builder.load(new ConnectionStringPropertyLoader(connectionString));
+      builder.loadSystemProperties();
       envSupplier = new OwnedSupplier<>(builder.build());
     } else {
       envSupplier = opts::environment;
