@@ -27,8 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ErrorCodeAndMessageTest {
 
+  /**
+   * This is how endpoints other than "/analytics/service" reported errors
+   * before Couchbase Server 7.1.0.
+   */
   @Test
-  void parsesPlaintext() {
+  void parsesPlaintextHttpResponseBody() {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" 123:Something bad happened!\n".getBytes(UTF_8)).get(0);
     assertEquals(123, e.code());
     assertEquals("Something bad happened!", e.message());
@@ -41,6 +45,22 @@ class ErrorCodeAndMessageTest {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from("oops".getBytes(UTF_8)).get(0);
     assertEquals(0, e.code());
     assertEquals("Failed to decode error: oops", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
+  }
+
+  /**
+   * This is what a top-level error report looks like in Couchbase Server 7.1.0 and later.
+   * NOTE: This is consistent with how errors are reported in the /analytics/service
+   * endpoint -- but when we parse that we use a streaming response parser that strips
+   * off the "errors" wrapper. This test ensures we can parse errors from the full
+   * body of a non-streaming response.
+   */
+  @Test
+  void parsesJsonHttpResponseBody() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from("{\"errors\":[{\"code\":123,\"msg\":\"Something bad happened!\"}],\"status\":\"errors\"}".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
     assertFalse(e.retry());
     assertNull(e.reason());
   }
@@ -81,6 +101,11 @@ class ErrorCodeAndMessageTest {
     assertNull(e.reason());
   }
 
+  /**
+   * This is how we see errors when reading them from the "/analytics/service" response stream.
+   * It's the same format as {@link #parsesJsonHttpResponseBody} but without the "errors" wrapper.
+   * (The response stream parser consumes the "errors" wrapper.)
+   */
   @Test
   void parseJsonArray() {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":123,\"msg\":\"Something bad happened!\"}]".getBytes(UTF_8)).get(0);

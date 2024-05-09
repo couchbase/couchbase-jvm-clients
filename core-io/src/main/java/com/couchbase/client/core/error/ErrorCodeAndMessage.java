@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -86,7 +87,9 @@ public class ErrorCodeAndMessage {
 
   @Override
   public String toString() {
-    return code + " " + message + (!context.isEmpty() ? " Context: " + context : "");
+    return code + " " + message +
+      (!isNullOrEmpty(reason) ? " Reason: " + reason : "") +
+      (!isNullOrEmpty(context) ? " Context: " + context : "");
   }
 
   @Stability.Internal
@@ -131,10 +134,23 @@ public class ErrorCodeAndMessage {
     try {
       node = Mapper.decodeIntoTree(content);
     } catch (Exception notJson) {
+      // Couchbase Server versions prior to 7.1.0 end up here when parsing
+      // full response bodies (like link management errors, for example).
       return fromPlaintext(content);
     }
 
     try {
+      // Starting with Couchbase Server 7.1.0, all analytics paths report errors in this format
+      // instead of plaintext.
+      // Note that when we use the streaming response parser, it strips off the "errors" wrapper
+      // for us; this code path is specifically for non-streaming responses where we process
+      // the whole body at once. When the body indicates errors, it looks like this:
+      //     {"errors":[{"code":123,"msg":"Oh no!"}],"status":"errors"}
+      if (node.path("errors").path(0).path("code").isInt()) {
+        // Strip away the "errors" wrapper, just like the streaming response parser does.
+        node = node.get("errors");
+      }
+
       if (node.isArray()) {
         return unmodifiableList(Mapper.convertValue(node, new TypeReference<List<ErrorCodeAndMessage>>() {
         }));
