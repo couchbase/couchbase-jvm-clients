@@ -22,7 +22,7 @@ import com.couchbase.client.core.io.netty.analytics.AnalyticsHandlerSwitcher;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 
-public class AnalyticsEndpoint extends BaseEndpoint {
+public class AnalyticsEndpoint extends DeferredCloseEndpoint {
 
   public AnalyticsEndpoint(final ServiceContext ctx, final String hostname,
                            final int port) {
