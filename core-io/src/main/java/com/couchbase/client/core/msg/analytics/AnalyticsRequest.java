@@ -36,7 +36,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -51,7 +50,9 @@ public class AnalyticsRequest
 
   public static final int NO_PRIORITY = 0;
 
-  private static final String SERVICE_URI = "/analytics/service";
+  private static final String uri = "/analytics/service";
+  private static final HttpMethod httpMethod = HttpMethod.POST;
+
   private final byte[] query;
   private final int priority;
   private final boolean idempotent;
@@ -59,27 +60,39 @@ public class AnalyticsRequest
   private final String statement;
   private final String bucket;
   private final String scope;
-  private final String uri;
-  private final HttpMethod httpMethod;
 
   private final Authenticator authenticator;
+
+  /**
+   * Automatically translate error codes into specific SDK3 exceptions,
+   * or throw generic {@link com.couchbase.client.core.error.CoreErrorCodeAndMessageException}?
+   */
+  private final boolean translateExceptions;
 
   public AnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                           final Authenticator authenticator, final byte[] query, final int priority,
                           final boolean idempotent, final String contextId, final String statement,
                           final RequestSpan span, final String bucket, final String scope) {
     this(timeout, ctx, retryStrategy, authenticator, query, priority, idempotent, contextId, statement, span, bucket,
-      scope, SERVICE_URI, HttpMethod.POST);
+      scope, true);
   }
 
-  public AnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                          final Authenticator authenticator, @Nullable final byte[] query, final int priority,
-                          final boolean idempotent, final String contextId, final String statement,
-                          final RequestSpan span, final String bucket, final String scope, final String uri,
-                          final HttpMethod httpMethod) {
+  public AnalyticsRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final Authenticator authenticator,
+    final byte[] query,
+    final int priority,
+    final boolean idempotent,
+    final String contextId,
+    final String statement,
+    final RequestSpan span,
+    final String bucket,
+    final String scope,
+    final boolean translateExceptions
+  ) {
     super(timeout, ctx, retryStrategy, span);
-    this.uri = uri;
-    this.httpMethod = httpMethod;
     this.query = query;
     this.authenticator = authenticator;
     this.priority = priority;
@@ -88,6 +101,7 @@ public class AnalyticsRequest
     this.statement = statement;
     this.bucket = bucket;
     this.scope = scope;
+    this.translateExceptions = translateExceptions;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
@@ -156,6 +170,10 @@ public class AnalyticsRequest
 
   public String statement() {
     return statement;
+  }
+
+  public boolean translateExceptions() {
+    return translateExceptions;
   }
 
   @Override

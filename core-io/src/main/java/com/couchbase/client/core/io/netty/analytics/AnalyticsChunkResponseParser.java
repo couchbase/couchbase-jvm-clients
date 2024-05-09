@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CompilationFailureException;
+import com.couchbase.client.core.error.CoreErrorCodeAndMessageException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DatasetExistsException;
 import com.couchbase.client.core.error.DatasetNotFoundException;
@@ -41,6 +42,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
+import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 
 import java.util.Collections;
 import java.util.List;
@@ -122,6 +124,12 @@ public class AnalyticsChunkResponseParser
     AnalyticsErrorContext errorContext = new AnalyticsErrorContext(ctx, errors, httpCode);
     if (errors.size() >= 1) {
       ErrorCodeAndMessage error = errors.get(0);
+
+      if (ctx.request() instanceof AnalyticsRequest && !((AnalyticsRequest) ctx.request()).translateExceptions()) {
+        // Let Columnar do its own exception translation
+        return new CoreErrorCodeAndMessageException(error, errorContext);
+      }
+
       // Analytics error code reference:
       //   https://docs.couchbase.com/server/current/analytics/error-codes.html
       int code = error.code();
