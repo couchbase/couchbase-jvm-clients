@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
@@ -40,21 +41,49 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbCollections.mapCopyOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("rawtypes")
-class BuilderPropertySetter {
+@Stability.Internal
+public class BuilderPropertySetter {
+
+  // By convention, builder methods that expose child builders have names ending with this.
+  private final String childBuilderAccessorSuffix;
+
+  // Escape hatch in case some accessors don't follow the convention.
+  private final Map<String, String> irregularChildBuilderAccessors;
+
+  public BuilderPropertySetter() {
+    this("Config", mapOf("ioEnvironment", "ioEnvironment"));
+  }
+
+  public BuilderPropertySetter(
+    String childBuilderAccessorSuffix,
+    Map<String, String> irregularChildBuilderAccessors
+  ) {
+    this.childBuilderAccessorSuffix = requireNonNull(childBuilderAccessorSuffix);
+    this.irregularChildBuilderAccessors = mapCopyOf(irregularChildBuilderAccessors);
+  }
+
+  /**
+   * @throws InvalidPropertyException if any property could not be applied to the builder
+   */
+  public void set(Object builder, Map<String, String> properties) {
+    properties.forEach((key, value) -> set(builder, key, value));
+  }
 
   /**
    * @throws InvalidPropertyException if the property could not be applied to the builder
    */
   public void set(Object builder, String propertyName, String propertyValue) {
 
-    // By convention, builder methods that return child builders have names ending with this.
-    final String CHILD_BUILDER_ACCESSOR_SUFFIX = "Config";
 
     try {
       final List<String> propertyComponents = Arrays.asList(propertyName.split("\\.", -1));
@@ -63,8 +92,17 @@ class BuilderPropertySetter {
 
       for (String pathComponent : pathToBuilder) {
         try {
-          final String childBuilderAccessor = pathComponent + CHILD_BUILDER_ACCESSOR_SUFFIX;
-          builder = builder.getClass().getMethod(childBuilderAccessor).invoke(builder);
+          final String childBuilderAccessor = irregularChildBuilderAccessors.getOrDefault(
+            pathComponent,
+            pathComponent + childBuilderAccessorSuffix
+          );
+
+          AtomicReference<Object> ref = new AtomicReference<>();
+          builder.getClass()
+            .getMethod(childBuilderAccessor, Consumer.class)
+            .invoke(builder, (Consumer<Object>) ref::set);
+          builder = ref.get();
+
         } catch (NoSuchMethodException e) {
           throw InvalidArgumentException.fromMessage("Method not found: " + e.getMessage(), e);
         }

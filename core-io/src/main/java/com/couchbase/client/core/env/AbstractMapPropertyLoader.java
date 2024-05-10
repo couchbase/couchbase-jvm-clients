@@ -41,7 +41,7 @@ public abstract class AbstractMapPropertyLoader<B extends CoreEnvironment.Builde
 
   @Override
   public void load(B builder) {
-    propertyMap().forEach((key, value) -> setter.set(builder, key, value));
+    setter.set(builder, propertyMap());
   }
 
 }
