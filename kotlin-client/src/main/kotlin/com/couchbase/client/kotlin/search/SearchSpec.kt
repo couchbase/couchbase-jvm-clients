@@ -397,7 +397,7 @@ public sealed class SearchSpec {
         public fun matchNone(): SearchQuery = SearchQuery.matchNone()
 
         /**
-         * A Vector query.
+         * A Vector query, with the vector specified as a FloatArray.
          *
          * Vector queries can be ANDed or ORed together to create a compound vector query by passing
          * them to [SearchSpec.allOf] or [SearchSpec.anyOf].
@@ -417,7 +417,22 @@ public sealed class SearchSpec {
             field: String,
             vector: FloatArray,
             numCandidates: Int = 3,
-        ): VectorQuery = InternalVectorQuery(vector.clone(), field, numCandidates)
+        ): VectorQuery = InternalVectorQuery(vector.clone(), null, field, numCandidates)
+
+        /**
+         * A Vector query, with the vector specified as a Base64-encoded sequence of little-endian IEEE 754 floats.
+         *
+         * See [SearchSpec.vector] for more info about vector queries.
+         *
+         * @param vector The vector to compare against, as a Base64-encoded sequence of little-endian IEEE 754 floats.
+         * @param field The document field to search.
+         */
+        @SinceCouchbase("7.6.2")
+        public fun vector(
+            field: String,
+            vector: String,
+            numCandidates: Int = 3,
+        ): VectorQuery = InternalVectorQuery(null, vector, field, numCandidates)
 
         /**
          * Combines vector queries using logical OR.

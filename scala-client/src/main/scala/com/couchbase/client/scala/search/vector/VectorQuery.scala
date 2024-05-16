@@ -47,6 +47,7 @@ case class VectorQuery private (
   private[scala] def toCore: CoreVectorQuery =
     new CoreVectorQuery(
       vectorQuery,
+      null,
       vectorField,
       numCandidates.map(Integer.valueOf).orNull,
       boost.map(java.lang.Double.valueOf).orNull

@@ -22,48 +22,72 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import reactor.util.annotation.Nullable;
 
-import static com.couchbase.client.core.util.Validators.notNull;
+import java.util.Arrays;
+import java.util.Objects;
+
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 @Stability.Internal
 public class CoreVectorQuery {
   public static final int DEFAULT_NUM_CANDIDATES = 3;
 
-  private final float[] vector;
+  // exactly one is non-null
+  @Nullable private final float[] vector;
+  @Nullable private final String base64EncodedVector;
+
   private final String field;
   private final @Nullable Integer numCandidates;
   private final @Nullable Double boost;
 
-  public CoreVectorQuery(float[] vector,
-                         String field,
-                         @Nullable Integer numCandidates,
-                         @Nullable Double boost) {
-    this.vector = notNull(vector, "Vector");
+  public CoreVectorQuery(
+      @Nullable float[] vector,
+      @Nullable String base64EncodedVector,
+      String field,
+      @Nullable Integer numCandidates,
+      @Nullable Double boost
+  ) {
+    if (countNonNull(vector, base64EncodedVector) != 1) {
+      throw InvalidArgumentException.fromMessage("Exactly one of `vector` or `base64EncodedVector` must be non-null.");
+    }
+
+    this.vector = vector;
+    this.base64EncodedVector = base64EncodedVector;
+
     this.numCandidates = numCandidates;
     this.field = notNullOrEmpty(field, "Field");
     this.boost = boost;
 
     if (numCandidates != null && numCandidates < 1) {
-      throw InvalidArgumentException.fromMessage("If numCandidates is specified it must be >= 1");
+      throw InvalidArgumentException.fromMessage("If numCandidates is specified, it must be >= 1, but got: " + numCandidates);
     }
-    if (vector.length == 0) {
-      throw InvalidArgumentException.fromMessage("A vector query must have at least one member");
+    if (vector != null && vector.length == 0) {
+      throw InvalidArgumentException.fromMessage("A vector must have at least one element.");
     }
+  }
+
+  private static int countNonNull(Object... objects) {
+    return (int) Arrays.stream(objects).filter(Objects::nonNull).count();
   }
 
   public ObjectNode toJson() {
     ObjectNode outer = Mapper.createObjectNode();
-    ArrayNode array = Mapper.createArrayNode();
-
-    for (float v : vector) {
-      array.add(v);
-    }
-    outer.set("vector", array);
     outer.put("field", this.field);
     outer.put("k", numCandidates != null ? numCandidates : DEFAULT_NUM_CANDIDATES);
     if (boost != null) {
       outer.put("boost", boost);
     }
+
+    if (vector != null) {
+      ArrayNode array = Mapper.createArrayNode();
+      for (float v : vector) {
+        array.add(v);
+      }
+      outer.set("vector", array);
+
+    } else {
+      outer.put("vector_base64", base64EncodedVector);
+    }
+
     return outer;
   }
 }

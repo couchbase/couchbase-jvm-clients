@@ -52,12 +52,13 @@ public sealed class VectorQuery : VectorSearchSpec() {
 }
 
 internal data class InternalVectorQuery(
-    val vector: FloatArray,
+    val vector: FloatArray?,
+    val base64EncodedVector: String?,
     val field: String,
     val numCandidates: Int,
     val boost: Double? = null,
 ) : VectorQuery() {
-    override val core = CoreVectorQuery(vector, field, numCandidates, boost)
+    override val core = CoreVectorQuery(vector, base64EncodedVector, field, numCandidates, boost)
     override fun withBoost(boost: Double?) = copy(boost = boost)
 
     override fun equals(other: Any?): Boolean {
@@ -66,7 +67,11 @@ internal data class InternalVectorQuery(
 
         other as InternalVectorQuery
 
-        if (!vector.contentEquals(other.vector)) return false
+        if (vector != null) {
+            if (other.vector == null) return false
+            if (!vector.contentEquals(other.vector)) return false
+        } else if (other.vector != null) return false
+        if (base64EncodedVector != other.base64EncodedVector) return false
         if (field != other.field) return false
         if (numCandidates != other.numCandidates) return false
         if (boost != other.boost) return false
@@ -75,7 +80,9 @@ internal data class InternalVectorQuery(
     }
 
     override fun hashCode(): Int {
-        return vector.contentHashCode()
+        var result = vector?.contentHashCode() ?: 0
+        result = 31 * result + (base64EncodedVector?.hashCode() ?: 0)
+        return result
     }
 }
 

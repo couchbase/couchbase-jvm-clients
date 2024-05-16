@@ -15,29 +15,52 @@
  */
 package com.couchbase.client.java.search.vector;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery;
 import reactor.util.annotation.Nullable;
 
+import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+
 @Stability.Uncommitted
 public class VectorQuery {
-  private final float[] vectorQuery;
+  // exactly 1 of the two formats is non-null
+  @Nullable private final float[] vector;
+  @Nullable private final String base64EncodedVector;
+
   private final String vectorField;
   private @Nullable Integer numCandidates;
   private @Nullable Double boost;
 
-  private VectorQuery(String vectorField, float[] vectorQuery) {
-    this.vectorField = vectorField;
-    this.vectorQuery = vectorQuery;
+  private VectorQuery(String vectorField, float[] vector) {
+    this.vectorField = notNull(vectorField, "vectorField");
+    this.vector = notNull(vector, "vector");
+    this.base64EncodedVector = null;
+  }
+
+  private VectorQuery(String vectorField, String base64EncodedVector) {
+    this.vectorField = notNull(vectorField, "vectorField");
+    this.base64EncodedVector = notNullOrEmpty(base64EncodedVector, "base64EncodedVector");
+    this.vector = null;
   }
 
   /**
    * @param vectorField the document field that contains the vector.
-   * @param vectorQuery the vector query to run.
-   * @return
+   * @param vector the vector to search for.
    */
-  public static VectorQuery create(String vectorField, float[] vectorQuery) {
-    return new VectorQuery(vectorField, vectorQuery);
+  @SinceCouchbase("7.6")
+  public static VectorQuery create(String vectorField, float[] vector) {
+    return new VectorQuery(vectorField, vector);
+  }
+
+  /**
+   * @param vectorField the document field that contains the vector.
+   * @param base64EncodedVector the vector to search for, as a Base64-encoded sequence of little-endian IEEE 754 floats.
+   */
+  @SinceCouchbase("7.6.2")
+  public static VectorQuery create(String vectorField, String base64EncodedVector) {
+    return new VectorQuery(vectorField, base64EncodedVector);
   }
 
   /**
@@ -52,7 +75,7 @@ public class VectorQuery {
 
   /**
    * Can be used to control how much weight to give the results of this query vs other queries.
-   *
+   * <p>
    * See the <a href="https://docs.couchbase.com/server/current/fts/fts-query-string-syntax-boosting.html">FTS documentation</a> for details.
    *
    * @return this, for chaining.
@@ -64,6 +87,6 @@ public class VectorQuery {
 
   @Stability.Internal
   public CoreVectorQuery toCore() {
-    return new CoreVectorQuery(vectorQuery, vectorField, numCandidates, boost);
+    return new CoreVectorQuery(vector, base64EncodedVector, vectorField, numCandidates, boost);
   }
 }

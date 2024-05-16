@@ -208,7 +208,8 @@ public class CoreSearchIndex {
                         if (field.has("type")) {
                           JsonNode typ = field.get("type");
                           if (typ.isTextual()) {
-                            if (typ.textValue().equals("vector")) {
+                            // "vector", "vector_base64", and any future vector* types
+                            if (typ.textValue().startsWith("vector")) {
                               return true;
                             }
                           }
