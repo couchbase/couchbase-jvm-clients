@@ -16,30 +16,34 @@
 
 package com.couchbase.client.core.node;
 
-import com.couchbase.client.core.config.NodeInfo;
-import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.KetamaRingNode;
+import com.couchbase.client.core.util.HostAndPort;
+
+import static java.util.Objects.requireNonNull;
 
 /**
- * A {@link MemcachedHashingStrategy} which is compatible with libcouchbase and SDKs that
- * are built on top.
- *
- * @author Michael Nitschinger
- * @since 1.5.3
+ * The default strategy, compatible with libcouchbase and related SDKs.
  */
 public class StandardMemcachedHashingStrategy implements MemcachedHashingStrategy {
 
     public static final StandardMemcachedHashingStrategy INSTANCE = new StandardMemcachedHashingStrategy();
 
-    private StandardMemcachedHashingStrategy() { }
+    private StandardMemcachedHashingStrategy() {
+    }
 
     @Override
-    public String hash(final NodeInfo info, final int repetition) {
-        int port = info.services().get(ServiceType.KV);
+    public String hash(final KetamaRingNode info, final int repetition) {
+        HostAndPort authority = requireNonNull(
+            info.ketamaAuthority(),
+            "Oops, didn't filter out nodes with missing ketama authority"
+        );
 
         // Compatibility note: libcouchbase encloses the host in square brackets
         // if it is an IPv6 literal (contains colons). The Java SDK doesn't do that.
+        //
+        //   return authority.format() + "-" + repetition; // <-- Here's what libcouchbase does!
 
-        return info.hostname() + ":" + port + "-" + repetition;
+        return authority.host() + ":" + authority.port() + "-" + repetition;
     }
 
 }

@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnor
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.KetamaRing;
 
 import java.util.List;
 import java.util.Map;

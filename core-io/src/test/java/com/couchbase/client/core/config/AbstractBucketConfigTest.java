@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -52,7 +53,7 @@ class AbstractBucketConfigTest {
         direct.put(ServiceType.MANAGER, 1235);
         ssl.put(ServiceType.KV, 4567);
 
-        nodeInfos.add(new NodeInfo("127.0.0.1", direct, ssl, null));
+        nodeInfos.add(new NodeInfo("127.0.0.1", direct, ssl, emptyMap()));
 
         BucketConfig bc = new SampleBucketConfig(nodeInfos, null);
 

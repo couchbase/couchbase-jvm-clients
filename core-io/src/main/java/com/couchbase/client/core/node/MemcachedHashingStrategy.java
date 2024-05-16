@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.NodeInfo;
+import com.couchbase.client.core.topology.KetamaRingNode;
 
 /**
  * This interface defines different hashing strategies used for ketama hashing in memcached buckets.
  *
- * @since 2.3.6
+ * @see StandardMemcachedHashingStrategy#INSTANCE
+ * @see Sdk2CompatibleMemcachedHashingStrategy#INSTANCE
  */
 @Stability.Internal
 public interface MemcachedHashingStrategy {
@@ -33,6 +35,6 @@ public interface MemcachedHashingStrategy {
      * @param repetition the repetition
      * @return the hashed node
      */
-    String hash(NodeInfo info, int repetition);
+    String hash(KetamaRingNode info, int repetition);
 
 }

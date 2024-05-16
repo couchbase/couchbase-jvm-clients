@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.config;
+package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
-import com.couchbase.client.core.service.ServiceType;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -49,8 +48,11 @@ import static java.util.Objects.requireNonNull;
 public final class KetamaRing<E> {
   private final NavigableMap<Long, E> points;
 
-  public static KetamaRing<NodeInfo> create(List<NodeInfo> nodes, MemcachedHashingStrategy strategy) {
-    List<NodeInfo> kvNodes = filter(nodes, it -> it.services().containsKey(ServiceType.KV));
+  public static <E extends KetamaRingNode> KetamaRing<E> create(
+    List<E> nodes,
+    MemcachedHashingStrategy strategy
+  ) {
+    List<E> eligibleNodes = filter(nodes, it -> it.ketamaAuthority() != null);
 
     // Compatibility note: libcouchbase sorts the nodes using a lexical sort on "host:port"
     // to get deterministic behavior if node hashes collide. Although deterministic, the actual
@@ -58,7 +60,16 @@ public final class KetamaRing<E> {
     //
     // The Java SDK does not sort the list.
 
-    return new KetamaRing<>(kvNodes, strategy::hash);
+    if (eligibleNodes.isEmpty()) {
+      throw new IllegalArgumentException(
+        "No nodes are eligible to participate in this Memcached bucket's ketama ring." +
+          " To be eligible, a node must be ready to service the bucket," + // must appear in both `nodes` and `nodesExt`
+          " and must advertise a non-TLS KV port for the default network" +
+          " (even when the KV connection is actually secured by TLS)."
+      );
+    }
+
+    return new KetamaRing<>(eligibleNodes, strategy::hash);
   }
 
   /**
@@ -121,8 +132,8 @@ public final class KetamaRing<E> {
         : points.firstEntry().getValue(); // wrap around
   }
 
-  // Visible for testing
-  NavigableMap<Long, E> toMap() {
+  // Visible for testing, and for MemcachedBucketConfig
+  public NavigableMap<Long, E> toMap() {
     return points;
   }
 

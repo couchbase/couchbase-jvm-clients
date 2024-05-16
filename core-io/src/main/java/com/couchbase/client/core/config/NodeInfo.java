@@ -16,13 +16,16 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.topology.KetamaRingNode;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.util.annotation.Nullable;
 
 import java.net.URI;
@@ -32,15 +35,13 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
 /**
- * Default implementation of {@link NodeInfo}.
- *
- * @author Michael Nitschinger
- * @since 1.0
+ * Service addresses for one node of a Couchbase Server cluster.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class NodeInfo {
+public class NodeInfo implements KetamaRingNode {
 
     private final String hostname;
     private final Map<ServiceType, Integer> directServices;
@@ -48,7 +49,7 @@ public class NodeInfo {
     private final Map<String, AlternateAddress> alternateAddresses;
     private final NodeIdentifier nodeIdentifier;
     private int configPort;
-
+    @Nullable private final HostAndPort ketamaAuthority;
 
     /**
      * Creates a new {@link NodeInfo} with no SSL services.
@@ -78,6 +79,31 @@ public class NodeInfo {
         this.directServices = parseDirectServices(viewUri, ports);
         this.sslServices = new HashMap<>();
         this.nodeIdentifier = new NodeIdentifier(this.hostname, directServices.get(ServiceType.MANAGER));
+        this.ketamaAuthority = initKetamaAuthority();
+    }
+
+    @Nullable
+    private HostAndPort initKetamaAuthority() {
+        Integer port = directServices.get(ServiceType.KV);
+        return port == null ? null : new HostAndPort(this.hostname, port);
+    }
+
+    @Stability.Internal
+    static NodeIdentifier initNodeIdentifier(String host, Map<ServiceType, Integer> nonTlsPorts, Map<ServiceType, Integer> tlsPorts) {
+        Integer managerPort = nonTlsPorts.get(ServiceType.MANAGER);
+        if (managerPort == null) {
+            managerPort = tlsPorts.get(ServiceType.MANAGER);
+        }
+        if (managerPort == null) {
+            throw new IllegalStateException("A config must have at least a non-ssl or a ssl manager port defined!");
+        }
+        return new NodeIdentifier(host, managerPort);
+    }
+
+    @Nullable
+    @Override
+    public HostAndPort ketamaAuthority() {
+        return ketamaAuthority;
     }
 
     /**
@@ -100,16 +126,27 @@ public class NodeInfo {
             ? Collections.emptyMap()
             : alternateAddresses;
 
-        Integer directManagerPort = directServices.get(ServiceType.MANAGER);
-        Integer sslManagerPort = sslServices.get(ServiceType.MANAGER);
-        if (directManagerPort != null) {
-            this.nodeIdentifier = new NodeIdentifier(this.hostname, directManagerPort);
-        } else if (sslManagerPort != null) {
-            this.nodeIdentifier = new NodeIdentifier(this.hostname, sslManagerPort);
-        } else {
-            throw new IllegalStateException("A config must have at least a non-ssl or a ssl manager port defined!");
-        }
+        this.nodeIdentifier = initNodeIdentifier(hostname, directServices, sslServices);
+        this.ketamaAuthority = initKetamaAuthority();
+    }
 
+    /**
+     * Creates an instance from pre-parsed address info.
+     */
+    @Stability.Internal
+    public NodeInfo(
+        String hostname,
+        Map<ServiceType, Integer> direct,
+        Map<ServiceType, Integer> ssl,
+        @Nullable HostAndPort ketamaAuthority
+    ) {
+        this.hostname = requireNonNull(hostname);
+        this.directServices = requireNonNull(direct);
+        this.sslServices = requireNonNull(ssl);
+        this.alternateAddresses = Collections.emptyMap();
+
+        this.nodeIdentifier = initNodeIdentifier(hostname, directServices, sslServices);
+        this.ketamaAuthority = ketamaAuthority;
     }
 
     public String hostname() {
@@ -191,6 +228,7 @@ public class NodeInfo {
             ", aa=" + redactSystem(alternateAddresses) +
             ", configPort=" + redactSystem(configPort) +
             ", nodeIdentifier=" + redactSystem(nodeIdentifier) +
+            ", ketamaAuthority=" + redactSystem(ketamaAuthority) +
             '}';
     }
 
