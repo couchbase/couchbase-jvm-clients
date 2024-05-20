@@ -17,32 +17,27 @@ package com.couchbase.client.java.search.vector;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.vector.CoreVector;
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
-import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
 @Stability.Uncommitted
 public class VectorQuery {
-  // exactly 1 of the two formats is non-null
-  @Nullable private final float[] vector;
-  @Nullable private final String base64EncodedVector;
-
+  private final CoreVector vector;
   private final String vectorField;
   private @Nullable Integer numCandidates;
   private @Nullable Double boost;
 
   private VectorQuery(String vectorField, float[] vector) {
     this.vectorField = notNull(vectorField, "vectorField");
-    this.vector = notNull(vector, "vector");
-    this.base64EncodedVector = null;
+    this.vector = CoreVector.of(vector);
   }
 
   private VectorQuery(String vectorField, String base64EncodedVector) {
     this.vectorField = notNull(vectorField, "vectorField");
-    this.base64EncodedVector = notNullOrEmpty(base64EncodedVector, "base64EncodedVector");
-    this.vector = null;
+    this.vector = CoreVector.of(base64EncodedVector);
   }
 
   /**
@@ -87,6 +82,6 @@ public class VectorQuery {
 
   @Stability.Internal
   public CoreVectorQuery toCore() {
-    return new CoreVectorQuery(vector, base64EncodedVector, vectorField, numCandidates, boost);
+    return new CoreVectorQuery(vector, vectorField, numCandidates, boost);
   }
 }

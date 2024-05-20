@@ -1,6 +1,7 @@
 package com.couchbase.client.kotlin.search
 
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest
+import com.couchbase.client.core.api.search.vector.CoreVector
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery
 import com.couchbase.client.core.api.search.vector.CoreVectorQueryCombination
 import com.couchbase.client.core.api.search.vector.CoreVectorSearch
@@ -58,7 +59,13 @@ internal data class InternalVectorQuery(
     val numCandidates: Int,
     val boost: Double? = null,
 ) : VectorQuery() {
-    override val core = CoreVectorQuery(vector, base64EncodedVector, field, numCandidates, boost)
+    override val core = CoreVectorQuery(
+        CoreVector.eitherOf(vector, base64EncodedVector),
+        field,
+        numCandidates,
+        boost
+    )
+
     override fun withBoost(boost: Double?) = copy(boost = boost)
 
     override fun equals(other: Any?): Boolean {

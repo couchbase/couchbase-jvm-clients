@@ -17,7 +17,7 @@
 package com.couchbase.client.scala.search.vector
 
 import com.couchbase.client.core.annotation.Stability.Uncommitted
-import com.couchbase.client.core.api.search.vector.CoreVectorQuery
+import com.couchbase.client.core.api.search.vector.{CoreVector, CoreVectorQuery}
 
 /** Represents a vector query. */
 @Uncommitted
@@ -46,8 +46,7 @@ case class VectorQuery private (
 
   private[scala] def toCore: CoreVectorQuery =
     new CoreVectorQuery(
-      vectorQuery,
-      null,
+      CoreVector.eitherOf(vectorQuery, null),
       vectorField,
       numCandidates.map(Integer.valueOf).orNull,
       boost.map(java.lang.Double.valueOf).orNull

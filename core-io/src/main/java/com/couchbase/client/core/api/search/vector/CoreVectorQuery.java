@@ -16,43 +16,30 @@
 package com.couchbase.client.core.api.search.vector;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import reactor.util.annotation.Nullable;
 
-import java.util.Arrays;
-import java.util.Objects;
-
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreVectorQuery {
   public static final int DEFAULT_NUM_CANDIDATES = 3;
 
-  // exactly one is non-null
-  @Nullable private final float[] vector;
-  @Nullable private final String base64EncodedVector;
-
+  private final CoreVector vector;
   private final String field;
   private final @Nullable Integer numCandidates;
   private final @Nullable Double boost;
 
   public CoreVectorQuery(
-      @Nullable float[] vector,
-      @Nullable String base64EncodedVector,
+      CoreVector vector,
       String field,
       @Nullable Integer numCandidates,
       @Nullable Double boost
   ) {
-    if (countNonNull(vector, base64EncodedVector) != 1) {
-      throw InvalidArgumentException.fromMessage("Exactly one of `vector` or `base64EncodedVector` must be non-null.");
-    }
-
-    this.vector = vector;
-    this.base64EncodedVector = base64EncodedVector;
-
+    this.vector = requireNonNull(vector);
     this.numCandidates = numCandidates;
     this.field = notNullOrEmpty(field, "Field");
     this.boost = boost;
@@ -60,13 +47,6 @@ public class CoreVectorQuery {
     if (numCandidates != null && numCandidates < 1) {
       throw InvalidArgumentException.fromMessage("If numCandidates is specified, it must be >= 1, but got: " + numCandidates);
     }
-    if (vector != null && vector.length == 0) {
-      throw InvalidArgumentException.fromMessage("A vector must have at least one element.");
-    }
-  }
-
-  private static int countNonNull(Object... objects) {
-    return (int) Arrays.stream(objects).filter(Objects::nonNull).count();
   }
 
   public ObjectNode toJson() {
@@ -77,16 +57,7 @@ public class CoreVectorQuery {
       outer.put("boost", boost);
     }
 
-    if (vector != null) {
-      ArrayNode array = Mapper.createArrayNode();
-      for (float v : vector) {
-        array.add(v);
-      }
-      outer.set("vector", array);
-
-    } else {
-      outer.put("vector_base64", base64EncodedVector);
-    }
+    vector.writeTo(outer);
 
     return outer;
   }
