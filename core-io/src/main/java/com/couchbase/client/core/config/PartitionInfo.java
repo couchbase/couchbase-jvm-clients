@@ -18,11 +18,13 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.topology.TopologyHelper;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Represents the partition information for a bucket.
@@ -102,8 +104,16 @@ public class PartitionInfo {
         return "PartitionInfo{"
             + "numberOfReplicas=" + numberOfReplicas
             + ", partitionHosts=" + Arrays.toString(partitionHosts)
-            + ", partitions=" + partitions
+            + ", partitions=" + prettyPartitions()
             + ", tainted=" + tainted
             + '}';
+    }
+
+    private String prettyPartitions() {
+        SortedMap<Integer, String> sortedPartitions = new TreeMap<>();
+        for (int i = 0; i < partitions.size(); i++) {
+           sortedPartitions.put(i, String.valueOf(partitions.get(i)));
+        }
+        return TopologyHelper.compressKeyRuns(sortedPartitions).toString();
     }
 }

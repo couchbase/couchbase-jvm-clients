@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static com.couchbase.client.test.Util.readResource;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -201,6 +202,14 @@ class CouchbaseBucketConfigTest {
         assertTrue(cc.get(ServiceType.ANALYTICS).isEmpty());
         assertTrue(cc.get(ServiceType.MANAGER).isEmpty());
         assertTrue(cc.get(ServiceType.VIEWS).isEmpty());
+    }
+
+    @Test
+    void partitionMapHasCompactStringRepresentation() {
+        CouchbaseBucketConfig config = readConfig("config_with_external.json");
+
+        assertThat(config.toString())
+            .contains("partitions={0..170=[0,1], 171..341=[0,2], 342..512=[1,0], 513..682=[1,2], 683..853=[2,0], 854..1023=[2,1]}");
     }
 
     /**
