@@ -452,7 +452,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     // [if:3.4.5]
     if (slc.hasSearch()) {
       com.couchbase.client.protocol.sdk.search.Search command = slc.getSearch();
-      return handleSearchQueryBlocking(connection.cluster(), scope, spans, command);
+      return handleSearchQueryBlocking(connection.cluster(), scope, spans, command, op);
     } else if (slc.hasSearchIndexManager()) {
       return SearchHelper.handleScopeSearchIndexManager(scope, spans, op);
     }
@@ -537,7 +537,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     // [if:3.4.5]
     if (clc.hasSearch()) {
       com.couchbase.client.protocol.sdk.search.Search command = clc.getSearch();
-      return handleSearchQueryBlocking(connection.cluster(), null, spans, command);
+      return handleSearchQueryBlocking(connection.cluster(), null, spans, command, op);
     } else if (clc.hasSearchIndexManager()) {
       return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
     }

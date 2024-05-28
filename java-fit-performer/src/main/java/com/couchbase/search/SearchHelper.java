@@ -613,7 +613,9 @@ public class SearchHelper {
   public static Result handleSearchQueryBlocking(Cluster cluster,
                                                  @Nullable Scope scope,
                                                  ConcurrentHashMap<String, RequestSpan> spans,
-                                                 com.couchbase.client.protocol.sdk.search.Search command) {
+                                                 com.couchbase.client.protocol.sdk.search.Search command,
+                                                 com.couchbase.client.protocol.sdk.Command op
+                                                 ) {
     var q = command.getQuery();
 
     var query = SearchHelper.convertSearchQuery(q);
@@ -641,8 +643,9 @@ public class SearchHelper {
 
     result.setElapsedNanos(System.nanoTime() - start);
 
-    result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+    if(op.getReturnResult())  result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
             .setSearchBlockingResult(convertResult(r, command.hasFieldsAs() ? command.getFieldsAs() : null)));
+    else setSuccess(result);
 
     return result.build();
   }
