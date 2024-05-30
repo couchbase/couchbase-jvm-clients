@@ -390,6 +390,7 @@ object OptionsUtil {
       if (qo.hasPipelineCap) queryOptions = queryOptions.pipelineCap(qo.getPipelineCap)
       if (qo.hasPipelineBatch) queryOptions = queryOptions.pipelineBatch(qo.getPipelineBatch)
       if (qo.hasScanCap) queryOptions = queryOptions.scanCap(qo.getScanCap)
+      if (qo.hasClientContextId) queryOptions = queryOptions.clientContextId(qo.getClientContextId)
     }
     Option(queryOptions)
   }

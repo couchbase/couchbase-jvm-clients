@@ -602,6 +602,10 @@ public class OptionsUtil {
             if (qo.hasScanWaitMillis()) {
                 queryOptions.scanWait(Duration.ofMillis(qo.getScanWaitMillis()));
             }
+
+            if (qo.hasClientContextId()) {
+              queryOptions.clientContextId(qo.getClientContextId());
+            }
         }
         return queryOptions;
     }

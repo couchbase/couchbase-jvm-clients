@@ -64,6 +64,7 @@ abstract public class CorePerformer extends PerformerServiceGrpc.PerformerServic
                 .addPerformerCaps(Caps.GRPC_TESTING)
                 // Add any shared caps here that all 3 performers possess:
                 .addPerformerCaps(Caps.KV_SUPPORT_1)
+                .addPerformerCaps(Caps.TXN_CLIENT_CONTEXT_ID_SUPPORT)
                 .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.WAIT_UNTIL_READY)
                 .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.PROTOSTELLAR)
                 .addSdkImplementationCaps(com.couchbase.client.protocol.sdk.Caps.SDK_SEARCH_RFC_REVISION_11)

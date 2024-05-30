@@ -230,6 +230,10 @@ public class SingleQueryTransactionExecutor {
                 queryOptions.parentSpan(spans.get(grpcQueryOptions.getParentSpanId()));
             }
 
+            if (grpcQueryOptions.hasClientContextId()) {
+              queryOptions.clientContextId(grpcQueryOptions.getClientContextId());
+            }
+
             if (grpcQueryOptions.hasSingleQueryTransactionOptions()) {
                 com.couchbase.client.protocol.sdk.query.SingleQueryTransactionOptions grpcSingleQueryOptions = grpcQueryOptions.getSingleQueryTransactionOptions();
                 SingleQueryTransactionOptions singleQueryOptions = SingleQueryTransactionOptions.singleQueryTransactionOptions();
