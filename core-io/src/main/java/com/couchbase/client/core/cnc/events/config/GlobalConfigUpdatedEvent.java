@@ -18,7 +18,6 @@ package com.couchbase.client.core.cnc.events.config;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.cnc.Context;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.logging.RedactableArgument;
 
