@@ -305,7 +305,6 @@ public class AsyncScope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Uncommitted
   @SinceCouchbase("7.6")
   public CompletableFuture<SearchResult> search(final String indexName, final SearchRequest searchRequest) {
     return search(indexName, searchRequest, DEFAULT_SEARCH_OPTIONS);
@@ -323,7 +322,6 @@ public class AsyncScope {
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
-  @Stability.Uncommitted
   @SinceCouchbase("7.6")
   public CompletableFuture<SearchResult> search(final String indexName, final SearchRequest searchRequest, final SearchOptions options) {
     notNull(searchRequest, "SearchRequest", () -> new ReducedSearchErrorContext(indexName, null));

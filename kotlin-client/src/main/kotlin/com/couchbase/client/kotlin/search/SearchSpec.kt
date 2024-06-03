@@ -19,7 +19,6 @@ package com.couchbase.client.kotlin.search
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest
 import com.couchbase.client.core.api.search.vector.CoreVectorQueryCombination
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.MatchOperator
 import java.time.Instant
 
@@ -43,7 +42,6 @@ import java.time.Instant
  * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAllOf
  * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
  */
-@UncommittedCouchbaseApi
 public sealed class SearchSpec {
     internal abstract val coreRequest: CoreSearchRequest
 

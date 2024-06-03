@@ -332,6 +332,10 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.searchSimpleVector
      * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
      */
+    @Deprecated(
+        message = "Please use search() instead.",
+        ReplaceWith(expression = "search(indexName, query, common, page, limit, sort, fields, facets, highlight, includeLocations, score, explain, collections, consistency, serializer, raw)")
+    )
     public fun searchQuery(
         indexName: String,
         query: SearchQuery,
@@ -438,7 +442,6 @@ public class Cluster internal constructor(
      * @sample com.couchbase.client.kotlin.samples.searchSimpleVector
      * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
      */
-    @UncommittedCouchbaseApi
     public fun search(
         indexName: String,
         spec: SearchSpec,

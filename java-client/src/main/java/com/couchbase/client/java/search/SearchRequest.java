@@ -29,7 +29,6 @@ import reactor.util.annotation.Nullable;
  * <p>
  * If both are provided, the FTS service will merge the results.
  */
-@Stability.Uncommitted
 public class SearchRequest {
 
   private @Nullable SearchQuery searchQuery;

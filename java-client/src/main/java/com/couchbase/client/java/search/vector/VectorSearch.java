@@ -28,7 +28,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 /**
  * A VectorSearch allows one or more individual {@link VectorQuery}s to be executed.
  */
-@Stability.Uncommitted
 public class VectorSearch {
 
   private final List<VectorQuery> vectorQueries;

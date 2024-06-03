@@ -41,7 +41,6 @@ import com.couchbase.client.kotlin.analytics.AnalyticsParameters
 import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
-import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.internal.requireUnique
 import com.couchbase.client.kotlin.internal.toOptional
@@ -390,7 +389,6 @@ public class Scope(
      * @sample com.couchbase.client.kotlin.samples.searchSimpleVector
      * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
      */
-    @UncommittedCouchbaseApi
     @SinceCouchbase("7.6")
     public fun search(
         indexName: String,

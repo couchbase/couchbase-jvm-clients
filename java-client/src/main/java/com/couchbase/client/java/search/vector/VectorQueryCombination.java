@@ -21,7 +21,6 @@ import com.couchbase.client.core.api.search.vector.CoreVectorQueryCombination;
 /**
  * Controls how multiple vector queries are combined.
  */
-@Stability.Uncommitted
 public enum VectorQueryCombination {
   /**
    * All vector queries must match a document for it to be included.

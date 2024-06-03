@@ -23,7 +23,6 @@ import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
-@Stability.Uncommitted
 public class VectorQuery {
   private final CoreVector vector;
   private final String vectorField;
