@@ -55,6 +55,7 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_VECTOR_SEARCH)
+            .addSdkImplementationCaps(Caps.SDK_VECTOR_SEARCH_BASE64)
             .addSdkImplementationCaps(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)

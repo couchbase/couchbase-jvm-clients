@@ -452,14 +452,27 @@ private fun FitVectorSearch.toSdk(): VectorSearchSpec {
 }
 
 private fun FitVectorQuery.toSdk(): VectorQuery {
-    val query = if (!hasOptions() || !options.hasNumCandidates())
-        SearchSpec.vector(vectorFieldName, vectorQueryList.toFloatArray())
-    else
-        SearchSpec.vector(
-            field = vectorFieldName,
-            vector = vectorQueryList.toFloatArray(),
-            numCandidates = options.numCandidates,
-        )
+    val query: VectorQuery
+
+    if (hasBase64VectorQuery()) {
+        query = if (!hasOptions() || !options.hasNumCandidates())
+            SearchSpec.vector(vectorFieldName, base64VectorQuery)
+        else
+            SearchSpec.vector(
+                field = vectorFieldName,
+                vector = base64VectorQuery,
+                numCandidates = options.numCandidates,
+            )
+    } else {
+        query = if (!hasOptions() || !options.hasNumCandidates())
+            SearchSpec.vector(vectorFieldName, vectorQueryList.toFloatArray())
+        else
+            SearchSpec.vector(
+                field = vectorFieldName,
+                vector = vectorQueryList.toFloatArray(),
+                numCandidates = options.numCandidates,
+            )
+    }
 
     return query.maybeBoost(hasOptions() && options.hasBoost(), options.boost)
 }

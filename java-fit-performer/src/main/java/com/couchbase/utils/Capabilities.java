@@ -80,6 +80,10 @@ public class Capabilities {
         out.add(Caps.SDK_VECTOR_SEARCH);
         // [end:3.6.0]
 
+        // [start:3.6.3]
+        out.add(Caps.SDK_VECTOR_SEARCH_BASE64);
+        // [end:3.6.3]
+
         return out;
     }
 }

@@ -79,7 +79,6 @@ import com.couchbase.client.protocol.sdk.search.indexmanager.UnfreezePlan;
 import com.couchbase.client.protocol.sdk.search.indexmanager.UpsertIndex;
 import com.couchbase.client.protocol.sdk.search.BlockingSearchResult;
 import com.couchbase.client.protocol.sdk.search.Location;
-import com.couchbase.client.protocol.sdk.search.Search;
 import com.couchbase.client.protocol.sdk.search.SearchFacetResult;
 import com.couchbase.client.protocol.sdk.search.SearchFacets;
 import com.couchbase.client.protocol.sdk.search.SearchFragments;
@@ -89,6 +88,7 @@ import com.couchbase.client.protocol.sdk.search.SearchRowLocation;
 import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.stream.ReactiveSearchResultStreamer;
 import com.couchbase.utils.ContentAsUtil;
+import com.google.common.primitives.Floats;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import reactor.core.publisher.Mono;
@@ -1439,6 +1439,41 @@ public class SearchHelper {
     return out;
   }
 
+  // pre-processor doesn't support nested tags, so do this intricate dance
+  // [start:3.6.0]
+  private static VectorQuery toSdk(com.couchbase.client.protocol.sdk.search.VectorQuery fit) {
+    // [end:3.6.0]
+
+    // [start:3.6.3]
+    if (fit.hasBase64VectorQuery()) {
+      VectorQuery sdk = VectorQuery.create(fit.getVectorFieldName(), fit.getBase64VectorQuery());
+      applyVectorQueryOptions(sdk, fit);
+      return sdk;
+    }
+    // [end:3.6.3]
+
+    // [start:3.6.0]
+    var floats = Floats.toArray(fit.getVectorQueryList());
+    VectorQuery sdk = VectorQuery.create(fit.getVectorFieldName(), floats);
+    applyVectorQueryOptions(sdk, fit);
+    return sdk;
+  }
+  // [end:3.6.0]
+
+  // [start:3.6.0]
+  private static void applyVectorQueryOptions(VectorQuery sdk, com.couchbase.client.protocol.sdk.search.VectorQuery fit) {
+    if (fit.hasOptions()) {
+      var opts = fit.getOptions();
+      if (opts.hasNumCandidates()) {
+        sdk.numCandidates(opts.getNumCandidates());
+      }
+      if (opts.hasBoost()) {
+        sdk.boost(opts.getBoost());
+      }
+    }
+  }
+  // [end:3.6.0]
+
   // [start:3.6.0]
   private static SearchRequest convertSearchRequest(com.couchbase.client.protocol.sdk.search.SearchRequest sr) {
     if (sr.hasSearchQuery()) {
@@ -1456,23 +1491,7 @@ public class SearchHelper {
 
   private static VectorSearch convertVectorSearch(com.couchbase.client.protocol.sdk.search.VectorSearch vs) {
     var vectors = vs.getVectorQueryList().stream()
-            .map(v -> {
-              var buffer = new float[v.getVectorQueryCount()];
-              for (int i = 0; i < v.getVectorQueryList().size(); i++) {
-                buffer[i] = v.getVectorQuery(i);
-              }
-              var out = VectorQuery.create(v.getVectorFieldName(), buffer);
-              if (v.hasOptions()) {
-                var opts = v.getOptions();
-                if (opts.hasNumCandidates()) {
-                  out = out.numCandidates(opts.getNumCandidates());
-                }
-                if (opts.hasBoost()) {
-                  out = out.boost(opts.getBoost());
-                }
-              }
-              return out;
-            })
+            .map(SearchHelper::toSdk)
             .toList();
     if (vs.hasOptions()) {
       return VectorSearch.create(vectors, convertVectorSearchOptions(vs.getOptions()));
