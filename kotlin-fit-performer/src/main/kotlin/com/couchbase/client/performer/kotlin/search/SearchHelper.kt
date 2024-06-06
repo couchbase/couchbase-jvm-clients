@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.performer.kotlin.search
 
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.util.NanoTimestamp
 import com.couchbase.client.kotlin.Scope
 import com.couchbase.client.kotlin.search.DateRange
@@ -62,7 +63,6 @@ import kotlin.Any
 import kotlin.Boolean
 import kotlin.ByteArray
 import kotlin.Double
-import kotlin.IllegalArgumentException
 import kotlin.Int
 import kotlin.Number
 import kotlin.String
@@ -194,7 +194,7 @@ private data class SearchParams(
 
                 val spec = if (searchQuery != null && vectorQuery != null) {
                     SearchSpec.mixedMode(searchQuery, vectorQuery)
-                } else searchQuery ?: vectorQuery ?: throw IllegalArgumentException("must specify at least one of searchQuery or vectorQuery")
+                } else searchQuery ?: vectorQuery ?: throw InvalidArgumentException.fromMessage("must specify at least one of searchQuery or vectorQuery")
 
                 return SearchParams(
                     indexName = indexName,
@@ -220,7 +220,7 @@ private data class SearchParams(
 
                 val spec = if (searchQuery != null && vectorQuery != null) {
                     SearchSpec.mixedMode(searchQuery, vectorQuery)
-                } else searchQuery ?: vectorQuery ?: throw IllegalArgumentException("must specify at least one of searchQuery or vectorQuery")
+                } else searchQuery ?: vectorQuery ?: throw InvalidArgumentException.fromMessage("must specify at least one of searchQuery or vectorQuery")
 
                 return SearchParams(
                     indexName = indexName,
