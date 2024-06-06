@@ -64,6 +64,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -82,6 +83,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @since 2.0.0
  */
 public class SaslAuthenticationHandler extends ChannelDuplexHandler implements CallbackHandler {
+
+  private static final String LDAP_ADMONITION = "If you are using LDAP you must either" +
+    " connect via TLS (recommended), or enable _only_ PLAIN in the allowed SASL mechanisms list on the PasswordAuthenticator" +
+    " (without TLS this is insecure and will present the user credentials in plain-text over the wire).";
 
   /**
    * Status indicating an authentication error.
@@ -248,9 +253,12 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
           failConnect(ctx, "Unexpected error during SASL auth", response, ex, status(response));
         }
       } else if (STATUS_AUTH_ERROR == status(response)) {
-        maybeFailConnect(ctx, "Authentication Failure - Potential causes: invalid credentials or if " +
-          "LDAP is enabled ensure PLAIN SASL mechanism is exclusively used on the PasswordAuthenticator (insecure) or " +
-          "TLS is used (recommended)", response, null, status(response));
+        String message = "User authentication failed; check username and password.";
+        boolean onlySaslPlain = allowedMechanisms.equals(setOf(SaslMechanism.PLAIN));
+        if (!onlySaslPlain) {
+          message += " " + LDAP_ADMONITION;
+        }
+        maybeFailConnect(ctx, message, response, null, status(response));
       } else {
         failConnect(
           ctx,
@@ -299,9 +307,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
         .collect(Collectors.toSet());
 
       if (mergedMechs.isEmpty()) {
-        failConnect(ctx, "Could not negotiate SASL mechanism with server. If you are using LDAP you must either" +
-           "connect via TLS (recommended), or ONLY enable PLAIN in the allowed SASL mechanisms list on the PasswordAuthenticator" +
-           "(this is insecure and will present the user credentials in plain-text over the wire).",
+        failConnect(ctx, "Could not negotiate SASL mechanism with server. " + LDAP_ADMONITION,
            lastPacket, cause, status);
       } else {
         ioContext.environment().eventBus().publish(new SaslAuthenticationRestartedEvent(ioContext));
