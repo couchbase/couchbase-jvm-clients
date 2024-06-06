@@ -22,10 +22,10 @@ import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
   *
   * @since 1.0.0
   */
-case class BooleanQuery(
-    private[scala] val must: ConjunctionQuery = ConjunctionQuery(),
-    private[scala] val should: DisjunctionQuery = DisjunctionQuery(),
-    private[scala] val mustNot: DisjunctionQuery = DisjunctionQuery(),
+case class BooleanQuery private (
+    private[scala] val must: Option[ConjunctionQuery] = None,
+    private[scala] val should: Option[DisjunctionQuery] = None,
+    private[scala] val mustNot: Option[DisjunctionQuery] = None,
     private[scala] val field: Option[String] = None,
     private[scala] val boost: Option[Double] = None
 ) extends SearchQuery {
@@ -36,7 +36,10 @@ case class BooleanQuery(
     * @return a copy of this, for chaining
     */
   def shouldMin(minForShould: Int): BooleanQuery = {
-    copy(should = should.min(minForShould))
+    copy(should = Some((this.should match {
+      case Some(existing) => existing
+      case None => DisjunctionQuery()
+    }).min(minForShould)))
   }
 
   /** Results must satisfy all of these queries.
@@ -44,7 +47,10 @@ case class BooleanQuery(
     * @return a copy of this, for chaining
     */
   def must(mustQueries: SearchQuery*): BooleanQuery = {
-    copy(must = must.and(mustQueries: _*))
+    copy(must = Some((must match {
+      case Some(existing) => existing
+      case _ => ConjunctionQuery()
+    }).and(mustQueries: _*)))
   }
 
   /** Results must not satisfy any of these queries.
@@ -52,7 +58,10 @@ case class BooleanQuery(
     * @return a copy of this, for chaining
     */
   def mustNot(mustNotQueries: SearchQuery*): BooleanQuery = {
-    copy(mustNot = mustNot.or(mustNotQueries: _*))
+    copy(mustNot = Some((mustNot match {
+      case Some(existing) => existing
+      case _ => DisjunctionQuery()
+    }).or(mustNotQueries: _*)))
   }
 
   /** Results should satisfy all of these queries.
@@ -60,7 +69,10 @@ case class BooleanQuery(
     * @return a copy of this, for chaining
     */
   def should(shouldQueries: SearchQuery*): BooleanQuery = {
-    copy(should = should.or(shouldQueries: _*))
+    copy(should = Some((should match {
+      case Some(existing) => existing
+      case _ => DisjunctionQuery()
+    }).or(shouldQueries: _*)))
   }
 
   /** The boost parameter is used to increase the relative weight of a clause (with a boost greater than 1) or decrease
@@ -76,9 +88,9 @@ case class BooleanQuery(
 
   override private[scala] def toCore =
     new CoreBooleanQuery(
-      must.toCore,
-      mustNot.toCore,
-      should.toCore,
+      must.map(_.toCore).orNull,
+      mustNot.map(_.toCore).orNull,
+      should.map(_.toCore).orNull,
       boost.map(_.asInstanceOf[java.lang.Double]).orNull
     )
 }
