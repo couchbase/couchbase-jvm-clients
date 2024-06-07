@@ -65,8 +65,8 @@ case class MatchPhraseQuery(
   override private[scala] def toCore =
     new CoreMatchPhraseQuery(
       matchPhrase,
-      analyzer.orNull,
       field.orNull,
+      analyzer.orNull,
       boost.map(_.asInstanceOf[java.lang.Double]).orNull
     )
 }
