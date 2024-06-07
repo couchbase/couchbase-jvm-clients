@@ -24,7 +24,7 @@ import java.util.Objects;
 abstract class ForwardCompatRequirement {
     public final ForwardCompatBehaviourFull behaviour;
 
-    abstract public ForwardCompatBehaviourFull behaviour(Supported supported);
+    abstract public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported);
 
     ForwardCompatRequirement(JsonNode json) {
         behaviour = new ForwardCompatBehaviourFull(Objects.requireNonNull(json));
@@ -43,8 +43,8 @@ class ForwardCompatExtensionRequirement extends ForwardCompatRequirement {
         extensionId = json.path("e").textValue();
     }
 
-    public ForwardCompatBehaviourFull behaviour(Supported supported) {
-        for (Extension e : supported.extensions) {
+    public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported) {
+        for (CoreTransactionsExtension e : supported.extensions) {
             if (e.value().equals(extensionId)) {
                 return ForwardCompatBehaviourFull.CONTINUE;
             }
@@ -69,7 +69,7 @@ class ForwardCompatProtocolRequirement extends ForwardCompatRequirement {
         minProtocolMinor = Integer.parseInt(split[1]);
     }
 
-    public ForwardCompatBehaviourFull behaviour(Supported supported) {
+    public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported) {
         if (supported.protocolMajor > minProtocolMajor) {
             return ForwardCompatBehaviourFull.CONTINUE;
         }

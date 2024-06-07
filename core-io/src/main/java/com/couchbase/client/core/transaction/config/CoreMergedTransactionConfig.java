@@ -22,6 +22,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 
 import java.time.Duration;
@@ -83,5 +84,9 @@ public class CoreMergedTransactionConfig {
             return perConfig.get().metadataCollection();
         }
         return config.metadataCollection();
+    }
+
+    public CoreTransactionsSupportedExtensions supported() {
+        return config.supported();
     }
 }

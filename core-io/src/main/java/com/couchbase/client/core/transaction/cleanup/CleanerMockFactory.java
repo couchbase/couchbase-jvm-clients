@@ -17,6 +17,7 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 
 /**
  * Used for testing/mocking.  Creates a Cleaner.
@@ -31,7 +32,7 @@ public class CleanerMockFactory extends CleanerFactory {
         this.hooks = hooks;
     }
 
-    public TransactionsCleaner create(Core core) {
-        return new TransactionsCleaner(core, hooks);
+    public TransactionsCleaner create(Core core, CoreTransactionsSupportedExtensions supported) {
+        return new TransactionsCleaner(core, hooks, supported);
     }
 }

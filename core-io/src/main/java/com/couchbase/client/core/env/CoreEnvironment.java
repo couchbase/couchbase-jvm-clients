@@ -38,6 +38,8 @@ import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -53,6 +55,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -195,7 +198,11 @@ public class CoreEnvironment implements AutoCloseable {
     this.thresholdLoggingTracerConfig = builder.thresholdLoggingTracerConfig.build();
     this.loggingMeterConfig = builder.loggingMeterConfig.build();
     this.appliedProfiles = builder.appliedProfiles;
-    this.transactionsConfig = builder.transactionsConfig == null ? CoreTransactionsConfig.createDefault() : builder.transactionsConfig;
+    // This is expected to be non-null in all production deployments, as we need at least the list of supported extensions,
+    // but cannot assert it here due to affecting too many core tests, and potentially end users of this class.
+    this.transactionsConfig = builder.transactionsConfig != null
+            ? builder.transactionsConfig
+            : CoreTransactionsConfig.createDefault(CoreTransactionsSupportedExtensions.from(CoreTransactionsExtension.values()));
 
     if (eventBus.isOwned()) {
       eventBus.get().start().block();

@@ -24,6 +24,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
 import com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.util.ConnectionString;
 import reactor.core.publisher.Mono;
 
@@ -180,7 +181,8 @@ public final class Cluster implements Closeable, Queryable {
       null,
       ActiveTransactionRecordIds.NUM_ATRS_DEFAULT,
       Optional.empty(),
-      Optional.empty()
+      Optional.empty(),
+      new CoreTransactionsSupportedExtensions()
     );
   }
 

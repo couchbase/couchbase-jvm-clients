@@ -21,6 +21,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
 import reactor.util.annotation.Nullable;
@@ -48,6 +49,7 @@ public class CoreTransactionsConfig {
     // Note this isn't a top-level option in TransactionConfig.Builder (correctly).  Just saving creating a
     // TransactionConfigQuery internal object.
     private final Optional<String> scanConsistency;
+    private final CoreTransactionsSupportedExtensions supported;
 
     public CoreTransactionsConfig(DurabilityLevel durabilityLevel,
                                   Duration timeout,
@@ -57,7 +59,8 @@ public class CoreTransactionsConfig {
                                   @Nullable ClientRecordFactory clientRecordFactory,
                                   int numAtrs,
                                   Optional<CollectionIdentifier> metadataCollection,
-                                  Optional<String> scanConsistency
+                                  Optional<String> scanConsistency,
+                                  CoreTransactionsSupportedExtensions supported
     ) {
         this.durabilityLevel = Objects.requireNonNull(durabilityLevel);
         this.timeout = Objects.requireNonNull(timeout);
@@ -68,12 +71,13 @@ public class CoreTransactionsConfig {
         this.numAtrs = numAtrs;
         this.metadataCollection = Objects.requireNonNull(metadataCollection);
         this.scanConsistency = Objects.requireNonNull(scanConsistency);
+        this.supported = Objects.requireNonNull(supported);
 
         metadataCollection.ifPresent(mc -> cleanupConfig.cleanupSet().add(mc));
     }
 
     @Stability.Internal
-    public static CoreTransactionsConfig createDefault() {
+    public static CoreTransactionsConfig createDefault(CoreTransactionsSupportedExtensions supported) {
         return new CoreTransactionsConfig(
                 DEFAULT_TRANSACTION_DURABILITY_LEVEL,
                 DEFAULT_TRANSACTION_TIMEOUT,
@@ -83,14 +87,16 @@ public class CoreTransactionsConfig {
                 new ClientRecordFactory(),
                 ActiveTransactionRecordIds.NUM_ATRS_DEFAULT,
                 Optional.empty(),
-                Optional.empty()
+                Optional.empty(),
+                supported
         );
     }
 
     public static CoreTransactionsConfig createForSingleQueryTransactions(DurabilityLevel durabilityLevel,
                                                                           Duration timeout,
                                                                           TransactionAttemptContextFactory transactionAttemptContextFactory,
-                                                                          Optional<CollectionIdentifier> metadataCollection) {
+                                                                          Optional<CollectionIdentifier> metadataCollection,
+                                                                          CoreTransactionsSupportedExtensions supported) {
         return new CoreTransactionsConfig(durabilityLevel,
                 timeout,
                 CoreTransactionsCleanupConfig.createForSingleQueryTransactions(),
@@ -99,7 +105,8 @@ public class CoreTransactionsConfig {
                 null,
                 ActiveTransactionRecordIds.NUM_ATRS_DEFAULT,
                 metadataCollection,
-                Optional.empty());
+                Optional.empty(),
+                supported);
     }
 
     public CoreTransactionsCleanupConfig cleanupConfig() {
@@ -130,6 +137,10 @@ public class CoreTransactionsConfig {
 
     public Optional<String> scanConsistency() {
         return scanConsistency;
+    }
+
+    public CoreTransactionsSupportedExtensions supported() {
+        return supported;
     }
 
     @Stability.Volatile

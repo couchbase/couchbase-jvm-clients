@@ -19,6 +19,7 @@ package com.couchbase.client.java.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.codec.DefaultJsonSerializer;
 import com.couchbase.client.java.codec.JacksonJsonSerializer;
@@ -28,6 +29,7 @@ import com.couchbase.client.java.codec.JsonValueSerializerWrapper;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObjectCrypto;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
+import com.couchbase.client.java.transactions.internal.TransactionsSupportedExtensionsUtil;
 
 import java.util.Optional;
 import java.util.function.Consumer;

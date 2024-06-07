@@ -274,7 +274,8 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
         CoreTransactionsConfig.createForSingleQueryTransactions(queryOpts == null ? transactionsConfig.durabilityLevel() : queryOpts.durabilityLevel().orElse(transactionsConfig.durabilityLevel()),
             opts.commonOptions().timeout().orElse(transactionsConfig.transactionExpirationTime()),
             queryOpts == null ? null : queryOpts.attemptContextFactory().orElse(transactionsConfig.attemptContextFactory()),
-            queryOpts == null ? transactionsConfig.metadataCollection() : queryOpts.metadataCollection()));
+            queryOpts == null ? transactionsConfig.metadataCollection() : queryOpts.metadataCollection(),
+            core.environment().transactionsConfig().supported()));
   }
 
   @Stability.Internal

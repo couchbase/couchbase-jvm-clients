@@ -17,154 +17,50 @@ package com.couchbase.client.core.transaction.forwards;
 
 import com.couchbase.client.core.annotation.Stability;
 
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Objects;
-import java.util.Set;
 
 /**
- * All protocol extensions known about by this implementation.
+ * All known protocol extensions.
+ * <p>
+ * The implementations that use this core implementation may support different subsets of this, which is represented
+ * with {@link CoreTransactionsSupportedExtensions}.
  */
 @Stability.Internal
-public enum Extension {
-    /**
-     * @since 3.3.0
-     */
+public enum CoreTransactionsExtension {
     EXT_TRANSACTION_ID("TI"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_DEFERRED_COMMIT("DC"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_TIME_OPT_UNSTAGING("TO"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_BINARY_METADATA("BM"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_CUSTOM_METADATA_COLLECTION("CM"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_QUERY("QU"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_STORE_DURABILITY("SD"),
-
-    /**
-     * @since 3.3.0
-     */
     BF_CBD_3838("BF3838"),
-
-    /**
-     * @since 3.3.0
-     */
     BF_CBD_3787("BF3787"),
-
-    /**
-     * @since 3.3.0
-     */
     BF_CBD_3705("BF3705"),
-
-    /**
-     * @since 3.3.0
-     */
     BF_CBD_3794("BF3794"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_REMOVE_COMPLETED("RC"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_ALL_KV_COMBINATIONS("CO"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_UNKNOWN_ATR_STATES("UA"),
-
-    /**
-     * @since 3.3.0
-     */
     BF_CBD_3791("BF3791"),
-
-    /**
-     * @since 3.3.0
-     */
-     EXT_SINGLE_QUERY("SQ"),
-
-    /**
-     * @since 3.3.0
-     */
+    EXT_SINGLE_QUERY("SQ"),
     EXT_THREAD_SAFE("TS"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_SERIALIZATION("SZ"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_SDK_INTEGRATION("SI"),
-
-    /**
-     * @since 3.3.0
-     */
     EXT_MOBILE_INTEROP("MI"),
-
-    /**
-     * @since 3.3.4
-     */
     EXT_REPLACE_BODY_WITH_XATTR("RX"),
-
-    /**
-     * @since 3.4.0
-     */
     EXT_INSERT_EXISTING("IX"),
-
-    /**
-     * @since 3.4.0
-     */
     EXT_OBSERVABILITY("OB"),
-
-    /**
-     * @since 3.4.1
-     */
     EXT_QUERY_CONTEXT("QC"),
-
-    /**
-     * @since 3.6.2
-     */
     EXT_BINARY_SUPPORT("BS"),
     ;
 
     private String value;
 
-    Extension(String value) {
+    CoreTransactionsExtension(String value) {
         this.value = Objects.requireNonNull(value);
     }
 
     public String value() {
         return value;
     }
-
-    /**
-     * All protocol extensions supported by this implementation.
-     */
-    public static final Set<Extension> SUPPORTED = Collections.unmodifiableSet(EnumSet.allOf(Extension.class));
 }

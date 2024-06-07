@@ -198,7 +198,7 @@ public class CoreTransactionsCleanup {
     }
 
     public TransactionsCleaner getCleaner() {
-        return cleanerFactory.create(core);
+        return cleanerFactory.create(core, config.supported());
     }
 
     public Optional<Integer> cleanupQueueLength() {

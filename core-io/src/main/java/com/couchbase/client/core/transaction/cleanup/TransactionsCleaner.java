@@ -32,7 +32,7 @@ import com.couchbase.client.core.transaction.components.DocumentGetter;
 import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
-import com.couchbase.client.core.transaction.forwards.Supported;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.support.AttemptState;
 import com.couchbase.client.core.transaction.support.OptionsUtil;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
@@ -70,12 +70,14 @@ import java.util.concurrent.TimeUnit;
 public class TransactionsCleaner {
     private final Core core;
     private final CleanerHooks hooks;
+    private final CoreTransactionsSupportedExtensions supported;
 
     private final static int BEING_LOGGING_FAILED_CLEANUPS_AT_WARN_AFTER_X_MINUTES = 60 * 2;
 
-    public TransactionsCleaner(Core core, CleanerHooks hooks) {
+    public TransactionsCleaner(Core core, CleanerHooks hooks, CoreTransactionsSupportedExtensions supported) {
         this.core = Objects.requireNonNull(core);
         this.hooks = Objects.requireNonNull(hooks);
+        this.supported = Objects.requireNonNull(supported);
     }
 
     private Duration kvDurableTimeout() {
@@ -421,7 +423,7 @@ public class TransactionsCleaner {
 
             Mono<Object> cleanupEntry = removeATREntry(req.state(), atrCollection, atrId, attemptId, perEntryLog, span, req);
 
-            return ForwardCompatibility.check(core, ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, Supported.SUPPORTED)
+            return ForwardCompatibility.check(core, ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, supported)
 
                     .then(cleanupDocs)
                     .then(cleanupEntry)

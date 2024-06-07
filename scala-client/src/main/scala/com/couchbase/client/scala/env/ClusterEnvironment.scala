@@ -22,8 +22,10 @@ import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, Meter, RequestTracer}
 import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, PropertyLoader}
 import com.couchbase.client.core.retry.RetryStrategy
+import com.couchbase.client.core.transaction.config.CoreTransactionsConfig
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono
@@ -360,7 +362,11 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     v => coreBuilder.thresholdRequestTracerConfig(v.toCore)
   )
   builder.loggingMeterConfig.foreach(v => coreBuilder.loggingMeterConfig(v.toCore))
-  builder.transactionsConfig.foreach(v => coreBuilder.transactionsConfig(v.toCore))
+  builder.transactionsConfig match {
+    case Some(value) => coreBuilder.transactionsConfig(value.toCore)
+    // Always provide a config so we can supply the supported extensions
+    case None => coreBuilder.transactionsConfig(CoreTransactionsConfig.createDefault(TransactionsSupportedExtensionsUtil.Supported))
+  }
 
   coreBuilder.loadSystemProperties()
 

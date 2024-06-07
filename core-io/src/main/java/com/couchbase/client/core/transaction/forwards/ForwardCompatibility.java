@@ -99,7 +99,7 @@ class ForwardCompatibilityForStage {
         }
     }
 
-    public ForwardCompatBehaviourFull behaviour(Supported supported) {
+    public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported) {
         for (ForwardCompatRequirement b : bases) {
             ForwardCompatBehaviourFull be = b.behaviour(supported);
 
@@ -145,7 +145,7 @@ public class ForwardCompatibility {
         }
     }
 
-    public ForwardCompatBehaviourFull check(ForwardCompatibilityStage fc, Supported supported) {
+    public ForwardCompatBehaviourFull check(ForwardCompatibilityStage fc, CoreTransactionsSupportedExtensions supported) {
         if (compatibilityMap.containsKey(fc.value())) {
             ForwardCompatibilityForStage f = compatibilityMap.get(fc.value());
             return f.behaviour(supported);
@@ -164,7 +164,7 @@ public class ForwardCompatibility {
                                    ForwardCompatibilityStage fc,
                                    Optional<ForwardCompatibility> forwardCompatibility,
                                    @Nullable CoreTransactionLogger logger,
-                                   Supported supported) {
+                                   CoreTransactionsSupportedExtensions supported) {
         return Mono.defer(() -> {
             if (forwardCompatibility.isPresent()) {
                 ForwardCompatibility map = forwardCompatibility.get();

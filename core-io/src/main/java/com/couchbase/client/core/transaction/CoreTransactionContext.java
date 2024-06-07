@@ -24,6 +24,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
@@ -120,5 +121,9 @@ public class CoreTransactionContext {
 
     public void finish(@Nullable Throwable err) {
         req.context().logicallyComplete(err);
+    }
+
+    public CoreTransactionsSupportedExtensions supported() {
+        return config.supported();
     }
 }

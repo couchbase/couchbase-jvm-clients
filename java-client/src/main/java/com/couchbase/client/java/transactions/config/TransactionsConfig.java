@@ -26,6 +26,7 @@ import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.transactions.TransactionKeyspace;
+import com.couchbase.client.java.transactions.internal.TransactionsSupportedExtensionsUtil;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -146,7 +147,8 @@ public class TransactionsConfig {
                     clientRecordFactory.orElse(new ClientRecordFactory()),
                     numAtrs.orElse(ActiveTransactionRecordIds.NUM_ATRS_DEFAULT),
                     metadataCollection,
-                    queryConfig.scanConsistency().map(Enum::name)
+                    queryConfig.scanConsistency().map(Enum::name),
+                    TransactionsSupportedExtensionsUtil.SUPPORTED
             );
         }
 

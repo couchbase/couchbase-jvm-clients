@@ -26,8 +26,14 @@ import com.couchbase.client.core.transaction.cleanup.ClientRecordDetails;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordEntry;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
-import com.couchbase.client.core.transaction.forwards.Extension;
-import com.couchbase.client.core.transaction.forwards.Supported;
+// [if:3.7.2]
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
+// [end]
+// [if:<3.7.2]
+//? import com.couchbase.client.core.transaction.forwards.Extension;
+//? import com.couchbase.client.core.transaction.forwards.Supported;
+// [end]
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
@@ -95,6 +101,9 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
+// [if:3.7.2]
+import static com.couchbase.client.java.transactions.internal.TransactionsSupportedExtensionsUtil.SUPPORTED;
+// [end]
 
 public class JavaPerformer extends CorePerformer {
     private static final Logger logger = LoggerFactory.getLogger(JavaPerformer.class);
@@ -134,7 +143,8 @@ public class JavaPerformer extends CorePerformer {
         response.setLibraryVersion(sdkVersion);
 
         // [if:3.3.0]
-        for (Extension ext : Extension.SUPPORTED) {
+        // [if:3.7.2]
+        for (CoreTransactionsExtension ext : SUPPORTED.extensions) {
             try {
                 var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
                 response.addTransactionImplementationsCaps(pc);
@@ -148,7 +158,7 @@ public class JavaPerformer extends CorePerformer {
             }
         }
 
-        var supported = new Supported();
+        var supported = new CoreTransactionsSupportedExtensions();
         var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
 
         response.setTransactionsProtocolVersion(protocolVersion);
@@ -158,6 +168,31 @@ public class JavaPerformer extends CorePerformer {
         response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
         response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1);
         // [end]
+
+        // [if:<3.7.2]
+//?        for (Extension ext : Extension.SUPPORTED) {
+//?            try {
+//?                var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
+//?                response.addTransactionImplementationsCaps(pc);
+//?            } catch (IllegalArgumentException err) {
+//?                if (ext.name().equals("EXT_CUSTOM_METADATA")) {
+//?                    response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION);
+//?                } else {
+//?                    logger.warn("Could not find FIT extension for " + ext.name());
+//?                }
+//?            }
+//?        }
+//?        var supported = new Supported();
+//?        var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
+//?        response.setTransactionsProtocolVersion(protocolVersion);
+//?        logger.info("Performer implements protocol {} with caps {}",
+//?                protocolVersion, response.getPerformerCapsList());
+//?        response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
+//?        response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1);
+        // [end]
+        // [end]
+
+
         response.addSupportedApis(API.ASYNC);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_CERT);
@@ -313,7 +348,12 @@ public class JavaPerformer extends CorePerformer {
             var collection = collectionIdentifierFor(request.getAtr());
             connection.waitUntilReady(collection);
             var cleanupHooks = HooksUtil.configureCleanupHooks(request.getHookList(), () -> connection);
-            var cleaner = new TransactionsCleaner(connection.core(), cleanupHooks);
+            // [if:3.7.2]
+            var cleaner = new TransactionsCleaner(connection.core(), cleanupHooks, SUPPORTED);
+            // [end]
+            // [if:<3.7.2]
+            //? var cleaner = new TransactionsCleaner(connection.core(), cleanupHooks);
+            // [end]
             var logger = new CoreTransactionLogger(null, "");
             var merged = new CoreMergedTransactionConfig(config);
 

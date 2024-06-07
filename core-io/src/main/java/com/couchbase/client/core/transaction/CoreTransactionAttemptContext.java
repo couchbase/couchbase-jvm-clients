@@ -94,10 +94,9 @@ import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
 import com.couchbase.client.core.transaction.components.OperationTypes;
 import com.couchbase.client.core.transaction.components.TransactionLinks;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
-import com.couchbase.client.core.transaction.forwards.Extension;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
-import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
 import com.couchbase.client.core.transaction.support.AttemptState;
@@ -495,7 +494,8 @@ public class CoreTransactionAttemptContext {
                             false,
                             pspan,
                             resolvingMissingATREntry,
-                            units))
+                            units,
+                            overall.supported()))
 
                     .publishOn(scheduler())
 
@@ -1344,7 +1344,7 @@ public class CoreTransactionAttemptContext {
 
     private Mono<Void> forwardCompatibilityCheck(ForwardCompatibilityStage stage,
                                                  Optional<ForwardCompatibility> fc) {
-        return ForwardCompatibility.check(core, stage, fc, logger(), Supported.SUPPORTED)
+        return ForwardCompatibility.check(core, stage, fc, logger(), overall.supported())
                 .onErrorResume(err -> {
                     TransactionOperationFailedException.Builder error = createError()
                             .cause(new ForwardCompatibilityFailureException());
@@ -1723,7 +1723,7 @@ public class CoreTransactionAttemptContext {
 
         if (isBinary && (opType.equals(OperationTypes.REPLACE) || opType.equals(OperationTypes.INSERT))) {
             ObjectNode fce = Mapper.createObjectNode()
-                    .put("e", Extension.EXT_BINARY_SUPPORT.value())
+                    .put("e", CoreTransactionsExtension.EXT_BINARY_SUPPORT.value())
                     .put("b", "f");
             ArrayNode fcea = Mapper.createArrayNode().add(fce);
             ObjectNode fc = Mapper.createObjectNode();
@@ -2927,7 +2927,7 @@ public class CoreTransactionAttemptContext {
                         }
                     })
                     .then(hooks.beforeDocChangedDuringCommit.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty(), units))
+                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty(), units, overall.supported()))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
@@ -2997,7 +2997,7 @@ public class CoreTransactionAttemptContext {
                         throwIfExpired(id, HOOK_STAGING_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringStaging.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported()))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         MeteringUnits built = addUnits(units.build());
@@ -3085,7 +3085,7 @@ public class CoreTransactionAttemptContext {
                         throwIfExpired(id, HOOK_ROLLBACK_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringRollback.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported()))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         MeteringUnits built = addUnits(units.build());

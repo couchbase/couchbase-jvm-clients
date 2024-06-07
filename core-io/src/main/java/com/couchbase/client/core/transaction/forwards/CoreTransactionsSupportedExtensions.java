@@ -17,18 +17,29 @@ package com.couchbase.client.core.transaction.forwards;
 
 import com.couchbase.client.core.annotation.Stability;
 
+import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Defines what is support by this implementation (extensions and protocol version).
  */
 @Stability.Internal
-public class Supported {
-    public final Set<Extension> extensions = Extension.SUPPORTED;
+public class CoreTransactionsSupportedExtensions {
+    public final Set<CoreTransactionsExtension> extensions = new HashSet<>();
     public final int protocolMajor = 2;
     public final int protocolMinor = 1;
 
-    public final static Supported SUPPORTED = new Supported();
+    public void add(CoreTransactionsExtension extension) {
+        extensions.add(extension);
+    }
+
+    public static CoreTransactionsSupportedExtensions from(CoreTransactionsExtension[] extensions) {
+        CoreTransactionsSupportedExtensions ret = new CoreTransactionsSupportedExtensions();
+        for (CoreTransactionsExtension extension : extensions) {
+            ret.add(extension);
+        }
+        return ret;
+    }
 
     @Override
     public String toString() {

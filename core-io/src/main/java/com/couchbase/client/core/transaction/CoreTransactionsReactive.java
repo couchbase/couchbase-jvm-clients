@@ -40,7 +40,6 @@ import com.couchbase.client.core.retry.reactor.RetryContext;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
-import com.couchbase.client.core.transaction.forwards.Supported;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
 import com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks;
@@ -258,7 +257,7 @@ public class CoreTransactionsReactive {
             sb.append(perConfig.durabilityLevel());
         }
         sb.append(", supported=");
-        sb.append(Supported.SUPPORTED);
+        sb.append(config.supported());
         return sb.toString();
     }
 

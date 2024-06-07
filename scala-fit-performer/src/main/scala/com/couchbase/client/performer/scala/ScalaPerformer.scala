@@ -15,18 +15,25 @@
  */
 package com.couchbase.client.performer.scala
 
-// [start:1.5.0]
+// [if:1.5.0]
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent
 import com.couchbase.client.performer.scala.transaction.{ScalaTransactionCommandExecutor, TransactionBlocking, TransactionMarshaller}
 import com.couchbase.client.core.transaction.cleanup.{ClientRecord, TransactionsCleaner}
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord
 import com.couchbase.client.core.transaction.config.{CoreMergedTransactionConfig, CoreTransactionsConfig}
-import com.couchbase.client.core.transaction.forwards.{Extension, Supported}
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.performer.scala.util.HooksUtil
 import com.couchbase.utils.ResultsUtil
-// [end:1.5.0]
+// [if:1.7.2]
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil.Supported
+// [end]
+// [if:<1.7.2]
+//? import com.couchbase.client.core.transaction.forwards.{Extension, Supported}
+// [end]
+// [end]
 
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 import com.couchbase.client.performer.core.util.VersionUtil
@@ -89,45 +96,78 @@ class ScalaPerformer extends CorePerformer {
       .addPerformerCaps(Caps.CLUSTER_CONFIG_INSECURE)
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
 
-      // [start:1.5.0]
-      response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
-      val supported = new Supported
-      val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
-      response.setTransactionsProtocolVersion("2.0")
-      val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
-      val sdkVersion = if (sdkVersionRaw == null) {
-        // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
-        logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
-        "1.5.0"
-      }
-      else {
-        sdkVersionRaw
-      }
-      response.setLibraryVersion(sdkVersion)
+    // [if:1.7.2]
+    response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
+    val supported = Supported
+    val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
+    response.setTransactionsProtocolVersion(protocolVersion)
+    val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
+    val sdkVersion = if (sdkVersionRaw == null) {
+      // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
+      logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
+      "1.5.0"
+    }
+    else {
+      sdkVersionRaw
+    }
+    response.setLibraryVersion(sdkVersion)
 
-      Extension.SUPPORTED.asScala
-        .filterNot(v =>
-        // Scala does not yet support single query transactions.
-          v == Extension.EXT_SINGLE_QUERY
+    Supported.extensions.asScala
+      .filterNot(v =>
+        // core-io does support this, but the Scala performer does not support the custom serializer required for
+        // testing.  It's not very necessary since it gets tested by Java performer.
+        v == CoreTransactionsExtension.EXT_SERIALIZATION
+      )
+      .foreach(ext => {
+        try {
+          val pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name)
+          response.addTransactionImplementationsCaps(pc)
+        } catch {
+          case _: IllegalArgumentException =>
 
-            // core-io does support this, but the Scala performer does not support the custom serializer required for
-            // testing.  It's not very necessary since it gets tested by Java performer.
-          || v == Extension.EXT_SERIALIZATION
-
-          /* || v == Extension.EXT_THREAD_SAFE || v == Extension.EXT_MOBILE_INTEROP */) // todo
-        .foreach(ext => {
-          try {
-              val pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name)
-              response.addTransactionImplementationsCaps(pc)
-          } catch {
-              case _: IllegalArgumentException =>
-
-                  // FIT and Java have used slightly different names for this
-                  if (ext.name == "EXT_CUSTOM_METADATA") response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION)
-                  else logger.warn("Could not find FIT extension for " + ext.name)
-          }
+            // FIT and Java have used slightly different names for this
+            if (ext.name == "EXT_CUSTOM_METADATA") response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION)
+            else logger.warn("Could not find FIT extension for " + ext.name)
+        }
       })
-      // [end:1.5.0]
+    // [end]
+
+    // [if:1.5.0]
+    // [if:<1.7.2]
+//?    response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
+//?    val supported = new Supported
+//?    val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
+//?    response.setTransactionsProtocolVersion("2.0")
+//?    val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
+//?    val sdkVersion = if (sdkVersionRaw == null) {
+//?      //? Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
+//?      logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
+//?      "1.5.0"
+//?    }
+//?    else {
+//?      sdkVersionRaw
+//?    }
+//?    response.setLibraryVersion(sdkVersion)
+//?    Extension.SUPPORTED.asScala
+//?      .filterNot(v =>
+//?        //? Scala does not yet support single query transactions.
+//?        v == Extension.EXT_SINGLE_QUERY
+//?          //? core-io does support this, but the Scala performer does not support the custom serializer required for
+//?          //? testing.  It's not very necessary since it gets tested by Java performer.
+//?          || v == Extension.EXT_SERIALIZATION)
+//?      .foreach(ext => {
+//?        try {
+//?          val pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name)
+//?          response.addTransactionImplementationsCaps(pc)
+//?        } catch {
+//?          case _: IllegalArgumentException =>
+//?            //? FIT and Java have used slightly different names for this
+//?            if (ext.name == "EXT_CUSTOM_METADATA") response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION)
+//?            else logger.warn("Could not find FIT extension for " + ext.name)
+//?        }
+//?      })
+    // [end]
+    // [end]
   }
 
   override def clusterConnectionCreate(
@@ -217,11 +257,9 @@ class ScalaPerformer extends CorePerformer {
       val connection: ClusterConnection = getClusterConnection(workloads.getClusterConnectionId)
       new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
       // [end:1.5.0]
-      // [start:<1.5.0]
-      /*
-    null
-      // [end:<1.5.0]
-       */
+      // [if:<1.5.0]
+      //? null
+      // [end]
   }
 
   def getClusterConnection(clusterConnectionId: String): ClusterConnection = clusterConnections(clusterConnectionId)
@@ -263,7 +301,12 @@ class ScalaPerformer extends CorePerformer {
       val connection = getClusterConnection(request.getClusterConnectionId)
       val collection = collectionIdentifierFor(request.getAtr)
       val cleanupHooks = HooksUtil.configureCleanupHooks(request.getHookList.asScala, () => connection)
-      val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      // [if:1.7.2]
+      val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks, TransactionsSupportedExtensionsUtil.Supported)
+      // [end]
+      // [if:<1.7.2]
+      //?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      // [end]
       val l = new CoreTransactionLogger(null, "")
       val merged = new CoreMergedTransactionConfig(config.toCore)
       val atrEntry = ActiveTransactionRecord

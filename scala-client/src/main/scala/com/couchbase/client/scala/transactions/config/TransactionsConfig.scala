@@ -26,6 +26,7 @@ import com.couchbase.client.core.transaction.support.TransactionAttemptContextFa
 import com.couchbase.client.scala.query.QueryScanConsistency
 import com.couchbase.client.scala.transactions.TransactionKeyspace
 import com.couchbase.client.scala.transactions.error.TransactionExpiredException
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
 import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala, _}
 
 import scala.compat.java8.OptionConverters._
@@ -129,7 +130,8 @@ case class TransactionsConfig private (
               case _                               => CoreQueryScanConsistency.REQUEST_PLUS.toString
             }
         )
-        .asJava
+        .asJava,
+      TransactionsSupportedExtensionsUtil.Supported
     );
   }
 }

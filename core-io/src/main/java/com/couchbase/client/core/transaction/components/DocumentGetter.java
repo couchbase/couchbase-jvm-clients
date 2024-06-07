@@ -31,7 +31,7 @@ import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryN
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordNotFoundException;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
-import com.couchbase.client.core.transaction.forwards.Supported;
+import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.util.DebugUtil;
@@ -49,7 +49,6 @@ import java.util.Optional;
 import static com.couchbase.client.core.transaction.components.OperationTypes.INSERT;
 import static com.couchbase.client.core.transaction.support.OptionsUtil.createClientContext;
 import static com.couchbase.client.core.transaction.support.OptionsUtil.kvTimeoutNonMutating;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Responsible for doing transaction-aware get()s.
@@ -67,7 +66,8 @@ public class DocumentGetter {
                                                                     boolean justReturn,
                                                                     @Nullable SpanWrapper span,
                                                                     Optional<String> resolvingMissingATREntry,
-                                                                    MeteringUnits.MeteringUnitsBuilder units) {
+                                                                    MeteringUnits.MeteringUnitsBuilder units,
+                                                                    CoreTransactionsSupportedExtensions supported) {
         return justGetDoc(core, collection, docId, kvTimeoutNonMutating(core), span, true, LOGGER, units)
                 .flatMap(origTrans -> {
                     if (justReturn) {
@@ -117,7 +117,7 @@ public class DocumentGetter {
                             LOGGER.info(byAttemptId, "doc {} is in a transaction {}, looking up its status from ATR {} (MAV read)",
                                     DebugUtil.docId(collection, docId), r.links().stagedAttemptId(),  ActiveTransactionRecordUtil.getAtrDebug(atrCollection, r.links().atrId().get()));
 
-                            return lookupStatusFromATR(core, atrCollection, r, byAttemptId, config, span, LOGGER, units);
+                            return lookupStatusFromATR(core, atrCollection, r, byAttemptId, config, span, LOGGER, units, supported);
                         }
                     } else {
                         LOGGER.info(byAttemptId, "doc {} is not in a transaction", DebugUtil.docId(collection, docId));
@@ -206,7 +206,8 @@ public class DocumentGetter {
                                                                                 CoreMergedTransactionConfig config,
                                                                                 SpanWrapper span,
                                                                                 @Nullable CoreTransactionLogger logger,
-                                                                                MeteringUnits.MeteringUnitsBuilder units) {
+                                                                                MeteringUnits.MeteringUnitsBuilder units,
+                                                                                CoreTransactionsSupportedExtensions supported) {
         CbPreconditions.check(doc.links().isDocumentInTransaction());
         CbPreconditions.check(doc.links().atrId().isPresent());
         CbPreconditions.check(doc.links().stagedAttemptId().isPresent());
@@ -230,7 +231,7 @@ public class DocumentGetter {
                     if (!atrDocOpt.isPresent()) {
                         return Mono.error(new ActiveTransactionRecordEntryNotFoundException(atrId, attemptIdOfDoc));
                     } else {
-                        return atrFound(core, doc, byAttemptId, atrDocOpt.get(), logger);
+                        return atrFound(core, doc, byAttemptId, atrDocOpt.get(), logger, supported);
                     }
                 });
     }
@@ -239,7 +240,8 @@ public class DocumentGetter {
                                                                      CoreTransactionGetResult doc,
                                                                      String byAttemptId,
                                                                      ActiveTransactionRecordEntry entry,
-                                                                     CoreTransactionLogger logger) {
+                                                                     CoreTransactionLogger logger,
+                                                                     CoreTransactionsSupportedExtensions supported) {
         if (doc.links().stagedAttemptId().isPresent()
                 && entry.attemptId().equals(byAttemptId)) {
             // Attempt is reading its own writes
@@ -252,7 +254,7 @@ public class DocumentGetter {
                         doc.links().stagedContentJsonOrBinary().get())));
             }
         } else {
-            return ForwardCompatibility.check(core, ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, Supported.SUPPORTED)
+            return ForwardCompatibility.check(core, ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, supported)
 
                     .then(Mono.defer(() -> {
                         logger.info(byAttemptId, "found ATR for MAV read in state: {}", entry);
