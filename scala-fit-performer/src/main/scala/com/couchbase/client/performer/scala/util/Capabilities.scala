@@ -74,6 +74,10 @@ object Capabilities {
     out.add(Caps.SDK_VECTOR_SEARCH)
     // [end:1.6.0]
 
+    // [start:1.6.2]
+    out.add(Caps.SDK_VECTOR_SEARCH_BASE64)
+    // [end:1.6.2]
+
     out
   }
 

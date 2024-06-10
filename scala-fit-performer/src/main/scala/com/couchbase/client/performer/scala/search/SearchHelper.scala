@@ -219,14 +219,11 @@ object SearchHelper {
       opts = opts.facets(facets)
     }
     if (o.hasTimeoutMillis) {
-      // [start:1.4.5]
+      // [if:1.4.5]
       opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
-      // [end:1.4.5]
-      // [start:<1.4.5]
-      /*
-      throw new UnsupportedOperationException()
-      // [end:<1.4.5]
-     */
+      // [else]
+      //? throw new UnsupportedOperationException()
+      // [end]
     }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
     if (o.getRawCount > 0) opts = opts.raw(o.getRawMap.asScala.toMap)
@@ -453,7 +450,7 @@ object SearchHelper {
     result
   }
 
-  // [start:1.6.0]
+  // [if:1.6.0]
   def handleSearchBlocking(
       cluster: Cluster,
       command: com.couchbase.client.protocol.sdk.search.SearchWrapper
@@ -533,8 +530,17 @@ object SearchHelper {
   def convertVectorQuery(
       vq: com.couchbase.client.protocol.sdk.search.VectorQuery
   ): com.couchbase.client.scala.search.vector.VectorQuery = {
-    val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
-    var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    // [if:1.6.2]
+    var out = if (vq.hasBase64VectorQuery) {
+      com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, vq.getBase64VectorQuery)
+    } else {
+      val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+      com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    }
+    // [else]
+    //? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+    //? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    // [end]
     if (vq.hasOptions) {
       val opts = vq.getOptions
       if (opts.hasNumCandidates) out = out.numCandidates(opts.getNumCandidates)
@@ -561,7 +567,7 @@ object SearchHelper {
     }
   }
 
-  // [end:1.6.0]
+  // [end]
 
   private def convertResult(
       result: SearchResult,
@@ -732,7 +738,7 @@ object SearchHelper {
     } else if (command.hasUpsertIndex) {
       val req = command.getUpsertIndex
 
-      // [start:1.4.5]
+      // [if:1.4.5]
       val converted = SearchIndex.fromJson(req.getIndexDefinition.toStringUtf8).get
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
@@ -747,12 +753,9 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [end:1.4.5]
-      // [start:<1.4.5]
-      /*
-      throw new UnsupportedOperationException()
-      // [end:<1.4.5]
-     */
+      // [else]
+      //? throw new UnsupportedOperationException()
+      // [end]
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
 
