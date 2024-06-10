@@ -16,16 +16,16 @@
 
 package com.couchbase.client.scala.search.vector
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.{CoreVector, CoreVectorQuery}
 
 /** Represents a vector query. */
-@Uncommitted
 case class VectorQuery private (
-    private val vectorQuery: Array[Float],
+    private val vectorQuery: Either[Array[Float], String],
     private val vectorField: String,
     private val numCandidates: Option[Int] = None,
-    private val boost: Option[Double] = None
+    private val boost: Option[Double] = None,
 ) {
 
   /** Can be used to control how much weight to give the results of this query vs other queries.
@@ -46,15 +46,24 @@ case class VectorQuery private (
 
   private[scala] def toCore: CoreVectorQuery =
     new CoreVectorQuery(
-      CoreVector.eitherOf(vectorQuery, null),
+      vectorQuery match {
+        case Left(floatArray) => CoreVector.of(floatArray)
+        case Right(base64String) => CoreVector.of(base64String)
+      },
       vectorField,
       numCandidates.map(Integer.valueOf).orNull,
       boost.map(java.lang.Double.valueOf).orNull
     )
 }
 
-@Uncommitted
 object VectorQuery {
+  /** Will perform a vector query using a vector provided as an array of floats. */
+  @SinceCouchbase("7.6")
   def apply(vectorField: String, vectorQuery: Array[Float]): VectorQuery =
-    new VectorQuery(vectorQuery, vectorField)
+    new VectorQuery(Left(vectorQuery), vectorField)
+
+  /** Will perform a vector query using a vector provided as an array of floats. */
+  @SinceCouchbase("7.6.2")
+  def apply(vectorField: String, vectorQueryBase64: String): VectorQuery =
+    new VectorQuery(Right(vectorQueryBase64), vectorField)
 }

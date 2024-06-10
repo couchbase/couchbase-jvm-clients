@@ -41,7 +41,6 @@ case class SearchRequest private (
     * @return a copy of this, for chaining.
     */
   @SinceCouchbase("7.6")
-  @Uncommitted
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest = {
     this.vectorSearch match {
       case Some(_) =>
@@ -100,7 +99,6 @@ object SearchRequest {
     new SearchRequest(Some(searchQuery), None)
 
   /** Execute a [[VectorSearch]]. */
-  @Uncommitted
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest =
     new SearchRequest(None, Some(vectorSearch))
 }

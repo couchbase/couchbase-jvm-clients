@@ -21,7 +21,6 @@ import com.couchbase.client.core.api.search.vector.CoreVectorSearch
 import scala.collection.JavaConverters._
 
 /** Allows one or more [[VectorQuery]]s to be executed. */
-@Uncommitted
 case class VectorSearch private (
     private val vectorQueries: Iterable[VectorQuery],
     private val vectorSearchOptions: Option[VectorSearchOptions] = None
@@ -41,7 +40,6 @@ case class VectorSearch private (
     )
 }
 
-@Uncommitted
 object VectorSearch {
 
   /** Create a [[VectorSearch]] containing a single [[VectorQuery]]. */
