@@ -17,6 +17,7 @@ package com.couchbase.client.performer.kotlin.search
 
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.util.NanoTimestamp
+import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.Scope
 import com.couchbase.client.kotlin.search.DateRange
 import com.couchbase.client.kotlin.search.Direction
@@ -32,6 +33,7 @@ import com.couchbase.client.kotlin.search.Mode
 import com.couchbase.client.kotlin.search.NumericRange
 import com.couchbase.client.kotlin.search.SearchFacet
 import com.couchbase.client.kotlin.search.SearchMetadata
+import com.couchbase.client.kotlin.search.SearchPage
 import com.couchbase.client.kotlin.search.SearchQuery
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.MatchOperator
 import com.couchbase.client.kotlin.search.SearchResult
@@ -70,6 +72,7 @@ import kotlin.Suppress
 import kotlin.TODO
 import kotlin.apply
 import kotlin.let
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.with
 import com.couchbase.client.protocol.sdk.Result as FitResult
 import com.couchbase.client.protocol.sdk.search.BlockingSearchResult as FitBlockingSearchResult
@@ -151,6 +154,12 @@ private data class SearchParams(
     val options: FitSearchOptions?,
     val fieldsAs: ContentAs?,
 ) {
+    val common: CommonOptions
+        get() = options?.let { if (it.hasTimeoutMillis()) CommonOptions(timeout = it.timeoutMillis.milliseconds) else null } ?: CommonOptions.Default
+
+    val page: SearchPage
+        get() = options?.let { if (it.hasSkip()) SearchPage.startAt(it.skip) else null } ?: SearchPage.startAt(0)
+
     val limit: Int?
         get() = options?.let { if (it.hasLimit()) it.limit else null }
 
@@ -254,6 +263,8 @@ class SearchHelper {
                 scope.search(
                     indexName = params.indexName,
                     spec = params.spec,
+                    common = params.common,
+                    page = params.page,
                     limit = params.limit,
                     fields = params.fields,
                     consistency = params.consistency,
@@ -280,6 +291,8 @@ class SearchHelper {
                     cluster.search(
                         indexName = params.indexName,
                         spec = params.spec,
+                        common = params.common,
+                        page = params.page,
                         limit = params.limit,
                         fields = params.fields,
                         consistency = params.consistency,
@@ -292,6 +305,8 @@ class SearchHelper {
                     cluster.searchQuery(
                         indexName = params.indexName,
                         query = params.spec as SearchQuery,
+                        common = params.common,
+                        page = params.page,
                         limit = params.limit,
                         fields = params.fields,
                         consistency = params.consistency,
