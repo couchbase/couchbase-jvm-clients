@@ -15,6 +15,13 @@
     <module name="IllegalImport">
       <!-- Prevent unintentional dependency on unbundled Jackson -->
       <property name="illegalPkgs" value="com.fasterxml.jackson"/>
+
+      <!-- Prevent unintentional direct access to org.iq80.snappy, which only works
+           on little-endian hardware in JVMs where `sun.misc.Unsafe` is accessible.
+           Most code should use SnappyCodec.instance() instead, because it has a fallback
+           to support all environments. -->
+      <property name="illegalPkgs" value="com.couchbase.client.core.deps.org.iq80.snappy"/>
+      <property name="illegalPkgs" value="com.couchbase.client.core.compression.snappy.repackaged.org.iq80.snappy.v04"/>
     </module>
 
     <!-- Enable inline suppression via @SuppressWarnings annotation. -->

@@ -26,8 +26,8 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
+import com.couchbase.client.core.compression.snappy.SnappyCodec;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
-import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
 import com.couchbase.client.core.msg.kv.MutationToken;
@@ -61,6 +61,8 @@ import java.util.Optional;
  */
 @Stability.Internal
 public class CoreProtostellarKeyValueResponses {
+  private static final SnappyCodec snappy = SnappyCodec.instance();
+
   private CoreProtostellarKeyValueResponses() {}
 
   public static CoreMutationResult convertResponse(CoreKeyspace keyspace, String key, InsertResponse response) {
@@ -109,7 +111,7 @@ public class CoreProtostellarKeyValueResponses {
   private static byte[] convertContent(boolean hasContentCompressed, ByteString contentCompressed, ByteString contentUncompressed) {
     if (hasContentCompressed) {
       byte[] bytes = contentCompressed.toByteArray();
-      return Snappy.uncompress(bytes, 0, bytes.length);
+      return snappy.decompress(bytes);
     }
     return contentUncompressed.toByteArray();
   }

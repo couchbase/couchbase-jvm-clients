@@ -19,12 +19,12 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
+import com.couchbase.client.core.compression.snappy.SnappyCodec;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
-import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -76,6 +76,8 @@ import static java.util.Collections.unmodifiableSet;
  */
 public enum MemcacheProtocol {
   ;
+
+  private static final SnappyCodec snappy = SnappyCodec.instance();
 
   /**
    * Holds the max value a unsigned short can represent.
@@ -963,7 +965,7 @@ public enum MemcacheProtocol {
    * @return a {@link ByteBuf} if compressed, or null if below the min ratio.
    */
   public static ByteBuf tryCompression(byte[] input, double minRatio) {
-    byte[] compressed = Snappy.compress(input);
+    byte[] compressed = snappy.compress(input);
     if (((double) compressed.length / input.length) > minRatio) {
       return null;
     }
@@ -982,7 +984,7 @@ public enum MemcacheProtocol {
    */
   public static byte[] tryDecompression(byte[] input, byte datatype) {
     if (Datatype.isSnappy(datatype)) {
-      return Snappy.uncompress(input, 0, input.length);
+      return snappy.decompress(input);
     }
     return input;
   }

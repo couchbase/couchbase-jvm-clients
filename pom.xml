@@ -252,7 +252,7 @@
                 <configuration>
                     <headerLocation>config/checkstyle/checkstyle-header.txt</headerLocation>
                     <configLocation>config/checkstyle/checkstyle-basic.xml</configLocation>
-<!--                    <suppressionsLocation>config/checkstyle/checkstyle-suppressions.xml</suppressionsLocation>-->
+                    <suppressionsLocation>config/checkstyle/checkstyle-suppressions.xml</suppressionsLocation>
                     <consoleOutput>true</consoleOutput>
                     <failsOnError>true</failsOnError>
                     <linkXRef>false</linkXRef>
