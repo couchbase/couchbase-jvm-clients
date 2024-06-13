@@ -178,6 +178,9 @@ private data class SearchParams(
     val facets: List<SearchFacet>
         get() = options?.facetsMap?.entries?.map { it.value.toSdk(it.key) } ?: emptyList()
 
+    val explain: Boolean
+        get() = options?.let { if (it.hasExplain()) it.explain else null } ?: false
+
     val consistency: SearchScanConsistency
         get() = options?.consistency ?: SearchScanConsistency.notBounded()
 
@@ -272,6 +275,7 @@ class SearchHelper {
                     highlight = params.highlight,
                     includeLocations = params.includeLocations,
                     facets = params.facets,
+                    explain = params.explain,
                 ).execute()
             }
 
@@ -300,6 +304,7 @@ class SearchHelper {
                         highlight = params.highlight,
                         includeLocations = params.includeLocations,
                         facets = params.facets,
+                        explain = params.explain,
                     ).execute()
                 } else {
                     cluster.searchQuery(
@@ -314,6 +319,7 @@ class SearchHelper {
                         highlight = params.highlight,
                         includeLocations = params.includeLocations,
                         facets = params.facets,
+                        explain = params.explain,
                     ).execute()
                 }
             }
