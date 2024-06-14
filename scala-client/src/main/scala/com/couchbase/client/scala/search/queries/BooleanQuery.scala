@@ -38,7 +38,7 @@ case class BooleanQuery private (
   def shouldMin(minForShould: Int): BooleanQuery = {
     copy(should = Some((this.should match {
       case Some(existing) => existing
-      case None => DisjunctionQuery()
+      case None           => DisjunctionQuery()
     }).min(minForShould)))
   }
 
@@ -49,7 +49,7 @@ case class BooleanQuery private (
   def must(mustQueries: SearchQuery*): BooleanQuery = {
     copy(must = Some((must match {
       case Some(existing) => existing
-      case _ => ConjunctionQuery()
+      case _              => ConjunctionQuery()
     }).and(mustQueries: _*)))
   }
 
@@ -60,7 +60,7 @@ case class BooleanQuery private (
   def mustNot(mustNotQueries: SearchQuery*): BooleanQuery = {
     copy(mustNot = Some((mustNot match {
       case Some(existing) => existing
-      case _ => DisjunctionQuery()
+      case _              => DisjunctionQuery()
     }).or(mustNotQueries: _*)))
   }
 
@@ -71,7 +71,7 @@ case class BooleanQuery private (
   def should(shouldQueries: SearchQuery*): BooleanQuery = {
     copy(should = Some((should match {
       case Some(existing) => existing
-      case _ => DisjunctionQuery()
+      case _              => DisjunctionQuery()
     }).or(shouldQueries: _*)))
   }
 

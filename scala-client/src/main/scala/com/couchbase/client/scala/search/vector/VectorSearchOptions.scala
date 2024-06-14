@@ -16,7 +16,10 @@
 
 package com.couchbase.client.scala.search.vector
 
-import com.couchbase.client.core.api.search.vector.{CoreVectorQueryCombination, CoreVectorSearchOptions}
+import com.couchbase.client.core.api.search.vector.{
+  CoreVectorQueryCombination,
+  CoreVectorSearchOptions
+}
 
 /** Specifies how multiple [[VectorQuery]]s in a [[VectorSearch]] are combined. */
 sealed trait VectorQueryCombination

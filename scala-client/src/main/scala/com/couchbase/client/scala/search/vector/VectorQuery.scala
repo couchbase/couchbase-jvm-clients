@@ -25,7 +25,7 @@ case class VectorQuery private (
     private val vectorQuery: Either[Array[Float], String],
     private val vectorField: String,
     private val numCandidates: Option[Int] = None,
-    private val boost: Option[Double] = None,
+    private val boost: Option[Double] = None
 ) {
 
   /** Can be used to control how much weight to give the results of this query vs other queries.
@@ -47,7 +47,7 @@ case class VectorQuery private (
   private[scala] def toCore: CoreVectorQuery =
     new CoreVectorQuery(
       vectorQuery match {
-        case Left(floatArray) => CoreVector.of(floatArray)
+        case Left(floatArray)    => CoreVector.of(floatArray)
         case Right(base64String) => CoreVector.of(base64String)
       },
       vectorField,
@@ -57,6 +57,7 @@ case class VectorQuery private (
 }
 
 object VectorQuery {
+
   /** Will perform a vector query using a vector provided as an array of floats. */
   @SinceCouchbase("7.6")
   def apply(vectorField: String, vectorQuery: Array[Float]): VectorQuery =
