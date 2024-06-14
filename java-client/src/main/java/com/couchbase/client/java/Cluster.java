@@ -23,6 +23,7 @@ import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -58,7 +59,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -232,7 +232,7 @@ public class Cluster implements Closeable {
 
     final ConnectionString connStr = ConnectionString.create(connectionString);
     final ClusterOptions.Built opts = options.build();
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
+    final OwnedOrExternal<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
     return new Cluster(
       environmentSupplier,
       opts.authenticator(),
@@ -286,7 +286,7 @@ public class Cluster implements Closeable {
   }
 
   private Cluster(
-    final Supplier<ClusterEnvironment> environment,
+    final OwnedOrExternal<ClusterEnvironment> environment,
     final Authenticator authenticator,
     final ConnectionString connectionString
   ) {

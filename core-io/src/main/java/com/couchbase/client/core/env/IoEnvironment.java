@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.env.OwnedOrExternal.external;
+import static com.couchbase.client.core.env.OwnedOrExternal.owned;
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -85,14 +87,14 @@ public class IoEnvironment {
 
   private final boolean nativeIoEnabled;
   private final int eventLoopThreadCount;
-  private final Supplier<EventLoopGroup> managerEventLoopGroup;
-  private final Supplier<EventLoopGroup> kvEventLoopGroup;
-  private final Supplier<EventLoopGroup> queryEventLoopGroup;
-  private final Supplier<EventLoopGroup> analyticsEventLoopGroup;
-  private final Supplier<EventLoopGroup> searchEventLoopGroup;
-  private final Supplier<EventLoopGroup> viewEventLoopGroup;
-  private final Supplier<EventLoopGroup> eventingEventLoopGroup;
-  private final Supplier<EventLoopGroup> backupEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> managerEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> kvEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> queryEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> analyticsEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> searchEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> viewEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> eventingEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroup> backupEventLoopGroup;
 
   /**
    * Creates the {@link IoEnvironment} with default settings.
@@ -336,7 +338,7 @@ public class IoEnvironment {
     nativeIoEnabled = builder.nativeIoEnabled;
     eventLoopThreadCount = builder.eventLoopThreadCount;
 
-    Supplier<EventLoopGroup> httpDefaultGroup = null;
+    OwnedOrExternal<EventLoopGroup> httpDefaultGroup = null;
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
@@ -392,7 +394,7 @@ public class IoEnvironment {
    *
    * @param group the group to check.
    */
-  private void sanityCheckEventLoop(final Supplier<EventLoopGroup> group) {
+  private void sanityCheckEventLoop(final OwnedOrExternal<EventLoopGroup> group) {
     if (!nativeIoEnabled && !(group.get() instanceof NioEventLoopGroup)) {
       throw InvalidArgumentException.fromMessage("Native IO is disabled and the EventLoopGroup is not a NioEventLoopGroup");
     }
@@ -404,7 +406,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> managerEventLoopGroup() {
-    return managerEventLoopGroup;
+    return managerEventLoopGroup::get;
   }
 
   /**
@@ -413,7 +415,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> kvEventLoopGroup() {
-    return kvEventLoopGroup;
+    return kvEventLoopGroup::get;
   }
 
   /**
@@ -422,7 +424,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> queryEventLoopGroup() {
-    return queryEventLoopGroup;
+    return queryEventLoopGroup::get;
   }
 
   /**
@@ -431,7 +433,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> analyticsEventLoopGroup() {
-    return analyticsEventLoopGroup;
+    return analyticsEventLoopGroup::get;
   }
 
   /**
@@ -440,7 +442,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> searchEventLoopGroup() {
-    return searchEventLoopGroup;
+    return searchEventLoopGroup::get;
   }
 
   /**
@@ -449,7 +451,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> viewEventLoopGroup() {
-    return viewEventLoopGroup;
+    return viewEventLoopGroup::get;
   }
 
   /**
@@ -458,7 +460,7 @@ public class IoEnvironment {
    * @return the selected event loop group.
    */
   public Supplier<EventLoopGroup> eventingEventLoopGroup() {
-    return eventingEventLoopGroup;
+    return eventingEventLoopGroup::get;
   }
 
   /**
@@ -468,7 +470,7 @@ public class IoEnvironment {
    */
   @Stability.Volatile
   public Supplier<EventLoopGroup> backupEventLoopGroup() {
-    return backupEventLoopGroup;
+    return backupEventLoopGroup::get;
   }
 
   /**
@@ -513,8 +515,8 @@ public class IoEnvironment {
    * @param timeout the maximum time to wait until shutdown abort.
    * @return a mono indicating completion.
    */
-  private static Mono<Void> shutdownGroup(final Supplier<EventLoopGroup> groupSupplier, final Duration timeout) {
-    if (groupSupplier instanceof OwnedSupplier) {
+  private static Mono<Void> shutdownGroup(final OwnedOrExternal<EventLoopGroup> groupSupplier, final Duration timeout) {
+    if (groupSupplier.isOwned()) {
       EventLoopGroup group = groupSupplier.get();
       if (!group.isShutdown() && !group.isShuttingDown()) {
         return Mono.create(sink -> group.shutdownGracefully(0, timeout.toMillis(), TimeUnit.MILLISECONDS)
@@ -543,16 +545,19 @@ public class IoEnvironment {
    * @param poolName the name of the threads.
    * @return the created group.
    */
-  private static OwnedSupplier<EventLoopGroup> createEventLoopGroup(final boolean nativeIoEnabled, final int numThreads,
-                                                                    final String poolName) {
+  private static OwnedOrExternal<EventLoopGroup> createEventLoopGroup(
+    final boolean nativeIoEnabled,
+    final int numThreads,
+    final String poolName
+  ) {
     final ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
 
     if (nativeIoEnabled && Epoll.isAvailable()) {
-      return new OwnedSupplier<>(new EpollEventLoopGroup(numThreads, threadFactory));
+      return owned(new EpollEventLoopGroup(numThreads, threadFactory));
     } else if (nativeIoEnabled && KQueue.isAvailable()) {
-      return new OwnedSupplier<>(new KQueueEventLoopGroup(numThreads, threadFactory));
+      return owned(new KQueueEventLoopGroup(numThreads, threadFactory));
     } else {
-      return new OwnedSupplier<>(new NioEventLoopGroup(numThreads, threadFactory));
+      return owned(new NioEventLoopGroup(numThreads, threadFactory));
     }
   }
 
@@ -576,14 +581,14 @@ public class IoEnvironment {
   public static class Builder {
 
     private boolean nativeIoEnabled = DEFAULT_NATIVE_IO_ENABLED;
-    private Supplier<EventLoopGroup> managerEventLoopGroup = null;
-    private Supplier<EventLoopGroup> kvEventLoopGroup = null;
-    private Supplier<EventLoopGroup> queryEventLoopGroup = null;
-    private Supplier<EventLoopGroup> analyticsEventLoopGroup = null;
-    private Supplier<EventLoopGroup> searchEventLoopGroup = null;
-    private Supplier<EventLoopGroup> viewEventLoopGroup = null;
-    private Supplier<EventLoopGroup> eventingEventLoopGroup = null;
-    private Supplier<EventLoopGroup> backupEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> managerEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> kvEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> queryEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> analyticsEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> searchEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> viewEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> eventingEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroup> backupEventLoopGroup = null;
     private int eventLoopThreadCount = DEFAULT_EVENT_LOOP_THREAD_COUNT;
 
     /**
@@ -724,8 +729,8 @@ public class IoEnvironment {
      * @param eventLoopGroup the event loop group to check.
      * @return the created external supplier.
      */
-    private static Supplier<EventLoopGroup> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      return new ExternalSupplier<>(notNull(eventLoopGroup, "EventLoopGroup"));
+    private static OwnedOrExternal<EventLoopGroup> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      return external(notNull(eventLoopGroup, "EventLoopGroup"));
     }
 
     /**

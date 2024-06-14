@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 
 import java.util.function.Supplier;
 
@@ -24,8 +25,12 @@ import java.util.function.Supplier;
  * A special supplier which allows the SDK to distinguish passed in suppliers vs. owned ones.
  * <p>
  * <strong>DO NOT USE THIS CLASS DIRECTLY!</strong>
+ *
+ * @deprecated For internal Couchbase code, please use {@link OwnedOrExternal#owned(Object)} instead.
  */
+@Deprecated
 @Stability.Internal
+@UsedBy(UsedBy.Project.SPRING_DATA_COUCHBASE)
 public class OwnedSupplier<T> implements Supplier<T> {
 
   private final T value;

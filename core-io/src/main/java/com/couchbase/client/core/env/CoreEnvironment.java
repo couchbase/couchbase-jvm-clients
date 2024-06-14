@@ -60,15 +60,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import static com.couchbase.client.core.env.OwnedOrExternal.external;
+import static com.couchbase.client.core.env.OwnedOrExternal.owned;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -122,7 +122,7 @@ public class CoreEnvironment implements AutoCloseable {
   private static final RetryStrategy DEFAULT_RETRY_STRATEGY = BestEffortRetryStrategy.INSTANCE;
 
   private final UserAgent userAgent;
-  private final Supplier<EventBus> eventBus;
+  private final OwnedOrExternal<EventBus> eventBus;
   private final Timer timer;
   private final IoEnvironment ioEnvironment;
   private final IoConfig ioConfig;
@@ -132,12 +132,12 @@ public class CoreEnvironment implements AutoCloseable {
   private final OrphanReporterConfig orphanReporterConfig;
   private final ThresholdLoggingTracerConfig thresholdLoggingTracerConfig;
   private final LoggingMeterConfig loggingMeterConfig;
-  private final Supplier<RequestTracer> requestTracer;
-  private final Supplier<Meter> meter;
+  private final OwnedOrExternal<RequestTracer> requestTracer;
+  private final OwnedOrExternal<Meter> meter;
   private final LoggerConfig loggerConfig;
   private final RetryStrategy retryStrategy;
-  private final Supplier<Scheduler> scheduler;
-  private final Supplier<Executor> executor;
+  private final OwnedOrExternal<Scheduler> scheduler;
+  private final OwnedOrExternal<Executor> executor;
   private final int schedulerThreadCount;
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
@@ -161,7 +161,7 @@ public class CoreEnvironment implements AutoCloseable {
     this.schedulerThreadCount = builder.schedulerThreadCount;
     this.scheduler = Optional
       .ofNullable(builder.scheduler)
-      .orElse(new OwnedSupplier<>(
+      .orElse(owned(
         Schedulers.newParallel("cb-comp", schedulerThreadCount, true))
       );
 
@@ -172,14 +172,14 @@ public class CoreEnvironment implements AutoCloseable {
       maxThreadCount = Integer.parseInt(executorMaxThreadCountRaw);
     }
 
-    this.executor = new OwnedSupplier<>(new ThreadPoolExecutor(0, maxThreadCount,
+    this.executor = owned(new ThreadPoolExecutor(0, maxThreadCount,
       60L, TimeUnit.SECONDS,
       new LinkedBlockingQueue<>(),
       new CouchbaseThreadFactory("cb-exec")));
 
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
-      .orElse(new OwnedSupplier<>(DefaultEventBus.create(scheduler.get())));
+      .orElse(owned(DefaultEventBus.create(scheduler.get())));
     this.timer = Timer.createAndStart(maxNumRequestsInRetry, builder.ioConfig.timerConfig().build());
 
 
@@ -197,28 +197,28 @@ public class CoreEnvironment implements AutoCloseable {
     this.appliedProfiles = builder.appliedProfiles;
     this.transactionsConfig = builder.transactionsConfig == null ? CoreTransactionsConfig.createDefault() : builder.transactionsConfig;
 
-    if (eventBus instanceof OwnedSupplier) {
+    if (eventBus.isOwned()) {
       eventBus.get().start().block();
     }
     eventBus.get().subscribe(LoggingEventConsumer.create(loggerConfig()));
 
-    this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(new OwnedSupplier<>(
+    this.requestTracer = Optional.ofNullable(builder.requestTracer).orElse(owned(
       thresholdLoggingTracerConfig.enabled()
         ? ThresholdLoggingTracer.create(eventBus.get(), thresholdLoggingTracerConfig)
         : NoopRequestTracer.INSTANCE
     ));
 
-    if (requestTracer instanceof OwnedSupplier) {
+    if (requestTracer.isOwned()) {
       requestTracer.get().start().block();
     }
 
-    this.meter = Optional.ofNullable(builder.meter).orElse(new OwnedSupplier<>(
+    this.meter = Optional.ofNullable(builder.meter).orElse(owned(
       loggingMeterConfig.enabled()
         ? LoggingMeter.create(eventBus.get(), loggingMeterConfig)
         : NoopMeter.INSTANCE
     ));
 
-    if (meter instanceof OwnedSupplier) {
+    if (meter.isOwned()) {
       meter.get().start().block();
     }
 
@@ -496,33 +496,33 @@ public class CoreEnvironment implements AutoCloseable {
    * @param timeout the timeout to wait maximum.
    */
   public Mono<Void> shutdownReactive(final Duration timeout) {
-    return Mono.defer(() -> eventBus instanceof OwnedSupplier ? eventBus.get().stop(timeout) : Mono.empty())
+    return Mono.defer(() -> eventBus.isOwned() ? eventBus.get().stop(timeout) : Mono.empty())
       .then(Mono.defer(() -> {
         timer.stop();
         return Mono.empty();
       }))
       .then(ioEnvironment.shutdown(timeout))
       .then(Mono.defer(() -> {
-        if (requestTracer instanceof OwnedSupplier) {
+        if (requestTracer.isOwned()) {
           return requestTracer.get().stop(timeout);
         }
         return Mono.empty();
       }))
       .then(Mono.defer(() -> {
-        if (meter instanceof OwnedSupplier) {
+        if (meter.isOwned()) {
           return meter.get().stop(timeout);
         }
         return Mono.empty();
       }))
       .then(Mono.defer(orphanReporter::stop))
       .then(Mono.defer(() -> {
-        if (scheduler instanceof OwnedSupplier) {
+        if (scheduler.isOwned()) {
           scheduler.get().dispose();
         }
         return Mono.empty();
       }))
       .then(Mono.defer(() -> {
-        if (executor instanceof OwnedSupplier) {
+        if (executor.isOwned()) {
           if (executor.get() instanceof ThreadPoolExecutor) {
             ((ThreadPoolExecutor) executor.get()).shutdown();
           }
@@ -620,11 +620,11 @@ public class CoreEnvironment implements AutoCloseable {
     private OrphanReporterConfig.Builder orphanReporterConfig = new OrphanReporterConfig.Builder();
     private ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig = new ThresholdLoggingTracerConfig.Builder();
     private LoggingMeterConfig.Builder loggingMeterConfig = new LoggingMeterConfig.Builder();
-    private Supplier<EventBus> eventBus = null;
-    private Supplier<Scheduler> scheduler = null;
+    private OwnedOrExternal<EventBus> eventBus = null;
+    private OwnedOrExternal<Scheduler> scheduler = null;
     private int schedulerThreadCount = Schedulers.DEFAULT_POOL_SIZE;
-    private Supplier<RequestTracer> requestTracer = null;
-    private Supplier<Meter> meter = null;
+    private OwnedOrExternal<RequestTracer> requestTracer = null;
+    private OwnedOrExternal<Meter> meter = null;
     private RetryStrategy retryStrategy = null;
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
     private final List<RequestCallback> requestCallbacks = new ArrayList<>();
@@ -1042,7 +1042,7 @@ public class CoreEnvironment implements AutoCloseable {
      */
     @Stability.Uncommitted
     public SELF eventBus(final EventBus eventBus) {
-      this.eventBus = new ExternalSupplier<>(notNull(eventBus, "EventBus"));
+      this.eventBus = external(notNull(eventBus, "EventBus"));
       return self();
     }
 
@@ -1056,7 +1056,7 @@ public class CoreEnvironment implements AutoCloseable {
      */
     @Stability.Uncommitted
     public SELF scheduler(final Scheduler scheduler) {
-      this.scheduler = new ExternalSupplier<>(notNull(scheduler, "Scheduler"));
+      this.scheduler = external(notNull(scheduler, "Scheduler"));
       return self();
     }
 
@@ -1102,7 +1102,7 @@ public class CoreEnvironment implements AutoCloseable {
      */
     @Stability.Volatile
     public SELF requestTracer(final RequestTracer requestTracer) {
-      this.requestTracer = new ExternalSupplier<>(notNull(requestTracer, "RequestTracer"));
+      this.requestTracer = external(notNull(requestTracer, "RequestTracer"));
       return self();
     }
 
@@ -1116,7 +1116,7 @@ public class CoreEnvironment implements AutoCloseable {
      */
     @Stability.Volatile
     public SELF meter(final Meter meter) {
-      this.meter = new ExternalSupplier<>(notNull(meter, "Meter"));
+      this.meter = external(notNull(meter, "Meter"));
       return self();
     }
 

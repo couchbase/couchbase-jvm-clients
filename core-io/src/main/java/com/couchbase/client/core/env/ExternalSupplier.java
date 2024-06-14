@@ -23,7 +23,11 @@ import java.util.function.Supplier;
  * <p>
  * This class can be used with care, but usually it is better to just use the java 8 supplier interface directly
  * or implement your own.
+ *
+ * @deprecated Please use {@link Supplier} instead.
+ * In internal Couchbase code, please use {@link OwnedOrExternal#external(Object)} instead.
  */
+@Deprecated
 public class ExternalSupplier<T> implements Supplier<T> {
 
   private final T value;

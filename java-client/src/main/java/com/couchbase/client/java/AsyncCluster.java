@@ -33,7 +33,7 @@ import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.OwnedSupplier;
+import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -81,9 +81,10 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.env.OwnedOrExternal.external;
+import static com.couchbase.client.core.env.OwnedOrExternal.owned;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.ConnectionStringUtil.checkConnectionString;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
@@ -127,9 +128,9 @@ import static com.couchbase.client.java.ReactiveCluster.DEFAULT_WAIT_UNTIL_READY
 public class AsyncCluster {
 
   /**
-   * Holds the supplied environment that gets used throughout the lifetime.
+   * Holds the environment that gets used throughout the lifetime.
    */
-  private final Supplier<ClusterEnvironment> environment;
+  private final OwnedOrExternal<ClusterEnvironment> environment;
 
   private final CoreCouchbaseOps couchbaseOps;
 
@@ -175,9 +176,9 @@ public class AsyncCluster {
 
     final ClusterOptions.Built opts = options.build();
     final ConnectionString connStr = ConnectionString.create(connectionString);
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
+    final OwnedOrExternal<ClusterEnvironment> environment = extractClusterEnvironment(connStr, opts);
     return new AsyncCluster(
-      environmentSupplier,
+      environment,
       opts.authenticator(),
       connStr
     );
@@ -205,8 +206,8 @@ public class AsyncCluster {
    * @param opts the cluster options.
    * @return the cluster environment, created if not passed in or the one supplied from the user.
    */
-  static Supplier<ClusterEnvironment> extractClusterEnvironment(final ConnectionString connectionString, final ClusterOptions.Built opts) {
-    Supplier<ClusterEnvironment> envSupplier;
+  static OwnedOrExternal<ClusterEnvironment> extractClusterEnvironment(final ConnectionString connectionString, final ClusterOptions.Built opts) {
+    OwnedOrExternal<ClusterEnvironment> env;
     if (opts.environment() == null) {
       ClusterEnvironment.Builder builder = ClusterEnvironment.builder();
       if (opts.environmentCustomizer() != null) {
@@ -214,15 +215,14 @@ public class AsyncCluster {
       }
       builder.load(new ConnectionStringPropertyLoader(connectionString));
       builder.loadSystemProperties();
-      envSupplier = new OwnedSupplier<>(builder.build());
+      env = owned(builder.build());
     } else {
-      envSupplier = opts::environment;
+      env = external(opts.environment());
     }
 
-    boolean ownsEnvironment = envSupplier instanceof OwnedSupplier;
-    checkConnectionString(envSupplier.get(), ownsEnvironment, connectionString);
+    checkConnectionString(env.get(), env.isOwned(), connectionString);
 
-    return envSupplier;
+    return env;
   }
 
   /**
@@ -231,7 +231,7 @@ public class AsyncCluster {
    * @param environment the environment to use for this cluster.
    */
   AsyncCluster(
-    final Supplier<ClusterEnvironment> environment,
+    final OwnedOrExternal<ClusterEnvironment> environment,
     final Authenticator authenticator,
     final ConnectionString connectionString
   ) {
@@ -538,7 +538,7 @@ public class AsyncCluster {
       timeout,
       couchbaseOps,
       environment.get(),
-      environment instanceof OwnedSupplier
+      environment.isOwned()
     );
   }
 

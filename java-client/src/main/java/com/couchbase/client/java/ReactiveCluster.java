@@ -24,6 +24,7 @@ import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -64,7 +65,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -144,9 +144,9 @@ public class ReactiveCluster {
     notNull(options, "ClusterOptions");
     final ClusterOptions.Built opts = options.build();
     final ConnectionString connStr = ConnectionString.create(connectionString);
-    final Supplier<ClusterEnvironment> environmentSupplier = extractClusterEnvironment(connStr, opts);
+    final OwnedOrExternal<ClusterEnvironment> environment = extractClusterEnvironment(connStr, opts);
     return new ReactiveCluster(
-      environmentSupplier,
+      environment,
       opts.authenticator(),
       connStr
     );
@@ -168,7 +168,7 @@ public class ReactiveCluster {
   }
 
   private ReactiveCluster(
-    final Supplier<ClusterEnvironment> environment,
+    final OwnedOrExternal<ClusterEnvironment> environment,
     final Authenticator authenticator,
     final ConnectionString connectionString
   ) {
