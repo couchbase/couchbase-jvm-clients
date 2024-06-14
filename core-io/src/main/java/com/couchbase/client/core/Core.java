@@ -600,15 +600,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
       // assigning other labels.
       if (!isDefaultLoggingMeter) {
-        if (key.bucketName != null) {
           tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
-        }
-        if (key.scopeName != null) {
           tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
-        }
-        if (key.collectionName != null) {
           tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
-        }
 
         if (finalExceptionSimpleName != null) {
           tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName);

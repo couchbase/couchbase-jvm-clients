@@ -31,6 +31,7 @@ import io.opentelemetry.api.metrics.MeterProvider;
 
 import java.net.URL;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.Attributes;
@@ -95,8 +96,9 @@ public class OpenTelemetryMeter implements Meter {
   }
 
   @Override
-  public Counter counter(final String name, final Map<String, String> tags) {
+  public Counter counter(final String name, final Map<String, String> tagsOriginal) {
     try {
+      Map<String, String> tags = filterTags(tagsOriginal);
       return counters.computeIfAbsent(new NameAndTags(name, tags), key -> {
         LongCounter counter = otMeter.counterBuilder(name).build();
         AttributesBuilder builder = io.opentelemetry.api.common.Attributes.builder();
@@ -111,8 +113,9 @@ public class OpenTelemetryMeter implements Meter {
   }
 
   @Override
-  public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
+  public ValueRecorder valueRecorder(final String name, final Map<String, String> tagsOriginal) {
     try {
+      Map<String, String> tags = filterTags(tagsOriginal);
       return valueRecorders.computeIfAbsent(new NameAndTags(name, tags), key -> {
         DoubleHistogram vc =  otMeter.histogramBuilder(name).build();
         AttributesBuilder builder = io.opentelemetry.api.common.Attributes.builder();
@@ -126,4 +129,14 @@ public class OpenTelemetryMeter implements Meter {
     }
   }
 
+  private static Map<String, String> filterTags(Map<String, String> tags) {
+    Map<String, String> out = new HashMap<>();
+    // OpenTelemetry can support the same metric having different tagsets, so we trim the nulls out.
+    tags.forEach((k, v) -> {
+      if (v != null) {
+        out.put(k, v);
+      }
+    });
+    return out;
+  }
 }

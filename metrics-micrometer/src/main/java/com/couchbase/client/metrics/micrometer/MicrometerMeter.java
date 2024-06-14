@@ -24,6 +24,7 @@ import com.couchbase.client.core.error.MeterException;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -49,9 +50,10 @@ public class MicrometerMeter implements Meter {
   @Override
   public Counter counter(final String name, final Map<String, String> tags) {
     try {
+      Map<String, String> filteredTags = filterTags(tags);
       return counters.computeIfAbsent(
-        new NameAndTags(name, tags),
-        key -> new MicrometerCounter(meterRegistry.counter(name, convertTags(tags)))
+        new NameAndTags(name, filteredTags),
+        key -> new MicrometerCounter(meterRegistry.counter(name, convertTags(filteredTags)))
       );
     } catch (Exception ex) {
       throw new MeterException("Failed to create/access Counter", ex);
@@ -61,9 +63,10 @@ public class MicrometerMeter implements Meter {
   @Override
   public ValueRecorder valueRecorder(final String name, final Map<String, String> tags) {
     try {
+      Map<String, String> filteredTags = filterTags(tags);
       return valueRecorders.computeIfAbsent(
-        new NameAndTags(name, tags),
-        key -> new MicrometerValueRecorder(meterRegistry.summary(name, convertTags(tags)))
+        new NameAndTags(name, filteredTags),
+        key -> new MicrometerValueRecorder(meterRegistry.summary(name, convertTags(filteredTags)))
       );
     } catch (Exception ex) {
       throw new MeterException("Failed to create/access ValueRecorder", ex);
@@ -84,4 +87,12 @@ public class MicrometerMeter implements Meter {
       .collect(Collectors.toList());
   }
 
+  private static Map<String, String> filterTags(Map<String, String> tags) {
+    Map<String, String> out = new HashMap<>();
+    // Micrometer cannot support the same metric having different tagsets (https://github.com/micrometer-metrics/micrometer/issues/877), so we replace any nulls with empty strings.
+    tags.forEach((k, v) -> {
+      out.put(k, v == null ? "" : v);
+    });
+    return out;
+  }
 }
