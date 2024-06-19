@@ -24,36 +24,36 @@ public class Capabilities {
     public static List<Caps> sdkImplementationCaps() {
         var out = new ArrayList<Caps>();
 
-        // [start:3.1.5]
+        // [if:3.1.5]
         out.add(Caps.SDK_PRESERVE_EXPIRY);
-        // [end:3.1.5]
+        // [end]
 
-      // [start:3.4.12]
+      // [if:3.4.12]
       out.add(Caps.SDK_BUCKET_MANAGEMENT);
       out.add(Caps.SDK_COLLECTION_MANAGEMENT);
       out.add(Caps.SDK_MANAGEMENT_HISTORY_RETENTION);
-      // [end:3.4.12]
+      // [end]
 
 
-        // [start:3.4.1]
+        // [if:3.4.1]
         out.add(Caps.SDK_KV_RANGE_SCAN);
-        // [end:3.4.1]
+        // [end]
 
         // We're not performance testing query index management, so not worth the complexity
         // of keeping them compiling.
-        // [start:3.4.3]
+        // [if:3.4.3]
         out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT);
         out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT);
-        // [end:3.4.3]
+        // [end]
 
         // Actually the SDK has had various forms of FTS since 3.0.0, but we're not performance testing it currently
         // so it's not worth trying to keep the various minor API additions compiling.
-        // [start:3.4.5]
+        // [if:3.4.5]
         out.add(Caps.SDK_SEARCH);
         out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT);
         out.add(Caps.SDK_SCOPE_SEARCH);
         out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT);
-        // [end:3.4.5]
+        // [end]
 
         //TODO: fully implement eventing function manager - Java performer only supports getFunction currently
         out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER);
@@ -65,24 +65,24 @@ public class Capabilities {
 
         // We supported observability before this, but as we have to fix the version of tracing-opentelemetry module used by the performer, we hit
         // issues related to not having GrpcAwareRequestTracer.
-        // [start:3.5.0]
+        // [if:3.5.0]
         out.add(Caps.SDK_OBSERVABILITY_RFC_REV_24);
-        // [end:3.5.0]
+        // [end]
 
         out.add(Caps.SDK_KV);
-        // [start:3.5.1]
+        // [if:3.5.1]
         out.add(Caps.SDK_DOCUMENT_NOT_LOCKED);
         // This was added long before this release, but we are not performance testing it.
         out.add(Caps.SDK_CIRCUIT_BREAKERS);
-        // [end:3.5.1]
+        // [end]
 
-        // [start:3.6.0]
+        // [if:3.6.0]
         out.add(Caps.SDK_VECTOR_SEARCH);
-        // [end:3.6.0]
+        // [end]
 
-        // [start:3.6.3]
+        // [if:3.7.0]
         out.add(Caps.SDK_VECTOR_SEARCH_BASE64);
-        // [end:3.6.3]
+        // [end]
 
         return out;
     }

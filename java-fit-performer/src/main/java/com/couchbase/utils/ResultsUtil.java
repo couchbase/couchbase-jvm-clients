@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [start:3.3.0]
+// [skip:<3.3.0]
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
@@ -250,4 +250,3 @@ public class ResultsUtil {
         }
     }
 }
-// [end:3.3.0]

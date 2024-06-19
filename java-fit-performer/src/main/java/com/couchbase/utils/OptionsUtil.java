@@ -19,14 +19,14 @@ import com.couchbase.InternalPerformerFailure;
 import com.couchbase.JavaSdkCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
-// [start:3.5.1]
+// [if:3.5.1]
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
-// [end:3.5.1]
+// [end]
 import com.couchbase.client.core.env.IoConfig;
-// [start:3.2.0]
+// [if:3.2.0]
 import com.couchbase.client.core.env.LoggingMeterConfig;
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
-// [end:3.2.0]
+// [end]
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -35,7 +35,7 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryProfile;
 import com.couchbase.client.java.query.QueryScanConsistency;
-// [start:3.3.0]
+// [if:3.3.0]
 import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
 import com.couchbase.client.core.transaction.cleanup.CleanerMockFactory;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
@@ -44,7 +44,7 @@ import com.couchbase.client.java.transactions.TransactionKeyspace;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
-// [end:3.3.0]
+// [end]
 import com.couchbase.client.metrics.opentelemetry.OpenTelemetryMeter;
 import com.couchbase.client.protocol.observability.Attribute;
 import com.couchbase.client.protocol.sdk.circuit_breaker.ServiceConfig;
@@ -106,11 +106,11 @@ public class OptionsUtil {
                 clusterEnvironment.jsonSerializer(new CustomSerializer());
             }
 
-            // [start:3.3.0]
+            // [if:3.3.0]
             if (request.getClusterConfig().hasTransactionsConfig()) {
                 applyTransactionsConfig(request, getCluster, clusterEnvironment);
             }
-            // [end:3.3.0]
+            // [end]
 
             SecurityConfig.Builder secBuilder = null;
             if (cc.getUseTls()) {
@@ -197,9 +197,9 @@ public class OptionsUtil {
         }
         if (cc.hasKvScanTimeoutSecs()) {
             if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
-            // [start:3.4.1]
+            // [if:3.4.1]
             timeoutConfig.kvScanTimeout(Duration.ofSeconds(cc.getKvScanTimeoutSecs()));
-            // [end:3.4.1]
+            // [end]
         }
         if (cc.hasTranscoder()) {
             clusterEnvironment.transcoder(JavaSdkCommandExecutor.convertTranscoder(cc.getTranscoder()));
@@ -238,7 +238,7 @@ public class OptionsUtil {
             if (ioConfig == null) ioConfig = IoConfig.builder();
             ioConfig.idleHttpConnectionTimeout(Duration.ofSeconds(cc.getIdleHttpConnectionTimeoutSecs()));
         }
-        // [start:3.5.1]
+        // [if:3.5.1]
         if (cc.hasCircuitBreakerConfig()) {
             if (ioConfig == null) ioConfig = IoConfig.builder();
             var cbcc = cc.getCircuitBreakerConfig();
@@ -267,7 +267,7 @@ public class OptionsUtil {
                 ioConfig.backupCircuitBreakerConfig(cb -> applyCircuitBreakerConfig(cbcc.getBackup(), cb));
             }
         }
-        // [end:3.5.1]
+        // [end]
 
         if (ioConfig != null) {
             clusterEnvironment.ioConfig(ioConfig);
@@ -277,7 +277,7 @@ public class OptionsUtil {
         }
     }
 
-    // [start:3.5.1]
+    // [if:3.5.1]
     private static void applyCircuitBreakerConfig(ServiceConfig cbc, CircuitBreakerConfig.Builder cb) {
         if (cbc.hasEnabled()) {
             cb.enabled(cbc.getEnabled());
@@ -299,11 +299,11 @@ public class OptionsUtil {
             throw new UnsupportedOperationException("Canary timeout not supported");
         }
     }
-    // [end:3.5.1]
+    // [end]
 
     private static void applyTransactionsConfig(ClusterConnectionCreateRequest request, Supplier<ClusterConnection> getCluster, ClusterEnvironment.Builder clusterEnvironment) {
         var tc = request.getClusterConfig().getTransactionsConfig();
-        // [start:3.3.0]
+        // [if:3.3.0]
         var builder = TransactionsConfig.builder();
 
         var factory = HooksUtil.configureHooks(tc.getHookList(), getCluster);
@@ -358,13 +358,13 @@ public class OptionsUtil {
         }
 
         clusterEnvironment.transactionsConfig(builder);
-        // [end:3.3.0]
+        // [end]
     }
 
     private static void applyObservabilityConfig(ClusterEnvironment.Builder clusterEnvironment, ClusterConfig cc, ArrayList<Runnable> onClusterConnectionClose) {
         var oc = cc.getObservabilityConfig();
 
-        // [start:3.2.0]
+        // [if:3.2.0]
         if (oc.hasMetrics() || oc.hasTracing()) {
             SdkTracerProvider tracerProvider = null;
             SdkMeterProvider meterProvider = null;
@@ -430,8 +430,8 @@ public class OptionsUtil {
                 clusterEnvironment.meter(OpenTelemetryMeter.wrap(openTelemetry));
             }
             if (oc.hasTracing()) {
-                // [end:3.2.0]
-                // [start:3.5.0]
+                // [end]
+                // [if:3.5.0]
                 final SdkTracerProvider tracerProviderForShutdown = tracerProvider;
                 onClusterConnectionClose.add(() -> {
                     logger.info("Shutting down tracer provider");
@@ -440,8 +440,8 @@ public class OptionsUtil {
                 });
                 var tracer = OpenTelemetryRequestTracer.wrap(openTelemetry);
                 clusterEnvironment.requestTracer(tracer);
-                // [end:3.5.0]
-                // [start:3.2.0]
+                // [end]
+                // [if:3.2.0]
             }
         }
 
@@ -470,13 +470,13 @@ public class OptionsUtil {
             if (tlc.hasAnalyticsThresholdMillis()) {
                 builder.analyticsThreshold(Duration.ofMillis(tlc.getAnalyticsThresholdMillis()));
             }
-            // [end:3.2.0]
-            // [start:3.4.0]
+            // [end]
+            // [if:3.4.0]
             if (tlc.hasTransactionsThresholdMillis()) {
                 builder.transactionsThreshold(Duration.ofMillis(tlc.getTransactionsThresholdMillis()));
             }
-            // [end:3.4.0]
-            // [start:3.2.0]
+            // [end]
+            // [if:3.2.0]
             if (tlc.hasSampleSize()) {
                 builder.sampleSize(tlc.getSampleSize());
             }
@@ -513,7 +513,7 @@ public class OptionsUtil {
             clusterEnvironment.orphanReporterConfig(builder);
         }
 
-        // [end:3.2.0]
+        // [end]
     }
 
     private static ResourceBuilder createOpenTelemetryResource(Map<String, Attribute> resources) {
@@ -549,7 +549,7 @@ public class OptionsUtil {
         return durabilityLevel;
     }
 
-    // [start:3.3.0]
+    // [if:3.3.0]
     public static com.couchbase.client.java.transactions.TransactionQueryOptions transactionQueryOptions(CommandQuery request) {
         com.couchbase.client.java.transactions.TransactionQueryOptions queryOptions = null;
         if (request.hasQueryOptions()) {
@@ -648,7 +648,7 @@ public class OptionsUtil {
         }
         return ptcb;
     }
-    // [end:3.3.0]
+    // [end]
 
   public static Duration convertDuration(com.google.protobuf.Duration duration) {
       var nanos = duration.getNanos() + TimeUnit.SECONDS.toNanos(duration.getSeconds());

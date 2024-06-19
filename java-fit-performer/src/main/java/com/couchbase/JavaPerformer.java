@@ -19,7 +19,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.logging.RedactionLevel;
-// [start:3.3.0]
+// [if:3.3.0]
 import com.couchbase.client.core.transaction.cleanup.TransactionsCleaner;
 import com.couchbase.client.core.transaction.cleanup.ClientRecord;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordDetails;
@@ -50,7 +50,7 @@ import com.couchbase.twoway.TwoWayTransactionMarshaller;
 import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ResultsUtil;
 import com.couchbase.utils.HooksUtil;
-// [end:3.3.0]
+// [end]
 import com.couchbase.client.performer.core.util.VersionUtil;
 import com.couchbase.client.protocol.observability.SpanCreateRequest;
 import com.couchbase.client.protocol.observability.SpanCreateResponse;
@@ -114,15 +114,12 @@ public class JavaPerformer extends CorePerformer {
 
     @Override
     protected TransactionCommandExecutor transactionsExecutor(com.couchbase.client.protocol.run.Workloads workloads, Counters counters) {
-        // [start:3.3.0]
+        // [if:3.3.0]
         var connection = clusterConnections.get(workloads.getClusterConnectionId());
         return new JavaTransactionCommandExecutor(connection, counters, spans);
-        // [end:3.3.0]
-        // [start:<3.3.0]
-/*
-        return null;
-        // [end:<3.3.0]
-*/
+        // [else]
+        //? return null;
+        // [end]
     }
 
     @Override
@@ -136,7 +133,7 @@ public class JavaPerformer extends CorePerformer {
         }
         response.setLibraryVersion(sdkVersion);
 
-        // [start:3.3.0]
+        // [if:3.3.0]
         for (Extension ext : Extension.SUPPORTED) {
             try {
                 var pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name());
@@ -160,15 +157,15 @@ public class JavaPerformer extends CorePerformer {
             protocolVersion, response.getPerformerCapsList());
         response.addPerformerCaps(Caps.TRANSACTIONS_WORKLOAD_1);
         response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1);
-        // [end:3.3.0]
+        // [end]
         response.addSupportedApis(API.ASYNC);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_1);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_CERT);
         response.addPerformerCaps(Caps.CLUSTER_CONFIG_INSECURE);
         // Some observability options blocks changed name here
-        // [start:3.2.0]
+        // [if:3.2.0]
         response.addPerformerCaps(Caps.OBSERVABILITY_1);
-        // [end:3.2.0]
+        // [end]
         response.addPerformerCaps(Caps.TIMING_ON_FAILED_OPS);
         response.setPerformerUserAgent("java-sdk");
     }
@@ -234,7 +231,7 @@ public class JavaPerformer extends CorePerformer {
         responseObserver.onCompleted();
     }
 
-    // [start:3.3.0]
+    // [if:3.3.0]
     @Override
     public void transactionCreate(TransactionCreateRequest request,
                                   StreamObserver<TransactionResult> responseObserver) {
@@ -260,7 +257,7 @@ public class JavaPerformer extends CorePerformer {
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
     }
-    // [end:3.3.0]
+    // [end]
 
     @Override
     public  void echo(EchoRequest request , StreamObserver<EchoResponse> responseObserver){
@@ -290,7 +287,7 @@ public class JavaPerformer extends CorePerformer {
         }
     }
 
-    // [start:3.3.0]
+    // [if:3.3.0]
     @Override
     public StreamObserver<TransactionStreamDriverToPerformer> transactionStream(
             StreamObserver<TransactionStreamPerformerToDriver> toTest) {
@@ -298,13 +295,13 @@ public class JavaPerformer extends CorePerformer {
 
         return marshaller.run(toTest);
     }
-    // [end:3.3.0]
+    // [end]
 
     private static CollectionIdentifier collectionIdentifierFor(com.couchbase.client.protocol.transactions.DocId doc) {
         return new CollectionIdentifier(doc.getBucketName(), Optional.of(doc.getScopeName()), Optional.of(doc.getCollectionName()));
     }
 
-    // [start:3.3.0]
+    // [if:3.3.0]
     @Override
     public void transactionCleanup(TransactionCleanupRequest request,
                                    StreamObserver<TransactionCleanupAttempt> responseObserver) {
@@ -457,7 +454,7 @@ public class JavaPerformer extends CorePerformer {
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
     }
-    // [end:3.3.0]
+    // [end]
 
     @Override
     public void spanCreate(SpanCreateRequest request, StreamObserver<SpanCreateResponse> responseObserver) {
@@ -470,7 +467,7 @@ public class JavaPerformer extends CorePerformer {
                 .requestTracer()
                 .requestSpan(request.getName(), parent);
         // RequestSpan interface finalised here
-        // [start:3.1.6]
+        // [if:3.1.6]
         request.getAttributesMap().forEach((k, v) -> {
             if (v.hasValueBoolean()) {
                 span.attribute(k, v.getValueBoolean());
@@ -483,7 +480,7 @@ public class JavaPerformer extends CorePerformer {
             }
             else throw new UnsupportedOperationException();
         });
-        // [end:3.1.6]
+        // [end]
         spans.put(request.getId(), span);
         responseObserver.onNext(SpanCreateResponse.getDefaultInstance());
         responseObserver.onCompleted();
@@ -491,9 +488,9 @@ public class JavaPerformer extends CorePerformer {
 
     @Override
     public void spanFinish(SpanFinishRequest request, StreamObserver<SpanFinishResponse> responseObserver) {
-        // [start:3.1.6]
+        // [if:3.1.6]
         spans.get(request.getId()).end();
-        // [end:3.1.6]
+        // [end]
         spans.remove(request.getId());
         responseObserver.onNext(SpanFinishResponse.getDefaultInstance());
         responseObserver.onCompleted();

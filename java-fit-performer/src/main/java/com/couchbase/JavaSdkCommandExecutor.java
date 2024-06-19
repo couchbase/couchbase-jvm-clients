@@ -43,19 +43,19 @@ import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInMacro;
 import com.couchbase.client.protocol.sdk.collection.mutatein.MutateInSpecResult;
 import com.couchbase.client.protocol.sdk.kv.GetAllReplicas;
 import com.couchbase.client.protocol.shared.*;
-// [start:3.2.1]
+// [if:3.2.1]
 import com.couchbase.eventing.EventingHelper;
-// [end:3.2.1]
-// [start:3.2.4]
+// [end]
+// [if:3.2.4]
 import com.couchbase.manager.BucketManagerHelper;
-// [end:3.2.4]
-// [start:3.4.12]
+// [end]
+// [if:3.4.12]
 import com.couchbase.manager.CollectionManagerHelper;
-// [end:3.4.12]
-// [start:3.4.1]
+// [end]
+// [if:3.4.1]
 import com.couchbase.client.java.kv.ScanOptions;
 import com.couchbase.client.java.kv.ScanResult;
-// [end:3.4.1]
+// [end]
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
@@ -65,20 +65,20 @@ import com.couchbase.client.performer.core.util.ErrorUtil;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest;
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan;
-// [start:3.4.3]
+// [if:3.4.3]
 import com.couchbase.query.QueryIndexManagerHelper;
-// [end:3.4.3]
+// [end]
 import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
-// [start:3.4.5]
+// [if:3.4.5]
 import com.couchbase.search.SearchHelper;
 import static com.couchbase.search.SearchHelper.handleSearchQueryBlocking;
-// [end:3.4.5]
-// [start:3.6.0]
+// [end]
+// [if:3.6.0]
 import static com.couchbase.search.SearchHelper.handleSearchBlocking;
-// [end:3.6.0]
+// [end]
 
 import javax.annotation.Nullable;
 import java.time.Duration;
@@ -187,7 +187,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             result.setElapsedNanos(System.nanoTime() - start);
             if (op.getReturnResult()) populateResult(result, mr);
             else setSuccess(result);
-        // [start:3.4.1]
+        // [if:3.4.1]
         } else if (op.hasRangeScan()){
             var request = op.getRangeScan();
             var collection = connection.collection(request.getCollection());
@@ -207,7 +207,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     .setCreated(com.couchbase.client.protocol.streams.Created.newBuilder()
                             .setType(STREAM_KV_RANGE_SCAN)
                             .setStreamId(streamer.streamId())));
-        // [end:3.4.1]
+        // [end]
         } else if (op.hasClusterCommand()) {
             return handleClusterLevelCommand(op, result);
         } else if (op.hasBucketCommand()) {
@@ -234,11 +234,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               .collection(clc.getCollection().getCollectionName());
     }
 
-    // [start:3.4.3]
+    // [if:3.4.3]
     if (clc.hasQueryIndexManager()) {
       QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
     }
-    // [end:3.4.3]
+    // [end]
 
     if (clc.hasGetAndLock()) {
       var request = clc.getGetAndLock();
@@ -434,7 +434,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     var slc = op.getScopeCommand();
     var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
 
-    // [start:3.0.9]
+    // [if:3.0.9]
     if (slc.hasQuery()) {
       var query = slc.getQuery().getStatement();
       QueryResult qr;
@@ -447,22 +447,22 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       else setSuccess(result);
       return result.build();
     }
-    // [end:3.0.9]
+    // [end]
 
-    // [start:3.4.5]
+    // [if:3.4.5]
     if (slc.hasSearch()) {
       com.couchbase.client.protocol.sdk.search.Search command = slc.getSearch();
       return handleSearchQueryBlocking(connection.cluster(), scope, spans, command);
     } else if (slc.hasSearchIndexManager()) {
       return SearchHelper.handleScopeSearchIndexManager(scope, spans, op);
     }
-    // [end:3.4.5]
+    // [end]
 
-    // [start:3.6.0]
+    // [if:3.6.0]
     if (slc.hasSearchV2()) {
       return handleSearchBlocking(connection.cluster(), scope, spans, slc.getSearchV2());
     }
-    // [end:3.6.0]
+    // [end]
 
     throw new UnsupportedOperationException("Unknown scope-level command");
   }
@@ -489,11 +489,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       setSuccess(result);
     }
 
-    // [start:3.4.12]
+    // [if:3.4.12]
     else if (blc.hasCollectionManager()) {
       CollectionManagerHelper.handleCollectionManager(connection.cluster(), spans, op, result);
     }
-    // [end:3.4.12]
+    // [end]
 
     return result.build();
   }
@@ -517,31 +517,31 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       setSuccess(result);
 
     }
-    // [start:3.2.4]
+    // [if:3.2.4]
     else if (clc.hasBucketManager()) {
       BucketManagerHelper.handleBucketManger(connection.cluster(), spans, op, result);
     }
-    // [end:3.2.4]
-    // [start:3.2.1]
+    // [end]
+    // [if:3.2.1]
     else if (clc.hasEventingFunctionManager()) {
       EventingHelper.handleEventingFunctionManager(connection.cluster(), spans, op, result);
     }
-    // [end:3.2.1]
+    // [end]
 
-    // [start:3.4.3]
+    // [if:3.4.3]
     if (clc.hasQueryIndexManager()) {
       QueryIndexManagerHelper.handleClusterQueryIndexManager(connection.cluster(), spans, op, result);
     }
-    // [end:3.4.3]
+    // [end]
 
-    // [start:3.4.5]
+    // [if:3.4.5]
     if (clc.hasSearch()) {
       com.couchbase.client.protocol.sdk.search.Search command = clc.getSearch();
       return handleSearchQueryBlocking(connection.cluster(), null, spans, command);
     } else if (clc.hasSearchIndexManager()) {
       return SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op);
     }
-    // [end:3.4.5]
+    // [end]
 
     if (clc.hasQuery()) {
       var query = clc.getQuery().getStatement();
@@ -558,11 +558,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       else setSuccess(result);
     }
 
-    // [start:3.6.0]
+    // [if:3.6.0]
     if (clc.hasSearchV2()) {
       return handleSearchBlocking(connection.cluster(), null, spans, clc.getSearchV2());
     }
-    // [end:3.6.0]
+    // [end]
 
     return result.build();
   }
@@ -660,7 +660,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         throw new UnsupportedOperationException("Given MutateInSpec operation is unsupported");
     }
 
-    // [start:3.4.1]
+    // [if:3.4.1]
     public static Result processScanResult(Scan request, ScanResult r) {
         try {
             var builder = com.couchbase.client.protocol.sdk.kv.rangescan.ScanResult.newBuilder()
@@ -767,7 +767,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             throw new UnsupportedOperationException();
         }
     }
-    // [end:3.4.1]
+    // [end]
 
     @Override
     protected Exception convertException(Throwable raw) {
@@ -841,9 +841,9 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               .setCas(value.cas())
               .setContent(content.value());
 
-        // [start:3.0.7]
+        // [if:3.0.7]
         value.expiryTime().ifPresent(et -> builder.setExpiryTime(et.getEpochSecond()));
-        // [end:3.0.7]
+        // [end]
 
         result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setGetResult(builder));
@@ -948,9 +948,9 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setContent(content.value())
                 .setIsReplica(value.isReplica());
 
-        // [start:3.0.7]
+        // [if:3.0.7]
         value.expiryTime().ifPresent(et -> builder.setExpiryTime(et.getEpochSecond()));
-        // [end:3.0.7]
+        // [end]
 
         result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setGetReplicaResult(builder));
@@ -1088,14 +1088,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    // [start:3.0.7]
+                    // [if:3.0.7]
                     out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                    // [end:3.0.7]
-                    // [start:<3.0.7]
-/*
-                    throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
-                    // [end:<3.0.7]
-*/
+                    // [else]
+                    //? throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+                    // [end]
                 }
                 else if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else throw new UnsupportedOperationException("Unknown expiry");
@@ -1107,7 +1104,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    // [start:3.4.1]
+    // [if:3.4.1]
     public static @Nullable ScanOptions createOptions(com.couchbase.client.protocol.sdk.kv.rangescan.Scan request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
@@ -1125,7 +1122,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         }
         else return null;
     }
-    // [end:3.4.1]
+    // [end]
 
     public static @Nullable QueryOptions createOptions(com.couchbase.client.protocol.sdk.query.Command request, ConcurrentHashMap<String, RequestSpan> spans) {
         if(request.hasOptions()){
@@ -1171,9 +1168,9 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             }
             if (opts.hasReadonly()) out.readonly(opts.getReadonly());
 
-            // [start:3.0.9]
+            // [if:3.0.9]
             if (opts.hasFlexIndex()) out.flexIndex(opts.getFlexIndex());
-            // [end:3.0.9]
+            // [end]
             if (opts.hasPipelineCap()) out.pipelineCap(opts.getPipelineCap());
             if (opts.hasPipelineBatch()) out.pipelineBatch(opts.getPipelineBatch());
             if (opts.hasScanCap()) out.scanCap(opts.getScanCap());
@@ -1182,12 +1179,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasMaxParallelism()) out.maxParallelism(opts.getMaxParallelism());
             if (opts.hasMetrics()) out.metrics(opts.getMetrics());
             if (opts.hasClientContextId()) out.clientContextId(opts.getClientContextId());
-            // [start:3.2.5]
+            // [if:3.2.5]
             if (opts.hasPreserveExpiry()) out.preserveExpiry(opts.getPreserveExpiry());
-            // [end:3.2.5]
-            // [start:3.4.8]
+            // [end]
+            // [if:3.4.8]
             if (opts.hasUseReplica()) out.useReplica(opts.getUseReplica());
-            // [end:3.4.8]
+            // [end]
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
@@ -1377,27 +1374,24 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasTimeoutMillis()) out.timeout(Duration.ofMillis(opts.getTimeoutMillis()));
             if (opts.hasAccessDeleted()) out.accessDeleted(opts.getAccessDeleted());
             if (opts.hasCas()) out.cas(opts.getCas());
-            // [start:3.0.1]
+            // [if:3.0.1]
             if (opts.hasCreateAsDeleted()) out.createAsDeleted(opts.getCreateAsDeleted());
-            // [end:3.0.1]
+            // [end]
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    // [start:3.0.7]
+                    // [if:3.0.7]
                     out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                    // [end:3.0.7]
-                    // [start:<3.0.7]
-/*
-                    //throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
-                    // [end:<3.0.7]
-*/
+                    // [else]
+                    //? throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+                    // [end]
                 }
                 else if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else throw new UnsupportedOperationException("Unknown expiry");
             }
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
-            // [start:3.1.5]
+            // [if:3.1.5]
             if (opts.hasPreserveExpiry()) out.preserveExpiry(opts.getPreserveExpiry());
-            // [end:3.1.5]
+            // [end]
             if (opts.hasStoreSemantics()) {
                 switch (opts.getStoreSemantics()) {
                     case INSERT -> out.storeSemantics(StoreSemantics.INSERT);
@@ -1420,27 +1414,21 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    // [start:3.0.7]
+                    // [if:3.0.7]
                     out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                    // [end:3.0.7]
-                    // [start:<3.0.7]
-/*
-                    throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
-                    // [end:<3.0.7]
-*/
+                    // [else]
+                    //? throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+                    // [end]
                 }
                 else if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else throw new UnsupportedOperationException("Unknown expiry");
             }
             if (opts.hasPreserveExpiry()) {
-                // [start:3.1.5]
+                // [if:3.1.5]
                 out.preserveExpiry(opts.getPreserveExpiry());
-                // [end:3.1.5]
-                // [start:<3.1.5]
-/*
-                throw new UnsupportedOperationException();
-                // [end:<3.1.5]
-*/
+                // [else]
+                //? throw new UnsupportedOperationException();
+                // [end]
             }
             if (opts.hasCas()) out.cas(opts.getCas());
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
@@ -1458,27 +1446,21 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    // [start:3.0.7]
+                    // [if:3.0.7]
                     out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                    // [end:3.0.7]
-                    // [start:<3.0.7]
-/*
-                    throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
-                    // [end:<3.0.7]
-*/
+                    // [else]
+                    //? throw new UnsupportedOperationException("This SDK version does not support this form of expiry");
+                    // [end]
                 }
                 else if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else throw new UnsupportedOperationException("Unknown expiry");
             }
             if (opts.hasPreserveExpiry()) {
-                // [start:3.1.5]
+                // [if:3.1.5]
                 out.preserveExpiry(opts.getPreserveExpiry());
-                // [end:3.1.5]
-                // [start:<3.1.5]
-/*
-                throw new UnsupportedOperationException();
-                // [end:<3.1.5]
-*/
+                // [else]
+                //? throw new UnsupportedOperationException();
+                // [end]
             }
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));

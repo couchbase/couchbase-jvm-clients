@@ -16,11 +16,11 @@
 package com.couchbase.twoway;
 
 import com.couchbase.JavaSdkCommandExecutor;
-// [start:3.6.2]
+// [if:3.6.2]
 import com.couchbase.client.java.transactions.config.TransactionGetOptions;
 import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
 import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
-// [end:3.6.2]
+// [end]
 import com.couchbase.client.protocol.transactions.CommandGet;
 import com.couchbase.client.protocol.transactions.CommandInsert;
 import com.couchbase.client.protocol.transactions.CommandReplace;
@@ -31,7 +31,7 @@ import com.couchbase.client.protocol.transactions.Get;
 public class TransactionOptionsUtil {
     private TransactionOptionsUtil() { }
 
-    // [start:3.6.2]
+    // [if:3.6.2]
     public static TransactionReplaceOptions transactionReplaceOptions(CommandReplace request) {
         TransactionReplaceOptions options = null;
         if (request.hasOptions()) {
@@ -103,33 +103,12 @@ public class TransactionOptionsUtil {
         }
         return options;
     }
-    // [end:3.6.2]
-
-    // [start:<3.6.2]
-    /*
-    public static Object transactionReplaceOptions(CommandReplace request) {
-        return null;
-    }
-
-    public static Object transactionReplaceOptions(Replace request) {
-        return null;
-    }
-
-    public static Object transactionInsertOptions(CommandInsert request) {
-        return null;
-    }
-
-    public static Object transactionInsertOptions(Insert request) {
-        return null;
-    }
-
-    public static Object transactionGetOptions(CommandGet request) {
-        return null;
-    }
-
-    public static Object transactionGetOptions(Get request) {
-        return null;
-    }
-    // [end:<3.6.2]
-     */
+    // [else]
+    //? public static Object transactionReplaceOptions(CommandReplace request) { return null; }
+    //? public static Object transactionReplaceOptions(Replace request) { return null; }
+    //? public static Object transactionInsertOptions(CommandInsert request) { return null; }
+    //? public static Object transactionInsertOptions(Insert request) { return null; }
+    //? public static Object transactionGetOptions(CommandGet request) { return null; }
+    //? public static Object transactionGetOptions(Get request) { return null; }
+    // [end]
 }

@@ -21,9 +21,9 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-// [start:3.3.2]
+// [if:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
-// [end:3.3.2]
+// [end]
 import com.couchbase.client.core.transaction.util.MonoBridge;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
@@ -117,7 +117,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     .concatMap(command -> performOperation(connection, ctx, command, toTest, performanceMode, ""))
                     .then();
         }, ptcb)
-                // [start:3.3.2]
+                // [if:3.3.2]
                 .flatMap(result -> {
                     return TransactionMarkerOwner.get()
                             .doOnNext(v -> {
@@ -127,7 +127,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                             })
                             .thenReturn(result);
                 })
-                // [end:3.3.2]
+                // [end]
                 // Use a unique scheduler so can find the thread in the debugger
                 .subscribeOn(Schedulers.newBoundedElastic(4, Integer.MAX_VALUE, "java-performer"))
                 .block();
@@ -152,11 +152,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                 () -> {
                     logger.info("Performing insert operation on {} on bucket {} on collection {}",
                             request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
-                    // [start:3.6.2]
+                    // [if:3.6.2]
                     if (options != null) {
                         return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content, options).then();
                     }
-                    // [end:3.6.2]
+                    // [end]
                     return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content).then();
                 });
         } else if (op.hasReplace()) {
@@ -172,11 +172,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
                             throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
                         }
-                        // [start:3.6.2]
+                        // [if:3.6.2]
                         if (options != null) {
                             return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
                         }
-                        // [end:3.6.2]
+                        // [end]
                         return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
@@ -184,11 +184,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                                 request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
                         return ctx.get(collection.reactive(), request.getDocId().getDocId())
                                 .flatMap(r -> {
-                                    // [start:3.6.2]
+                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.replace(r, content, options);
                                     }
-                                    // [end:3.6.2]
+                                    // [end]
                                     return ctx.replace(r, content);
                                 })
                                 .then();
@@ -229,11 +229,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     () -> {
                         logger.info("Performing get operation on {} on bucket {} on collection {}", request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
                         return Mono.defer(() -> {
-                                    // [start:3.6.2]
+                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
                                     }
-                                    // [end:3.6.2]
+                                    // [end]
                                     return ctx.get(collection.reactive(), request.getDocId().getDocId());
                                 })
                                 .doOnNext(out -> handleGetResult(request, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
@@ -249,11 +249,11 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     () -> {
                         logger.info("Performing getOptional operation on {} on bucket {} on collection {} ", request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
                         return Mono.defer(() -> {
-                                    // [start:3.6.2]
+                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
                                     }
-                                    // [end:3.6.2]
+                                    // [end]
                                     return ctx.get(collection.reactive(), request.getDocId().getDocId());
                                 })
                                 .doOnNext(doc -> handleGetOptionalResult(request, req, Optional.of(doc), connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))

@@ -18,11 +18,11 @@ package com.couchbase;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
-// [start:3.4.9]
+// [if:3.4.9]
 import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
 import com.couchbase.client.java.kv.LookupInAnyReplicaOptions;
 import com.couchbase.client.java.kv.LookupInReplicaResult;
-// [end:3.4.9]
+// [end]
 import com.couchbase.client.java.kv.LookupInOptions;
 import com.couchbase.client.java.kv.LookupInResult;
 import com.couchbase.client.java.kv.LookupInSpec;
@@ -138,13 +138,9 @@ public class LookupInHelper {
           CollectionLevelCommand clc,
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
-    // [start:<3.4.9]
-/*
-      throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
-      // [end:<3.4.9]
-*/
-
-    // [start:3.4.9]
+    // [if:<3.4.9]
+    //? throw new UnsupportedOperationException("This version of the SDK does not support lookupInAllReplicas");
+    // [else]
     var req = clc.getLookupInAnyReplica();
     var collection = connection.collection(req.getLocation());
     var options = createOptions(req, spans);
@@ -169,7 +165,7 @@ public class LookupInHelper {
     } else {
       setSuccess(out);
     }
-    // [end:3.4.9]
+    // [end]
   }
 
   private static void handleLookupInAllReplicas(
@@ -180,13 +176,9 @@ public class LookupInHelper {
           CollectionLevelCommand clc,
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
-    // [start:<3.4.9]
-/*
-    throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
-    // [end:<3.4.9]
-*/
-
-    // [start:3.4.9]
+    // [if:<3.4.9]
+    //? throw new UnsupportedOperationException("This version of the SDK does not support lookupInAllReplicas");
+    // [else]
     var req = clc.getLookupInAllReplicas();
     var collection = connection.collection(req.getLocation());
     var options = createOptions(req, spans);
@@ -229,7 +221,7 @@ public class LookupInHelper {
                             com.couchbase.client.protocol.streams.Created.newBuilder()
                                     .setType(com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN)
                                     .setStreamId(streamer.streamId())));
-    // [end:3.4.9]
+    // [end]
   }
 
   private static Mono<?> handleLookupInReactive(
@@ -273,13 +265,9 @@ public class LookupInHelper {
           CollectionLevelCommand clc,
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
-    // [start:<3.4.9]
-/*
-          throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAnyReplica");
-          // [end:<3.4.9]
-*/
-
-    // [start:3.4.9]
+    // [if:<3.4.9]
+    //? throw new UnsupportedOperationException("This version of the SDK does not support lookupInAnyReplica");
+    // [else]
     var req = clc.getLookupInAnyReplica();
     var collection = connection.collection(req.getLocation()).reactive();
     var options = createOptions(req, spans);
@@ -310,7 +298,7 @@ public class LookupInHelper {
                 setSuccess(out);
               }
             });
-    // [end:3.4.9]
+    // [end]
   }
 
   private static Mono<?> handleLookupInAllReplicasReactive(
@@ -321,13 +309,9 @@ public class LookupInHelper {
           CollectionLevelCommand clc,
           Result.Builder out,
           ConcurrentHashMap<String, RequestSpan> spans) {
-    // [start:<3.4.9]
-/*
-        throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas");
-        // [end:<3.4.9]
-*/
-
-    // [start:3.4.9]
+    // [if:<3.4.9]
+    //? throw new UnsupportedOperationException("This version of the SDK does not support lookupInAllReplicas");
+    // [else]
     var req = clc.getLookupInAllReplicas();
     var collection = connection.collection(req.getLocation()).reactive();
     var options = createOptions(req, spans);
@@ -372,7 +356,7 @@ public class LookupInHelper {
                                     .setStreamId(streamer.streamId())));
 
     return Mono.just(0);
-    // [end:3.4.9]
+    // [end]
   }
 
   private static List<com.couchbase.client.java.kv.LookupInSpec> mapSpecs(List<com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpec> specList) {
@@ -421,7 +405,7 @@ public class LookupInHelper {
     }
   }
 
-  // [start:3.4.9]
+  // [if:3.4.9]
   private static @Nullable LookupInAnyReplicaOptions createOptions(com.couchbase.client.protocol.sdk.kv.lookupin.LookupInAnyReplica request,
                                                                    ConcurrentHashMap<String, RequestSpan> spans) {
     if (request.hasOptions()) {
@@ -455,7 +439,7 @@ public class LookupInHelper {
       return null;
     }
   }
-  // [end:3.4.9]
+  // [end]
 
   private static void populateResult(com.couchbase.client.protocol.sdk.kv.lookupin.LookupIn request,
                                      com.couchbase.client.protocol.run.Result.Builder out,
@@ -515,7 +499,7 @@ public class LookupInHelper {
                                     .addAllResults(specs)));
   }
 
-  // [start:3.4.9]
+  // [if:3.4.9]
   private static com.couchbase.client.protocol.sdk.kv.lookupin.LookupInReplicaResult populateResult(List<com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpec> specs,
                                                                                                     LookupInReplicaResult result) {
     var specResults = new ArrayList<com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpecResult>();
@@ -571,6 +555,6 @@ public class LookupInHelper {
             .addAllResults(specResults)
             .build();
   }
-  // [end:3.4.9]
+  // [end]
 
 }

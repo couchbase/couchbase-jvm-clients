@@ -53,13 +53,13 @@ import com.couchbase.client.java.search.sort.SearchFieldMode;
 import com.couchbase.client.java.search.sort.SearchFieldType;
 import com.couchbase.client.java.search.sort.SearchGeoDistanceUnits;
 import com.couchbase.client.java.search.sort.SearchSort;
-// [start:3.6.0]
+// [if:3.6.0]
 import com.couchbase.client.java.search.vector.VectorQuery;
 import com.couchbase.client.java.search.vector.VectorQueryCombination;
 import com.couchbase.client.java.search.vector.VectorSearch;
 import com.couchbase.client.java.search.vector.VectorSearchOptions;
 import com.couchbase.client.java.search.SearchRequest;
-// [end:3.6.0]
+// [end]
 import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;
@@ -696,7 +696,7 @@ public class SearchHelper {
     }).then();
   }
 
-  // [start:3.6.0]
+  // [if:3.6.0]
   public static Result handleSearchBlocking(Cluster cluster,
                                             @Nullable Scope scope,
                                             ConcurrentHashMap<String, RequestSpan> spans,
@@ -779,7 +779,7 @@ public class SearchHelper {
       });
     }).then();
   }
-  // [end:3.6.0]
+  // [end]
 
   private static BlockingSearchResult convertResult(SearchResult result, @Nullable ContentAs fieldsAs) {
     return BlockingSearchResult.newBuilder()
@@ -1439,28 +1439,25 @@ public class SearchHelper {
     return out;
   }
 
-  // pre-processor doesn't support nested tags, so do this intricate dance
-  // [start:3.6.0]
+  // [if:3.6.0]
   private static VectorQuery toSdk(com.couchbase.client.protocol.sdk.search.VectorQuery fit) {
-    // [end:3.6.0]
 
-    // [start:3.6.3]
+    // [if:3.7.0]
     if (fit.hasBase64VectorQuery()) {
       VectorQuery sdk = VectorQuery.create(fit.getVectorFieldName(), fit.getBase64VectorQuery());
       applyVectorQueryOptions(sdk, fit);
       return sdk;
     }
-    // [end:3.6.3]
+    // [end]
 
-    // [start:3.6.0]
     var floats = Floats.toArray(fit.getVectorQueryList());
     VectorQuery sdk = VectorQuery.create(fit.getVectorFieldName(), floats);
     applyVectorQueryOptions(sdk, fit);
     return sdk;
   }
-  // [end:3.6.0]
+  // [end]
 
-  // [start:3.6.0]
+  // [if:3.6.0]
   private static void applyVectorQueryOptions(VectorQuery sdk, com.couchbase.client.protocol.sdk.search.VectorQuery fit) {
     if (fit.hasOptions()) {
       var opts = fit.getOptions();
@@ -1472,9 +1469,9 @@ public class SearchHelper {
       }
     }
   }
-  // [end:3.6.0]
+  // [end]
 
-  // [start:3.6.0]
+  // [if:3.6.0]
   private static SearchRequest convertSearchRequest(com.couchbase.client.protocol.sdk.search.SearchRequest sr) {
     if (sr.hasSearchQuery()) {
       var out = SearchRequest.create(convertSearchQuery(sr.getSearchQuery()));
@@ -1510,5 +1507,5 @@ public class SearchHelper {
     }
     return out;
   }
-  // [end:3.6.0]
+  // [end]
 }

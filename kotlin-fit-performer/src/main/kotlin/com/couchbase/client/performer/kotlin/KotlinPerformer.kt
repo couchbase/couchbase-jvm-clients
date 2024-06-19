@@ -49,9 +49,9 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_QUERY)
             .addSdkImplementationCaps(Caps.SDK_BUCKET_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_COLLECTION_MANAGEMENT)
-            // [start:1.2.0]
+            // [if:1.2.0]
             .addSdkImplementationCaps(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
-            // [end:1.2.0]
+            // [end]
             .addSdkImplementationCaps(Caps.SDK_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_VECTOR_SEARCH)

@@ -27,33 +27,33 @@ import com.couchbase.client.protocol.sdk.Command;
 import com.couchbase.utils.ContentAsUtil;
 import static com.couchbase.JavaSdkCommandExecutor.*;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_GET_ALL_REPLICAS;
-// [start:3.2.1]
+// [if:3.2.1]
 import com.couchbase.eventing.EventingHelper;
-// [end:3.2.1]
-// [start:3.2.4]
+// [end]
+// [if:3.2.4]
 import com.couchbase.manager.BucketManagerHelper;
-// [end:3.2.4]
-// [start:3.4.12]
+// [end]
+// [if:3.4.12]
 import com.couchbase.manager.CollectionManagerHelper;
-// [end:3.4.12]
-// [start:3.4.1]
+// [end]
+// [if:3.4.1]
 import com.couchbase.client.java.kv.ScanResult;
 import static com.couchbase.JavaSdkCommandExecutor.convertScanType;
 import static com.couchbase.JavaSdkCommandExecutor.processScanResult;
-// [end:3.4.1]
+// [end]
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.perf.PerRun;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.shared.Exception;
-// [start:3.4.3]
+// [if:3.4.3]
 import com.couchbase.query.QueryIndexManagerHelper;
-// [end:3.4.3]
-// [start:3.4.5]
+// [end]
+// [if:3.4.5]
 import com.couchbase.search.SearchHelper;
 
 import static com.couchbase.search.SearchHelper.handleSearchQueryReactive;
-// [end:3.4.5]
+// [end]
 import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
 import reactor.core.publisher.Flux;
@@ -66,9 +66,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
-// [start:3.6.0]
+// [if:3.6.0]
 import static com.couchbase.search.SearchHelper.handleSearchReactive;
-// [end:3.6.0]
+// [end]
 
 
 /**
@@ -180,7 +180,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     else setSuccess(result);
                     return result.build();
                 });
-            // [start:3.4.1]
+            // [if:3.4.1]
             } else if (op.hasRangeScan()) {
                 var request = op.getRangeScan();
                 var collection = connection.collection(request.getCollection()).reactive();
@@ -201,7 +201,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                                 .setType(STREAM_KV_RANGE_SCAN)
                                 .setStreamId(streamer.streamId())));
                 return Mono.just(result.build());
-                // [end:3.4.1]
+                // [end]
             } else if (op.hasClusterCommand()) {
               return handleClusterLevelCommand(op, perRun, result);
             } else if (op.hasBucketCommand()) {
@@ -228,11 +228,11 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
               .reactive();
     }
 
-    // [start:3.4.3]
+    // [if:3.4.3]
     if (clc.hasQueryIndexManager()) {
       return QueryIndexManagerHelper.handleCollectionQueryIndexManagerReactive(collection, spans, op, result);
     }
-    // [end:3.4.3]
+    // [end]
 
     if (clc.hasGetAndLock()) {
       var request = clc.getGetAndLock();
@@ -525,7 +525,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     var slc = op.getScopeCommand();
     var scope = connection.cluster().bucket(slc.getScope().getBucketName()).scope(slc.getScope().getScopeName());
 
-    // [start:3.0.9]
+    // [if:3.0.9]
     if (slc.hasQuery()) {
       var request = slc.getQuery();
       String query = request.getStatement();
@@ -542,24 +542,24 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
 
       return returnQueryResult(request, queryResult, result, start);
     }
-    // [end:3.0.9]
+    // [end]
 
-    // [start:3.4.5]
+    // [if:3.4.5]
     if (slc.hasSearch()) {
       return handleSearchQueryReactive(connection.cluster(), scope, spans, slc.getSearch(), perRun)
               .ofType(Result.class);
     } else if (slc.hasSearchIndexManager()) {
       return Mono.fromSupplier(() -> SearchHelper.handleScopeSearchIndexManager(scope, spans, op));
     }
-    // [end:3.4.5]
+    // [end]
 
-    // [start:3.6.0]
+    // [if:3.6.0]
     if (slc.hasSearchV2()) {
       // Streaming, so intentionally does not return a result.
       return handleSearchReactive(connection.cluster(), scope, spans, slc.getSearchV2(), perRun)
               .ofType(Result.class);
     }
-    // [end:3.6.0]
+    // [end]
 
     return Mono.error(new UnsupportedOperationException("Unknown command " + op));
   }
@@ -589,11 +589,11 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         return result.build();
       }));
     }
-    // [start:3.4.12]
+    // [if:3.4.12]
     else if (blc.hasCollectionManager()) {
       return CollectionManagerHelper.handleCollectionManagerReactive(connection.cluster().reactive(), spans, op, result);
     }
-    // [end:3.4.12]
+    // [end]
 
     return Mono.error(new UnsupportedOperationException("Unknown command " + op));
   }
@@ -623,24 +623,24 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       }));
 
     }
-    // [start:3.2.4]
+    // [if:3.2.4]
     else if (clc.hasBucketManager()) {
       return BucketManagerHelper.handleBucketManagerReactive(cluster, spans, op, result);
     }
-    // [end:3.2.4]
-    // [start:3.2.1]
+    // [end]
+    // [if:3.2.1]
     else if (clc.hasEventingFunctionManager()) {
       return EventingHelper.handleEventingFunctionManagerReactive(cluster, spans, op, result);
     }
-    // [end:3.2.1]
+    // [end]
 
-    // [start:3.4.3]
+    // [if:3.4.3]
     if (clc.hasQueryIndexManager()) {
       return QueryIndexManagerHelper.handleClusterQueryIndexManagerReactive(cluster, spans, op, result);
     }
-    // [end:3.4.3]
+    // [end]
 
-    // [start:3.4.5]
+    // [if:3.4.5]
     if (clc.hasSearch()) {
       // Streaming, so intentionally does not return a result.
       return handleSearchQueryReactive(connection.cluster(), null, spans, clc.getSearch(), perRun)
@@ -652,15 +652,15 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       // same underlying logic as the blocking API.
       return Mono.fromSupplier(() -> SearchHelper.handleClusterSearchIndexManager(connection.cluster(), spans, op));
     }
-    // [end:3.4.5]
+    // [end]
 
-    // [start:3.6.0]
+    // [if:3.6.0]
     if (clc.hasSearchV2()) {
       // Streaming, so intentionally does not return a result.
       return handleSearchReactive(connection.cluster(), null, spans, clc.getSearchV2(), perRun)
               .ofType(Result.class);
     }
-    // [end:3.6.0]
+    // [end]
 
     if (clc.hasQuery()) {
       var request = clc.getQuery();
