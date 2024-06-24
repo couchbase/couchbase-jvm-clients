@@ -19,7 +19,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
-import com.couchbase.client.core.error.{ParsingFailureException, QueryException}
+import com.couchbase.client.core.error.ParsingFailureException
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.scala.implicits.Codec
 import com.couchbase.client.scala.json.JsonObject

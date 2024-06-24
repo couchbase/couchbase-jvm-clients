@@ -16,21 +16,25 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.util.CbCollections;
 
 import java.util.Collection;
 import java.util.List;
 
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * There was a problem fulfilling the query request.
  * <p>
  * Check {@link #errors()} for further details.
- * TODO: needs to go away once all the manaagement APIs are refactored
  *
  * @since 2.0.0
+ * @deprecated The SDK never throws this exception.
  */
+@Deprecated
+@UsedBy(SPRING_DATA_COUCHBASE) // Used only in SDC JavaIntegrationTests, so probably safe to remove from SDC too.
 public class QueryException extends CouchbaseException {
   private final List<ErrorCodeAndMessage> errors;
 
