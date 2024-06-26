@@ -130,6 +130,7 @@ import java.util.stream.Stream;
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * The main entry point into the core layer.
@@ -287,12 +288,13 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     this.connectionString = requireNonNull(connectionString);
     this.seedNodes = seedNodesFromConnectionString(connectionString, environment);
+    boolean tls = environment.securityConfig().tlsEnabled();
     this.topologyParser = new TopologyParser(
       NetworkSelector.create(
         environment.ioConfig().networkResolution(),
-        this.seedNodes
+        makeDefaultPortsExplicitForNetworkDetection(this.seedNodes, tls)
       ),
-      environment.securityConfig().tlsEnabled() ? PortSelector.TLS : PortSelector.NON_TLS,
+      tls ? PortSelector.TLS : PortSelector.NON_TLS,
       environment.ioConfig().memcachedHashingStrategy()
     );
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
@@ -337,6 +339,21 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
+  }
+
+  private static Set<SeedNode> makeDefaultPortsExplicitForNetworkDetection(Set<SeedNode> seedNodes, boolean tls) {
+    return seedNodes.stream()
+      .map(it -> {
+        if (it.kvPort().isPresent() || it.clusterManagerPort().isPresent()) {
+          // User specified at least one port, which is sufficient for network detection.
+          return it;
+        }
+        // User didn't specify any ports, so assume defaults.
+        return it
+            .withKvPort(tls ? 11207 : 11210)
+            .withManagerPort(tls ? 18091 : 8091);
+      })
+      .collect(toSet());
   }
 
   @Stability.Internal
