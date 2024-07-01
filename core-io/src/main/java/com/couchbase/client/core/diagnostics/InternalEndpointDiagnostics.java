@@ -16,6 +16,7 @@
 package com.couchbase.client.core.diagnostics;
 
 import com.couchbase.client.core.annotation.Stability;
+import reactor.util.annotation.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,9 +24,15 @@ import static java.util.Objects.requireNonNull;
 public class InternalEndpointDiagnostics {
   public final EndpointDiagnostics internal;
   public final AuthenticationStatus authenticationStatus;
+  @Nullable public final Throwable tlsHandshakeFailure;
 
-  public InternalEndpointDiagnostics(EndpointDiagnostics internal, AuthenticationStatus authenticationStatus) {
+  public InternalEndpointDiagnostics(
+    EndpointDiagnostics internal,
+    AuthenticationStatus authenticationStatus,
+    @Nullable Throwable tlsHandshakeFailure
+  ) {
     this.internal = requireNonNull(internal);
     this.authenticationStatus = requireNonNull(authenticationStatus);
+    this.tlsHandshakeFailure = tlsHandshakeFailure;
   }
 }

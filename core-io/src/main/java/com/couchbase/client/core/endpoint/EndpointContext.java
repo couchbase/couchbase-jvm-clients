@@ -21,6 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
+import reactor.util.annotation.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +55,9 @@ public class EndpointContext extends CoreContext {
 
   private volatile AuthenticationStatus authenticationStatus = AuthenticationStatus.UNKNOWN;
 
+  @Nullable
+  private volatile Throwable tlsHandshakeFailure;
+
   /**
    * Helper method to duplicate the endpoint context (useful for extension).
    *
@@ -81,6 +85,11 @@ public class EndpointContext extends CoreContext {
   @Stability.Internal
   public void authenticationStatus(AuthenticationStatus authenticationStatus) {
     this.authenticationStatus = requireNonNull(authenticationStatus);
+  }
+
+  @Stability.Internal
+  public void tlsHandshakeFailure(@Nullable Throwable tlsHandshakeFailure) {
+    this.tlsHandshakeFailure = tlsHandshakeFailure;
   }
 
   @Override
@@ -123,5 +132,11 @@ public class EndpointContext extends CoreContext {
   @Stability.Internal
   public AuthenticationStatus authenticationStatus() {
     return authenticationStatus;
+  }
+
+  @Stability.Internal
+  @Nullable
+  public Throwable tlsHandshakeFailure() {
+    return tlsHandshakeFailure;
   }
 }

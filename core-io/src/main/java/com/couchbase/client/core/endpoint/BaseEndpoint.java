@@ -752,7 +752,8 @@ public abstract class BaseEndpoint implements Endpoint {
 
   @Override
   public InternalEndpointDiagnostics internalDiagnostics() {
-    return new InternalEndpointDiagnostics(diagnostics(), context().authenticationStatus());
+    EndpointContext ctx = context();
+    return new InternalEndpointDiagnostics(diagnostics(), ctx.authenticationStatus(), ctx.tlsHandshakeFailure());
   }
 
   @Override

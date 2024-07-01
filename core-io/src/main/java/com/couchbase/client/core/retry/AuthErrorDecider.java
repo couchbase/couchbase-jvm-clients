@@ -16,12 +16,15 @@
 
 package com.couchbase.client.core.retry;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -39,16 +42,25 @@ public class AuthErrorDecider {
   public static boolean isAuthError(List<InternalEndpointDiagnostics> endpointDiagnostics) {
     // We decide AUTHENTICATION_ERROR if _any_ node's GCCCP stream is auth-erroring.  Because a) it's a fairly safe assumption that if one stream is auth-erroring the rest will be, and b) it allows the user
     // to override our decision in the RetryStrategy by redoing this logic and requiring a different heuristic (such as all or a majority of nodes to be auth-erroring).
-    return endpointDiagnostics.stream().anyMatch(ed ->
-
-      // Look for the GCCCP streams
-      ed.internal.type() == ServiceType.KV
-        && !ed.internal.namespace().isPresent()
-
-        && ed.authenticationStatus == AuthenticationStatus.FAILED);
+    return endpointDiagnostics.stream()
+      .anyMatch(ed -> isGcccpEndpoint(ed) && ed.authenticationStatus == AuthenticationStatus.FAILED);
   }
 
   public static boolean isAuthError(Stream<InternalEndpointDiagnostics> endpointDiagnostics) {
     return isAuthError(endpointDiagnostics.collect(Collectors.toList()));
+  }
+
+  private static boolean isGcccpEndpoint(InternalEndpointDiagnostics ed) {
+    return ed.internal.type() == ServiceType.KV && !ed.internal.namespace().isPresent();
+  }
+
+  @Nullable
+  public static Throwable getTlsHandshakeFailure(Core core) {
+    return core.internalDiagnostics()
+      .filter(AuthErrorDecider::isGcccpEndpoint)
+      .map(it -> it.tlsHandshakeFailure)
+      .filter(Objects::nonNull)
+      .findFirst()
+      .orElse(null);
   }
 }

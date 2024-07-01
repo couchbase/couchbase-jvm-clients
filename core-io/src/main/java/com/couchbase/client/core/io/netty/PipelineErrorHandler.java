@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -45,6 +46,19 @@ public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelActive(ChannelHandlerContext ctx)  {
     assembleIoContext(ctx);
+  }
+
+  @Override
+  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+    if (evt instanceof SslHandshakeCompletionEvent) {
+      SslHandshakeCompletionEvent sslEvent = (SslHandshakeCompletionEvent) evt;
+      // Cause is null if handshake was successful. Set it unconditionally,
+      // so the endpoint can recover from a transient on-path attack
+      // (where the "server" temporarily presents an untrusted certificate).
+      endpointContext.tlsHandshakeFailure(sslEvent.cause());
+    }
+
+    ctx.fireUserEventTriggered(evt);
   }
 
   @Override
