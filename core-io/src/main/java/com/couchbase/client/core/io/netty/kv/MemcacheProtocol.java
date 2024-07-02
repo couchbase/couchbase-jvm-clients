@@ -634,7 +634,13 @@ public enum MemcacheProtocol {
                                                ByteBufAllocator alloc,
                                                Optional<DurabilityLevel> durabilityLevel,
                                                boolean preserveExpiry) {
-    if (!durabilityLevel.isPresent() && !preserveExpiry) {
+    // Some callers represent "no synchronous durability" as Optional.empty(),
+    // while others use Optional.of(DurabilityLevel.NONE).
+    // Tech debt: Clean up that discrepancy.
+    // Short term: Canonicalize here.
+    DurabilityLevel durability = durabilityLevel.orElse(DurabilityLevel.NONE);
+
+    if (durability == DurabilityLevel.NONE && !preserveExpiry) {
       return Unpooled.EMPTY_BUFFER;
     }
 
@@ -649,12 +655,12 @@ public enum MemcacheProtocol {
         result.writeByte(PRESERVE_TTL_FLEXIBLE_IDENT);
       }
 
-      durabilityLevel.ifPresent(level -> {
+      if (durability != DurabilityLevel.NONE) {
         if (!ctx.syncReplicationEnabled()) {
           throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(request));
         }
-        flexibleSyncReplication(result, level, request.timeout(), request.context());
-      });
+        flexibleSyncReplication(result, durability, request.timeout(), request.context());
+      }
 
       return result;
 
