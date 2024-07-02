@@ -9,8 +9,6 @@
             <!-- Prevent referencing classes that might not be present
                  in a future version of the SDK. -->
             <property name="illegalPkgs" value="com.couchbase.client.core"/>
-            <property name="illegalPkgs" value="com.couchbase.client."/>
-
         </module>
     </module>
 </module>
