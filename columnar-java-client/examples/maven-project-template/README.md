@@ -1,4 +1,4 @@
-= Columnar Maven project template
+# Columnar Maven project template
 
 This directory contains an example Maven project you can use to get started with the Couchbase Columnar Java SDK.
 
