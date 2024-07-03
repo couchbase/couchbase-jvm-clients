@@ -30,6 +30,7 @@ import com.couchbase.client.java.json.JsonObjectCrypto;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -144,6 +145,7 @@ public class ClusterEnvironment extends CoreEnvironment {
     private JsonSerializer jsonSerializer;
     private Transcoder transcoder;
     private CryptoManager cryptoManager;
+    private TransactionsConfig.Builder transactionsConfigBuilder = TransactionsConfig.builder();
 
     Builder() {
       super();
@@ -211,11 +213,27 @@ public class ClusterEnvironment extends CoreEnvironment {
      *
      * @param transactionsConfig the transactions configuration.
      * @return this builder for chaining purposes.
+     * @deprecated This method clobbers any previously configured values. Please use {@link #transactionsConfig(Consumer)} instead.
      */
+    @Deprecated
     @Stability.Uncommitted
     public Builder transactionsConfig(final TransactionsConfig.Builder transactionsConfig) {
       notNull(transactionsConfig, "transactionsConfig");
-      this.transactionsConfig = transactionsConfig.build();
+      this.transactionsConfigBuilder = transactionsConfig;
+      return this;
+    }
+
+    /**
+     * Passes the {@link TransactionsConfig.Builder} to the provided consumer.
+     * <p>
+     * Allows customizing the default options for all transactions.
+     *
+     * @param builderConsumer a callback that configures options.
+     * @return this builder for chaining purposes.
+     */
+    @Stability.Uncommitted
+    public Builder transactionsConfig(Consumer<TransactionsConfig.Builder> builderConsumer) {
+      builderConsumer.accept(this.transactionsConfigBuilder);
       return this;
     }
 
@@ -225,6 +243,7 @@ public class ClusterEnvironment extends CoreEnvironment {
      * @return the created cluster environment.
      */
     public ClusterEnvironment build() {
+      this.transactionsConfig = transactionsConfigBuilder.build();
       return new ClusterEnvironment(this);
     }
 

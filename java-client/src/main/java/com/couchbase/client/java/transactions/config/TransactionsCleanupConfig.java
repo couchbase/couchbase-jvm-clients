@@ -26,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_LOST_PROPERTY;
 import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_REGULAR_PROPERTY;
@@ -37,7 +38,12 @@ import static com.couchbase.client.core.util.Validators.notNull;
 public class TransactionsCleanupConfig {
     private static final Duration CLEANUP_WINDOW_SECS = Duration.of(60, ChronoUnit.SECONDS);
 
-
+    /**
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
+     */
+    @Deprecated
     public static Builder builder() {
         return new TransactionsCleanupConfig.Builder();
     }
@@ -47,7 +53,12 @@ public class TransactionsCleanupConfig {
      * <p>
      * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
      * transactions.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder cleanupClientAttempts(boolean cleanupClientAttempts) {
         return builder().cleanupClientAttempts(cleanupClientAttempts);
     }
@@ -57,7 +68,12 @@ public class TransactionsCleanupConfig {
      * <p>
      * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
      * transactions.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder cleanupLostAttempts(boolean cleanupLostAttempts) {
         return builder().cleanupLostAttempts(cleanupLostAttempts);
     }
@@ -70,7 +86,12 @@ public class TransactionsCleanupConfig {
      * minimising impact on the cluster.  If the application would prefer to discover
      * lost transactions more swiftly, but at the cost of increased impact, it can feel free to reduce this
      * parameter.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder cleanupWindow(Duration cleanupWindow) {
         return builder().cleanupWindow(cleanupWindow);
     }
@@ -80,7 +101,12 @@ public class TransactionsCleanupConfig {
      * <p>
      * This will also start cleanup immediately rather than on the first transaction (unless cleanup has been
      * explicitly disabled.)
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder addCollection(TransactionKeyspace collection) {
         return builder().addCollection(collection);
     }
@@ -92,7 +118,14 @@ public class TransactionsCleanupConfig {
      * an application will not need to change this.
      * <p>
      * Setting this parameter will also start cleanup immediately rather than on the first transaction.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#cleanupConfig(Consumer)}
+     * and configure the builder passed to the consumer.
+     * <p>
+     * Also note that this is an instance method, but was intended to be static.
      */
+    @Deprecated
     public Builder addCollections(java.util.Collection<TransactionKeyspace> collections) {
         return builder().addCollections(collections);
     }
@@ -101,7 +134,7 @@ public class TransactionsCleanupConfig {
         private Optional<Boolean> cleanupLostAttempts = Optional.empty();
         private Optional<Boolean> cleanupClientAttempts = Optional.empty();
         private Optional<Duration> cleanupWindow = Optional.empty();
-        private Set<CollectionIdentifier> cleanupSet = new HashSet<>();
+        private final Set<CollectionIdentifier> cleanupSet = new HashSet<>();
 
         @Stability.Internal
         public CoreTransactionsCleanupConfig build() {

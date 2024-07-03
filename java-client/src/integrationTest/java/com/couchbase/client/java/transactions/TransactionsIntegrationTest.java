@@ -15,24 +15,18 @@
  */
 package com.couchbase.client.java.transactions;
 
-import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
-import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
-import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
+import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.query.QueryScanConsistency;
-import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
-import com.couchbase.client.java.transactions.config.TransactionsConfig;
-import com.couchbase.client.java.transactions.config.TransactionsQueryConfig;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -40,18 +34,20 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_LOST_PROPERTY;
 import static com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig.TRANSACTIONS_CLEANUP_REGULAR_PROPERTY;
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Transactions are heavily tested by FIT, these are some basic sanity tests for KV-only transactions.
@@ -85,24 +81,72 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
      */
     @Test
     void testConfig() {
-        ClusterEnvironment env = ClusterEnvironment.builder()
+        try (ClusterEnvironment env = ClusterEnvironment.builder()
                 .ioConfig(io -> io
                         .enableMutationTokens(true)
                         .analyticsCircuitBreakerConfig(breaker -> breaker.enabled(true))
                 )
-                .transactionsConfig(TransactionsConfig.durabilityLevel(DurabilityLevel.NONE)
+                .transactionsConfig(txn -> txn
+                        .durabilityLevel(DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
                         .metadataCollection(TransactionKeyspace.create("bkt", "scp", "coll"))
-                        .cleanupConfig(TransactionsCleanupConfig
+                        .cleanupConfig(cleanup -> cleanup
                                 .cleanupClientAttempts(false)
                                 .cleanupLostAttempts(false)
                                 .cleanupWindow(Duration.ofSeconds(10))
                                 .addCollection(TransactionKeyspace.create("bkt", "scp", "coll")))
-                        .queryConfig(TransactionsQueryConfig.scanConsistency(QueryScanConsistency.REQUEST_PLUS)))
-                .build();
+                        .queryConfig(query -> query.scanConsistency(QueryScanConsistency.REQUEST_PLUS)))
+                .build())  {
 
-        env.shutdown();
+            assertEquals(
+                Optional.of("REQUEST_PLUS"),
+                env.transactionsConfig().scanConsistency()
+            );
 
+            assertEquals(
+                Duration.ofSeconds(10),
+                env.transactionsConfig().cleanupConfig().cleanupWindow()
+            );
 
+            assertEquals(
+                DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE,
+                env.transactionsConfig().durabilityLevel()
+            );
+
+            assertEquals(
+                setOf(new CollectionIdentifier("bkt", Optional.of("scp"), Optional.of("coll"))),
+                env.transactionsConfig().cleanupConfig().cleanupSet()
+            );
+        }
+    }
+
+    @Test
+    void canSetTransactionConfigOptionsViaConnectionString() {
+        try (ClusterEnvironment env = ClusterEnvironment.builder()
+              .load(new ConnectionStringPropertyLoader(
+                  "couchbases://127.0.0.1?" +
+                      String.join("&",
+                        "transactions.query.scanConsistency=REQUEST_PLUS",
+                        "transactions.cleanup.cleanupWindow=10s",
+                        "transactions.durabilityLevel=MAJORITY_AND_PERSIST_TO_ACTIVE"
+                      )
+              ))
+              .build()) {
+
+            assertEquals(
+              Optional.of("REQUEST_PLUS"),
+              env.transactionsConfig().scanConsistency()
+            );
+
+            assertEquals(
+              Duration.ofSeconds(10),
+              env.transactionsConfig().cleanupConfig().cleanupWindow()
+            );
+
+            assertEquals(
+              DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE,
+              env.transactionsConfig().durabilityLevel()
+            );
+        }
     }
 
     @Test
@@ -141,20 +185,14 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
         String docId = UUID.randomUUID().toString();
         JsonObject content = JsonObject.create().put("foo", "bar");
 
-        try {
+        assertThrows(TransactionFailedException.class, () ->
             cluster.transactions().run((ctx) -> {
                 ctx.insert(collection, docId, content);
                 throw new RuntimeException();
-            });
-            Assertions.fail();
-        } catch (TransactionFailedException err) {
-        }
+            })
+        );
 
-        try {
-            collection.get(docId);
-            Assertions.fail();
-        } catch (DocumentNotFoundException ignored) {
-        }
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(docId));
     }
 
     @Test
@@ -198,11 +236,7 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
             ctx.remove(doc);
         });
 
-        try {
-            collection.get(docId);
-            Assertions.fail();
-        } catch (DocumentNotFoundException ignored) {
-        }
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(docId));
     }
 
     @Test
@@ -217,11 +251,7 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
                                 .flatMap(doc -> ctx.remove(doc)))
                 .block();
 
-        try {
-            collection.get(docId);
-            Assertions.fail();
-        } catch (DocumentNotFoundException ignored) {
-        }
+        assertThrows(DocumentNotFoundException.class, () -> collection.get(docId));
     }
 
     @Test

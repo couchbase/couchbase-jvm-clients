@@ -17,13 +17,10 @@
 package com.couchbase.client.java.authentication.fastfail;
 
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import com.couchbase.client.core.diagnostics.AuthenticationStatus;
-import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConsistencyUtil;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -34,8 +31,6 @@ import com.couchbase.client.java.manager.query.GetAllQueryIndexesOptions;
 import com.couchbase.client.java.manager.user.AuthDomain;
 import com.couchbase.client.java.manager.user.User;
 import com.couchbase.client.java.query.QueryOptions;
-import com.couchbase.client.java.transactions.config.TransactionsCleanupConfig;
-import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
@@ -53,7 +48,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -288,7 +282,7 @@ class FastFailAuthErrorTest extends JavaIntegrationTest {
     Cluster cluster = Cluster.connect(connectionString,
       ClusterOptions.clusterOptions(username, password)
         .environment(env -> env.retryStrategy(useCustomRetryStrategy ? FastFailOnAuthErrorRetryStrategy.INSTANCE : BestEffortRetryStrategy.INSTANCE)
-          .transactionsConfig(TransactionsConfig.cleanupConfig(TransactionsCleanupConfig.builder().cleanupLostAttempts(false).cleanupClientAttempts(false)))
+          .transactionsConfig(txn -> txn.cleanupConfig(cleanup -> cleanup.cleanupLostAttempts(false).cleanupClientAttempts(false)))
           .securityConfig(cfg -> cfg.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE))
           // We spend a lot of time waiting for timeouts in these tests, so keep it short
           .timeoutConfig(cfg ->

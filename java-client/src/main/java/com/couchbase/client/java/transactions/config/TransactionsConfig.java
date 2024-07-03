@@ -22,15 +22,16 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
 import com.couchbase.client.core.transaction.cleanup.CleanerFactory;
 import com.couchbase.client.core.transaction.cleanup.ClientRecordFactory;
-import com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.transactions.TransactionKeyspace;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -46,7 +47,12 @@ public class TransactionsConfig {
 
     /**
      * Configures transaction cleanup.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link ClusterEnvironment.Builder#transactionsConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder cleanupConfig(final TransactionsCleanupConfig.Builder config) {
         return builder().cleanupConfig(config);
     }
@@ -60,7 +66,12 @@ public class TransactionsConfig {
      * being mutated in a transaction A, are effectively locked from being updated by other transactions until
      * transaction A has completed - committed or rolled back.  If transaction A is unable to complete for whatever
      * reason, the document can be locked for this <code>timeout</code> time.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link ClusterEnvironment.Builder#transactionsConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder timeout(Duration timeout) {
         return builder().timeout(timeout);
     }
@@ -72,7 +83,12 @@ public class TransactionsConfig {
      * until it is available in-memory on a majority of configured replicas.
      * <p>
      * DurabilityLevel.NONE is not supported and provides no ACID transactional guarantees.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link ClusterEnvironment.Builder#transactionsConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder durabilityLevel(DurabilityLevel level) {
         return builder().durabilityLevel(level);
     }
@@ -84,7 +100,12 @@ public class TransactionsConfig {
      * mutated document in the transaction is on.
      * <p>
      * This collection will be added to the set of collections being cleaned up.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link ClusterEnvironment.Builder#transactionsConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder metadataCollection(TransactionKeyspace collection) {
         return builder().metadataCollection(collection);
     }
@@ -94,7 +115,11 @@ public class TransactionsConfig {
      *
      * @param queryConfig the query configuration to use
      * @return this, for chaining
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#queryConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder queryConfig(TransactionsQueryConfig.Builder queryConfig) {
         return builder().queryConfig(queryConfig);
     }
@@ -102,35 +127,52 @@ public class TransactionsConfig {
     public static class Builder {
         private DurabilityLevel level = DurabilityLevel.MAJORITY;
         private Optional<Duration> timeout = Optional.empty();
-        private Optional<CoreTransactionsCleanupConfig> cleanupConfig = Optional.empty();
+        private TransactionsCleanupConfig.Builder cleanupConfig = new TransactionsCleanupConfig.Builder();
         private Optional<TransactionAttemptContextFactory> attemptContextFactory = Optional.empty();
         private Optional<CleanerFactory> cleanerFactory = Optional.empty();
         private Optional<ClientRecordFactory> clientRecordFactory = Optional.empty();
         private Optional<Integer> numAtrs = Optional.empty();
         private Optional<CollectionIdentifier> metadataCollection = Optional.empty();
-        private Optional<TransactionsQueryConfig.Builder> queryConfig = Optional.empty();
+        private TransactionsQueryConfig.Builder queryConfig = new TransactionsQueryConfig.Builder();
 
         @Stability.Internal
         public CoreTransactionsConfig build() {
             return new CoreTransactionsConfig(
                     level,
                     timeout.orElse(TRANSACTION_TIMEOUT_MSECS_DEFAULT),
-                    cleanupConfig.orElse(TransactionsCleanupConfig.builder().build()),
+                    cleanupConfig.build(),
                     attemptContextFactory.orElse(new TransactionAttemptContextFactory()),
                     cleanerFactory.orElse(new CleanerFactory()),
                     clientRecordFactory.orElse(new ClientRecordFactory()),
                     numAtrs.orElse(ActiveTransactionRecordIds.NUM_ATRS_DEFAULT),
                     metadataCollection,
-                    queryConfig.flatMap(v -> v.scanConsistency().map(Enum::name))
+                    queryConfig.scanConsistency().map(Enum::name)
             );
         }
 
         /**
          * Configures transaction cleanup.
+         *
+         * @deprecated This method clobbers any previously configured values. Please use {@link #cleanupConfig(Consumer)} instead.
          */
+        @Deprecated
         public Builder cleanupConfig(final TransactionsCleanupConfig.Builder config) {
             notNull(config, "cleanupConfig");
-            this.cleanupConfig = Optional.of(config.build());
+            this.cleanupConfig = config;
+            return this;
+        }
+
+        /**
+         * Passes the {@link TransactionsCleanupConfig.Builder} to the provided consumer.
+         * <p>
+         * Allows customizing transaction cleanup options.
+         *
+         * @param builderConsumer a callback that configures options.
+         * @return this builder for chaining purposes.
+         */
+        @Stability.Uncommitted
+        public Builder cleanupConfig(Consumer<TransactionsCleanupConfig.Builder> builderConsumer) {
+            builderConsumer.accept(this.cleanupConfig);
             return this;
         }
 
@@ -205,10 +247,24 @@ public class TransactionsConfig {
          *
          * @param queryConfig the query configuration to use
          * @return this, for chaining
+         * @deprecated This method clobbers any previously configured values. Please use {@link #queryConfig(Consumer)} instead.
          */
+        @Deprecated
         public Builder queryConfig(TransactionsQueryConfig.Builder queryConfig) {
             notNull(queryConfig, "queryConfig");
-            this.queryConfig = Optional.of(queryConfig);
+            this.queryConfig = queryConfig;
+            return this;
+        }
+
+        /**
+         * Passes the {@link TransactionsQueryConfig.Builder} to the provided consumer.
+         * <p>
+         * Allows customizing the default options for all transactional queries.
+         *
+         * @param builderConsumer a callback that configures options.
+         */
+        public Builder queryConfig(Consumer<TransactionsQueryConfig.Builder> builderConsumer) {
+            builderConsumer.accept(this.queryConfig);
             return this;
         }
     }

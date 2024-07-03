@@ -19,6 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.java.query.QueryScanConsistency;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -29,8 +30,13 @@ public class TransactionsQueryConfig {
     private TransactionsQueryConfig() {}
 
     /**
-     * Returns a new <code>PerTransactionQueryConfigBuilder</code>.
+     * Returns a new <code>TransactionsQueryConfig.Builder</code>.
+     *
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#queryConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static TransactionsQueryConfig.Builder builder() {
         return new TransactionsQueryConfig.Builder();
     }
@@ -46,7 +52,11 @@ public class TransactionsQueryConfig {
      * <p>
      * @param scanConsistency the index scan consistency to be used.
      * @return a builder with the value set
+     * @deprecated Instead of creating a new builder, please use
+     * {@link TransactionsConfig.Builder#queryConfig(Consumer)}
+     * and configure the builder passed to the consumer.
      */
+    @Deprecated
     public static Builder scanConsistency(QueryScanConsistency scanConsistency) {
         return builder().scanConsistency(scanConsistency);
     }
