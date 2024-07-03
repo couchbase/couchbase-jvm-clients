@@ -19,27 +19,28 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
+import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupEndRunEvent;
+import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartRunEvent;
+import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
+import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordEntry;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordUtil;
 import com.couchbase.client.core.transaction.components.CasMode;
+import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
-import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
-import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
-import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
-import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
-import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
-import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
-import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupEndRunEvent;
-import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartRunEvent;
 import com.couchbase.client.core.transaction.util.DebugUtil;
 import com.couchbase.client.core.transaction.util.MonoBridge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -93,9 +94,10 @@ class CollectionDeletedException extends CouchbaseException {}
  */
 @Stability.Internal
 public class LostCleanupDistributed {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CoreTransactionsCleanup.LOST_CATEGORY);
+
     private final Core core;
     private final ClientRecord clientRecord;
-    private final SimpleEventBusLogger LOGGER;
     private final CoreTransactionsConfig config;
     /**
      * This abstraction is purely to enable testing to inject errors during cleanup.
@@ -120,12 +122,11 @@ public class LostCleanupDistributed {
                                   CoreTransactionsConfig config,
                                   Supplier<TransactionsCleaner> cleanerSupplier) {
         this.core = Objects.requireNonNull(core);
-        this.LOGGER = new SimpleEventBusLogger(core.context().environment().eventBus(), CoreTransactionsCleanup.LOST_CATEGORY);
         this.clientRecord = config.clientRecordFactory().create(core);
         this.config = Objects.requireNonNull(config);
         this.cleanerSupplier = Objects.requireNonNull(cleanerSupplier);
         this.actualCleanupWindow = config.cleanupConfig().cleanupWindow();
-        bp = String.format("Client %s", clientUuid.substring(0, TransactionLogEvent.CHARS_TO_LOG));
+        bp = "Client " + clientUuid.substring(0, TransactionLogEvent.CHARS_TO_LOG);
         start();
     }
 
@@ -183,11 +184,11 @@ public class LostCleanupDistributed {
 
                         // TXNJ-96
                         .onErrorResume(err -> {
-                            LOGGER.warn(String.format("%s failed to remove from cleanup set with err: %s", bp, err));
+                            LOGGER.warn("{} failed to remove from cleanup set with err: {}", bp, err);
                             return Mono.empty();
                         }))
 
-                .doOnTerminate(() -> LOGGER.info(String.format("%s stopped lost cleanup process and removed client from client records", bp)));
+                .doOnTerminate(() -> LOGGER.info("{} stopped lost cleanup process and removed client from client records", bp));
     }
 
     private static List<String> atrsToHandle(int indexOfThisClient, int numActiveClients, int numAtrs) {
@@ -242,8 +243,8 @@ public class LostCleanupDistributed {
                 })
 
                 .doOnError(err -> {
-                    LOGGER.debug(String.format("%s Got error '%s' while getting ATR %s/",
-                        bp, err, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId)));
+                    LOGGER.debug("{} Got error '{}' while getting ATR {}/",
+                        bp, err, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
                     stats.errored = Optional.of(err);
                 })
 
@@ -266,10 +267,10 @@ public class LostCleanupDistributed {
                 })
 
                 .concatMap(atrEntry -> {
-                    LOGGER.verbose(String.format("%s Found expired attempt %s, expires after %d, age %d (started %d, now %d)",
+                    LOGGER.trace("{} Found expired attempt {}, expires after {}, age {} (started {}, now {})",
                         bp, atrEntry.attemptId(), atrEntry.expiresAfterMillis().orElse(-1), atrEntry.ageMillis(),
-                        atrEntry.timestampStartMillis().orElse(0l),
-                        atrEntry.cas() / 1000000));
+                        atrEntry.timestampStartMillis().orElse(0L),
+                        atrEntry.cas() / 1000000);
 
                     stats.expiredEntryCleanupTotalAttempts.incrementAndGet();
 
@@ -286,10 +287,12 @@ public class LostCleanupDistributed {
 
                 .doOnError(err -> span.finish(err))
                 .doOnTerminate(() -> {
-                    long now = System.nanoTime();
-                    LOGGER.verbose(String.format("%s processed ATR %s after %sµs (%d fetching ATR), CAS=%s: %s", bp,
-                        ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId),
-                        TimeUnit.NANOSECONDS.toMicros(now - start), TimeUnit.NANOSECONDS.toMicros(timeToFetchAtr.get() - start), casMode.get(), stats));
+                    if (LOGGER.isTraceEnabled()) {
+                        long now = System.nanoTime();
+                        LOGGER.trace("{} processed ATR {} after {}µs ({} fetching ATR), CAS={}: {}", bp,
+                                ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId),
+                                TimeUnit.NANOSECONDS.toMicros(now - start), TimeUnit.NANOSECONDS.toMicros(timeToFetchAtr.get() - start), casMode.get(), stats);
+                    }
                     span.finish();
                 })
 
@@ -360,14 +363,14 @@ public class LostCleanupDistributed {
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .concatMap(this::createThreadForCollectionIfNeeded)
                 .doOnCancel(() -> {
-                    LOGGER.info(String.format("%s has been told to cancel", bp));
+                    LOGGER.info("{} has been told to cancel", bp);
                 })
-                .subscribe(v -> LOGGER.warn(String.format("%s lost transactions cleanup thread(s) ending", bp)),
+                .subscribe(v -> LOGGER.warn("{} lost transactions cleanup thread(s) ending", bp),
                         (err) -> {
                             if (err instanceof ThreadStopRequestedException) {
-                                LOGGER.info(String.format("%s lost transactions cleanup told to stop", bp));
+                                LOGGER.info("{} lost transactions cleanup told to stop", bp);
                             } else {
-                                LOGGER.warn(String.format("%s lost transactions cleanup ended with exception " + err, bp));
+                                LOGGER.warn("{} lost transactions cleanup ended with exception " + err, bp);
                             }
                         });
     }
@@ -410,13 +413,13 @@ public class LostCleanupDistributed {
                     if (atrsHandledByThisClient.size() < config.numAtrs()) {
                         atrsHandledByThisClient.forEach(id -> {
                             // Enable this only when explicitly testing LostTxnsCleanupCrucibleTest
-                            // LOGGER.verbose(String.format("%s owns ATR %s (of %d) and will check it over next %dmillis, checking an ATR every %dmillis",
-                            //        bp, id, config.numAtrs(), actualCleanupWindow.toMillis(), checkAtrEveryNMillis));
+                            // LOGGER.trace("{} owns ATR {} (of {}) and will check it over next {}millis, checking an ATR every {}millis",
+                            //        bp, id, config.numAtrs(), actualCleanupWindow.toMillis(), checkAtrEveryNMillis);
                         });
                     }
                     else {
-                        LOGGER.verbose(String.format("%s owns all %d ATRs and will check them over next %dmills, checking an ATR every %dnanos", bp,
-                                config.numAtrs(), actualCleanupWindow.toMillis(), checkAtrEveryNNanos));
+                        LOGGER.trace("{} owns all {} ATRs and will check them over next {}mills, checking an ATR every {}nanos", bp,
+                                config.numAtrs(), actualCleanupWindow.toMillis(), checkAtrEveryNNanos);
                     }
 
                     TransactionCleanupStartRunEvent ev = new TransactionCleanupStartRunEvent(collection.bucket(),
@@ -444,8 +447,8 @@ public class LostCleanupDistributed {
                         .flatMap(v -> {
                             String atrId = v.getT1();
 
-                            LOGGER.verbose(String.format("%s checking for lost txns in atr %s", bp,
-                                ActiveTransactionRecordUtil.getAtrDebug(collection, atrId)));
+                            LOGGER.trace("{} checking for lost txns in atr {}", bp,
+                                ActiveTransactionRecordUtil.getAtrDebug(collection, atrId));
 
                             ActiveTransactionRecordStats stats = new ActiveTransactionRecordStats();
 
@@ -473,7 +476,7 @@ public class LostCleanupDistributed {
 
                                 if (collectionDeleted) {
                                     cleanupSet.remove(collection);
-                                    LOGGER.info(String.format("%s stopping cleanup on collection %s as it seems to be deleted", bp, collection));
+                                    LOGGER.info("{} stopping cleanup on collection {} as it seems to be deleted", bp, collection);
                                     // This will end this thread and remove from actuallyBeingCleaned
                                     return Mono.error(err);
                                 }
@@ -483,7 +486,7 @@ public class LostCleanupDistributed {
                             if (err instanceof ThreadStopRequestedException) {
                                 return Mono.error(err);
                             } else {
-                                LOGGER.info(String.format("%s lost cleanup thread got error '%s', continuing", bp, err));
+                                LOGGER.info("{} lost cleanup thread got error '{}', continuing", bp, err);
 
                                 return Mono.empty();
                             }
@@ -515,8 +518,8 @@ public class LostCleanupDistributed {
                         .exponentialBackoff(Duration.ofMillis(Math.min(1000, config.cleanupConfig().cleanupWindow().toMillis())),
                                 config.cleanupConfig().cleanupWindow())
                         .doOnRetry(v -> {
-                            LOGGER.debug(String.format("%s retrying lost cleanup on error %s after %s",
-                                    bp, DebugUtil.dbg(v.exception()), v.backoff()));
+                            LOGGER.debug("{} retrying lost cleanup on error {} after {}",
+                                    bp, DebugUtil.dbg(v.exception()), v.backoff());
                         })
                         .toReactorRetry())
 
@@ -530,7 +533,7 @@ public class LostCleanupDistributed {
     private Mono<Void> checkIfThreadStopped(CollectionIdentifier collection) {
         return Mono.defer(() -> {
             if (stop) {
-                LOGGER.info(String.format("%s Stopping background cleanup thread for lost transactions on %s", bp, collection));
+                LOGGER.info("{} Stopping background cleanup thread for lost transactions on {}", bp, collection);
                 return Mono.error(new ThreadStopRequestedException());
             } else {
                 return Mono.empty();

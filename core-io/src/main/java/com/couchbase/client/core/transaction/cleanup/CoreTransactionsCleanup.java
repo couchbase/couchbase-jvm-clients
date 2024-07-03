@@ -18,16 +18,15 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.events.transaction.CleanupFailedEvent;
 import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
-import com.couchbase.client.core.cnc.events.transaction.CleanupFailedEvent;
-import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -56,21 +55,20 @@ public class CoreTransactionsCleanup {
     public static final String LOST_CATEGORY = DEFAULT_CATEGORY + ".cleanup.lost";
     public static final String REGULAR_CATEGORY = DEFAULT_CATEGORY + ".cleanup.regular";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CATEGORY);
+    private static final Logger LOGGER_REGULAR = LoggerFactory.getLogger(REGULAR_CATEGORY);
+
     private final Core core;
     private final CoreTransactionsConfig config;
     private final DelayQueue<CleanupRequest> cleanupQueue = new DelayQueue<>();
     private volatile boolean stop = false;
     private final CountDownLatch stopLatch;
     private @Nullable final LostCleanupDistributed lostCleanup;
-    private final SimpleEventBusLogger LOGGER;
-    private final SimpleEventBusLogger LOGGER_REGULAR;
     private final CleanerFactory cleanerFactory;
 
     public CoreTransactionsCleanup(Core core, CoreTransactionsConfig config) {
         this.core = Objects.requireNonNull(core);
         this.config = Objects.requireNonNull(config);
-        this.LOGGER = new SimpleEventBusLogger(core.context().environment().eventBus(), CATEGORY);
-        this.LOGGER_REGULAR = new SimpleEventBusLogger(core.context().environment().eventBus(), REGULAR_CATEGORY);
         this.lostCleanup = config.cleanupConfig().runLostAttemptsCleanupThread() ? new LostCleanupDistributed(core, config, this::getCleaner) : null;
         int countdown = 0;
         cleanerFactory = config.cleanerFactory();
@@ -106,7 +104,7 @@ public class CoreTransactionsCleanup {
     Mono<Void> stopBackgroundProcesses(Duration timeout) {
         return Mono.defer(() -> {
             stop = true;
-            LOGGER.info(String.format("Waiting for %d regular background threads to exit", stopLatch.getCount()));
+            LOGGER.info("Waiting for {} regular background threads to exit", stopLatch.getCount());
             try {
                 if (!stopLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                     LOGGER.info("Background threads did not stop in expected time {}", timeout);
@@ -163,15 +161,15 @@ public class CoreTransactionsCleanup {
                     return cleaner.performCleanup(req, true, null)
 
                             .doOnSuccess(result -> {
-                                LOGGER_REGULAR.debug(String.format("result of cleanup request %s: success=%s", req, result.success()));
+                                LOGGER_REGULAR.debug("result of cleanup request {}: success={}", req, result.success());
                             })
 
                             .onErrorResume(err -> {
                                 CleanupFailedEvent ev = new CleanupFailedEvent(req, err);
                                 core.context().environment().eventBus().publish(ev);
                                 // [REGULAR-CLEANUP-FAILURES] - retry it later
-                                LOGGER_REGULAR.debug(String.format("error while handling cleanup request %s, leaving for lost cleanup: '%s'",
-                                        req, err));
+                                LOGGER_REGULAR.debug("error while handling cleanup request {}, leaving for lost cleanup: '{}'",
+                                        req, err);
                                 return Mono.empty();
                             });
                 })
@@ -180,7 +178,7 @@ public class CoreTransactionsCleanup {
                 .retryWhen(Retry.allBut(ThreadStopRequestedException.class)
                         .exponentialBackoff(Duration.ofMillis(10), Duration.ofMillis(2000))
                         .doOnRetry(v -> {
-                            LOGGER_REGULAR.debug(String.format("retrying regular cleanup on error '%s'", v.exception()));
+                            LOGGER_REGULAR.debug("retrying regular cleanup on error '{}'", String.valueOf(v.exception()));
                         })
                         .retryMax(100000)
                         .toReactorRetry()

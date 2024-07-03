@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
+
 /**
  * A logger optimized for logging transactions-specific info.
  *
@@ -60,12 +62,12 @@ public class CoreTransactionLogger {
     }
 
     public void log(String secondaryId, Throwable err, Event.Severity level) {
-        String st = SimpleEventBusLogger.stackTraceToString(err);
+        String st = getStackTraceAsString(err);
         log(secondaryId, st, level);
     }
 
     public void log(Throwable err, Event.Severity level) {
-        String st = SimpleEventBusLogger.stackTraceToString(err);
+        String st = getStackTraceAsString(err);
         log(st, level);
     }
 

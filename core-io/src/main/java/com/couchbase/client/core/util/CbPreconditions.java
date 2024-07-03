@@ -16,7 +16,11 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Stability.Internal
 public class CbPreconditions {
@@ -31,6 +35,33 @@ public class CbPreconditions {
   }
   
   public static void check(boolean condition, String message, Object... args) {
-    if (!condition) throw new IllegalArgumentException(SimpleEventBusLogger.format(message, args));
+    if (!condition) throw new IllegalArgumentException(format(message, args));
+  }
+
+  private static final Pattern PLACEHOLDER = Pattern.compile(Pattern.quote("{}"));
+
+  private static String format(String message, Object... args) {
+    if (args.length == 0) {
+      return message;
+    }
+
+    Iterator<?> i = Arrays.asList(args).iterator();
+    Matcher m = PLACEHOLDER.matcher(message);
+    StringBuffer result = new StringBuffer();
+    while (m.find()) {
+      String replacement = i.hasNext() ? String.valueOf(i.next()) : "{}";
+      m.appendReplacement(result, replacement);
+    }
+    m.appendTail(result);
+
+    if (i.hasNext()) {
+      Object lastExtraArg = args[args.length-1];
+      if (lastExtraArg instanceof Throwable) {
+        result.append("\n")
+          .append(CbThrowables.getStackTraceAsString((Throwable) lastExtraArg));
+      }
+    }
+
+    return result.toString();
   }
 }

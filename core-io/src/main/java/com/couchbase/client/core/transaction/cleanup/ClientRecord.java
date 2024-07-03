@@ -27,24 +27,25 @@ import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.logging.RedactableArgument;
-import com.couchbase.client.core.msg.kv.CodecFlags;
-import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
-import com.couchbase.client.core.transaction.support.OptionsUtil;
-import com.couchbase.client.core.transaction.support.SpanWrapper;
-import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
-import com.couchbase.client.core.transaction.error.internal.ErrorClass;
-import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
+import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
-import com.couchbase.client.core.transaction.log.SimpleEventBusLogger;
+import com.couchbase.client.core.transaction.error.internal.ErrorClass;
+import com.couchbase.client.core.transaction.support.OptionsUtil;
+import com.couchbase.client.core.transaction.support.SpanWrapper;
+import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.transaction.util.DebugUtil;
+import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -79,8 +80,9 @@ import java.util.stream.Collectors;
  */
 @Stability.Internal
 public class ClientRecord {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CoreTransactionsCleanup.CATEGORY_CLIENT_RECORD);
+
     private final Core core;
-    private final SimpleEventBusLogger LOGGER;
 
     public static final String CLIENT_RECORD_DOC_ID = "_txn:client-record";
     private static final String FIELD_HEARTBEAT = "heartbeat_ms";
@@ -101,7 +103,6 @@ public class ClientRecord {
     private static final Duration BACKOFF_END = Duration.ofMillis(250);
 
     public ClientRecord(Core core) {
-        this.LOGGER = new SimpleEventBusLogger(core.context().environment().eventBus(), CoreTransactionsCleanup.CATEGORY_CLIENT_RECORD);
         this.core = Objects.requireNonNull(core);
     }
 
@@ -134,16 +135,16 @@ public class ClientRecord {
                         .onErrorResume(err -> {
                             switch (ErrorClass.classify(err)) {
                                 case FAIL_DOC_NOT_FOUND:
-                                    LOGGER.info(String.format("%s/%s remove skipped as client record does not exist",
-                                            RedactableArgument.redactUser(collection), clientUuid));
+                                    LOGGER.info("{}/{} remove skipped as client record does not exist",
+                                            RedactableArgument.redactUser(collection), clientUuid);
                                     return Mono.empty();
                                 case FAIL_PATH_NOT_FOUND:
-                                    LOGGER.info(String.format("%s/%s remove skipped as client record entry does not exist",
-                                            RedactableArgument.redactUser(collection), clientUuid));
+                                    LOGGER.info("{}/{} remove skipped as client record entry does not exist",
+                                            RedactableArgument.redactUser(collection), clientUuid);
                                     return Mono.empty();
                                 default:
-                                    LOGGER.info(String.format("%s/%s got error while removing client from client record: %s",
-                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err)));
+                                    LOGGER.info("{}/{} got error while removing client from client record: {}",
+                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err));
                                     return Mono.error(err);
                             }
                         })
@@ -152,20 +153,20 @@ public class ClientRecord {
                         .retryWhen(Retry.any()
                                 .exponentialBackoff(BACKOFF_START, BACKOFF_END)
                                 .doOnRetry(v -> {
-                                    LOGGER.info(String.format("%s/%s retrying removing client from record on error %s",
-                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(v.exception())));
+                                    LOGGER.info("{}/{} retrying removing client from record on error {}",
+                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(v.exception()));
                                 })
                                 .toReactorRetry())
 
                         .timeout(timeout)
 
                         .doOnNext(v -> {
-                            LOGGER.info(String.format("%s/%s removed from client record",
-                                    RedactableArgument.redactUser(collection), clientUuid));
+                            LOGGER.info("{}/{} removed from client record",
+                                    RedactableArgument.redactUser(collection), clientUuid);
                         })
 
                         .doOnError(err -> {
-                            LOGGER.info(String.format("got error while removing client record '%s'", err));
+                            LOGGER.info("got error while removing client record '{}'", String.valueOf(err));
                         })
                         .then());
     }
@@ -276,11 +277,11 @@ public class ClientRecord {
                     .flatMap(clientRecord -> {
                         ClientRecordDetails cr = parseClientRecord(clientRecord, clientUuid);
 
-                        LOGGER.debug(String.format("%s found %d existing clients including this (%s active, %d " +
-                                        "expired), included this=%s, index of this=%d, override={enabled=%s,expires=%d,now=%d,active=%s}",
+                        LOGGER.debug("{} found {} existing clients including this ({} active, {} " +
+                                        "expired), included this={}, index of this={}, override={enabled={},expires={},now={},active={}}",
                                 bp, cr.numExistingClients(), cr.numActiveClients(), cr.numExpiredClients(),
                                 !cr.clientIsNew(), cr.indexOfThisClient(),
-                                cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive()));
+                                cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive());
 
                         if (cr.overrideActive()) {
                             // Nothing to do: an external process has taken over cleanup, for now.
@@ -301,7 +302,7 @@ public class ClientRecord {
                             try {
                                 pid = Long.parseLong(name.split("@")[0]);
                             } catch (Throwable err) {
-                                LOGGER.debug(String.format("Discarding error %s while trying to parse PID %s", err.getMessage(), name));
+                                LOGGER.debug("Discarding error {} while trying to parse PID {}", err.getMessage(), name);
                             }
 
                             // Either update existing record or add new one
@@ -324,8 +325,8 @@ public class ClientRecord {
                             cr.expiredClientIds().stream()
                                     .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)
                                     .forEach(expiredClientId -> {
-                                        LOGGER.debug(String.format("%s removing expired client %s",
-                                                bp, expiredClientId));
+                                        LOGGER.debug("{} removing expired client {}",
+                                                bp, expiredClientId);
 
                                         specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + expiredClientId, null, false, true, false, specs.size()));
                                     });
@@ -346,7 +347,7 @@ public class ClientRecord {
                     .onErrorResume(err -> {
                         ErrorClass ec = ErrorClass.classify(err);
 
-                        LOGGER.debug(String.format("%s got error processing client record: %s", bp, DebugUtil.dbg(err)));
+                        LOGGER.debug("{} got error processing client record: {}", bp, DebugUtil.dbg(err));
 
                         if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
                             return createClientRecord(clientUuid, collection, span)
@@ -382,19 +383,19 @@ public class ClientRecord {
                                 new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 1))))
 
                 .doOnSubscribe(v -> {
-                    LOGGER.debug(String.format("%s found client record does not exist, creating and retrying", bp));
+                    LOGGER.debug("{} found client record does not exist, creating and retrying", bp);
                 })
 
                 .onErrorResume(e -> {
                     if (ErrorClass.FAIL_DOC_ALREADY_EXISTS == ErrorClass.classify(e)) {
-                        LOGGER.debug(String.format("%s found client record exists after retry, another client " +
-                                "must have created it, continuing", bp));
+                        LOGGER.debug("{} found client record exists after retry, another client " +
+                                "must have created it, continuing", bp);
                         return Mono.empty();
                     } else if ((e instanceof CouchbaseException)
                             && ((CouchbaseException) e).context().responseStatus() == ResponseStatus.NO_ACCESS) {
                         return Mono.error(new AccessErrorException());
                     } else {
-                        LOGGER.info(String.format("got error while creating client record '%s'", e));
+                        LOGGER.info("got error while creating client record '{}'", String.valueOf(e));
                         return Mono.error(e);
                     }
                 })
