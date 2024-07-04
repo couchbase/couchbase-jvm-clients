@@ -17,6 +17,9 @@ package com.couchbase.client.core.cnc.events.transaction;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.util.CbThrowables;
+import org.slf4j.helpers.FormattingTuple;
+import org.slf4j.helpers.MessageFormatter;
 import reactor.util.annotation.Nullable;
 
 import java.time.Instant;
@@ -95,7 +98,7 @@ public class TransactionLogEvent extends TransactionEvent {
         }
         sb.append(' ');
         if (values != null) {
-            String value = String.format(fmt, values);
+            String value = lenientFormat(fmt, values);
             sb.append(value);
         } else {
             sb.append(fmt);
@@ -106,5 +109,24 @@ public class TransactionLogEvent extends TransactionEvent {
     @Override
     public String description() {
         return toString();
+    }
+
+    private static String lenientFormat(String message, @Nullable Object... args) {
+        if (args == null || args.length == 0) {
+           return message;
+        }
+
+        // Accept a handful of String.format()-style placeholders
+        if (message.contains("%")) {
+            message = message
+                .replace("%s", "{}")
+                .replace("%d", "{}");
+        }
+
+        // Performance is important here, so use SLF4j's highly-optimized
+        // formatter instead of rolling our own with regex.
+        FormattingTuple result = MessageFormatter.arrayFormat(message, args);
+        Throwable t = result.getThrowable();
+        return t == null ? result.getMessage() : result.getMessage() + System.lineSeparator() + CbThrowables.getStackTraceAsString(t);
     }
 }
