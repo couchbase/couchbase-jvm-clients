@@ -84,7 +84,7 @@ public class CoreTransactionContext {
         long expiredMillis = timeSinceStartOfTransactionsMillis(now);
         boolean isExpired = expiredMillis > expirationTime().toMillis();
         if (isExpired) {
-            LOGGER.info("Has expired client side (now=%dns start=%dns expired=%dmillis config=%dms)",
+            LOGGER.info("Has expired client side (now={}ns start={}ns expired={}millis config={}ms)",
                     now, startTimeClient, expiredMillis, expirationTime().toMillis());
         }
         return isExpired;

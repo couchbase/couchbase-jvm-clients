@@ -67,7 +67,7 @@ public class ReactiveWaitGroup {
             synchronized (this) {
                 waiting.add(waiter);
                 if (debugMode) {
-                    ctx.logger().info(ctx.attemptId(), (String.format("WG: adding [%s], %d now in waiting", dbg, waiting.size())));
+                    ctx.logger().info(ctx.attemptId(), "WG: adding [{}], {} now in waiting", dbg, waiting.size());
                 }
             }
 
@@ -84,11 +84,11 @@ public class ReactiveWaitGroup {
                     // We allow this, to permit a defensive form of programming where the waiter is removed both when it's meant to be, and on any error
                     // Can also get here if a concurrent op is being cancelled
                     if (debugMode) {
-                        ctx.logger().info(ctx.attemptId(), String.format("WG: wanted to remove [%s] from waiters but it's not in there", waiter.dbg));
+                        ctx.logger().info(ctx.attemptId(), "WG: wanted to remove [{}] from waiters but it's not in there", waiter.dbg);
                     }
                 } else {
                     if (debugMode) {
-                        ctx.logger().info(ctx.attemptId(), String.format("WG: [%s] is done, %d now in waiting", waiter.dbg, waiting.size()));
+                        ctx.logger().info(ctx.attemptId(), "WG: [{}] is done, {} now in waiting", waiter.dbg, waiting.size());
                     }
                     notifier = waiter.notifier;
                 }

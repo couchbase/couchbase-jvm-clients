@@ -85,7 +85,7 @@ public class DocumentGetter {
                             }
                         }
                         else if (r.links().stagedAttemptId().get().equals(byAttemptId)) {
-                            LOGGER.info(byAttemptId, "doc %s is in our own transaction attempt - RYOW", DebugUtil.docId(collection, docId));
+                            LOGGER.info(byAttemptId, "doc {} is in our own transaction attempt - RYOW", DebugUtil.docId(collection, docId));
                             if (r.links().op().get().equals(OperationTypes.REMOVE)) {
                                 return Mono.just(Optional.empty());
                             }
@@ -97,14 +97,14 @@ public class DocumentGetter {
 
                             if (r.links().op().isPresent() && r.links().op().get().equals(INSERT)) {
                                 LOGGER.info(byAttemptId,
-                                        "doc %s is in the same transaction as last time indicating it's part of a lost PENDING transaction, it's a staged insert so returning empty",
+                                        "doc {} is in the same transaction as last time indicating it's part of a lost PENDING transaction, it's a staged insert so returning empty",
                                         DebugUtil.docId(collection, docId));
 
                                 return Mono.just(Optional.empty());
                             }
                             else {
                                 LOGGER.info(byAttemptId,
-                                        "doc %s is in the same transaction as last time indicating it's part of a lost PENDING transaction, returning body",
+                                        "doc {} is in the same transaction as last time indicating it's part of a lost PENDING transaction, returning body",
                                         DebugUtil.docId(collection, docId));
 
                                 return Mono.just(Optional.of(r));
@@ -114,13 +114,13 @@ public class DocumentGetter {
                             CollectionIdentifier atrCollection = new CollectionIdentifier(r.links().atrBucketName().get(),
                                     r.links().atrScopeName(), r.links().atrCollectionName());
 
-                            LOGGER.info(byAttemptId, "doc %s is in a transaction %s, looking up its status from ATR %s (MAV read)",
+                            LOGGER.info(byAttemptId, "doc {} is in a transaction {}, looking up its status from ATR {} (MAV read)",
                                     DebugUtil.docId(collection, docId), r.links().stagedAttemptId(),  ActiveTransactionRecordUtil.getAtrDebug(atrCollection, r.links().atrId().get()));
 
                             return lookupStatusFromATR(core, atrCollection, r, byAttemptId, config, span, LOGGER, units);
                         }
                     } else {
-                        LOGGER.info(byAttemptId, "doc %s is not in a transaction", DebugUtil.docId(collection, docId));
+                        LOGGER.info(byAttemptId, "doc {} is not in a transaction", DebugUtil.docId(collection, docId));
 
                         return Mono.just(origTrans.map(v -> v.getT1()));
                     }
@@ -161,8 +161,8 @@ public class DocumentGetter {
                                 fragment), fragment));
                     }
                     catch (Throwable err) {
-                        logger.info("", String.format("Hit error while decoding doc's transaction metadata %s.%s.%s.%s %s",
-                                collection.bucket(), collection.scope(), collection.collection(), docId, DebugUtil.dbg(err)));
+                        logger.info("", "Hit error while decoding doc's transaction metadata {}.{}.{}.{} {}",
+                                collection.bucket(), collection.scope(), collection.collection(), docId, DebugUtil.dbg(err));
                         for (int i = 0; i < 10; i ++) {
                             dumpRawLookupInField(logger, fragment, 0);
                         }
@@ -188,14 +188,14 @@ public class DocumentGetter {
             if (fragment.values()[index].status().success()) {
                 byte[] raw = fragment.values()[index].value();
                 String asStr = new String(raw, StandardCharsets.UTF_8);
-                logger.info("", "Field %d: %s", index, asStr);
+                logger.info("", "Field {}: {}", index, asStr);
             }
             else {
-                logger.info("", "Field %d not found", index);
+                logger.info("", "Field {} not found", index);
             }
         }
         catch (Throwable err) {
-            logger.info("", "Error on field %d: %s", index, DebugUtil.dbg(err));
+            logger.info("", "Error on field {}: {}", index, DebugUtil.dbg(err));
         }
     }
 
@@ -255,7 +255,7 @@ public class DocumentGetter {
             return ForwardCompatibility.check(core, ForwardCompatibilityStage.GETS_READING_ATR, entry.forwardCompatibility(), logger, Supported.SUPPORTED)
 
                     .then(Mono.defer(() -> {
-                        logger.info(byAttemptId, "found ATR for MAV read in state: %s", entry);
+                        logger.info(byAttemptId, "found ATR for MAV read in state: {}", entry);
 
                         switch (entry.state()) {
                             case COMMITTED:

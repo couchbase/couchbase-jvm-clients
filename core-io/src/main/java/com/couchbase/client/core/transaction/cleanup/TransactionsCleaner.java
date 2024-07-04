@@ -118,7 +118,7 @@ public class TransactionsCleaner {
             case PENDING:
                 // Not much to do here, as don't have the ids of the docs involved in the txn.  Leave it.  All reads
                 // will ignore it.
-                perEntryLog.logDefer(req.attemptId(), "No docs cleanup possible as txn in state %s, just removing",
+                perEntryLog.logDefer(req.attemptId(), "No docs cleanup possible as txn in state {}, just removing",
                         Event.Severity.DEBUG, req.state());
 
                 return Mono.empty();
@@ -127,7 +127,7 @@ public class TransactionsCleaner {
             case ROLLED_BACK:
             case NOT_STARTED:
             default:
-                perEntryLog.logDefer(req.attemptId(), "No docs cleanup to do as txn in state %s, just removing",
+                perEntryLog.logDefer(req.attemptId(), "No docs cleanup to do as txn in state {}, just removing",
                         Event.Severity.DEBUG, req.state());
 
                 return Mono.empty();
@@ -168,7 +168,7 @@ public class TransactionsCleaner {
                     }))
 
                     .doOnSubscribe(v -> {
-                        perEntryLog.logDefer(attemptId, "removing txn links and writing content to doc %s",
+                        perEntryLog.logDefer(attemptId, "removing txn links and writing content to doc {}",
                                 Event.Severity.DEBUG, DebugUtil.docId(doc));
                     })
 
@@ -195,7 +195,7 @@ public class TransactionsCleaner {
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
                             )))
 
-                    .doOnSubscribe(v -> perEntryLog.logDefer(attemptId, "removing txn links from doc %s",
+                    .doOnSubscribe(v -> perEntryLog.logDefer(attemptId, "removing txn links from doc {}",
                             Event.Severity.DEBUG, DebugUtil.docId(doc)))
 
                     .then();
@@ -214,11 +214,11 @@ public class TransactionsCleaner {
                         .then(TransactionKVHandler.remove(core, collection, doc.id(), kvDurableTimeout(),
                                         doc.cas(), req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeDoc"), pspan))
 
-                        .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc %s", doc.id()))
+                        .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc {}", doc.id()))
                         .then();
             } else {
                 return Mono.create(v -> {
-                    perEntryLog.debug(attemptId, "doc %s does not have expected remove indication, skipping",
+                    perEntryLog.debug(attemptId, "doc {} does not have expected remove indication, skipping",
                             DebugUtil.docId(doc));
                     v.success();
                 });
@@ -252,7 +252,7 @@ public class TransactionsCleaner {
                         }
                     }))
 
-                    .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc %s",
+                    .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc {}",
                             DebugUtil.docId(doc)))
 
                     .then();
@@ -302,18 +302,18 @@ public class TransactionsCleaner {
                         SubdocGetResponse lir = docOpt.get().getT2();
                         MeteringUnits built = units.build();
 
-                        perEntryLog.debug(attemptId, "handling doc %s with cas %d " +
-                                        "and links %s, isTombstone=%s%s",
+                        perEntryLog.debug(attemptId, "handling doc {} with cas {} " +
+                                        "and links {}, isTombstone={}{}",
                                 DebugUtil.docId(doc), doc.cas(), doc.links(), lir.isDeleted(), DebugUtil.dbg(built));
 
                         if (!doc.links().isDocumentInTransaction()) {
                             // The txn probably committed this doc then crashed.  This is fine, can skip.
-                            perEntryLog.debug(attemptId, "no staged content for doc %s, assuming it was committed and skipping",
+                            perEntryLog.debug(attemptId, "no staged content for doc {}, assuming it was committed and skipping",
                                     DebugUtil.docId(doc));
                             return Mono.empty();
                         } else if (!doc.links().stagedAttemptId().get().equals(attemptId)) {
-                            perEntryLog.debug(attemptId, "for doc %s, staged version is for a " +
-                                            "different attempt %s, skipping",
+                            perEntryLog.debug(attemptId, "for doc {}, staged version is for a " +
+                                            "different attempt {}, skipping",
                                     DebugUtil.docId(doc),
                                     doc.links().stagedAttemptId().get());
                             return Mono.empty();
@@ -324,11 +324,11 @@ public class TransactionsCleaner {
                                 // This field must always be present since the doc has just been fetched.
                                 String crc32Now = doc.crc32OfGet().get();
 
-                                perEntryLog.debug(attemptId, "checking whether document %s has changed since staging, crc32 then %s now %s",
+                                perEntryLog.debug(attemptId, "checking whether document {} has changed since staging, crc32 then {} now {}",
                                         DebugUtil.docId(doc), crc32WhenStaging, crc32Now);
 
                                 if (!crc32Now.equals(crc32WhenStaging)) {
-                                    perEntryLog.warn(attemptId, "document %s has changed since staging, ignoring it to avoid data loss",
+                                    perEntryLog.warn(attemptId, "document {} has changed since staging, ignoring it to avoid data loss",
                                             DebugUtil.docId(doc));
                                     return Mono.empty();
                                 }
@@ -337,7 +337,7 @@ public class TransactionsCleaner {
                             return perDoc.apply(collection, doc, lir);
                         }
                     } else {
-                        perEntryLog.debug(attemptId, "could not get doc %s, skipping",
+                        perEntryLog.debug(attemptId, "could not get doc {}, skipping",
                                 DebugUtil.docId(collection, docRecord.id()));
                         return Mono.empty();
                     }
@@ -346,14 +346,14 @@ public class TransactionsCleaner {
                 .onErrorResume(err -> {
                     ErrorClass ec = ErrorClass.classify(err);
 
-                    perEntryLog.debug(attemptId, "got exception while handling doc %s: %s",
+                    perEntryLog.debug(attemptId, "got exception while handling doc {}: {}",
                             DebugUtil.docId(collection, docRecord.id()), DebugUtil.dbg(err));
 
                     if (ec == ErrorClass.FAIL_CAS_MISMATCH) {
                         // Cleanup is conservative.  It could be running hours, even days after the
                         // transaction originally committed.  If the document has changed since it
                         // was staged, fail this cleanup attempt.  It will be tried again later.
-                        perEntryLog.debug(attemptId, "got CAS mismatch while cleaning up doc %s, " +
+                        perEntryLog.debug(attemptId, "got CAS mismatch while cleaning up doc {}, " +
                                         "failing this cleanup attempt (it will be retried)",
                                 DebugUtil.docId(collection, docRecord.id()));
 
@@ -414,7 +414,7 @@ public class TransactionsCleaner {
             // Update: nope.  If client crashes could have thousands of these to remove.
             //                logLevel = Event.Severity.INFO;
             //            }
-            perEntryLog.logDefer(attemptId, "Cleaning up ATR entry (isRegular=%s) %s", logLevel, isRegularCleanup,
+            perEntryLog.logDefer(attemptId, "Cleaning up ATR entry (isRegular={}) {}", logLevel, isRegularCleanup,
                     req);
 
             Mono<Void> cleanupDocs = cleanupDocs(perEntryLog, req, span);
@@ -443,8 +443,8 @@ public class TransactionsCleaner {
 
                         long ageInMinutes = TimeUnit.MILLISECONDS.toMinutes(req.ageMillis());
 
-                        perEntryLog.logDefer(attemptId, "error while attempting to cleanup ATR entry %s, entry is %d mins old, " +
-                                        "cleanup will retry later: %s",
+                        perEntryLog.logDefer(attemptId, "error while attempting to cleanup ATR entry {}, entry is {} mins old, " +
+                                        "cleanup will retry later: {}",
                                 Event.Severity.WARN, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId), ageInMinutes, DebugUtil.dbg(err));
 
                         Event.Severity level = Event.Severity.DEBUG;
@@ -494,16 +494,16 @@ public class TransactionsCleaner {
                 .onErrorResume(err -> {
                     ErrorClass ec = ErrorClass.classify(err);
 
-                    perEntryLog.debug(attemptId, "got exception while removing ATR entry %s: %s",
+                    perEntryLog.debug(attemptId, "got exception while removing ATR entry {}: {}",
                             atrId, DebugUtil.dbg(err));
 
                     if (ec == ErrorClass.FAIL_PATH_NOT_FOUND) {
-                        perEntryLog.logDefer(attemptId, "failed to remove %s as entry isn't there, likely" +
+                        perEntryLog.logDefer(attemptId, "failed to remove {} as entry isn't there, likely" +
                                         " due to concurrent cleanup",
                                 Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
                         return Mono.empty();
                     } else if (ec == ErrorClass.FAIL_PATH_ALREADY_EXISTS) {
-                        perEntryLog.logDefer(attemptId, "not removing %s as it has changed from PENDING to COMMITTED",
+                        perEntryLog.logDefer(attemptId, "not removing {} as it has changed from PENDING to COMMITTED",
                                 Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
                         return Mono.error(err);
                     } else {

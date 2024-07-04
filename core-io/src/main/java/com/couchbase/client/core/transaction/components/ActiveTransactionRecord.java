@@ -125,19 +125,19 @@ public class ActiveTransactionRecord {
                         catch (Throwable err) {
                             // CBSE-10352
                             if (logger != null) {
-                                logger.info("", String.format("Hit error while decoding ATR %s.%s.%s.%s %s %s",
-                                        atrCollection.bucket(), atrCollection.scope(), atrCollection.collection(), atrId, attemptId, DebugUtil.dbg(err)));
+                                logger.info("", "Hit error while decoding ATR {}.{}.{}.{} {} {}",
+                                        atrCollection.bucket(), atrCollection.scope(), atrCollection.collection(), atrId, attemptId, DebugUtil.dbg(err));
                                 logger.warn("Attempt to dump raw JSON of ATR entry:");
                                 try {
                                     byte[] raw = d.values()[0].value();
                                     String asStr = new String(raw, StandardCharsets.UTF_8);
-                                    logger.info("", "Raw JSON: %s", asStr);
+                                    logger.info("", "Raw JSON: {}", asStr);
                                     byte[] rawHLC = d.values()[1].value();
                                     String asStrHLC = new String(rawHLC, StandardCharsets.UTF_8);
-                                    logger.info("", "Raw JSON HLC: %s", asStrHLC);
+                                    logger.info("", "Raw JSON HLC: {}", asStrHLC);
                                 }
                                 catch (Throwable e) {
-                                    logger.info("", "Error while trying to read raw JSON: %s", DebugUtil.dbg(e));
+                                    logger.info("", "Error while trying to read raw JSON: {}", DebugUtil.dbg(e));
                                 }
                             }
                             // This implementation cannot proceed in the face of a corrupted ATR doc, so fast-fail the

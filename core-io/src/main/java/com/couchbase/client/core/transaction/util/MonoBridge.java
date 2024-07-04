@@ -56,10 +56,10 @@ public class MonoBridge<T> {
 
                     synchronized (syncer) {
                         if (!done) {
-                            if (logger != null) logger.info("", "MB: [%s] propagating err %s", dbg, err.toString());
+                            if (logger != null) logger.info("", "MB: [{}] propagating err {}", dbg, err.toString());
                             actual.tryEmitError(err).orThrow();
                         } else if (logger != null)
-                            logger.info("", "MB: [%s] skipping err propagating as done", dbg);
+                            logger.info("", "MB: [{}] skipping err propagating as done", dbg);
                         return Mono.empty();
                     }
                 })
@@ -67,9 +67,9 @@ public class MonoBridge<T> {
                 // Subscribe so this work will be happening asynchronously.  Should already be publishing on our thread-pool.
                 .subscribe(next -> {
                             if (!done) {
-                                if (logger != null) logger.info("", "MB: [%s] propagating next", dbg);
+                                if (logger != null) logger.info("", "MB: [{}] propagating next", dbg);
                                 actual.tryEmitValue(next).orThrow();
-                            } else if (logger != null) logger.info("", "MB: [%s] skipping next propagating as done", dbg);
+                            } else if (logger != null) logger.info("", "MB: [{}] skipping next propagating as done", dbg);
                         },
                         err -> {
                             // Should not trigger due to onErrorResume
@@ -78,18 +78,18 @@ public class MonoBridge<T> {
                         () -> {
                             // Even though a Mono still need to propagate onComplete in case it's Mono<Void>
                             if (!done) {
-                                if (logger != null) logger.info("", "MB: [%s] propagating complete", dbg);
+                                if (logger != null) logger.info("", "MB: [{}] propagating complete", dbg);
                                 actual.tryEmitEmpty();
                             } else if (logger != null)
-                                logger.info("", "MB: [%s] skipping complete propagating as done", dbg);
+                                logger.info("", "MB: [{}] skipping complete propagating as done", dbg);
                         });
 
         external.doOnCancel(() -> {
-                    if (logger != null) logger.info("", "MB: [%s] is cancelled", dbg);
+                    if (logger != null) logger.info("", "MB: [{}] is cancelled", dbg);
                     done = true;
                 })
                 .doOnTerminate(() -> {
-                    if (logger != null) logger.info("", "MB: [%s] is errored or complete", dbg);
+                    if (logger != null) logger.info("", "MB: [{}] is errored or complete", dbg);
                     done = true;
                 });
     }

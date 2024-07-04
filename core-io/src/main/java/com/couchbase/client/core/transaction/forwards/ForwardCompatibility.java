@@ -177,8 +177,8 @@ public class ForwardCompatibility {
                     RuntimeException toThrow = (behaviour.behaviour == ForwardCompatBehaviour.RETRY_TRANSACTION) ? RETRY : NO_RETRY;
 
                     if (logger != null) {
-                        logger.warn("", String.format("forward-compatibility rejection at point '%s'/'%s', map is %s, supported is %s",
-                                fc.name(), fc.value(), map.raw, supported));
+                        logger.warn("", "forward-compatibility rejection at point '{}'/'{}', map is {}, supported is {}",
+                                fc.name(), fc.value(), map.raw, supported);
                     }
 
                     if (behaviour.retryAfterMillis.isPresent()) {

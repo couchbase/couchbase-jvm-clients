@@ -100,7 +100,7 @@ public class CoreTransactionsReactive {
                 // So, expiry checks only get done inside this block.
                 .doOnNext(ctx -> {
                     overall.incAttempts();
-                    ctx.LOGGER.info(ctx.attemptId(), "starting attempt %d/%s/%s", overall.numAttempts(), ctx.transactionId(), ctx.attemptId());
+                    ctx.LOGGER.info(ctx.attemptId(), "starting attempt {}/{}/{}", overall.numAttempts(), ctx.transactionId(), ctx.attemptId());
                 })
 
                 .flatMap(ctx -> transactionLogic.apply(ctx)
@@ -146,7 +146,7 @@ public class CoreTransactionsReactive {
                 // If we get here, success
                 .doOnTerminate(() -> {
                     long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTime.get());
-                    overall.LOGGER.info("finished txn in %dus", elapsed);
+                    overall.LOGGER.info("finished txn in {}us", elapsed);
                 });
     }
 
@@ -162,7 +162,7 @@ public class CoreTransactionsReactive {
 
                 .doOnRetry(v -> {
                     Duration ofLastAttempt = Duration.ofNanos(System.nanoTime() - startTime.get());
-                    overall.LOGGER.info("<>", "retrying transaction after backoff %dmillis", v.backoff().toMillis());
+                    overall.LOGGER.info("<>", "retrying transaction after backoff {}millis", v.backoff().toMillis());
                     overall.incrementRetryAttempts(ofLastAttempt, RetryReason.UNKNOWN);
                 })
 
@@ -357,7 +357,7 @@ public class CoreTransactionsReactive {
         return (err) -> {
             RuntimeException converted = QueryUtil.convertQueryError(err);
 
-            overall.LOGGER.warn("", "got error on rows stream %s, converted from %s",
+            overall.LOGGER.warn("", "got error on rows stream {}, converted from {}",
                     DebugUtil.dbg(converted), DebugUtil.dbg(err));
 
             RuntimeException ret = converted;

@@ -75,18 +75,18 @@ public class ReactiveLock {
 
                 if (lockedBy == null) {
                     if (debugMode) {
-                        ctx.logger().info(ctx.attemptId(), String.format("LOCK: [%s] is locking, %d waiting", waiter.dbg, waiting.size()));
+                        ctx.logger().info(ctx.attemptId(), "LOCK: [{}] is locking, {} waiting", waiter.dbg, waiting.size());
                     }
                     lockedBy = waiter;
                     return Mono.just(waiter);
                 } else if (lockedBy == waiter) {
-                    String msg = String.format("LOCK: internal bug [%s] wants a lock currently held by itself", dbg);
+                    String msg = "LOCK: internal bug [" + dbg + "] wants a lock currently held by itself";
                     ctx.logger().info(ctx.attemptId(), msg);
                     throw new IllegalStateException(msg);
                 } else {
                     if (debugMode) {
-                        ctx.logger().info(ctx.attemptId(), String.format("LOCK: [%s] will wait for lock currently held by [%s], %d other waiters",
-                                dbg, lockedBy.dbg, waiting.size()));
+                        ctx.logger().info(ctx.attemptId(), "LOCK: [{}] will wait for lock currently held by [{}], {} other waiters",
+                                dbg, lockedBy.dbg, waiting.size());
                     }
                     waiting.add(waiter);
                 }
@@ -123,7 +123,7 @@ public class ReactiveLock {
                         // CANCEL signal should not arrive anymore following MonoBridge.  This is probably indicative of an internal bug.
                         // Thread safety 10.2: it is
                         if (v == SignalType.CANCEL) {
-                            ctx.logger().info(ctx.attemptId(), "cancel signal while waiter %s is waiting for lock", dbg);
+                            ctx.logger().info(ctx.attemptId(), "cancel signal while waiter {} is waiting for lock", dbg);
 
                             // Thread safety 7.6: removeFromWaiters on CANCEL because this operation is dying and does not want to have or be given the lock
                             unlock(waiter, "onCancel", true).block();
@@ -152,7 +152,7 @@ public class ReactiveLock {
 
             synchronized (this) {
                 if (waiter == null) {
-                    ctx.logger().info(ctx.attemptId(), "LOCK: internal bug, waiter is null %s", extraDbg);
+                    ctx.logger().info(ctx.attemptId(), "LOCK: internal bug, waiter is null {}", extraDbg);
                 }
                 if (lockedBy != waiter) {
                     // Allowing double-unlocks, to permit a paranoid style of coding that both unlocks where it's expected to, and in a doFinally as a safety precaution
@@ -161,13 +161,13 @@ public class ReactiveLock {
                     if (removeFromWaiters) {
                         waiting.remove(waiter);
                         if (debugMode) {
-                            String msg = String.format("LOCK: [%s: %s] is unlocking, but does not have the lock - removing from waiters, leaving %d others", waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg, waiting.size());
-                            ctx.logger().info(ctx.attemptId(), msg);
+                            ctx.logger().info(ctx.attemptId(), "LOCK: [{}: {}] is unlocking, but does not have the lock - removing from waiters, leaving {} others",
+                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg, waiting.size());
                         }
                     } else {
                         if (debugMode) {
-                            String msg = String.format("LOCK: [%s: %s] is unlocking, but does not have the lock", waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg);
-                            ctx.logger().info(ctx.attemptId(), msg);
+                            ctx.logger().info(ctx.attemptId(), "LOCK: [{}: {}] is unlocking, but does not have the lock",
+                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg);
                         }
                     }
                     return Mono.empty();
@@ -175,15 +175,15 @@ public class ReactiveLock {
                     if (!waiting.isEmpty()) {
                         next = waiting.remove(0);
                         if (debugMode) {
-                            ctx.logger().info(ctx.attemptId(), String.format("LOCK: [%s: %s] is unlocking, [%s] now has lock, %d left waiting",
-                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg, next.dbg, waiting.size()));
+                            ctx.logger().info(ctx.attemptId(), "LOCK: [{}: {}] is unlocking, [{}] now has lock, {} left waiting",
+                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg, next.dbg, waiting.size());
                         }
                         lockedBy = next;
                     } else {
                         lockedBy = null;
                         if (debugMode) {
-                            ctx.logger().info(ctx.attemptId(), String.format("LOCK: [%s: %s] is unlocking, nothing waiting",
-                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg));
+                            ctx.logger().info(ctx.attemptId(), "LOCK: [{}: {}] is unlocking, nothing waiting",
+                                    waiter == null ? "-" : waiter.dbg, extraDbg == null ? "-" : extraDbg);
                         }
                     }
                 }
