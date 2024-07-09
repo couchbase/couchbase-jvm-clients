@@ -285,7 +285,7 @@ public class ConnectionStringUtil {
           throw InvalidArgumentException.fromMessage(
               "The DNS SRV record for '" + redactSystem(serviceName) + "' indicates" +
                   " TLS must be used when connecting to this cluster." +
-                  " Please enable TLS by setting the 'security.enableTLS' client setting to true." +
+                  " Please enable TLS by setting the 'security.enableTls' client setting to true." +
                   " If the Cluster does not use a shared ClusterEnvironment, an alternative way to enable TLS is to" +
                   " prefix the connection string with \"couchbases://\" (note the final 's')");
         }
