@@ -27,7 +27,7 @@ def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon
 def CLUSTER_VERSION_LATEST_STABLE = "7.1-stable"
 
 // The lucky spammees
-EMAILS = ['graham.pople@couchbase.com', 'michael.nitschinger@couchbase.com', 'david.nault@couchbase.com']
+EMAILS = ['graham.pople@couchbase.com', 'david.nault@couchbase.com']
 
 pipeline {
     agent none
