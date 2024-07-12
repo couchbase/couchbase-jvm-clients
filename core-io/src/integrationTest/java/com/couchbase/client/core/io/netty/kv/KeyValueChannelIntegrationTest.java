@@ -51,6 +51,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -156,7 +157,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         }
       });
 
-    assertAuthenticationFailure(bootstrap, "Authentication Failure");
+    assertAuthenticationFailure(bootstrap, "User authentication failed");
   }
 
   @Test
@@ -178,7 +179,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
         }
       });
 
-    assertAuthenticationFailure(bootstrap, "Authentication Failure");
+    assertAuthenticationFailure(bootstrap, "User authentication failed");
   }
 
   @Test
@@ -220,7 +221,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
     assertFalse(f.get().isSuccess());
     Throwable ex = f.get().cause();
     assertInstanceOf(AuthenticationFailureException.class, ex);
-    assertTrue(ex.getMessage().contains(msg));
+    assertThat(ex.getMessage()).contains(msg);
   }
 
 }
