@@ -16,6 +16,10 @@
     <name>Couchbase Columnar Java SDK</name>
     <description>The official Couchbase Columnar Java SDK</description>
 
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+    </properties>
+
     <dependencies>
         <!-- External, Required Dependencies -->
         <dependency>

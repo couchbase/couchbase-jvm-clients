@@ -38,7 +38,7 @@ These include getting started guides.
 ## Building
 Stable releases are published on [maven central](https://search.maven.org/search?q=com.couchbase.client).
 
-You can always also just build it from source, using any JDK 8+:
+You can always also just build it from source, using any JDK 17+:
 
 ```
 $ git clone https://github.com/couchbase/couchbase-jvm-clients.git
