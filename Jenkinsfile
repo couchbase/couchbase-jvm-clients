@@ -10,18 +10,91 @@ QUICK_TEST_MODE = false // enable to support quicker development iteration
 // Java versions available through cbdeps are on
 // https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
 // https://github.com/couchbasebuild/cbdep/blob/master/cbdep.config
-def ORACLE_JDK = "java"
-def ORACLE_JDK_8 = "8u192"        // Avoid above Oracle 8u201, for licensing reasons.
-def ORACLE_JDK_11 = "11.0.3"
-def OPENJDK = "openjdk"
-def OPENJDK_8 = "8u292-b10"       // https://github.com/AdoptOpenJDK/openjdk8-binaries/releases
-def OPENJDK_11 = "11.0.2+7"
-def OPENJDK_11_M1 = "11.0.11+9"
-def OPENJDK_17 = "17.0.1+12"
-def OPENJDK_21 = "21.0.1+12"
-def CORRETTO = "corretto"         // Amazon JDK
-def CORRETTO_8 = "8.232.09.1"     // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
-def CORRETTO_11 = "11.0.5.10.1"   // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
+
+Jvm oracle8() { oracle('8u192') } // Avoid above Oracle 8u201, for licensing reasons.
+Jvm oracle11() { oracle('11.0.3') }
+
+Jvm openjdk8() { openjdk('8u292-b10') } // https://github.com/AdoptOpenJDK/openjdk8-binaries/releases
+Jvm openjdk11() { openjdk('11.0.23+9') }
+Jvm openjdk17() { openjdk('17.0.11+9') }
+Jvm openjdk21() { openjdk('21.0.3+9') }
+
+Jvm corretto8() { corretto('8.232.09.1') } // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
+Jvm corretto11() { corretto('11.0.5.10.1') } // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
+
+Jvm oracle(String version) { new Jvm('java', version) }
+Jvm openjdk(String version) { new Jvm('openjdk', version) }
+Jvm corretto(String version) { new Jvm('corretto', version) }
+
+Jvm defaultBuildJvm() { openjdk17() }
+
+class Jvm implements Serializable {
+    final String cbdepPackage
+    final String version
+
+    Jvm(String cbdepPackage, String version) {
+        this.cbdepPackage = cbdepPackage
+        this.version = version
+    }
+
+    @NonCPS String toString() { cbdepPackage + ' ' + version }
+}
+
+// Ideally these would be instance methods of Jvm,
+// but the Jenkins CPS execution model makes it a hassle.
+String javaHome(Jvm jvm) { "$WORKSPACE/deps/${jvm.cbdepPackage}-${jvm.version}" }
+String javaBinary(Jvm jvm) { javaHome(jvm) + '/bin/java' }
+String pathSeparator() { isUnix() ? ':' : ';' }
+String pathFor(Jvm jvm) { javaHome(jvm) + '/bin' + pathSeparator() + PATH }
+
+void shOrBat(String command) { isUnix() ? sh(command) : bat(command) }
+
+void installJvm(Jvm jvm) {
+    dir(WORKSPACE) {
+        if (fileExists(javaHome(jvm))) {
+            echo "$jvm already installed"
+        } else {
+            echo "installing $jvm"
+            shOrBat('cbdep --version')
+            shOrBat('cbdep --debug platform')
+            shOrBat("cbdep --debug install -d deps ${jvm.cbdepPackage} ${jvm.version}")
+        }
+        shOrBat(javaBinary(jvm) + ' -version') // smoke test
+    }
+}
+
+String setEnv(String name, String value) { isUnix() ? "${name}=\"${value}\"" : "set ${name}=${value}\r\n" }
+
+String setEnvFor(Jvm jvm) {
+    // Unix wants all on same line. Windows wants separate lines.
+    // Let `setEnv()` insert the line ending for Windows.
+    setEnv('JAVA_HOME', javaHome(jvm)) + ' ' + setEnv('PATH', pathFor(jvm))
+}
+
+void makeDeps(Jvm buildJvm) {
+    installJvm(buildJvm)
+    shOrBat("${setEnvFor(buildJvm)} make deps-only")
+}
+
+void runMaven(Jvm buildJvm, Jvm testJvm, String mavenArgs) {
+    installJvm(buildJvm)
+    if (testJvm != null) installJvm(testJvm)
+
+    String command = setEnvFor(buildJvm) + ' ./mvnw '
+    shOrBat(command + '--version')
+
+    command += "--batch-mode " // Hide verbose download progress messages.
+
+    // Specify the Java executable to use when running tests.
+    // See https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html (Search for "<jvm>").
+    if (testJvm != null) command += "-Djvm=${javaBinary(testJvm)} "
+
+    command += mavenArgs
+    shOrBat(command)
+}
+
+boolean triggeredByGerrit() { IS_GERRIT_TRIGGER.toBoolean() }
+boolean notTriggeredByGerrit() { !triggeredByGerrit() }
 
 // The latest released cluster version.  The majority of the testing is done against this.
 def CLUSTER_VERSION_LATEST_STABLE = "7.1-stable"
@@ -40,44 +113,33 @@ pipeline {
     stages {
         stage('Build Scala 2.13 (OpenJDK 11)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                buildScala(OPENJDK, OPENJDK_11, "2.13", "2.13.7", REFSPEC)
+                buildScala(openjdk11(), "2.13", "2.13.7", REFSPEC)
             }
         }
 
         // Test against mock - this skips a lot of tests, and is intended for quick validation
         stage('Validation testing (mock, Oracle JDK 8)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == true }
+                beforeAgent true
+                expression { triggeredByGerrit() }
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(ORACLE_JDK, ORACLE_JDK_8)
 
                     dir('couchbase-jvm-clients') {
                         doCheckout(REFSPEC)
                         // By default Java and Scala use mock for testing
-                        shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean test")
+                        runMaven(defaultBuildJvm(), oracle8(), "-Dmaven.test.failure.ignore=true clean test")
 
                         // While iterating Jenkins development, this makes it much faster:
-                        // shWithEcho("./mvnw package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+                        // runMaven(defaultBuildJvm(), oracle8(), "package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
                     }
                 }
             }
@@ -105,17 +167,12 @@ pipeline {
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 7.6-stable, OpenJDK 21)') {
              agent { label "sdkqe" }
-             environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_21}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_21}/bin:$PATH"
-             }
              when {
-                 beforeAgent true;
-                 expression
-                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                 beforeAgent true
+                 expression { notTriggeredByGerrit() }
              }
              steps {
-                 test(OPENJDK, OPENJDK_21, "7.6-stable", REFSPEC)
+                 test(defaultBuildJvm(), openjdk21(), "7.6-stable", REFSPEC)
              }
              post {
                  always {
@@ -126,17 +183,12 @@ pipeline {
 
         stage('Cluster testing  (Linux, cbdyncluster 7.6-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.6-stable", REFSPEC)
+                test(defaultBuildJvm(), oracle8(), "7.6-stable", REFSPEC)
             }
             post {
                 always {
@@ -147,17 +199,12 @@ pipeline {
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 7.2-stable, Oracle JDK 8)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.2-stable", REFSPEC)
+                test(defaultBuildJvm(), oracle8(), "7.2-stable", REFSPEC)
             }
             post {
                 always {
@@ -168,17 +215,12 @@ pipeline {
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 7.1-stable, openjdk 17)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(OPENJDK, OPENJDK_17, "7.1-stable", REFSPEC)
+                test(defaultBuildJvm(), openjdk17(), "7.1-stable", REFSPEC)
             }
             post {
                 always {
@@ -189,17 +231,12 @@ pipeline {
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 7.0-stable, Oracle JDK 11)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_11}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_11, "7.0-stable", REFSPEC)
+                test(defaultBuildJvm(), oracle11(), "7.0-stable", REFSPEC)
             }
             post {
                 always {
@@ -210,17 +247,12 @@ pipeline {
 
         stage('JDK/Cluster testing  (Linux, cbdyncluster 6.6-stable, Corretto 8)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}"
-                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(CORRETTO, CORRETTO_8, "6.6-stable", REFSPEC)
+                test(defaultBuildJvm(), corretto8(), "6.6-stable", REFSPEC)
             }
             post {
                 always {
@@ -232,17 +264,12 @@ pipeline {
         // 6.5 is EOL, we do one sanity test against it
         stage('JDK/Cluster testing  (Linux, cbdyncluster 6.5-release, Corretto 11)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}"
-                PATH = "${WORKSPACE}/deps/${CORRETTO}-${CORRETTO_11}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(CORRETTO, CORRETTO_11, "6.5-release", REFSPEC)
+                test(defaultBuildJvm(), corretto11(), "6.5-release", REFSPEC)
             }
             post {
                 always {
@@ -259,17 +286,12 @@ pipeline {
         // Real Elixir is tested in job: http://qe-jenkins.sc.couchbase.com/job/DirectNebulaJob-centos-sdk/
 //         stage('Serverless testing (Linux, cbdyncluster 7.5-stable Serverless mode, Oracle JDK 8)') {
 //             agent { label "sdkqe" }
-//             environment {
-//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//             }
 //             when {
-//                 beforeAgent true;
-//                 expression
-//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//                 beforeAgent true
+//                 expression { notTriggeredByGerrit() }
 //             }
 //             steps {
-//                 test(ORACLE_JDK, ORACLE_JDK_8, "7.5-stable", includeEventing : true, serverlessMode: true, REFSPEC)
+//                 test(defaultBuildJvm(), oracle8(), "7.5-stable", includeEventing : true, serverlessMode: true, REFSPEC)
 //             }
 //             post {
 //                 always {
@@ -281,17 +303,12 @@ pipeline {
         // Cannot use 7.1-stable, it maps to 7.1.3 and there is no 7.1.3 CE release.  7.1.1 is current latest (Nov '22).
         stage("CE testing (Linux, cbdyncluster 7.1.1, OpenJDK 8)") {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(OPENJDK, OPENJDK_8, "7.1.1", ceMode : true, REFSPEC)
+                test(defaultBuildJvm(), openjdk8(), "7.1.1", ceMode : true, REFSPEC)
             }
             post {
                 always {
@@ -303,17 +320,12 @@ pipeline {
         // 7.0.3 does not and will not have a CE build.
         stage('CE testing (Linux, cbdyncluster 7.0.2, Oracle JDK 8)') {
             agent { label "sdkqe" }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-                PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
-                test(ORACLE_JDK, ORACLE_JDK_8, "7.0.2", ceMode : true, REFSPEC)
+                test(defaultBuildJvm(), oracle8(), "7.0.2", ceMode : true, REFSPEC)
             }
             post {
                 always {
@@ -323,52 +335,37 @@ pipeline {
         }
 
 
-        stage("Platform testing (M1, stable, openjdk 11)") {
-            agent { label 'm1' }
-            environment {
-                // Advice from builds team: '"java" doesn't support Linux aarch64. Only openjdk.'
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
-            }
-            when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
-            }
-            steps {
-                test(OPENJDK, OPENJDK_11_M1, CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
-                }
-            }
-        }
-
+// The Maven wrapper can't install itself here due to a broken `wget` installation
+//        stage("Platform testing (M1, stable, openjdk 17)") {
+//            agent { label 'm1' }
+//            when {
+//                beforeAgent true
+//                expression { notTriggeredByGerrit() }
+//            }
+//            steps {
+//                test(defaultBuildJvm(), openjdk17(), CLUSTER_VERSION_LATEST_STABLE, REFSPEC)
+//            }
+//            post {
+//                always {
+//                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+//                }
+//            }
+//        }
 
         stage('Platform testing (Graviton2, mocks, openjdk 11)') {
             agent { label 'qe-grav2-amzn2' }
-            environment {
-                // Advice from builds team: '"java" doesn't support Linux aarch64. Only openjdk.'
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11}/bin:${WORKSPACE}/deps/maven-3.5.2-cb6/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(OPENJDK, OPENJDK_11)
-                    // qe-grav2-amzn2 doesn't have maven
-                    shWithEcho("cbdep install -d deps maven 3.5.2-cb6")
                     dir('couchbase-jvm-clients') {
                         doCheckout(REFSPEC)
                         // Advice from builds team: cbdyncluster cannot be contacted from qe-grav2-amzn2, so testing
                         // against mocks only for now
-                        script { testAgainstMock() }
+                        script { testAgainstMock(defaultBuildJvm(), openjdk11()) }
                     }
                 }
             }
@@ -382,23 +379,17 @@ pipeline {
 // Temporarily disabling until JVMCBC-1227 is resolved
 //         stage('Platform testing (Alpine, mock, openjdk 11)') {
 //             agent { label 'alpine' }
-//             environment {
-//                 JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}"
-//                 PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_11_M1}/bin:$PATH"
-//             }
 //             when {
-//                 beforeAgent true;
-//                 expression
-//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//                 beforeAgent true
+//                 expression { notTriggeredByGerrit() }
 //             }
 //             steps {
 //                  catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
 //                     cleanupWorkspace()
-//                     installJDKIfNeeded(OPENJDK, OPENJDK_11_M1)
 //                     dir('couchbase-jvm-clients') {
 //                         doCheckout(REFSPEC)
 //                         // Mock testing only, with native IO disabled - check JVMCBC-942 for details
-//                         script { testAgainstMock(true) }
+//                         script { testAgainstMock(defaultBuildJvm(), openjdk11(), true) }
 //                     }
 //                  }
 //             }
@@ -411,25 +402,19 @@ pipeline {
 
         stage('Platform testing (ARM Ubuntu 20, mock, openjdk 17)') {
             agent { label 'qe-ubuntu20-arm64' }
-            environment {
-                JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-            }
             when {
-                beforeAgent true;
-                expression
-                        { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
             }
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     cleanupWorkspace()
-                    installJDKIfNeeded(OPENJDK, OPENJDK_17)
                     dir('couchbase-jvm-clients') {
                         doCheckout(REFSPEC)
                         // Cbdyn not available on this machine
                         script {
-                            shWithEcho("make deps-only")
-                            shWithEcho("./mvnw --fail-at-end clean install --batch-mode")
+                            makeDeps(defaultBuildJvm())
+                            runMaven(defaultBuildJvm(), openjdk17(), "--fail-at-end clean install")
                         }
                     }
                 }
@@ -444,25 +429,19 @@ pipeline {
 
         stage('Platform testing (ARM Ubuntu 22, mock, openjdk 17)') {
                     agent { label 'qe-ubuntu22-arm64' }
-                    environment {
-                        JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                        PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-                    }
                     when {
-                        beforeAgent true;
-                        expression
-                                { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                        beforeAgent true
+                        expression { notTriggeredByGerrit() }
                     }
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                             cleanupWorkspace()
-                            installJDKIfNeeded(OPENJDK, OPENJDK_17)
                             dir('couchbase-jvm-clients') {
                                 doCheckout(REFSPEC)
                                 // Cbdyn not available on this machine
                                 script {
-                                    shWithEcho("make deps-only")
-                                    shWithEcho("./mvnw --fail-at-end clean install --batch-mode")
+                                    makeDeps(defaultBuildJvm())
+                                    runMaven(defaultBuildJvm(), openjdk17(), "--fail-at-end clean install")
                                 }
                             }
                         }
@@ -477,25 +456,19 @@ pipeline {
 
         stage('Platform testing (ARM RHEL 9, mock, openjdk 17)') {
                     agent { label 'qe-rhel9-arm64' }
-                    environment {
-                        JAVA_HOME = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}"
-                        PATH = "${WORKSPACE}/deps/${OPENJDK}-${OPENJDK_17}/bin:$PATH"
-                    }
                     when {
-                        beforeAgent true;
-                        expression
-                                { return IS_GERRIT_TRIGGER.toBoolean() == false }
+                        beforeAgent true
+                        expression { notTriggeredByGerrit() }
                     }
                     steps {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                             cleanupWorkspace()
-                            installJDKIfNeeded(OPENJDK, OPENJDK_17)
                             dir('couchbase-jvm-clients') {
                                 doCheckout(REFSPEC)
                                 // Cbdyn not available on this machine
                                 script {
-                                    shWithEcho("make deps-only")
-                                    shWithEcho("./mvnw --fail-at-end clean install --batch-mode")
+                                    makeDeps(defaultBuildJvm())
+                                    runMaven(defaultBuildJvm(), openjdk17(), "--fail-at-end clean install")
                                 }
                             }
                         }
@@ -511,23 +484,18 @@ pipeline {
         // Commented for now as sdk-integration-test-win temporarily down
 //         stage('testing (Windows, cbdyncluster 6.5, Oracle JDK 8)') {
 //             agent { label 'sdk-integration-test-win' }
-//             environment {
-//                 JAVA_HOME = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}"
-//                 PATH = "${WORKSPACE}/deps/${ORACLE_JDK}-${ORACLE_JDK_8}/bin:$PATH"
-//             }
 //             when {
-//                 expression
-//                         { return IS_GERRIT_TRIGGER.toBoolean() == false }
+//                 beforeAgent true
+//                 expression { notTriggeredByGerrit() }
 //             }
 //             steps {
 //                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
 //                     cleanWs()
 //                     unstash 'couchbase-jvm-clients'
-//                     installJDKIfNeeded("windows", ORACLE_JDK, ORACLE_JDK_8)
 //
 //                     dir('couchbase-jvm-clients') {
 //                         script {
-//                             testAgainstServer(SERVER_TEST_VERSION, QUICK_TEST_MODE)
+//                             testAgainstServer(defaultBuildJvm(), oracle8(), SERVER_TEST_VERSION, QUICK_TEST_MODE)
 //                         }
 //                     }
 //                 }
@@ -548,8 +516,8 @@ pipeline {
 
 
 void test(Map args=[:],
-            String jdk,
-            String jdkVersion,
+            Jvm buildJvm,
+            Jvm testJvm,
             String serverVersion,
             String refspec) {
 
@@ -562,29 +530,26 @@ void test(Map args=[:],
 
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
-        installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
             doCheckout(refspec)
-            script { testAgainstServer(serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts, serverlessMode) }
+            script { testAgainstServer(buildJvm, testJvm, serverVersion, QUICK_TEST_MODE, includeAnalytics, includeEventing, enableDevelopPreview, ceMode, multiCerts, serverlessMode) }
         }
     }
 }
 
 
-void buildScala(String jdk,
-                String jdkVersion,
+void buildScala(Jvm buildJvm,
                 String scalaCompatVersion,
                 String scalaLibraryVersion,
                 String refspec) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
-        installJDKIfNeeded(jdk, jdkVersion)
 
         dir('couchbase-jvm-clients') {
             doCheckout(refspec)
-            shWithEcho("make deps-only")
-            shWithEcho("./mvnw -Dmaven.test.skip --batch-mode -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
+            makeDeps(buildJvm)
+            runMaven(buildJvm, null, "-Dmaven.test.skip -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
         }
     }
 }
@@ -618,44 +583,10 @@ void emailFailure() {
 }
 
 void shWithEcho(String command) {
-    if (NODE_NAME.contains("windows")) {
+    if (!isUnix()) {
         echo bat(script: command, returnStdout: true)
     } else {
         echo sh(script: command, returnStdout: true)
-    }
-}
-
-void shIgnoreFailure(String command) {
-    if (NODE_NAME.contains("windows")) {
-        bat(script: command, returnStatus: true)
-    } else {
-        sh(script: command, returnStatus: true)
-    }
-}
-
-// Installs JDK to the workspace using cbdep tool
-String installJDKIfNeeded(javaPackage, javaVersion) {
-    def install = false
-
-    echo "checking install"
-    if (!fileExists("deps")) {
-        echo "file deps does not exist"
-        install = true
-    } else {
-        echo "file deps does exist"
-        dir("deps") {
-            install = !fileExists("$javaPackage-${javaVersion}")
-            if (install) {
-                echo "$javaPackage-${javaVersion} exists"
-            } else {
-                echo "$javaPackage-${javaVersion} does not exist"
-            }
-        }
-    }
-
-    if (install) {
-        shWithEcho("mkdir -p deps && mkdir -p deps/$javaPackage-${javaVersion}")
-        shWithEcho("cbdep install -d deps $javaPackage ${javaVersion}")
     }
 }
 
@@ -672,7 +603,9 @@ void createIntegrationTestPropertiesFile(String filename, String ip) {
 
 // To be called inside a script {} block - required so can do try-finally logic to cleanup the cbdyncluster
 // (Inside a script {} block is 'scripted pipeline' syntax, different to the 'declarative pipeline' syntax elsewhere.)
-void testAgainstServer(String serverVersion,
+void testAgainstServer(Jvm buildJvm,
+                       Jvm testJvm,
+                       String serverVersion,
                        boolean QUICK_TEST_MODE,
                        boolean includeAnalytics = true,
                        boolean includeEventing = false,
@@ -682,12 +615,6 @@ void testAgainstServer(String serverVersion,
                        boolean serverlessMode = false) {
     def clusterId = null
     try {
-        // For debugging
-        shIgnoreFailure("echo $JAVA_HOME")
-        shIgnoreFailure("ls $JAVA_HOME")
-        shIgnoreFailure("echo $PATH")
-        shIgnoreFailure("java -version")
-
         // For debugging, what clusters are open
         shWithEcho("cbdyncluster ps -a")
 
@@ -758,17 +685,16 @@ void testAgainstServer(String serverVersion,
         }
 
         // Not sure why this is needed, it should be in stash from build....
-        shWithEcho("make deps-only")
+        makeDeps(buildJvm)
 
-        // The --batch-mode hides download progress messages, very verbose
         if (!QUICK_TEST_MODE) {
-            shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean install --batch-mode -Dgroups=!flaky")
+            runMaven(buildJvm, testJvm, "-Dmaven.test.failure.ignore=true clean install -Dgroups=!flaky")
         } else {
             // This is for iteration during development, skips out some steps
-            shWithEcho("./mvnw -pl '!scala-client,!scala-implicits' --fail-at-end clean install test --batch-mode")
+            runMaven(buildJvm, testJvm, "-pl '!scala-client,!scala-implicits' --fail-at-end clean install test")
 
             // Another iteration option, this runs just one test
-            //shWithEcho("./mvnw package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
+            //runMaven(buildJvm, testJvm, "package surefire:test -Dtest=com.couchbase.client.java.ObserveIntegrationTest -pl java-client")
         }
 
 
@@ -783,9 +709,9 @@ void testAgainstServer(String serverVersion,
     }
 }
 
-void testAgainstMock(boolean disableNativeIo = false) {
-    shWithEcho("make deps-only")
-    shWithEcho("./mvnw -Dmaven.test.failure.ignore=true clean install --batch-mode ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
+void testAgainstMock(Jvm buildJvm, Jvm testJvm, boolean disableNativeIo = false) {
+    makeDeps(buildJvm)
+    runMaven(buildJvm, testJvm, "-Dmaven.test.failure.ignore=true clean install ${disableNativeIo ? '-Dcom.couchbase.client.core.deps.io.netty.transport.noNative=true' : ''}")
 }
 
 void cleanupWorkspace() {
