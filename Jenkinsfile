@@ -111,14 +111,14 @@ pipeline {
     }
 
     stages {
-        stage('Build Scala 2.13 (OpenJDK 11)') {
+        stage('Build Scala 2.13 (OpenJDK 17)') {
             agent { label "sdkqe" }
             when {
                 beforeAgent true
                 expression { notTriggeredByGerrit() }
             }
             steps {
-                buildScala(openjdk11(), "2.13", "2.13.7", REFSPEC)
+                buildScala(defaultBuildJvm(), "2.13", "2.13.7", REFSPEC)
             }
         }
 
