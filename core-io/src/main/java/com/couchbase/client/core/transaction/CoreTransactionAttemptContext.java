@@ -18,6 +18,7 @@ package com.couchbase.client.core.transaction;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
@@ -146,6 +147,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_ATR_COMMIT;
 import static com.couchbase.client.core.config.BucketCapabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.Builder.createError;
@@ -736,6 +738,16 @@ public class CoreTransactionAttemptContext {
                 (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, flagsToStage, span, lockToken));
     }
 
+    /**
+     * @deprecated in favor of {@link #insert(CollectionIdentifier, String, byte[], int, SpanWrapper)}
+     * which takes an additional 'flags' argument.
+     */
+    @UsedBy(SPRING_DATA_COUCHBASE)
+    @Deprecated
+    public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content, SpanWrapper pspan) {
+        return insert(collection, id, content, JSON_COMMON_FLAGS, pspan);
+    }
+
     private Mono<CoreTransactionGetResult> insertInternal(String operationId, CollectionIdentifier collection, String id, byte[] content, int flagsToStage,
                                                           SpanWrapper span, ReactiveLock.Waiter lockToken) {
         return Mono.defer(() -> {
@@ -958,6 +970,16 @@ public class CoreTransactionAttemptContext {
     public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, int flags, SpanWrapper pspan) {
         return doKVOperation("replace " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
                 (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, flags, span, lockToken));
+    }
+
+    /**
+     * @deprecated in favor of {@link #replace(CoreTransactionGetResult, byte[], int, SpanWrapper)}
+     * which takes an additional 'flags' argument.
+     */
+    @UsedBy(SPRING_DATA_COUCHBASE)
+    @Deprecated
+    public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, SpanWrapper pspan) {
+        return replace(doc, content, JSON_COMMON_FLAGS, pspan);
     }
 
     private <T> Mono<T> createMonoBridge(String debug, Mono<T> internal) {
