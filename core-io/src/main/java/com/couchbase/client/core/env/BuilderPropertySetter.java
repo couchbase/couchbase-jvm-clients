@@ -252,12 +252,12 @@ public class BuilderPropertySetter {
   }
 
   @SuppressWarnings("unchecked")
-  private static Object convertEnum(Class enumClass, String value) {
+  private static <E extends Enum> E convertEnum(Class<E> enumClass, String value) {
     try {
-      return Enum.valueOf(enumClass, value);
+      return (E) Enum.valueOf(enumClass, value);
     } catch (IllegalArgumentException e) {
-      throw InvalidArgumentException.fromMessage("Expected one of " +
-          Arrays.toString(enumClass.getEnumConstants()) + " but got \"" + value + "\"");
+      List<String> enumValueNames = Arrays.stream(enumClass.getEnumConstants()).map(Enum::name).collect(Collectors.toList());
+      throw InvalidArgumentException.fromMessage("Expected one of " + enumValueNames + " but got \"" + value + "\"");
     }
   }
 
