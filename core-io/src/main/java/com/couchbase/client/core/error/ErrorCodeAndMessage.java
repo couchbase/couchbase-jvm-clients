@@ -17,6 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonAlias;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
@@ -54,7 +55,7 @@ public class ErrorCodeAndMessage {
 
   public ErrorCodeAndMessage(@JsonProperty("code") int code,
                              @JsonProperty("msg") String message,
-                             @JsonProperty("retry") boolean retry,
+                             @JsonProperty("retry") @JsonAlias("retriable") boolean retry, // query uses "retry", analytics uses "retriable"
                              @JsonProperty("reason") Map<String, Object> reason) {
     this.code = code;
     this.message = nullToEmpty(message);

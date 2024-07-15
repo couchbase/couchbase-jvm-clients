@@ -143,6 +143,24 @@ class ErrorCodeAndMessageTest {
   }
 
   @Test
+  void parsesJsonWithAnalyticsRetriable() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retriable\":true}".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
+    assertTrue(e.retry());
+    assertNull(e.reason());
+  }
+
+  @Test
+  void parsesJsonWithAnalyticsRetriableFalse() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retriable\":false}".getBytes(UTF_8)).get(0);
+    assertEquals(123, e.code());
+    assertEquals("Something bad happened!", e.message());
+    assertFalse(e.retry());
+    assertNull(e.reason());
+  }
+
+  @Test
   void parseJsonArrayWithRetry() {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":true}]".getBytes(UTF_8)).get(0);
     assertEquals(123, e.code());
