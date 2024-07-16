@@ -46,19 +46,27 @@ import static java.util.Objects.requireNonNull;
 public class HostAndServicePorts implements KetamaRingNode {
   // Placeholder for a node that can't be reached because it doesn't have an alternate address
   // for the requested network. (Can't just ignore it, because bucket config refers to nodes by index.)
-  public static final HostAndServicePorts INACCESSIBLE = new HostAndServicePorts("<inaccessible>", emptyMap(), null);
+  public static final HostAndServicePorts INACCESSIBLE = new HostAndServicePorts(
+    "<inaccessible>",
+    emptyMap(),
+    new NodeIdentifier("<inaccessible>", 0),
+    null
+  );
 
   private final String host;
   private final Map<ServiceType, Integer> ports;
+  private final NodeIdentifier id;
   @Nullable private final HostAndPort ketamaAuthority;
 
   public HostAndServicePorts(
     String host,
     Map<ServiceType, Integer> ports,
+    NodeIdentifier id,
     @Nullable HostAndPort ketamaAuthority
   ) {
     this.host = requireNonNull(host);
     this.ports = unmodifiableMap(newEnumMap(ServiceType.class, ports));
+    this.id = requireNonNull(id);
     this.ketamaAuthority = ketamaAuthority;
   }
 
@@ -67,7 +75,7 @@ public class HostAndServicePorts implements KetamaRingNode {
   }
 
   public NodeIdentifier id() {
-    return new NodeIdentifier(host, port(ServiceType.MANAGER).orElse(0));
+    return id;
   }
 
   public String host() {
@@ -113,7 +121,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       temp.remove(t);
     }
 
-    return new HostAndServicePorts(this.host, temp, this.ketamaAuthority);
+    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority);
   }
 
   @Stability.Internal
@@ -121,7 +129,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     if (Objects.equals(this.ketamaAuthority, ketamaAuthority)) {
       return this;
     }
-    return new HostAndServicePorts(this.host, this.ports, ketamaAuthority);
+    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority);
   }
 
   boolean matches(SeedNode seedNode) {
@@ -153,6 +161,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     return "HostAndServicePorts{" +
       "host='" + redactSystem(host) + '\'' +
       ", ports=" + redactSystem(ports) +
+      ", id=" + redactSystem(id) +
       ", ketamaAuthority=" + redactSystem(ketamaAuthority) +
       '}';
   }

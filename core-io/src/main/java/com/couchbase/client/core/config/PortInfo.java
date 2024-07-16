@@ -83,6 +83,20 @@ public class PortInfo {
       this.nodeIdentifier = initNodeIdentifier(hostname, ports, sslPorts);
     }
 
+    PortInfo(
+        final Map<ServiceType, Integer> ports,
+        final Map<ServiceType, Integer> sslPorts,
+        final Map<String, AlternateAddress> alternateAddresses,
+        final String hostname,
+        final NodeIdentifier nodeIdentifier
+    ) {
+        this.ports = requireNonNull(ports);
+        this.sslPorts = requireNonNull(sslPorts);
+        this.alternateAddresses = requireNonNull(alternateAddresses);
+        this.hostname = requireNonNull(hostname);
+        this.nodeIdentifier = requireNonNull(nodeIdentifier);
+    }
+
     public NodeIdentifier identifier() {
       return nodeIdentifier;
     }

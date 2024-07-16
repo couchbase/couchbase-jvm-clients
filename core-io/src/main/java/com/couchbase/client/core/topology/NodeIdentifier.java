@@ -32,6 +32,11 @@ public class NodeIdentifier {
     this.port = port;
   }
 
+  @Deprecated
+  public com.couchbase.client.core.node.NodeIdentifier toLegacy() {
+    return new com.couchbase.client.core.node.NodeIdentifier(host, port);
+  }
+
   @Override
   public String toString() {
     return host + ":" + port;

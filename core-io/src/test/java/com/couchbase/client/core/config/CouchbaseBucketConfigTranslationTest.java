@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
@@ -357,6 +360,41 @@ public class CouchbaseBucketConfigTranslationTest {
     assertEquals(21002, config.nodeAtIndex(1).sslServices().get(KV));
     assertEquals("i-041c154dd0246354e.sdk.dev.cloud.couchbase.com", config.nodeAtIndex(2).hostname());
     assertEquals(11207, config.nodeAtIndex(2).sslServices().get(KV));
+  }
+
+  @Test
+  void nodeIdsComeFromInternalNetwork() {
+    String originHost = "private-endpoint.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com";
+
+    ClusterTopologyWithBucket topology = readTopology(
+      "config_7.6_external_manager_ports_not_unique_with_bucket.json",
+      NetworkSelector.autoDetect(setOf(SeedNode.create(originHost).withKvPort(11208))),
+      PortSelector.TLS,
+      originHost
+    );
+
+    assertEquals(NetworkResolution.EXTERNAL, topology.network());
+
+    CouchbaseBucketConfig config = new CouchbaseBucketConfig(topology);
+
+    List<NodeIdentifier> expectedIds = listOf(
+      new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+      new NodeIdentifier("svc-dqisea-node-002.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+      new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+      new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+      // Node 003 comes last because it's not servicing the bucket.
+      new NodeIdentifier("svc-dqisea-node-003.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091)
+    );
+
+    assertEquals(
+      expectedIds,
+      transform(config.portInfos(), PortInfo::identifier)
+    );
+
+    assertEquals(
+      expectedIds,
+      transform(config.nodes(), NodeInfo::identifier)
+    );
   }
 
   private static CouchbaseBucketConfig readConfig(final String path) {

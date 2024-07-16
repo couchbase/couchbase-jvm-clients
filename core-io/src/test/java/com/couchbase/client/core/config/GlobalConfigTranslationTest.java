@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
@@ -26,6 +28,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -70,6 +75,30 @@ class GlobalConfigTranslationTest {
     assertTrue(config.clusterCapabilities().get(ServiceType.KV).isEmpty());
   }
 
+  @Test
+  void nodeIdsComeFromInternalNetwork() {
+    String originHost = "private-endpoint.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com";
+
+    ClusterTopology topology = readTopology(
+      "config_7.6_external_manager_ports_not_unique.json",
+      NetworkSelector.autoDetect(setOf(SeedNode.create(originHost).withKvPort(11208))),
+      PortSelector.TLS,
+      originHost
+    );
+
+    GlobalConfig config = new GlobalConfig(topology);
+
+    assertEquals(
+      listOf(
+        new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-002.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-003.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091)
+      ),
+      transform(config.portInfos(), PortInfo::identifier)
+    );
+  }
 
   /**
    * Helper method to load the config.

@@ -25,18 +25,25 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNo
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 @Stability.Internal
 class ClusterTopologyParser {
+  private static final Logger log = LoggerFactory.getLogger(ClusterTopologyParser.class);
+
   private ClusterTopologyParser() {
     throw new AssertionError("not instantiable");
   }
@@ -74,7 +81,18 @@ class ClusterTopologyParser {
     // currently enforce this. If a node doesn't have an alternate address
     // for the selected network, use an "inaccessible" placeholder to preserve
     // the node indexes required by the KV partition map.
-    List<HostAndServicePorts> resolvedNodes = transform(nodes, it -> it.getOrDefault(resolvedNetwork, HostAndServicePorts.INACCESSIBLE));
+    List<HostAndServicePorts> resolvedNodes = transform(nodes, it -> {
+      HostAndServicePorts resolved = it.getOrDefault(resolvedNetwork, HostAndServicePorts.INACCESSIBLE);
+      if (resolved.inaccessible()) {
+        log.error(
+          "Cluster topology has at least one node that is inaccessible on the selected network ({}) : {}",
+          resolvedNetwork, redactSystem(it)
+        );
+      }
+      return resolved;
+    });
+
+    sanityCheck(resolvedNodes);
 
     // RELATIONSHIP BETWEEN "nodes" and "nodesEXT":
     //
@@ -113,6 +131,20 @@ class ClusterTopologyParser {
       portSelector,
       bucket
     );
+  }
+
+  private static void sanityCheck(List<HostAndServicePorts> resolvedNodes) {
+    List<NodeIdentifier> idsOfAccessibleNodes = resolvedNodes.stream()
+      .filter(it -> !it.inaccessible())
+      .map(HostAndServicePorts::id)
+      .collect(toList());
+
+    Set<NodeIdentifier> distinct = new HashSet<>(idsOfAccessibleNodes);
+    if (distinct.size() != idsOfAccessibleNodes.size()) {
+      throw new CouchbaseException(
+        "Cluster topology has nodes with non-unique IDs (host and manager port on default network: " + redactSystem(resolvedNodes)
+      );
+    }
   }
 
   /**

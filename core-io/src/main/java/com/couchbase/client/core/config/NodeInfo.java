@@ -141,14 +141,15 @@ public class NodeInfo implements KetamaRingNode {
         String hostname,
         Map<ServiceType, Integer> direct,
         Map<ServiceType, Integer> ssl,
-        @Nullable HostAndPort ketamaAuthority
+        @Nullable HostAndPort ketamaAuthority,
+        NodeIdentifier nodeIdentifier
     ) {
         this.hostname = requireNonNull(hostname);
         this.directServices = requireNonNull(direct);
         this.sslServices = requireNonNull(ssl);
         this.alternateAddresses = Collections.emptyMap();
 
-        this.nodeIdentifier = initNodeIdentifier(hostname, directServices, sslServices);
+        this.nodeIdentifier = requireNonNull(nodeIdentifier);
         this.ketamaAuthority = ketamaAuthority;
     }
 

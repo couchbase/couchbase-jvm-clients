@@ -19,6 +19,7 @@ package com.couchbase.client.core.topology;
 import com.couchbase.client.core.config.CouchbaseBucketConfigTranslationTest;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -36,7 +37,6 @@ import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -212,6 +212,31 @@ public class ClusterTopologyParserTest {
     assertEquals(
       "{0..170=[0,1], 171..341=[0,2], 342..512=[1,0], 513..682=[1,2], 683..853=[2,0], 854..1023=[2,1]}",
       bucket.partitions().toString()
+    );
+  }
+
+  @Test
+  void nodeIdsComeFromInternalNetwork() {
+    String originHost = "private-endpoint.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com";
+
+    ClusterTopology config = read(
+      "config_7.6_external_manager_ports_not_unique.json",
+      originHost,
+      PortSelector.TLS,
+      NetworkSelector.autoDetect(setOf(SeedNode.create(originHost).withKvPort(11208)))
+    );
+
+    assertEquals(NetworkResolution.EXTERNAL, config.network());
+
+    assertEquals(
+      listOf(
+        new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-002.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-003.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
+        new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091)
+      ),
+      transform(config.nodes(), HostAndServicePorts::id)
     );
   }
 

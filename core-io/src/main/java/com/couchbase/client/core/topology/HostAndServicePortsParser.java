@@ -29,7 +29,9 @@ import reactor.util.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbCollections.transformValues;
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 
@@ -52,11 +54,13 @@ class HostAndServicePortsParser {
   ) {
     Map<NetworkResolution, HostAndRawServicePorts> raw = parseIntermediate(json);
     HostAndPort ketamaAuthority = getKetamaAuthority(raw);
+    NodeIdentifier id = getId(raw);
 
     return transformValues(raw, value ->
       new HostAndServicePorts(
         value.host,
         portSelector.selectPorts(value.rawServicePorts),
+        id,
         ketamaAuthority
       )
     );
@@ -73,13 +77,50 @@ class HostAndServicePortsParser {
       return null;
     }
 
-    Map<ServiceType, Integer> nonTlsPorts = PortSelector.NON_TLS.selectPorts(defaultNodeMap.rawServicePorts);
-    Integer nonTlsKvPort = nonTlsPorts.get(ServiceType.KV);
+    Integer nonTlsKvPort = getPort(defaultNodeMap, PortSelector.NON_TLS, ServiceType.KV);
     if (nonTlsKvPort == null) {
       return null;
     }
 
     return new HostAndPort(defaultNodeMap.host, nonTlsKvPort);
+  }
+
+  /**
+   * Returns an ID consisting of the host and manager port on the default network.
+   * <p>
+   * Depending on which ports the server advertises, it might be a TLS or non-TLS port.
+   * This must not matter though, since this is just for uniquely identifying nodes,
+   * and not for making network connections.
+   *
+   * @throws CouchbaseException If the default network has no manager ports for the node
+   */
+  private static NodeIdentifier getId(
+    Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo
+  ) {
+    HostAndRawServicePorts defaultNodeMap = networkToNodeInfo.get(NetworkResolution.DEFAULT);
+    if (defaultNodeMap == null) {
+      throw new CouchbaseException("Network map is missing entry for default network.");
+    }
+
+    Integer idPort = defaultIfNull(
+      getPort(defaultNodeMap, PortSelector.NON_TLS, ServiceType.MANAGER),
+      () -> getPort(defaultNodeMap, PortSelector.TLS, ServiceType.MANAGER)
+    );
+
+    if (idPort == null) {
+      throw new CouchbaseException(
+        "Cluster topology has no manager port on the default network for node: " +
+          redactSystem(networkToNodeInfo)
+      );
+    }
+
+    return new NodeIdentifier(defaultNodeMap.host, idPort);
+  }
+
+  @Nullable
+  private static Integer getPort(HostAndRawServicePorts nodeMap, PortSelector portSelector, ServiceType serviceType) {
+    Map<ServiceType, Integer> ports = portSelector.selectPorts(nodeMap.rawServicePorts);
+    return ports.get(serviceType);
   }
 
   private static Map<NetworkResolution, HostAndRawServicePorts> parseIntermediate(ObjectNode json) {

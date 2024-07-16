@@ -52,7 +52,8 @@ public class LegacyConfigHelper {
         nonTlsPorts(topology, it),
         tlsPorts(topology, it),
         emptyMap(), // The host is always accurate -- there is never an alternate.
-        it.host()
+        it.host(),
+        it.id().toLegacy()
       )
     );
   }
@@ -107,7 +108,8 @@ public class LegacyConfigHelper {
         it.host(),
         nonTlsPorts(topology, it),
         tlsPorts(topology, it),
-        it.ketamaAuthority()
+        it.ketamaAuthority(),
+        it.id().toLegacy()
       ));
   }
 
