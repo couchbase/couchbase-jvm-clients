@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.client.test.Util.readResource;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -103,18 +102,12 @@ class CoreTest {
         configs.tryEmitComplete().orThrow();
         return Mono.empty();
       });
-
-      configs.tryEmitNext(clusterConfig).orThrow();
     }
 
     public void accept(BucketConfig bucketConfig) throws InterruptedException {
       clusterConfig.setBucketConfig(bucketConfig);
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
-
-      // A sleep after emitting the config prevents it intermittently
-      // emitting the config twice, for reasons that are unclear.
-      MILLISECONDS.sleep(500);
     }
   }
 
@@ -123,7 +116,6 @@ class CoreTest {
    * the difference in services and nodes is enabled.
    */
   @Test
-  @SuppressWarnings({"unchecked"})
   void addNodesAndServicesOnNewConfig() throws Exception {
     MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
@@ -222,7 +214,6 @@ class CoreTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void addServicesOnNewConfig() throws Exception {
     MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
@@ -307,7 +298,6 @@ class CoreTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void removeNodesAndServicesOnNewConfig() throws Exception {
     MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
@@ -377,7 +367,6 @@ class CoreTest {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   void removesNodeIfNotPresentInConfigAnymore() throws Exception {
     MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
@@ -450,7 +439,6 @@ class CoreTest {
    * the node is identified by a tuple of hostname and manager port, and this should work.
    */
   @Test
-  @SuppressWarnings("unchecked")
   void addsSecondNodeIfBothSameHostname() throws Exception {
     MockConfigProvider mockConfigProvider = new MockConfigProvider();
 
