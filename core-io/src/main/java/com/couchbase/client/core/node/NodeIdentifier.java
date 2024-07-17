@@ -15,55 +15,102 @@
  */
 package com.couchbase.client.core.node;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.HostAndPort;
+import reactor.util.annotation.Nullable;
+
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static java.util.Objects.requireNonNull;
 
 /**
- * Identifies a node uniquely in the cluster.
- *
- * <p>If you ask yourself: why is the hostname not enough? Well, let me tell you that
- * it is possible to run multiple nodes on the same host if you compile it from source and know how. So the
- * hostname alone is not enough, we also need to know the cluster manager port to properly identify each
- * node.</p>
+ * Uniquely identifies a node within the cluster, using the node's
+ * host and manager port from the default network.
  */
 public class NodeIdentifier {
 
-  private final String address;
-  private final int managerPort;
+  private final String canonicalHost;
+  private final int canonicalManagerPort;
 
-  public NodeIdentifier(final String address, final int managerPort) {
-    this.address = address;
-    this.managerPort = managerPort;
+  // Nullable only when created by  a
+  @Nullable private final String hostForNetworkConnections;
+
+  @Deprecated
+  public NodeIdentifier(
+    final String canonicalHost,
+    final int canonicalManagerPort
+  ) {
+    this.canonicalHost = canonicalHost;
+    this.canonicalManagerPort = canonicalManagerPort;
+    this.hostForNetworkConnections = null;
   }
 
+  @Stability.Internal
+  public static NodeIdentifier forBootstrap(String bootstrapHost, int bootstrapPort) {
+    // This address isn't really "canonical", since it may be an "external" address.
+    // If it's an external address, the node created from this identifier will be discarded
+    // when the config with the _real_ canonical addresses is applied.
+    return new NodeIdentifier(new HostAndPort(bootstrapHost, bootstrapPort), bootstrapHost);
+  }
+
+  public NodeIdentifier(
+    HostAndPort canonicalAddress,
+    String hostForNetworkConnections
+  ) {
+    this.canonicalHost = canonicalAddress.host();
+    this.canonicalManagerPort = canonicalAddress.port();
+    this.hostForNetworkConnections = requireNonNull(hostForNetworkConnections);
+  }
+
+  /**
+   * Returns this node's host on the selected network.
+   * <p>
+   * If the default network was selected, this is the same as the canonical host.
+   *
+   * @throws NoSuchElementException if this info is not available
+   */
+  public String hostForNetworkConnections() throws NoSuchElementException {
+    if (hostForNetworkConnections == null) {
+      throw new NoSuchElementException(
+        "This NodeIdentifier (" + this + ") doesn't have the host to use for network connections." +
+          " It might have been created by a legacy config parser or some other component that did not specify it."
+      );
+    }
+    return hostForNetworkConnections;
+  }
+
+  /**
+   * Returns the node's host on the default network.
+   */
   public String address() {
-    return address;
+    return canonicalHost;
   }
 
   public int managerPort() {
-    return managerPort;
+    return canonicalManagerPort;
   }
 
   @Override
   public String toString() {
     return "NodeIdentifier{" +
-      "address=" + redactSystem(address) +
-      ", managerPort=" + redactSystem(managerPort) +
-      '}';
+      "canonicalAddress=" + redactSystem(canonicalHost + ":" + canonicalManagerPort) +
+      ", hostForNetworkConnections=" + hostForNetworkConnections +
+      "}";
   }
 
   @Override
-  public boolean equals(final Object o) {
+  public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     NodeIdentifier that = (NodeIdentifier) o;
-    return managerPort == that.managerPort && Objects.equals(address, that.address);
+    return canonicalManagerPort == that.canonicalManagerPort && Objects.equals(canonicalHost, that.canonicalHost);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(address, managerPort);
+    return Objects.hash(canonicalHost, canonicalManagerPort);
   }
 
 }

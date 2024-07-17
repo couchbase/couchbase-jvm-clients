@@ -27,6 +27,7 @@ import com.couchbase.client.core.topology.TopologyParser;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
@@ -88,6 +89,7 @@ class GlobalConfigTranslationTest {
 
     GlobalConfig config = new GlobalConfig(topology);
 
+    List<NodeIdentifier> nodeIds = transform(config.portInfos(), PortInfo::identifier);
     assertEquals(
       listOf(
         new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
@@ -96,7 +98,12 @@ class GlobalConfigTranslationTest {
         new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
         new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091)
       ),
-      transform(config.portInfos(), PortInfo::identifier)
+      nodeIds
+    );
+
+    assertEquals(
+      listOf(originHost, originHost, originHost, originHost, originHost),
+      transform(nodeIds, NodeIdentifier::hostForNetworkConnections)
     );
   }
 

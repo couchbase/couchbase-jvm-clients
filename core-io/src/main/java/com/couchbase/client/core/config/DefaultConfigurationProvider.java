@@ -821,7 +821,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         .take(Math.min(index, seedNodes.size()))
         .last()
         .flatMap(seed -> {
-          NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+          NodeIdentifier identifier = NodeIdentifier.forBootstrap(
+            seed.address(),
+            seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT)
+          );
 
           final int mappedKvPort = seed.kvPort().orElse(kvPort);
           final int mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
@@ -891,7 +894,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             return Mono.empty();
           }
 
-          NodeIdentifier identifier = new NodeIdentifier(seed.address(), seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT));
+          NodeIdentifier identifier = NodeIdentifier.forBootstrap(
+            seed.address(),
+            seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT)
+          );
           return globalLoader
             .load(identifier, seed.kvPort().orElse(kvPort))
             .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(

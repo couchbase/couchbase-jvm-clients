@@ -228,15 +228,25 @@ public class ClusterTopologyParserTest {
 
     assertEquals(NetworkResolution.EXTERNAL, config.network());
 
+    // This config has the same external host for all nodes
+    String externalHost = originHost;
+
+    List<NodeIdentifier> nodeIds = transform(config.nodes(), HostAndServicePorts::id);
     assertEquals(
       listOf(
-        new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
-        new NodeIdentifier("svc-dqisea-node-002.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
-        new NodeIdentifier("svc-dqisea-node-003.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
-        new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091),
-        new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091)
+        new NodeIdentifier("svc-dqisea-node-001.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091, externalHost),
+        new NodeIdentifier("svc-dqisea-node-002.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091, externalHost),
+        new NodeIdentifier("svc-dqisea-node-003.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091, externalHost),
+        new NodeIdentifier("svc-dqisea-node-004.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091, externalHost),
+        new NodeIdentifier("svc-dqisea-node-005.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com", 8091, externalHost)
       ),
-      transform(config.nodes(), HostAndServicePorts::id)
+      nodeIds
+    );
+
+    // external host is not part of equals, so:
+    assertEquals(
+      listOf(externalHost, externalHost, externalHost, externalHost, externalHost),
+      transform(nodeIds, NodeIdentifier::hostForNetworkConnections)
     );
   }
 

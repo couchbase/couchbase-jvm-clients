@@ -17,6 +17,7 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.HostAndPort;
 
 import java.util.Objects;
 
@@ -24,38 +25,45 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class NodeIdentifier {
-  private final String host;
-  private final int port;
+  private final HostAndPort canonical; // manager host:port on default network
+  private final String hostForNetworkConnections;
 
-  public NodeIdentifier(String host, int port) {
-    this.host = requireNonNull(host);
-    this.port = port;
+  public NodeIdentifier(String host, int port, String hostForNetworkConnections) {
+    this(new HostAndPort(host, port), hostForNetworkConnections);
+  }
+
+  public NodeIdentifier(HostAndPort canonical, String hostForNetworkConnections) {
+    this.canonical = requireNonNull(canonical);
+    this.hostForNetworkConnections = requireNonNull(hostForNetworkConnections);
   }
 
   @Deprecated
   public com.couchbase.client.core.node.NodeIdentifier toLegacy() {
-    return new com.couchbase.client.core.node.NodeIdentifier(host, port);
+    return new com.couchbase.client.core.node.NodeIdentifier(canonical, hostForNetworkConnections);
   }
 
-  @Override
-  public String toString() {
-    return host + ":" + port;
+  public String hostForNetworkConnections() {
+    return hostForNetworkConnections;
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
     NodeIdentifier that = (NodeIdentifier) o;
-    return port == that.port && host.equals(that.host);
+    return canonical.equals(that.canonical);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(host, port);
+    return Objects.hash(canonical);
+  }
+
+  @Override
+  public String toString() {
+    return "NodeID{" +
+      "canonical=" + canonical +
+      ", hostForNetworkConnections='" + hostForNetworkConnections + '\'' +
+      '}';
   }
 }

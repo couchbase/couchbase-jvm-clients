@@ -108,7 +108,7 @@ class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
     GlobalLoader loader = new GlobalLoader(core);
 
     ProposedGlobalConfigContext globalConfigContext = loader.load(
-      new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
+      NodeIdentifier.forBootstrap(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV)
     ).block();
 

@@ -49,7 +49,7 @@ public class HostAndServicePorts implements KetamaRingNode {
   public static final HostAndServicePorts INACCESSIBLE = new HostAndServicePorts(
     "<inaccessible>",
     emptyMap(),
-    new NodeIdentifier("<inaccessible>", 0),
+    new NodeIdentifier("<inaccessible>", 0, "<inaccessible>"),
     null
   );
 

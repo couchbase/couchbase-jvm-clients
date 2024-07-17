@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config.loader;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.cnc.events.core.ReconfigurationCompletedEvent;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.node.NodeIdentifier;
@@ -67,7 +66,7 @@ public class GlobalLoaderIntegrationTest extends CoreIntegrationTest {
     logger.info("Proposing config");
 
     ProposedGlobalConfigContext globalConfigContext = loader.load(
-      new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
+      NodeIdentifier.forBootstrap(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV)
     ).block();
 

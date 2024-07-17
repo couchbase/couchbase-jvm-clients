@@ -54,13 +54,12 @@ class HostAndServicePortsParser {
   ) {
     Map<NetworkResolution, HostAndRawServicePorts> raw = parseIntermediate(json);
     HostAndPort ketamaAuthority = getKetamaAuthority(raw);
-    NodeIdentifier id = getId(raw);
 
     return transformValues(raw, value ->
       new HostAndServicePorts(
         value.host,
         portSelector.selectPorts(value.rawServicePorts),
-        id,
+        getId(value.host, raw),
         ketamaAuthority
       )
     );
@@ -95,6 +94,7 @@ class HostAndServicePortsParser {
    * @throws CouchbaseException If the default network has no manager ports for the node
    */
   private static NodeIdentifier getId(
+    String hostForNetworkConnections,
     Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo
   ) {
     HostAndRawServicePorts defaultNodeMap = networkToNodeInfo.get(NetworkResolution.DEFAULT);
@@ -114,7 +114,7 @@ class HostAndServicePortsParser {
       );
     }
 
-    return new NodeIdentifier(defaultNodeMap.host, idPort);
+    return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections);
   }
 
   @Nullable

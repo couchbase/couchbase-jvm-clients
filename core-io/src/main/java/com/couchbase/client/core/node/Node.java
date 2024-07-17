@@ -235,7 +235,7 @@ public class Node implements Stateful<NodeState> {
       }
 
       HostAndPort newServiceAddress = new HostAndPort(
-        identifier.address(),
+        identifier.hostForNetworkConnections(),
         port
       );
 

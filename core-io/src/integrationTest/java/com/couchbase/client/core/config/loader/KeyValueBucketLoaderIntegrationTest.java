@@ -62,7 +62,7 @@ class KeyValueBucketLoaderIntegrationTest extends CoreIntegrationTest {
     configWaitHelper.await();
     KeyValueBucketLoader loader = new KeyValueBucketLoader(core);
     ProposedBucketConfigContext loaded = loader.load(
-      new NodeIdentifier(config.hostname(), config.ports().get(Services.MANAGER)),
+      NodeIdentifier.forBootstrap(config.hostname(), config.ports().get(Services.MANAGER)),
       config.ports().get(Services.KV),
       config().bucketname()
     ).block();
