@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreat
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.CouchbaseBucketTopology;
@@ -58,7 +59,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
     private final int numberOfPartitions;
 
     private final List<NodeInfo> partitionHosts;
-    private final Set<String> hostsWithPrimaryPartitions;
+    private final Set<NodeIdentifier> hostsWithPrimaryPartitions;
 
     private final List<Partition> partitions;
     private final List<Partition> forwardPartitions;
@@ -152,7 +153,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
 
         this.hostsWithPrimaryPartitions = new HashSet<>();
         bucket.partitions().values().forEach(partitionTopology ->
-          partitionTopology.active().ifPresent(it -> this.hostsWithPrimaryPartitions.add(it.host()))
+          partitionTopology.active().ifPresent(it -> this.hostsWithPrimaryPartitions.add(it.id().toLegacy()))
         );
     }
 
@@ -179,13 +180,15 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
      * @param partitions the partitions.
      * @return a set containing the addresses of nodes with primary partitions.
      */
-    private static Set<String> buildNodesWithPrimaryPartitions(final List<NodeInfo> nodeInfos,
-                                                               final List<Partition> partitions) {
-        Set<String> nodes = new HashSet<>(nodeInfos.size());
+    private static Set<NodeIdentifier> buildNodesWithPrimaryPartitions(
+        final List<NodeInfo> nodeInfos,
+        final List<Partition> partitions
+    ) {
+        Set<NodeIdentifier> nodes = new HashSet<>(nodeInfos.size());
         for (Partition partition : partitions) {
             int index = partition.active();
             if (index >= 0) {
-                nodes.add(nodeInfos.get(index).hostname());
+                nodes.add(nodeInfos.get(index).identifier());
             }
         }
         return nodes;
@@ -260,8 +263,17 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
         return tainted;
     }
 
+    /**
+     * @deprecated In favor of {@link #hasPrimaryPartitionsOnNode(NodeIdentifier)}
+     * which handles the case where node hosts are not unique within the cluster.
+     */
+    @Deprecated
     public boolean hasPrimaryPartitionsOnNode(final String hostname) {
-        return hostsWithPrimaryPartitions.contains(hostname);
+        return hostsWithPrimaryPartitions.stream().anyMatch(it -> it.address().equals(hostname));
+    }
+
+    public boolean hasPrimaryPartitionsOnNode(final NodeIdentifier nodeId) {
+        return hostsWithPrimaryPartitions.contains(nodeId);
     }
 
     public short nodeIndexForActive(int partition, boolean useFastForward) {

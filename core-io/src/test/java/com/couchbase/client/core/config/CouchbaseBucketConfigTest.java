@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.env.NetworkResolution;
+import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ class CouchbaseBucketConfigTest {
     void shouldHavePrimaryPartitionsOnNode() {
         CouchbaseBucketConfig config = readConfig("config_with_mixed_partitions.json");
 
+        assertTrue(config.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.4", 8091)));
+        assertFalse(config.hasPrimaryPartitionsOnNode(new NodeIdentifier("2.3.4.5", 8091)));
         assertTrue(config.hasPrimaryPartitionsOnNode("1.2.3.4"));
         assertFalse(config.hasPrimaryPartitionsOnNode("2.3.4.5"));
         assertEquals(BucketNodeLocator.VBUCKET, config.locator());

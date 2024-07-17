@@ -36,8 +36,8 @@ class ViewLocatorTest {
     CouchbaseBucketConfig bucketConfig = mock(CouchbaseBucketConfig.class);
     ClusterConfig config = mock(ClusterConfig.class);
     when(config.bucketConfig("bucket")).thenReturn(bucketConfig);
-    when(bucketConfig.hasPrimaryPartitionsOnNode("1.2.3.4")).thenReturn(true);
-    when(bucketConfig.hasPrimaryPartitionsOnNode("1.2.3.5")).thenReturn(false);
+    when(bucketConfig.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.4", 1234))).thenReturn(true);
+    when(bucketConfig.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.5", 1234))).thenReturn(false);
 
     Node node1 = mock(Node.class);
     when(node1.identifier()).thenReturn(new NodeIdentifier("1.2.3.4", 1234));

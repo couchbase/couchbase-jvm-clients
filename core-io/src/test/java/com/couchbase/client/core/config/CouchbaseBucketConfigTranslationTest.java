@@ -70,6 +70,9 @@ public class CouchbaseBucketConfigTranslationTest {
   void shouldHavePrimaryPartitionsOnNode() {
     CouchbaseBucketConfig config = readConfig("config_7.6.0_2kv_but_only_1_has_active_partitions.json");
 
+    assertTrue(config.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.4", 8091)));
+    assertFalse(config.hasPrimaryPartitionsOnNode(new NodeIdentifier("2.3.4.5", 8091)));
+
     assertTrue(config.hasPrimaryPartitionsOnNode("1.2.3.4"));
     assertFalse(config.hasPrimaryPartitionsOnNode("2.3.4.5"));
     assertEquals(BucketNodeLocator.VBUCKET, config.locator());

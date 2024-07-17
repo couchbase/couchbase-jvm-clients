@@ -68,7 +68,7 @@ public class ViewLocator extends RoundRobinLocator {
       BucketConfig bucketConfig = config.bucketConfig(bucket);
       if (bucketConfig instanceof CouchbaseBucketConfig) {
         return ((CouchbaseBucketConfig) bucketConfig)
-            .hasPrimaryPartitionsOnNode(node.identifier().address());
+            .hasPrimaryPartitionsOnNode(node.identifier());
       }
     }
     return false;
