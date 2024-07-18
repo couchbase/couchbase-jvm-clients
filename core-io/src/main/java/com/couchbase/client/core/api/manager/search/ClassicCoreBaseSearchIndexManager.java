@@ -166,7 +166,7 @@ public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchInd
     Duration timeout = options.timeout().orElse(core.environment().timeoutConfig().managementTimeout());
 
     return initialCheck(timeout)
-            .thenApply(ignore -> vectorIndexCheck(core, index, timeout))
+            .thenCompose(ignore -> vectorIndexCheck(core, index, timeout))
             .thenCompose(ignore -> searchHttpClient.put(path(indexPath(index.name())), options)
                     .trace(TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX)
                     .json(index.toJson().getBytes(UTF_8))
