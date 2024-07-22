@@ -53,7 +53,7 @@ case class DisjunctionQuery(
     * @return a copy of this, for chaining
     */
   def or(queries: SearchQuery*): DisjunctionQuery = {
-    copy(queries ++ queries.toSeq)
+    copy(queries = this.queries ++ queries.toSeq)
   }
 
   override private[scala] def toCore =
