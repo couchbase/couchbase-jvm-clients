@@ -94,7 +94,7 @@
         <dependency>
             <groupId>dnsjava</groupId>
             <artifactId>dnsjava</artifactId>
-            <version>3.5.2</version>
+            <version>3.6.0</version>
             <exclusions>
                 <!-- Exclude SLF4J; we'll declare it separately as a dependency of core-io -->
                 <exclusion>
