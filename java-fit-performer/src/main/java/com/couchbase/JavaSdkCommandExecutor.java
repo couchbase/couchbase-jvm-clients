@@ -460,7 +460,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
     // [if:3.6.0]
     if (slc.hasSearchV2()) {
-      return handleSearchBlocking(connection.cluster(), scope, spans, slc.getSearchV2());
+      return handleSearchBlocking(connection.cluster(), scope, spans, slc.getSearchV2(), op);
     }
     // [end]
 
@@ -560,7 +560,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
     // [if:3.6.0]
     if (clc.hasSearchV2()) {
-      return handleSearchBlocking(connection.cluster(), null, spans, clc.getSearchV2());
+      return handleSearchBlocking(connection.cluster(), null, spans, clc.getSearchV2(), op);
     }
     // [end]
 
