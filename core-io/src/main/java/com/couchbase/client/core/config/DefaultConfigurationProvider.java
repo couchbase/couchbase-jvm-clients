@@ -63,6 +63,9 @@ import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.NetworkSelector;
+import com.couchbase.client.core.topology.PortSelector;
+import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
@@ -94,6 +97,7 @@ import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionSt
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * The standard {@link ConfigurationProvider} that is used by default.
@@ -137,6 +141,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private final Core core;
   private final EventBus eventBus;
+  private final TopologyParser topologyParser;
 
   private final KeyValueBucketLoader keyValueLoader;
   private final ClusterManagerBucketLoader clusterManagerLoader;
@@ -191,6 +196,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     // and might not be KV nodes, or might have incomplete port information.
     this.currentSeedNodes = new AtomicReference<>(copyToUnmodifiableSet(seedNodes));
 
+    this.topologyParser = createTopologyParser(core.environment(), seedNodes);
+
     keyValueLoader = new KeyValueBucketLoader(core);
     clusterManagerLoader = new ClusterManagerBucketLoader(core);
     keyValueRefresher = new KeyValueBucketRefresher(this, core);
@@ -200,6 +207,39 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     // Start with pushing the current config into the sink for all subscribers currently attached.
     configsSink.emitNext(currentConfig, emitFailureHandler());
+  }
+
+  private static TopologyParser createTopologyParser(
+    CoreEnvironment env,
+    Set<SeedNode> seedNodes
+  ) {
+    boolean tls = env.securityConfig().tlsEnabled();
+    return new TopologyParser(
+      NetworkSelector.create(
+        env.ioConfig().networkResolution(),
+        makeDefaultPortsExplicitForNetworkDetection(seedNodes, tls)
+      ),
+      tls ? PortSelector.TLS : PortSelector.NON_TLS,
+      env.ioConfig().memcachedHashingStrategy()
+    );
+  }
+
+  private static Set<SeedNode> makeDefaultPortsExplicitForNetworkDetection(
+    Set<SeedNode> seedNodes,
+    boolean tls
+  ) {
+    return seedNodes.stream()
+      .map(it -> {
+        if (it.kvPort().isPresent() || it.clusterManagerPort().isPresent()) {
+          // User specified at least one port, which is sufficient for network detection.
+          return it;
+        }
+        // User didn't specify any ports, so assume defaults.
+        return it
+          .withKvPort(tls ? 11207 : 11210)
+          .withManagerPort(tls ? 18091 : 8091);
+      })
+      .collect(toSet());
   }
 
   @Override
@@ -326,7 +366,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        ClusterTopologyWithBucket cluster = core.parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
+        ClusterTopologyWithBucket cluster = topologyParser.parse(ctx.config(), ctx.origin()).requireBucket();
         BucketConfig config = LegacyConfigHelper.toLegacyBucketConfig(cluster);
         checkAndApplyConfig(config, ctx.forcesOverride());
 
@@ -366,7 +406,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        ClusterTopology topology = core.parseClusterTopology(ctx.config(), ctx.origin());
+        ClusterTopology topology = topologyParser.parse(ctx.config(), ctx.origin());
         GlobalConfig config = new GlobalConfig(topology);
         checkAndApplyConfig(config, ctx.forcesOverride());
 

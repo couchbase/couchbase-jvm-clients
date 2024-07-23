@@ -22,10 +22,8 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEvent;
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
-import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -33,10 +31,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
-import com.couchbase.client.core.topology.NetworkSelector;
-import com.couchbase.client.core.topology.PortSelector;
-import com.couchbase.client.core.topology.TopologyParser;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,8 +43,6 @@ import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -66,14 +58,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/**
- * Verifies the functionality of the {@link DefaultConfigurationProvider}.
- */
 class DefaultConfigurationProviderTest {
 
   private static CoreEnvironment ENVIRONMENT;
@@ -98,9 +86,7 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void currentConfigIsReplayedToLateSubscriber() {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
     provider.configs().blockFirst(Duration.ofSeconds(10));
@@ -108,9 +94,7 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void canProposeNewBucketConfig() {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
@@ -141,8 +125,7 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void ignoreProposedConfigWithLowerOrEqualRev() {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
@@ -171,8 +154,7 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void canUpdateConfigWithNewRev() {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
@@ -206,8 +188,7 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void ignoreProposedConfigOnceShutdown() {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
@@ -246,8 +227,7 @@ class DefaultConfigurationProviderTest {
    */
   @Test
   void updatesSeedNodesFromGlobalConfig() {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
 
@@ -266,22 +246,13 @@ class DefaultConfigurationProviderTest {
     }
   }
 
-  private static Core mockCoreForParsingConfig(Set<SeedNode> seedNodes) {
-    return mockCoreForParsingConfig(seedNodes, NetworkResolution.AUTO);
-  }
-
-  private static Core mockCoreForParsingConfig(Set<SeedNode> seedNodes, NetworkResolution network) {
-    TopologyParser parser = new TopologyParser(
-      NetworkSelector.create(network, seedNodes),
-      PortSelector.NON_TLS,
-      StandardMemcachedHashingStrategy.INSTANCE
-    );
+  static Core mockCore(CoreEnvironment env) {
+    CoreContext ctx = mock(CoreContext.class);
+    when(ctx.environment()).thenReturn(env);
 
     Core core = mock(Core.class);
-    when(core.parseClusterTopology(anyString(), anyString()))
-      .thenAnswer(invocation ->
-        parser.parse((String) invocation.getArgument(0), invocation.getArgument(1))
-      );
+    when(core.context()).thenReturn(ctx);
+    when(core.environment()).thenReturn(env);
     return core;
   }
 
@@ -289,11 +260,7 @@ class DefaultConfigurationProviderTest {
   void externalModeSelectedIfAuto() {
     Set<SeedNode> seedNodes = setOf(SeedNode.create("192.168.132.234").withManagerPort(32790));
 
-    Core core = mockCoreForParsingConfig(seedNodes);
-    CoreEnvironment environment = CoreEnvironment.create();
-
-    CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(ENVIRONMENT);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
@@ -315,19 +282,16 @@ class DefaultConfigurationProviderTest {
         .stream().map(NodeInfo::hostname)
         .collect(toSet())
     );
-
-    environment.shutdown();
   }
 
   @Test
   void forceDefaultModeIfDefault() {
-    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("192.168.132.234").withManagerPort(32790)));
+    Set<SeedNode> seedNodes = setOf(SeedNode.create("192.168.132.234").withManagerPort(32790));
 
-    Core core = mockCoreForParsingConfig(seedNodes, NetworkResolution.DEFAULT);
-    CoreEnvironment environment = CoreEnvironment.create();
-
-    CoreContext ctx = new CoreContext(core, 1, environment, PasswordAuthenticator.create("user", "pw"));
-    when(core.context()).thenReturn(ctx);
+    CoreEnvironment environment = CoreEnvironment.builder()
+      .ioConfig(it -> it.networkResolution(NetworkResolution.DEFAULT))
+      .build();
+    Core core = mockCore(environment);
 
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
 
@@ -361,11 +325,9 @@ class DefaultConfigurationProviderTest {
    */
   @Test
   void handlesMultipleBucketOpenInProgress() throws Exception {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
-    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
+    Core core = mockCore(ENVIRONMENT);
 
+    Set<SeedNode> seedNodes = setOf(SeedNode.create("127.0.0.1"));
 
     Sinks.One<ProposedBucketConfigContext> bucket1Barrier = Sinks.one();
     Sinks.One<ProposedBucketConfigContext> bucket2Barrier = Sinks.one();
@@ -418,10 +380,9 @@ class DefaultConfigurationProviderTest {
    */
   @Test
   void ignoresMultipleCollectionIdRefreshAttempts() {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
-    Set<SeedNode> seedNodes = new HashSet<>(Collections.singletonList(SeedNode.create("127.0.0.1")));
+    Core core = mockCore(ENVIRONMENT);
+
+    Set<SeedNode> seedNodes = setOf(SeedNode.create("127.0.0.1"));
 
     List<GetCollectionIdRequest> capturedRequests = new ArrayList<>();
     doAnswer(invocation -> {
@@ -482,8 +443,7 @@ class DefaultConfigurationProviderTest {
   })
   void applyBucketConfigWithRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch,
                                        String newConfigFile, long newRev, long newEpoch) {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
     String bucket = "travel-sample";
 
@@ -514,8 +474,7 @@ class DefaultConfigurationProviderTest {
     "config_lower_rev_higher_epoch,1,2,config_higher_rev_lower_epoch",
   })
   void ignoresBucketConfigWithOlderRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch, String newConfigFile) {
-    Core core = mockCoreForParsingConfig(SeedNode.LOCALHOST);
-    when(core.context()).thenReturn(new CoreContext(core, 1, ENVIRONMENT, mock(Authenticator.class)));
+    Core core = mockCore(ENVIRONMENT);
     DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
     String bucket = "travel-sample";
 

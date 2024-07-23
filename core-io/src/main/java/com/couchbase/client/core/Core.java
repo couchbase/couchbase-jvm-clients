@@ -93,10 +93,6 @@ import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.topology.ClusterTopology;
-import com.couchbase.client.core.topology.NetworkSelector;
-import com.couchbase.client.core.topology.PortSelector;
-import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
@@ -130,7 +126,6 @@ import java.util.stream.Stream;
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * The main entry point into the core layer.
@@ -231,8 +226,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final Set<SeedNode> seedNodes;
 
-  private final TopologyParser topologyParser;
-
   private final List<BeforeSendRequestCallback> beforeSendRequestCallbacks;
 
   /**
@@ -288,15 +281,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     this.connectionString = requireNonNull(connectionString);
     this.seedNodes = seedNodesFromConnectionString(connectionString, environment);
-    boolean tls = environment.securityConfig().tlsEnabled();
-    this.topologyParser = new TopologyParser(
-      NetworkSelector.create(
-        environment.ioConfig().networkResolution(),
-        makeDefaultPortsExplicitForNetworkDetection(this.seedNodes, tls)
-      ),
-      tls ? PortSelector.TLS : PortSelector.NON_TLS,
-      environment.ioConfig().memcachedHashingStrategy()
-    );
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -339,26 +323,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.transactionsContext = new CoreTransactionsContext(environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
-  }
-
-  private static Set<SeedNode> makeDefaultPortsExplicitForNetworkDetection(Set<SeedNode> seedNodes, boolean tls) {
-    return seedNodes.stream()
-      .map(it -> {
-        if (it.kvPort().isPresent() || it.clusterManagerPort().isPresent()) {
-          // User specified at least one port, which is sufficient for network detection.
-          return it;
-        }
-        // User didn't specify any ports, so assume defaults.
-        return it
-            .withKvPort(tls ? 11207 : 11210)
-            .withManagerPort(tls ? 18091 : 8091);
-      })
-      .collect(toSet());
-  }
-
-  @Stability.Internal
-  public ClusterTopology parseClusterTopology(String clusterConfig, String originHost) {
-    return topologyParser.parse(clusterConfig, originHost);
   }
 
   private static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final CoreEnvironment env) {

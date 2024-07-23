@@ -17,11 +17,8 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.SimpleEventBus;
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
@@ -35,15 +32,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.config.DefaultConfigurationProviderTest.mockCore;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Covers DNS SRV-specific tests for the {@link DefaultConfigurationProvider}.
@@ -71,9 +66,7 @@ class DefaultConfigurationProviderDnsSrvTest {
 
   @Test
   void performsDnsSrvLookupOnSignal() {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, environment, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(environment);
 
     final AtomicBoolean called = new AtomicBoolean();
     ConfigurationProvider provider = new DefaultConfigurationProvider(
@@ -94,9 +87,7 @@ class DefaultConfigurationProviderDnsSrvTest {
 
   @Test
   void respectsMinDnsLookupInterval() throws Exception {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, environment, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(environment);
 
     final AtomicInteger numCalled = new AtomicInteger();
     ConfigurationProvider provider = new DefaultConfigurationProvider(
@@ -120,9 +111,7 @@ class DefaultConfigurationProviderDnsSrvTest {
 
   @Test
   void ignoresSignalWithIneligibleConnectionString() throws Exception {
-    Core core = mock(Core.class);
-    CoreContext ctx = new CoreContext(core, 1, environment, mock(Authenticator.class));
-    when(core.context()).thenReturn(ctx);
+    Core core = mockCore(environment);
 
     final AtomicBoolean called = new AtomicBoolean();
     Set<SeedNode> seedNodes = setOf(SeedNode.create("1.2.3.4")); // DNS SRV requires hostname, not IP literal
@@ -146,9 +135,7 @@ class DefaultConfigurationProviderDnsSrvTest {
       .build();
 
     try {
-      Core core = mock(Core.class);
-      CoreContext ctx = new CoreContext(core, 1, environment, mock(Authenticator.class));
-      when(core.context()).thenReturn(ctx);
+      Core core = mockCore(environment);
 
       final AtomicBoolean called = new AtomicBoolean();
       ConfigurationProvider provider = new DefaultConfigurationProvider(
