@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>core-io</artifactId>
-    <version>2.7.2-SNAPSHOT</version><!--REL-->
+    <version>3.7.2-SNAPSHOT</version><!--REL-->
 
     <!-- Ideally, this would be like java-client and not use packaging-bundle -->
     <!-- But I haven't figured out how to run the felix plugin *after* the shading has been done, then update the MANIFEST.MF -->
