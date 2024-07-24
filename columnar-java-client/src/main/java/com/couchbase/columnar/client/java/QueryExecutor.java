@@ -210,7 +210,7 @@ class QueryExecutor {
 
     CoreContext ctx = core.context();
     AnalyticsRequest request = new AnalyticsRequest(timeout, ctx, columnarRetryStrategy, ctx.authenticator(),
-      queryBytes, numericPriority, opts.readonly(), clientContextId, statement, span, null, null, false
+      queryBytes, numericPriority, opts.readonly(), clientContextId, statement, span, null, null, false, 1
     );
     request.context().clientContext(opts.clientContext());
     return request;

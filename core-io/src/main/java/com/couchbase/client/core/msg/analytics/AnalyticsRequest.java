@@ -38,11 +38,13 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static com.couchbase.client.core.util.CbCollections.listOf;
 
 public class AnalyticsRequest
   extends BaseRequest<AnalyticsResponse>
@@ -50,7 +52,11 @@ public class AnalyticsRequest
 
   public static final int NO_PRIORITY = 0;
 
-  private static final String uri = "/analytics/service";
+  private static final List<String> httpPathsByVersion = listOf(
+    "/analytics/service", // v0
+    "/api/v1/request"
+  );
+
   private static final HttpMethod httpMethod = HttpMethod.POST;
 
   private final byte[] query;
@@ -60,6 +66,7 @@ public class AnalyticsRequest
   private final String statement;
   private final String bucket;
   private final String scope;
+  private final String httpPath;
 
   private final Authenticator authenticator;
 
@@ -74,7 +81,7 @@ public class AnalyticsRequest
                           final boolean idempotent, final String contextId, final String statement,
                           final RequestSpan span, final String bucket, final String scope) {
     this(timeout, ctx, retryStrategy, authenticator, query, priority, idempotent, contextId, statement, span, bucket,
-      scope, true);
+      scope, true, 0);
   }
 
   public AnalyticsRequest(
@@ -90,7 +97,8 @@ public class AnalyticsRequest
     final RequestSpan span,
     final String bucket,
     final String scope,
-    final boolean translateExceptions
+    final boolean translateExceptions,
+    final int apiVersion
   ) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
@@ -102,6 +110,7 @@ public class AnalyticsRequest
     this.bucket = bucket;
     this.scope = scope;
     this.translateExceptions = translateExceptions;
+    this.httpPath = httpPathsByVersion.get(apiVersion);
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
@@ -130,7 +139,7 @@ public class AnalyticsRequest
   public FullHttpRequest encode() {
     ByteBuf content = query == null || query.length == 0 ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(query);
     FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, httpMethod,
-      uri, content);
+      httpPath, content);
     request.headers()
       .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
     request.headers()
@@ -180,7 +189,7 @@ public class AnalyticsRequest
   public Map<String, Object> serviceContext() {
     Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
-    ctx.put("uri", redactMeta(uri));
+    ctx.put("httpPath", httpPath);
     ctx.put("httpMethod", httpMethod.toString());
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
