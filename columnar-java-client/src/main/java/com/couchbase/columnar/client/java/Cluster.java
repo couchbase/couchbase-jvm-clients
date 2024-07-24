@@ -182,7 +182,7 @@ public final class Cluster implements Closeable, Queryable {
       ActiveTransactionRecordIds.NUM_ATRS_DEFAULT,
       Optional.empty(),
       Optional.empty(),
-      new CoreTransactionsSupportedExtensions()
+      CoreTransactionsSupportedExtensions.NONE
     );
   }
 

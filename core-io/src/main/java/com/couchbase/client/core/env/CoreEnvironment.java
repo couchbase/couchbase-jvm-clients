@@ -38,7 +38,6 @@ import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
-import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
@@ -55,7 +54,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -202,7 +200,7 @@ public class CoreEnvironment implements AutoCloseable {
     // but cannot assert it here due to affecting too many core tests, and potentially end users of this class.
     this.transactionsConfig = builder.transactionsConfig != null
             ? builder.transactionsConfig
-            : CoreTransactionsConfig.createDefault(CoreTransactionsSupportedExtensions.from(CoreTransactionsExtension.values()));
+            : CoreTransactionsConfig.createDefault(CoreTransactionsSupportedExtensions.ALL);
 
     if (eventBus.isOwned()) {
       eventBus.get().start().block();

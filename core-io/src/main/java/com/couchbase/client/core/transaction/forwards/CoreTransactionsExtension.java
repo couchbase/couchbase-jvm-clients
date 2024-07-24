@@ -54,7 +54,7 @@ public enum CoreTransactionsExtension {
     EXT_BINARY_SUPPORT("BS"),
     ;
 
-    private String value;
+    private final String value;
 
     CoreTransactionsExtension(String value) {
         this.value = Objects.requireNonNull(value);

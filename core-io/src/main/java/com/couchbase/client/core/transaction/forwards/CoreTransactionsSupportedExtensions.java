@@ -17,32 +17,46 @@ package com.couchbase.client.core.transaction.forwards;
 
 import com.couchbase.client.core.annotation.Stability;
 
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.Set;
+
+import static com.couchbase.client.core.util.CbCollections.newEnumSet;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Defines what is support by this implementation (extensions and protocol version).
  */
 @Stability.Internal
 public class CoreTransactionsSupportedExtensions {
-    public final Set<CoreTransactionsExtension> extensions = new HashSet<>();
+    public static final CoreTransactionsSupportedExtensions NONE = from();
+    public static final CoreTransactionsSupportedExtensions ALL = from(CoreTransactionsExtension.values());
+
+    public final Set<CoreTransactionsExtension> extensions;
+    private final Set<String> extensionIds;
+
     public final int protocolMajor = 2;
     public final int protocolMinor = 1;
 
-    public void add(CoreTransactionsExtension extension) {
-        extensions.add(extension);
+    private CoreTransactionsSupportedExtensions(Iterable<CoreTransactionsExtension> extensions) {
+        this.extensions = unmodifiableSet(newEnumSet(CoreTransactionsExtension.class, extensions));
+        this.extensionIds = unmodifiableSet(
+                this.extensions.stream()
+                        .map(CoreTransactionsExtension::value)
+                        .collect(toSet())
+        );
     }
 
-    public static CoreTransactionsSupportedExtensions from(CoreTransactionsExtension[] extensions) {
-        CoreTransactionsSupportedExtensions ret = new CoreTransactionsSupportedExtensions();
-        for (CoreTransactionsExtension extension : extensions) {
-            ret.add(extension);
-        }
-        return ret;
+    public static CoreTransactionsSupportedExtensions from(CoreTransactionsExtension... extensions) {
+        return new CoreTransactionsSupportedExtensions(Arrays.asList(extensions));
+    }
+
+    public boolean has(String extensionId) {
+        return extensionIds.contains(extensionId);
     }
 
     @Override
     public String toString() {
-        return "Supported {extensions=" + extensions.toString() + ", protocol=" + protocolMajor + "." + protocolMinor + "}";
+        return "Supported {extensions=" + extensions + ", protocol=" + protocolMajor + "." + protocolMinor + "}";
     }
 }

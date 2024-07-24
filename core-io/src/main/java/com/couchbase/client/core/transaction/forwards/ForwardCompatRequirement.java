@@ -44,12 +44,9 @@ class ForwardCompatExtensionRequirement extends ForwardCompatRequirement {
     }
 
     public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported) {
-        for (CoreTransactionsExtension e : supported.extensions) {
-            if (e.value().equals(extensionId)) {
-                return ForwardCompatBehaviourFull.CONTINUE;
-            }
-        }
-        return behaviour;
+        return supported.has(extensionId)
+                ? ForwardCompatBehaviourFull.CONTINUE
+                : behaviour;
     }
 }
 
