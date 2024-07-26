@@ -330,6 +330,10 @@
                             <excludes>
                                 <!-- These localized messages are optional (See R.java) and aren't worth the trouble of relocating. -->
                                 <resource>messages.properties</resource>
+                                <!-- Avoid https://github.com/dnsjava/dnsjava/issues/329
+                                     Also, we're not interested in overriding the JVM's default DNS lookup mechanisms;
+                                     we only care about our own explicit DNS SRV lookups. -->
+                                <exclude>META-INF/services/**</exclude>
                             </excludes>
                         </filter>
                         <filter>
