@@ -365,7 +365,10 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.transactionsConfig match {
     case Some(value) => coreBuilder.transactionsConfig(value.toCore)
     // Always provide a config so we can supply the supported extensions
-    case None => coreBuilder.transactionsConfig(CoreTransactionsConfig.createDefault(TransactionsSupportedExtensionsUtil.Supported))
+    case None =>
+      coreBuilder.transactionsConfig(
+        CoreTransactionsConfig.createDefault(TransactionsSupportedExtensionsUtil.Supported)
+      )
   }
 
   coreBuilder.loadSystemProperties()
