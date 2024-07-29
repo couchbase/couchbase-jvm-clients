@@ -705,4 +705,8 @@ public class ThresholdLoggingTracer implements RequestTracer {
 
   }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName();
+  }
 }

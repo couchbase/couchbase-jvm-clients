@@ -50,4 +50,8 @@ public class NoopRequestTracer implements RequestTracer {
     return NoopRequestSpan.INSTANCE;
   }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName();
+  }
 }

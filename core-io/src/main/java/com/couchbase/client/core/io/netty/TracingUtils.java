@@ -49,7 +49,6 @@ public class TracingUtils {
                                                      @Nullable final String localHost, final int localPort,
                                                      @Nullable final String remoteHost, final int remotePort,
                                                      @Nullable final String operationId) {
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
 
     if (localId != null) {

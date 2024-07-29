@@ -17,15 +17,13 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
-import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -140,10 +138,6 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
 
     if (requestSpan != null) {
       requestSpan.requestContext(this.ctx);
-
-      if (!CbTracing.isInternalSpan(requestSpan)) {
-        requestSpan.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-      }
     }
 
     this.requestSpan = requestSpan;

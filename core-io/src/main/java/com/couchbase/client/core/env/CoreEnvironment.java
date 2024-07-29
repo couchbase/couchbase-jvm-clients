@@ -18,6 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
@@ -590,7 +591,7 @@ public class CoreEnvironment implements AutoCloseable {
     input.put("loggingMeterConfig", loggingMeterConfig.exportAsMap());
 
     input.put("retryStrategy", retryStrategy.getClass().getSimpleName());
-    input.put("requestTracer", requestTracer.get().getClass().getSimpleName());
+    input.put("requestTracer", requestTracer.get().toString());
     input.put("meter", meter.get().getClass().getSimpleName());
     input.put("numRequestCallbacks", requestCallbacks.size());
     input.put("scheduler", scheduler.get().getClass().getSimpleName());
@@ -1107,7 +1108,11 @@ public class CoreEnvironment implements AutoCloseable {
      */
     @Stability.Volatile
     public SELF requestTracer(final RequestTracer requestTracer) {
-      this.requestTracer = external(notNull(requestTracer, "RequestTracer"));
+      notNull(requestTracer, "RequestTracer");
+
+      boolean ignoresAttributes = CbTracing.isInternalTracer(requestTracer);
+      this.requestTracer = external(ignoresAttributes ? requestTracer : new RequestTracerWithCommonAttributes(requestTracer));
+
       return self();
     }
 

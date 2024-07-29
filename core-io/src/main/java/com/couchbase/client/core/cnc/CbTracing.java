@@ -65,18 +65,19 @@ public class CbTracing {
    */
   @UsedBy(SPRING_DATA_COUCHBASE)
   public static RequestSpan newSpan(CoreContext coreContext, String spanName, RequestSpan parent) {
-    return newSpan(coreContext.environment().requestTracer(), spanName, parent);
+    return coreContext.environment().requestTracer().requestSpan(spanName, parent);
   }
 
   /**
    * Returns a new span with the `db.system` attribute set to `couchbase`.
    *
    * @param parent (nullable)
+   * @deprecated In favor of {@link RequestTracer#requestSpan(String, RequestSpan)},
+   * which now always sets the `db.system` attribute.
    */
+  @Deprecated
   public static RequestSpan newSpan(RequestTracer tracer, String spanName, RequestSpan parent) {
-    RequestSpan span = tracer.requestSpan(spanName, parent);
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-    return span;
+    return tracer.requestSpan(spanName, parent);
   }
 
   /**

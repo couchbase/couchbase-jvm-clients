@@ -112,7 +112,6 @@ public class ReplicaHelper {
 
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
-    getAllSpan.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Reactor
         .toMono(() -> getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan))
@@ -154,7 +153,6 @@ public class ReplicaHelper {
 
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
-    getAllSpan.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     return Reactor
       .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan))
       .flux()
@@ -190,7 +188,6 @@ public class ReplicaHelper {
   ) {
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
-    getAllSpan.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan)
         .thenApply(stream ->
@@ -239,7 +236,6 @@ public class ReplicaHelper {
   ) {
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
-    getAllSpan.attribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan)
       .thenApply(stream ->

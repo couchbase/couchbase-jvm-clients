@@ -16,7 +16,6 @@
 package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -24,8 +23,6 @@ import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_OPERATION;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_SYSTEM;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_SYSTEM_COUCHBASE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ATTEMPT_ID;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ID;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTIONS;
@@ -54,8 +51,7 @@ public class SpanWrapperUtil {
                                             @Nullable CollectionIdentifier collection,
                                             @Nullable String id) {
         if (!out.isInternal()) {
-            out.attribute(ATTR_SYSTEM, ATTR_SYSTEM_COUCHBASE)
-                    .attribute(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);
+            out.attribute(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);
             if (ctx != null) {
                 out.attribute(ATTR_TRANSACTION_ID, ctx.transactionId())
                         .attribute(ATTR_TRANSACTION_ATTEMPT_ID, ctx.attemptId());

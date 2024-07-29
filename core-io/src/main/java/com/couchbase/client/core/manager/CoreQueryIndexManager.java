@@ -41,7 +41,6 @@ import com.couchbase.client.core.error.IndexesNotReadyException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.retry.reactor.Retry;
-import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
@@ -307,7 +306,6 @@ public class CoreQueryIndexManager {
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
     RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, options.watchPrimary(), parent, options.scopeAndCollection()))
             .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
@@ -360,7 +358,6 @@ public class CoreQueryIndexManager {
                                                   CoreCommonOptions options, String spanName, String bucketName,
                                                   ObjectNode parameters) {
     RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));
 

@@ -258,7 +258,6 @@ public class CoreCollectionQueryIndexManager {
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
     RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(indexNameSet, options.watchPrimary(), parent))
             .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
@@ -367,7 +366,6 @@ public class CoreCollectionQueryIndexManager {
   private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
                                                   CoreCommonOptions options, String spanName, ObjectNode parameters) {
     RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));
 
