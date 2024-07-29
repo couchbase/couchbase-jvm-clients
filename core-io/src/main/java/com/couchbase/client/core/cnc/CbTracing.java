@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.service.ServiceType;
 import java.util.EnumMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 import static java.util.Collections.unmodifiableMap;
 
 @Stability.Internal
@@ -61,6 +63,7 @@ public class CbTracing {
    * Returns a new span with the `db.system` attribute set to `couchbase`.
    * @param parent (nullable)
    */
+  @UsedBy(SPRING_DATA_COUCHBASE)
   public static RequestSpan newSpan(CoreContext coreContext, String spanName, RequestSpan parent) {
     return newSpan(coreContext.environment().requestTracer(), spanName, parent);
   }
