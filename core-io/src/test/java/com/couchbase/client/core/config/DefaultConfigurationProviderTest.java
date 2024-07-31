@@ -25,13 +25,16 @@ import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEv
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
+import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +43,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -68,6 +72,8 @@ class DefaultConfigurationProviderTest {
   private static SimpleEventBus EVENT_BUS;
   private static final String ORIGIN = "127.0.0.1";
 
+  private DefaultConfigurationProvider provider;
+
   @BeforeAll
   static void setup() {
     EVENT_BUS = new SimpleEventBus(true);
@@ -84,11 +90,42 @@ class DefaultConfigurationProviderTest {
     EVENT_BUS.clear();
   }
 
+  @AfterEach
+  void afterEach() {
+    close(provider);
+  }
+
+  private static DefaultConfigurationProvider newDefaultConfigurationProvider(Core core) {
+    return newDefaultConfigurationProvider(core, ConnectionString.create("127.0.0.1"));
+  }
+
+  private static DefaultConfigurationProvider newDefaultConfigurationProvider(Core core, ConnectionString cs) {
+    DefaultConfigurationProvider p = new DefaultConfigurationProvider(core, cs);
+    // Ensures the provider is ready to start accepting new configs.
+    // (This is only necessary in unit tests; normally all configs come from the server,
+    // and the SDK can't connect to the server until after the seed nodes are resolved.)
+    waitForSeedNodes(p);
+    return p;
+  }
+
+  private static Set<SeedNode> waitForSeedNodes(ConfigurationProvider p) {
+    return p.seedNodes().next().block(Duration.ofSeconds(30));
+  }
+
+  static void close(@Nullable ConfigurationProvider p) {
+    try {
+      if (p != null) {
+        p.shutdown().block(Duration.ofSeconds(30));
+      }
+    } catch (AlreadyShutdownException ignore) {
+    }
+  }
+
   @Test
   void currentConfigIsReplayedToLateSubscriber() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    DefaultConfigurationProvider provider = newDefaultConfigurationProvider(core);
     provider.configs().blockFirst(Duration.ofSeconds(10));
   }
 
@@ -96,7 +133,7 @@ class DefaultConfigurationProviderTest {
   void canProposeNewBucketConfig() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs()
@@ -104,7 +141,7 @@ class DefaultConfigurationProviderTest {
         .subscribe((c) -> configsPushed.incrementAndGet());
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.currentSeedNodes().size());
+    assertEquals(1, waitForSeedNodes(provider).size());
 
     String bucket = "default";
     String config = readResource(
@@ -127,7 +164,7 @@ class DefaultConfigurationProviderTest {
   void ignoreProposedConfigWithLowerOrEqualRev() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs()
@@ -156,7 +193,7 @@ class DefaultConfigurationProviderTest {
   void canUpdateConfigWithNewRev() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs()
@@ -190,7 +227,7 @@ class DefaultConfigurationProviderTest {
   void ignoreProposedConfigOnceShutdown() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
 
     final AtomicInteger configsPushed = new AtomicInteger(0);
     provider.configs()
@@ -229,7 +266,7 @@ class DefaultConfigurationProviderTest {
   void updatesSeedNodesFromGlobalConfig() {
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
 
     String newConfig = readResource(
       "global_config_mad_hatter_multi_node.json",
@@ -258,14 +295,12 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void externalModeSelectedIfAuto() {
-    Set<SeedNode> seedNodes = setOf(SeedNode.create("192.168.132.234").withManagerPort(32790));
-
     Core core = mockCore(ENVIRONMENT);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
+    provider = newDefaultConfigurationProvider(core, ConnectionString.create("192.168.132.234:32790=manager"));
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.currentSeedNodes().size());
+    assertEquals(1, waitForSeedNodes(provider).size());
 
     String bucket = "default";
     String config = readResource(
@@ -286,17 +321,15 @@ class DefaultConfigurationProviderTest {
 
   @Test
   void forceDefaultModeIfDefault() {
-    Set<SeedNode> seedNodes = setOf(SeedNode.create("192.168.132.234").withManagerPort(32790));
-
     CoreEnvironment environment = CoreEnvironment.builder()
       .ioConfig(it -> it.networkResolution(NetworkResolution.DEFAULT))
       .build();
     Core core = mockCore(environment);
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
+    DefaultConfigurationProvider provider = newDefaultConfigurationProvider(core, ConnectionString.create("192.168.132.234:32790=manager"));
 
     assertTrue(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1, provider.currentSeedNodes().size());
+    assertEquals(1, waitForSeedNodes(provider).size());
 
     String bucket = "default";
     String config = readResource(
@@ -327,12 +360,10 @@ class DefaultConfigurationProviderTest {
   void handlesMultipleBucketOpenInProgress() throws Exception {
     Core core = mockCore(ENVIRONMENT);
 
-    Set<SeedNode> seedNodes = setOf(SeedNode.create("127.0.0.1"));
-
     Sinks.One<ProposedBucketConfigContext> bucket1Barrier = Sinks.one();
     Sinks.One<ProposedBucketConfigContext> bucket2Barrier = Sinks.one();
 
-    ConfigurationProvider cp = new DefaultConfigurationProvider(core, seedNodes) {
+    ConfigurationProvider cp = new DefaultConfigurationProvider(core, ConnectionString.create("127.0.0.1")) {
       @Override
       protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(NodeIdentifier identifier, int mappedKvPort,
                                                                           int mappedManagerPort, String name) {
@@ -351,6 +382,8 @@ class DefaultConfigurationProviderTest {
         return Mono.empty();
       }
     };
+    waitForSeedNodes(cp);
+
     assertFalse(cp.bucketConfigLoadInProgress());
 
     CountDownLatch latch = new CountDownLatch(2);
@@ -382,15 +415,13 @@ class DefaultConfigurationProviderTest {
   void ignoresMultipleCollectionIdRefreshAttempts() {
     Core core = mockCore(ENVIRONMENT);
 
-    Set<SeedNode> seedNodes = setOf(SeedNode.create("127.0.0.1"));
-
     List<GetCollectionIdRequest> capturedRequests = new ArrayList<>();
     doAnswer(invocation -> {
       capturedRequests.add(invocation.getArgument(0));
       return null;
     }).when(core).send(any(GetCollectionIdRequest.class));
 
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes);
+    provider = newDefaultConfigurationProvider(core);
 
     assertFalse(provider.collectionRefreshInProgress());
 
@@ -444,7 +475,7 @@ class DefaultConfigurationProviderTest {
   void applyBucketConfigWithRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch,
                                        String newConfigFile, long newRev, long newEpoch) {
     Core core = mockCore(ENVIRONMENT);
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
     String bucket = "travel-sample";
 
     String config = readResource(
@@ -475,7 +506,7 @@ class DefaultConfigurationProviderTest {
   })
   void ignoresBucketConfigWithOlderRevOrEpoch(String oldConfigFile, long oldRev, long oldEpoch, String newConfigFile) {
     Core core = mockCore(ENVIRONMENT);
-    DefaultConfigurationProvider provider = new DefaultConfigurationProvider(core, SeedNode.LOCALHOST);
+    provider = newDefaultConfigurationProvider(core);
     String bucket = "travel-sample";
 
     String config = readResource(

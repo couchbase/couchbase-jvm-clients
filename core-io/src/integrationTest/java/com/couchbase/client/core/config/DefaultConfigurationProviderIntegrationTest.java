@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
-import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
@@ -46,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -73,6 +73,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     }
   }
 
+  public DefaultConfigurationProvider newDefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
+    return new DefaultConfigurationProvider(core, asConnectionString(seedNodes));
+  }
+
   /**
    * This is the simplest "good" case, just fetch a config that should be good to load.
    */
@@ -90,7 +94,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+    ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
   }
@@ -119,7 +123,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+    ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
 
@@ -149,7 +153,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+    ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
     openAndClose(bucketName, provider);
     provider.shutdown().block();
 
@@ -177,7 +181,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     core = Core.create(environment, authenticator(), seeds);
 
     String bucketName = config().bucketname();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+    ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
 
     AtomicInteger configEvents = new AtomicInteger(0);
     CountDownLatch configsComplete = new CountDownLatch(1);
@@ -223,7 +227,7 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     core = Core.create(environment, authenticator(), seeds);
     configWaitHelper.await();
 
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seeds);
+    ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
 
     try {
       String bucketName = "this-bucket-does-not-exist";

@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -123,7 +124,7 @@ class GlobalBucketRefresherIntegrationTest extends CoreIntegrationTest {
     private final List<ProposedGlobalConfigContext> proposedConfigs;
 
     GlobalConfigCountingConfigurationProvider(final Core core) {
-      super(core, GlobalBucketRefresherIntegrationTest.seedNodes());
+      super(core, asConnectionString(GlobalBucketRefresherIntegrationTest.seedNodes()));
       this.proposedConfigs = Collections.synchronizedList(new ArrayList<>());
     }
 

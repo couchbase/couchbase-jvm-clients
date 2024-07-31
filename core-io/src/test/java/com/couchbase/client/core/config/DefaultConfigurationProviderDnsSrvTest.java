@@ -19,23 +19,21 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.config.DefaultConfigurationProviderTest.close;
 import static com.couchbase.client.core.config.DefaultConfigurationProviderTest.mockCore;
-import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.test.Util.waitUntilCondition;
-import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,6 +45,8 @@ class DefaultConfigurationProviderDnsSrvTest {
 
   private static CoreEnvironment environment;
   private static SimpleEventBus eventBus;
+
+  private DefaultConfigurationProvider provider;
 
   @BeforeAll
   static void setup() {
@@ -64,14 +64,18 @@ class DefaultConfigurationProviderDnsSrvTest {
     eventBus.clear();
   }
 
+  @AfterEach
+  void afterEach() {
+    close(provider);
+  }
+
   @Test
   void performsDnsSrvLookupOnSignal() {
     Core core = mockCore(environment);
 
     final AtomicBoolean called = new AtomicBoolean();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(
+    provider = new DefaultConfigurationProvider(
       core,
-      emptySet(),
       ConnectionString.create("couchbase://myConnectionString")
     ) {
       @Override
@@ -90,9 +94,8 @@ class DefaultConfigurationProviderDnsSrvTest {
     Core core = mockCore(environment);
 
     final AtomicInteger numCalled = new AtomicInteger();
-    ConfigurationProvider provider = new DefaultConfigurationProvider(
+    provider = new DefaultConfigurationProvider(
       core,
-      emptySet(),
       ConnectionString.create("couchbase://myConnectionString")
     ) {
       @Override
@@ -114,8 +117,8 @@ class DefaultConfigurationProviderDnsSrvTest {
     Core core = mockCore(environment);
 
     final AtomicBoolean called = new AtomicBoolean();
-    Set<SeedNode> seedNodes = setOf(SeedNode.create("1.2.3.4")); // DNS SRV requires hostname, not IP literal
-    ConfigurationProvider provider = new DefaultConfigurationProvider(core, seedNodes) {
+    // DNS SRV requires hostname, not IP literal
+    provider = new DefaultConfigurationProvider(core, ConnectionString.create("1.2.3.4")) {
       @Override
       protected List<String> performDnsSrvLookup(boolean tlsEnabled) {
         called.set(true);
@@ -138,9 +141,8 @@ class DefaultConfigurationProviderDnsSrvTest {
       Core core = mockCore(environment);
 
       final AtomicBoolean called = new AtomicBoolean();
-      ConfigurationProvider provider = new DefaultConfigurationProvider(
+      provider = new DefaultConfigurationProvider(
         core,
-        emptySet(),
         ConnectionString.create("couchbase://foo")
       ) {
         @Override

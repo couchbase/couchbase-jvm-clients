@@ -67,13 +67,18 @@ import com.couchbase.client.core.topology.NetworkSelector;
 import com.couchbase.client.core.topology.PortSelector;
 import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.annotation.Nullable;
 import reactor.util.retry.Retry;
 
 import javax.naming.NamingException;
@@ -92,9 +97,9 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
-import static com.couchbase.client.core.util.CbCollections.copyToUnmodifiableSet;
-import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
@@ -108,6 +113,7 @@ import static java.util.stream.Collectors.toSet;
  * @since 1.0.0
  */
 public class DefaultConfigurationProvider implements ConfigurationProvider {
+  private static final Logger log = LoggerFactory.getLogger(DefaultConfigurationProvider.class);
 
   /**
    * Don't perform DNS SRV lookups more quickly than every 10 seconds.
@@ -141,7 +147,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private final Core core;
   private final EventBus eventBus;
-  private final TopologyParser topologyParser;
+  @Nullable private volatile TopologyParser topologyParser;
 
   private final KeyValueBucketLoader keyValueLoader;
   private final ClusterManagerBucketLoader clusterManagerLoader;
@@ -153,6 +159,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final Sinks.Many<ClusterConfig> configsSink = Sinks.many().replay().latest();
   private final Flux<ClusterConfig> configs = configsSink.asFlux();
   private final ClusterConfig currentConfig = new ClusterConfig();
+
+  private final Disposable seedNodeResolver; // async task that gets the initial seed nodes from the connection string
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
   private final CollectionMap collectionMap = new CollectionMap();
@@ -168,7 +176,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   /**
    * Stores the current seed nodes used to bootstrap buckets and global configs.
    */
-  private final AtomicReference<Set<SeedNode>> currentSeedNodes;
+  private final AtomicReference<Set<SeedNode>> currentSeedNodes = new AtomicReference<>(emptySet());
   private final Sinks.Many<Set<SeedNode>> seedNodesSink = Sinks.many().replay().latest();
   private final Flux<Set<SeedNode>> seedNodes = seedNodesSink.asFlux();
 
@@ -178,25 +186,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private final Sinks.Many<Long> configPollTrigger = Sinks.many().multicast().directBestEffort();
 
-  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes) {
-    this(core, seedNodes, asConnectionString(seedNodes));
-  }
-
   /**
    * Creates a new configuration provider.
    *
    * @param core the core against which all ops are executed.
    */
-  public DefaultConfigurationProvider(final Core core, final Set<SeedNode> seedNodes, final ConnectionString connectionString) {
+  public DefaultConfigurationProvider(final Core core, final ConnectionString connectionString) {
     this.core = core;
     eventBus = core.context().environment().eventBus();
     this.connectionString = requireNonNull(connectionString);
-
-    // Don't publish the initial seed nodes, since they probably came from the user
-    // and might not be KV nodes, or might have incomplete port information.
-    this.currentSeedNodes = new AtomicReference<>(copyToUnmodifiableSet(seedNodes));
-
-    this.topologyParser = createTopologyParser(core.environment(), seedNodes);
+    this.seedNodeResolver = launchSeedNodeResolver(connectionString, core.environment());
 
     keyValueLoader = new KeyValueBucketLoader(core);
     clusterManagerLoader = new ClusterManagerBucketLoader(core);
@@ -207,6 +206,41 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     // Start with pushing the current config into the sink for all subscribers currently attached.
     configsSink.emitNext(currentConfig, emitFailureHandler());
+  }
+
+  /**
+   * Launches an async task that resolves connection string addresses
+   * into seed nodes, then publishes the results to the seed nodes sink.
+   * <p>
+   * This task must complete (publish the seed nodes) before the SDK can
+   * attempt to connect to the server and fetch cluster topology.
+   * <p>
+   * If DNS SRV is disabled or not applicable, this is basically a noop.
+   * Otherwise, the task attempts DNS SRV resolution. If the environment
+   * _requires_ SRV, the task retries until SRV lookup succeeds.
+   *
+   * @return a handle for cancelling the task.
+   */
+  private Disposable launchSeedNodeResolver(ConnectionString connectionString, CoreEnvironment env) {
+    return Mono.fromRunnable(() -> {
+        Set<SeedNode> seedNodes = ConnectionStringUtil.seedNodesFromConnectionString(
+          connectionString,
+          env.ioConfig().dnsSrvEnabled(),
+          env.securityConfig().tlsEnabled(),
+          env.eventBus()
+        );
+        topologyParser = createTopologyParser(core.environment(), seedNodes);
+        setSeedNodes(seedNodes).orThrow();
+        log.info("Resolved seed nodes: {}", redactSystem(seedNodes));
+      })
+      .subscribeOn(Schedulers.boundedElastic()) // DNS SRV lookup blocks
+      .doOnError(t -> log.warn("Seed node resolution failed. Will try again after a brief delay. Cause:", t))
+      // keep retrying until the task is cancelled (config provider is closed)
+      .retryWhen(Retry.backoff(Long.MAX_VALUE, Duration.ofMillis(10))
+        .maxBackoff(Duration.ofSeconds(60))
+        .jitter(1.0)
+      )
+      .subscribe();
   }
 
   private static TopologyParser createTopologyParser(
@@ -262,6 +296,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     return seedNodes;
   }
 
+  private Mono<Set<SeedNode>> waitForSeedNodes() {
+    return seedNodes.next()
+      // Mono might be empty if cluster was shut down before first set of seed nodes was published.
+      .switchIfEmpty(Mono.error(new AlreadyShutdownException()));
+  }
+
   @Override
   public Mono<Void> openBucket(final String name) {
     return Mono.defer(() -> {
@@ -269,10 +309,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         bucketConfigLoadInProgress.incrementAndGet();
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
 
-        return fetchBucketConfigs(name, currentSeedNodes.get(), tls)
-          .switchIfEmpty(Mono.error(
-            new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
-          ))
+        return waitForSeedNodes()
+          .flatMap(seedNodes -> fetchBucketConfigs(name, seedNodes, tls).switchIfEmpty(Mono.error(
+              new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
+            ))
+          )
           .map(ctx -> {
             proposeBucketConfig(ctx);
             return ctx;
@@ -335,9 +376,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         globalConfigLoadInProgress = true;
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
 
-        return fetchGlobalConfigs(currentSeedNodes.get(), tls, false, true).switchIfEmpty(Mono.error(
-            new ConfigException("Could not locate a single global configuration")
-          ))
+        return waitForSeedNodes()
+          .flatMap(seedNodes -> fetchGlobalConfigs(seedNodes, tls, false, true).switchIfEmpty(Mono.error(
+              new ConfigException("Could not locate a single global configuration")
+            ))
+          )
           .map(ctx -> {
             proposeGlobalConfig(ctx);
             return ctx;
@@ -348,6 +391,18 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         return Mono.error(new AlreadyShutdownException());
       }
     });
+  }
+
+  private ClusterTopology parseClusterTopology(String json, String origin) {
+    TopologyParser parser = this.topologyParser;
+    if (parser == null) {
+      // Shouldn't be possible. The parser is initialized after seed nodes are resolved, and before they are published.
+      // The SDK can't connect to the server until seed nodes are published.
+      // Outside unit tests, all topology JSON comes from the server.
+      // Therefore, if we have topology JSON from the server, the parser has already been initialized.
+      throw new IllegalStateException("Can't parse cluster topology until seed nodes are resolved.");
+    }
+    return parser.parse(json, origin);
   }
 
   @Override
@@ -366,7 +421,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        ClusterTopologyWithBucket cluster = topologyParser.parse(ctx.config(), ctx.origin()).requireBucket();
+        ClusterTopologyWithBucket cluster = parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
         BucketConfig config = LegacyConfigHelper.toLegacyBucketConfig(cluster);
         checkAndApplyConfig(config, ctx.forcesOverride());
 
@@ -406,7 +461,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        ClusterTopology topology = topologyParser.parse(ctx.config(), ctx.origin());
+        ClusterTopology topology = parseClusterTopology(ctx.config(), ctx.origin());
         GlobalConfig config = new GlobalConfig(topology);
         checkAndApplyConfig(config, ctx.forcesOverride());
 
@@ -479,6 +534,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             // is complete, so this is probably redundant.
             pushConfig(true);
             configsSink.emitComplete(emitFailureHandler());
+            seedNodesSink.emitComplete(emitFailureHandler());
+            seedNodeResolver.dispose(); // in case it hasn't completed and is still retrying.
           })
           .then(keyValueRefresher.shutdown())
           .then(clusterManagerRefresher.shutdown())
@@ -975,10 +1032,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       .next();
   }
 
-  /**
-   * Visible for testing.
-   */
-  Set<SeedNode> currentSeedNodes() {
+  private Set<SeedNode> currentSeedNodes() {
     return currentSeedNodes.get();
   }
 
@@ -989,13 +1043,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * {@link reactor.core.publisher.Sinks.EmitResult#FAIL_NON_SERIALIZED} from happening. All other results
    * should not be happening, but just to be sure we log them as WARN, so we have a chance to debug them in the field.
    */
-  private synchronized void setSeedNodes(Set<SeedNode> seedNodes) {
+  private synchronized Sinks.EmitResult setSeedNodes(Set<SeedNode> seedNodes) {
     currentSeedNodes.set(seedNodes);
     Sinks.EmitResult emitResult = seedNodesSink.tryEmitNext(seedNodes);
 
     if (emitResult != Sinks.EmitResult.OK) {
       eventBus.publish(new SeedNodesUpdateFailedEvent(core.context(), emitResult));
     }
+
+    return emitResult;
   }
 
 }

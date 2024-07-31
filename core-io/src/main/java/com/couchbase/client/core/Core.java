@@ -97,7 +97,6 @@ import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
@@ -125,6 +124,8 @@ import java.util.stream.Stream;
 
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
+import static com.couchbase.client.core.util.ConnectionStringUtil.sanityCheckPorts;
+import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -224,8 +225,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   private final Timer timer;
 
-  private final Set<SeedNode> seedNodes;
-
   private final List<BeforeSendRequestCallback> beforeSendRequestCallbacks;
 
   /**
@@ -276,11 +275,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     }
 
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
+    sanityCheckPorts(connectionString);
 
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
     this.connectionString = requireNonNull(connectionString);
-    this.seedNodes = seedNodesFromConnectionString(connectionString, environment);
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -308,7 +307,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .map(c -> (BeforeSendRequestCallback) c)
       .collect(Collectors.toList());
 
-    eventBus.publish(new CoreCreatedEvent(coreContext, environment, seedNodes, CoreLimiter.numInstances(), connectionString));
+    eventBus.publish(new CoreCreatedEvent(coreContext, environment, emptySet(), CoreLimiter.numInstances(), connectionString));
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
     if (watchdogInterval <= 1) {
@@ -325,15 +324,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
   }
 
-  private static Set<SeedNode> seedNodesFromConnectionString(final ConnectionString cs, final CoreEnvironment env) {
-    return ConnectionStringUtil.seedNodesFromConnectionString(
-      cs,
-      env.ioConfig().dnsSrvEnabled(),
-      env.securityConfig().tlsEnabled(),
-      env.eventBus()
-    );
-  }
-
   /**
    * During testing this can be overridden so that a custom configuration provider is used
    * in the system.
@@ -341,7 +331,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * @return by default returns the default config provider.
    */
   ConfigurationProvider createConfigurationProvider() {
-    return new DefaultConfigurationProvider(this, seedNodes, connectionString);
+    return new DefaultConfigurationProvider(this, connectionString);
   }
 
   /**

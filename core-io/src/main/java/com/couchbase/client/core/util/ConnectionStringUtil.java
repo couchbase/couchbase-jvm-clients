@@ -47,6 +47,7 @@ import static com.couchbase.client.core.util.ConnectionString.PortType.KV;
 import static com.couchbase.client.core.util.ConnectionString.PortType.MANAGER;
 import static com.couchbase.client.core.util.ConnectionString.PortType.PROTOSTELLAR;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASE;
+import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASE2;
 import static com.couchbase.client.core.util.ConnectionString.Scheme.COUCHBASES;
 import static java.util.stream.Collectors.groupingBy;
 
@@ -145,11 +146,11 @@ public class ConnectionStringUtil {
 
     groupedByHost.forEach((host, addresses) -> {
       Map<PortType, Integer> ports = new EnumMap<>(PortType.class);
-      PortType assumedPortType = connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2 ? PortType.PROTOSTELLAR : PortType.KV;
+      PortType assumedPortType = connectionString.scheme() == COUCHBASE2 ? PortType.PROTOSTELLAR : PortType.KV;
       addresses.stream()
         .filter(it -> it.port() != 0)
         .forEach(it -> {
-          if (connectionString.scheme() == ConnectionString.Scheme.COUCHBASE2 && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
+          if (connectionString.scheme() == COUCHBASE2 && (it.portType().isPresent() && it.portType().get() != PROTOSTELLAR)) {
             throw InvalidArgumentException.fromMessage("Invalid connection string. Port type " + it.portType().get() + " is not compatible with scheme " + connectionString.scheme());
           }
 
@@ -163,26 +164,26 @@ public class ConnectionStringUtil {
       );
     });
 
-    sanityCheckSeedNodes(connectionString.original(), seedNodes);
     return seedNodes;
   }
 
   /**
-   * Sanity check the seed node list for common errors that can be caught early on.
-   *
-   * @param seedNodes the seed nodes to verify.
+   * Sanity check a connection string for common errors that can be caught early on.
    */
-  private static void sanityCheckSeedNodes(final String connectionString, final Set<SeedNode> seedNodes) {
-    for (SeedNode seedNode : seedNodes) {
-      if (seedNode.kvPort().isPresent()) {
-        if (seedNode.kvPort().get() == 8091 || seedNode.kvPort().get() == 18091) {
-          String recommended = connectionString
-              .replace(":8091", "")
-              .replace(":18091", "");
-          throw new InvalidArgumentException("Specifying 8091 or 18091 in the connection string \"" + connectionString + "\" is " +
-              "likely not what you want (it would connect to key/value via the management port which does not work). Please omit " +
-              "the port and use \"" + recommended + "\" instead.", null, null);
-        }
+  public static void sanityCheckPorts(final ConnectionString cs) {
+    if (cs.scheme() == COUCHBASE2) {
+      return;
+    }
+
+    for (UnresolvedSocket address : cs.hosts()) {
+      // Prohibit "example.com:8091", but allow "example.com:8091=kv" as an escape hatch.
+      if ((address.port() == 8091 || address.port() == 18091) && (!address.portType().isPresent())) {
+        String recommended = cs.original()
+          .replace(":8091", "")
+          .replace(":18091", "");
+        throw new InvalidArgumentException("Specifying 8091 or 18091 in the connection string \"" + cs.original() + "\" is " +
+          "likely not what you want (it would connect to key/value via the management port which does not work). Please omit " +
+          "the port and use \"" + recommended + "\" instead." , null, null);
       }
     }
   }
@@ -226,7 +227,7 @@ public class ConnectionStringUtil {
     }
 
     return ConnectionString.create(String.join(",", addresses))
-      .withScheme(hasProtostellarPort ? ConnectionString.Scheme.COUCHBASE2 : COUCHBASE);
+      .withScheme(hasProtostellarPort ? COUCHBASE2 : COUCHBASE);
   }
 
   public static final String INCOMPATIBLE_CONNECTION_STRING_SCHEME =
@@ -243,7 +244,7 @@ public class ConnectionStringUtil {
       if (!tls && connStr.scheme() == COUCHBASES) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
-      if (!tls && connStr.scheme() == ConnectionString.Scheme.COUCHBASE2) {
+      if (!tls && connStr.scheme() == COUCHBASE2) {
         throw new IllegalArgumentException(INCOMPATIBLE_CONNECTION_STRING_SCHEME);
       }
       if (!connStr.params().isEmpty()) {

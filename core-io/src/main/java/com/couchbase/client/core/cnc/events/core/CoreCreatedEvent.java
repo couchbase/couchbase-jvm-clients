@@ -26,10 +26,8 @@ import com.couchbase.client.core.util.ConnectionString;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * This event is emitted when a {@link Core} is created.
@@ -40,24 +38,16 @@ public class CoreCreatedEvent extends AbstractEvent {
 
   public CoreCreatedEvent(final CoreContext context, final CoreEnvironment environment, final Set<SeedNode> seedNodes,
                           final int numCoreInstances, @Nullable final ConnectionString connectionString) {
-    super(Severity.INFO, Category.CORE, Duration.ZERO, enrichContext(context, seedNodes, numCoreInstances, connectionString));
+    super(Severity.INFO, Category.CORE, Duration.ZERO, enrichContext(context, numCoreInstances, connectionString));
     this.environment = environment;
   }
 
-  private static Context enrichContext(final CoreContext context, final Set<SeedNode> seedNodes,
+  private static Context enrichContext(final CoreContext context,
                                        final int numCoreInstances, @Nullable final ConnectionString connectionString) {
     return new CoreContext(context.core(), context.id(), context.environment(), context.authenticator()) {
       @Override
       public void injectExportableParams(final Map<String, Object> input) {
         super.injectExportableParams(input);
-
-        input.put("seedNodes", seedNodes.stream().map(seedNode -> {
-          Map<String, Object> mapped = new HashMap<>();
-          mapped.put("address", seedNode.address());
-          seedNode.kvPort().ifPresent(p -> mapped.put("kvPort", p));
-          seedNode.clusterManagerPort().ifPresent(p -> mapped.put("mgmtPort", p));
-          return mapped;
-        }).collect(Collectors.toSet()));
 
         input.put("numCoreInstances", numCoreInstances);
         if (connectionString != null) {
