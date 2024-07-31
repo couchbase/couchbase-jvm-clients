@@ -151,12 +151,14 @@ public class SeedNode {
 
   @Override
   public String toString() {
-    return "SeedNode{" +
-      "address='" + address + '\'' +
-      ", kvPort=" + kvPort +
-      ", mgmtPort=" + clusterManagerPort +
-      ", psPort=" + protostellarPort +
-      '}';
+    StringBuilder sb = new StringBuilder("SeedNode{")
+      .append("address='").append(address).append('\'');
+
+    kvPort.ifPresent(port -> sb.append(", kvPort=").append(port));
+    clusterManagerPort.ifPresent(port -> sb.append(", mgmtPort=").append(port));
+    protostellarPort.ifPresent(port -> sb.append(", psPort=").append(port));
+
+    return sb.append('}').toString();
   }
 
   @Override
