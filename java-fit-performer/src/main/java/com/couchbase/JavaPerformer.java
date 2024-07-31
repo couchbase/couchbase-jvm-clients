@@ -158,7 +158,7 @@ public class JavaPerformer extends CorePerformer {
             }
         }
 
-        var supported = new CoreTransactionsSupportedExtensions();
+        var supported = CoreTransactionsSupportedExtensions.ALL;
         var protocolVersion = supported.protocolMajor + "." + supported.protocolMinor;
 
         response.setTransactionsProtocolVersion(protocolVersion);
