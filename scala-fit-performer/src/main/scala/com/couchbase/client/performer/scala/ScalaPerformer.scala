@@ -99,7 +99,7 @@ class ScalaPerformer extends CorePerformer {
     // [if:1.7.2]
     response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
     val supported = Supported
-    val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
+    val protocolVersion = supported.protocolMajor() + "." + supported.protocolMinor()
     response.setTransactionsProtocolVersion(protocolVersion)
     val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
     val sdkVersion = if (sdkVersionRaw == null) {

@@ -67,13 +67,13 @@ class ForwardCompatProtocolRequirement extends ForwardCompatRequirement {
     }
 
     public ForwardCompatBehaviourFull behaviour(CoreTransactionsSupportedExtensions supported) {
-        if (supported.protocolMajor > minProtocolMajor) {
+        if (supported.protocolMajor() > minProtocolMajor) {
             return ForwardCompatBehaviourFull.CONTINUE;
         }
-        if (supported.protocolMajor < minProtocolMajor) {
+        if (supported.protocolMajor() < minProtocolMajor) {
             return behaviour;
         }
-        if (supported.protocolMinor < minProtocolMinor) {
+        if (supported.protocolMinor() < minProtocolMinor) {
             return behaviour;
         }
         return ForwardCompatBehaviourFull.CONTINUE;

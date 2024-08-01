@@ -16,6 +16,7 @@
 package com.couchbase.client.core.transaction.forwards;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.CbCollections;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -31,12 +32,27 @@ import static java.util.stream.Collectors.toSet;
 public class CoreTransactionsSupportedExtensions {
     public static final CoreTransactionsSupportedExtensions NONE = from();
     public static final CoreTransactionsSupportedExtensions ALL = from(CoreTransactionsExtension.values());
+    private static final Set<CoreTransactionsExtension> ALL_2_1 = CbCollections.setOf(CoreTransactionsExtension.EXT_TRANSACTION_ID,
+            CoreTransactionsExtension.EXT_TIME_OPT_UNSTAGING,
+            CoreTransactionsExtension.EXT_BINARY_METADATA,
+            CoreTransactionsExtension.EXT_CUSTOM_METADATA_COLLECTION,
+            CoreTransactionsExtension.EXT_QUERY,
+            CoreTransactionsExtension.EXT_STORE_DURABILITY,
+            CoreTransactionsExtension.BF_CBD_3838,
+            CoreTransactionsExtension.BF_CBD_3787,
+            CoreTransactionsExtension.BF_CBD_3705,
+            CoreTransactionsExtension.BF_CBD_3794,
+            CoreTransactionsExtension.EXT_REMOVE_COMPLETED,
+            CoreTransactionsExtension.EXT_ALL_KV_COMBINATIONS,
+            CoreTransactionsExtension.EXT_UNKNOWN_ATR_STATES,
+            CoreTransactionsExtension.BF_CBD_3791,
+            CoreTransactionsExtension.EXT_SINGLE_QUERY);
 
     public final Set<CoreTransactionsExtension> extensions;
     private final Set<String> extensionIds;
 
-    public final int protocolMajor = 2;
-    public final int protocolMinor = 1;
+    private final int protocolMajor = 2;
+    private final int protocolMinor;
 
     private CoreTransactionsSupportedExtensions(Iterable<CoreTransactionsExtension> extensions) {
         this.extensions = unmodifiableSet(newEnumSet(CoreTransactionsExtension.class, extensions));
@@ -45,6 +61,15 @@ public class CoreTransactionsSupportedExtensions {
                         .map(CoreTransactionsExtension::value)
                         .collect(toSet())
         );
+        this.protocolMinor = this.extensions.equals(ALL_2_1) ? 1 : 0;
+    }
+
+    public int protocolMajor() {
+        return protocolMajor;
+    }
+
+    public int protocolMinor() {
+        return protocolMinor;
     }
 
     public static CoreTransactionsSupportedExtensions from(CoreTransactionsExtension... extensions) {
