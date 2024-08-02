@@ -30,7 +30,7 @@ import scala.concurrent.duration.Duration
   * @author Graham Pople
   * @since 1.0.0
   */
-case class AnalyticsOptions(
+case class AnalyticsOptions private (
     private[scala] val parameters: Option[AnalyticsParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
@@ -39,7 +39,8 @@ case class AnalyticsOptions(
     @SinceCouchbase("6.5") private[scala] val readonly: Option[Boolean] = None,
     private[scala] val scanConsistency: Option[AnalyticsScanConsistency] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
-    private[scala] val raw: Option[Map[String, Any]] = None
+    private[scala] val raw: Option[Map[String, Any]] = None,
+    private[scala] val _endpointIdx: Int = 0
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -131,6 +132,9 @@ case class AnalyticsOptions(
     */
   def scanConsistency(scanConsistency: AnalyticsScanConsistency): AnalyticsOptions =
     copy(scanConsistency = Some(scanConsistency))
+
+  private[couchbase] def endpointIdx(idx: Int): AnalyticsOptions =
+    copy(_endpointIdx = idx)
 
   private[scala] def encode() = {
     val out = JsonObject.create

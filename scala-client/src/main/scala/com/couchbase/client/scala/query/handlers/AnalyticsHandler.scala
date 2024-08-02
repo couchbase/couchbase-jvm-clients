@@ -104,7 +104,9 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
           hp.tracer
             .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, options.parentSpan.orNull),
           bucket.orNull,
-          scope.orNull
+          scope.orNull,
+          true,
+          options._endpointIdx
         )
       })
     }
