@@ -17,12 +17,15 @@
 package com.couchbase.columnar.client.java;
 
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.VersionAndGitHash;
 import com.couchbase.columnar.client.java.codec.Deserializer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
 
 class Environment extends CoreEnvironment {
+  private static final VersionAndGitHash version = VersionAndGitHash.from(Cluster.class);
+
   private final Deserializer deserializer;
 
   private Environment(Builder builder) {
@@ -33,6 +36,11 @@ class Environment extends CoreEnvironment {
   @Override
   protected String defaultAgentTitle() {
     return "columnar-java";
+  }
+
+  @Override
+  protected VersionAndGitHash clientVersionAndGitHash() {
+    return version;
   }
 
   /**

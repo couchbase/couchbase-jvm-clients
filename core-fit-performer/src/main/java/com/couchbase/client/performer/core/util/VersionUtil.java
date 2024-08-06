@@ -29,18 +29,30 @@ public class VersionUtil {
     }
 
     public static @Nullable String introspectSDKVersionJava() {
-        return introspectSDKVersion("couchbase-java", "3");
+        return introspectSDKVersion("com.couchbase.client.java.Cluster", "couchbase-java", "3");
     }
 
     public static @Nullable String introspectSDKVersionScala() {
-        return introspectSDKVersion("couchbase-scala", "1");
+        return introspectSDKVersion("com.couchbase.client.scala.Cluster", "couchbase-scala", "1");
     }
 
     public static @Nullable String introspectSDKVersionKotlin() {
-        return introspectSDKVersion("couchbase-kotlin", "1");
+        return introspectSDKVersion("com.couchbase.client.kotlin.Cluster", "couchbase-kotlin", "1");
     }
 
-    private static @Nullable String introspectSDKVersion(String match, String replace) {
+    private static @Nullable String introspectSDKVersion(String nameOfClassInSamePackageAsVersionMetadata, String match, String replace) {
+        try {
+            // Java 3.7.3, Scala 1.4.3, and Kotlin 1.4.5 use the standard "Implementation-Version" manifest attribute.
+            Class<?> anchor = Class.forName(nameOfClassInSamePackageAsVersionMetadata);
+            String attribute = anchor.getPackage().getImplementationVersion();
+            if (attribute != null) {
+                // ignore the git hash, which comes after the "+"
+                return attribute.split("\\+",2)[0];
+            }
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
         // Try to get the actual SDK version first.  This might only work if the performer was compiled against a
         // specific version of the SDK, which is usually only the case when performance testing.
         String sdkVersion = introspectImplVersion(match);

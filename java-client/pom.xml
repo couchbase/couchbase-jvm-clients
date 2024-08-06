@@ -134,43 +134,14 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>1.4</version>
-                <executions>
-                    <execution>
-                        <phase>validate</phase>
-                        <goals><goal>create</goal></goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <getRevisionOnlyOnce>true</getRevisionOnlyOnce>
-                    <shortRevisionLength>8</shortRevisionLength>
-                    <attach>true</attach>
-                    <addOutputDirectoryToResources>true</addOutputDirectoryToResources>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
+                    <!-- Attributes like `Automatic-Module-Name` and `Implementation-Version` that would normally be set here
+                         are instead set by `maven-bundle-plugin`. See the comment in that plugin config for details. -->
                     <archive>
 			<manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                        <manifestEntries>
-                            <Build-Time>${maven.build.timestamp}</Build-Time>
-                            <Automatic-Module-Name>com.couchbase.client.java</Automatic-Module-Name>
-                        </manifestEntries>
-                        <manifestSections>
-                            <manifestSection>
-                                <!-- the part after couchbase- needs to match with the agent title in the env -->
-                                <name>couchbase-java</name>
-                                <manifestEntries>
-                                    <Impl-Version>${project.version}</Impl-Version>
-                                    <Impl-Git-Revision>${buildNumber}</Impl-Git-Revision>
-                                </manifestEntries>
-                            </manifestSection>
-                        </manifestSections>
                     </archive>
                 </configuration>
             </plugin>
@@ -239,6 +210,14 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <!-- The `maven-bundle-plugin` interferes with property placeholder resolution in `maven-jar-plugin`.
+                             Specifically, using ${buildNumber} with `maven-jar-plugin` doesn't work when the bundle plugin is present.
+                             See https://stackoverflow.com/questions/12604161/error-while-adding-svn-revision-in-jar-manifest-with-maven-and-maven-bundle-plug
+                             As a workaround, declare the manifest attributes here instead, even though they are not related to bundles. -->
+                        <Implementation-Version>${project.version}+${buildNumber}</Implementation-Version>
+                        <Build-Time>${maven.build.timestamp}</Build-Time>
+                        <Automatic-Module-Name>com.couchbase.client.java</Automatic-Module-Name>
+
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Export-Package>

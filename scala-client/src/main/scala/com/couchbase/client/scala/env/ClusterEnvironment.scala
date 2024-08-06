@@ -20,9 +20,14 @@ import java.util.concurrent.{Executors, ThreadFactory}
 import com.couchbase.client.core
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, Meter, RequestTracer}
-import com.couchbase.client.core.env.{ConnectionStringPropertyLoader, PropertyLoader}
+import com.couchbase.client.core.env.{
+  ConnectionStringPropertyLoader,
+  PropertyLoader,
+  VersionAndGitHash
+}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig
+import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.codec.{JsonTranscoder, Transcoder}
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
@@ -301,6 +306,8 @@ private[scala] class CoreEnvironment(
 
   override protected def defaultAgentTitle(): String = "scala"
 
+  override protected def clientVersionAndGitHash(): VersionAndGitHash =
+    VersionAndGitHash.from(classOf[Cluster])
 }
 
 /** All configuration options related to a cluster environment, along with some long-lived resources including a

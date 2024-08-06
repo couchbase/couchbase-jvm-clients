@@ -25,6 +25,7 @@ import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.PropertyLoader
 import com.couchbase.client.core.env.TimeoutConfig
+import com.couchbase.client.core.env.VersionAndGitHash
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.CommonOptions
 import com.couchbase.client.kotlin.codec.JacksonJsonSerializer
@@ -45,6 +46,8 @@ import kotlin.time.toJavaDuration
 import kotlin.time.toKotlinDuration
 
 public interface ClusterPropertyLoader : PropertyLoader<ClusterEnvironment.Builder>
+
+private val clientVersion = VersionAndGitHash.from(Cluster::class.java)
 
 /**
  * Resources and configuration for connecting to a Couchbase cluster.
@@ -109,6 +112,10 @@ public class ClusterEnvironment private constructor(builder: Builder) : CoreEnvi
      */
     override fun defaultAgentTitle(): String {
         return "kotlin"
+    }
+
+    override fun clientVersionAndGitHash(): VersionAndGitHash {
+        return clientVersion
     }
 
     /**

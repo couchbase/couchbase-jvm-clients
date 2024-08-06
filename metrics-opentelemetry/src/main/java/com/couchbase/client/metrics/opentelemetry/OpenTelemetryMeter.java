@@ -21,7 +21,7 @@ import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
-import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.VersionAndGitHash;
 import com.couchbase.client.core.error.MeterException;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -29,44 +29,16 @@ import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.MeterProvider;
 
-import java.net.URL;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 @Stability.Volatile
 public class OpenTelemetryMeter implements Meter {
 
   public static final String INSTRUMENTATION_NAME = "com.couchbase.client.jvm";
 
-  private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
-
-  static {
-    try {
-      Enumeration<URL> resources = CoreEnvironment.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
-      while (resources.hasMoreElements()) {
-        URL manifestUrl = resources.nextElement();
-        if (manifestUrl == null) {
-          continue;
-        }
-        Manifest manifest = new Manifest(manifestUrl.openStream());
-        if (manifest.getEntries() == null) {
-          continue;
-        }
-        for (Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
-          if (entry.getKey().startsWith("couchbase-")) {
-            MANIFEST_INFOS.put(entry.getKey(), entry.getValue());
-          }
-        }
-      }
-    } catch (Exception e) {
-      // Ignored on purpose.
-    }
-  }
+  private static final VersionAndGitHash version = VersionAndGitHash.from(OpenTelemetryMeter.class);
 
   private final io.opentelemetry.api.metrics.Meter otMeter;
   private final Map<NameAndTags, OpenTelemetryCounter> counters = new ConcurrentHashMap<>();
@@ -83,15 +55,8 @@ public class OpenTelemetryMeter implements Meter {
   }
 
   private OpenTelemetryMeter(MeterProvider meterProvider) {
-    String version = null;
-    try {
-      version = MANIFEST_INFOS.get("couchbase-java-metrics-opentelemetry").getValue("Impl-Version");
-    } catch (Exception ex) {
-      // ignored on purpose
-    }
-
     this.otMeter = version != null
-      ? meterProvider.meterBuilder(INSTRUMENTATION_NAME).setInstrumentationVersion(version).build()
+      ? meterProvider.meterBuilder(INSTRUMENTATION_NAME).setInstrumentationVersion(version.version()).build()
       : meterProvider.get(INSTRUMENTATION_NAME);
   }
 

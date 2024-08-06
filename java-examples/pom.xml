@@ -56,16 +56,6 @@
                             <Build-Time>${maven.build.timestamp}</Build-Time>
                             <Automatic-Module-Name>com.couchbase.client.java.examples</Automatic-Module-Name>
                         </manifestEntries>
-                        <manifestSections>
-                            <manifestSection>
-                                <!-- the part after couchbase- needs to match with the agent title in the env -->
-                                <name>couchbase-java-examples</name>
-                                <manifestEntries>
-                                    <Impl-Version>${project.version}</Impl-Version>
-                                    <Impl-Git-Revision>${buildNumber}</Impl-Git-Revision>
-                                </manifestEntries>
-                            </manifestSection>
-                        </manifestSections>
                     </archive>
                 </configuration>
             </plugin>

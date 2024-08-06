@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
@@ -45,11 +46,9 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
-import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -59,15 +58,11 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.jar.Attributes;
-import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
@@ -81,42 +76,19 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * language binding (i.e. the ClusterEnvironment for the java client).
  */
 public class CoreEnvironment implements AutoCloseable {
+  private static final VersionAndGitHash coreVersion = VersionAndGitHash.from(Core.class);
 
   private static final String CORE_AGENT_TITLE = "java-core";
   /**
    * Default maximum requests being queued in retry before performing backpressure cancellations.
    */
   public static final long DEFAULT_MAX_NUM_REQUESTS_IN_RETRY = 32768;
-  private static final Map<String, Attributes> MANIFEST_INFOS = new ConcurrentHashMap<>();
 
   /**
    * Service Loader for Environment Profiles.
    */
   private static final ServiceLoader<ConfigurationProfile> environmentProfileLoader =
     ServiceLoader.load(ConfigurationProfile.class);
-
-  static {
-    try {
-      Enumeration<URL> resources = CoreEnvironment.class.getClassLoader().getResources(JarFile.MANIFEST_NAME);
-      while (resources.hasMoreElements()) {
-        URL manifestUrl = resources.nextElement();
-        if (manifestUrl == null) {
-          continue;
-        }
-        Manifest manifest = new Manifest(manifestUrl.openStream());
-        if (manifest.getEntries() == null) {
-          continue;
-        }
-        for (Map.Entry<String, Attributes> entry : manifest.getEntries().entrySet()) {
-          if (entry.getKey().startsWith("couchbase-")) {
-            MANIFEST_INFOS.put(entry.getKey(), entry.getValue());
-          }
-        }
-      }
-    } catch (Exception e) {
-      // Ignored on purpose.
-    }
-  }
 
   /**
    * The default retry strategy used for all ops if not overridden.
@@ -254,11 +226,6 @@ public class CoreEnvironment implements AutoCloseable {
     }
   }
 
-  /**
-   * Helper method which grabs the title and version for the user agent from the manifest.
-   *
-   * @return the user agent string, in a best effort manner.
-   */
   private UserAgent defaultUserAgent() {
     try {
       String os = String.join(" ",
@@ -284,46 +251,38 @@ public class CoreEnvironment implements AutoCloseable {
   }
 
   /**
+   * Subclasses should override to return version info for the "wrapper" (language-specific SDK).
+   */
+  protected VersionAndGitHash clientVersionAndGitHash() {
+    return VersionAndGitHash.UNKNOWN;
+  }
+
+  /**
    * If present, returns the git hash for the client at build time.
    */
   public Optional<String> clientHash() {
-    return loadFromManifest(defaultAgentTitle(), "Impl-Git-Revision");
+    return Optional.of(clientVersionAndGitHash().gitHash());
   }
 
   /**
    * If present, returns the git hash for the core at build time.
    */
   public Optional<String> coreHash() {
-    return loadFromManifest(CORE_AGENT_TITLE, "Impl-Git-Revision");
+    return Optional.of(coreVersion.gitHash());
   }
 
   /**
    * If present, returns the client version at build time.
    */
   public Optional<String> clientVersion() {
-    return loadFromManifest(defaultAgentTitle(), "Impl-Version");
+    return Optional.of(clientVersionAndGitHash().version());
   }
 
   /**
    * If present, returns the core version at build time.
    */
   public Optional<String> coreVersion() {
-    return loadFromManifest(CORE_AGENT_TITLE, "Impl-Version");
-  }
-
-  /**
-   * Helper method to load the value from the parsed manifests (if present).
-   *
-   * @param agent the agent suffix, either core or client per pom file.
-   * @param value the value of the manifest attribute to fetch.
-   * @return if found, returns the attribute value or an empty optional otherwise.
-   */
-  private Optional<String> loadFromManifest(final String agent, final String value) {
-    Attributes attributes = MANIFEST_INFOS.get("couchbase-" + agent);
-    if (attributes == null) {
-      return Optional.empty();
-    }
-    return Optional.ofNullable(attributes.getValue(value));
+    return Optional.of(coreVersion.version());
   }
 
   /**
