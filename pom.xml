@@ -212,6 +212,8 @@
 <!--         <module>java-fit-performer</module>-->
 <!--         <module>kotlin-fit-performer</module>-->
 <!--         <module>scala-fit-performer</module>-->
+<!--         <module>columnar-fit-performer-shared</module>-->
+<!--         <module>columnar-java-fit-performer</module>-->
     </modules>
 
     <build>

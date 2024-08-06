@@ -26,6 +26,7 @@ import com.couchbase.columnar.client.java.internal.JacksonTransformers;
 import com.couchbase.columnar.client.java.internal.JsonSerializer;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
+import org.jetbrains.annotations.ApiStatus.Experimental;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -53,7 +54,8 @@ public final class QueryOptions {
   @Nullable private ScanConsistency scanConsistency;
   @Nullable private Duration scanWait;
   @Nullable private Deserializer deserializer;
-  private boolean readOnly = false;
+  @Nullable private Boolean readOnly;
+  @Nullable private Map<String, ?> raw;
 
   public QueryOptions timeout(@Nullable Duration timeout) {
     this.timeout = timeout;
@@ -102,8 +104,21 @@ public final class QueryOptions {
     return this;
   }
 
-  public QueryOptions readOnly(boolean readOnly) {
+  public QueryOptions readOnly(@Nullable Boolean readOnly) {
     this.readOnly = readOnly;
+    return this;
+  }
+
+  /**
+   * Specifies arbitrary name-value pairs to include the query request JSON.
+   * <p>
+   * Marked as "experimental" because this might not be supported by future
+   * client-server protocols. Let us know if you need to use this method,
+   * so we can consider extending the stable API to support your use case.
+   */
+  @Experimental
+  public QueryOptions raw(@Nullable Map<String, ?> raw) {
+    this.raw = raw == null ? null : unmodifiableMap(new HashMap<>(raw));
     return this;
   }
 
@@ -120,13 +135,8 @@ public final class QueryOptions {
     @Nullable private final ScanConsistency scanConsistency;
     @Nullable private final Duration scanWait;
     @Nullable private final Deserializer deserializer;
-
-    // Affects how the client handles retries, so must be non-null.
-    private final boolean readonly;
-
-    // Raw parameters are tricky for protostellar,
-    // so let's defer exposing them as long as we can.
-    //  private Map<String, Object> raw;
+    @Nullable private final Boolean readOnly;
+    @Nullable private final Map<String, ?> raw;
 
     Unmodifiable(QueryOptions builder) {
       this.timeout = builder.timeout;
@@ -137,7 +147,8 @@ public final class QueryOptions {
       this.scanConsistency = builder.scanConsistency;
       this.scanWait = builder.scanWait;
       this.deserializer = builder.deserializer;
-      this.readonly = builder.readOnly;
+      this.readOnly = builder.readOnly;
+      this.raw = builder.raw;
     }
 
     void injectParams(ObjectNode query) {
@@ -190,15 +201,19 @@ public final class QueryOptions {
         }
       }
 
-      if (readonly) {
-        query.put("readonly", true);
+      if (readOnly != null) {
+        query.put("readonly", readOnly);
       }
 
-//    if (raw != null) {
-//      for (Map.Entry<String, Object> entry : raw.entrySet()) {
-//        input.put(entry.getKey(), entry.getValue());
-//      }
-//    }
+      if (raw != null) {
+        // ignore result; just ensure internal serializer can safely handle the values
+        JsonObject.from(raw);
+
+        raw.forEach((key, value) -> {
+          JsonNode jsonValue = toRepackagedJacksonNode(InternalJacksonSerDes.INSTANCE, value);
+          query.set(key, jsonValue);
+        });
+      }
     }
 
     @Override
@@ -212,7 +227,8 @@ public final class QueryOptions {
         ", scanConsistency=" + scanConsistency +
         ", scanWait=" + scanWait +
         ", deserializer=" + deserializer +
-        ", readonly=" + readonly +
+        ", readOnly=" + readOnly +
+        ", raw=" + raw +
         '}';
     }
 
@@ -236,8 +252,8 @@ public final class QueryOptions {
       return priority;
     }
 
-    public boolean readonly() {
-      return readonly;
+    public boolean readOnly() {
+      return readOnly != null && readOnly;
     }
 
     public Map<String, Object> clientContext() {

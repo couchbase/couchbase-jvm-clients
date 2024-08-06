@@ -16,9 +16,9 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
+import org.jetbrains.annotations.ApiStatus;
 
-@Stability.Internal
+@ApiStatus.Internal
 public interface JsonSerializer {
   byte[] serialize(Object input);
 }

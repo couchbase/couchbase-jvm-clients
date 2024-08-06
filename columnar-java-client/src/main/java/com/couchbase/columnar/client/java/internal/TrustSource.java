@@ -17,8 +17,8 @@
 package com.couchbase.columnar.client.java.internal;
 
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.jetbrains.annotations.ApiStatus;
 import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -34,7 +34,7 @@ import static java.util.stream.Collectors.joining;
 /**
  * Either a {@link TrustManagerFactory} XOR a list of {@link X509Certificate}.
  */
-@Stability.Internal
+@ApiStatus.Internal
 public class TrustSource {
   @Nullable private final List<X509Certificate> certificates;
   @Nullable private final TrustManagerFactory factory;

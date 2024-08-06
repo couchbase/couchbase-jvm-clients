@@ -16,7 +16,6 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JavaType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.json.Mapper;
@@ -24,6 +23,7 @@ import com.couchbase.columnar.client.java.DataConversionException;
 import com.couchbase.columnar.client.java.codec.Deserializer;
 import com.couchbase.columnar.client.java.codec.JacksonDeserializer;
 import com.couchbase.columnar.client.java.codec.TypeRef;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ import java.io.IOException;
  * Be aware that this serializer does not recognize standard Jackson annotations.
  * @see JacksonDeserializer
  */
-@Stability.Internal
+@ApiStatus.Internal
 public class InternalJacksonSerDes implements JsonSerializer, Deserializer {
 
   public static final InternalJacksonSerDes INSTANCE = new InternalJacksonSerDes();

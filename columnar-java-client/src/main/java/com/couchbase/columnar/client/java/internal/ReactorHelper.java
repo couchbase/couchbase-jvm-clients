@@ -16,7 +16,7 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
+import org.jetbrains.annotations.ApiStatus;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -30,7 +30,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
-@Stability.Internal
+@ApiStatus.Internal
 public class ReactorHelper {
 
   private ReactorHelper() {

@@ -28,11 +28,20 @@
             <version>${core-io.version}</version>
         </dependency>
 
-        <!-- May be excluded if JacksonDeserializer is never used -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Copy this dependency declaration into your own project
+             if you would like IntelliJ IDEA to warn you about
+             using experimental API. (For Gradle, use `compileOnly`.)-->
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>24.1.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- External, Optional Dependencies -->

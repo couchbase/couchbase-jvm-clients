@@ -16,7 +16,6 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
@@ -24,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.service.ServiceType;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.util.function.Supplier;
 
@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
  * Delegates all methods to the authenticator returned by the
  * given supplier.
  */
-@Stability.Internal
+@ApiStatus.Internal
 public class DynamicAuthenticator implements Authenticator {
   private final Supplier<Authenticator> supplier;
 

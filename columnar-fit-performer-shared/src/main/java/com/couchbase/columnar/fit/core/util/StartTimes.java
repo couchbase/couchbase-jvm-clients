@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.columnar.fit.core.util;
 
-/**
- * Classes in this package are not part of the SDK's public API,
- * and may change in any way at any time.
- */
-@ApiStatus.Internal
-@NonNullApi
-package com.couchbase.columnar.client.java.internal;
+import static com.couchbase.columnar.fit.core.util.TimeUtil.getTimeNow;
 
-import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.NonNullApi;
+public record StartTimes(long asSystem, com.google.protobuf.Timestamp asWallclock) {
+  public static StartTimes startTiming() {
+    return new StartTimes(System.nanoTime(), getTimeNow());
+  }
+}

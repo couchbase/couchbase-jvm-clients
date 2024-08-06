@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-/**
- * Classes in this package are not part of the SDK's public API,
- * and may change in any way at any time.
- */
-@ApiStatus.Internal
-@NonNullApi
-package com.couchbase.columnar.client.java.internal;
+package com.couchbase.columnar.fit.core.exceptions;
 
-import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.NonNullApi;
+public class GrpcUnimplemented extends RuntimeException {
+}

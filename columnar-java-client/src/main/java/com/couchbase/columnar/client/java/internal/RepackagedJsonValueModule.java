@@ -16,7 +16,6 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonGenerator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
@@ -28,11 +27,12 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.SerializerP
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.SimpleModule;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
+import org.jetbrains.annotations.ApiStatus;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
 
-@Stability.Internal
+@ApiStatus.Internal
 public class RepackagedJsonValueModule extends SimpleModule {
 
   public RepackagedJsonValueModule() {

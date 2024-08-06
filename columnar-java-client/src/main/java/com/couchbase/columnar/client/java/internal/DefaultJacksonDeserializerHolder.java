@@ -18,15 +18,15 @@ package com.couchbase.columnar.client.java.internal;
 
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.columnar.client.java.codec.JacksonDeserializer;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Separate class so the SDK doesn't explode if the user
  * excludes Jackson from the class path.
  */
-@Stability.Internal
+@ApiStatus.Internal
 public class DefaultJacksonDeserializerHolder {
   public static final JacksonDeserializer DESERIALIZER = new JacksonDeserializer(
     JsonMapper.builder().build()

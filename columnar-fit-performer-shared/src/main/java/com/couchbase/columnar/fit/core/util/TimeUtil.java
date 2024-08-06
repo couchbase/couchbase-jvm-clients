@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.couchbase.columnar.fit.core.util;
 
-/**
- * Classes in this package are not part of the SDK's public API,
- * and may change in any way at any time.
- */
-@ApiStatus.Internal
-@NonNullApi
-package com.couchbase.columnar.client.java.internal;
+import java.time.Instant;
 
-import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.NonNullApi;
+public class TimeUtil {
+  public static com.google.protobuf.Timestamp getTimeNow() {
+    Instant now = Instant.now();
+
+    return com.google.protobuf.Timestamp.newBuilder()
+      .setSeconds(now.getEpochSecond())
+      .setNanos(now.getNano())
+      .build();
+  }
+}

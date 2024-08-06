@@ -54,7 +54,7 @@ import static java.util.Objects.requireNonNull;
  * These classes are not as full-featured as Jackson's tree model, but they
  * are always supported regardless of which deserializer you use.
  * <p>
- * Call {@link #asByteArray()} to get the raw bytes of the row content,
+ * Call {@link #bytes()} to get the raw bytes of the row content,
  * exactly as it was received from the server. This may be useful for
  * debugging, or if you want to handle deserialization yourself.
  *
@@ -77,7 +77,7 @@ public final class Row {
    * Returns the raw content of the row, exactly as it was received from
    * the server.
    */
-  public byte[] asByteArray() {
+  public byte[] bytes() {
     return content;
   }
 

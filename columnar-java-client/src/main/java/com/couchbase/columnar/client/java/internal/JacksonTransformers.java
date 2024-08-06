@@ -15,12 +15,12 @@
  */
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.json.JsonMapper;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.module.afterburner.AfterburnerModule;
+import org.jetbrains.annotations.ApiStatus;
 
-@Stability.Internal
+@ApiStatus.Internal
 public class JacksonTransformers {
 
   public static final ObjectMapper MAPPER = JsonMapper.builder()

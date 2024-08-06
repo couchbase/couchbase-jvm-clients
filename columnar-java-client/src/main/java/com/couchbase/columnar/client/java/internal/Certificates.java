@@ -16,8 +16,8 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.SecurityConfig;
+import org.jetbrains.annotations.ApiStatus;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
@@ -40,7 +40,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Utility methods for reading TLS certificates from various locations.
  */
-@Stability.Internal
+@ApiStatus.Internal
 public class Certificates {
   private Certificates() {
     throw new AssertionError("not instantiable");
@@ -93,7 +93,6 @@ public class Certificates {
    * Returns the Certificate Authority (CA) certificates used by
    * Couchbase internal pre-production clusters.
    */
-  @Stability.Internal
   public static List<X509Certificate> getNonProdCertificates() {
     return parse("-----BEGIN CERTIFICATE-----\n" +
       "MIIDFTCCAf2gAwIBAgIRANguFcFZ7eVLTF2mnPqkkhYwDQYJKoZIhvcNAQELBQAw\n" +
