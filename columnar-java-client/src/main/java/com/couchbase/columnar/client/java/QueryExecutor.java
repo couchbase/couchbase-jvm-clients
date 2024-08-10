@@ -38,19 +38,19 @@ import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryAction;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.CoreAsyncUtils;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.columnar.client.java.codec.Deserializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -58,13 +58,23 @@ import static com.couchbase.client.core.retry.AuthErrorDecider.getTlsHandshakeFa
 import static com.couchbase.client.core.retry.RetryReason.AUTHENTICATION_ERROR;
 import static com.couchbase.client.core.retry.RetryReason.ENDPOINT_NOT_AVAILABLE;
 import static com.couchbase.client.core.retry.RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.columnar.client.java.internal.ReactorHelper.forEachBlocking;
+import static com.couchbase.columnar.client.java.internal.ReactorHelper.propagateAsCancellation;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 class QueryExecutor {
+  private static final Logger log = LoggerFactory.getLogger(QueryExecutor.class);
+
   private static final double dispatchTimeoutFactor = 1.5; // of connectTimeout
+
+  private static final BackoffCalculator backoff = new BackoffCalculator(
+    Duration.ofMillis(100),
+    Duration.ofMinutes(1)
+  );
 
   private final Core core;
   private final Environment environment;
@@ -82,28 +92,19 @@ class QueryExecutor {
     columnarRetryStrategy = new ColumnarRetryStrategy(dispatchTimeout, connectionString);
   }
 
-  QueryResult query(
+  QueryResult queryBuffered(
     String statement,
     Consumer<QueryOptions> optionsCustomizer,
     @Nullable CoreBucketAndScope scope
   ) {
-    QueryOptions builder = new QueryOptions();
-    optionsCustomizer.accept(builder);
-    QueryOptions.Unmodifiable builtOpts = builder.build();
-
-    Deserializer customDeserializer = builtOpts.deserializer();
-
-    try {
-      return CoreAsyncUtils.block(
-        analyticsQueryAsync(
-          core,
-          analyticsRequest(statement, builtOpts, scope),
-          customDeserializer != null ? customDeserializer : environment.deserializer()
-        )
-      );
-    } catch (RuntimeException t) {
-      throw translateException(t);
-    }
+    return doWithRetry(
+      optionsCustomizer,
+      (options, remainingTimeout) -> blockAndRewriteStackTrace(analyticsQueryAsync(
+        core,
+        analyticsRequest(statement, options, remainingTimeout, scope),
+        defaultIfNull(options.deserializer(), environment.deserializer())
+      ))
+    );
   }
 
   QueryMetadata queryStreaming(
@@ -112,33 +113,115 @@ class QueryExecutor {
     @Nullable CoreBucketAndScope scope,
     Consumer<Row> rowConsumer
   ) {
+    return doWithRetry(
+      optionsCustomizer,
+      (options, remainingTimeout) -> analyticsQueryBlockingStreaming(
+        core,
+        analyticsRequest(statement, options, remainingTimeout, scope),
+        defaultIfNull(options.deserializer(), environment.deserializer()),
+        rowConsumer
+      )
+    );
+  }
+
+  /**
+   * A little adapter that lets buffered and streaming queries
+   * both use the same retry code.
+   */
+  private interface QueryStrategy<R> {
+    R apply(
+      QueryOptions.Unmodifiable options,
+      Duration remainingTimeout
+    );
+  }
+
+  private <R> R doWithRetry(
+    Consumer<QueryOptions> optionsCustomizer,
+    QueryStrategy<R> strategy
+  ) {
     QueryOptions builder = new QueryOptions();
     optionsCustomizer.accept(builder);
     QueryOptions.Unmodifiable builtOpts = builder.build();
 
-    Deserializer customDeserializer = builtOpts.deserializer();
+    Duration remainingTimeout = resolveTimeout(builtOpts);
+    Deadline retryDeadline = Deadline.of(remainingTimeout);
 
-    try {
-      return analyticsQueryBlockingStreaming(
-        core,
-        analyticsRequest(statement, builtOpts, scope),
-        customDeserializer != null ? customDeserializer : environment.deserializer(),
-        rowConsumer
-      );
-    } catch (RuntimeException t) {
-      throw translateException(t);
+    CoreErrorCodeAndMessageException prevError = null;
+    int attempt = 0;
+
+    while (true) {
+      try {
+        return strategy.apply(builtOpts, remainingTimeout);
+
+      } catch (RuntimeException t) {
+        if (t instanceof CoreErrorCodeAndMessageException) {
+          CoreErrorCodeAndMessageException currentError = (CoreErrorCodeAndMessageException) t;
+
+          if (currentError.retriable()) {
+            Duration delay = backoff.delayForAttempt(attempt++);
+            remainingTimeout = retryDeadline.remaining().orElse(Duration.ZERO);
+
+            if (remainingTimeout.compareTo(delay) <= 0) {
+              throw notEnoughTimeToRetry(attempt, currentError);
+            }
+
+            log.debug("Query attempt {} failed; retrying after {}. {}", attempt, delay, context(currentError));
+            sleep(delay);
+            prevError = currentError;
+            continue; // retry!
+          }
+        }
+
+        throw translateException(t, prevError);
+      }
     }
+  }
+
+  private static TimeoutException notEnoughTimeToRetry(int attempt, CoreErrorCodeAndMessageException t) {
+    TimeoutException timeoutException = new TimeoutException(
+      "Query attempt " + attempt + " failed, and there's not enough time left to try again. " +
+        t.context().exportAsString(Context.ExportFormat.JSON)
+    );
+    timeoutException.addSuppressed(translateException(t));
+    return timeoutException;
+  }
+
+  private static Object context(CouchbaseException e) {
+    // defers building the string unless actually needed [logged].
+    return new Object() {
+      @Override
+      public String toString() {
+        ErrorContext ctx = e.context();
+        return ctx == null ? "{}" : ctx.exportAsString(Context.ExportFormat.JSON);
+      }
+    };
+  }
+
+  private static void sleep(Duration d) {
+    try {
+      MILLISECONDS.sleep(d.toMillis());
+    } catch (InterruptedException e) {
+      throw propagateAsCancellation(e);
+    }
+  }
+
+  private static RuntimeException translateException(RuntimeException e, @Nullable Exception suppressMe) {
+    RuntimeException result = translateException(e);
+    if (suppressMe != null) {
+      result.addSuppressed(suppressMe);
+    }
+    return result;
   }
 
   private static RuntimeException translateException(RuntimeException e) {
     if (e instanceof CoreErrorCodeAndMessageException) {
       CoreErrorCodeAndMessageException t = (CoreErrorCodeAndMessageException) e;
 
-      if (t.errorCodeAndMessage().code() == 20000) {
+      if (t.hasCode(20000)) {
         return new InvalidCredentialException(t.context());
       }
 
-      if (t.errorCodeAndMessage().code() == 21002) {
+      if (t.hasCode(21002)) {
         if (t.context() instanceof AnalyticsErrorContext) {
           AnalyticsErrorContext ctx = (AnalyticsErrorContext) t.context();
           if (ctx.requestContext().request().idempotent()) {
@@ -148,7 +231,7 @@ class QueryExecutor {
         return newAmbiguousTimeoutException(t.context());
       }
 
-      return new QueryException(t.errorCodeAndMessage(), t.context());
+      return new QueryException(t.errors().get(0), t.context());
     }
 
     if (e instanceof com.couchbase.client.core.error.TimeoutException) {
@@ -167,14 +250,12 @@ class QueryExecutor {
       return hide((CouchbaseException) e);
     }
 
-    if (CbThrowables.hasCause(e, InterruptedException.class)) {
-      // Satisfy executeQuery() contract.
-      CancellationException ce = new CancellationException("Thread was interrupted.");
-      ce.addSuppressed(e);
-      return ce;
-    }
-
     return e;
+  }
+
+  Duration resolveTimeout(QueryOptions.Unmodifiable opts) {
+    Duration customTimeout = opts.timeout();
+    return customTimeout != null ? customTimeout : environment.timeoutConfig().analyticsTimeout();
   }
 
   /**
@@ -187,16 +268,19 @@ class QueryExecutor {
   AnalyticsRequest analyticsRequest(
     final String statement,
     final QueryOptions.Unmodifiable opts,
+    final Duration timeout,
     @Nullable final CoreBucketAndScope scope
   ) {
     requireNonNull(statement);
 
-    Duration customTimeout = opts.timeout();
-    Duration timeout = customTimeout != null ? customTimeout : environment.timeoutConfig().analyticsTimeout();
+    // The server timeout doesn't _need_ to be different, but making it longer
+    // means it's more likely the user will consistently get timeout exceptions
+    // with client timeout error contexts instead of a mix of client- and server-side contexts.
+    Duration serverTimeout = timeout.plus(Duration.ofSeconds(5));
 
     ObjectNode query = Mapper.createObjectNode();
     query.put("statement", statement);
-    query.put("timeout", encodeDurationToMs(timeout));
+    query.put("timeout", encodeDurationToMs(serverTimeout));
     if (scope != null) {
       query.put("query_context", "default:`" + scope.bucketName() + "`.`" + scope.scopeName() + "`");
     }
@@ -256,6 +340,7 @@ class QueryExecutor {
     final Consumer<Row> callback
   ) {
     Deadline deadline = Deadline.of(request.timeout());
+
     AnalyticsResponse response = analyticsQueryInternal(core, request).blockOptional().get();
 
     Mono<?> wholeStreamDeadlineAsMono = Mono.never().timeout(
@@ -385,7 +470,7 @@ class QueryExecutor {
    *   is dispatched to the server.
    * </ul>
    *
-   * @see QueryOptions#readOnly(boolean)
+   * @see QueryOptions#readOnly(Boolean)
    */
   private static TimeoutException newSafeTimeoutException(String message, Context context) {
     return new TimeoutException(message + " " + context.exportAsString(Context.ExportFormat.JSON));
@@ -426,5 +511,38 @@ class QueryExecutor {
     }
 
     return r;
+  }
+
+  /**
+   * Similar to {@link com.couchbase.client.core.util.CoreAsyncUtils#block(CompletableFuture)}
+   * but handles interruption differently.
+   */
+  private static <T> T blockAndRewriteStackTrace(CompletableFuture<T> future) {
+    try {
+      return future.get();
+
+    } catch (InterruptedException e) {
+      throw propagateAsCancellation(e);
+
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof RuntimeException) {
+        rewriteStackTrace(cause);
+        throw (RuntimeException) cause;
+      }
+      throw new RuntimeException(cause);
+    }
+  }
+
+  /**
+   * Adjusts the stack trace to point HERE instead of the thread where the exception was actually thrown.
+   * Preserves the original async stack trace as a suppressed exception.
+   */
+  private static void rewriteStackTrace(Throwable t) {
+    Exception suppressed = new Exception(
+      "The above exception was originally thrown by another thread at the following location.");
+    suppressed.setStackTrace(t.getStackTrace());
+    t.fillInStackTrace();
+    t.addSuppressed(suppressed);
   }
 }

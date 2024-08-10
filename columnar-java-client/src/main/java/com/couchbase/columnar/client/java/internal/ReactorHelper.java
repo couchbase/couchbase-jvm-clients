@@ -39,7 +39,15 @@ public class ReactorHelper {
 
   private static final Object STREAM_END_SENTINEL = new Object();
 
-  private static CancellationException propagateAsCancellationException(InterruptedException e) {
+  public static CancellationException propagateAsCancellation(InterruptedException e) {
+    // We don't own the thread's interruption policy, so preserve the "interrupted" flag per
+    // Java Concurrency In Practice section 7.1.13:
+    // """
+    // Only code that implements a thread's interruption policy may swallow an interruption request.
+    // General-purpose task and library code should never swallow interruption requests.
+    // """
+    Thread.currentThread().interrupt();
+
     CancellationException t = new CancellationException("Thread was interrupted.");
     t.addSuppressed(e);
     return t;
@@ -102,6 +110,8 @@ public class ReactorHelper {
               // In any case, we're stopping soon, so it's fine to release a permit
               // even if we were interrupted while acquiring one.
               semaphore.release();
+
+              Thread.currentThread().interrupt(); // Because we don't own the thread's interrupt policy
             }
           })
           .subscribeOn(Schedulers.boundedElastic()) // Because this Mono blocks.
@@ -126,8 +136,7 @@ public class ReactorHelper {
           semaphore.release();
 
         } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw propagateAsCancellationException(e);
+          throw propagateAsCancellation(e);
         }
 
         if (item instanceof List) {

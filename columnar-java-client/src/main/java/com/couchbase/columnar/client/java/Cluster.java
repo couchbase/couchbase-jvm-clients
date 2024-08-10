@@ -246,7 +246,7 @@ public final class Cluster implements Closeable, Queryable {
     String statement,
     Consumer<QueryOptions> optionsCustomizer
   ) {
-    return queryExecutor.query(statement, optionsCustomizer, null);
+    return queryExecutor.queryBuffered(statement, optionsCustomizer, null);
   }
 
   @Override

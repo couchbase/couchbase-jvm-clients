@@ -122,13 +122,13 @@ public class AnalyticsChunkResponseParser
       ? Collections.emptyList()
       : ErrorCodeAndMessage.from(bytes);
     AnalyticsErrorContext errorContext = new AnalyticsErrorContext(ctx, errors, httpCode);
-    if (errors.size() >= 1) {
-      ErrorCodeAndMessage error = errors.get(0);
 
+    if (!errors.isEmpty()) {
       if (ctx.request() instanceof AnalyticsRequest && !((AnalyticsRequest) ctx.request()).translateExceptions()) {
         // Let Columnar do its own exception translation
-        return new CoreErrorCodeAndMessageException(error, errorContext);
+        return new CoreErrorCodeAndMessageException(errors, errorContext);
       }
+      ErrorCodeAndMessage error = errors.get(0);
 
       // Analytics error code reference:
       //   https://docs.couchbase.com/server/current/analytics/error-codes.html

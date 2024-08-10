@@ -19,6 +19,9 @@ package com.couchbase.client.core.error;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.context.ErrorContext;
 
+import java.util.List;
+
+import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -28,17 +31,28 @@ import static java.util.Objects.requireNonNull;
  */
 @Stability.Internal
 public class CoreErrorCodeAndMessageException extends CouchbaseException {
-  private final ErrorCodeAndMessage errorCodeAndMessage;
+  private final List<ErrorCodeAndMessage> errors;
 
   public CoreErrorCodeAndMessageException(
-    ErrorCodeAndMessage errorCodeAndMessage,
+    List<ErrorCodeAndMessage> errors,
     ErrorContext errorContext
   ) {
-    super(errorCodeAndMessage.toString(), errorContext);
-    this.errorCodeAndMessage = requireNonNull(errorCodeAndMessage);
+    super(errors.toString(), errorContext);
+    this.errors = unmodifiableList(errors);
+    if (errors.isEmpty()) {
+      throw new IllegalArgumentException("errors list must not be empty");
+    }
   }
 
-  public ErrorCodeAndMessage errorCodeAndMessage() {
-    return errorCodeAndMessage;
+  public List<ErrorCodeAndMessage> errors() {
+    return errors;
+  }
+
+  public boolean retriable() {
+    return errors.stream().allMatch(ErrorCodeAndMessage::retry);
+  }
+
+  public boolean hasCode(int code) {
+    return errors.stream().anyMatch(it -> it.code() == code);
   }
 }

@@ -52,7 +52,7 @@ public final class Scope implements Queryable {
 
   @Override
   public QueryResult executeQuery(String statement, Consumer<QueryOptions> options) {
-    return cluster.queryExecutor.query(
+    return cluster.queryExecutor.queryBuffered(
       statement,
       options,
       new CoreBucketAndScope(database.name(), name)
