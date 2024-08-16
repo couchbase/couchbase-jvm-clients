@@ -78,7 +78,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.couchbase.JavaPerformer</mainClass>
+                            <mainClass>com.couchbase.columnar.JavaColumnarPerformer</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
