@@ -29,7 +29,7 @@ public final class Scope implements Queryable {
 
   private final String name;
 
-  public Scope(
+  Scope(
     Cluster cluster,
     Database database,
     String name
