@@ -57,6 +57,9 @@ public final class QueryOptions {
   @Nullable private Boolean readOnly;
   @Nullable private Map<String, ?> raw;
 
+  QueryOptions() {
+  }
+
   public QueryOptions timeout(@Nullable Duration timeout) {
     this.timeout = timeout;
     return this;

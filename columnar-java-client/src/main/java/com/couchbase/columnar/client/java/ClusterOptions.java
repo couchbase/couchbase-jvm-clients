@@ -27,6 +27,9 @@ public final class ClusterOptions {
   final SecurityOptions security = new SecurityOptions();
   final TimeoutOptions timeout = new TimeoutOptions();
 
+  ClusterOptions() {
+  }
+
   Unmodifiable build() {
     return new Unmodifiable(this);
   }

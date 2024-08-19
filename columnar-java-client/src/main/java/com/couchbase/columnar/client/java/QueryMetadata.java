@@ -16,7 +16,6 @@
 
 package com.couchbase.columnar.client.java;
 
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
@@ -33,8 +32,7 @@ public final class QueryMetadata {
   private final AnalyticsChunkHeader header;
   private final AnalyticsChunkTrailer trailer;
 
-  @Stability.Internal
-  public QueryMetadata(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
+  QueryMetadata(final AnalyticsChunkHeader header, final AnalyticsChunkTrailer trailer) {
     this.header = header;
     this.trailer = trailer;
   }
