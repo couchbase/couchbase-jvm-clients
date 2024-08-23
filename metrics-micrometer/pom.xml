@@ -11,10 +11,6 @@
         <version>1.16.3-SNAPSHOT</version><!--REL-->
     </parent>
 
-    <properties>
-        <micrometer.version>1.10.9</micrometer.version>
-    </properties>
-
     <artifactId>metrics-micrometer</artifactId>
     <version>0.7.3-SNAPSHOT</version><!--REL-->
 

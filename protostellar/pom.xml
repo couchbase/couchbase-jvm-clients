@@ -16,7 +16,7 @@
 
     <properties>
         <!-- when updating grpc version, check to see if it's still necessary to pin Guava to a later version -->
-        <grpc.version>1.60.0</grpc.version>
+        <grpc.version>1.66.0</grpc.version>
         <grpc.protoc.version>3.23.2</grpc.protoc.version>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
@@ -25,11 +25,11 @@
 
     <dependencies>
 
-        <!-- Temporarily pin the Guava version for CVE-2020-8908 until gRPC catches up. -->
+        <!-- '-jre' version instead of '-android' -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>32.1.2-jre</version>
+            <version>33.3.0-jre</version>
         </dependency>
 
         <dependency>

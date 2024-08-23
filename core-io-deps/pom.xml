@@ -19,7 +19,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- When bumping this, it may be necessary to bump the grpc-netty dependency in protostellar/pom.xml also -->
-        <netty.version>4.1.108.Final</netty.version>
+        <netty.version>4.1.112.Final</netty.version>
         <jackson.version>2.17.2</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
@@ -117,7 +117,7 @@
             <!-- Transitive dependency of LatencyUtils. Force latest version. -->
             <groupId>org.hdrhistogram</groupId>
             <artifactId>HdrHistogram</artifactId>
-            <version>2.1.12</version>
+            <version>2.2.2</version>
         </dependency>
 
         <dependency>
