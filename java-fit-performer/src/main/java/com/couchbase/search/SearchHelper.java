@@ -88,6 +88,7 @@ import com.couchbase.client.protocol.sdk.search.SearchRowLocation;
 import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.stream.ReactiveSearchResultStreamer;
 import com.couchbase.utils.ContentAsUtil;
+import com.couchbase.utils.CustomJsonSerializer;
 import com.google.common.primitives.Floats;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
@@ -290,6 +291,13 @@ public class SearchHelper {
     }
     if (o.hasIncludeLocations()) {
       opts.includeLocations(o.getIncludeLocations());
+    }
+
+    if (o.hasSerialize()) {
+      if (o.getSerialize().hasCustomSerializer() && o.getSerialize().getCustomSerializer()) {
+        CustomJsonSerializer customSerializer = new CustomJsonSerializer();
+        opts.serializer(customSerializer);
+      }
     }
 
     return opts;
