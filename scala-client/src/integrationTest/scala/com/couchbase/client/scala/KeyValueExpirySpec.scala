@@ -10,13 +10,14 @@ import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
+import org.junit.jupiter.api.{AfterAll, BeforeAll, RepeatedTest, Test, TestInstance}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
 
 /** Helper class for generically testing expiry. */
 case class DocAndOperation(
+    name: String,
     op: (String) => Unit,
     docId: String = TestUtils.docId(),
     upsertDocFirst: Boolean = true
@@ -74,33 +75,33 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
     val expiryDuration = 3.second
     val nearFuture     = Instant.now.plus(expiryDuration.toSeconds, SECONDS)
 
-    val insertWithInstant = DocAndOperation(
+    val insertWithInstant = DocAndOperation("insertWithInstant",
       (docId) => assert(coll.insert(docId, content, InsertOptions().expiry(nearFuture)).isSuccess),
       upsertDocFirst = false
     )
-    val insertWithDuration = DocAndOperation(
+    val insertWithDuration = DocAndOperation("insertWithDuration",
       (docId) =>
         assert(coll.insert(docId, content, InsertOptions().expiry(expiryDuration)).isSuccess),
       upsertDocFirst = false
     )
 
-    val replaceWithInstant = DocAndOperation(
+    val replaceWithInstant = DocAndOperation("replaceWithInstant",
       (docId) => assert(coll.replace(docId, content, ReplaceOptions().expiry(nearFuture)).isSuccess)
     )
-    val replaceWithDuration = DocAndOperation(
+    val replaceWithDuration = DocAndOperation("replaceWithDuration",
       (docId) =>
         assert(coll.replace(docId, content, ReplaceOptions().expiry(expiryDuration)).isSuccess)
     )
 
-    val upsertWithInstant = DocAndOperation(
+    val upsertWithInstant = DocAndOperation("upsertWithInstant",
       (docId) => assert(coll.upsert(docId, content, UpsertOptions().expiry(nearFuture)).isSuccess)
     )
-    val upsertWithDuration = DocAndOperation(
+    val upsertWithDuration = DocAndOperation("upsertWithDuration",
       (docId) =>
         assert(coll.upsert(docId, content, UpsertOptions().expiry(expiryDuration)).isSuccess)
     )
 
-    val mutateInWithInstant = DocAndOperation(
+    val mutateInWithInstant = DocAndOperation("mutateInWithInstant",
       (docId) =>
         assert(
           coll
@@ -112,7 +113,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
             .isSuccess
         )
     )
-    val mutateInWithDuration = DocAndOperation(
+    val mutateInWithDuration = DocAndOperation("mutateInWithDuration",
       (docId) =>
         assert(
           coll
@@ -125,7 +126,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         )
     )
 
-    val incrementWithInstant = DocAndOperation(
+    val incrementWithInstant = DocAndOperation("incrementWithInstant",
       (docId) =>
         assert(
           coll.binary
@@ -134,7 +135,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         ),
       upsertDocFirst = false
     )
-    val incrementWithDuration = DocAndOperation(
+    val incrementWithDuration = DocAndOperation("incrementWithDuration",
       (docId) =>
         assert(
           coll.binary
@@ -144,7 +145,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
       upsertDocFirst = false
     )
 
-    val decrementWithInstant = DocAndOperation(
+    val decrementWithInstant = DocAndOperation("decrementWithInstant",
       (docId) =>
         assert(
           coll.binary
@@ -153,7 +154,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
         ),
       upsertDocFirst = false
     )
-    val decrementWithDuration = DocAndOperation(
+    val decrementWithDuration = DocAndOperation("decrementWithDuration",
       (docId) =>
         assert(
           coll.binary
@@ -189,6 +190,7 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
 
     // Execute all operations
     operations.foreach(operation => {
+      ScalaIntegrationTest.Logger.info(s"${operation.name}: executing")
       if (operation.upsertDocFirst) {
         coll.upsert(operation.docId, content)
       }
@@ -197,18 +199,25 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
 
       // Immediately after, the doc should exist
       coll.get(operation.docId, GetOptions().withExpiry(true)) match {
-        case Success(result) => assert(result.expiry.isDefined)
+        case Success(result) =>
+            ScalaIntegrationTest.Logger.info(s"${operation.name}: fetched ${result}")
+            assert(result.expiry.isDefined)
         case Failure(err)    => assert(false, s"unexpected error $err")
       }
     })
 
     Thread.sleep(sleepFor.toMillis)
+    ScalaIntegrationTest.Logger.info(s"Finished sleeping")
 
     // After a sleep the doc should be gone
     operations.foreach(operation => {
-      coll.get(operation.docId) match {
+        ScalaIntegrationTest.Logger.info(s"${operation.name}: fetching after sleep")
+
+        coll.get(operation.docId) match {
         case Failure(x: DocumentNotFoundException) =>
-        case x                                     => assert(false, s"Unexpected result $x")
+        case x                                     =>
+            ScalaIntegrationTest.Logger.info(s"${operation.name}: fetched after sleep $x")
+            assert(false, s"Unexpected result $x")
       }
     })
   }

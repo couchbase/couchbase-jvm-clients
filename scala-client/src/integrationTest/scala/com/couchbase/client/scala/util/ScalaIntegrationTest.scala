@@ -30,6 +30,7 @@ import com.couchbase.client.test.{
   TestNodeConfig
 }
 import org.junit.jupiter.api.Timeout
+import org.slf4j.LoggerFactory
 
 import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters
@@ -42,7 +43,9 @@ import scala.jdk.CollectionConverters._
   *
   * @since 3.0.0
   */
-object ScalaIntegrationTest {}
+object ScalaIntegrationTest {
+    val Logger = LoggerFactory.getLogger(classOf[ScalaIntegrationTest])
+}
 
 // Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
 @Timeout(value = 10, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
