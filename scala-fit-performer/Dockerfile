@@ -21,6 +21,8 @@ RUN mvn -T6 package -q -pl scala-fit-performer -am -Dcheckstyle.skip -Dmaven.tes
 FROM maven:3.8.1-openjdk-17
 
 WORKDIR /app
+# Default level; override with docker run -e LOG_LEVEL=DEBUG
+ENV LOG_LEVEL=INFO
 
 COPY --from=0 /app/couchbase-jvm-clients/scala-fit-performer/target/fit-performer-scala-1.0-SNAPSHOT-jar-with-dependencies.jar .
 ENTRYPOINT ["java", "-jar", "fit-performer-scala-1.0-SNAPSHOT-jar-with-dependencies.jar"]

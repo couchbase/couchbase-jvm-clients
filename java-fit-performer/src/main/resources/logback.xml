@@ -10,7 +10,7 @@
       <pattern>%d{HH:mm:ss.SSS} %thread{10} %-5level %-20F.%-4L %msg%n</pattern>
     </encoder>
   </appender>
-  <root level="INFO">
+  <root level="${LOG_LEVEL:-INFO}">
     <appender-ref ref="STDOUT"/>
   </root>
   <logger name="com.couchbase.transactions" level="DEBUG" />

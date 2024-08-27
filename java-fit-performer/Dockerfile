@@ -1,6 +1,8 @@
 # A Docker image for the Couchbase SDK performance test performer for Java.
 # Build from root with:
-# docker build -f couchbase-jvm-clients/java-fit-performer/Dockerfile .
+# docker build -f couchbase-jvm-clients/java-fit-performer/Dockerfile -t java-performer .
+# Run with:
+# docker run -e LOG_LEVEL=DEBUG -p 8060:8060 java-performer
 
 FROM maven:3.8.1-openjdk-17
 WORKDIR /app
@@ -21,6 +23,8 @@ RUN mvn -T6 package -q -pl java-fit-performer -am -Dcheckstyle.skip -Dmaven.test
 FROM maven:3.8.1-openjdk-17
 
 WORKDIR /app
+# Default level; override with docker run -e LOG_LEVEL=DEBUG
+ENV LOG_LEVEL=INFO
 
 COPY --from=0 /app/couchbase-jvm-clients/java-fit-performer/target/fit-performer-java-sdk-1.0-SNAPSHOT-jar-with-dependencies.jar .
 ENTRYPOINT ["java", "-jar", "fit-performer-java-sdk-1.0-SNAPSHOT-jar-with-dependencies.jar"]
