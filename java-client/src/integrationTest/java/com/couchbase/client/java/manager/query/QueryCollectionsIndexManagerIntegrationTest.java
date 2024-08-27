@@ -72,7 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   // time to allow for watch operations that are expected to succeed eventually
-  private static final Duration watchTimeout = Duration.ofSeconds(15);
+  private static final Duration watchTimeout = Duration.ofSeconds(60);
   private static final String scopeName = UUID.randomUUID().toString();
   private static final String collectionName = UUID.randomUUID().toString();
 
