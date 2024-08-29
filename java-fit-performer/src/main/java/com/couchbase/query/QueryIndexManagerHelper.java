@@ -227,7 +227,7 @@ public class QueryIndexManagerHelper {
       setSuccess(result);
     } else if (op.hasWatchIndexes()) {
       var request = op.getWatchIndexes();
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       if (collection == null) {
@@ -409,7 +409,7 @@ public class QueryIndexManagerHelper {
       }));
     } else if (command.hasWatchIndexes()) {
       var request = command.getWatchIndexes();
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Mono<Void> res;
@@ -556,13 +556,16 @@ public class QueryIndexManagerHelper {
     }
   }
 
-  public static @Nullable WatchQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.WatchIndexes request) {
+  public static @Nullable WatchQueryIndexesOptions createOptions(com.couchbase.client.protocol.sdk.query.indexmanager.WatchIndexes request, ConcurrentHashMap<String, RequestSpan> spans) {
     if (request.hasOptions()) {
       var opts = request.getOptions();
       var out = WatchQueryIndexesOptions.watchQueryIndexesOptions();
       if (opts.hasWatchPrimary()) out.watchPrimary(opts.getWatchPrimary());
       if (opts.hasScopeName()) out.scopeName(opts.getScopeName());
       if (opts.hasCollectionName()) out.collectionName(opts.getCollectionName());
+      // [start:3.4.3]
+      if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+      // [end:3.4.3]
       return out;
     } else {
       return null;

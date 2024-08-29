@@ -257,7 +257,9 @@ public class CoreCollectionQueryIndexManager {
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
-    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, options.commonOptions().parentSpan().orElse(null));
+
+    setupSpan(parent);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(indexNameSet, options.watchPrimary(), parent))
             .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
@@ -267,6 +269,13 @@ public class CoreCollectionQueryIndexManager {
             .onErrorMap(t -> toWatchTimeoutException(t, timeout))
             .toFuture()
             .whenComplete((r, t) -> parent.end());
+  }
+
+  private void setupSpan(RequestSpan parent) {
+    parent.attribute(TracingIdentifiers.ATTR_NAME, collection.bucket());
+    parent.attribute(TracingIdentifiers.ATTR_SCOPE, collection.scope());
+    parent.attribute(TracingIdentifiers.ATTR_COLLECTION, collection.collection());
+    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
   }
 
   public static String formatIndexFields(Collection<String> fields) {
@@ -371,9 +380,7 @@ public class CoreCollectionQueryIndexManager {
 
     CoreQueryOptions queryOpts = toQueryOptions(common, requireNonNull(queryType) == READ_ONLY, parameters);
 
-    parent.attribute(TracingIdentifiers.ATTR_NAME, collection.bucket());
-    parent.attribute(TracingIdentifiers.ATTR_SCOPE, collection.scope());
-    parent.attribute(TracingIdentifiers.ATTR_COLLECTION, collection.collection());
+    setupSpan(parent);
 
     return queryOps
             .queryAsync(statement.toString(), queryOpts, queryContext, null, null)

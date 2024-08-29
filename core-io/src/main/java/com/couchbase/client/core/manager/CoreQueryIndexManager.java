@@ -305,7 +305,8 @@ public class CoreQueryIndexManager {
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
-    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, null);
+    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, options.commonOptions().parentSpan().orElse(null));
+    setupSpan(bucketName, parent);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, options.watchPrimary(), parent, options.scopeAndCollection()))
             .retryWhen(Retry.onlyIf(ctx -> hasCause(ctx.exception(), IndexesNotReadyException.class))
@@ -315,6 +316,13 @@ public class CoreQueryIndexManager {
             .onErrorMap(t -> toWatchTimeoutException(t, timeout))
             .toFuture()
             .whenComplete((r, t) -> parent.end());
+  }
+
+  private static void setupSpan(@Nullable String bucketName, RequestSpan parent) {
+    if (bucketName != null) {
+      parent.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
+    }
+    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
   }
 
   private CompletableFuture<Void> failIfIndexesOffline(final String bucketName, final Set<String> indexNames,
@@ -355,7 +363,7 @@ public class CoreQueryIndexManager {
   }
 
   private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
-                                                  CoreCommonOptions options, String spanName, String bucketName,
+                                                  CoreCommonOptions options, String spanName, @Nullable String bucketName,
                                                   ObjectNode parameters) {
     RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
 
@@ -363,9 +371,7 @@ public class CoreQueryIndexManager {
 
     CoreQueryOptions queryOpts = toQueryOptions(common, requireNonNull(queryType) == READ_ONLY, parameters);
 
-    if (bucketName != null) {
-      parent.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
-    }
+    setupSpan(bucketName, parent);
 
     return queryOps
             .queryAsync(statement.toString(), queryOpts, null, null, null)
