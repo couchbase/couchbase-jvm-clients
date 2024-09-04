@@ -95,7 +95,7 @@ public class CoreTransactionGetResult {
     public String toString() {
         final StringBuilder sb = new StringBuilder("TransactionGetResultInternal{");
         sb.append("id=").append(DebugUtil.docId(collection, id));
-        sb.append("userFlags=").append(userFlags);
+        sb.append(",userFlags=").append(userFlags);
         sb.append(",cas=").append(cas);
         sb.append(",bucket=").append(collection.bucket());
         sb.append(",scope=").append(collection.scope());
