@@ -39,6 +39,7 @@ import com.couchbase.client.kotlin.analytics.AnalyticsPriority
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency
 import com.couchbase.client.kotlin.analytics.internal.AnalyticsExecutor
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
+import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.diagnostics.DiagnosticsResult
 import com.couchbase.client.kotlin.diagnostics.PingResult
@@ -71,6 +72,7 @@ import com.couchbase.client.kotlin.search.SearchRow
 import com.couchbase.client.kotlin.search.SearchScanConsistency
 import com.couchbase.client.kotlin.search.SearchSort
 import com.couchbase.client.kotlin.search.SearchSpec
+import com.couchbase.client.kotlin.transactions.Transactions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.awaitSingle
@@ -185,6 +187,13 @@ public class Cluster internal constructor(
     @Stability.Volatile
     public val httpClient: CouchbaseHttpClient
         get() = CouchbaseHttpClient(this)
+
+    /**
+     * A runner for transactional operations.
+     */
+    @VolatileCouchbaseApi
+    public val transactions: Transactions
+        get() = Transactions(core)
 
     /**
      * A manager for administering buckets (create, update, drop, flush, list, etc.)

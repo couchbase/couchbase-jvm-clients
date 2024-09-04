@@ -77,56 +77,25 @@ internal class QueryExecutor(
     ): Flow<QueryFlowItem> {
         val actualSerializer = serializer ?: defaultSerializer
 
-        val coreQueryOpts = object : CoreQueryOptions {
-            override fun adhoc(): Boolean = adhoc
-            override fun clientContextId(): String? = clientContextId
-            override fun consistentWith(): CoreMutationState? = (consistency as? QueryScanConsistency.ConsistentWith)?.toCore()
-            override fun maxParallelism(): Int? = maxParallelism
-            override fun metrics(): Boolean = metrics
-
-            override fun namedParameters(): ObjectNode? = (parameters as? QueryParameters.Named)?.let { params ->
-                // Let the user's serializer serialize arguments
-                val map = mutableMapOf<String, Any?>()
-                params.inject(map)
-                val queryBytes = actualSerializer.serialize(map, typeRef())
-                Mapper.decodeIntoTree(queryBytes) as ObjectNode
-            }
-
-            override fun pipelineBatch(): Int? = pipelineBatch
-            override fun pipelineCap(): Int? = pipelineCap
-
-            override fun positionalParameters(): ArrayNode? = (parameters as? QueryParameters.Positional)?.let { params ->
-                // Let the user's serializer serialize arguments
-                val map = mutableMapOf<String, Any?>()
-                params.inject(map)
-                val queryBytes = actualSerializer.serialize(map, typeRef())
-                Mapper.decodeIntoTree(queryBytes).get("args") as? ArrayNode
-            }
-
-            override fun profile(): CoreQueryProfile = profile.core
-
-            override fun raw(): JsonNode? {
-                if (raw.isEmpty()) return null
-                val rawBytes = actualSerializer.serialize(raw, typeRef())
-                return Mapper.decodeIntoTree(rawBytes)
-            }
-
-            override fun readonly(): Boolean = readonly
-            override fun scanWait(): java.time.Duration? = consistency.scanWait?.toJavaDuration()
-            override fun scanCap(): Int? = scanCap
-
-            override fun scanConsistency(): CoreQueryScanConsistency? = when (consistency) {
-                is QueryScanConsistency.NotBounded -> CoreQueryScanConsistency.NOT_BOUNDED
-                is QueryScanConsistency.RequestPlus -> CoreQueryScanConsistency.REQUEST_PLUS
-                else -> null // ConsistentWith is handled by separate consistentWith() accessor
-            }
-
-            override fun flexIndex(): Boolean = flexIndex
-            override fun preserveExpiry(): Boolean? = if (preserveExpiry) true else null
-            override fun asTransactionOptions(): CoreSingleQueryTransactionOptions? = null
-            override fun commonOptions(): CoreCommonOptions = common.toCore()
-            override fun useReplica(): Boolean? = useReplica
-        }
+        val coreQueryOpts = CoreQueryOptions(
+            common = common,
+            parameters = parameters,
+            preserveExpiry = preserveExpiry,
+            actualSerializer = actualSerializer,
+            consistency = consistency,
+            readonly = readonly,
+            adhoc = adhoc,
+            flexIndex = flexIndex,
+            metrics = metrics,
+            profile = profile,
+            maxParallelism = maxParallelism,
+            scanCap = scanCap,
+            pipelineBatch = pipelineBatch,
+            pipelineCap = pipelineCap,
+            clientContextId = clientContextId,
+            raw = raw,
+            useReplica = useReplica,
+        )
 
         return flow {
             val response = queryOps.queryReactive(
@@ -145,5 +114,81 @@ internal class QueryExecutor(
 
             emit(QueryMetadata(response.metaData().awaitSingle()))
         }
+    }
+}
+
+internal fun CoreQueryOptions(
+    common: CommonOptions,
+    parameters: QueryParameters,
+    preserveExpiry: Boolean,
+
+    actualSerializer: JsonSerializer,
+
+    consistency: QueryScanConsistency,
+    readonly: Boolean,
+    adhoc: Boolean,
+    flexIndex: Boolean,
+
+    metrics: Boolean,
+    profile: QueryProfile,
+
+    maxParallelism: Int?,
+    scanCap: Int?,
+    pipelineBatch: Int?,
+    pipelineCap: Int?,
+
+    clientContextId: String?,
+    raw: Map<String, Any?>,
+    useReplica: Boolean?,
+): CoreQueryOptions {
+    return object : CoreQueryOptions {
+        override fun adhoc(): Boolean = adhoc
+        override fun clientContextId(): String? = clientContextId
+        override fun consistentWith(): CoreMutationState? = (consistency as? QueryScanConsistency.ConsistentWith)?.toCore()
+        override fun maxParallelism(): Int? = maxParallelism
+        override fun metrics(): Boolean = metrics
+
+        override fun namedParameters(): ObjectNode? = (parameters as? QueryParameters.Named)?.let { params ->
+            // Let the user's serializer serialize arguments
+            val map = mutableMapOf<String, Any?>()
+            params.inject(map)
+            val queryBytes = actualSerializer.serialize(map, typeRef())
+            Mapper.decodeIntoTree(queryBytes) as ObjectNode
+        }
+
+        override fun pipelineBatch(): Int? = pipelineBatch
+        override fun pipelineCap(): Int? = pipelineCap
+
+        override fun positionalParameters(): ArrayNode? = (parameters as? QueryParameters.Positional)?.let { params ->
+            // Let the user's serializer serialize arguments
+            val map = mutableMapOf<String, Any?>()
+            params.inject(map)
+            val queryBytes = actualSerializer.serialize(map, typeRef())
+            Mapper.decodeIntoTree(queryBytes).get("args") as? ArrayNode
+        }
+
+        override fun profile(): CoreQueryProfile = profile.core
+
+        override fun raw(): JsonNode? {
+            if (raw.isEmpty()) return null
+            val rawBytes = actualSerializer.serialize(raw, typeRef())
+            return Mapper.decodeIntoTree(rawBytes)
+        }
+
+        override fun readonly(): Boolean = readonly
+        override fun scanWait(): java.time.Duration? = consistency.scanWait?.toJavaDuration()
+        override fun scanCap(): Int? = scanCap
+
+        override fun scanConsistency(): CoreQueryScanConsistency? = when (consistency) {
+            is QueryScanConsistency.NotBounded -> CoreQueryScanConsistency.NOT_BOUNDED
+            is QueryScanConsistency.RequestPlus -> CoreQueryScanConsistency.REQUEST_PLUS
+            else -> null // ConsistentWith is handled by separate consistentWith() accessor
+        }
+
+        override fun flexIndex(): Boolean = flexIndex
+        override fun preserveExpiry(): Boolean? = if (preserveExpiry) true else null
+        override fun asTransactionOptions(): CoreSingleQueryTransactionOptions? = null
+        override fun commonOptions(): CoreCommonOptions = common.toCore()
+        override fun useReplica(): Boolean? = useReplica
     }
 }

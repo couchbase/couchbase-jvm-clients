@@ -71,13 +71,14 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 public class Scope(
     public val name: String,
     public val bucket: Bucket,
 ) {
+    internal val queryContext = CoreQueryContext.of(bucket.name, name)
     internal val couchbaseOps: CoreCouchbaseOps = bucket.couchbaseOps
     private val searchOps = couchbaseOps.searchOps(CoreBucketAndScope(bucket.name, name))
 
@@ -85,7 +86,7 @@ public class Scope(
 
     private val queryExecutor = QueryExecutor(
         couchbaseOps.queryOps(),
-        CoreQueryContext.of(bucket.name, name),
+        queryContext,
         bucket.env.jsonSerializer,
     )
 
