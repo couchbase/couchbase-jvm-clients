@@ -43,7 +43,7 @@ object SearchSort {
   /** Sort by the hit score.
     *
     * @param descending whether the search results should be sorted in descending order.  If None (the default) is
-    *                   specified, it is left to the server (which sorts descending by default)
+    *                   specified, it is not sent and left to the server default.
     *
     * @since 1.0.0
     */
@@ -57,7 +57,7 @@ object SearchSort {
   /** Sort by the document ID.
     *
     * @param descending whether the search results should be sorted in descending order.  If None (the default) is
-    *                   specified, it is left to the server (which sorts descending by default)
+    *                   specified, it is not sent and left to the server default.
     *
     * @since 1.0.0
     */
@@ -75,7 +75,7 @@ object SearchSort {
     * @param mode       the sort mode.  If left at the default `None`, it will default on the server to `Default`
     * @param missing    the missing mode.  If left at the default `None`, it will default on the server to `Last`
     * @param descending whether the search results should be sorted in descending order.  If None (the default) is
-    *                   specified, it is left to the server (which sorts descending by default)
+    *                   specified, it is not sent and left to the server default.
     */
   case class FieldSort(
       field: String,
@@ -110,9 +110,9 @@ object SearchSort {
     * @param unit       the unit multipler to use for sorting.  Acceptable values are: "inch", "yards", "feet",
     *                   "kilometers", "nauticalmiles", "millimeters", "centimeters", "miles" and "meters".  Standard
     *                   abbreviations for those ("ft", "km", "mi") may also be used.  If left at default `None`, it
-    *                   defaults on the server side to "meters".
+    *                   is not sent and left to the server default.
     * @param descending whether the search results should be sorted in descending order.  If None (the default) is
-    *                   specified, it is left to the server (which sorts descending by default)
+    *                   specified, it is not sent and left to the server default.
     *
     * @since 1.0.0
     */
