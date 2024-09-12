@@ -19,7 +19,7 @@ package com.couchbase.columnar.query;
 import com.couchbase.columnar.client.java.QueryResult;
 import com.couchbase.columnar.client.java.Queryable;
 import com.couchbase.columnar.client.java.Row;
-import com.couchbase.columnar.fit.core.util.ResultUtil;
+import com.couchbase.columnar.util.ResultUtil;
 import fit.columnar.EmptyResultOrFailureResponse;
 import fit.columnar.ExecuteQueryRequest;
 import fit.columnar.QueryResultMetadataResponse;

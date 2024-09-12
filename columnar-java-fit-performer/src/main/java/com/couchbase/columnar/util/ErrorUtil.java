@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.columnar.fit.core.util;
+package com.couchbase.columnar.util;
 
-import fit.columnar.ColumnarErrorType;
+import com.couchbase.columnar.client.java.InvalidCredentialException;
+import com.couchbase.columnar.client.java.QueryException;
+import com.couchbase.columnar.client.java.TimeoutException;
 import fit.columnar.PlatformErrorType;
-
-import javax.annotation.Nullable;
 
 
 public class ErrorUtil {
@@ -26,13 +26,11 @@ public class ErrorUtil {
     throw new AssertionError("not instantiable");
   }
 
-  private static @Nullable fit.columnar.ColumnarErrorType convertColumnarError(Throwable exception) {
+  private static boolean isColumnarError(Throwable exception) {
     String simpleName = exception.getClass().getSimpleName();
     return switch (simpleName) {
-      case "QueryException" -> ColumnarErrorType.COLUMNAR_EXCEPTION_QUERY;
-      case "InvalidCredentialException" -> ColumnarErrorType.COLUMNAR_EXCEPTION_INVALID_CREDENTIAL;
-      case "TimeoutException" -> ColumnarErrorType.COLUMNAR_EXCEPTION_TIMEOUT;
-      default -> null;
+      case "QueryException", "InvalidCredentialException", "TimeoutException", "ColumnarException" -> true;
+      default -> false;
     };
   }
 
@@ -45,12 +43,29 @@ public class ErrorUtil {
   public static fit.columnar.Error convertError(Throwable raw) {
     var ret = fit.columnar.Error.newBuilder();
 
-    var type = ErrorUtil.convertColumnarError(raw);
-
-    if (type != null) {
+    if (isColumnarError(raw)) {
       var out = fit.columnar.ColumnarError.newBuilder()
-              .setType(type)
-              .setAsString(raw.toString());
+        .setAsString(raw.toString());
+
+      if (raw instanceof QueryException queryException) {
+        out.setSubException(fit.columnar.SubColumnarError.newBuilder().setQueryException(
+          fit.columnar.QueryException.newBuilder()
+            .setErrorCode(queryException.code())
+            .setServerMessage(queryException.serverMessage())
+            .build())
+          .build());
+      }
+      if (raw instanceof InvalidCredentialException) {
+        out.setSubException(fit.columnar.SubColumnarError.newBuilder().setInvalidCredentialException(
+          fit.columnar.InvalidCredentialException.newBuilder().build())
+          .build());
+      }
+
+      if (raw instanceof TimeoutException) {
+        out.setSubException(fit.columnar.SubColumnarError.newBuilder().setTimeoutException(fit.columnar.TimeoutException.newBuilder().build())
+          .build());
+      }
+
       if (raw.getCause() != null) {
         out.setCause(convertError(raw.getCause()));
       }
@@ -58,8 +73,8 @@ public class ErrorUtil {
       ret.setColumnar(out);
     } else {
       ret.setPlatform(fit.columnar.PlatformError.newBuilder()
-                      .setType(convertPlatformError(raw))
-              .setAsString(raw.toString()));
+        .setType(convertPlatformError(raw))
+        .setAsString(raw.toString()));
     }
 
     return ret.build();

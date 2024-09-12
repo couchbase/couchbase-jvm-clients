@@ -20,7 +20,7 @@ import com.couchbase.columnar.client.java.Row;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
 import com.couchbase.columnar.content.ContentAsUtil;
-import com.couchbase.columnar.fit.core.util.ErrorUtil;
+import com.couchbase.columnar.util.ErrorUtil;
 import fit.columnar.QueryRowResponse;
 
 import javax.annotation.Nullable;
