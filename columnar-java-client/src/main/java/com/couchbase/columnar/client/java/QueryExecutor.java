@@ -25,6 +25,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.CoreErrorCodeAndMessageException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.AnalyticsErrorContext;
@@ -231,7 +232,12 @@ class QueryExecutor {
         return newAmbiguousTimeoutException(t.context());
       }
 
-      return new QueryException(t.errors().get(0), t.context());
+      ErrorCodeAndMessage primary = t.errors().stream()
+        .filter(it -> !it.retry())
+        .findFirst()
+        .orElse(t.errors().get(0));
+
+      return new QueryException(primary, t.context());
     }
 
     if (e instanceof com.couchbase.client.core.error.TimeoutException) {
