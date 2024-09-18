@@ -28,7 +28,9 @@ object TransactionsSupportedExtensionsUtil {
     CoreTransactionsExtension.EXT_MOBILE_INTEROP,
     CoreTransactionsExtension.EXT_REPLACE_BODY_WITH_XATTR,
     CoreTransactionsExtension.EXT_INSERT_EXISTING,
-    CoreTransactionsExtension.EXT_QUERY_CONTEXT
+    CoreTransactionsExtension.EXT_QUERY_CONTEXT,
+    CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING
+
     // Not currently supported:
 //  CoreTransactionsExtension.EXT_SINGLE_QUERY,
 //  CoreTransactionsExtension.EXT_OBSERVABILITY,

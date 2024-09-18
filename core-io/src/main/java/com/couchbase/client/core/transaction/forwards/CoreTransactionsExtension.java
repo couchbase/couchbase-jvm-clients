@@ -52,6 +52,7 @@ public enum CoreTransactionsExtension {
     EXT_OBSERVABILITY("OB"),
     EXT_QUERY_CONTEXT("QC"),
     EXT_BINARY_SUPPORT("BS"),
+    EXT_PARALLEL_UNSTAGING("PU"),
     ;
 
     private final String value;

@@ -134,6 +134,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -198,6 +199,7 @@ public class CoreTransactionAttemptContext {
     public static final int STATE_BITS_POSITION_FINAL_ERROR = 4;
     public static final int STATE_BITS_MASK_FINAL_ERROR = 0b1110000;
     public static final int STATE_BITS_MASK_BITS =        0b0001111;
+    public static final int UNSTAGING_PARALLELISM = 1000;
 
     private final AtomicInteger stateBits = new AtomicInteger(0);
 
@@ -2638,13 +2640,15 @@ public class CoreTransactionAttemptContext {
             assertLocked("commitDocs");
             long start = System.nanoTime();
 
-            // TXNJ-64 - commit in the order the docs were staged
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(scheduler())
+                    .parallel(UNSTAGING_PARALLELISM)
+                    .runOn(scheduler())
 
                     .concatMap(staged -> {
                         return commitDocWrapperLocked(span, staged);
                     })
+
+                    .sequential()
 
                     .then(Mono.defer(() -> {
                         long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start);
@@ -3607,7 +3611,8 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> rollbackDocsLocked(boolean isAppRollback, SpanWrapper span) {
         return Mono.defer(() -> {
             return Flux.fromIterable(stagedMutationsLocked)
-                    .publishOn(scheduler())
+                    .parallel(UNSTAGING_PARALLELISM)
+                    .runOn(scheduler())
 
                     .concatMap(staged -> {
                         switch (staged.type) {
@@ -3617,6 +3622,8 @@ public class CoreTransactionAttemptContext {
                                 return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, staged.collection, staged.id, staged.cas, staged.currentUserFlags);
                         }
                     })
+
+                    .sequential()
 
                     .doOnNext(v -> {
                         LOGGER.info(attemptId, "rollback - docs rolled back");

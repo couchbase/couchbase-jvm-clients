@@ -54,6 +54,9 @@ public class TransactionsSupportedExtensionsUtil {
         CoreTransactionsExtension.EXT_QUERY_CONTEXT,
 
         /* @since 3.7.0 */
-        CoreTransactionsExtension.EXT_BINARY_SUPPORT
+        CoreTransactionsExtension.EXT_BINARY_SUPPORT,
+
+        /* @since 3.7.4 */
+        CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING
     );
 }
