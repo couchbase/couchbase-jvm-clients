@@ -33,7 +33,6 @@ public class JavaColumnarPerformer {
   private static final Logger logger = LoggerFactory.getLogger(JavaColumnarPerformer.class);
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    System.out.println(VersionUtil.introspectSDKVersionJava());
     int port = 8060;
 
     // Force that log redaction has been enabled
