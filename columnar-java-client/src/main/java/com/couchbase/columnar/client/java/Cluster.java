@@ -32,6 +32,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -124,7 +125,7 @@ public final class Cluster implements Closeable, Queryable {
     optionsCustomizer.accept(builder);
 
     BuilderPropertySetter propertySetter = new BuilderPropertySetter("", Collections.emptyMap());
-    propertySetter.set(builder, cs.params());
+    propertySetter.set(builder, translateTlsVerify(cs.params()));
 
     // do we really want to allow a system property to disable server certificate verification?
     //propertySetter.set(builder, systemPropertyMap(SYSTEM_PROPERTY_PREFIX));
@@ -134,7 +135,10 @@ public final class Cluster implements Closeable, Queryable {
     Environment.Builder envBuilder = new Environment.Builder()
       .transactionsConfig(disableTransactionsCleanup())
       .deserializer(opts.deserializer())
-      .ioConfig(it -> it.maxHttpConnections(Integer.MAX_VALUE))
+      .ioConfig(it -> it
+        .enableDnsSrv(opts.srv())
+        .maxHttpConnections(Integer.MAX_VALUE)
+      )
       .securityConfig(it -> {
           SecurityOptions.Unmodifiable security = opts.security();
 
@@ -169,6 +173,29 @@ public final class Cluster implements Closeable, Queryable {
     Environment env = envBuilder.build();
 
     return new Cluster(cs, credential.toInternalAuthenticator(), env);
+  }
+
+  private static Map<String, String> translateTlsVerify(Map<String, String> connectionStringProperties) {
+    Map<String, String> properties = new LinkedHashMap<>(connectionStringProperties);
+    String tlsVerify = properties.remove("tls_verify");
+    if (tlsVerify == null) {
+      return properties;
+    }
+
+    String javaName = "security.verifyServerCertificate";
+    switch (tlsVerify) {
+      case "none":
+        properties.put(javaName, "false");
+        break;
+      case "peer":
+        properties.put(javaName, "true");
+        break;
+      default:
+        throw new IllegalArgumentException(
+          "Unexpected value for connection string parameter 'tls_verify'; expected 'none' or 'peer', but got: '" + tlsVerify + "'");
+    }
+
+    return properties;
   }
 
   private static CoreTransactionsConfig disableTransactionsCleanup() {

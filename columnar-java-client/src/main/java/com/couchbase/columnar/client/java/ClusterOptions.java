@@ -23,6 +23,7 @@ import reactor.util.annotation.Nullable;
 import java.util.function.Consumer;
 
 public final class ClusterOptions {
+  boolean srv = true;
   @Nullable Deserializer deserializer;
   final SecurityOptions security = new SecurityOptions();
   final TimeoutOptions timeout = new TimeoutOptions();
@@ -32,6 +33,15 @@ public final class ClusterOptions {
 
   Unmodifiable build() {
     return new Unmodifiable(this);
+  }
+
+  /**
+   * Specifies whether the SDK should treat the connection string address
+   * as a DNS SRV record. Defaults to true.
+   */
+  public ClusterOptions srv(boolean useDnsSrv) {
+    this.srv = useDnsSrv;
+    return this;
   }
 
   /**
@@ -65,10 +75,12 @@ public final class ClusterOptions {
     private final TimeoutOptions.Unmodifiable timeout;
     private final SecurityOptions.Unmodifiable security;
     private final Deserializer deserializer;
+    private final boolean srv;
 
     Unmodifiable(ClusterOptions builder) {
       this.timeout = builder.timeout.build();
       this.security = builder.security.build();
+      this.srv = builder.srv;
 
       this.deserializer = builder.deserializer != null
         ? builder.deserializer
@@ -87,12 +99,17 @@ public final class ClusterOptions {
       return deserializer;
     }
 
+    public boolean srv() {
+      return srv;
+    }
+
     @Override
     public String toString() {
       return "ClusterOptions{" +
         "timeout=" + timeout +
         ", security=" + security +
         ", deserializer=" + deserializer +
+        ", srv=" + srv +
         '}';
     }
 
