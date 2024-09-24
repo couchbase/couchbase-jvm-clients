@@ -45,6 +45,7 @@ import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -120,6 +121,7 @@ public class CoreEnvironment implements AutoCloseable {
 
   private final Set<String> appliedProfiles;
   private final CoreTransactionsSchedulers transactionsSchedulers = new CoreTransactionsSchedulers();
+  private final @Nullable String preferredServerGroup;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -208,6 +210,7 @@ public class CoreEnvironment implements AutoCloseable {
     }
 
     this.requestCallbacks = Collections.unmodifiableList(builder.requestCallbacks);
+    this.preferredServerGroup = builder.preferredServerGroup;
 
     checkInsecureTlsConfig();
   }
@@ -421,6 +424,13 @@ public class CoreEnvironment implements AutoCloseable {
   }
 
   /**
+   * The preferred server group to use for operations that support such.
+   */
+  public @Nullable String preferredServerGroup() {
+    return preferredServerGroup;
+  }
+
+  /**
    * Shuts down this Environment with the default disconnect timeout.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
@@ -594,6 +604,7 @@ public class CoreEnvironment implements AutoCloseable {
     private long maxNumRequestsInRetry = DEFAULT_MAX_NUM_REQUESTS_IN_RETRY;
     private final List<RequestCallback> requestCallbacks = new ArrayList<>();
     protected CoreTransactionsConfig transactionsConfig = null;
+    private String preferredServerGroup = null;
 
     private final Set<String> appliedProfiles = new LinkedHashSet<>();
 
@@ -1148,6 +1159,16 @@ public class CoreEnvironment implements AutoCloseable {
 
       throw InvalidArgumentException.fromMessage("Unknown profile: '" + profileName + "', valid profiles are: "
         + registeredProfileNames());
+    }
+
+    /**
+     * Sets a preferred server group, that will be used for operations that support this feature.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF preferredServerGroup(final @Nullable String preferredServerGroup) {
+      this.preferredServerGroup = preferredServerGroup;
+      return self();
     }
 
     /**

@@ -24,6 +24,7 @@ import com.couchbase.client.core.node.Sdk2CompatibleMemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Arrays;
