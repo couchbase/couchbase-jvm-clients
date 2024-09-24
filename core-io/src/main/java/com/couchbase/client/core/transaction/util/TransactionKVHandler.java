@@ -24,6 +24,8 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
+import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -36,6 +38,7 @@ import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
@@ -143,10 +146,22 @@ public class TransactionKVHandler {
                                                    boolean accessDeleted,
                                                    final Map<String, Object> clientContext,
                                                    @Nullable final SpanWrapper pspan,
+                                                   boolean preferredReplicaMode,
                                                    final List<SubdocGetRequest.Command> commands) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
             SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
+
+
+            if (preferredReplicaMode) {
+                CompletableFuture<CoreSubdocGetResult> replicas = ReplicaHelper.lookupInAnyReplicaAsync(core, collectionIdentifier, id, convertCommandsToCore(commands), timeout, BestEffortRetryStrategy.INSTANCE,
+                        clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP, (r) -> r);
+
+                return Reactor.wrap(replicas, () -> {})
+                        .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionIdentifier))))
+                        .doOnError(span::recordException)
+                        .doOnTerminate(span::finish);
+            }
 
             byte flags = 0;
             if (accessDeleted) {

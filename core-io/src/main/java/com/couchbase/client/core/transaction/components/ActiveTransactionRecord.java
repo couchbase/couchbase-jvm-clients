@@ -97,6 +97,7 @@ public class ActiveTransactionRecord {
 
         return TransactionKVHandler.lookupIn(core, atrCollection, atrId, kvTimeoutNonMutating(core),
                         false, createClientContext("ATR::findEntryForTransaction"), pspan,
+                        false,
                         Arrays.asList(
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS + "." + attemptId, true, 0),
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)
@@ -228,6 +229,7 @@ public class ActiveTransactionRecord {
                                                                   Duration timeout,
                                                                   @Nullable SpanWrapper pspan) {
         return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout, false,  createClientContext("ATR::getAtr"), pspan,
+        false,
         Arrays.asList(
                 new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS, true, 0),
                 new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)

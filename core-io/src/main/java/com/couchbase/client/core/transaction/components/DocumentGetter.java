@@ -68,8 +68,9 @@ public class DocumentGetter {
                                                                     @Nullable SpanWrapper span,
                                                                     Optional<String> resolvingMissingATREntry,
                                                                     MeteringUnits.MeteringUnitsBuilder units,
-                                                                    CoreTransactionsSupportedExtensions supported) {
-        return justGetDoc(core, collection, docId, kvTimeoutNonMutating(core), span, true, LOGGER, units)
+                                                                    CoreTransactionsSupportedExtensions supported,
+                                                                    boolean preferredReplicaMode) {
+        return justGetDoc(core, collection, docId, kvTimeoutNonMutating(core), span, true, LOGGER, units, preferredReplicaMode)
                 .flatMap(origTrans -> {
                     if (justReturn) {
                         return Mono.just(origTrans.map(v -> v.getT1()));
@@ -136,9 +137,11 @@ public class DocumentGetter {
                @Nullable SpanWrapper span,
                boolean accessDeleted,
                CoreTransactionLogger logger,
-               MeteringUnits.MeteringUnitsBuilder units) {
+               MeteringUnits.MeteringUnitsBuilder units,
+               boolean preferredReplicaMode) {
         return TransactionKVHandler.lookupIn(core, collection, docId, timeout, accessDeleted,
                         createClientContext("DocumentGetter::justGetDoc"), span,
+                        preferredReplicaMode,
                         Arrays.asList(
                                 // The design doc details why these specs are fetched (rather than all of "txn")
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "txn.id", true, 0),

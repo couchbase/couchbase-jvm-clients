@@ -56,7 +56,10 @@ public class TransactionsSupportedExtensionsUtil {
         /* @since 3.7.0 */
         CoreTransactionsExtension.EXT_BINARY_SUPPORT,
 
+        /* @since 3.7.3 */
+        CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING,
+
         /* @since 3.7.4 */
-        CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING
+        CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP
     );
 }

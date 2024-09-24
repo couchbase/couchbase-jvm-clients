@@ -297,7 +297,7 @@ public class TransactionsCleaner {
                                       DocRecord docRecord,
                                       CollectionIdentifier collection,
                                       MeteringUnits.MeteringUnitsBuilder units) {
-        return DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog, units)
+        return DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog, units, false)
 
                 .flatMap(docOpt -> {
                     if (docOpt.isPresent()) {

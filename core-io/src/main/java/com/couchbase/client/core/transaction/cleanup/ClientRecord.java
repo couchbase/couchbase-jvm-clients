@@ -247,6 +247,7 @@ public class ClientRecord {
 
     public Mono<CoreSubdocGetResult> getClientRecord(CollectionIdentifier collection, @Nullable SpanWrapper span) {
         return TransactionKVHandler.lookupIn(core, collection, CLIENT_RECORD_DOC_ID, nonMutatingTimeout(), false, OptionsUtil.createClientContext("ClientRecord::getClientRecord"), span,
+                false,
                 Arrays.asList(
                         new SubdocGetRequest.Command(SubdocCommandType.GET, FIELD_RECORDS, true, 0),
                         new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)

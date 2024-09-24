@@ -44,6 +44,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.util.RawVal
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryNotFoundException;
@@ -440,7 +441,19 @@ public class CoreTransactionAttemptContext {
                     if (queryModeLocked()) {
                         return getWithQueryLocked(collection, id, lockToken, span);
                     } else {
-                        return getWithKVLocked(collection, id, Optional.empty(), span, lockToken);
+                        return getWithKVLocked(collection, id, Optional.empty(), span, lockToken, false);
+                    }
+                }));
+    }
+
+    private Mono<Optional<CoreTransactionGetResult>> getReplicaFromPreferredServerGroupInternal(CollectionIdentifier collection, String id, SpanWrapper pspan) {
+
+        return doKVOperation("get " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_GET, collection, id,
+                (operationId, span, lockToken) -> Mono.defer(() -> {
+                    if (queryModeLocked()) {
+                        return Mono.error(new FeatureNotAvailableException("getReplicaFromPreferredServerGroup cannot presently be used in a transaction that has previously involved the query service.  It can however be used before any query call."));
+                    } else {
+                        return getWithKVLocked(collection, id, Optional.empty(), span, lockToken, true);
                     }
                 }));
     }
@@ -449,12 +462,13 @@ public class CoreTransactionAttemptContext {
                                                                      String id,
                                                                      Optional<String> resolvingMissingATREntry,
                                                                      SpanWrapper pspan,
-                                                                     ReactiveLock.Waiter lockToken) {
+                                                                     ReactiveLock.Waiter lockToken,
+                                                                     boolean preferredReplicaMode) {
         return Mono.defer(() -> {
             assertLocked("getWithKV");
 
-            LOGGER.info(attemptId, "getting doc {}, resolvingMissingATREntry={}", DebugUtil.docId(collection, id),
-                    resolvingMissingATREntry.orElse("<empty>"));
+            LOGGER.info(attemptId, "getting doc {}, resolvingMissingATREntry={}, preferredReplicaMode={}", DebugUtil.docId(collection, id),
+                    resolvingMissingATREntry.orElse("<empty>"), preferredReplicaMode);
 
             Optional<StagedMutation> ownWrite = checkForOwnWriteLocked(collection, id);
             if (ownWrite.isPresent()) {
@@ -499,7 +513,8 @@ public class CoreTransactionAttemptContext {
                             pspan,
                             resolvingMissingATREntry,
                             units,
-                            overall.supported()))
+                            overall.supported(),
+                            preferredReplicaMode))
 
                     .publishOn(scheduler())
 
@@ -511,7 +526,10 @@ public class CoreTransactionAttemptContext {
                         LOGGER.warn(attemptId, "got error while getting doc {}{} in {}us: {}",
                                 DebugUtil.docId(collection, id), DebugUtil.dbg(built), pspan.elapsedMicros(), dbg(err));
 
-                        if (err instanceof ForwardCompatibilityRequiresRetryException
+                        if (err instanceof DocumentUnretrievableException) {
+                            return Mono.error(err);
+                        }
+                        else if (err instanceof ForwardCompatibilityRequiresRetryException
                                 || err instanceof ForwardCompatibilityFailureException) {
                             TransactionOperationFailedException.Builder error = createError()
                                     .cause(new ForwardCompatibilityFailureException());
@@ -538,7 +556,8 @@ public class CoreTransactionAttemptContext {
                                                 id,
                                                 Optional.of(attemptIdToCheck),
                                                 pspan,
-                                                newLockToken)
+                                                newLockToken,
+                                                preferredReplicaMode)
                                                 .onErrorResume(e ->
                                                         unlock(newLockToken, "relock error")
                                                                 .then(Mono.error(e))));
@@ -686,6 +705,22 @@ public class CoreTransactionAttemptContext {
                             return Mono.just(doc.get());
                         } else {
                             return Mono.error(new DocumentNotFoundException(ReducedKeyValueErrorContext.create(id)));
+                        }
+                    });
+        });
+    }
+
+    public Mono<CoreTransactionGetResult> getReplicaFromPreferredServerGroup(CollectionIdentifier collection, String id) {
+        return Mono.defer(() -> {
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), collection, id, TracingIdentifiers.TRANSACTION_OP_GET_REPLICA_FROM_PREFERRED_SERVER_GROUP, attemptSpan);
+            return getReplicaFromPreferredServerGroupInternal(collection, id, span)
+                    .doOnError(err -> span.finishWithErrorStatus())
+                    .flatMap(doc -> {
+                        span.finish();
+                        if (doc.isPresent()) {
+                            return Mono.just(doc.get());
+                        } else {
+                            return Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id)));
                         }
                     });
         });
@@ -1873,7 +1908,7 @@ public class CoreTransactionAttemptContext {
 
         return hooks.beforeGetDocInExistsDuringStagedInsert.apply(this, id) // testing hook
 
-                .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(),  pspan, true, logger(), units))
+                .then(DocumentGetter.justGetDoc(core, collection, id, kvTimeoutNonMutating(), pspan, true, logger(), units, false))
 
                 .publishOn(scheduler())
 
@@ -2932,7 +2967,7 @@ public class CoreTransactionAttemptContext {
                         }
                     })
                     .then(hooks.beforeDocChangedDuringCommit.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty(), units, overall.supported()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, staged.collection, config, staged.id, attemptId, true, span, Optional.empty(), units, overall.supported(), false))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         ErrorClass ec = classify(err);
@@ -3002,7 +3037,7 @@ public class CoreTransactionAttemptContext {
                         throwIfExpired(id, HOOK_STAGING_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringStaging.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported(), false))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         MeteringUnits built = addUnits(units.build());
@@ -3090,7 +3125,7 @@ public class CoreTransactionAttemptContext {
                         throwIfExpired(id, HOOK_ROLLBACK_DOC_CHANGED);
                     })
                     .then(hooks.beforeDocChangedDuringRollback.apply(this, id)) // testing hook
-                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported()))
+                    .then(DocumentGetter.getAsync(core, LOGGER, collection, config, id, attemptId, true, span, Optional.empty(), units, overall.supported(), false))
                     .publishOn(scheduler())
                     .onErrorResume(err -> {
                         MeteringUnits built = addUnits(units.build());
@@ -3171,6 +3206,7 @@ public class CoreTransactionAttemptContext {
                 .then(hooks.beforeAtrCommitAmbiguityResolution.apply(this)) // testing hook
 
                 .then(TransactionKVHandler.lookupIn(core, atrCollection.get(), atrId.get(), kvTimeoutNonMutating(), false, OptionsUtil.createClientContext("atrCommitAmbiguityResolution"), span,
+                        false,
                         Arrays.asList(
                                 new SubdocGetRequest.Command(SubdocCommandType.GET, "attempts." + attemptId + "." + TransactionFields.ATR_FIELD_STATUS, true, 0)
                         )))

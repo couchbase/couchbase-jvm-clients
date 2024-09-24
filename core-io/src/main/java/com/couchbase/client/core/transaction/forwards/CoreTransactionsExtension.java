@@ -53,6 +53,7 @@ public enum CoreTransactionsExtension {
     EXT_QUERY_CONTEXT("QC"),
     EXT_BINARY_SUPPORT("BS"),
     EXT_PARALLEL_UNSTAGING("PU"),
+    EXT_REPLICA_FROM_PREFERRED_GROUP("RP"),
     ;
 
     private final String value;

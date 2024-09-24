@@ -22,11 +22,7 @@ import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.EncodingFailureException;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
@@ -36,11 +32,10 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.config.TransactionGetOptions;
+import com.couchbase.client.java.transactions.config.TransactionGetReplicaFromPreferredServerGroupOptions;
 import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
 import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
-import reactor.util.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.Objects;
 
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_INSERT;
@@ -104,6 +99,44 @@ public class TransactionAttemptContext {
         notNull(options, "Options");
         TransactionGetOptions.Built built = options.build();
         return internal.get(makeCollectionIdentifier(collection.async()), id)
+            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+            .block();
+    }
+
+    /**
+     * A convenience wrapper around {@link #getReplicaFromPreferredServerGroup(Collection, String, TransactionGetReplicaFromPreferredServerGroupOptions)}
+     * using default options.
+     */
+    public TransactionGetResult getReplicaFromPreferredServerGroup(Collection collection, String id) {
+        return getReplicaFromPreferredServerGroup(collection, id, TransactionGetReplicaFromPreferredServerGroupOptions.DEFAULT);
+    }
+
+    /**
+     * Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
+     * <p>
+     * It will be fetched only from document copies that on nodes in the preferred server group, which can
+     * be configured with {@link com.couchbase.client.java.env.ClusterEnvironment.Builder#preferredServerGroup(String)}.
+     * <p>
+     * If no replica can be retrieved, which can include for reasons such as this preferredServerGroup not being set,
+     * and misconfigured server groups, then {@link com.couchbase.client.core.error.DocumentUnretrievableException}
+     * can be raised.  It is strongly recommended that this method always be used with a fallback strategy, such as:
+     * <code>
+     * try {
+     *   var result = ctx.getReplicaFromPreferredServerGroup(collection, id);
+     * } catch (DocumentUnretrievableException err) {
+     *   var result = ctx.get(collection, id);
+     * }
+     * </code>
+     *
+     * @param collection the Couchbase collection the document exists on
+     * @param id         the document's ID
+     * @param options    options controlling the operation
+     * @return a <code>TransactionGetResult</code> containing the document
+     */
+    public TransactionGetResult getReplicaFromPreferredServerGroup(Collection collection, String id, TransactionGetReplicaFromPreferredServerGroupOptions options) {
+        notNull(options, "Options");
+        TransactionGetReplicaFromPreferredServerGroupOptions.Built built = options.build();
+        return internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id)
             .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
             .block();
     }
