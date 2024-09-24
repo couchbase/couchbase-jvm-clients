@@ -356,6 +356,7 @@ public class AsyncCollection {
         opts.retryStrategy().orElse(environment().retryStrategy()),
         opts.clientContext(),
         opts.parentSpan().orElse(null),
+        opts.readPreference(),
         response -> GetReplicaResult.from(response, transcoder));
   }
 
@@ -390,6 +391,7 @@ public class AsyncCollection {
         opts.retryStrategy().orElse(environment().retryStrategy()),
         opts.clientContext(),
         opts.parentSpan().orElse(null),
+        opts.readPreference(),
         response -> GetReplicaResult.from(response, transcoder));
   }
 
@@ -709,6 +711,7 @@ public class AsyncCollection {
       opts.retryStrategy().orElse(environment().retryStrategy()),
       opts.clientContext(),
       opts.parentSpan().orElse(null),
+      opts.readPreference(),
       response -> LookupInReplicaResult.from(response, serializer));
   }
 
@@ -748,6 +751,7 @@ public class AsyncCollection {
       opts.retryStrategy().orElse(environment().retryStrategy()),
       opts.clientContext(),
       opts.parentSpan().orElse(null),
+      opts.readPreference(),
       response -> LookupInReplicaResult.from(response, serializer));
   }
 

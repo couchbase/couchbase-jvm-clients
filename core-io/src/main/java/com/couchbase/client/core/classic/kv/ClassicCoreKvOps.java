@@ -27,7 +27,6 @@ import com.couchbase.client.core.api.kv.CoreExistsResult;
 import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
-import com.couchbase.client.core.api.kv.CoreKvParamValidators;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreLookupInMacro;
 import com.couchbase.client.core.api.kv.CoreMutationResult;
@@ -36,6 +35,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.classic.ClassicHelper;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -49,7 +49,6 @@ import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -723,7 +722,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key) {
+  public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key, CoreReadPreference readPreference) {
     validateGetAllReplicasParams(common, key);
 
     Duration timeout = timeout(common);
@@ -736,7 +735,8 @@ public final class ClassicCoreKvOps implements CoreKvOps {
         timeout,
         retryStrategy,
         common.clientContext(),
-        common.parentSpan().orElse(null)
+        common.parentSpan().orElse(null),
+        readPreference
     ).map(it -> new CoreGetResult(
         CoreKvResponseMetadata.from(it.getResponse().flexibleExtras()),
         keyspace,
@@ -750,17 +750,17 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key) {
+  public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key, CoreReadPreference readPreference) {
     validateGetAnyReplicaParams(common, key);
 
     RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
-    return getAllReplicasReactive(common.withParentSpan(getAnySpan), key)
+    return getAllReplicasReactive(common.withParentSpan(getAnySpan), key, readPreference)
         .next()
         .doFinally(signalType -> getAnySpan.end());
   }
 
   @Override
-  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, CoreReadPreference readPreference) {
     validateSubdocGetAllParams(common, key, commands);
 
     Duration timeout = timeout(common);
@@ -774,15 +774,16 @@ public final class ClassicCoreKvOps implements CoreKvOps {
         timeout,
         retryStrategy,
         common.clientContext(),
-        common.parentSpan().orElse(null)
+        common.parentSpan().orElse(null),
+        readPreference
     );
   }
 
   @Override
-  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, CoreReadPreference readPreference) {
     validateSubdocGetAnyParams(common, key, commands);
     RequestSpan getAnySpan = span(common, TracingIdentifiers.SPAN_GET_ANY_REPLICA);
-    return subdocGetAllReplicasReactive(common.withParentSpan(getAnySpan), key, commands)
+    return subdocGetAllReplicasReactive(common.withParentSpan(getAnySpan), key, commands, readPreference)
         .next()
         .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(key, collectionIdentifier))))
         .doFinally(signalType -> getAnySpan.end());

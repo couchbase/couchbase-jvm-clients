@@ -17,7 +17,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.api.kv.CoreExpiry
+import com.couchbase.client.core.api.kv.{CoreExpiry, CoreReadPreference}
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.durability.Durability
@@ -399,7 +399,12 @@ class ReactiveCollection(async: AsyncCollection) {
   ): SMono[LookupInReplicaResult] = {
     convert(
       kvOps
-        .subdocGetAnyReplicaReactive(makeCommonOptions(timeout), id, LookupInSpec.map(spec).asJava)
+        .subdocGetAnyReplicaReactive(
+          makeCommonOptions(timeout),
+          id,
+          LookupInSpec.map(spec).asJava,
+          CoreReadPreference.NO_PREFERENCE
+        )
     ).map(result => convertLookupInReplica(result, environment))
   }
 
@@ -421,8 +426,14 @@ class ReactiveCollection(async: AsyncCollection) {
       spec: collection.Seq[LookupInSpec],
       options: LookupInAnyReplicaOptions
   ): SMono[LookupInReplicaResult] = {
-    convert(kvOps.subdocGetAnyReplicaReactive(convert(options), id, LookupInSpec.map(spec).asJava))
-      .map(result => convertLookupInReplica(result, environment))
+    convert(
+      kvOps.subdocGetAnyReplicaReactive(
+        convert(options),
+        id,
+        LookupInSpec.map(spec).asJava,
+        CoreReadPreference.NO_PREFERENCE
+      )
+    ).map(result => convertLookupInReplica(result, environment))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -445,7 +456,12 @@ class ReactiveCollection(async: AsyncCollection) {
   ): SFlux[LookupInReplicaResult] = {
     convert(
       kvOps
-        .subdocGetAllReplicasReactive(makeCommonOptions(timeout), id, LookupInSpec.map(spec).asJava)
+        .subdocGetAllReplicasReactive(
+          makeCommonOptions(timeout),
+          id,
+          LookupInSpec.map(spec).asJava,
+          CoreReadPreference.NO_PREFERENCE
+        )
     ).map(result => convertLookupInReplica(result, environment))
   }
 
@@ -467,8 +483,14 @@ class ReactiveCollection(async: AsyncCollection) {
       spec: collection.Seq[LookupInSpec],
       options: LookupInAllReplicasOptions
   ): SFlux[LookupInReplicaResult] = {
-    convert(kvOps.subdocGetAllReplicasReactive(convert(options), id, LookupInSpec.map(spec).asJava))
-      .map(result => convertLookupInReplica(result, environment))
+    convert(
+      kvOps.subdocGetAllReplicasReactive(
+        convert(options),
+        id,
+        LookupInSpec.map(spec).asJava,
+        CoreReadPreference.NO_PREFERENCE
+      )
+    ).map(result => convertLookupInReplica(result, environment))
   }
 
   /** Retrieves any available version of the document.
@@ -478,8 +500,9 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id))
-      .map(result => convertReplica(result, environment, None))
+    convert(
+      kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
+    ).map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves any available version of the document.
@@ -489,7 +512,7 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAnyReplicaOptions
   ): SMono[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(convert(options), id))
+    convert(kvOps.getAnyReplicaReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
       .map(result => convertReplica(result, environment, options.transcoder))
   }
 
@@ -500,8 +523,9 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       timeout: Duration = kvReadTimeout
   ): SFlux[GetReplicaResult] = {
-    convert(kvOps.getAllReplicasReactive(makeCommonOptions(timeout), id))
-      .map(result => convertReplica(result, environment, None))
+    convert(
+      kvOps.getAllReplicasReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
+    ).map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves all available versions of the document.
@@ -511,7 +535,7 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAllReplicasOptions
   ): SFlux[GetReplicaResult] = {
-    convert(kvOps.getAllReplicasReactive(convert(options), id))
+    convert(kvOps.getAllReplicasReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
       .map(result => convertReplica(result, environment, options.transcoder))
   }
 

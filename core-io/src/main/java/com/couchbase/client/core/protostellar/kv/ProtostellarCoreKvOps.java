@@ -32,6 +32,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -308,25 +309,25 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
 
 
   @Override
-  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+  public Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, CoreReadPreference readPreference) {
     // Protostellar subdoc-from-replica support is currently incomplete.
     throw unsupported();
   }
 
   @Override
-  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands) {
+  public Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, CoreReadPreference readPreference) {
     // Protostellar subdoc-from-replica support is currently incomplete.
     throw unsupported();
   }
 
   @Override
-  public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key) {
+  public Flux<CoreGetResult> getAllReplicasReactive(CoreCommonOptions common, String key, CoreReadPreference readPreference) {
     // Protostellar get-from-replica support is currently incomplete.  JVMCBC-1263.
     throw unsupported();
   }
 
   @Override
-  public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key) {
+  public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key, CoreReadPreference readPreference) {
     // Protostellar get-from-replica support is currently incomplete.  JVMCBC-1263.
     throw unsupported();
   }

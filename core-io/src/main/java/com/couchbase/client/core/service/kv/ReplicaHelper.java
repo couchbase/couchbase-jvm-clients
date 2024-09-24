@@ -24,6 +24,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
@@ -106,7 +107,8 @@ public class ReplicaHelper {
       final Duration timeout,
       final RetryStrategy retryStrategy,
       Map<String, Object> clientContext,
-      RequestSpan parentSpan
+      RequestSpan parentSpan,
+      CoreReadPreference readPreference
   ) {
     notNullOrEmpty(documentId, "Id", () -> ReducedKeyValueErrorContext.create(documentId, collectionIdentifier));
 
@@ -114,7 +116,7 @@ public class ReplicaHelper {
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
 
     return Reactor
-        .toMono(() -> getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan))
+        .toMono(() -> getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan, readPreference))
         .flux()
         .flatMap(Flux::fromStream)
         .flatMap(request -> Reactor
@@ -147,14 +149,15 @@ public class ReplicaHelper {
     final Duration timeout,
     final RetryStrategy retryStrategy,
     Map<String, Object> clientContext,
-    RequestSpan parentSpan
+    RequestSpan parentSpan,
+    CoreReadPreference readPreference
   ) {
     notNullOrEmpty(documentId, "Id", () -> ReducedKeyValueErrorContext.create(documentId, collectionIdentifier));
 
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
     return Reactor
-      .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan))
+      .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference))
       .flux()
       .flatMap(Flux::fromStream)
       .flatMap(request -> Reactor
@@ -184,12 +187,13 @@ public class ReplicaHelper {
       final RetryStrategy retryStrategy,
       final Map<String, Object> clientContext,
       final RequestSpan parentSpan,
+      final CoreReadPreference readPreference,
       final Function<GetReplicaResponse, R> responseMapper
   ) {
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
 
-    return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan)
+    return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan, readPreference)
         .thenApply(stream ->
             stream.map(request ->
                 get(core, request)
@@ -232,12 +236,13 @@ public class ReplicaHelper {
     final RetryStrategy retryStrategy,
     final Map<String, Object> clientContext,
     final RequestSpan parentSpan,
+    final CoreReadPreference readPreference,
     final Function<CoreSubdocGetResult, R> responseMapper
   ) {
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
 
-    return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan)
+    return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference)
       .thenApply(stream ->
         stream.map(request ->
           get(core, request)
@@ -269,13 +274,14 @@ public class ReplicaHelper {
       final RetryStrategy retryStrategy,
       final Map<String, Object> clientContext,
       final RequestSpan parentSpan,
+      final CoreReadPreference readPreference,
       final Function<GetReplicaResponse, R> responseMapper) {
 
     RequestSpan getAnySpan = core.context().environment().requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_GET_ANY_REPLICA, parentSpan);
 
     CompletableFuture<List<CompletableFuture<R>>> listOfFutures = getAllReplicasAsync(
-        core, collectionIdentifier, documentId, timeout, retryStrategy, clientContext, getAnySpan, responseMapper
+        core, collectionIdentifier, documentId, timeout, retryStrategy, clientContext, getAnySpan, readPreference, responseMapper
     );
 
     // Aggregating the futures here will discard the individual errors, which we don't need
@@ -304,13 +310,14 @@ public class ReplicaHelper {
     final RetryStrategy retryStrategy,
     final Map<String, Object> clientContext,
     final RequestSpan parentSpan,
+    final CoreReadPreference readPreference,
     final Function<CoreSubdocGetResult, R> responseMapper) {
 
     RequestSpan getAnySpan = core.context().environment().requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ANY_REPLICA, parentSpan);
 
     CompletableFuture<List<CompletableFuture<R>>> listOfFutures = lookupInAllReplicasAsync(
-      core, collectionIdentifier, documentId, commands, timeout, retryStrategy, clientContext, getAnySpan, responseMapper
+      core, collectionIdentifier, documentId, commands, timeout, retryStrategy, clientContext, getAnySpan, readPreference, responseMapper
     );
 
     // Aggregating the futures here will discard the individual errors, which we don't need
@@ -372,7 +379,8 @@ public class ReplicaHelper {
       final Map<String, Object> clientContext,
       final RetryStrategy retryStrategy,
       final Duration timeout,
-      final RequestSpan parent
+      final RequestSpan parent,
+      final CoreReadPreference readPreference
   ) {
     notNullOrEmpty(documentId, "Id");
 
@@ -381,21 +389,32 @@ public class ReplicaHelper {
     final BucketConfig config = core.clusterConfig().bucketConfig(collectionIdentifier.bucket());
 
     if (config instanceof CouchbaseBucketConfig) {
-      int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
+      CouchbaseBucketConfig topology = (CouchbaseBucketConfig) config;
+      int numReplicas = topology.numberOfReplicas();
       List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
+      NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
 
-      RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
-      GetRequest activeRequest = new GetRequest(documentId, timeout, coreContext, collectionIdentifier, retryStrategy, span);
-      activeRequest.context().clientContext(clientContext);
-      requests.add(activeRequest);
+      if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
+        RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
+        GetRequest activeRequest = new GetRequest(documentId, timeout, coreContext, collectionIdentifier, retryStrategy, span);
+        activeRequest.context().clientContext(clientContext);
+        requests.add(activeRequest);
+      }
 
       for (short replica = 1; replica <= numReplicas; replica++) {
-        RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
-        ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
+        if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
+          RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
+          ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
             documentId, timeout, coreContext, collectionIdentifier, retryStrategy, replica, replicaSpan
-        );
-        replicaRequest.context().clientContext(clientContext);
-        requests.add(replicaRequest);
+          );
+          replicaRequest.context().clientContext(clientContext);
+          requests.add(replicaRequest);
+        }
+      }
+      if (requests.isEmpty()) {
+        CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
+        future.completeExceptionally(DocumentUnretrievableException.noReplicasSuitable());
+        return future;
       }
       return CompletableFuture.completedFuture(requests.stream());
     } else if (config == null) {
@@ -404,7 +423,7 @@ public class ReplicaHelper {
       final Duration retryDelay = Duration.ofMillis(100);
       final CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
       coreContext.environment().timer().schedule(() -> {
-        getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout.minus(retryDelay), parent).whenComplete((getRequestStream, throwable) -> {
+        getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout.minus(retryDelay), parent, readPreference).whenComplete((getRequestStream, throwable) -> {
           if (throwable != null) {
             future.completeExceptionally(throwable);
           } else {
@@ -441,7 +460,8 @@ public class ReplicaHelper {
     final Map<String, Object> clientContext,
     final RetryStrategy retryStrategy,
     final Duration timeout,
-    final RequestSpan parent
+    final RequestSpan parent,
+    final CoreReadPreference readPreference
   ) {
     notNullOrEmpty(documentId, "Id");
 
@@ -450,26 +470,37 @@ public class ReplicaHelper {
     final BucketConfig config = core.clusterConfig().bucketConfig(collectionIdentifier.bucket());
 
     if (config instanceof CouchbaseBucketConfig) {
+      CouchbaseBucketConfig topology = (CouchbaseBucketConfig) config;
 
       if (!config.bucketCapabilities().contains(BucketCapabilities.SUBDOC_READ_REPLICA)) {
         return failedFuture(FeatureNotAvailableException.subdocReadReplica());
       }
 
-      int numReplicas = ((CouchbaseBucketConfig) config).numberOfReplicas();
+      int numReplicas = topology.numberOfReplicas();
       List<SubdocGetRequest> requests = new ArrayList<>(numReplicas + 1);
+      NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
 
-      RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
-      SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte)0, commands, span);
-      activeRequest.context().clientContext(clientContext);
-      requests.add(activeRequest);
+      if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
+        RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
+        SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, span);
+        activeRequest.context().clientContext(clientContext);
+        requests.add(activeRequest);
+      }
 
       for (short replica = 1; replica <= numReplicas; replica++) {
-        RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
-        ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
-          timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte)0, commands, replica, replicaSpan
-        );
-        replicaRequest.context().clientContext(clientContext);
-        requests.add(replicaRequest);
+        if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
+          RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
+          ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
+            timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, replica, replicaSpan
+          );
+          replicaRequest.context().clientContext(clientContext);
+          requests.add(replicaRequest);
+        }
+      }
+      if (requests.isEmpty()) {
+        CompletableFuture<Stream<SubdocGetRequest>> future = new CompletableFuture<>();
+        future.completeExceptionally(DocumentUnretrievableException.noReplicasSuitable());
+        return future;
       }
       return CompletableFuture.completedFuture(requests.stream());
     } else if (config == null) {
@@ -478,7 +509,7 @@ public class ReplicaHelper {
       final Duration retryDelay = Duration.ofMillis(100);
       final CompletableFuture<Stream<SubdocGetRequest>> future = new CompletableFuture<>();
       coreContext.environment().timer().schedule(() -> {
-        lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout.minus(retryDelay), parent).whenComplete((getRequestStream, throwable) -> {
+        lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout.minus(retryDelay), parent, readPreference).whenComplete((getRequestStream, throwable) -> {
           if (throwable != null) {
             future.completeExceptionally(throwable);
           } else {

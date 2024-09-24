@@ -28,4 +28,11 @@ public class DocumentUnretrievableException extends CouchbaseException {
     super("No document retrievable with a successful status", ctx);
   }
 
+  public DocumentUnretrievableException(final String message, final ErrorContext ctx) {
+    super(message, ctx);
+  }
+
+  public static DocumentUnretrievableException noReplicasSuitable() {
+    return new DocumentUnretrievableException("No suitable replicas were available.  Note that it is advised to always have a try-catch fallback to e.g. a regular get, when using replica gets", null);
+  }
 }

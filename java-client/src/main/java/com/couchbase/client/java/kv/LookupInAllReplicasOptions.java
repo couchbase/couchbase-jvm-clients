@@ -17,8 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.JsonSerializer;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -27,6 +29,7 @@ public class LookupInAllReplicasOptions extends CommonOptions<LookupInAllReplica
    * Holds the serializer used for decoding.
    */
   private JsonSerializer serializer;
+  private CoreReadPreference readPreference;
 
   public static LookupInAllReplicasOptions lookupInAllReplicasOptions() {
     return new LookupInAllReplicasOptions();
@@ -41,6 +44,17 @@ public class LookupInAllReplicasOptions extends CommonOptions<LookupInAllReplica
   public LookupInAllReplicasOptions serializer(final JsonSerializer serializer) {
     notNull(serializer, "Serializer");
     this.serializer = serializer;
+    return this;
+  }
+
+  /**
+   * Set a read preference for this operation.
+   *
+   * @see ReadPreference
+   * @return this to allow method chaining.
+   */
+  public LookupInAllReplicasOptions readPreference(ReadPreference readPreference) {
+    this.readPreference = readPreference.toCore();
     return this;
   }
 
@@ -61,6 +75,9 @@ public class LookupInAllReplicasOptions extends CommonOptions<LookupInAllReplica
       return serializer;
     }
 
+    public @Nullable CoreReadPreference readPreference() {
+      return readPreference;
+    }
   }
 
 }

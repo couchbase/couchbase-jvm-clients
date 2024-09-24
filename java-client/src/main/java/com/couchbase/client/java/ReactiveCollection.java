@@ -351,7 +351,7 @@ public class ReactiveCollection {
     GetAllReplicasOptions.Built opts = options.build();
     final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
 
-    return kvOps.getAllReplicasReactive(opts, id)
+    return kvOps.getAllReplicasReactive(opts, id, opts.readPreference())
       .map(response -> GetReplicaResult.from(response, transcoder));
   }
 
@@ -381,7 +381,7 @@ public class ReactiveCollection {
     GetAnyReplicaOptions.Built opts = options.build();
     final Transcoder transcoder = Optional.ofNullable(opts.transcoder()).orElse(environment().transcoder());
 
-    return kvOps.getAnyReplicaReactive(opts, id)
+    return kvOps.getAnyReplicaReactive(opts, id, opts.readPreference())
       .map(response -> GetReplicaResult.from(response, transcoder));
   }
 
@@ -779,7 +779,8 @@ public class ReactiveCollection {
     LookupInAllReplicasOptions.Built opts = options.build();
     final JsonSerializer serializer = Optional.ofNullable(opts.serializer()).orElse(environment().jsonSerializer());
 
-    return kvOps.subdocGetAllReplicasReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore)).map(response -> LookupInReplicaResult.from(response, serializer));
+    return kvOps.subdocGetAllReplicasReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore), opts.readPreference())
+      .map(response -> LookupInReplicaResult.from(response, serializer));
   }
 
   /**
@@ -810,7 +811,7 @@ public class ReactiveCollection {
     LookupInAnyReplicaOptions.Built opts = options.build();
     final JsonSerializer serializer = Optional.ofNullable(opts.serializer()).orElse(environment().jsonSerializer());
 
-    return kvOps.subdocGetAnyReplicaReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore))
+    return kvOps.subdocGetAnyReplicaReactive(opts, id, transform(lookupInSpecs, LookupInSpec::toCore), opts.readPreference())
       .map(response ->  LookupInReplicaResult.from(response, serializer));
   }
 }

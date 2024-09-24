@@ -17,9 +17,11 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.java.CommonOptions;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.json.JsonObject;
+import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -29,6 +31,7 @@ public class GetAllReplicasOptions extends CommonOptions<GetAllReplicasOptions> 
    * Holds the transcoder used for decoding.
    */
   private Transcoder transcoder;
+  private CoreReadPreference readPreference;
 
   /**
    * Creates a new set of {@link GetAllReplicasOptions}.
@@ -54,6 +57,17 @@ public class GetAllReplicasOptions extends CommonOptions<GetAllReplicasOptions> 
     return this;
   }
 
+  /**
+   * Set a read preference for this operation.
+   *
+   * @see ReadPreference
+   * @return this to allow method chaining.
+   */
+  public GetAllReplicasOptions readPreference(ReadPreference readPreference) {
+    this.readPreference = readPreference.toCore();
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -67,6 +81,9 @@ public class GetAllReplicasOptions extends CommonOptions<GetAllReplicasOptions> 
       return transcoder;
     }
 
+    public @Nullable CoreReadPreference readPreference() {
+      return readPreference;
+    }
   }
 
 }

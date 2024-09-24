@@ -328,23 +328,27 @@ public interface CoreKvOps {
   Flux<CoreSubdocGetResult> subdocGetAllReplicasReactive(
       CoreCommonOptions common,
       String key,
-      List<CoreSubdocGetCommand> commands
+      List<CoreSubdocGetCommand> commands,
+      CoreReadPreference readPreference
   );
 
   Mono<CoreSubdocGetResult> subdocGetAnyReplicaReactive(
       CoreCommonOptions common,
       String key,
-      List<CoreSubdocGetCommand> commands
+      List<CoreSubdocGetCommand> commands,
+      CoreReadPreference readPreference
   );
 
   Flux<CoreGetResult> getAllReplicasReactive(
       CoreCommonOptions common,
-      String key
+      String key,
+      CoreReadPreference readPreference
   );
 
   Mono<CoreGetResult> getAnyReplicaReactive(
       CoreCommonOptions common,
-      String key
+      String key,
+      CoreReadPreference readPreference
   );
 
   CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(

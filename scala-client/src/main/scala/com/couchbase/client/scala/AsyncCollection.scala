@@ -17,7 +17,12 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.api.kv.{CoreExpiry, CoreSubdocGetCommand, CoreSubdocGetResult}
+import com.couchbase.client.core.api.kv.{
+  CoreExpiry,
+  CoreReadPreference,
+  CoreSubdocGetCommand,
+  CoreSubdocGetResult
+}
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -490,8 +495,9 @@ class AsyncCollection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Future[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id))
-      .map(result => convertReplica(result, environment, None))
+    convert(
+      kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
+    ).map(result => convertReplica(result, environment, None))
       .toFuture
   }
 
@@ -502,7 +508,7 @@ class AsyncCollection(
       id: String,
       options: GetAnyReplicaOptions
   ): Future[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(convert(options), id))
+    convert(kvOps.getAnyReplicaReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
       .map(result => convertReplica(result, environment, options.transcoder))
       .toFuture
   }
@@ -538,7 +544,7 @@ class AsyncCollection(
     // Since the API here returns a Seq and not a Future, there is unfortunately
     // no option but to block & buffer the stream and return already completed/failed Futures.
     // Users that require a true streaming solution should use the reactive version.
-    convert(kvOps.getAllReplicasReactive(convert(options), id))
+    convert(kvOps.getAllReplicasReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
       .map(result => convertReplica(result, environment, options.transcoder))
       .collectSeq()
       .block(options.timeout)
@@ -575,8 +581,14 @@ class AsyncCollection(
       spec: collection.Seq[LookupInSpec],
       options: LookupInAnyReplicaOptions
   ): Future[LookupInReplicaResult] = {
-    convert(kvOps.subdocGetAnyReplicaReactive(convert(options), id, LookupInSpec.map(spec).asJava))
-      .map(result => convertLookupInReplica(result, environment))
+    convert(
+      kvOps.subdocGetAnyReplicaReactive(
+        convert(options),
+        id,
+        LookupInSpec.map(spec).asJava,
+        CoreReadPreference.NO_PREFERENCE
+      )
+    ).map(result => convertLookupInReplica(result, environment))
       .toFuture
   }
 
@@ -618,8 +630,14 @@ class AsyncCollection(
       spec: collection.Seq[LookupInSpec],
       options: LookupInAllReplicasOptions
   ): Seq[Future[LookupInReplicaResult]] = {
-    convert(kvOps.subdocGetAllReplicasReactive(convert(options), id, LookupInSpec.map(spec).asJava))
-      .map(result => convertLookupInReplica(result, environment))
+    convert(
+      kvOps.subdocGetAllReplicasReactive(
+        convert(options),
+        id,
+        LookupInSpec.map(spec).asJava,
+        CoreReadPreference.NO_PREFERENCE
+      )
+    ).map(result => convertLookupInReplica(result, environment))
       .collectSeq()
       .block(options.timeout)
       .map(result => Future.successful(result))

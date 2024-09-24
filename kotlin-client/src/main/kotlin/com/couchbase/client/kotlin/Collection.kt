@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
+import com.couchbase.client.core.api.kv.CoreReadPreference
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.error.CasMismatchException
@@ -335,7 +336,7 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
     ): Flow<GetReplicaResult> {
-        return kvOps.getAllReplicasReactive(common.toCore(), id)
+        return kvOps.getAllReplicasReactive(common.toCore(), id, CoreReadPreference.NO_PREFERENCE)
             .asFlow().map { GetReplicaResult(id, it, defaultTranscoder) }
     }
 
@@ -363,7 +364,7 @@ public class Collection internal constructor(
         id: String,
         common: CommonOptions = CommonOptions.Default,
     ): GetReplicaResult? {
-        val response = kvOps.getAnyReplicaReactive(common.toCore(), id)
+        val response = kvOps.getAnyReplicaReactive(common.toCore(), id, CoreReadPreference.NO_PREFERENCE)
             .awaitFirstOrNull() ?: return null
 
         return GetReplicaResult(id, response, defaultTranscoder)
@@ -643,7 +644,8 @@ public class Collection internal constructor(
         val coreResult = kvOps.subdocGetAnyReplicaReactive(
             common.toCore(),
             id,
-            spec.commands
+            spec.commands,
+            CoreReadPreference.NO_PREFERENCE,
         ).awaitFirst()
 
         return LookupInReplicaResult(coreResult, defaultJsonSerializer, spec)
@@ -663,6 +665,7 @@ public class Collection internal constructor(
             common.toCore(),
             id,
             spec.commands,
+            CoreReadPreference.NO_PREFERENCE,
         )
         return flux
             .map { coreResult -> LookupInReplicaResult(coreResult, defaultJsonSerializer, spec) }
