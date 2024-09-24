@@ -22,6 +22,10 @@ import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
 import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
 // [end]
 import com.couchbase.client.protocol.transactions.CommandGet;
+// [if:3.7.4]
+import com.couchbase.client.java.transactions.config.TransactionGetReplicaFromPreferredServerGroupOptions;
+// [end]
+import com.couchbase.client.protocol.transactions.CommandGetReplicaFromPreferredServerGroup;
 import com.couchbase.client.protocol.transactions.CommandInsert;
 import com.couchbase.client.protocol.transactions.CommandReplace;
 import com.couchbase.client.protocol.transactions.Replace;
@@ -110,5 +114,21 @@ public class TransactionOptionsUtil {
     //? public static Object transactionInsertOptions(Insert request) { return null; }
     //? public static Object transactionGetOptions(CommandGet request) { return null; }
     //? public static Object transactionGetOptions(Get request) { return null; }
+    // [end]
+
+    // [if:3.7.4]
+    public static TransactionGetReplicaFromPreferredServerGroupOptions transactionGetReplicaFromPreferredServerGroupOptions(CommandGetReplicaFromPreferredServerGroup request) {
+        TransactionGetReplicaFromPreferredServerGroupOptions options = null;
+        if (request.hasOptions()) {
+            options = TransactionGetReplicaFromPreferredServerGroupOptions.transactionGetReplicaFromPreferredServerGroupOptions();
+            var opts = request.getOptions();
+            if (opts.hasTranscoder()) {
+                options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
+            }
+        }
+        return options;
+    }
+    // [else]
+    //? public static Object TransactionGetReplicaFromPreferredServerGroupOptions(CommandGetReplicaFromPreferredServerGroup request) { return null; }
     // [end]
 }

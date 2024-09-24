@@ -46,6 +46,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static com.couchbase.JavaSdkCommandExecutor.convertExceptionShared;
+import static com.couchbase.JavaSdkCommandExecutor.convertReadPreference;
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
 import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
@@ -418,6 +419,11 @@ public class LookupInHelper {
       if (opts.hasParentSpanId()) {
         out = out.parentSpan(spans.get(opts.getParentSpanId()));
       }
+      // [if:3.7.4]
+      if (opts.hasReadPreference()) {
+        out = out.readPreference(convertReadPreference(opts.getReadPreference()));
+      }
+      // [end]
       return out;
     } else {
       return null;
@@ -435,6 +441,11 @@ public class LookupInHelper {
       if (opts.hasParentSpanId()) {
         out = out.parentSpan(spans.get(opts.getParentSpanId()));
       }
+      // [if:3.7.4]
+      if (opts.hasReadPreference()) {
+        out = out.readPreference(convertReadPreference(opts.getReadPreference()));
+      }
+      // [end]
       return out;
     } else {
       return null;

@@ -1342,7 +1342,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var out = GetAllReplicasOptions.getAllReplicasOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
-
+            // [if:3.7.4]
+            if (opts.hasReadPreference()) {
+              out.readPreference(convertReadPreference(opts.getReadPreference()));
+            }
+            // [end]
             return out;
         }
         else return null;
@@ -1354,7 +1358,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             var out = GetAnyReplicaOptions.getAnyReplicaOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
-
+            // [if:3.7.4]
+            if (opts.hasReadPreference()) {
+              out.readPreference(convertReadPreference(opts.getReadPreference()));
+            }
+            // [end]
             return out;
         }
         else return null;
@@ -1537,4 +1545,17 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
     return options;
   }
+
+  // [if:3.7.4]
+  public static com.couchbase.client.java.kv.ReadPreference convertReadPreference(com.couchbase.client.protocol.shared.ReadPreference readPreference) {
+    return switch (readPreference) {
+      case NO_PREFERENCE -> com.couchbase.client.java.kv.ReadPreference.NO_PREFERENCE;
+      case SELECTED_SERVER_GROUP -> com.couchbase.client.java.kv.ReadPreference.PREFERRED_SERVER_GROUP;
+      case SELECTED_SERVER_GROUP_OR_ALL_AVAILABLE -> throw new UnsupportedOperationException();
+      default -> throw new UnsupportedOperationException("Read preference not handled " + readPreference);
+    };
+  }
+  // [else]
+  //? public static Object convertReadPreference(com.couchbase.client.protocol.shared.ReadPreference readPreference) { return null; }
+  // [end]
 }

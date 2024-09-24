@@ -42,6 +42,7 @@ import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTran
 import com.couchbase.client.protocol.transactions.CommandBatch;
 import com.couchbase.client.protocol.transactions.CommandGet;
 import com.couchbase.client.protocol.transactions.CommandGetOptional;
+import com.couchbase.client.protocol.transactions.CommandGetReplicaFromPreferredServerGroup;
 import com.couchbase.client.protocol.transactions.CommandSetLatch;
 import com.couchbase.client.protocol.transactions.CommandWaitOnLatch;
 import com.couchbase.client.protocol.shared.ContentAsPerformerValidation;
@@ -308,13 +309,47 @@ public abstract class TwoWayTransactionShared {
     }
 
     protected void handleGetResult(CommandGet request, TransactionGetResult getResult, ClusterConnection cc, @Nullable ContentAsPerformerValidation contentAs) {
-        stashedGet.set(getResult);
-
         if (request.hasStashInSlot()) {
             stashedGetMap.put(request.getStashInSlot(), getResult);
             logger.info("Stashed {} in slot {}", getResult.id(), request.getStashInSlot());
             // stashedGetMap.forEach((k, v) -> logger.info("Stash: {}={}", k, v));
         }
+
+        handleGetResultInternal(getResult, contentAs);
+
+        if (!request.getExpectedContentJson().isEmpty()) {
+            JsonObject expected = JsonObject.fromJson(request.getExpectedContentJson());
+            // Due to JsonValueSerializerWrapper, can't use contentAsObject() as that uses Jackson directly rather
+            // than the wrapped CustomSerializer.  CustomSerializer always returns a JsonObject, so we request a String
+            // and cast to that.  Unfortunately we can't always do this, as with the default Json serializer contentAsObject()
+            // throws if we ask for String.class.
+            JsonObject actual;
+            if (cc.cluster().environment().jsonSerializer() instanceof JsonValueSerializerWrapper) {
+                actual = (JsonObject) (Object) getResult.contentAs(String.class);
+            }
+            else {
+                actual = getResult.contentAsObject();
+            }
+
+            if (!expected.equals(actual)) {
+                logger.warn("Expected content {}, got content {}", expected, actual);
+                throw new TestFailure(new IllegalStateException("Did not get expected content"));
+            }
+        }
+    }
+
+    protected void handleGetReplicaFromPreferredServerGroupResult(CommandGetReplicaFromPreferredServerGroup request, TransactionGetResult getResult, @Nullable ContentAsPerformerValidation contentAs) {
+        if (request.hasStashInSlot()) {
+            stashedGetMap.put(request.getStashInSlot(), getResult);
+            logger.info("Stashed {} in slot {}", getResult.id(), request.getStashInSlot());
+            // stashedGetMap.forEach((k, v) -> logger.info("Stash: {}={}", k, v));
+        }
+
+        handleGetResultInternal(getResult, contentAs);
+    }
+
+    protected void handleGetResultInternal(TransactionGetResult getResult, @Nullable ContentAsPerformerValidation contentAs) {
+        stashedGet.set(getResult);
 
         if (contentAs != null) {
             var content = ContentAsUtil.contentType(
@@ -336,26 +371,6 @@ public abstract class TwoWayTransactionShared {
                 if (!Arrays.equals(contentAs.getExpectedContentBytes().toByteArray(), bytes)) {
                     throw new TestFailure(new RuntimeException("Content bytes " + Arrays.toString(bytes) + " did not equal expected bytes " + contentAs.getExpectedContentBytes()));
                 }
-            }
-        }
-
-        if (!request.getExpectedContentJson().isEmpty()) {
-            JsonObject expected = JsonObject.fromJson(request.getExpectedContentJson());
-            // Due to JsonValueSerializerWrapper, can't use contentAsObject() as that uses Jackson directly rather
-            // than the wrapped CustomSerializer.  CustomSerializer always returns a JsonObject, so we request a String
-            // and cast to that.  Unfortunately we can't always do this, as with the default Json serializer contentAsObject()
-            // throws if we ask for String.class.
-            JsonObject actual;
-            if (cc.cluster().environment().jsonSerializer() instanceof JsonValueSerializerWrapper) {
-                actual = (JsonObject) (Object) getResult.contentAs(String.class);
-            }
-            else {
-                actual = getResult.contentAsObject();
-            }
-
-            if (!expected.equals(actual)) {
-                logger.warn("Expected content {}, got content {}", expected, actual);
-                throw new TestFailure(new IllegalStateException("Did not get expected content"));
             }
         }
     }

@@ -206,6 +206,9 @@ public class ResultsUtil {
         else if (ex instanceof AuthenticationFailureException) {
             return ExternalException.AuthenticationFailureException;
         }
+        else if (ex instanceof com.couchbase.client.core.error.DocumentUnretrievableException) {
+          return ExternalException.DocumentUnretrievableException;
+        }
         else if (ex instanceof com.couchbase.client.core.error.CouchbaseException) {
             return ExternalException.CouchbaseException;
         }

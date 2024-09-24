@@ -270,6 +270,25 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                                 })
                                 .then();
                     });
+        // [if:3.7.4]
+        } else if (op.hasGetFromPreferredServerGroup()) {
+            var request = op.getGetFromPreferredServerGroup();
+            var collection = connection.collection(request.getDocId());
+            var options = TransactionOptionsUtil.transactionGetReplicaFromPreferredServerGroupOptions(request);
+
+            return performOperation(waitIfNeeded, dbg + "getFromPreferredServerGroup " + request.getDocId().getDocId(), ctx, request.getExpectedResultList(), op.getDoNotPropagateError(), performanceMode,
+                    () -> {
+                        logger.info("Performing getFromPreferredServerGroup operation on {} on bucket {} on collection {}", request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
+                        return Mono.defer(() -> {
+                                    if (options != null) {
+                                        return ctx.getReplicaFromPreferredServerGroup(collection.reactive(), request.getDocId().getDocId(), options);
+                                    }
+                                    return ctx.getReplicaFromPreferredServerGroup(collection.reactive(), request.getDocId().getDocId());
+                                })
+                                .doOnNext(out -> handleGetReplicaFromPreferredServerGroupResult(request, out, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
+                                .then();
+                    });
+        // [end]
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();
             final String latchName = request.getLatchName();
