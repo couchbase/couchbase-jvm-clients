@@ -53,7 +53,8 @@ public class LegacyConfigHelper {
         tlsPorts(topology, it),
         emptyMap(), // The host is always accurate -- there is never an alternate.
         it.host(),
-        it.id().toLegacy()
+        it.id().toLegacy(),
+        it.serverGroup()
       )
     );
   }

@@ -81,7 +81,7 @@ public class GlobalConfig {
     List<PortInfo> enriched = new ArrayList<>(portInfos.size());
     for (PortInfo portInfo : portInfos) {
       if (portInfo.hostname() == null) {
-        enriched.add(new PortInfo(portInfo.ports(), portInfo.sslPorts(), portInfo.alternateAddresses(), origin));
+        enriched.add(new PortInfo(portInfo.ports(), portInfo.sslPorts(), portInfo.alternateAddresses(), origin, portInfo.serverGroup()));
       } else {
         enriched.add(portInfo);
       }

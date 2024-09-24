@@ -34,7 +34,7 @@ import static org.mockito.Mockito.when;
 class ClusterConfigTest {
 
   private static PortInfo minimalPortInfo(String host) {
-    return new PortInfo(mapOf("mgmt", 8091), host, emptyMap());
+    return new PortInfo(mapOf("mgmt", 8091), host, emptyMap(), null);
   }
 
   private static NodeInfo minimalNodeInfo(String host, int port) {

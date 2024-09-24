@@ -87,8 +87,8 @@ class GlobalRefresherTest {
     GlobalConfig config = mock(GlobalConfig.class);
     clusterConfig.setGlobalConfig(config);
     when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap()),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap())
+      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap(), null),
+      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap(), null)
     ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);
@@ -135,8 +135,8 @@ class GlobalRefresherTest {
     GlobalConfig config = mock(GlobalConfig.class);
     clusterConfig.setGlobalConfig(config);
     when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap()),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap())
+      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap(), null),
+      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap(), null)
     ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);

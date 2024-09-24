@@ -19,6 +19,7 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import reactor.util.annotation.Nullable;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -40,6 +41,7 @@ public class PortInfo {
     private final Map<ServiceType, Integer> sslPorts;
     private final Map<String, AlternateAddress> alternateAddresses;
     private final String hostname;
+    private final @Nullable String serverGroup;
     private final NodeIdentifier nodeIdentifier;
 
     /**
@@ -54,12 +56,14 @@ public class PortInfo {
     public PortInfo(
         @JsonProperty("services") Map<String, Integer> services,
         @JsonProperty("hostname") String hostname,
-        @JsonProperty("alternateAddresses") Map<String, AlternateAddress> aa
+        @JsonProperty("alternateAddresses") Map<String, AlternateAddress> aa,
+        @JsonProperty("serverGroup") String serverGroup
     ) {
         ports = new HashMap<>();
         sslPorts = new HashMap<>();
         alternateAddresses = aa == null ? Collections.emptyMap() : aa;
         this.hostname = hostname; // might be null when decoded from JSON, covered at a higher level
+        this.serverGroup = serverGroup;
 
         extractPorts(services, ports, sslPorts);
 
@@ -75,11 +79,12 @@ public class PortInfo {
      * @param hostname the hostname of the port info (node).
      */
     PortInfo(final Map<ServiceType, Integer> ports, final Map<ServiceType, Integer> sslPorts,
-                     final Map<String, AlternateAddress> alternateAddresses, final String hostname) {
+                     final Map<String, AlternateAddress> alternateAddresses, final String hostname, final @Nullable String serverGroup) {
       this.ports = requireNonNull(ports);
       this.sslPorts = requireNonNull(sslPorts);
       this.alternateAddresses = requireNonNull(alternateAddresses);
       this.hostname = requireNonNull(hostname);
+      this.serverGroup = serverGroup;
       this.nodeIdentifier = initNodeIdentifier(hostname, ports, sslPorts);
     }
 
@@ -88,13 +93,15 @@ public class PortInfo {
         final Map<ServiceType, Integer> sslPorts,
         final Map<String, AlternateAddress> alternateAddresses,
         final String hostname,
-        final NodeIdentifier nodeIdentifier
+        final NodeIdentifier nodeIdentifier,
+        final @Nullable String serverGroup
     ) {
         this.ports = requireNonNull(ports);
         this.sslPorts = requireNonNull(sslPorts);
         this.alternateAddresses = requireNonNull(alternateAddresses);
         this.hostname = requireNonNull(hostname);
         this.nodeIdentifier = requireNonNull(nodeIdentifier);
+        this.serverGroup = serverGroup;
     }
 
     public NodeIdentifier identifier() {
@@ -183,6 +190,11 @@ public class PortInfo {
         return alternateAddresses;
     }
 
+    @Nullable
+    public String serverGroup() {
+       return serverGroup;
+    }
+
     @Override
     public String toString() {
         return "PortInfo{"
@@ -190,6 +202,7 @@ public class PortInfo {
             + ", sslPorts=" + sslPorts
             + ", hostname='" + hostname
             + ", alternateAddresses=" + alternateAddresses
+            + ", serverGroup=" + serverGroup
             + '\'' + '}';
     }
 

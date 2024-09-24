@@ -50,6 +50,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     "<inaccessible>",
     emptyMap(),
     new NodeIdentifier("<inaccessible>", 0, "<inaccessible>"),
+    null,
     null
   );
 
@@ -57,17 +58,20 @@ public class HostAndServicePorts implements KetamaRingNode {
   private final Map<ServiceType, Integer> ports;
   private final NodeIdentifier id;
   @Nullable private final HostAndPort ketamaAuthority;
+  @Nullable private final String serverGroup;
 
   public HostAndServicePorts(
     String host,
     Map<ServiceType, Integer> ports,
     NodeIdentifier id,
-    @Nullable HostAndPort ketamaAuthority
+    @Nullable HostAndPort ketamaAuthority,
+    @Nullable String serverGroup
   ) {
     this.host = requireNonNull(host);
     this.ports = unmodifiableMap(newEnumMap(ServiceType.class, ports));
     this.id = requireNonNull(id);
     this.ketamaAuthority = ketamaAuthority;
+    this.serverGroup = serverGroup;
   }
 
   public boolean inaccessible() {
@@ -105,6 +109,10 @@ public class HostAndServicePorts implements KetamaRingNode {
     return ports;
   }
 
+  public @Nullable String serverGroup() {
+    return serverGroup;
+  }
+
   public boolean has(ServiceType serviceType) {
     return ports.containsKey(serviceType);
   }
@@ -121,7 +129,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       temp.remove(t);
     }
 
-    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority);
+    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority, this.serverGroup);
   }
 
   @Stability.Internal
@@ -129,7 +137,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     if (Objects.equals(this.ketamaAuthority, ketamaAuthority)) {
       return this;
     }
-    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority);
+    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority, this.serverGroup);
   }
 
   boolean matches(SeedNode seedNode) {

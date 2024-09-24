@@ -53,9 +53,9 @@ public class GlobalLoader {
   /**
    * Tries to load the global configuration.
    *
-   * <p>Please note that at this point, we are passing an {@link Optional#empty()} for alternate addresses when the
+   * <p>Please note that at this point, we are passing a null for server group info when the
    * service is created, since we do not have a config to check against at this point. The config provider
-   * will take care of this at a later point in time, before the rest of the bootstrap happens.</p>
+   * will take care of this at a later point in time, before the rest of the bootstrap happens.
    *
    * @param seed the seed node to load from.
    * @param port the port number for the KV service.

@@ -82,7 +82,7 @@ public abstract class BaseBucketLoader implements BucketLoader {
    * all non-config exceptions into config exceptions so that the upper level only needs to handle
    * one specific exception type.</p>
    *
-   * <p>At this point, we are passing an {@link Optional#empty()} for alternate addresses when the
+   * <p>At this point, we are passing a null for server group info when the
    * service is created, since we do not have a config to check against at this point. The config provider
    * will take care of this at a later point in time, before the rest of the bootstrap happens.</p>
    *

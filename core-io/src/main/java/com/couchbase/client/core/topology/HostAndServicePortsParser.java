@@ -54,13 +54,16 @@ class HostAndServicePortsParser {
   ) {
     Map<NetworkResolution, HostAndRawServicePorts> raw = parseIntermediate(json);
     HostAndPort ketamaAuthority = getKetamaAuthority(raw);
+    String serverGroup = json.path("serverGroup").asText();
+    final String serverGroupFinal = serverGroup.isEmpty() ? null : serverGroup;
 
     return transformValues(raw, value ->
       new HostAndServicePorts(
         value.host,
         portSelector.selectPorts(value.rawServicePorts),
         getId(value.host, raw),
-        ketamaAuthority
+        ketamaAuthority,
+        serverGroupFinal
       )
     );
   }
