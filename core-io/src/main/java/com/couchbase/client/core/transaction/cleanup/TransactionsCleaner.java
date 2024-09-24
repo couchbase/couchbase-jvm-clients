@@ -17,6 +17,7 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -152,7 +153,7 @@ public class TransactionsCleaner {
             return hooks.beforeCommitDoc.apply(doc.id()) // Testing hook
 
                     .then(Mono.defer(() -> {
-                        if (lir.isDeleted()) {
+                        if (lir.tombstone()) {
                             return TransactionKVHandler.insert(core, collection, doc.id(), content, doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan);
                         } else {
@@ -163,7 +164,7 @@ public class TransactionsCleaner {
                             );
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
-                                    lir.isDeleted(), false, doc.cas(), doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
+                                    lir.tombstone(), false, doc.cas(), doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
                                     commands);
                         }
@@ -192,7 +193,7 @@ public class TransactionsCleaner {
 
                     .then(TransactionKVHandler.mutateIn(core, collectionIdentifier, doc.id(), kvDurableTimeout(),
                                 false, false, false,
-                                lir.isDeleted(), false, doc.cas(), doc.userFlags(),
+                                lir.tombstone(), false, doc.cas(), doc.userFlags(),
                                 req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeTxnLinks"), pspan, Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
                             )))
@@ -240,7 +241,7 @@ public class TransactionsCleaner {
             return hooks.beforeRemoveDoc.apply(doc.id())
 
                     .then(Mono.defer(() -> {
-                        if (lir.isDeleted()) {
+                        if (lir.tombstone()) {
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
                                     true, false, doc.cas(), doc.userFlags(),
@@ -266,7 +267,7 @@ public class TransactionsCleaner {
                                 List<DocRecord> docs,
                                 SpanWrapper pspan,
                                 boolean requireCrc32ToMatchStaging,
-                                TriFunction<CollectionIdentifier, CoreTransactionGetResult, SubdocGetResponse, Mono<Void>> perDoc) {
+                                TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Mono<Void>> perDoc) {
         return Flux.fromIterable(docs)
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .concatMap(docRecord -> {
@@ -292,7 +293,7 @@ public class TransactionsCleaner {
                                       String attemptId,
                                       SpanWrapper pspan,
                                       boolean requireCrc32ToMatchStaging,
-                                      TriFunction<CollectionIdentifier, CoreTransactionGetResult, SubdocGetResponse, Mono<Void>> perDoc,
+                                      TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Mono<Void>> perDoc,
                                       DocRecord docRecord,
                                       CollectionIdentifier collection,
                                       MeteringUnits.MeteringUnitsBuilder units) {
@@ -301,12 +302,12 @@ public class TransactionsCleaner {
                 .flatMap(docOpt -> {
                     if (docOpt.isPresent()) {
                         CoreTransactionGetResult doc = docOpt.get().getT1();
-                        SubdocGetResponse lir = docOpt.get().getT2();
+                        CoreSubdocGetResult lir = docOpt.get().getT2();
                         MeteringUnits built = units.build();
 
                         perEntryLog.debug(attemptId, "handling doc {} with cas {} " +
                                         "and links {}, isTombstone={}{}",
-                                DebugUtil.docId(doc), doc.cas(), doc.links(), lir.isDeleted(), DebugUtil.dbg(built));
+                                DebugUtil.docId(doc), doc.cas(), doc.links(), lir.tombstone(), DebugUtil.dbg(built));
 
                         if (!doc.links().isDocumentInTransaction()) {
                             // The txn probably committed this doc then crashed.  This is fine, can skip.

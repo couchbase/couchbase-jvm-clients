@@ -17,6 +17,7 @@
 package com.couchbase.client.core.transaction;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -237,7 +238,7 @@ public class CoreTransactionGetResult {
     @Stability.Internal
     public static CoreTransactionGetResult createFrom(CollectionIdentifier collection,
                                                       String documentId,
-                                                      SubdocGetResponse doc) throws IOException {
+                                                      CoreSubdocGetResult doc) throws IOException {
         Optional<String> atrId = Optional.empty();
         Optional<String> transactionId = Optional.empty();
         Optional<String> attemptId = Optional.empty();
@@ -259,16 +260,16 @@ public class CoreTransactionGetResult {
         Optional<String> op = Optional.empty();
 
         // "txn.id"
-        if (doc.values()[0].status().success()) {
-            JsonNode id = MAPPER.readValue(doc.values()[0].value(), JsonNode.class);
+        if (doc.field(0).status().success()) {
+            JsonNode id = MAPPER.readValue(doc.field(0).value(), JsonNode.class);
             transactionId = Optional.ofNullable(id.path("txn").textValue());
             attemptId = Optional.ofNullable(id.path("atmpt").textValue());
             operationId = Optional.ofNullable(id.path("op").textValue());
         }
 
         // "txn.atr"
-        if (doc.values()[1].status().success()) {
-            JsonNode atr  = MAPPER.readValue(doc.values()[1].value(), JsonNode.class);
+        if (doc.field(1).status().success()) {
+            JsonNode atr  = MAPPER.readValue(doc.field(1).value(), JsonNode.class);
             atrId = Optional.ofNullable(atr.path("id").textValue());
             atrBucketName = Optional.ofNullable(atr.path("bkt").textValue());
             String scope = atr.path("scp").textValue();
@@ -287,24 +288,24 @@ public class CoreTransactionGetResult {
         }
 
         // "txn.op.type"
-        if (doc.values()[2].status().success()) {
-            op = Optional.of(Mapper.reader().readValue(doc.values()[2].value(), String.class));
+        if (doc.field(2).status().success()) {
+            op = Optional.of(Mapper.reader().readValue(doc.field(2).value(), String.class));
         }
 
         // "txn.op.stgd"
-        if (doc.values()[3].status().success()) {
-            byte[] raw = doc.values()[3].value();
+        if (doc.field(3).status().success()) {
+            byte[] raw = doc.field(3).value();
             stagedContentJson = Optional.of(raw);
         }
 
         // "txn.op.crc32"
-        if (doc.values()[4].status().success()) {
-            crc32OfStaging = Optional.of(Mapper.reader().readValue(doc.values()[4].value(), String.class));
+        if (doc.field(4).status().success()) {
+            crc32OfStaging = Optional.of(Mapper.reader().readValue(doc.field(4).value(), String.class));
         }
 
         // "txn.restore"
-        if (doc.values()[5].status().success()) {
-            JsonNode restore  = MAPPER.readValue(doc.values()[5].value(), JsonNode.class);
+        if (doc.field(5).status().success()) {
+            JsonNode restore  = MAPPER.readValue(doc.field(5).value(), JsonNode.class);
             casPreTxn = Optional.of(restore.path("CAS").textValue());
             // Only present in 6.5+
             revidPreTxn = Optional.of(restore.path("revid").textValue());
@@ -312,17 +313,17 @@ public class CoreTransactionGetResult {
         }
 
         // "txn.fc"
-        if (doc.values()[6].status().success()) {
-            JsonNode json = MAPPER.readValue(doc.values()[6].value(), JsonNode.class);
+        if (doc.field(6).status().success()) {
+            JsonNode json = MAPPER.readValue(doc.field(6).value(), JsonNode.class);
             ForwardCompatibility fc = new ForwardCompatibility(json);
             forwardCompatibility = Optional.of(fc);
         }
 
-        if (!doc.values()[7].status().success()) {
+        if (!doc.field(7).status().success()) {
             throw new IllegalStateException("$document requested but not received");
         }
         // Read from $document
-        JsonNode restore = MAPPER.readValue(doc.values()[7].value(), JsonNode.class);
+        JsonNode restore = MAPPER.readValue(doc.field(7).value(), JsonNode.class);
         String casFromDocument = restore.path("CAS").textValue();
         // Only present in 6.5+
         String revidFromDocument = restore.path("revid").textValue();
@@ -333,14 +334,14 @@ public class CoreTransactionGetResult {
         int currentUserFlags = restore.path("flags").intValue();
 
         // "txn.op.bin"
-        if (doc.values()[8].status().success()) {
-            byte[] raw = doc.values()[8].value();
+        if (doc.field(8).status().success()) {
+            byte[] raw = doc.field(8).value();
             stagedContentBinary = Optional.of(raw);
         }
 
         // "txn.aux"
-        if (doc.values()[9].status().success()) {
-            JsonNode aux = MAPPER.readValue(doc.values()[9].value(), JsonNode.class);
+        if (doc.field(9).status().success()) {
+            JsonNode aux = MAPPER.readValue(doc.field(9).value(), JsonNode.class);
             if (aux.has("uf")) {
                 stagedUserFlags = Optional.of(aux.get("uf").intValue());
             }
@@ -349,8 +350,8 @@ public class CoreTransactionGetResult {
         byte[] bodyContent;
 
         // body
-        if (doc.values()[10].status().success()) {
-            bodyContent = doc.values()[10].value();
+        if (doc.field(10).status().success()) {
+            bodyContent = doc.field(10).value();
         }
         else {
             bodyContent = new byte[] {};
@@ -369,7 +370,7 @@ public class CoreTransactionGetResult {
                 revidPreTxn,
                 exptimePreTxn,
                 op,
-                doc.isDeleted(),
+                doc.tombstone(),
                 crc32OfStaging,
                 forwardCompatibility,
                 operationId,

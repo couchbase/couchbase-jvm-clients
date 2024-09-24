@@ -710,14 +710,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
           // This should be superfluous now - if the op failed then error() should be set - but leaving as a fail-safe.
           commonKvResponseCheck(req, res);
         },
-        it -> new CoreSubdocGetResult(
-            keyspace,
-            key,
-            CoreKvResponseMetadata.from(it.flexibleExtras()),
-            Arrays.asList(it.values()),
-            it.cas(),
-            it.isDeleted()
-        )
+        it -> it.toCore(keyspace, key)
     );
   }
 

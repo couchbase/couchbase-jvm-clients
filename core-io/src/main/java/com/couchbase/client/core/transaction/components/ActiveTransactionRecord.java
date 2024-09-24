@@ -104,15 +104,15 @@ public class ActiveTransactionRecord {
 
                 .map(d -> {
                     if (units != null) {
-                      units.add(d.flexibleExtras());
+                      units.add(d.meta());
                     }
 
-                    if (!d.values()[0].status().success()) {
+                    if (!d.field(0).status().success()) {
                         return Optional.empty();
                     } else {
                         try {
-                            JsonNode atr = MAPPER.readValue(d.values()[0].value(), JsonNode.class);
-                            JsonNode hlc = MAPPER.readValue(d.values()[1].value(), JsonNode.class);
+                            JsonNode atr = MAPPER.readValue(d.field(0).value(), JsonNode.class);
+                            JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
                             ParsedHLC parsedHLC = new ParsedHLC(hlc);
 
                             ActiveTransactionRecordEntry entry = createFrom(atrCollection.bucket(),
@@ -129,10 +129,10 @@ public class ActiveTransactionRecord {
                                         atrCollection.bucket(), atrCollection.scope(), atrCollection.collection(), atrId, attemptId, DebugUtil.dbg(err));
                                 logger.warn("Attempt to dump raw JSON of ATR entry:");
                                 try {
-                                    byte[] raw = d.values()[0].value();
+                                    byte[] raw = d.field(0).value();
                                     String asStr = new String(raw, StandardCharsets.UTF_8);
                                     logger.info("", "Raw JSON: {}", asStr);
-                                    byte[] rawHLC = d.values()[1].value();
+                                    byte[] rawHLC = d.field(1).value();
                                     String asStrHLC = new String(rawHLC, StandardCharsets.UTF_8);
                                     logger.info("", "Raw JSON HLC: {}", asStrHLC);
                                 }
@@ -244,8 +244,8 @@ public class ActiveTransactionRecord {
             // So this code should always be safe.
             .map(d -> {
                 try {
-                    JsonNode attempts = MAPPER.readValue(d.values()[0].value(), JsonNode.class);
-                    JsonNode hlc = MAPPER.readValue(d.values()[1].value(), JsonNode.class);
+                    JsonNode attempts = MAPPER.readValue(d.field(0).value(), JsonNode.class);
+                    JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
                     ParsedHLC parsedHLC = new ParsedHLC(hlc);
 
                     return Optional.of(mapToAtr(atrCollection, atrId, attempts, parsedHLC.nowInNanos(), parsedHLC.mode()));

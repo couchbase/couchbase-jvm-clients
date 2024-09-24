@@ -16,6 +16,7 @@
 package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -78,6 +79,15 @@ public class MeteringUnits {
         if (flexibleExtras.writeUnits != UNITS_NOT_PRESENT) {
           writeUnits += flexibleExtras.writeUnits;
         }
+      }
+    }
+
+    public void add(CoreKvResponseMetadata meta) {
+      if (meta.readUnits() != null) {
+         readUnits += meta.readUnits();
+      }
+      if (meta.writeUnits() != null) {
+          writeUnits += meta.writeUnits();
       }
     }
 

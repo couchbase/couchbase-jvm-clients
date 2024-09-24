@@ -17,6 +17,7 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
@@ -179,10 +180,10 @@ public class ClientRecord {
         return core.context().environment().timeoutConfig().kvTimeout();
     }
 
-    public static ClientRecordDetails parseClientRecord(SubdocGetResponse clientRecord, String clientUuid) {
+    public static ClientRecordDetails parseClientRecord(CoreSubdocGetResult clientRecord, String clientUuid) {
         try {
-            JsonNode records = Mapper.reader().readValue(clientRecord.values()[0].value(), JsonNode.class);
-            JsonNode hlcRaw = Mapper.reader().readValue(clientRecord.values()[1].value(), JsonNode.class);
+            JsonNode records = Mapper.reader().readValue(clientRecord.field(0).value(), JsonNode.class);
+            JsonNode hlcRaw = Mapper.reader().readValue(clientRecord.field(1).value(), JsonNode.class);
             ActiveTransactionRecord.ParsedHLC parsedHLC = new ActiveTransactionRecord.ParsedHLC(hlcRaw);
             JsonNode clients = records.get("clients");
 
@@ -244,7 +245,7 @@ public class ClientRecord {
         }
     }
 
-    public Mono<SubdocGetResponse> getClientRecord(CollectionIdentifier collection, @Nullable SpanWrapper span) {
+    public Mono<CoreSubdocGetResult> getClientRecord(CollectionIdentifier collection, @Nullable SpanWrapper span) {
         return TransactionKVHandler.lookupIn(core, collection, CLIENT_RECORD_DOC_ID, nonMutatingTimeout(), false, OptionsUtil.createClientContext("ClientRecord::getClientRecord"), span,
                 Arrays.asList(
                         new SubdocGetRequest.Command(SubdocCommandType.GET, FIELD_RECORDS, true, 0),

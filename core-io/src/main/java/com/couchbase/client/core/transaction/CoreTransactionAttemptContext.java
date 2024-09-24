@@ -19,6 +19,8 @@ package com.couchbase.client.core.transaction;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.annotation.UsedBy;
+import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
@@ -1894,18 +1896,18 @@ public class CoreTransactionAttemptContext {
 
                 .flatMap(v -> {
                     if (v.isPresent()) {
-                        Tuple2<CoreTransactionGetResult, SubdocGetResponse> results = v.get();
+                        Tuple2<CoreTransactionGetResult, CoreSubdocGetResult> results = v.get();
                         CoreTransactionGetResult r = results.getT1();
-                        SubdocGetResponse lir = results.getT2();
+                        CoreSubdocGetResult lir = results.getT2();
                         MeteringUnits built = addUnits(units.build());
 
                         LOGGER.info(attemptId, "{} doc {} exists inTransaction={} isDeleted={}{}",
-                                bp, DebugUtil.docId(collection, id), r.links(), lir.isDeleted(), DebugUtil.dbg(built));
+                                bp, DebugUtil.docId(collection, id), r.links(), lir.tombstone(), DebugUtil.dbg(built));
 
                         return forwardCompatibilityCheck(ForwardCompatibilityStage.WRITE_WRITE_CONFLICT_INSERTING_GET, r.links().forwardCompatibility())
 
                                 .then(Mono.defer(() -> {
-                                    if (lir.isDeleted() && !r.links().isDocumentInTransaction()) {
+                                    if (lir.tombstone() && !r.links().isDocumentInTransaction()) {
                                         LOGGER.info(attemptId, "{} doc {} is a regular tombstone without txn metadata, proceeding to overwrite",
                                                 bp, DebugUtil.docId(collection, id));
 
@@ -1969,12 +1971,12 @@ public class CoreTransactionAttemptContext {
                                                                  SpanWrapper pspan,
                                                                  String bp,
                                                                  CoreTransactionGetResult r,
-                                                                 SubdocGetResponse lir) {
+                                                                 CoreSubdocGetResult lir) {
         return Mono.defer(() -> {
             CbPreconditions.check(r.links().isDocumentInTransaction());
             CbPreconditions.check(r.links().op().get().equals(OperationTypes.INSERT));
 
-            if (lir.isDeleted()) {
+            if (lir.tombstone()) {
                 return createStagedInsert(operationId, collection, id, content, flags, pspan, Optional.of(r.cas()));
             }
             else {
@@ -2834,6 +2836,10 @@ public class CoreTransactionAttemptContext {
         });
     }
 
+    private void addUnits(CoreKvResponseMetadata meta) {
+        meteringUnitsBuilder.add(meta);
+    }
+
     private void addUnits(@Nullable MemcacheProtocol.FlexibleExtras flexibleExtras) {
         meteringUnitsBuilder.add(flexibleExtras);
     }
@@ -3173,15 +3179,14 @@ public class CoreTransactionAttemptContext {
                 .flatMap(result -> {
                     String status = null;
                     try {
-                        status = Mapper.reader().readValue(result.values()[0].value(), String.class);
+                        status = Mapper.reader().readValue(result.field(0).value(), String.class);
                     } catch (IOException e) {
-                        LOGGER.info(attemptId, "failed to parse ATR {} status '{}'", getAtrDebug(atrCollection, atrId), new String(result.values()[0].value()));
+                        LOGGER.info(attemptId, "failed to parse ATR {} status '{}'", getAtrDebug(atrCollection, atrId), new String(result.field(0).value()));
                         status = "UNKNOWN";
                     }
 
-                    addUnits(result.flexibleExtras());
-                    LOGGER.info(attemptId, "got status of ATR {}{}: '{}'", getAtrDebug(atrCollection, atrId),
-                            DebugUtil.dbg(result.flexibleExtras()), status);
+                    addUnits(result.meta());
+                    LOGGER.info(attemptId, "got status of ATR {}: '{}'", getAtrDebug(atrCollection, atrId), status);
 
                     AttemptState state = AttemptState.convert(status);
 

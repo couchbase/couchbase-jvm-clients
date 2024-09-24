@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
@@ -99,6 +100,20 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
     // xattrs must come first. decode() puts the results back in original order.
     result.sort(xattrsFirst);
+    return result;
+  }
+
+  @Stability.Internal
+  public static List<CoreSubdocGetCommand> convertCommandsToCore(List<Command> commands) {
+    List<CoreSubdocGetCommand> result = new ArrayList<>(commands.size());
+    for (Command cmd : commands) {
+      result.add(new CoreSubdocGetCommand(
+        cmd.type,
+        cmd.path,
+        cmd.xattr,
+        cmd.binary
+      ));
+    }
     return result;
   }
 

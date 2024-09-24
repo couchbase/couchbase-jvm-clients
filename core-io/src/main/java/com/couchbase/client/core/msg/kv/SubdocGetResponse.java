@@ -16,6 +16,10 @@
 
 package com.couchbase.client.core.msg.kv;
 
+import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -69,5 +73,16 @@ public class SubdocGetResponse extends KeyValueBaseResponse {
       ", cas=" + cas +
       ", isDeleted=" + isDeleted +
       '}';
+  }
+
+  @Stability.Internal
+  public CoreSubdocGetResult toCore(CoreKeyspace keyspace, String key) {
+    return new CoreSubdocGetResult(keyspace,
+      key,
+      CoreKvResponseMetadata.from(flexibleExtras()),
+      Arrays.asList(values()),
+      cas(),
+      isDeleted()
+    );
   }
 }

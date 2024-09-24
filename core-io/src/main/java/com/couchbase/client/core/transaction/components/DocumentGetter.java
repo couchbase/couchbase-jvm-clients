@@ -18,6 +18,7 @@ package com.couchbase.client.core.transaction.components;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.transaction.util.MeteringUnits;
@@ -74,10 +75,10 @@ public class DocumentGetter {
                         return Mono.just(origTrans.map(v -> v.getT1()));
                     } else if (origTrans.isPresent()) {
                         CoreTransactionGetResult r = origTrans.get().getT1();
-                        SubdocGetResponse lir = origTrans.get().getT2();
+                        CoreSubdocGetResult lir = origTrans.get().getT2();
 
                         if (!r.links().isDocumentInTransaction()) {
-                            if (lir.isDeleted()) {
+                            if (lir.tombstone()) {
                                 return Mono.just(Optional.empty());
                             }
                             else {
@@ -127,7 +128,7 @@ public class DocumentGetter {
                 });
     }
 
-    public static Mono<Optional<Tuple2<CoreTransactionGetResult, SubdocGetResponse>>>
+    public static Mono<Optional<Tuple2<CoreTransactionGetResult, CoreSubdocGetResult>>>
     justGetDoc(Core core,
                CollectionIdentifier collection,
                String docId,
@@ -154,7 +155,7 @@ public class DocumentGetter {
                         ))
 
                 .map(fragment -> {
-                    units.add(fragment.flexibleExtras());
+                    units.add(fragment.meta());
                     try {
                         return Optional.of(Tuples.of(CoreTransactionGetResult.createFrom(collection,
                                 docId,
@@ -183,10 +184,10 @@ public class DocumentGetter {
                 });
     }
 
-    private static void dumpRawLookupInField(CoreTransactionLogger logger, SubdocGetResponse fragment, int index) {
+    private static void dumpRawLookupInField(CoreTransactionLogger logger, CoreSubdocGetResult fragment, int index) {
         try {
-            if (fragment.values()[index].status().success()) {
-                byte[] raw = fragment.values()[index].value();
+            if (fragment.field(index).status().success()) {
+                byte[] raw = fragment.field(index).value();
                 String asStr = new String(raw, StandardCharsets.UTF_8);
                 logger.info("", "Field {}: {}", index, asStr);
             }

@@ -16,7 +16,11 @@
 package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
@@ -46,6 +50,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
+import static com.couchbase.client.core.msg.kv.SubdocGetRequest.convertCommandsToCore;
 
 /**
  * Transactions does a lot of KV work from core-io.  This logic is essentially a mini version of java-client, providing
@@ -131,7 +136,7 @@ public class TransactionKVHandler {
         });
     }
 
-    public static Mono<SubdocGetResponse> lookupIn(final Core core,
+    public static Mono<CoreSubdocGetResult> lookupIn(final Core core,
                                                    CollectionIdentifier collectionIdentifier,
                                                    final String id,
                                                    final Duration timeout,
@@ -166,7 +171,7 @@ public class TransactionKVHandler {
                     .response()
                     .thenApply(response -> {
                         if (response.status().success() || response.status() == ResponseStatus.SUBDOC_FAILURE) {
-                            return response;
+                            return response.toCore(CoreKeyspace.from(collectionIdentifier), id);
                         }
                         throw keyValueStatusToException(request, response);
                     })
