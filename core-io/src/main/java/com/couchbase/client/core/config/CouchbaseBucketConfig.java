@@ -164,7 +164,7 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
         return transform(map.values(), it -> {
             short[] replicas = new short[numberOfReplicas];
             for (int i = 0; i < numberOfReplicas; i++) {
-                replicas[i] = (short) it.nodeIndexForReplica(0).orElse(PARTITION_NOT_EXISTENT);
+                replicas[i] = (short) it.nodeIndexForReplica(i).orElse(PARTITION_NOT_EXISTENT);
             }
             return new Partition(
               (short) it.nodeIndexForActive().orElse(PARTITION_NOT_EXISTENT),
