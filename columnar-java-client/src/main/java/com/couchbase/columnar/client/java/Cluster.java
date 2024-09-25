@@ -246,10 +246,7 @@ public final class Cluster implements Closeable, Queryable {
   }
 
   public void close() {
-    close(environment.timeoutConfig().disconnectTimeout());
-  }
-
-  public void close(Duration timeout) {
+    Duration timeout = environment.timeoutConfig().disconnectTimeout();
     disconnectInternal(disconnected, timeout, couchbaseOps, environment).block();
   }
 
