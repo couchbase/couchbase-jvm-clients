@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
-import com.couchbase.client.core.deps.com.google.common.collect.Sets;
+import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -46,11 +46,14 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.node.KeyValueLocator.partitionForKey;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,7 +104,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     collection.upsert(id, "Hello, World!");
 
     List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
-    assertFalse(results.isEmpty());
+    assertEquals(numAvailableCopies(id), results.size(), results::toString);
     for (GetResult result : results) {
       assertEquals("Hello, World!", result.contentAs(String.class));
       assertFalse(result.expiryTime().isPresent());
@@ -181,8 +184,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   void asyncGetAllReturnsListOfFailedFuturesWhenNotFound() throws Exception {
     List<CompletableFuture<GetReplicaResult>> futures = collection.async().getAllReplicas(absentId()).get();
 
-    // one result for each replica, plus 1 for active
-    assertEquals(config().numReplicas() + 1, futures.size());
+    assertEquals(numAvailableCopies(absentId()), futures.size(), futures::toString);
 
     List<Class<?>> errorClasses = transform(futures, future -> {
       ExecutionException e = assertThrows(ExecutionException.class, future::get);
@@ -242,7 +244,7 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
         .block();
 
     assertNotNull(results);
-    assertNotEquals(0, results.size());
+    assertEquals(numAvailableCopies(absentId()), results.size(), results::toString);
 
     int primaryCount = 0;
     for (GetReplicaResult result : results) {
@@ -377,5 +379,26 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
             .switchIfEmpty(Mono.error(new NoSuchElementException()));
 
     assertThrows(NoSuchElementException.class, () -> flux3.next().block());
+  }
+
+  /**
+   * Returns the number of available replicas + active associated with the
+   * given document ID.
+   */
+  private static int numAvailableCopies(String key) {
+    CouchbaseBucketConfig bucket = (CouchbaseBucketConfig) cluster.core()
+      .configurationProvider()
+      .config()
+      .bucketConfig(config().bucketname());
+
+    int partition = partitionForKey(key.getBytes(UTF_8), bucket.numberOfPartitions());
+
+    return (int) IntStream.range(0, bucket.numberOfReplicas())
+      .filter(replicaIndex ->
+        bucket.nodeIndexForReplica(partition, replicaIndex, false) >= 0
+      )
+      .count()
+      // Plus active
+      + 1;
   }
 }
