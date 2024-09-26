@@ -44,7 +44,7 @@ import scala.jdk.CollectionConverters._
   * @since 3.0.0
   */
 object ScalaIntegrationTest {
-    val Logger = LoggerFactory.getLogger(classOf[ScalaIntegrationTest])
+  val Logger = LoggerFactory.getLogger(classOf[ScalaIntegrationTest])
 }
 
 // Temporarily increased timeout to (possibly) workaround MB-37011 when Developer Preview enabled
