@@ -199,7 +199,7 @@ public class CoreTransactionAttemptContext {
     public static final int STATE_BITS_POSITION_FINAL_ERROR = 4;
     public static final int STATE_BITS_MASK_FINAL_ERROR = 0b1110000;
     public static final int STATE_BITS_MASK_BITS =        0b0001111;
-    public static final int UNSTAGING_PARALLELISM = 1000;
+    public static final int UNSTAGING_PARALLELISM = Integer.parseInt(System.getProperty("com.couchbase.transactions.unstagingParallelism", "1000"));;
 
     private final AtomicInteger stateBits = new AtomicInteger(0);
 
@@ -2641,14 +2641,9 @@ public class CoreTransactionAttemptContext {
             long start = System.nanoTime();
 
             return Flux.fromIterable(stagedMutationsLocked)
-                    .parallel(UNSTAGING_PARALLELISM)
-                    .runOn(scheduler())
+                    .publishOn(scheduler())
 
-                    .concatMap(staged -> {
-                        return commitDocWrapperLocked(span, staged);
-                    })
-
-                    .sequential()
+                    .flatMap(staged -> commitDocWrapperLocked(span, staged), UNSTAGING_PARALLELISM)
 
                     .then(Mono.defer(() -> {
                         long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start);
@@ -3611,19 +3606,16 @@ public class CoreTransactionAttemptContext {
     private Mono<Void> rollbackDocsLocked(boolean isAppRollback, SpanWrapper span) {
         return Mono.defer(() -> {
             return Flux.fromIterable(stagedMutationsLocked)
-                    .parallel(UNSTAGING_PARALLELISM)
-                    .runOn(scheduler())
+                    .publishOn(scheduler())
 
-                    .concatMap(staged -> {
+                    .flatMap(staged -> {
                         switch (staged.type) {
                             case INSERT:
                                 return rollbackStagedInsertLocked(isAppRollback, span, staged.collection, staged.id, staged.cas);
                             default:
                                 return rollbackStagedReplaceOrRemoveLocked(isAppRollback, span, staged.collection, staged.id, staged.cas, staged.currentUserFlags);
                         }
-                    })
-
-                    .sequential()
+                    }, UNSTAGING_PARALLELISM)
 
                     .doOnNext(v -> {
                         LOGGER.info(attemptId, "rollback - docs rolled back");
