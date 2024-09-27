@@ -36,7 +36,7 @@ public final class SecurityOptions {
 
   private List<String> cipherSuites = emptyList();
   @Nullable private TrustSource trustSource = null;
-  private boolean verifyServerCertificate = true;
+  private boolean disableServerCertificateVerification = false;
 
   Unmodifiable build() {
     return new Unmodifiable(this);
@@ -107,7 +107,7 @@ public final class SecurityOptions {
 
   /**
    * Server certification verification is enabled by default.
-   * You can disable it by passing false to this method,
+   * You can disable it by passing true to this method,
    * but you almost certainly shouldn't. Instead, call one of the
    * {@code trust} methods to tell the SDK which certificates
    * it should trust.
@@ -116,7 +116,7 @@ public final class SecurityOptions {
    * because it exposes you to on-path attacks. Never do this in production.
    * In fact, you probably shouldn't do it anywhere.
    *
-   * @param verify If false, the SDK does not verify the certificate
+   * @param disable If true, the SDK does not verify the certificate
    * presented by the server.
    * @see #trustOnlyPemFile(Path)
    * @see #trustOnlyPemString(String)
@@ -126,8 +126,8 @@ public final class SecurityOptions {
    * is almost always a bad idea.
    */
   @Deprecated
-  public SecurityOptions verifyServerCertificate(boolean verify) {
-    this.verifyServerCertificate = verify;
+  public SecurityOptions disableServerCertificateVerification(boolean disable) {
+    this.disableServerCertificateVerification = disable;
     return this;
   }
 
@@ -142,9 +142,9 @@ public final class SecurityOptions {
 
     Unmodifiable(SecurityOptions builder) {
       this.cipherSuites = builder.cipherSuites;
-      this.trustSource = builder.verifyServerCertificate
-        ? (builder.trustSource != null ? builder.trustSource : TrustSource.from(Certificates.getCapellaCertificates()))
-        : TrustSource.insecure();
+      this.trustSource = builder.disableServerCertificateVerification
+        ? TrustSource.insecure()
+        : (builder.trustSource != null ? builder.trustSource : TrustSource.from(Certificates.getCapellaCertificates()));
     }
 
     public List<String> cipherSuites() {
