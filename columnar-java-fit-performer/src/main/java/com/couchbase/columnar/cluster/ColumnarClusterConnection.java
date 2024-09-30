@@ -87,9 +87,8 @@ public class ColumnarClusterConnection {
               if (secOptions.hasTrustOnlyPlatform()) {
                 sec.trustOnlyJvm();
               }
-              if (secOptions.hasVerifyServerCertificate()) {
-                //noinspection deprecation
-                sec.disableServerCertificateVerification(!secOptions.getVerifyServerCertificate());
+              if (secOptions.hasDisableServerCertificateVerification()) {
+                sec.disableServerCertificateVerification(secOptions.getDisableServerCertificateVerification());
               }
               if (secOptions.getCipherSuitesCount() > 0) {
                 sec.cipherSuites(secOptions.getCipherSuitesList());
