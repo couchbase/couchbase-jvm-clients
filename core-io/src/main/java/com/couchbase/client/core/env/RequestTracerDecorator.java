@@ -46,6 +46,11 @@ public class RequestTracerDecorator implements RequestTracer {
   public RequestSpan requestSpan(String name, RequestSpan parent) {
     RequestSpan span = wrapped.requestSpan(name, parent);
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    ClusterIdentifier clusterIdent = clusterIdentSupplier.get();
+    if (clusterIdent != null) {
+      span.attribute(TracingIdentifiers.ATTR_CLUSTER_NAME, clusterIdent.clusterName());
+      span.attribute(TracingIdentifiers.ATTR_CLUSTER_UUID, clusterIdent.clusterUuid());
+    }
     return span;
   }
 

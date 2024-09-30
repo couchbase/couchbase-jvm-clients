@@ -88,6 +88,10 @@ public class Capabilities {
         out.add(Caps.SDK_ZONE_AWARE_READ_FROM_REPLICA);
         // [end]
 
+        // [if:3.7.6]
+        out.add(Caps.SDK_OBSERVABILITY_CLUSTER_LABELS);
+        // [end]
+
         return out;
     }
 }

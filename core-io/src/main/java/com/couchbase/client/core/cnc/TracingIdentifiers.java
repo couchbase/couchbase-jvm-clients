@@ -264,6 +264,9 @@ public class TracingIdentifiers {
   public static final String ATTR_SCOPE = "db.couchbase.scope";
 
   public static final String ATTR_DOCUMENT_ID = "db.couchbase.document_id";
+  public static final String ATTR_CLUSTER_UUID = "db.couchbase.cluster_uuid";
+  public static final String ATTR_CLUSTER_NAME = "db.couchbase.cluster_name";
+
   public static final String ATTR_TRANSACTION_ID = "db.couchbase.transaction.id";
   public static final String ATTR_TRANSACTION_ATTEMPT_ID = "db.couchbase.transaction.attempt_id";
   public static final String ATTR_TRANSACTION_STATE = "db.couchbase.transaction.state";
