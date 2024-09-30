@@ -89,7 +89,7 @@ public class ColumnarClusterConnection {
               }
               if (secOptions.hasVerifyServerCertificate()) {
                 //noinspection deprecation
-                sec.verifyServerCertificate(secOptions.getVerifyServerCertificate());
+                sec.disableServerCertificateVerification(!secOptions.getVerifyServerCertificate());
               }
               if (secOptions.getCipherSuitesCount() > 0) {
                 sec.cipherSuites(secOptions.getCipherSuitesList());
