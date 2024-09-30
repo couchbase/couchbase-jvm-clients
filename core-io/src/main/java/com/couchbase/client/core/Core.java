@@ -248,6 +248,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final ConnectionString connectionString;
 
+  private final CoreResources coreResources;
+
   /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
@@ -285,6 +287,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
     this.connectionString = requireNonNull(connectionString);
+    // No-op for now; follow-up commit will provide the clusterIdent
+    this.coreResources = () -> environment.requestTracer();
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -967,6 +971,12 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Override
   public CoreEnvironment environment() {
     return context().environment();
+  }
+
+  @Stability.Internal
+  @Override
+  public CoreResources coreResources() {
+    return coreResources;
   }
 
   @Override

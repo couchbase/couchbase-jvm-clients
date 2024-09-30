@@ -83,7 +83,8 @@ public class CoreProtostellar implements CoreCouchbaseOps {
     final Authenticator authenticator,
     final ConnectionString connectionString
   ) {
-    this.ctx = new ProtostellarContext(env, authenticator);
+    CoreResources coreResources = () -> env.requestTracer();
+    this.ctx = new ProtostellarContext(env, authenticator, coreResources);
     notNull(connectionString, "connectionString");
 
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE2);
@@ -206,6 +207,11 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreEnvironment environment() {
     return context().environment();
+  }
+
+  @Override
+  public CoreResources coreResources() {
+    return context().coreResources();
   }
 
   @Override

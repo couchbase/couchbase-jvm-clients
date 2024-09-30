@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.protostellar;
 
+import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.env.Authenticator;
@@ -34,10 +35,12 @@ public final class ProtostellarContext extends AbstractContext {
 
   private final CoreEnvironment env;
   private final Authenticator authenticator;
+  private final CoreResources coreResources;
 
-  public ProtostellarContext(final CoreEnvironment env, final Authenticator authenticator) {
+  public ProtostellarContext(final CoreEnvironment env, final Authenticator authenticator, final CoreResources coreResources) {
     this.env = requireNonNull(env);
     this.authenticator = requireNonNull(authenticator);
+    this.coreResources = requireNonNull(coreResources);
 
     if (env.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
       throw InvalidArgumentException.fromMessage("TLS enabled but the Authenticator does not support TLS!");
@@ -56,6 +59,10 @@ public final class ProtostellarContext extends AbstractContext {
 
   public CoreEnvironment environment() {
     return env;
+  }
+
+  public CoreResources coreResources() {
+    return coreResources;
   }
 
   public Authenticator authenticator() {

@@ -19,6 +19,7 @@ package com.couchbase.client.core.api;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.CoreProtostellar;
+import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
@@ -66,6 +67,8 @@ public interface CoreCouchbaseOps {
   CoreSearchIndexManager scopeSearchIndexManager(CoreBucketAndScope scope);
 
   CoreEnvironment environment();
+
+  CoreResources coreResources();
 
   CompletableFuture<Void> waitUntilReady(
       Set<ServiceType> serviceTypes,

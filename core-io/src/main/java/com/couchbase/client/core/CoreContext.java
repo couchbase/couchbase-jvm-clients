@@ -81,6 +81,11 @@ public class CoreContext extends AbstractContext {
     return env;
   }
 
+  @Stability.Internal
+  public CoreResources coreResources() {
+    return core.coreResources();
+  }
+
   /**
    * @deprecated Always return an empty optional. Alternate addresses
    * are now resolved immediately when parsing cluster topology.
