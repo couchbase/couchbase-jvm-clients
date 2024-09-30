@@ -36,6 +36,7 @@ import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
+import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
@@ -63,6 +64,7 @@ import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.RequestTracerDecorator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
@@ -287,8 +289,24 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
     this.connectionString = requireNonNull(connectionString);
-    // No-op for now; follow-up commit will provide the clusterIdent
-    this.coreResources = () -> environment.requestTracer();
+    boolean ignoresAttributes = CbTracing.isInternalTracer(environment.requestTracer());
+    RequestTracer requestTracerDecoratedIfRequired = ignoresAttributes
+      ? environment.requestTracer()
+      : new RequestTracerDecorator(environment.requestTracer(), () -> {
+      if (currentConfig == null) {
+        return null;
+      }
+      if (currentConfig.globalConfig() == null) {
+        return null;
+      }
+      return currentConfig.globalConfig().clusterIdent();
+    });
+    this.coreResources = new CoreResources() {
+      @Override
+      public RequestTracer requestTracer() {
+        return requestTracerDecoratedIfRequired;
+      }
+    };
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();

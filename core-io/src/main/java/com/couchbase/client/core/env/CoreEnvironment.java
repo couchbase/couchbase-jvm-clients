@@ -1127,8 +1127,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     public SELF requestTracer(final RequestTracer requestTracer) {
       notNull(requestTracer, "RequestTracer");
 
-      boolean ignoresAttributes = CbTracing.isInternalTracer(requestTracer);
-      this.requestTracer = external(ignoresAttributes ? requestTracer : new RequestTracerWithCommonAttributes(requestTracer));
+      this.requestTracer = external(requestTracer);
 
       return self();
     }
