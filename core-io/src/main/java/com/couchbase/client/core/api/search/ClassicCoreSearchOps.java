@@ -17,6 +17,7 @@
 package com.couchbase.client.core.api.search;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
@@ -158,6 +159,10 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     return core.context().environment();
   }
 
+  private CoreResources coreResources() {
+    return core.context().coreResources();
+  }
+
   private ServerSearchRequest searchRequest(String indexName, CoreSearchQuery query, CoreSearchOptions opts) {
     notNullOrEmpty(indexName, "IndexName", () -> new ReducedSearchErrorContext(indexName, query));
     Duration timeout = opts.commonOptions().timeout().orElse(environment().timeoutConfig().searchTimeout());
@@ -170,7 +175,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
 
     RetryStrategy retryStrategy = opts.commonOptions().retryStrategy().orElse(environment().retryStrategy());
 
-    RequestSpan span = environment()
+    RequestSpan span = coreResources()
             .requestTracer()
             .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
     ServerSearchRequest request = new ServerSearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);
@@ -352,7 +357,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
 
     RetryStrategy retryStrategy = opts.commonOptions().retryStrategy().orElse(environment().retryStrategy());
 
-    RequestSpan span = environment()
+    RequestSpan span = coreResources()
             .requestTracer()
             .requestSpan(TracingIdentifiers.SPAN_REQUEST_SEARCH, opts.commonOptions().parentSpan().orElse(null));
     ServerSearchRequest request = new ServerSearchRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), indexName, bytes, span, scope);

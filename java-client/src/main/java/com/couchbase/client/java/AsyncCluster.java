@@ -310,7 +310,7 @@ public class AsyncCluster {
    * Provides access to the N1QL index management services.
    */
   public AsyncQueryIndexManager queryIndexes() {
-    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().environment().requestTracer(), this);
+    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().coreResources().requestTracer(), this);
   }
 
   /**
@@ -397,7 +397,8 @@ public class AsyncCluster {
 
     final byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
     final String clientContextId = query.getString("client_context_id");
-    final RequestSpan span = environment()
+    final RequestSpan span = couchbaseOps()
+      .coreResources()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
     AnalyticsRequest request = new AnalyticsRequest(timeout, core().context(), retryStrategy, authenticator,

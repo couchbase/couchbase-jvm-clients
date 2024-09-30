@@ -145,7 +145,7 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     this.defaultKvTimeout = ctx.environment().timeoutConfig().kvTimeout();
     this.defaultKvDurableTimeout = ctx.environment().timeoutConfig().kvDurableTimeout();
     this.defaultRetryStrategy = ctx.environment().retryStrategy();
-    this.requestTracer = ctx.environment().requestTracer();
+    this.requestTracer = ctx.coreResources().requestTracer();
     this.keyspace = requireNonNull(keyspace);
     this.collectionIdentifier = keyspace.toCollectionIdentifier();
     this.rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);

@@ -62,7 +62,7 @@ public class RangeScanContinueRequest extends PredeterminedPartitionRequest<Rang
       options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
       key,
       collectionIdentifier,
-      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CONTINUE, options.commonOptions().parentSpan().orElse(null)));
+      ctx.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CONTINUE, options.commonOptions().parentSpan().orElse(null)));
     this.id = id;
     this.itemLimit = options.batchItemLimit();
     this.byteLimit = options.batchByteLimit();

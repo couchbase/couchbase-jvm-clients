@@ -75,7 +75,7 @@ public class TransactionKVHandler {
                                               final SpanWrapper pspan) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
 
             InsertRequest request = new InsertRequest(id,
                     transcodedContent,
@@ -113,7 +113,7 @@ public class TransactionKVHandler {
                                               final SpanWrapper pspan) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, pspan);
 
             RemoveRequest request = new RemoveRequest(id,
                     cas,
@@ -150,7 +150,7 @@ public class TransactionKVHandler {
                                                    final List<SubdocGetRequest.Command> commands) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
 
 
             if (preferredReplicaMode) {
@@ -250,7 +250,7 @@ public class TransactionKVHandler {
                                                       final List<SubdocMutateRequest.Command> commands,
                                                       CoreTransactionLogger logger) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
             long start = System.nanoTime();
 
             final boolean requiresBucketConfig = createAsDeleted || reviveDocument;

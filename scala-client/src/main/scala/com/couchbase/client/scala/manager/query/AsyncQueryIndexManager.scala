@@ -55,7 +55,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
 ) {
   private[scala] val internal = new CoreQueryIndexManager(
     cluster.couchbaseOps.queryOps(),
-    cluster.env.core.requestTracer()
+    cluster.core.coreResources.requestTracer
   )
 
   private[scala] val DefaultTimeout =

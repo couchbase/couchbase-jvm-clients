@@ -706,9 +706,8 @@ public class AsyncAnalyticsIndexManager {
   private CompletableFuture<AnalyticsResult> exec(final String statement,
                                                   final CommonOptions<?>.BuiltCommonOptions options,
                                                   final String spanName) {
-    RequestSpan parent = CbTracing.newSpan(
-      cluster.environment().requestTracer(), spanName, options.parentSpan().orElse(null)
-    );
+    RequestSpan parent = core.coreResources().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+
     final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options).parentSpan(parent);
 
     return cluster

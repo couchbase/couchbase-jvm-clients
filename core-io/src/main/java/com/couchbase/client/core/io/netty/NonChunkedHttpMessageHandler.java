@@ -163,7 +163,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
         encoded.headers().set(HttpHeaderNames.USER_AGENT, endpointContext.environment().userAgent().formattedLong());
         dispatchTimingStart = System.nanoTime();
         if (currentRequest.requestSpan() != null) {
-          RequestTracer tracer = endpointContext.environment().requestTracer();
+          RequestTracer tracer = endpointContext.coreResources().requestTracer();
           currentDispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
 
           if (!CbTracing.isInternalTracer(tracer)) {

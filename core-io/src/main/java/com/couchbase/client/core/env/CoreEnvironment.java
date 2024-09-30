@@ -391,8 +391,13 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
    * Returns the request tracer for response time observability.
    * <p>
    * Note that this right now is unsupported, volatile API and subject to change!
+   *
+   * @deprecated consumers should use {@link com.couchbase.client.core.CoreResources} instead, as the RequestTracer returned
+   * from that adds useful additional spans that are specific to a Core, and cannot be added here (as this class can be
+   * shared between Clusters).
    */
   @Stability.Volatile
+  @Deprecated
   public RequestTracer requestTracer() {
     return requestTracer.get();
   }

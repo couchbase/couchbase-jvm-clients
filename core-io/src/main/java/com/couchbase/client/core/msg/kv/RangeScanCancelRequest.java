@@ -54,7 +54,7 @@ public class RangeScanCancelRequest extends PredeterminedPartitionRequest<RangeS
       options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
       null,
       collectionIdentifier,
-      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CANCEL, options.commonOptions().parentSpan().orElse(null)));
+      ctx.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CANCEL, options.commonOptions().parentSpan().orElse(null)));
     this.id = id;
   }
 

@@ -1497,7 +1497,7 @@ public class CoreTransactionAttemptContext {
 
     private RequestTracer tracer() {
         // Will go to the ThresholdRequestTracer by default.  In future, may want our own default tracer.
-        return core.context().environment().requestTracer();
+        return core.context().coreResources().requestTracer();
     }
 
     private byte[] serialize(Object in) {

@@ -78,7 +78,7 @@ public class CoreProtostellarAccessors {
       long start = System.nanoTime();
       RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
 
-      AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+      AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().coreResources().requestTracer());
 
       try {
         // Make the Protostellar call.
@@ -146,7 +146,7 @@ public class CoreProtostellarAccessors {
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
-    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().coreResources().requestTracer());
 
     // Make the Protostellar call.
     ListenableFuture<TGrpcResponse> response = executeFutureGrpcCall.apply(endpoint);
@@ -244,7 +244,7 @@ public class CoreProtostellarAccessors {
     RequestSpan dispatchSpan = createDispatchSpan(core, request, endpoint);
     long start = System.nanoTime();
 
-    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().environment().requestTracer());
+    AutoCloseable scope = activateSpan(Optional.empty(), dispatchSpan, core.context().coreResources().requestTracer());
 
     // Make the Protostellar call.
     ListenableFuture<TGrpcResponse> response = executeFutureGrpcCall.apply(endpoint);
@@ -317,7 +317,7 @@ public class CoreProtostellarAccessors {
   private static <TGrpcRequest> @Nullable RequestSpan createDispatchSpan(CoreProtostellar core,
                                                                          ProtostellarRequest<TGrpcRequest> request,
                                                                          ProtostellarEndpoint endpoint) {
-    RequestTracer tracer = core.context().environment().requestTracer();
+    RequestTracer tracer = core.context().coreResources().requestTracer();
     RequestSpan dispatchSpan;
     if (!CbTracing.isInternalTracer(tracer)) {
       dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.span());

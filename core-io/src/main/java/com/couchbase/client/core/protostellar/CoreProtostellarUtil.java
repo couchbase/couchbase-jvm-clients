@@ -186,7 +186,7 @@ public class CoreProtostellarUtil {
                                        String spanName,
                                        CoreDurability durability,
                                        @Nullable RequestSpan parent) {
-    RequestSpan span = CbTracing.newSpan(core.context().environment().requestTracer(), spanName, parent);
+    RequestSpan span = core.context().coreResources().requestTracer().requestSpan(spanName, parent);
 
     if (!durability.isNone() && !durability.isLegacy()) {
       switch (durability.levelIfSynchronous().get()) {

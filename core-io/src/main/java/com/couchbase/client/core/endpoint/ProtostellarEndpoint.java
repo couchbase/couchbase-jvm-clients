@@ -234,9 +234,9 @@ public class ProtostellarEndpoint {
       // Retry strategies to be determined, but presumably we will need something custom rather than what GRPC provides
       .disableRetry();
 
-    if (ctx.environment().requestTracer() != null
-      && ctx.environment().requestTracer() instanceof GrpcAwareRequestTracer) {
-      ((GrpcAwareRequestTracer) ctx.environment().requestTracer()).registerGrpc(builder);
+    if (ctx.coreResources().requestTracer() != null
+      && ctx.coreResources().requestTracer() instanceof GrpcAwareRequestTracer) {
+      ((GrpcAwareRequestTracer) ctx.coreResources().requestTracer()).registerGrpc(builder);
     }
 
     // JVMCBC-1187: experimental code for performance testing that will be removed pre-GA.

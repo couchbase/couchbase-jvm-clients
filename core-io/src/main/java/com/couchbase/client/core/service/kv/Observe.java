@@ -54,7 +54,7 @@ public class Observe {
     }
 
     final RequestSpan parentSpan = ctx
-      .environment()
+      .coreResources()
       .requestTracer()
       .requestSpan("observe", ctx.parentSpan());
 
@@ -79,7 +79,7 @@ public class Observe {
 
     List<ObserveViaSeqnoRequest> requests = new ArrayList<>();
     if (ctx.persistTo() != ObservePersistTo.NONE) {
-      final RequestSpan span = ctx.environment().requestTracer()
+      final RequestSpan span = ctx.coreResources().requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE, parent);
       requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, 0, true,
         mutationToken.partitionUUID(), id, span));
@@ -87,7 +87,7 @@ public class Observe {
 
     if (ctx.persistTo().touchesReplica() || ctx.replicateTo().touchesReplica()) {
       for (short i = 1; i <= bucketReplicas; i++) {
-        final RequestSpan span = ctx.environment().requestTracer()
+        final RequestSpan span = ctx.coreResources().requestTracer()
           .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_OBSERVE, parent);
         requests.add(new ObserveViaSeqnoRequest(timeout, ctx, ctx.collectionIdentifier(), retryStrategy, i, false,
           mutationToken.partitionUUID(), id, span));

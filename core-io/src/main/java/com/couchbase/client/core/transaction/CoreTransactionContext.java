@@ -57,7 +57,7 @@ public class CoreTransactionContext {
                                   CoreTransactionsCleanup cleanup) {
         this.config = Objects.requireNonNull(config);
         this.cleanup = Objects.requireNonNull(cleanup);
-        RequestTracer tracer = coreContext.environment().requestTracer();
+        RequestTracer tracer = coreContext.coreResources().requestTracer();
         SpanWrapper pspan = config.parentSpan().map(sp -> new SpanWrapper(sp)).orElse(null);
         this.transactionSpan = SpanWrapper.create(tracer, TracingIdentifiers.TRANSACTION_OP, pspan);
         SpanWrapperUtil.setAttributes(this.transactionSpan, null, null, null)

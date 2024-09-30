@@ -197,7 +197,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     byte[] queryBytes = query.toString().getBytes(StandardCharsets.UTF_8);
-    RequestSpan span = core.context().environment()
+    RequestSpan span = core.context().coreResources()
         .requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.commonOptions().parentSpan().orElse(null));
 
@@ -219,7 +219,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     CoreTransactionsReactive tri = configureTransactions(core, opts);
-    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), null,
+    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), null,
             null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null))
         .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
         .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
@@ -253,7 +253,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     CoreTransactionsReactive tri = configureTransactions(core, opts);
-    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().environment().requestTracer(), null,
+    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), null,
             null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null))
         .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
         .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);

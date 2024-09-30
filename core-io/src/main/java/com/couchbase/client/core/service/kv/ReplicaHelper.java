@@ -112,8 +112,7 @@ public class ReplicaHelper {
   ) {
     notNullOrEmpty(documentId, "Id", () -> ReducedKeyValueErrorContext.create(documentId, collectionIdentifier));
 
-    CoreEnvironment env = core.context().environment();
-    RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
+    RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
 
     return Reactor
         .toMono(() -> getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan, readPreference))
@@ -122,7 +121,7 @@ public class ReplicaHelper {
         .flatMap(request -> Reactor
             .wrap(request, get(core, request), true)
             .onErrorResume(t -> {
-              env.eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
+              core.environment().eventBus().publish(new IndividualReplicaGetFailedEvent(request.context()));
               return Mono.empty(); // Swallow any errors from individual replicas
             })
             .map(response -> new GetReplicaResponse(response, request instanceof ReplicaGetRequest))
@@ -155,7 +154,7 @@ public class ReplicaHelper {
     notNullOrEmpty(documentId, "Id", () -> ReducedKeyValueErrorContext.create(documentId, collectionIdentifier));
 
     CoreEnvironment env = core.context().environment();
-    RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
+    RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
     return Reactor
       .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference))
       .flux()
@@ -190,8 +189,7 @@ public class ReplicaHelper {
       final CoreReadPreference readPreference,
       final Function<GetReplicaResponse, R> responseMapper
   ) {
-    CoreEnvironment env = core.context().environment();
-    RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
+    RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
 
     return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan, readPreference)
         .thenApply(stream ->
@@ -239,8 +237,7 @@ public class ReplicaHelper {
     final CoreReadPreference readPreference,
     final Function<CoreSubdocGetResult, R> responseMapper
   ) {
-    CoreEnvironment env = core.context().environment();
-    RequestSpan getAllSpan = env.requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
+    RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
 
     return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference)
       .thenApply(stream ->
@@ -277,7 +274,7 @@ public class ReplicaHelper {
       final CoreReadPreference readPreference,
       final Function<GetReplicaResponse, R> responseMapper) {
 
-    RequestSpan getAnySpan = core.context().environment().requestTracer()
+    RequestSpan getAnySpan = core.context().coreResources().requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_GET_ANY_REPLICA, parentSpan);
 
     CompletableFuture<List<CompletableFuture<R>>> listOfFutures = getAllReplicasAsync(
@@ -313,7 +310,7 @@ public class ReplicaHelper {
     final CoreReadPreference readPreference,
     final Function<CoreSubdocGetResult, R> responseMapper) {
 
-    RequestSpan getAnySpan = core.context().environment().requestTracer()
+    RequestSpan getAnySpan = core.context().coreResources().requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ANY_REPLICA, parentSpan);
 
     CompletableFuture<List<CompletableFuture<R>>> listOfFutures = lookupInAllReplicasAsync(
@@ -395,7 +392,7 @@ public class ReplicaHelper {
       NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
 
       if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
-        RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
+        RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
         GetRequest activeRequest = new GetRequest(documentId, timeout, coreContext, collectionIdentifier, retryStrategy, span);
         activeRequest.context().clientContext(clientContext);
         requests.add(activeRequest);
@@ -403,7 +400,7 @@ public class ReplicaHelper {
 
       for (short replica = 1; replica <= numReplicas; replica++) {
         if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
-          RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
+          RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
           ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
             documentId, timeout, coreContext, collectionIdentifier, retryStrategy, replica, replicaSpan
           );
@@ -481,7 +478,7 @@ public class ReplicaHelper {
       NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
 
       if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
-        RequestSpan span = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
+        RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
         SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, span);
         activeRequest.context().clientContext(clientContext);
         requests.add(activeRequest);
@@ -489,7 +486,7 @@ public class ReplicaHelper {
 
       for (short replica = 1; replica <= numReplicas; replica++) {
         if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
-          RequestSpan replicaSpan = environment.requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
+          RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
           ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
             timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, replica, replicaSpan
           );

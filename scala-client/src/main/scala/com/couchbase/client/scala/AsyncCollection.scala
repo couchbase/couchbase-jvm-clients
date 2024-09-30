@@ -62,11 +62,11 @@ private[scala] case class HandlerParams(
     collectionIdentifier: CollectionIdentifier,
     env: ClusterEnvironment
 ) {
-  def tracer = env.coreEnv.requestTracer()
+  def tracer = core.coreResources.requestTracer
 }
 
 private[scala] case class HandlerBasicParams(core: Core) {
-  def tracer = core.context.environment.requestTracer
+  def tracer = core.context.coreResources.requestTracer
 }
 
 /** Provides asynchronous access to all collection APIs, based around Scala `Future`s.  This is the main entry-point

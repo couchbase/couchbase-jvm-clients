@@ -65,7 +65,7 @@ public class CbTracing {
    */
   @UsedBy(SPRING_DATA_COUCHBASE)
   public static RequestSpan newSpan(CoreContext coreContext, String spanName, RequestSpan parent) {
-    return coreContext.environment().requestTracer().requestSpan(spanName, parent);
+    return coreContext.coreResources().requestTracer().requestSpan(spanName, parent);
   }
 
   /**

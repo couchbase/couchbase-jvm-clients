@@ -165,7 +165,7 @@ public abstract class ChunkedMessageHandler
       chunkResponseParser.updateRequestContext(currentRequest.context());
       dispatchTimingStart = System.nanoTime();
       if (currentRequest.requestSpan() != null) {
-        RequestTracer tracer = endpointContext.environment().requestTracer();
+        RequestTracer tracer = endpointContext.coreResources().requestTracer();
         currentDispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
 
         if (!CbTracing.isInternalTracer(tracer)) {

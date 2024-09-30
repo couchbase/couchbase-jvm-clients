@@ -368,7 +368,7 @@ public class TransactionsCleaner {
     }
 
     private RequestTracer tracer() {
-        return core.context().environment().requestTracer();
+        return core.context().coreResources().requestTracer();
     }
 
 

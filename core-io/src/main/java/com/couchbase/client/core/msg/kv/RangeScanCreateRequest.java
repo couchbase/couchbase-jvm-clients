@@ -88,7 +88,7 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
       ctx,
       options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
       collectionIdentifier,
-      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
+      ctx.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
       partition,
       Optional.ofNullable(consistencyMap.get(partition)));
   }
@@ -111,7 +111,7 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
       ctx,
       options.commonOptions().retryStrategy().orElse(ctx.environment().retryStrategy()),
       collectionIdentifier,
-      ctx.environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
+      ctx.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_RANGE_SCAN_CREATE, options.commonOptions().parentSpan().orElse(null)),
       partition,
       Optional.ofNullable(consistencyMap.get(partition)));
   }

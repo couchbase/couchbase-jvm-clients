@@ -320,7 +320,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     }
 
     public CoreHttpRequest build() {
-      RequestSpan span = spanName == null ? null : CbTracing.newSpan(coreContext.environment().requestTracer(), spanName, options.parentSpan().orElse(null));
+      RequestSpan span = spanName == null ? null : coreContext.coreResources().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
 
       if (span != null && !CbTracing.isInternalSpan(span)) {
         if (target.bucketName() != null) {

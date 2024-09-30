@@ -18,6 +18,7 @@ package com.couchbase.client.core.classic.kv;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
+import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreCounterResult;
@@ -92,7 +93,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
     CoreKvBinaryParamValidators.validateAppendPrependArgs(id, keyspace, options, content, cas, durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());
-    RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND,
+    RequestSpan span = coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_APPEND,
       options.parentSpan().orElse(null));
     AppendRequest request = new AppendRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
       content, cas, durability.levelIfSynchronous(), span);
@@ -126,7 +127,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
     CoreKvBinaryParamValidators.validateAppendPrependArgs(id, keyspace, options, content,  cas, durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());
-    RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND,
+    RequestSpan span = coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_PREPEND,
       options.parentSpan().orElse(null));
     PrependRequest request = new PrependRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
       content, cas, durability.levelIfSynchronous(), span);
@@ -159,7 +160,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
         durability);
     Duration timeout = timeout(options, durability);
     RetryStrategy retryStrategy = options.retryStrategy().orElse(environment().retryStrategy());
-    RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT,
+    RequestSpan span = coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_INCREMENT,
       options.parentSpan().orElse(null));
 
     IncrementRequest request = new IncrementRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
@@ -193,7 +194,7 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
     notNullOrEmpty(id, "Id", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
     Duration timeout = timeout(opts, durability);
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment().retryStrategy());
-    RequestSpan span = environment().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT,
+    RequestSpan span = coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_DECREMENT,
       opts.parentSpan().orElse(null));
 
     DecrementRequest request = new DecrementRequest(timeout, context(), collectionIdentifier(), retryStrategy, id,
@@ -208,6 +209,10 @@ public class ClassicCoreKvBinaryOps implements CoreKvBinaryOps {
 
   private CoreEnvironment environment() {
     return core.context().environment();
+  }
+
+  private CoreResources coreResources() {
+    return core.context().coreResources();
   }
 
   private CollectionIdentifier collectionIdentifier() {

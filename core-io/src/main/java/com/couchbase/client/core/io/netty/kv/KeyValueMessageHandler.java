@@ -172,7 +172,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     this.compressionConfig = endpointContext.environment().compressionConfig();
     this.eventBus = endpointContext.environment().eventBus();
     this.bucketName = bucketName;
-    this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.environment().requestTracer());
+    this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
   }
 
   /**
@@ -226,7 +226,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.requestSpan() != null) {
-          RequestTracer tracer = endpointContext.environment().requestTracer();
+          RequestTracer tracer = endpointContext.coreResources().requestTracer();
           RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
 
           if (!isInternalTracer) {

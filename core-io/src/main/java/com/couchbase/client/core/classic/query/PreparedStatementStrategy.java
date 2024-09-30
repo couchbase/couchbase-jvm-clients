@@ -42,7 +42,7 @@ public abstract class PreparedStatementStrategy {
   }
 
   protected RequestTracer requestTracer() {
-    return core.context().environment().requestTracer();
+    return core.context().coreResources().requestTracer();
   }
 
   public abstract Mono<QueryResponse> execute(QueryRequest request);

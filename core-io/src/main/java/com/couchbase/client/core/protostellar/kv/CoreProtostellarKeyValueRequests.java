@@ -369,7 +369,7 @@ public class CoreProtostellarKeyValueRequests {
   }
 
   private static ProtostellarCoreEncodedContent encodedContent(CoreProtostellar core, Supplier<CoreEncodedContent> content, RequestSpan span, CompressionConfig compressionConfig) {
-    RequestSpan encodeSpan = CbTracing.newSpan(core.context().environment().requestTracer(), TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
+    RequestSpan encodeSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_ENCODING, span);
     long start = System.nanoTime();
     CoreEncodedContent encoded;
     boolean compressed = false;
