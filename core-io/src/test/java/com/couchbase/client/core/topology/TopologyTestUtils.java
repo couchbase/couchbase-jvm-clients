@@ -56,6 +56,7 @@ public class TopologyTestUtils {
   public static ClusterTopology clusterTopology(List<HostAndServicePorts> nodes) {
     return ClusterTopology.of(
       new TopologyRevision(1, 1),
+      null,
       nodes,
       emptySet(),
       NetworkResolution.DEFAULT,

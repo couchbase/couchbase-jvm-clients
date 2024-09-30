@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreat
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterIdentifier;
 import com.couchbase.client.core.topology.ClusterTopology;
 import reactor.util.annotation.Nullable;
 
@@ -47,6 +48,7 @@ public class GlobalConfig {
   private final ConfigVersion version;
   private final List<PortInfo> portInfos;
   private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
+  private final @Nullable ClusterIdentifier clusterIdent;
 
   // Null only if the GlobalConfig was created by a legacy config parser
   @Nullable private final ClusterTopology clusterTopology;
@@ -56,6 +58,7 @@ public class GlobalConfig {
     this.portInfos = LegacyConfigHelper.getPortInfos(topology);
     this.clusterCapabilities = LegacyConfigHelper.getClusterCapabilities(topology);
     this.clusterTopology = topology;
+    this.clusterIdent = topology.id();
   }
 
   @JsonCreator
@@ -70,6 +73,7 @@ public class GlobalConfig {
     this.portInfos = enrichPortInfos(portInfos, origin);
     this.clusterCapabilities = AbstractBucketConfig.convertClusterCapabilities(clusterCapabilities);
     this.clusterTopology = null;
+    this.clusterIdent = null;
   }
 
   /**
@@ -124,6 +128,10 @@ public class GlobalConfig {
    */
   public Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities() {
     return clusterCapabilities;
+  }
+
+  @Nullable public ClusterIdentifier clusterIdent() {
+    return clusterIdent;
   }
 
   /**

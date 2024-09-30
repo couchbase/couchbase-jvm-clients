@@ -123,8 +123,11 @@ class ClusterTopologyParser {
 
     BucketTopology bucket = BucketTopology.parse(clusterConfig, nodesReadyToServiceThisBucket, memcachedHashingStrategy);
 
+    ClusterIdentifier clusterIdent = ClusterIdentifier.parse(clusterConfig);
+
     return ClusterTopology.of(
       TopologyRevision.parse(clusterConfig),
+      clusterIdent,
       resolvedNodes,
       parseCapabilities(clusterConfig),
       resolvedNetwork,

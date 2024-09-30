@@ -36,9 +36,11 @@ public class ClusterTopology {
   private final NetworkResolution network;
   private final Set<ClusterCapability> capabilities;
   private final List<HostAndServicePorts> nodes;
+  @Nullable private final ClusterIdentifier clusterIdent;
 
   public static ClusterTopology of(
     TopologyRevision revision,
+    @Nullable ClusterIdentifier clusterIdent,
     List<HostAndServicePorts> nodes,
     Set<ClusterCapability> capabilities,
     NetworkResolution network,
@@ -52,7 +54,8 @@ public class ClusterTopology {
         capabilities,
         network,
         portSelector,
-        bucket
+        bucket,
+        clusterIdent
       );
     }
 
@@ -61,7 +64,8 @@ public class ClusterTopology {
       nodes,
       capabilities,
       network,
-      portSelector
+      portSelector,
+      clusterIdent
     );
   }
 
@@ -70,7 +74,8 @@ public class ClusterTopology {
     List<HostAndServicePorts> nodes,
     Set<ClusterCapability> capabilities,
     NetworkResolution network,
-    PortSelector portSelector
+    PortSelector portSelector,
+    @Nullable ClusterIdentifier clusterIdent
   ) {
     if (network.equals(NetworkResolution.AUTO)) {
       throw new IllegalArgumentException("Must resolve 'auto' network before creating config.");
@@ -81,6 +86,7 @@ public class ClusterTopology {
     this.capabilities = unmodifiableSet(newEnumSet(ClusterCapability.class, capabilities));
     this.network = requireNonNull(network);
     this.tls = requireNonNull(portSelector) == PortSelector.TLS;
+    this.clusterIdent = clusterIdent;
   }
 
   public TopologyRevision revision() {
@@ -114,12 +120,17 @@ public class ClusterTopology {
     throw new NoSuchElementException("Bucket topology is absent.");
   }
 
+  @Nullable public ClusterIdentifier id() {
+    return clusterIdent;
+  }
+
   @Override
   public String toString() {
     String bucket = this instanceof ClusterTopologyWithBucket ? this.requireBucket().bucket().toString() : "<N/A>";
 
     return "ClusterTopology{" +
       "revision=" + revision +
+      ", clusterIdent=" + clusterIdent +
       ", tls=" + tls +
       ", network=" + network +
       ", capabilities=" + capabilities +

@@ -18,6 +18,7 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
+import reactor.util.annotation.Nullable;
 
 import java.util.List;
 import java.util.Set;
@@ -40,9 +41,10 @@ public class ClusterTopologyWithBucket extends ClusterTopology {
     Set<ClusterCapability> capabilities,
     NetworkResolution network,
     PortSelector portSelector,
-    BucketTopology bucket
+    BucketTopology bucket,
+    @Nullable ClusterIdentifier clusterIdent
   ) {
-    super(revision, nodes, capabilities, network, portSelector);
+    super(revision, nodes, capabilities, network, portSelector, clusterIdent);
     this.bucket = requireNonNull(bucket);
   }
 
