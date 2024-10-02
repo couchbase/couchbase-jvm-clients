@@ -44,11 +44,11 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.mapCopyOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 
 @SuppressWarnings("rawtypes")
 @Stability.Internal
@@ -60,16 +60,22 @@ public class BuilderPropertySetter {
   // Escape hatch in case some accessors don't follow the convention.
   private final Map<String, String> irregularChildBuilderAccessors;
 
+  // Converts an input path component to match the Java method name,
+  // for translating case conventions.
+  private final Function<String, String> pathComponentTransformer;
+
   public BuilderPropertySetter() {
-    this("Config", mapOf("ioEnvironment", "ioEnvironment"));
+    this("Config", mapOf("ioEnvironment", "ioEnvironment"), name -> name);
   }
 
   public BuilderPropertySetter(
     String childBuilderAccessorSuffix,
-    Map<String, String> irregularChildBuilderAccessors
+    Map<String, String> irregularChildBuilderAccessors,
+    Function<String, String> pathComponentTransformer
   ) {
     this.childBuilderAccessorSuffix = requireNonNull(childBuilderAccessorSuffix);
     this.irregularChildBuilderAccessors = mapCopyOf(irregularChildBuilderAccessors);
+    this.pathComponentTransformer = requireNonNull(pathComponentTransformer);
   }
 
   /**
@@ -83,10 +89,11 @@ public class BuilderPropertySetter {
    * @throws InvalidPropertyException if the property could not be applied to the builder
    */
   public void set(Object builder, String propertyName, String propertyValue) {
-
-
     try {
-      final List<String> propertyComponents = Arrays.asList(propertyName.split("\\.", -1));
+      final List<String> propertyComponents = Arrays.stream(propertyName.split("\\.", -1))
+        .map(pathComponentTransformer)
+        .collect(toList());
+
       final List<String> pathToBuilder = propertyComponents.subList(0, propertyComponents.size() - 1);
       final String setterName = propertyComponents.get(propertyComponents.size() - 1);
 
@@ -111,7 +118,7 @@ public class BuilderPropertySetter {
       final List<Method> candidates = Arrays.stream(builder.getClass().getMethods())
           .filter(m -> m.getName().equals(setterName))
           .filter(m -> m.getParameterCount() == 1)
-          .collect(Collectors.toList());
+          .collect(toList());
 
       if (candidates.isEmpty()) {
         throw InvalidArgumentException.fromMessage("No one-arg setter for property \"" + propertyName + "\" in " + builder.getClass());
@@ -256,7 +263,7 @@ public class BuilderPropertySetter {
     try {
       return (E) Enum.valueOf(enumClass, value);
     } catch (IllegalArgumentException e) {
-      List<String> enumValueNames = Arrays.stream(enumClass.getEnumConstants()).map(Enum::name).collect(Collectors.toList());
+      List<String> enumValueNames = Arrays.stream(enumClass.getEnumConstants()).map(Enum::name).collect(toList());
       throw InvalidArgumentException.fromMessage("Expected one of " + enumValueNames + " but got \"" + value + "\"");
     }
   }

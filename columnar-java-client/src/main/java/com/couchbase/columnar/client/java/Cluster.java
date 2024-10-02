@@ -32,7 +32,6 @@ import javax.net.ssl.TrustManagerFactory;
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -121,11 +120,13 @@ public final class Cluster implements Closeable, Queryable {
       throw new IllegalArgumentException("Invalid connection string; must start with secure scheme \"couchbases://\" (note the final 's') but got: " + redactUser(cs.original()));
     }
 
+    checkParameterNamesAreLowercase(cs);
+
     ClusterOptions builder = new ClusterOptions();
     optionsCustomizer.accept(builder);
 
-    BuilderPropertySetter propertySetter = new BuilderPropertySetter("", Collections.emptyMap());
-    propertySetter.set(builder, translateTlsVerify(cs.params()));
+    BuilderPropertySetter propertySetter = new BuilderPropertySetter("", Collections.emptyMap(), Cluster::lowerSnakeCaseToLowerCamelCase);
+    propertySetter.set(builder, cs.params());
 
     // do we really want to allow a system property to disable server certificate verification?
     //propertySetter.set(builder, systemPropertyMap(SYSTEM_PROPERTY_PREFIX));
@@ -175,27 +176,38 @@ public final class Cluster implements Closeable, Queryable {
     return new Cluster(cs, credential.toInternalAuthenticator(), env);
   }
 
-  private static Map<String, String> translateTlsVerify(Map<String, String> connectionStringProperties) {
-    Map<String, String> properties = new LinkedHashMap<>(connectionStringProperties);
-    String tlsVerify = properties.remove("tls_verify");
-    if (tlsVerify == null) {
-      return properties;
+  private static void checkParameterNamesAreLowercase(ConnectionString cs) {
+    cs.params().keySet().stream()
+      .filter(Cluster::hasUppercase)
+      .findFirst()
+      .ifPresent(badName -> {
+        throw new IllegalArgumentException("Invalid connection string parameter '" + badName + "'. Please use lower_snake_case in connection string parameter names.");
+      });
+  }
+
+  private static boolean hasUppercase(String s) {
+    return s.codePoints().anyMatch(Character::isUpperCase);
+  }
+
+  private static String lowerSnakeCaseToLowerCamelCase(String s) {
+    StringBuilder sb = new StringBuilder();
+    int[] codePoints = s.codePoints().toArray();
+
+    boolean prevWasUnderscore = false;
+    for (int i : codePoints) {
+      if (i == '_') {
+        prevWasUnderscore = true;
+        continue;
+      }
+
+      if (prevWasUnderscore) {
+        i = Character.toUpperCase(i);
+      }
+      sb.appendCodePoint(i);
+      prevWasUnderscore = false;
     }
 
-    String javaName = "security.verifyServerCertificate";
-    switch (tlsVerify) {
-      case "none":
-        properties.put(javaName, "false");
-        break;
-      case "peer":
-        properties.put(javaName, "true");
-        break;
-      default:
-        throw new IllegalArgumentException(
-          "Unexpected value for connection string parameter 'tls_verify'; expected 'none' or 'peer', but got: '" + tlsVerify + "'");
-    }
-
-    return properties;
+    return sb.toString();
   }
 
   private static CoreTransactionsConfig disableTransactionsCleanup() {

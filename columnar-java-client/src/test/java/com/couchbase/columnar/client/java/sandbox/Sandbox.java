@@ -35,7 +35,7 @@ import static java.util.stream.Collectors.toList;
 public class Sandbox {
 
   public static void main(String[] args) throws Exception {
-    String connectionString = "couchbases://127.0.0.1?security.disableServerCertificateVerification=true";
+    String connectionString = "couchbases://127.0.0.1?security.disable_server_certificate_verification=true&srv=0";
     String username = "Administrator";
     String password = "password";
 
