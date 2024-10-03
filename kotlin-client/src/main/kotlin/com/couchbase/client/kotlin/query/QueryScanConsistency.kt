@@ -17,28 +17,20 @@
 package com.couchbase.client.kotlin.query
 
 import com.couchbase.client.core.api.shared.CoreMutationState
-import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.internal.isEmpty
 import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.consistentWith
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.notBounded
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.requestPlus
 import kotlin.time.Duration
-import kotlin.time.toJavaDuration
 
 /**
  * Create instances using the [requestPlus], [consistentWith], or [notBounded]
  * factory methods.
  */
 public sealed class QueryScanConsistency(
-    private val wireName: String?,
     internal val scanWait: Duration?,
 ) {
-
-    internal open fun inject(queryJson: MutableMap<String, Any?>): Unit {
-        wireName?.let { queryJson["scan_consistency"] = it }
-        scanWait?.let { queryJson["scan_wait"] = Golang.encodeDurationToMs(it.toJavaDuration()) }
-    }
 
     public companion object {
         /**
@@ -70,20 +62,15 @@ public sealed class QueryScanConsistency(
             if (tokens.isEmpty()) NotBounded else ConsistentWith(tokens, scanWait)
     }
 
-    internal object NotBounded : QueryScanConsistency(null, null)
+    internal object NotBounded : QueryScanConsistency(null)
 
     internal class RequestPlus internal constructor(scanWait: Duration? = null) :
-        QueryScanConsistency("request_plus", scanWait)
+        QueryScanConsistency(scanWait)
 
     internal class ConsistentWith internal constructor(
         private val tokens: MutationState,
         scanWait: Duration? = null,
-    ) : QueryScanConsistency("at_plus", scanWait) {
-        override fun inject(queryJson: MutableMap<String, Any?>): Unit {
-            super.inject(queryJson)
-            queryJson["scan_vectors"] = tokens.export()
-        }
-
+    ) : QueryScanConsistency(scanWait) {
         fun toCore(): CoreMutationState = CoreMutationState(tokens)
     }
 }
