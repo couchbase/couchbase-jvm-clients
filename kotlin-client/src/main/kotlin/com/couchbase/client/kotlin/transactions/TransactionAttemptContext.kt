@@ -162,13 +162,65 @@ public class TransactionAttemptContext internal constructor(
         internal.remove(doc.internal, SpanWrapper(span)).await()
     }
 
+    /**
+     * Executes a SQL++ query, buffers all result rows in memory, and returns them as a [QueryResult].
+     *
+     * @param statement the SQL++ statement to execute.
+     *
+     * @param parameters parameters to the SQL++ statement.
+     *
+     * @param scope the query context, or null to execute a cluster-level query.
+     *
+     * @param serializer the serializer to use for converting parameters to JSON,
+     * and the default serializer for parsing [QueryRow] content.
+     * Defaults to the serializer configured on the cluster environment.
+     *
+     * @param consistency the scan consistency level for this query.
+     * Only [QueryScanConsistency.requestPlus] and [QueryScanConsistency.notBounded] are
+     * supported in transactions. Note that the default scan consistency for transactional queries is
+     * [QueryScanConsistency.requestPlus]; this differs from non-transaction queries,
+     * which default to [QueryScanConsistency.notBounded].
+     *
+     * @param readonly pass true if the SQL++ statement does not modify documents.
+     * This enables certain optimizations, and ensures a query fails instead of accidentally modifying data.
+     *
+     * @param adhoc pass false if this is a commonly used query that should be
+     * turned into a prepared statement for faster execution.
+     *
+     * @param flexIndex pass true to use a full-text index instead of a query index.
+     *
+     * @param profile specifies how much profiling information to include in
+     * the response (access via [QueryMetadata.profile]). Profiling is
+     * relatively expensive, and can impact the performance of the server
+     * query engine. Not recommended for use in production, unless you're
+     * diagnosing a specific issue.  Note this is an Enterprise Edition feature.
+     * On Community Edition the parameter will be accepted, but no profiling
+     * information returned.
+     *
+     * @param scanCap Maximum buffered channel size between the indexer client
+     * and the query service for index scans. This parameter controls when to use
+     * scan backfill. Use 0 or a negative number to disable. Smaller values
+     * reduce GC, while larger values reduce indexer backfill.
+     *
+     * @param pipelineBatch Controls the number of items execution operators
+     * can batch for Fetch from the KV.
+     *
+     * @param pipelineCap Maximum number of items each execution operator
+     * can buffer between various operators.
+     *
+     * @param clientContextId an arbitrary string that identifies this query
+     * for diagnostic purposes.
+     *
+     * @param raw an "escape hatch" for passing arbitrary query options that
+     * aren't otherwise exposed by this method.
+     */
     public suspend fun query(
         statement: String,
         parameters: QueryParameters = QueryParameters.None,
         scope: Scope? = null,
         serializer: JsonSerializer? = null,
 
-        consistency: QueryScanConsistency = QueryScanConsistency.notBounded(),
+        consistency: QueryScanConsistency = QueryScanConsistency.requestPlus(),
         readonly: Boolean = false,
         adhoc: Boolean = true,
         flexIndex: Boolean = false,

@@ -124,6 +124,14 @@ public class ClusterEnvironmentDslBuilder {
         loggingMeterConfigDslBuilder.initializer()
     }
 
+    private var transactionsConfigDslBuilder = TransactionsConfigDslBuilder()
+    @VolatileCouchbaseApi
+    public fun transactions(initializer: TransactionsConfigDslBuilder.() -> Unit) {
+        transactionsConfigDslBuilder.initializer()
+
+        wrapped.transactionsConfig(transactionsConfigDslBuilder.toCore())
+    }
+
     /**
      * @see CoreEnvironment.Builder.eventBus
      */

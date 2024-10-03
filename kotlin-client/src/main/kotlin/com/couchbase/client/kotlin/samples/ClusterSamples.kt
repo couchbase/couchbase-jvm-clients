@@ -23,10 +23,11 @@ import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.env.ClusterEnvironment
 import com.couchbase.client.kotlin.env.dsl.TrustSource
+import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.query.execute
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Paths
-import java.util.*
+import java.util.Optional
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNUSED_VARIABLE")
@@ -138,6 +139,14 @@ internal fun configureManyThingsUsingDsl() {
             kvTimeout = 3.seconds
             kvDurableTimeout = 20.seconds
             connectTimeout = 15.seconds
+        }
+
+        transactions {
+            durabilityLevel = Durability.majorityAndPersistToActive()
+
+            cleanup {
+                cleanupWindow = 30.seconds
+            }
         }
 
         orphanReporter {

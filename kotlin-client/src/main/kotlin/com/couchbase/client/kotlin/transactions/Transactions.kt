@@ -27,6 +27,7 @@ import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory
 import com.couchbase.client.kotlin.Keyspace
+import com.couchbase.client.kotlin.env.dsl.checkTransactionDurability
 import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.kv.Durability
@@ -62,39 +63,45 @@ public class Transactions internal constructor(internal val core: Core) {
      * If the transaction logic does not perform an explicit commit or rollback, then a commit will be performed
      * anyway.
      *
-     * @return there is no need to check the returned [TransactionResult], as success is implied by the lack of a
-     * thrown exception. The result contains information useful only for debugging and logging.
+     * @param durability Durability level for this transaction, or null to use the cluster environment's default transaction durability.
+     * Must not be [Durability.none] or [Durability.clientVerified], which are not compatible with transactions.
+     *
+     * @param timeout Time allowed for this transaction to complete, or null to use the cluster environment's default timeout duration.
+     * @param metadataCollection The location in Couchbase to store metadata this transaction, or null to use the cluster environment's default metadata collection.
+     *
+     * @return The value returned by the transaction logic, along with diagnostic information.
+     *
      * @throws TransactionFailedException or a derived exception if the transaction fails to commit for any reason, possibly
      *                           after multiple retries. The exception contains further details of the error
      */
     public suspend fun <V> run(
-        durability: Durability = Durability.none(),
-        parentSpan: RequestSpan? = null,
         timeout: Duration? = null,
+        parentSpan: RequestSpan? = null,
+        durability: Durability? = null,
         metadataCollection: Keyspace? = null,
         transactionLogic: suspend TransactionAttemptContext.() -> V,
     ): TransactionResult<V> {
         return runInternal(
-            durability, parentSpan, timeout, metadataCollection, null, transactionLogic,
+            timeout, parentSpan, durability, metadataCollection, null, transactionLogic,
         )
     }
 
     internal suspend fun <V> runInternal(
-        durability: Durability = Durability.none(),
-        parentSpan: RequestSpan? = null,
         timeout: Duration? = null,
+        parentSpan: RequestSpan? = null,
+        durability: Durability? = null,
         metadataCollection: Keyspace? = null,
         attemptContextFactory: TransactionAttemptContextFactory?,
         transactionLogic: suspend TransactionAttemptContext.() -> V,
     ): TransactionResult<V> {
 
-        require(durability !is Durability.ClientVerified) { "Client-verified durability is not supported for transactions." }
+        checkTransactionDurability(durability)
 
         val perConfig = CoreTransactionOptions(
-            durability.levelIfSynchronous(),
+            durability?.levelIfSynchronous() ?: Optional.empty(),
             Optional.empty(), // scan consistency
             parentSpan.toOptional(),
-            timeout?.toJavaDuration().toOptional(), // TODO or get from txn config
+            timeout?.toJavaDuration().toOptional(),
             metadataCollection?.toCollectionIdentifier().toOptional(),
             attemptContextFactory.toOptional(),
         )
