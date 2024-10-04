@@ -21,19 +21,22 @@ import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.BuilderPropertySetter;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.InvalidPropertyException;
 import com.couchbase.client.core.transaction.atr.ActiveTransactionRecordIds;
 import com.couchbase.client.core.transaction.config.CoreTransactionsCleanupConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.columnar.client.java.internal.Certificates;
 import reactor.core.publisher.Mono;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -43,7 +46,6 @@ import static com.couchbase.client.core.transaction.config.CoreTransactionsConfi
 import static com.couchbase.client.core.transaction.config.CoreTransactionsConfig.DEFAULT_TRANSACTION_TIMEOUT;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toMap;
 
 /**
  * Create a new instance by calling {@link #newInstance}.
@@ -125,11 +127,7 @@ public final class Cluster implements Closeable, Queryable {
     ClusterOptions builder = new ClusterOptions();
     optionsCustomizer.accept(builder);
 
-    BuilderPropertySetter propertySetter = new BuilderPropertySetter("", Collections.emptyMap(), Cluster::lowerSnakeCaseToLowerCamelCase);
-    propertySetter.set(builder, cs.params());
-
-    // do we really want to allow a system property to disable server certificate verification?
-    //propertySetter.set(builder, systemPropertyMap(SYSTEM_PROPERTY_PREFIX));
+    applyConnectionStringParameters(builder, cs);
 
     ClusterOptions.Unmodifiable opts = builder.build();
 
@@ -174,6 +172,62 @@ public final class Cluster implements Closeable, Queryable {
     Environment env = envBuilder.build();
 
     return new Cluster(cs, credential.toInternalAuthenticator(), env);
+  }
+
+  private static void applyConnectionStringParameters(ClusterOptions builder, ConnectionString cs) {
+    // Make a mutable copy so we can remove entries that require special handling.
+    LinkedHashMap<String, String> params = new LinkedHashMap<>(cs.params());
+
+    // "security.trust_only_non_prod" is special; it doesn't have a corresponding programmatic
+    // config option. It's not a secret, but we don't want to confuse external users with a
+    // security config option they never need to set.
+    boolean trustOnlyNonProdCertificates = lastTrustParamIsNonProd(params);
+
+    try {
+      BuilderPropertySetter propertySetter = new BuilderPropertySetter("", Collections.emptyMap(), Cluster::lowerSnakeCaseToLowerCamelCase);
+      propertySetter.set(builder, params);
+
+    } catch (InvalidPropertyException e) {
+      // Translate core-io exception (internal API) to platform exception!
+      throw new IllegalArgumentException(e.getMessage(), e.getCause());
+    }
+
+    // Do this last, after any other "trust_only_*" params are validated and applied.
+    // Otherwise, the earlier params would clobber the config set by this param.
+    // (There's no compelling use case for including multiple "trust_only_*" params in
+    // the connection string, but we behave consistently if someone tries it.)
+    if (trustOnlyNonProdCertificates) {
+      builder.security(it -> it.trustOnlyCertificates(Certificates.getNonProdCertificates()));
+    }
+  }
+
+  /**
+   * Returns true if the "security.trust_only_non_prod" connection string param is
+   * present, and no other trust params appear after it (since last one wins).
+   * <p>
+   * Side effect: Removes that param from the map.
+   *
+   * @throws IllegalArgumentException if the param has an invalid value
+   */
+  private static boolean lastTrustParamIsNonProd(LinkedHashMap<String, String> params) {
+    final String TRUST_ONLY_NON_PROD_PARAM = "security.trust_only_non_prod";
+
+    // Last trust param wins, so check whether "trust only non-prod" was last trust param.
+    boolean trustOnlyNonProdWasLast = params.keySet().stream()
+      .filter(it -> it.startsWith("security.trust_"))
+      .reduce((a, b) -> b) // last
+      .orElse("")
+      .equals(TRUST_ONLY_NON_PROD_PARAM);
+
+    // Always remove it, so later processing doesn't treat it as unrecognized param.
+    String trustOnlyNonProdValue = params.remove(TRUST_ONLY_NON_PROD_PARAM);
+
+    // Always validate if present, regardless of whether it was last.
+    if (trustOnlyNonProdValue != null && !Set.of("", "true", "1").contains(trustOnlyNonProdValue)) {
+      throw new IllegalArgumentException("Invalid value for connection string property '" + TRUST_ONLY_NON_PROD_PARAM + "'; expected 'true', '1', or empty string, but got: '" + trustOnlyNonProdValue + "'");
+    }
+
+    return trustOnlyNonProdWasLast;
   }
 
   private static void checkParameterNamesAreLowercase(ConnectionString cs) {
@@ -223,21 +277,6 @@ public final class Cluster implements Closeable, Queryable {
       Optional.empty(),
       CoreTransactionsSupportedExtensions.NONE
     );
-  }
-
-  private static final String SYSTEM_PROPERTY_PREFIX = "com.couchbase.columnar.env.";
-
-  /**
-   * Returns a map of all system properties whose names start with the given prefix,
-   * transformed to remove the prefix.
-   */
-  private static Map<String, String> systemPropertyMap(String prefix) {
-    return System.getProperties()
-      .entrySet()
-      .stream()
-      .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof String)
-      .filter(entry -> ((String) entry.getKey()).startsWith(prefix))
-      .collect(toMap(e -> ((String) e.getKey()).substring(prefix.length()), e -> (String) e.getValue()));
   }
 
   /**
