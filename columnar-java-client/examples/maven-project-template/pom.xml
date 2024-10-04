@@ -40,6 +40,16 @@
             <artifactId>couchbase-columnar-java-client</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+
+        <!-- Including this optional dependency lets IntelliJ IDEA
+             warn if you use unstable or internal Couchbase APIs.
+             This JAR does not need to be present at runtime. -->
+        <dependency>
+            <groupId>org.jetbrains</groupId>
+            <artifactId>annotations</artifactId>
+            <version>24.1.0</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -53,7 +63,8 @@
                 </configuration>
             </plugin>
 
-            <!-- Prevent accidentally using Couchbase internal API. -->
+            <!-- Prevent accidentally using Couchbase internal API.
+                 Optional, but recommended. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>

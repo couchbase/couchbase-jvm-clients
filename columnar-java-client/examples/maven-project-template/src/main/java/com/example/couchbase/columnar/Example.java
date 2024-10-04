@@ -19,8 +19,8 @@ package com.example.couchbase.columnar;
 import com.couchbase.columnar.client.java.Cluster;
 import com.couchbase.columnar.client.java.Credential;
 import com.couchbase.columnar.client.java.QueryResult;
-import com.couchbase.columnar.client.java.internal.Certificates;
 
+import java.time.Duration;
 import java.util.List;
 
 public class Example {
@@ -32,10 +32,10 @@ public class Example {
     try (Cluster cluster = Cluster.newInstance(
       connectionString,
       Credential.of(username, password),
+      // The third parameter is optional.
+      // This example sets the default query timeout to 2 minutes.
       clusterOptions -> clusterOptions
-        // Configure a secure connection to Couchbase internal pre-production cluster.
-        // (Not required when connecting to a production cluster!)
-        .security(it -> it.trustOnlyCertificates(Certificates.getNonProdCertificates()))
+        .timeout(it -> it.queryTimeout(Duration.ofMinutes(2)))
     )) {
 
       // Buffered query. All rows must fit in memory.
