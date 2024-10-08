@@ -6,7 +6,7 @@
 
     <groupId>com.example</groupId>
     <artifactId>couchbase-columnar-java-example</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version><!--REL-->
 
     <name>Couchbase Columnar Java SDK Project Template</name>
     <description>Examples project for Couchbase Columnar Java SDK</description>
@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>couchbase-columnar-java-client</artifactId>
-            <version>0.1.0-SNAPSHOT</version>
+            <version>1.0.0</version><!--REL-->
         </dependency>
 
         <!-- Including this optional dependency lets IntelliJ IDEA
