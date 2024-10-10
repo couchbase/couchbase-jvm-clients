@@ -16,9 +16,12 @@
 
 package com.couchbase.columnar.client.java;
 
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
+
 import java.util.concurrent.CancellationException;
 import java.util.function.Consumer;
 
+@ThreadSafe
 public interface Queryable {
 
   /**

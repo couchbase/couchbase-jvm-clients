@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Golang;
 import com.couchbase.columnar.client.java.internal.JacksonTransformers;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -31,6 +32,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 /**
  * Holds the metrics as returned from an analytics response.
  */
+@ThreadSafe
 public final class QueryMetrics {
 
   /**

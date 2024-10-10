@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+/**
+ * Classes that turn query result rows into Java objects
+ * when you call {@code row.as(Class)} or {@code row.as(TypeRef)}.
+ */
 @NonNullApi
 package com.couchbase.columnar.client.java.codec;
 

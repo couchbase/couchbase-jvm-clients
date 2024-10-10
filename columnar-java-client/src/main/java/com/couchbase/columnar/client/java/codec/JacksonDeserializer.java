@@ -18,6 +18,9 @@ package com.couchbase.columnar.client.java.codec;
 
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
+import com.couchbase.columnar.client.java.ClusterOptions;
+import com.couchbase.columnar.client.java.QueryOptions;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -35,7 +38,11 @@ import static java.util.Objects.requireNonNull;
  *     .build();
  * var deserializer = new JacksonDeserializer(mapper);
  * </pre>
+ *
+ * @see ClusterOptions#deserializer(Deserializer)
+ * @see QueryOptions#deserializer(Deserializer)
  */
+@ThreadSafe
 public final class JacksonDeserializer implements Deserializer {
   private final ObjectMapper mapper;
 

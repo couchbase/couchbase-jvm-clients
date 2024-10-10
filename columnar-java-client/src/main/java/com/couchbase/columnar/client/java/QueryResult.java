@@ -18,11 +18,13 @@ package com.couchbase.columnar.client.java;
 
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listCopyOf;
 
+@ThreadSafe(caveat = "Unless you modify the byte array returned by Row.bytes()")
 public final class QueryResult {
   private final List<Row> rows;
   private final QueryMetadata metadata;

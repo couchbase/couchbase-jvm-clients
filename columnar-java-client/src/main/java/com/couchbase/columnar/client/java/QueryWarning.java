@@ -17,6 +17,7 @@
 package com.couchbase.columnar.client.java;
 
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +26,7 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * Note that warnings are not terminal errors, but hints from the engine that something went not as expected.
  */
+@ThreadSafe
 public final class QueryWarning {
 
   private final ErrorCodeAndMessage inner;

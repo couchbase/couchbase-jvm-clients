@@ -18,11 +18,13 @@ package com.couchbase.columnar.client.java;
 
 
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
+@ThreadSafe
 public final class Scope implements Queryable {
   private final Cluster cluster;
   private final Database database;

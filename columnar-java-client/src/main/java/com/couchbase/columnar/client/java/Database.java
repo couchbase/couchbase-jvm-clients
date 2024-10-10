@@ -16,8 +16,14 @@
 
 package com.couchbase.columnar.client.java;
 
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
+
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Contains {@link Scope}s.
+ */
+@ThreadSafe
 public final class Database {
   private final Cluster cluster;
   private final String name;

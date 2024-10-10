@@ -16,6 +16,7 @@
 
 package com.couchbase.columnar.client.java.codec;
 
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
@@ -23,6 +24,7 @@ import java.io.IOException;
 /**
  * Converts query result rows into Java objects.
  */
+@ThreadSafe
 public interface Deserializer {
   /**
    * Deserializes raw input into the target class.

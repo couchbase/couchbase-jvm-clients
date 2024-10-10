@@ -16,6 +16,8 @@
 
 package com.couchbase.columnar.client.java.codec;
 
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
@@ -34,6 +36,7 @@ import java.lang.reflect.Type;
  * <a href="http://gafter.blogspot.com/2006/12/super-type-tokens.html">
  * Super Type Tokens</a>.
  */
+@ThreadSafe
 public abstract class TypeRef<T> {
   private final Type type;
 

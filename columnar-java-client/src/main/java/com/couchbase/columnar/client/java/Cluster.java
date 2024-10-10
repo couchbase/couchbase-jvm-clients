@@ -28,6 +28,7 @@ import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.columnar.client.java.internal.Certificates;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 import reactor.core.publisher.Mono;
 
 import javax.net.ssl.TrustManagerFactory;
@@ -67,7 +68,13 @@ import static java.util.Objects.requireNonNull;
  *         .deserializer(new JacksonDeserializer(new ObjectMapper()))
  * );
  * </pre>
+ * For best efficiency, create a single `Cluster` instance
+ * per Columnar cluster and share it throughout your application.
+ * <p>
+ * When you're done interacting with the cluster, it's important to call
+ * {@link Cluster#close()} to release resources used by the cluster.
  */
+@ThreadSafe
 public final class Cluster implements Closeable, Queryable {
   private final Environment environment;
   private final CoreCouchbaseOps couchbaseOps;
@@ -107,9 +114,21 @@ public final class Cluster implements Closeable, Queryable {
 
   /**
    * Returns a new instance, with options customized by the {@code optionsCustomizer} callback.
+   * <p>
+   * Example usage:
+   * <pre>
+   * Cluster cluster = Cluster.newInstance(
+   *     connectionString,
+   *     Credential.of(username, password),
+   *     options -> options
+   *         .timeout(it -> it.queryTimeout(Duration.ofMinutes(5)))
+   *         .deserializer(new JacksonDeserializer(new ObjectMapper()))
+   * );
+   * </pre>
    *
    * @see Credential#of(String, String)
    * @see #newInstance(String, Credential)
+   * @see ClusterOptions
    */
   public static Cluster newInstance(
     String connectionString,
@@ -296,6 +315,9 @@ public final class Cluster implements Closeable, Queryable {
     this.queryExecutor = new QueryExecutor(core, environment, connectionString);
   }
 
+  /**
+   * Releases resources and prevents further use of this object.
+   */
   public void close() {
     Duration timeout = environment.timeoutConfig().disconnectTimeout();
     disconnectInternal(disconnected, timeout, couchbaseOps, environment).block();
@@ -312,6 +334,15 @@ public final class Cluster implements Closeable, Queryable {
       .then(Mono.fromRunnable(() -> disconnected.set(true)));
   }
 
+  /**
+   * Returns the database in this cluster with the given name.
+   * <p>
+   * A database is a container for {@link Scope}s.
+   * <p>
+   * If the database does not exist, this method still returns a
+   * non-null object, but operations using that object fail with
+   * an exception indicating the database does not exist.
+   */
   public Database database(String name) {
     return new Database(this, name);
   }

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+/**
+ * Start here by creating a {@link com.couchbase.columnar.client.java.Cluster}.
+ */
 @NonNullApi
 package com.couchbase.columnar.client.java;
 

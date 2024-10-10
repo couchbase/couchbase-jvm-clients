@@ -22,6 +22,11 @@ import reactor.util.annotation.Nullable;
 
 import java.util.function.Consumer;
 
+/**
+ * A mutable builder for configuring the cluster's behavior.
+ *
+ * @see Cluster#newInstance(String, Credential, Consumer)
+ */
 public final class ClusterOptions {
   boolean srv = true;
   @Nullable Deserializer deserializer;

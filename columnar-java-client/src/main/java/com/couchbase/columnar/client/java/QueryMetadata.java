@@ -19,6 +19,7 @@ package com.couchbase.columnar.client.java;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkHeader;
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkTrailer;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Holds associated metadata returned by the server.
  */
+@ThreadSafe
 public final class QueryMetadata {
 
   private final AnalyticsChunkHeader header;

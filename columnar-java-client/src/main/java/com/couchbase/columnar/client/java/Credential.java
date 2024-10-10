@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.columnar.client.java.internal.DynamicAuthenticator;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 
 import java.util.function.Supplier;
 
@@ -34,6 +35,7 @@ import static java.util.Objects.requireNonNull;
  * For advanced use cases involving dynamic credentials, see
  * {@link Credential#ofDynamic(Supplier)}.
  */
+@ThreadSafe
 public abstract class Credential {
 
   /**

@@ -19,6 +19,7 @@ package com.couchbase.columnar.client.java;
 import com.couchbase.columnar.client.java.codec.Deserializer;
 import com.couchbase.columnar.client.java.codec.TypeRef;
 import com.couchbase.columnar.client.java.internal.InternalJacksonSerDes;
+import com.couchbase.columnar.client.java.internal.ThreadSafe;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
 import com.couchbase.columnar.client.java.json.JsonValue;
@@ -61,6 +62,7 @@ import static java.util.Objects.requireNonNull;
  * @see ClusterOptions#deserializer(Deserializer)
  * @see QueryOptions#deserializer(Deserializer)
  */
+@ThreadSafe(caveat = "Unless you modify the byte array returned by Row.bytes()")
 public final class Row {
   private final byte[] content;
   private final Deserializer deserializer;
@@ -76,6 +78,8 @@ public final class Row {
   /**
    * Returns the raw content of the row, exactly as it was received from
    * the server.
+   * <p>
+   * This method returns the same array each time it is called.
    */
   public byte[] bytes() {
     return content;
