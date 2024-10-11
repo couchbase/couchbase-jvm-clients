@@ -28,6 +28,7 @@ import fit.columnar.ClusterCloseRequest;
 import fit.columnar.ClusterNewInstanceRequest;
 import fit.columnar.ColumnarServiceGrpc;
 import fit.columnar.EmptyResultOrFailureResponse;
+import fit.columnar.SdkConnectionError;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +54,8 @@ public class JavaColumnarService extends ColumnarServiceGrpc.ColumnarServiceImpl
         builder.setSdkVersion(sdkVersion);
       }
       builder.setSdk(fit.columnar.SDK.SDK_JAVA);
-      builder.putClusterNewInstance(0, fit.columnar.PerApiElementGeneric.getDefaultInstance());
-      builder.putClusterClose(0, fit.columnar.PerApiElementGeneric.getDefaultInstance());
+      builder.putClusterNewInstance(0, fit.columnar.PerApiElementClusterNewInstance.getDefaultInstance());
+      builder.putClusterClose(0, fit.columnar.PerApiElementClusterClose.getDefaultInstance());
       // The SDK has two main modes: buffered and push-based streaming.
       var executeQueryBuffered = fit.columnar.PerApiElementExecuteQuery.newBuilder()
         .setExecuteQueryReturns(fit.columnar.PerApiElementExecuteQuery.ExecuteQueryReturns.EXECUTE_QUERY_RETURNS_QUERY_RESULT)
@@ -70,6 +71,13 @@ public class JavaColumnarService extends ColumnarServiceGrpc.ColumnarServiceImpl
       builder.putClusterExecuteQuery(Mode.BUFFERED.ordinal(), executeQueryBuffered);
       builder.putScopeExecuteQuery(Mode.PUSH_BASED_STREAMING.ordinal(), executeQueryPushBased);
       builder.putScopeExecuteQuery(Mode.BUFFERED.ordinal(), executeQueryBuffered);
+      for (Mode mode : new Mode[]{Mode.PUSH_BASED_STREAMING, Mode.BUFFERED}) {
+        builder.putSdkConnectionError(mode.ordinal(), SdkConnectionError.newBuilder()
+          .setInvalidCredErrorType(SdkConnectionError.InvalidCredentialErrorType.AS_INVALID_CREDENTIAL_EXCEPTION)
+          .setBootstrapErrorType(SdkConnectionError.BootstrapErrorType.ERROR_AS_TIMEOUT_EXCEPTION)
+          .build()
+        );
+      }
       responseObserver.onNext(builder.build());
       responseObserver.onCompleted();
     } catch (RuntimeException err) {
