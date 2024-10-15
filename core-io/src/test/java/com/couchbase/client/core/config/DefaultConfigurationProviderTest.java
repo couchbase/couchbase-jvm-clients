@@ -33,6 +33,7 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.MockUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -287,7 +288,7 @@ class DefaultConfigurationProviderTest {
     CoreContext ctx = mock(CoreContext.class);
     when(ctx.environment()).thenReturn(env);
 
-    Core core = mock(Core.class);
+    Core core = MockUtil.mockCore();
     when(core.context()).thenReturn(ctx);
     when(core.environment()).thenReturn(env);
     return core;

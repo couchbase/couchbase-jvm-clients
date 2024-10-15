@@ -42,6 +42,7 @@ import java.util.EnumSet;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,7 +72,7 @@ class SelectBucketHandlerTest {
     when(env.eventBus()).thenReturn(simpleEventBus);
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(10));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
+    CoreContext coreContext = new CoreContext(mockCore(), 1, env, mock(Authenticator.class));
     endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }

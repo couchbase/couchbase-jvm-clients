@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeInfo;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
@@ -64,7 +65,7 @@ public class KeyValueBucketRefresherTest {
       .build();
 
     CoreContext coreContext = mock(CoreContext.class);
-    core = mock(Core.class);
+    core = mockCore();
     when(core.context()).thenReturn(coreContext);
     when(coreContext.environment()).thenReturn(env);
   }

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -38,7 +39,7 @@ class TimerTest {
   void performsBackpressureWhenOverLimit() throws Exception {
     Timer timer = Timer.createAndStart(2);
     try {
-      Core core = mock(Core.class);
+      Core core = mockCore();
       assertEquals(0, timer.outstandingForRetry());
 
       Request<? extends Response> request = mock(Request.class);

@@ -53,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -80,7 +81,7 @@ class NodeTest {
 
   @BeforeAll
   static void beforeAll() {
-    Core core = mock(Core.class);
+    Core core = mockCore();
     ENV = CoreEnvironment
       .builder()
       .build();

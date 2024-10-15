@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,7 +74,7 @@ class QueryMessageHandlerTest {
   @BeforeAll
   static void setup() {
     ENV = CoreEnvironment.create();
-    CORE_CTX = new CoreContext(mock(Core.class), 1, ENV, PasswordAuthenticator.create("user", "pass"));
+    CORE_CTX = new CoreContext(mockCore(), 1, ENV, PasswordAuthenticator.create("user", "pass"));
     ENDPOINT_CTX = new EndpointContext(CORE_CTX, new HostAndPort("127.0.0.1", 1234),
       NoopCircuitBreaker.INSTANCE, ServiceType.QUERY, Optional.empty(), Optional.empty(), Optional.empty());
   }

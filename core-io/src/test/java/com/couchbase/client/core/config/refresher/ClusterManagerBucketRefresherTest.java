@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -55,7 +56,7 @@ class ClusterManagerBucketRefresherTest {
     env = CoreEnvironment.builder().eventBus(eventBus).build();
 
     CoreContext coreContext = mock(CoreContext.class);
-    core = mock(Core.class);
+    core = mockCore();
     when(core.context()).thenReturn(coreContext);
     when(coreContext.environment()).thenReturn(env);
     ConfigurationProvider provider = mock(ConfigurationProvider.class);

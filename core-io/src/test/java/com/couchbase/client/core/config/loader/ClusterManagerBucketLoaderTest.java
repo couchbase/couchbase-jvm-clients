@@ -34,6 +34,7 @@ import reactor.core.Disposable;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +62,7 @@ class ClusterManagerBucketLoaderTest {
     when(env.timeoutConfig()).thenReturn(TimeoutConfig.create());
     when(env.retryStrategy()).thenReturn(BestEffortRetryStrategy.INSTANCE);
 
-    core = mock(Core.class);
+    core = mockCore();
     CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
     loader = new ClusterManagerBucketLoader(core);

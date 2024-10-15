@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.verifyRequest;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -87,7 +88,7 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
     when(env.timeoutConfig()).thenReturn(timeoutConfig);
     when(env.userAgent()).thenReturn(new UserAgent("some", Optional.empty(), Optional.empty(), Optional.empty()));
     when(timeoutConfig.connectTimeout()).thenReturn(Duration.ofMillis(1000));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
+    CoreContext coreContext = new CoreContext(mockCore(), 1, env, mock(Authenticator.class));
     endpointContext = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }

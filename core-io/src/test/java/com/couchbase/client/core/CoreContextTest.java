@@ -21,6 +21,7 @@ import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
@@ -33,7 +34,7 @@ class CoreContextTest {
   void getAndExportProperties() {
     long id = 12345;
     CoreEnvironment env = mock(CoreEnvironment.class);
-    Core core = mock(Core.class);
+    Core core = mockCore();
     Authenticator authenticator = mock(Authenticator.class);
     CoreContext ctx = new CoreContext(core, id, env, authenticator);
 

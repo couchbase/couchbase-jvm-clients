@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,7 +81,7 @@ class RetryOrchestratorTest {
     CoreEnvironment env = mock(CoreEnvironment.class);
     SimpleEventBus eventBus = new SimpleEventBus(true);
     when(env.eventBus()).thenReturn(eventBus);
-    CoreContext context = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
+    CoreContext context = new CoreContext(mockCore(), 1, env, mock(Authenticator.class));
     RetryOrchestrator.maybeRetry(context, request, RetryReason.UNKNOWN);
 
     verify(request, times(1)).cancel(CancellationReason.noMoreRetries(RetryReason.UNKNOWN), Function.identity());

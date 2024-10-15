@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -91,7 +92,7 @@ class BaseEndpointTest {
     eventLoopGroup = new NioEventLoopGroup(1);
     eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     environment = CoreEnvironment.builder().eventBus(eventBus).build();
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment, authenticator);
+    CoreContext coreContext = new CoreContext(mockCore(), 1, environment, authenticator);
     ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
       ServiceType.KV, Optional.empty());
   }

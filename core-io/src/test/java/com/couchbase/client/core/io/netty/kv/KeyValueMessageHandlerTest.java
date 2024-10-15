@@ -52,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -77,7 +78,7 @@ class KeyValueMessageHandlerTest {
   @BeforeAll
   static void setup() {
     ENV = CoreEnvironment.builder().eventBus(new SimpleEventBus(true)).build();
-    Core core = mock(Core.class);
+    Core core = mockCore();
     CoreContext coreContext = new CoreContext(core, 1, ENV, PasswordAuthenticator.create("foo", "bar"));
     ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
     when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());

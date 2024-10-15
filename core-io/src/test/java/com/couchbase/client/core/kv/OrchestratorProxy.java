@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -74,7 +75,7 @@ class OrchestratorProxy {
     when(configurationProvider.config()).thenReturn(clusterConfig);
 
     // Set up core
-    core = mock(Core.class);
+    core = mockCore();
     CoreContext coreContext = new CoreContext(core, 1, environment, null);
     when(core.context()).thenReturn(coreContext);
     when(core.configurationProvider()).thenReturn(configurationProvider);

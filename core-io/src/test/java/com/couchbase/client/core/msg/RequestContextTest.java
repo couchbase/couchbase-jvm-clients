@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -40,7 +41,7 @@ class RequestContextTest {
   @Test
   void requestCancellation() {
     Request<?> request = mock(Request.class);
-    Core core = mock(Core.class);
+    Core core = mockCore();
     RequestContext ctx = new RequestContext(new CoreContext(core, 1, null, mock(Authenticator.class)), request);
 
     ctx.cancel();
@@ -50,7 +51,7 @@ class RequestContextTest {
   @Test
   void customPayloadCanBeAttached() {
     Request<?> request = mock(Request.class);
-    Core core = mock(Core.class);
+    Core core = mockCore();
     RequestContext ctx = new RequestContext(new CoreContext(core, 1, null, mock(Authenticator.class)), request);
     assertNull(ctx.clientContext());
 

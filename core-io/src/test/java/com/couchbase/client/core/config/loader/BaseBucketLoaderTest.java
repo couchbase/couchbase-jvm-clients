@@ -36,6 +36,7 @@ import reactor.core.publisher.Mono;
 import java.util.Optional;
 
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -61,7 +62,7 @@ class BaseBucketLoaderTest {
   @BeforeEach
   void setup() {
     CoreEnvironment env = mock(CoreEnvironment.class);
-    core = mock(Core.class);
+    core = mockCore();
     CoreContext ctx = new CoreContext(core, 1, env, mock(Authenticator.class));
     when(core.context()).thenReturn(ctx);
   }

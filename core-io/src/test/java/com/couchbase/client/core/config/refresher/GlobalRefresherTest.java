@@ -42,6 +42,7 @@ import static com.couchbase.client.core.topology.TopologyTestUtils.clusterTopolo
 import static com.couchbase.client.core.topology.TopologyTestUtils.node;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,7 +69,7 @@ class GlobalRefresherTest {
       .build();
 
     CoreContext coreContext = mock(CoreContext.class);
-    core = mock(Core.class);
+    core = mockCore();
     when(core.context()).thenReturn(coreContext);
     when(coreContext.environment()).thenReturn(env);
   }

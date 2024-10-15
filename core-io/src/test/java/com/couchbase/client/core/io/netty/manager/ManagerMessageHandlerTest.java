@@ -55,6 +55,7 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,7 +91,7 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void returnsNewConfigsWhenChunked() throws Exception {
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV, PasswordAuthenticator.create(USER, PASS));
+    CoreContext ctx = new CoreContext(mockCore(), 1, ENV, PasswordAuthenticator.create(USER, PASS));
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(ENV);

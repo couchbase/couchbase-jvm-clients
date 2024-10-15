@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeInfo;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -68,7 +69,7 @@ class KeyValueLocatorTest {
     CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
     when(getRequestMock.bucket()).thenReturn("bucket");
     when(getRequestMock.key()).thenReturn("key".getBytes(UTF_8));
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, mock(CoreEnvironment.class), mock(Authenticator.class));
+    CoreContext coreContext = new CoreContext(mockCore(), 1, mock(CoreEnvironment.class), mock(Authenticator.class));
     when(getRequestMock.context()).thenReturn(new RequestContext(coreContext, getRequestMock));
     when(configMock.bucketConfig("bucket")).thenReturn(bucketMock);
     when(bucketMock.nodes()).thenReturn(Arrays.asList(nodeInfo1, nodeInfo2));

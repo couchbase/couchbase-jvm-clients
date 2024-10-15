@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -61,7 +62,7 @@ class MemcacheProtocolTest {
   void before() {
     eventBus = mock(EventBus.class);
     CoreEnvironment env = mock(CoreEnvironment.class);
-    context = new CoreContext(mock(Core.class), 1, env, mock(Authenticator.class));
+    context = new CoreContext(mockCore(), 1, env, mock(Authenticator.class));
     when(env.eventBus()).thenReturn(eventBus);
   }
 

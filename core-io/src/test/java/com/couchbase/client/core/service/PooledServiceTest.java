@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.atLeastOnce;
@@ -71,7 +72,7 @@ class PooledServiceTest {
   void beforeEach() {
     eventBus = new SimpleEventBus(true, Collections.singletonList(ServiceStateChangedEvent.class));
     environment = CoreEnvironment.builder().eventBus(eventBus).build();
-    CoreContext coreContext = new CoreContext(mock(Core.class), 1, environment, authenticator);
+    CoreContext coreContext = new CoreContext(mockCore(), 1, environment, authenticator);
     serviceContext = new ServiceContext(coreContext, "127.0.0.1", 1234,
       ServiceType.KV, Optional.empty());
   }
