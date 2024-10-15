@@ -27,14 +27,14 @@
         <metrics-opentelemetry.version>0.7.5-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
         <test-utils.version>1.7.5-SNAPSHOT</test-utils.version><!--REL-->
 
-        <junit.version>5.9.1</junit.version>
+        <junit.version>5.11.2</junit.version>
         <assertj.version>3.23.1</assertj.version>
         <log4j-slf4j-impl.version>2.20.0</log4j-slf4j-impl.version>
 
         <jackson.version>2.17.2</jackson.version>
         <reactor.version>3.6.9</reactor.version>
         <reactive-streams.version>1.0.4</reactive-streams.version>
-        <blockhound.version>1.0.9.RELEASE</blockhound.version>
+        <blockhound.version>1.0.10.RELEASE</blockhound.version>
         <micrometer.version>1.12.9</micrometer.version>
         <slf4j.version>1.7.36</slf4j.version>
         <karaf.version>4.4.3</karaf.version>
@@ -42,8 +42,9 @@
         <logback.version>1.2.11</logback.version>
         <gson.version>2.9.1</gson.version>
 
+        <!-- This project has been sunset and 0.8.0 is the final version -->
         <scala.reactor-core-extensions.version>0.8.0</scala.reactor-core-extensions.version>
-        <scala.circe.version>0.14.3</scala.circe.version>
+        <scala.circe.version>0.14.10</scala.circe.version>
         <!-- Next version 2.10.0 dropped support for Java 8 -->
         <scala.play-json.version>2.9.4</scala.play-json.version>
         <!-- "The v2.13.5.2 release is the last version that supports JDK 8+" -->
@@ -51,9 +52,10 @@
         <scala.jsoniter.version>0.9.23</scala.jsoniter.version>
         <!-- json4s has long since moved to 4.x, but this would be a breaking change for us.  3.6.12 was the last stable (non-M) 3.x release -->
         <scala.json4s.version>3.6.12</scala.json4s.version>
-        <scala.jawn.version>1.5.1</scala.jawn.version>
-        <scala.upickle.version>3.2.0</scala.upickle.version>
-        <scala.collection-compat.version>2.11.0</scala.collection-compat.version>
+        <scala.jawn.version>1.6.0</scala.jawn.version>
+        <!-- 3.3.1 is the final version of the 3.x family, with 4.0 introducing breaking changes -->
+        <scala.upickle.version>3.3.1</scala.upickle.version>
+        <scala.collection-compat.version>2.12.0</scala.collection-compat.version>
 
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
