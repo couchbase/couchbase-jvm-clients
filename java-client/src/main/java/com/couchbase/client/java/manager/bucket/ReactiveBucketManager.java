@@ -21,12 +21,12 @@ import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.ReactiveCluster;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
-import static com.couchbase.client.core.Reactor.toMono;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -42,6 +42,7 @@ public class ReactiveBucketManager {
    * Holds the underlying async bucket manager.
    */
   private final AsyncBucketManager async;
+  private final ReactorOps reactor;
 
   /**
    * Creates a new {@link ReactiveBucketManager}.
@@ -52,7 +53,8 @@ public class ReactiveBucketManager {
    * @param async the underlying async manager that performs the ops.
    */
   @Stability.Internal
-  public ReactiveBucketManager(final AsyncBucketManager async) {
+  public ReactiveBucketManager(final ReactorOps reactor, final AsyncBucketManager async) {
+    this.reactor = requireNonNull(reactor);
     this.async = requireNonNull(async);
   }
 
@@ -76,7 +78,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createBucket(final BucketSettings settings) {
-    return toMono(() -> async.createBucket(settings));
+    return reactor.publishOnUserScheduler(() -> async.createBucket(settings));
   }
 
   /**
@@ -93,7 +95,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createBucket(final BucketSettings settings, final CreateBucketOptions options) {
-    return toMono(() -> async.createBucket(settings, options));
+    return reactor.publishOnUserScheduler(() -> async.createBucket(settings, options));
   }
 
   /**
@@ -119,7 +121,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> updateBucket(final BucketSettings settings) {
-    return toMono(() -> async.updateBucket(settings));
+    return reactor.publishOnUserScheduler(() -> async.updateBucket(settings));
   }
 
   /**
@@ -146,7 +148,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> updateBucket(final BucketSettings settings, final UpdateBucketOptions options) {
-    return toMono(() -> async.updateBucket(settings, options));
+    return reactor.publishOnUserScheduler(() -> async.updateBucket(settings, options));
   }
 
   /**
@@ -158,7 +160,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropBucket(final String bucketName) {
-    return toMono(() -> async.dropBucket(bucketName));
+    return reactor.publishOnUserScheduler(() -> async.dropBucket(bucketName));
   }
 
   /**
@@ -171,7 +173,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropBucket(final String bucketName, final DropBucketOptions options) {
-    return toMono(() -> async.dropBucket(bucketName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropBucket(bucketName, options));
   }
 
   /**
@@ -183,7 +185,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<BucketSettings> getBucket(final String bucketName) {
-    return toMono(() -> async.getBucket(bucketName));
+    return reactor.publishOnUserScheduler(() -> async.getBucket(bucketName));
   }
 
   /**
@@ -196,7 +198,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<BucketSettings> getBucket(final String bucketName, final GetBucketOptions options) {
-    return toMono(() -> async.getBucket(bucketName, options));
+    return reactor.publishOnUserScheduler(() -> async.getBucket(bucketName, options));
   }
 
   /**
@@ -206,7 +208,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Map<String, BucketSettings>> getAllBuckets() {
-    return toMono(async::getAllBuckets);
+    return reactor.publishOnUserScheduler(async::getAllBuckets);
   }
 
   /**
@@ -217,7 +219,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Map<String, BucketSettings>> getAllBuckets(final GetAllBucketOptions options) {
-    return toMono(() -> async.getAllBuckets(options));
+    return reactor.publishOnUserScheduler(() -> async.getAllBuckets(options));
   }
 
   /**
@@ -237,7 +239,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> flushBucket(final String bucketName) {
-    return toMono(() -> async.flushBucket(bucketName));
+    return reactor.publishOnUserScheduler(() -> async.flushBucket(bucketName));
   }
 
   /**
@@ -258,7 +260,7 @@ public class ReactiveBucketManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> flushBucket(final String bucketName, final FlushBucketOptions options) {
-    return toMono(() -> async.flushBucket(bucketName, options));
+    return reactor.publishOnUserScheduler(() -> async.flushBucket(bucketName, options));
   }
 
 }

@@ -93,11 +93,11 @@ public class ReactiveBucket {
   }
 
   public ReactiveCollectionManager collections() {
-    return new ReactiveCollectionManager(asyncBucket.collections());
+    return new ReactiveCollectionManager(environment(), asyncBucket.collections());
   }
 
   public ReactiveViewIndexManager viewIndexes() {
-    return new ReactiveViewIndexManager(asyncBucket.viewIndexes());
+    return new ReactiveViewIndexManager(environment(), asyncBucket.viewIndexes());
   }
 
   /**

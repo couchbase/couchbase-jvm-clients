@@ -65,6 +65,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbCollections.transform;
+import static com.couchbase.client.core.util.ReactorOps.proxyToPublishOnSuppliedScheduler;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.kv.ExistsOptions.existsOptions;
 import static com.couchbase.client.java.kv.GetAllReplicasOptions.getAllReplicasOptions;
@@ -135,9 +136,13 @@ public class ReactiveCollection {
 
   ReactiveCollection(final AsyncCollection asyncCollection) {
     this.asyncCollection = asyncCollection;
-    this.reactiveBinaryCollection = new ReactiveBinaryCollection(asyncCollection.binary());
-    this.kvOps = asyncCollection.kvOps;
-    this.queryIndexManager = new ReactiveCollectionQueryIndexManager(asyncCollection.queryIndexes());
+    this.reactiveBinaryCollection = new ReactiveBinaryCollection(asyncCollection.binary(), asyncCollection.environment());
+    this.kvOps = proxyToPublishOnSuppliedScheduler(
+      asyncCollection.kvOps,
+      CoreKvOps.class,
+      asyncCollection.environment().userScheduler()
+    );
+    this.queryIndexManager = new ReactiveCollectionQueryIndexManager(environment(), asyncCollection.queryIndexes());
   }
 
   /**

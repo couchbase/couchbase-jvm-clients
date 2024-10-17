@@ -32,6 +32,7 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
@@ -115,6 +116,8 @@ public class ReactiveCluster {
    */
   private final AsyncCluster asyncCluster;
 
+  private final ReactorOps reactor;
+
   /**
    * Stores already opened buckets for reuse.
    */
@@ -182,8 +185,8 @@ public class ReactiveCluster {
    */
   ReactiveCluster(final AsyncCluster asyncCluster) {
     this.asyncCluster = asyncCluster;
+    this.reactor = asyncCluster.environment();
   }
-
 
   /**
    * Provides access to the underlying {@link Core}.
@@ -200,21 +203,21 @@ public class ReactiveCluster {
    */
   @Stability.Volatile
   public ReactiveCouchbaseHttpClient httpClient() {
-    return new ReactiveCouchbaseHttpClient(asyncCluster.httpClient());
+    return new ReactiveCouchbaseHttpClient(reactor, asyncCluster.httpClient());
   }
 
   /**
    * Provides access to the user management services.
    */
   public ReactiveUserManager users() {
-    return new ReactiveUserManager(asyncCluster.users());
+    return new ReactiveUserManager(reactor, asyncCluster.users());
   }
 
   /**
    * Provides access to the bucket management services.
    */
   public ReactiveBucketManager buckets() {
-    return new ReactiveBucketManager(async().buckets());
+    return new ReactiveBucketManager(reactor, async().buckets());
   }
 
   /**
@@ -228,14 +231,14 @@ public class ReactiveCluster {
    * Provides access to the search index management services.
    */
   public ReactiveSearchIndexManager searchIndexes() {
-    return new ReactiveSearchIndexManager(async().searchIndexes());
+    return new ReactiveSearchIndexManager(reactor, async().searchIndexes());
   }
 
   /**
    * Provides access to the N1QL index management services.
    */
   public ReactiveQueryIndexManager queryIndexes() {
-    return new ReactiveQueryIndexManager(async().queryIndexes());
+    return new ReactiveQueryIndexManager(reactor, async().queryIndexes());
   }
 
   /**
@@ -243,7 +246,7 @@ public class ReactiveCluster {
    */
   @Stability.Uncommitted
   public ReactiveEventingFunctionManager eventingFunctions() {
-    return new ReactiveEventingFunctionManager(async().eventingFunctions());
+    return new ReactiveEventingFunctionManager(reactor, async().eventingFunctions());
   }
 
   /**
@@ -281,7 +284,7 @@ public class ReactiveCluster {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return async().queryOps.queryReactive(statement, opts, null, null, QueryAccessor::convertCoreQueryError)
+    return reactor.publishOnUserScheduler(async().queryOps.queryReactive(statement, opts, null, null, QueryAccessor::convertCoreQueryError))
       .map(result -> new ReactiveQueryResult(result, serializer));
   }
 
@@ -307,13 +310,13 @@ public class ReactiveCluster {
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return Mono.defer(() -> {
+    return reactor.publishOnUserScheduler(Mono.defer(() -> {
       return AnalyticsAccessor.analyticsQueryReactive(
         asyncCluster.core(),
         asyncCluster.analyticsRequest(statement, opts),
         serializer
       );
-    });
+    }));
   }
 
   /**
@@ -350,7 +353,7 @@ public class ReactiveCluster {
     CoreSearchRequest coreRequest = searchRequest.toCore();
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return asyncCluster.searchOps.searchReactive(indexName, coreRequest, opts)
+    return reactor.publishOnUserScheduler(asyncCluster.searchOps.searchReactive(indexName, coreRequest, opts))
       .map(r -> new ReactiveSearchResult(r, serializer));
   }
 
@@ -387,7 +390,7 @@ public class ReactiveCluster {
     notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, coreQuery));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return asyncCluster.searchOps.searchQueryReactive(indexName, coreQuery, opts)
+    return reactor.publishOnUserScheduler(asyncCluster.searchOps.searchQueryReactive(indexName, coreQuery, opts))
             .map(result -> new ReactiveSearchResult(result, serializer));
   }
 
@@ -450,7 +453,7 @@ public class ReactiveCluster {
    * @return the {@link DiagnosticsResult} once complete.
    */
   public Mono<DiagnosticsResult> diagnostics(final DiagnosticsOptions options) {
-    return Mono.defer(() -> Mono.fromFuture(asyncCluster.diagnostics(options)));
+    return reactor.publishOnUserScheduler(Mono.defer(() -> Mono.fromFuture(asyncCluster.diagnostics(options))));
   }
 
   /**
@@ -477,7 +480,7 @@ public class ReactiveCluster {
    * @return the {@link PingResult} once complete.
    */
   public Mono<PingResult> ping(final PingOptions options) {
-    return Mono.defer(() -> Mono.fromFuture(asyncCluster.ping(options)));
+    return reactor.publishOnUserScheduler(Mono.defer(() -> Mono.fromFuture(asyncCluster.ping(options))));
   }
 
   /**
@@ -506,7 +509,7 @@ public class ReactiveCluster {
    * @return a mono that completes either once ready or timeout.
    */
   public Mono<Void> waitUntilReady(final Duration timeout, final WaitUntilReadyOptions options) {
-    return Mono.defer(() -> Mono.fromFuture(asyncCluster.waitUntilReady(timeout, options)));
+    return reactor.publishOnUserScheduler(Mono.defer(() -> Mono.fromFuture(asyncCluster.waitUntilReady(timeout, options))));
   }
 
   /**

@@ -334,14 +334,14 @@ public class Cluster implements Closeable {
    * The user manager allows to manage users and groups.
    */
   public UserManager users() {
-    return new UserManager(asyncCluster.users());
+    return new UserManager(environment(), asyncCluster.users());
   }
 
   /**
    * The bucket manager allows to perform administrative tasks on buckets and their resources.
    */
   public BucketManager buckets() {
-    return new BucketManager(asyncCluster.buckets());
+    return new BucketManager(environment(), asyncCluster.buckets());
   }
 
   /**
@@ -355,7 +355,7 @@ public class Cluster implements Closeable {
    * The query index manager allows to modify and create indexes for the query service.
    */
   public QueryIndexManager queryIndexes() {
-    return new QueryIndexManager(asyncCluster.queryIndexes());
+    return new QueryIndexManager(environment(), asyncCluster.queryIndexes());
   }
 
   /**

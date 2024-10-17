@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.transactions;
 
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
@@ -36,14 +37,13 @@ import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
 import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
 import reactor.core.publisher.Mono;
 
-import java.util.Objects;
-
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_INSERT;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REMOVE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REPLACE;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.transactions.internal.ConverterUtil.makeCollectionIdentifier;
 import static com.couchbase.client.java.transactions.internal.EncodingUtil.encode;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents, as well
@@ -52,10 +52,12 @@ import static com.couchbase.client.java.transactions.internal.EncodingUtil.encod
 public class ReactiveTransactionAttemptContext {
     private final CoreTransactionAttemptContext internal;
     private final JsonSerializer serializer;
+    private final ReactorOps reactor;
 
-    ReactiveTransactionAttemptContext(CoreTransactionAttemptContext internal, JsonSerializer serializer) {
-        this.internal = Objects.requireNonNull(internal);
-        this.serializer = Objects.requireNonNull(serializer);
+    ReactiveTransactionAttemptContext(ReactorOps reactor, CoreTransactionAttemptContext internal, JsonSerializer serializer) {
+        this.reactor = requireNonNull(reactor);
+        this.internal = requireNonNull(internal);
+        this.serializer = requireNonNull(serializer);
     }
 
     @Stability.Internal
@@ -88,8 +90,10 @@ public class ReactiveTransactionAttemptContext {
      */
     public Mono<TransactionGetResult> get(ReactiveCollection collection, String id, TransactionGetOptions options) {
         TransactionGetOptions.Built built = options.build();
-        return internal.get(makeCollectionIdentifier(collection.async()), id)
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()));
+        return reactor.publishOnUserScheduler(
+            internal.get(makeCollectionIdentifier(collection.async()), id)
+                .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+        );
     }
 
     /**
@@ -125,8 +129,10 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetResult> getReplicaFromPreferredServerGroup(ReactiveCollection collection, String id, TransactionGetReplicaFromPreferredServerGroupOptions options) {
         notNull(options, "Options");
         TransactionGetReplicaFromPreferredServerGroupOptions.Built built = options.build();
-        return internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id)
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()));
+        return reactor.publishOnUserScheduler(
+            internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id)
+                .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+        );
     }
 
     /**
@@ -156,10 +162,12 @@ public class ReactiveTransactionAttemptContext {
         span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
 
-        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), new SpanWrapper(span))
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-            .doOnTerminate(() -> span.end());
+        return reactor.publishOnUserScheduler(
+            internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+                .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(() -> span.end())
+        );
     }
 
     private JsonSerializer serializer() {
@@ -192,10 +200,12 @@ public class ReactiveTransactionAttemptContext {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
         span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
-        return internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), new SpanWrapper(span))
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-            .doOnTerminate(() -> span.end());
+        return reactor.publishOnUserScheduler(
+            internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+                .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(() -> span.end())
+        );
     }
 
     /**
@@ -206,9 +216,11 @@ public class ReactiveTransactionAttemptContext {
     public Mono<Void> remove(TransactionGetResult doc) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
         span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE);
-        return internal.remove(doc.internal(), new SpanWrapper(span))
+        return reactor.publishOnUserScheduler(
+            internal.remove(doc.internal(), new SpanWrapper(span))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(() -> span.end());
+                .doOnTerminate(() -> span.end())
+        );
     }
 
     @SuppressWarnings("unused")
@@ -272,10 +284,12 @@ public class ReactiveTransactionAttemptContext {
                                               final String statement,
                                               final TransactionQueryOptions options) {
         CoreQueryOptions opts = options != null ? options.builder().build() : null;
-        return internal.queryBlocking(statement,
-                        scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
-                        opts,
-                        false)
-                .map(response -> new TransactionQueryResult(response, serializer()));
+        return reactor.publishOnUserScheduler(
+            internal.queryBlocking(statement,
+                    scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
+                    opts,
+                    false)
+                .map(response -> new TransactionQueryResult(response, serializer()))
+        );
     }
 }

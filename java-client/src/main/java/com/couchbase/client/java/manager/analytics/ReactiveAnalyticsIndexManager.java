@@ -29,6 +29,7 @@ import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.LinkExistsException;
 import com.couchbase.client.core.error.LinkNotFoundException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.ReactiveCluster;
 import com.couchbase.client.java.manager.analytics.link.AnalyticsLink;
@@ -40,7 +41,6 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 import static com.couchbase.client.core.Reactor.toFlux;
-import static com.couchbase.client.core.Reactor.toMono;
 
 /**
  * Performs management operations on analytics indexes.
@@ -48,6 +48,7 @@ import static com.couchbase.client.core.Reactor.toMono;
 public class ReactiveAnalyticsIndexManager {
 
   private final AsyncAnalyticsIndexManager async;
+  private final ReactorOps reactor;
 
   /**
    * Creates a new {@link ReactiveAnalyticsIndexManager}.
@@ -58,7 +59,10 @@ public class ReactiveAnalyticsIndexManager {
    * @param cluster the async cluster to perform the analytics queries on.
    */
   @Stability.Internal
-  public ReactiveAnalyticsIndexManager(final AsyncCluster cluster) {
+  public ReactiveAnalyticsIndexManager(
+    final AsyncCluster cluster
+  ) {
+    this.reactor = cluster.environment();
     this.async = new AsyncAnalyticsIndexManager(cluster);
   }
 
@@ -80,7 +84,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createDataverse(final String dataverseName) {
-    return toMono(() -> async.createDataverse(dataverseName));
+    return reactor.publishOnUserScheduler(() -> async.createDataverse(dataverseName));
   }
 
   /**
@@ -93,7 +97,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createDataverse(String dataverseName, CreateDataverseAnalyticsOptions options) {
-    return toMono(() -> async.createDataverse(dataverseName, options));
+    return reactor.publishOnUserScheduler(() -> async.createDataverse(dataverseName, options));
   }
 
   /**
@@ -106,7 +110,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropDataverse(String dataverseName) {
-    return toMono(() -> async.dropDataverse(dataverseName));
+    return reactor.publishOnUserScheduler(() -> async.dropDataverse(dataverseName));
   }
 
   /**
@@ -120,7 +124,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropDataverse(String dataverseName, DropDataverseAnalyticsOptions options) {
-    return toMono(() -> async.dropDataverse(dataverseName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropDataverse(dataverseName, options));
   }
 
   /**
@@ -131,7 +135,7 @@ public class ReactiveAnalyticsIndexManager {
    */
   @Stability.Uncommitted
   public Flux<AnalyticsDataverse> getAllDataverses() {
-    return toFlux(async::getAllDataverses);
+    return reactor.publishOnUserScheduler(toFlux(async::getAllDataverses));
   }
 
   /**
@@ -143,7 +147,7 @@ public class ReactiveAnalyticsIndexManager {
    */
   @Stability.Uncommitted
   public Flux<AnalyticsDataverse> getAllDataverses(GetAllDataversesAnalyticsOptions options) {
-    return toFlux(() -> async.getAllDataverses(options));
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getAllDataverses(options)));
   }
 
   /**
@@ -156,7 +160,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createDataset(String datasetName, String bucketName) {
-    return toMono(() -> async.createDataset(datasetName, bucketName));
+    return reactor.publishOnUserScheduler(() -> async.createDataset(datasetName, bucketName));
   }
 
   /**
@@ -170,7 +174,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createDataset(String datasetName, String bucketName, CreateDatasetAnalyticsOptions options) {
-    return toMono(() -> async.createDataset(datasetName, bucketName, options));
+    return reactor.publishOnUserScheduler(() -> async.createDataset(datasetName, bucketName, options));
   }
 
   /**
@@ -182,7 +186,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropDataset(String datasetName) {
-    return toMono(() -> async.dropDataset(datasetName));
+    return reactor.publishOnUserScheduler(() -> async.dropDataset(datasetName));
   }
 
   /**
@@ -195,7 +199,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropDataset(String datasetName, DropDatasetAnalyticsOptions options) {
-    return toMono(() -> async.dropDataset(datasetName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropDataset(datasetName, options));
   }
 
   /**
@@ -205,7 +209,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsDataset> getAllDatasets() {
-    return toFlux(async::getAllDatasets);
+    return reactor.publishOnUserScheduler(toFlux(async::getAllDatasets));
   }
 
   /**
@@ -216,7 +220,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsDataset> getAllDatasets(GetAllDatasetsAnalyticsOptions options) {
-    return toFlux(() -> async.getAllDatasets(options));
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getAllDatasets(options)));
   }
 
   /**
@@ -232,7 +236,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createIndex(String indexName, String datasetName, Map<String, AnalyticsDataType> fields) {
-    return toMono(() -> async.createIndex(indexName, datasetName, fields));
+    return reactor.publishOnUserScheduler(() -> async.createIndex(indexName, datasetName, fields));
   }
 
   /**
@@ -249,7 +253,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createIndex(String indexName, String datasetName, Map<String, AnalyticsDataType> fields, CreateIndexAnalyticsOptions options) {
-    return toMono(() -> async.createIndex(indexName, datasetName, fields, options));
+    return reactor.publishOnUserScheduler(() -> async.createIndex(indexName, datasetName, fields, options));
   }
 
   /**
@@ -264,7 +268,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropIndex(String indexName, String datasetName) {
-    return toMono(() -> async.dropIndex(indexName, datasetName));
+    return reactor.publishOnUserScheduler(() -> async.dropIndex(indexName, datasetName));
   }
 
   /**
@@ -280,7 +284,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropIndex(String indexName, String datasetName, DropIndexAnalyticsOptions options) {
-    return toMono(() -> async.dropIndex(indexName, datasetName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropIndex(indexName, datasetName, options));
   }
 
   /**
@@ -290,7 +294,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsIndex> getAllIndexes() {
-    return toFlux(async::getAllIndexes);
+    return reactor.publishOnUserScheduler(toFlux(async::getAllIndexes));
   }
 
   /**
@@ -301,7 +305,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsIndex> getAllIndexes(GetAllIndexesAnalyticsOptions options) {
-    return toFlux(() -> async.getAllIndexes(options));
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getAllIndexes(options)));
   }
 
   /**
@@ -311,7 +315,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> connectLink() {
-    return toMono(async::connectLink);
+    return reactor.publishOnUserScheduler(async::connectLink);
   }
 
   /**
@@ -324,7 +328,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> connectLink(ConnectLinkAnalyticsOptions options) {
-    return toMono(() -> async.connectLink(options));
+    return reactor.publishOnUserScheduler(() -> async.connectLink(options));
   }
 
   /**
@@ -334,7 +338,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> disconnectLink() {
-    return toMono(async::disconnectLink);
+    return reactor.publishOnUserScheduler(async::disconnectLink);
   }
 
   /**
@@ -347,7 +351,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> disconnectLink(DisconnectLinkAnalyticsOptions options) {
-    return toMono(() -> async.disconnectLink(options));
+    return reactor.publishOnUserScheduler(() -> async.disconnectLink(options));
   }
 
   /**
@@ -357,7 +361,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Map<String, Map<String, Long>>> getPendingMutations() {
-    return toMono(async::getPendingMutations);
+    return reactor.publishOnUserScheduler(async::getPendingMutations);
   }
 
   /**
@@ -368,7 +372,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Map<String, Map<String, Long>>> getPendingMutations(final GetPendingMutationsAnalyticsOptions options) {
-    return toMono(() -> async.getPendingMutations(options));
+    return reactor.publishOnUserScheduler(() -> async.getPendingMutations(options));
   }
 
   /**
@@ -382,7 +386,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createLink(AnalyticsLink link) {
-    return toMono(() -> async.createLink(link));
+    return reactor.publishOnUserScheduler(() -> async.createLink(link));
   }
 
   /**
@@ -397,7 +401,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createLink(AnalyticsLink link, CreateLinkAnalyticsOptions options) {
-    return toMono(() -> async.createLink(link, options));
+    return reactor.publishOnUserScheduler(() -> async.createLink(link, options));
   }
 
   /**
@@ -411,7 +415,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> replaceLink(AnalyticsLink link) {
-    return toMono(() -> async.replaceLink(link));
+    return reactor.publishOnUserScheduler(() -> async.replaceLink(link));
   }
 
   /**
@@ -426,7 +430,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> replaceLink(AnalyticsLink link, ReplaceLinkAnalyticsOptions options) {
-    return toMono(() -> async.replaceLink(link, options));
+    return reactor.publishOnUserScheduler(() -> async.replaceLink(link, options));
   }
 
   /**
@@ -440,7 +444,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropLink(String linkName, String dataverse) {
-    return toMono(() -> async.dropLink(linkName, dataverse));
+    return reactor.publishOnUserScheduler(() -> async.dropLink(linkName, dataverse));
   }
 
   /**
@@ -455,7 +459,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropLink(String linkName, String dataverse, DropLinkAnalyticsOptions options) {
-    return toMono(() -> async.dropLink(linkName, dataverse, options));
+    return reactor.publishOnUserScheduler(() -> async.dropLink(linkName, dataverse, options));
   }
 
   /**
@@ -472,7 +476,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsLink> getLinks() {
-    return toFlux(async::getLinks);
+    return reactor.publishOnUserScheduler(toFlux(async::getLinks));
   }
 
   /**
@@ -490,7 +494,7 @@ public class ReactiveAnalyticsIndexManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<AnalyticsLink> getLinks(GetLinksAnalyticsOptions options) {
-    return toFlux(() -> async.getLinks(options));
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getLinks(options)));
   }
 
 }

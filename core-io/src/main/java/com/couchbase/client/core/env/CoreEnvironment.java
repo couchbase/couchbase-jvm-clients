@@ -42,6 +42,8 @@ import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
+import com.couchbase.client.core.util.ReactorOps;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
@@ -64,6 +66,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
@@ -76,7 +79,7 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
  * Note that unless you are using the core directly, you want to consider the child implementations for each
  * language binding (i.e. the ClusterEnvironment for the java client).
  */
-public class CoreEnvironment implements AutoCloseable {
+public class CoreEnvironment implements ReactorOps, AutoCloseable {
   private static final VersionAndGitHash coreVersion = VersionAndGitHash.from(Core.class);
 
   private static final String CORE_AGENT_TITLE = "java-core";
@@ -113,6 +116,7 @@ public class CoreEnvironment implements AutoCloseable {
   private final RetryStrategy retryStrategy;
   private final OwnedOrExternal<Scheduler> scheduler;
   private final OwnedOrExternal<Executor> executor;
+  @Nullable private final Supplier<Scheduler> userScheduler;
   private final int schedulerThreadCount;
   private final OrphanReporter orphanReporter;
   private final long maxNumRequestsInRetry;
@@ -140,6 +144,7 @@ public class CoreEnvironment implements AutoCloseable {
       .orElse(owned(
         Schedulers.newParallel("cb-comp", schedulerThreadCount, true))
       );
+    this.userScheduler = builder.userScheduler;
 
     // JVMCBC-1196: configuration options for the executor will be provided.
     String executorMaxThreadCountRaw = System.getProperty("com.couchbase.protostellar.executorMaxThreadCount");
@@ -352,6 +357,26 @@ public class CoreEnvironment implements AutoCloseable {
    */
   public Scheduler scheduler() {
     return scheduler.get();
+  }
+
+  /**
+   * Returns the supplier for the scheduler where Reactive API results should be published,
+   * or null if the user does not want to switch schedulers.
+   */
+  @Stability.Internal
+  @Nullable
+  public Supplier<Scheduler> userScheduler() {
+    return userScheduler;
+  }
+
+  @Stability.Internal
+  public <T> Mono<T> publishOnUserScheduler(Mono<T> mono) {
+    return userScheduler == null ? mono : Mono.defer(() -> mono.publishOn(userScheduler.get()));
+  }
+
+  @Stability.Internal
+  public <T> Flux<T> publishOnUserScheduler(Flux<T> flux) {
+    return userScheduler == null ? flux : Flux.defer(() -> flux.publishOn(userScheduler.get()));
   }
 
   /**
@@ -597,6 +622,7 @@ public class CoreEnvironment implements AutoCloseable {
     private LoggingMeterConfig.Builder loggingMeterConfig = new LoggingMeterConfig.Builder();
     private OwnedOrExternal<EventBus> eventBus = null;
     private OwnedOrExternal<Scheduler> scheduler = null;
+    private Supplier<Scheduler> userScheduler = null;
     private int schedulerThreadCount = Schedulers.DEFAULT_POOL_SIZE;
     private OwnedOrExternal<RequestTracer> requestTracer = null;
     private OwnedOrExternal<Meter> meter = null;
@@ -900,6 +926,22 @@ public class CoreEnvironment implements AutoCloseable {
     @Deprecated
     public SELF thresholdLoggingTracerConfig(final ThresholdLoggingTracerConfig.Builder thresholdLoggingTracerConfig) {
       this.thresholdLoggingTracerConfig = notNull(thresholdLoggingTracerConfig, "ThresholdLoggingTracerConfig");
+      return self();
+    }
+
+    /**
+     * Specifies the supplier the SDK uses to get the Scheduler for publishing Reactive API results.
+     * <p>
+     * Defaults to null, which means reactive results are published immediately
+     * in a thread owned by the SDK -- typically the SDK's Netty event loop.
+     * <p>
+     * The supplier is invoked once for every subscription, by the same thread that subscribes to the Mono/Flux.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Volatile
+    public SELF publishOnScheduler(@Nullable final Supplier<Scheduler> publishOnScheduler) {
+      this.userScheduler = publishOnScheduler;
       return self();
     }
 

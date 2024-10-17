@@ -16,6 +16,8 @@
 
 package com.couchbase.client.java.manager.user;
 
+import com.couchbase.client.core.util.ReactorOps;
+
 import java.util.List;
 
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -24,8 +26,10 @@ import static java.util.Objects.requireNonNull;
 public class UserManager {
 
   private final AsyncUserManager async;
+  private final ReactorOps reactor;
 
-  public UserManager(AsyncUserManager async) {
+  public UserManager(ReactorOps reactor, AsyncUserManager async) {
+    this.reactor = requireNonNull(reactor);
     this.async = requireNonNull(async);
   }
 
@@ -34,7 +38,7 @@ public class UserManager {
   }
 
   public ReactiveUserManager reactive() {
-    return new ReactiveUserManager(async);
+    return new ReactiveUserManager(reactor, async);
   }
 
   public UserAndMetadata getUser(AuthDomain domain, String username) {

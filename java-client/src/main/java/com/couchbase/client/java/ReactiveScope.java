@@ -27,6 +27,7 @@ import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
@@ -67,6 +68,8 @@ public class ReactiveScope {
    */
   private final AsyncScope asyncScope;
 
+  private final ReactorOps reactor;
+
   /**
    * Stores already opened collections for reuse.
    */
@@ -78,6 +81,7 @@ public class ReactiveScope {
    * @param asyncScope the underlying async scope.
    */
   ReactiveScope(final AsyncScope asyncScope) {
+    this.reactor = asyncScope.environment();
     this.asyncScope = asyncScope;
   }
 
@@ -164,7 +168,7 @@ public class ReactiveScope {
     notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return async().queryOps.queryReactive(statement, opts, asyncScope.queryContext, null, QueryAccessor::convertCoreQueryError)
+    return reactor.publishOnUserScheduler(async().queryOps.queryReactive(statement, opts, asyncScope.queryContext, null, QueryAccessor::convertCoreQueryError))
       .map(result -> new ReactiveQueryResult(result, serializer));
   }
 
@@ -190,13 +194,13 @@ public class ReactiveScope {
     notNull(options, "AnalyticsOptions", () -> new ReducedAnalyticsErrorContext(statement));
     AnalyticsOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return Mono.defer(() -> {
+    return reactor.publishOnUserScheduler(Mono.defer(() -> {
       return AnalyticsAccessor.analyticsQueryReactive(
           asyncScope.core(),
           asyncScope.analyticsRequest(statement, opts),
           serializer
       );
-    });
+    }));
   }
 
   /**
@@ -235,7 +239,7 @@ public class ReactiveScope {
     CoreSearchRequest coreRequest = searchRequest.toCore();
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return asyncScope.searchOps.searchReactive(indexName, coreRequest, opts)
+    return reactor.publishOnUserScheduler(asyncScope.searchOps.searchReactive(indexName, coreRequest, opts))
       .map(r -> new ReactiveSearchResult(r, serializer));
   }
 
@@ -272,7 +276,7 @@ public class ReactiveScope {
     notNull(options, "SearchOptions", () -> new ReducedSearchErrorContext(indexName, coreQuery));
     SearchOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
-    return asyncScope.searchOps.searchQueryReactive(indexName, coreQuery, opts)
+    return reactor.publishOnUserScheduler(asyncScope.searchOps.searchQueryReactive(indexName, coreQuery, opts))
             .map(result -> new ReactiveSearchResult(result, serializer));
   }
 
@@ -282,6 +286,6 @@ public class ReactiveScope {
   @Stability.Volatile
   @SinceCouchbase("7.1")
   public ReactiveScopeEventingFunctionManager eventingFunctions() {
-    return new ReactiveScopeEventingFunctionManager(asyncScope.eventingFunctions());
+    return new ReactiveScopeEventingFunctionManager(environment(), asyncScope.eventingFunctions());
   }
 }

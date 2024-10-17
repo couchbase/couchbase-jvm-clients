@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.Cluster;
 
 import java.time.Duration;
@@ -54,9 +55,9 @@ public class QueryIndexManager {
    * @param async the async index manager.
    */
   @Stability.Internal
-  public QueryIndexManager(final AsyncQueryIndexManager async) {
+  public QueryIndexManager(final ReactorOps reactor, final AsyncQueryIndexManager async) {
     this.async = requireNonNull(async);
-    this.reactive = new ReactiveQueryIndexManager(async);
+    this.reactive = new ReactiveQueryIndexManager(reactor, async);
   }
 
   /**

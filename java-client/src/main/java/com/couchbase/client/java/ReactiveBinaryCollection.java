@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import static com.couchbase.client.core.util.ReactorOps.proxyToPublishOnSuppliedScheduler;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.BinaryCollection.DEFAULT_APPEND_OPTIONS;
 import static com.couchbase.client.java.BinaryCollection.DEFAULT_DECREMENT_OPTIONS;
@@ -25,9 +26,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
+import com.couchbase.client.java.env.ClusterEnvironment;
 import reactor.core.publisher.Mono;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -53,9 +54,13 @@ public class ReactiveBinaryCollection {
   @PreventsGarbageCollection
   private final AsyncBinaryCollection async;
 
-  ReactiveBinaryCollection(final AsyncBinaryCollection async) {
+  ReactiveBinaryCollection(final AsyncBinaryCollection async, final ClusterEnvironment env) {
     this.collectionIdentifier = async.collectionIdentifier();
-    this.coreKvBinaryOps = async.coreKvBinaryOps;
+    this.coreKvBinaryOps = proxyToPublishOnSuppliedScheduler(
+      async.coreKvBinaryOps,
+      CoreKvBinaryOps.class,
+      env.userScheduler()
+    );
     this.async = requireNonNull(async);
   }
 

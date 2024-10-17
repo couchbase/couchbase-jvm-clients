@@ -166,7 +166,7 @@ public class ReactiveBatchHelper {
       responses.add(Reactor.wrap(request, request.response(), true));
     }
 
-    return Flux
+    return env.publishOnUserScheduler(Flux
       .merge(responses)
       .flatMap(response -> Flux.fromIterable(response.observed().keySet()))
       .onErrorMap(throwable -> {
@@ -176,7 +176,7 @@ public class ReactiveBatchHelper {
       .doOnComplete(() -> core.context().environment().eventBus().publish(new BatchHelperExistsCompletedEvent(
           Duration.ofNanos(System.nanoTime() - start),
           new BatchErrorContext(Collections.unmodifiableList(requests))
-      )));
+      ))));
   }
 
 }

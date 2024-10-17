@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.eventing;
 
-import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
@@ -27,11 +26,13 @@ import com.couchbase.client.core.error.EventingFunctionIdenticalKeyspaceExceptio
 import com.couchbase.client.core.error.EventingFunctionNotBootstrappedException;
 import com.couchbase.client.core.error.EventingFunctionNotDeployedException;
 import com.couchbase.client.core.error.EventingFunctionNotFoundException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.ReactiveCluster;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import static com.couchbase.client.java.manager.eventing.GetAllFunctionsOptions.getAllFunctionsOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs management operations on {@link EventingFunction EventingFunctions}.
@@ -43,6 +44,7 @@ public class ReactiveScopeEventingFunctionManager {
    * The underlying async function manager which performs the actual ops and does the conversions.
    */
   private final AsyncScopeEventingFunctionManager asyncManager;
+  private final ReactorOps reactor;
 
   /**
    * Creates a new {@link ReactiveScopeEventingFunctionManager}.
@@ -53,8 +55,9 @@ public class ReactiveScopeEventingFunctionManager {
    * @param asyncManager the underlying async manager that performs the ops.
    */
   @Stability.Internal
-  public ReactiveScopeEventingFunctionManager(AsyncScopeEventingFunctionManager asyncManager) {
-    this.asyncManager = asyncManager;
+  public ReactiveScopeEventingFunctionManager(ReactorOps reactor, AsyncScopeEventingFunctionManager asyncManager) {
+    this.reactor = requireNonNull(reactor);
+    this.asyncManager = requireNonNull(asyncManager);
   }
 
   /**
@@ -99,7 +102,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> upsertFunction(final EventingFunction function, final UpsertFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.upsertFunction(function, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.upsertFunction(function, options));
   }
 
   /**
@@ -124,7 +127,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<EventingFunction> getFunction(final String name, final GetFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.getFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.getFunction(name, options));
   }
 
   /**
@@ -149,7 +152,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<EventingFunction> getAllFunctions(final GetAllFunctionsOptions options) {
-    return Reactor.toMono(() -> asyncManager.getAllFunctions(options)).flatMapMany(Flux::fromIterable);
+    return reactor.publishOnUserScheduler(() -> asyncManager.getAllFunctions(options)).flatMapMany(Flux::fromIterable);
   }
 
   /**
@@ -186,7 +189,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropFunction(final String name, final DropFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.dropFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.dropFunction(name, options));
   }
 
   /**
@@ -219,7 +222,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> deployFunction(final String name, final DeployFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.deployFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.deployFunction(name, options));
   }
 
   /**
@@ -260,7 +263,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> undeployFunction(final String name, final UndeployFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.undeployFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.undeployFunction(name, options));
   }
 
   /**
@@ -293,7 +296,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> pauseFunction(final String name, final PauseFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.pauseFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.pauseFunction(name, options));
   }
 
   /**
@@ -334,7 +337,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> resumeFunction(final String name, final ResumeFunctionOptions options) {
-    return Reactor.toMono(() -> asyncManager.resumeFunction(name, options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.resumeFunction(name, options));
   }
 
   /**
@@ -355,7 +358,7 @@ public class ReactiveScopeEventingFunctionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<EventingStatus> functionsStatus(final FunctionsStatusOptions options) {
-    return Reactor.toMono(() -> asyncManager.functionsStatus(options));
+    return reactor.publishOnUserScheduler(() -> asyncManager.functionsStatus(options));
   }
 
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.java.http;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.ReactiveCluster;
 import reactor.core.publisher.Mono;
 
@@ -32,10 +33,12 @@ import static java.util.Objects.requireNonNull;
  * @see AsyncCouchbaseHttpClient
  */
 public class ReactiveCouchbaseHttpClient {
+  private final ReactorOps reactor;
   private final AsyncCouchbaseHttpClient async;
 
   @Stability.Internal
-  public ReactiveCouchbaseHttpClient(AsyncCouchbaseHttpClient async) {
+  public ReactiveCouchbaseHttpClient(ReactorOps reactor, AsyncCouchbaseHttpClient async) {
+    this.reactor = requireNonNull(reactor);
     this.async = requireNonNull(async);
   }
 
@@ -46,7 +49,7 @@ public class ReactiveCouchbaseHttpClient {
    * or include the query string in the path.
    */
   public Mono<HttpResponse> get(HttpTarget target, HttpPath path) {
-    return toMono(() -> async.get(target, path));
+    return reactor.publishOnUserScheduler(() -> async.get(target, path));
   }
 
   /**
@@ -59,7 +62,7 @@ public class ReactiveCouchbaseHttpClient {
    * </pre>
    */
   public Mono<HttpResponse> get(HttpTarget target, HttpPath path, HttpGetOptions options) {
-    return toMono(() -> async.get(target, path, options));
+    return reactor.publishOnUserScheduler(() -> async.get(target, path, options));
   }
 
   /**
@@ -68,7 +71,7 @@ public class ReactiveCouchbaseHttpClient {
    * To specify a request body, use the overload that takes {@link HttpPostOptions}.
    */
   public Mono<HttpResponse> post(HttpTarget target, HttpPath path) {
-    return toMono(() -> async.post(target, path));
+    return reactor.publishOnUserScheduler(() -> async.post(target, path));
   }
 
   /**
@@ -86,7 +89,7 @@ public class ReactiveCouchbaseHttpClient {
    * </pre>
    */
   public Mono<HttpResponse> post(HttpTarget target, HttpPath path, HttpPostOptions options) {
-    return toMono(() -> async.post(target, path, options));
+    return reactor.publishOnUserScheduler(() -> async.post(target, path, options));
   }
 
   /**
@@ -95,7 +98,7 @@ public class ReactiveCouchbaseHttpClient {
    * To specify a request body, use the overload that takes {@link HttpPutOptions}.
    */
   public Mono<HttpResponse> put(HttpTarget target, HttpPath path) {
-    return toMono(() -> async.put(target, path));
+    return reactor.publishOnUserScheduler(() -> async.put(target, path));
   }
 
   /**
@@ -113,20 +116,20 @@ public class ReactiveCouchbaseHttpClient {
    * </pre>
    */
   public Mono<HttpResponse> put(HttpTarget target, HttpPath path, HttpPutOptions options) {
-    return toMono(() -> async.put(target, path, options));
+    return reactor.publishOnUserScheduler(() -> async.put(target, path, options));
   }
 
   /**
    * Returns a Mono that, when subscribed, issues a DELETE request with default options.
    */
   public Mono<HttpResponse> delete(HttpTarget target, HttpPath path) {
-    return toMono(() -> async.delete(target, path));
+    return reactor.publishOnUserScheduler(() -> async.delete(target, path));
   }
 
   /**
    * Returns a Mono that, when subscribed, issues a DELETE request with given options.
    */
   public Mono<HttpResponse> delete(HttpTarget target, HttpPath path, HttpDeleteOptions options) {
-    return toMono(() -> async.delete(target, path, options));
+    return reactor.publishOnUserScheduler(() -> async.delete(target, path, options));
   }
 }

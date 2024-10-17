@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.ReactiveCluster;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -29,7 +30,6 @@ import java.time.Duration;
 import java.util.Collection;
 
 import static com.couchbase.client.core.Reactor.toFlux;
-import static com.couchbase.client.core.Reactor.toMono;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -42,6 +42,7 @@ public class ReactiveCollectionQueryIndexManager {
    * The underlying async query index manager which performs the actual ops and does the conversions.
    */
   private final AsyncCollectionQueryIndexManager async;
+  private final ReactorOps reactor;
 
   /**
    * Creates a new {@link ReactiveCollectionQueryIndexManager}.
@@ -52,7 +53,8 @@ public class ReactiveCollectionQueryIndexManager {
    * @param async the async index manager.
    */
   @Stability.Internal
-  public ReactiveCollectionQueryIndexManager(final AsyncCollectionQueryIndexManager async) {
+  public ReactiveCollectionQueryIndexManager(final ReactorOps reactor, final AsyncCollectionQueryIndexManager async) {
+    this.reactor = requireNonNull(reactor);
     this.async = requireNonNull(async);
   }
 
@@ -66,7 +68,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createIndex(final String indexName, final Collection<String> fields) {
-    return toMono(() -> async.createIndex(indexName, fields));
+    return reactor.publishOnUserScheduler(() -> async.createIndex(indexName, fields));
   }
 
   /**
@@ -81,7 +83,7 @@ public class ReactiveCollectionQueryIndexManager {
    */
   public Mono<Void> createIndex(final String indexName, final Collection<String> fields,
                                 final CreateQueryIndexOptions options) {
-    return toMono(() -> async.createIndex(indexName, fields, options));
+    return reactor.publishOnUserScheduler(() -> async.createIndex(indexName, fields, options));
   }
 
   /**
@@ -92,7 +94,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createPrimaryIndex() {
-    return toMono(() -> async.createPrimaryIndex());
+    return reactor.publishOnUserScheduler(() -> async.createPrimaryIndex());
   }
 
   /**
@@ -104,7 +106,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createPrimaryIndex(final CreatePrimaryQueryIndexOptions options) {
-    return toMono(() -> async.createPrimaryIndex(options));
+    return reactor.publishOnUserScheduler(() -> async.createPrimaryIndex(options));
   }
 
   /**
@@ -114,7 +116,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Flux<QueryIndex> getAllIndexes() {
-    return toFlux(() -> async.getAllIndexes());
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getAllIndexes()));
   }
 
   /**
@@ -125,7 +127,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Flux<QueryIndex> getAllIndexes(final GetAllQueryIndexesOptions options) {
-    return toFlux(() -> async.getAllIndexes(options));
+    return reactor.publishOnUserScheduler(toFlux(() -> async.getAllIndexes(options)));
   }
 
   /**
@@ -136,7 +138,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropPrimaryIndex() {
-    return toMono(() -> async.dropPrimaryIndex());
+    return reactor.publishOnUserScheduler(() -> async.dropPrimaryIndex());
   }
 
   /**
@@ -147,7 +149,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropPrimaryIndex(final DropPrimaryQueryIndexOptions options) {
-    return toMono(() -> async.dropPrimaryIndex(options));
+    return reactor.publishOnUserScheduler(() -> async.dropPrimaryIndex(options));
   }
 
   /**
@@ -159,7 +161,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropIndex(final String indexName) {
-    return toMono(() -> async.dropIndex(indexName));
+    return reactor.publishOnUserScheduler(() -> async.dropIndex(indexName));
   }
 
   /**
@@ -172,7 +174,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropIndex(final String indexName, final DropQueryIndexOptions options) {
-    return toMono(() -> async.dropIndex(indexName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropIndex(indexName, options));
   }
 
   /**
@@ -181,7 +183,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> buildDeferredIndexes() {
-    return toMono(() -> async.buildDeferredIndexes());
+    return reactor.publishOnUserScheduler(() -> async.buildDeferredIndexes());
   }
 
   /**
@@ -191,7 +193,7 @@ public class ReactiveCollectionQueryIndexManager {
    * @throws CouchbaseException if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> buildDeferredIndexes(final BuildQueryIndexOptions options) {
-    return toMono(() -> async.buildDeferredIndexes(options));
+    return reactor.publishOnUserScheduler(() -> async.buildDeferredIndexes(options));
   }
 
   /**
@@ -203,7 +205,7 @@ public class ReactiveCollectionQueryIndexManager {
    */
   public Mono<Void> watchIndexes(final Collection<String> indexNames,
                                  final Duration timeout) {
-    return toMono(() -> async.watchIndexes(indexNames, timeout));
+    return reactor.publishOnUserScheduler(() -> async.watchIndexes(indexNames, timeout));
   }
 
   /**
@@ -216,6 +218,6 @@ public class ReactiveCollectionQueryIndexManager {
    */
   public Mono<Void> watchIndexes(final Collection<String> indexNames, final Duration timeout,
                                  final WatchQueryIndexesOptions options) {
-    return toMono(() -> async.watchIndexes(indexNames, timeout, options));
+    return reactor.publishOnUserScheduler(() -> async.watchIndexes(indexNames, timeout, options));
   }
 }

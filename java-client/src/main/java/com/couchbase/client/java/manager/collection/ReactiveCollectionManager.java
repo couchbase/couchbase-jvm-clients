@@ -22,19 +22,20 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ScopeExistsException;
 import com.couchbase.client.core.error.ScopeNotFoundException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.ReactiveBucket;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.Reactor.toMono;
 import static com.couchbase.client.java.manager.collection.CreateCollectionOptions.createCollectionOptions;
 import static com.couchbase.client.java.manager.collection.CreateScopeOptions.createScopeOptions;
 import static com.couchbase.client.java.manager.collection.DropCollectionOptions.dropCollectionOptions;
 import static com.couchbase.client.java.manager.collection.DropScopeOptions.dropScopeOptions;
 import static com.couchbase.client.java.manager.collection.GetAllScopesOptions.getAllScopesOptions;
 import static com.couchbase.client.java.manager.collection.GetScopeOptions.getScopeOptions;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The {@link ReactiveCollectionManager} provides APIs to manage collections and scopes within a bucket.
@@ -46,6 +47,7 @@ public class ReactiveCollectionManager {
    * The underlying async collection manager.
    */
   private final AsyncCollectionManager async;
+  private final ReactorOps reactor;
 
   /**
    * Creates a new {@link ReactiveCollectionManager}.
@@ -56,8 +58,9 @@ public class ReactiveCollectionManager {
    * @param async the underlying async collection manager.
    */
   @Stability.Internal
-  public ReactiveCollectionManager(final AsyncCollectionManager async) {
-    this.async = async;
+  public ReactiveCollectionManager(final ReactorOps reactor, final AsyncCollectionManager async) {
+    this.reactor = requireNonNull(reactor);
+    this.async = requireNonNull(async);
   }
 
   /**
@@ -94,7 +97,7 @@ public class ReactiveCollectionManager {
    */
   @Deprecated
   public Mono<Void> createCollection(final CollectionSpec collectionSpec, final CreateCollectionOptions options) {
-    return toMono(() -> async.createCollection(collectionSpec, options));
+    return reactor.publishOnUserScheduler(() -> async.createCollection(collectionSpec, options));
   }
 
   /**
@@ -112,7 +115,7 @@ public class ReactiveCollectionManager {
    */
   @Stability.Volatile
   public Mono<Void> createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings) {
-    return toMono(() -> async.createCollection(scopeName, collectionName, settings));
+    return reactor.publishOnUserScheduler(() -> async.createCollection(scopeName, collectionName, settings));
   }
 
   /**
@@ -131,7 +134,7 @@ public class ReactiveCollectionManager {
    */
   @Stability.Volatile
   public Mono<Void> createCollection(final String scopeName, final String collectionName, final CreateCollectionSettings settings, final CreateCollectionOptions options) {
-    return toMono(() -> async.createCollection(scopeName, collectionName, settings, options));
+    return reactor.publishOnUserScheduler(() -> async.createCollection(scopeName, collectionName, settings, options));
   }
 
   /**
@@ -156,7 +159,7 @@ public class ReactiveCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> createScope(final String scopeName, final CreateScopeOptions options) {
-    return toMono(() -> async.createScope(scopeName, options));
+    return reactor.publishOnUserScheduler(() -> async.createScope(scopeName, options));
   }
 
   /**
@@ -172,7 +175,7 @@ public class ReactiveCollectionManager {
    */
   @Stability.Volatile
   public Mono<Void> updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings) {
-    return toMono(() -> async.updateCollection(scopeName, collectionName, settings));
+    return reactor.publishOnUserScheduler(() -> async.updateCollection(scopeName, collectionName, settings));
   }
 
   /**
@@ -189,7 +192,7 @@ public class ReactiveCollectionManager {
    */
   @Stability.Volatile
   public Mono<Void> updateCollection(String scopeName, String collectionName, UpdateCollectionSettings settings, UpdateCollectionOptions options) {
-    return toMono(() -> async.updateCollection(scopeName, collectionName, settings, options));
+    return reactor.publishOnUserScheduler(() -> async.updateCollection(scopeName, collectionName, settings, options));
   }
 
   /**
@@ -220,7 +223,7 @@ public class ReactiveCollectionManager {
    */
   @Deprecated
   public Mono<Void> dropCollection(final CollectionSpec collectionSpec, final DropCollectionOptions options) {
-    return toMono(() -> async.dropCollection(collectionSpec, options));
+    return reactor.publishOnUserScheduler(() -> async.dropCollection(collectionSpec, options));
   }
 
   /**
@@ -251,7 +254,7 @@ public class ReactiveCollectionManager {
    */
   @Stability.Volatile
   public Mono<Void> dropCollection(final String scopeName, final String collectionName, final DropCollectionOptions options) {
-    return toMono(() -> async.dropCollection(scopeName, collectionName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropCollection(scopeName, collectionName, options));
   }
 
   /**
@@ -276,7 +279,7 @@ public class ReactiveCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Mono<Void> dropScope(final String scopeName, final DropScopeOptions options) {
-    return toMono(() -> async.dropScope(scopeName, options));
+    return reactor.publishOnUserScheduler(() -> async.dropScope(scopeName, options));
   }
 
   /**
@@ -305,7 +308,7 @@ public class ReactiveCollectionManager {
    */
   @Deprecated
   public Mono<ScopeSpec> getScope(final String scopeName, final GetScopeOptions options) {
-    return toMono(() -> async.getScope(scopeName, options));
+    return reactor.publishOnUserScheduler(() -> async.getScope(scopeName, options));
   }
 
   /**
@@ -326,7 +329,7 @@ public class ReactiveCollectionManager {
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    */
   public Flux<ScopeSpec> getAllScopes(final GetAllScopesOptions options) {
-    return toMono(() -> async.getAllScopes(options)).flatMapMany(Flux::fromIterable);
+    return reactor.publishOnUserScheduler(() -> async.getAllScopes(options)).flatMapMany(Flux::fromIterable);
   }
 
 }

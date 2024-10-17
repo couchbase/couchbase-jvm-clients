@@ -17,6 +17,7 @@
 package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.CoreTransactionContext;
@@ -25,7 +26,6 @@ import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
-import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
@@ -48,6 +48,7 @@ import java.util.function.Function;
 public class ReactiveTransactions {
     private final CoreTransactionsReactive internal;
     private final JsonSerializer serializer;
+    private final ReactorOps reactor;
 
     @Stability.Internal
     public ReactiveTransactions(Core core, JsonSerializer serializer) {
@@ -55,6 +56,7 @@ public class ReactiveTransactions {
 
         this.internal = new CoreTransactionsReactive(core, core.context().environment().transactionsConfig());
         this.serializer = Objects.requireNonNull(serializer);
+        this.reactor = core.environment();
     }
 
     /**
@@ -81,9 +83,11 @@ public class ReactiveTransactions {
      */
     public Mono<TransactionResult> run(Function<ReactiveTransactionAttemptContext, Mono<?>> transactionLogic,
                                                @Nullable TransactionOptions options) {
-        return internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(ctx, serializer)), options == null ? null : options.build())
+        return reactor.publishOnUserScheduler(
+            internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(reactor, ctx, serializer)), options == null ? null : options.build())
                 .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
-                .map(TransactionResult::new);
+                .map(TransactionResult::new)
+        );
     }
 
     /**

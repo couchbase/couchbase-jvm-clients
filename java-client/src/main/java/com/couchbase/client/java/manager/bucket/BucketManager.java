@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.Cluster;
 
 import java.util.Map;
@@ -56,9 +57,9 @@ public class BucketManager {
    * @param async the underlying async manager that performs the ops.
    */
   @Stability.Internal
-  public BucketManager(final AsyncBucketManager async) {
+  public BucketManager(final ReactorOps reactor, final AsyncBucketManager async) {
     this.async = requireNonNull(async);
-    this.reactive = new ReactiveBucketManager(async);
+    this.reactive = new ReactiveBucketManager(reactor, async);
   }
 
   /**
