@@ -38,7 +38,11 @@ import java.util.Optional
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
-
+/**
+ * The starting point for accessing Couchbase transactions.
+ *
+ * @see run
+ */
 public class Transactions internal constructor(internal val core: Core) {
     private val internal = CoreTransactionsReactive(core, core.env.transactionsConfig())
 
@@ -73,6 +77,8 @@ public class Transactions internal constructor(internal val core: Core) {
      *
      * @throws TransactionFailedException or a derived exception if the transaction fails to commit for any reason, possibly
      *                           after multiple retries. The exception contains further details of the error
+     *
+     * @sample com.couchbase.client.kotlin.samples.simpleTransactionExample
      */
     public suspend fun <V> run(
         timeout: Duration? = null,

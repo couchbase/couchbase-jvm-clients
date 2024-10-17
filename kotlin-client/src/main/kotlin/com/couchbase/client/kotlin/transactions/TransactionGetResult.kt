@@ -22,6 +22,9 @@ import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.typeRef
 
+/**
+ * A document inside a transaction.
+ */
 public class TransactionGetResult internal constructor(
     internal val internal: CoreTransactionGetResult,
     @property:PublishedApi internal val defaultJsonSerializer: JsonSerializer,

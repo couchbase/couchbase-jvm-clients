@@ -190,6 +190,8 @@ public class Cluster internal constructor(
 
     /**
      * A runner for transactional operations.
+     *
+     * @sample com.couchbase.client.kotlin.samples.simpleTransactionExample
      */
     @VolatileCouchbaseApi
     public val transactions: Transactions
