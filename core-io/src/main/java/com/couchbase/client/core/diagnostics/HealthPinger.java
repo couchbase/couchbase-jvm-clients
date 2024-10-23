@@ -33,7 +33,6 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
 import com.couchbase.client.core.node.NodeIdentifier;
-import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbThrowables;
@@ -157,7 +156,7 @@ public class HealthPinger {
 
         log.message("extractPingTargets: getting ping targets from global config portInfos: " + globalConfig.portInfos());
         for (PortInfo portInfo : globalConfig.portInfos()) {
-          for (ServiceType serviceType : portInfo.ports().keySet()) {
+          for (ServiceType serviceType : advertisedServices(portInfo)) {
             if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
@@ -175,7 +174,7 @@ public class HealthPinger {
         log.message("extractPingTargets: getting targets from bucket config via global config for bucket " + bucketConfig.getKey() + " : " + bucketConfig.getValue());
 
         for (NodeInfo nodeInfo : bucketConfig.getValue().nodes()) {
-          for (ServiceType serviceType : nodeInfo.services().keySet()) {
+          for (ServiceType serviceType : advertisedServices(nodeInfo)) {
             if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
@@ -191,7 +190,7 @@ public class HealthPinger {
       if (bucketConfig != null) {
         log.message("extractPingTargets: Getting targets from bucket config: " + bucketConfig);
         for (NodeInfo nodeInfo : bucketConfig.nodes()) {
-          for (ServiceType serviceType : nodeInfo.services().keySet()) {
+          for (ServiceType serviceType : advertisedServices(nodeInfo)) {
             RequestTarget target;
             if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
               target = new RequestTarget(serviceType, nodeInfo.identifier(), null);
@@ -218,6 +217,22 @@ public class HealthPinger {
     );
 
     return targets;
+  }
+
+  private static Set<ServiceType> advertisedServices(PortInfo info) {
+    Set<ServiceType> result = EnumSet.noneOf(ServiceType.class);
+    // add both because only is populated
+    result.addAll(info.ports().keySet());
+    result.addAll(info.sslPorts().keySet());
+    return result;
+  }
+
+  private static Set<ServiceType> advertisedServices(NodeInfo info) {
+    Set<ServiceType> result = EnumSet.noneOf(ServiceType.class);
+    // add both because only is populated
+    result.addAll(info.services().keySet());
+    result.addAll(info.sslServices().keySet());
+    return result;
   }
 
   private static String format(NodeIdentifier id) {
