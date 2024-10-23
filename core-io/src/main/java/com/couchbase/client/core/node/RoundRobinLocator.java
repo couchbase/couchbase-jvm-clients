@@ -18,9 +18,7 @@ package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.node.NodeLocatorBugIdentifiedEvent;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.ServiceNotAvailableException;
@@ -140,21 +138,14 @@ public class RoundRobinLocator implements Locator {
   private boolean serviceShowsUpInConfig(final ClusterConfig clusterConfig) {
     if (clusterConfig.globalConfig() != null) {
       for (PortInfo portInfo : clusterConfig.globalConfig().portInfos()) {
-        if (portInfo.ports().containsKey(serviceType)) {
+        if (portInfo.ports().containsKey(serviceType) || portInfo.sslPorts().containsKey(serviceType)) {
           return true;
         }
       }
     }
 
-    for (BucketConfig bucketConfig : clusterConfig.bucketConfigs().values()) {
-      for (NodeInfo nodeInfo : bucketConfig.nodes()) {
-        if (nodeInfo.services().containsKey(serviceType)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return clusterConfig.bucketConfigs().values().stream()
+      .anyMatch(it -> it.serviceEnabled(serviceType));
   }
 
   /**
