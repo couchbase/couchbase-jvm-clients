@@ -96,6 +96,15 @@ public class QueryMetrics {
 
   @Override
   public String toString() {
-    return internal.toString();
+    return "QueryMetrics{" +
+      "elapsedTime=" + elapsedTime() +
+      ", executionTime=" + executionTime() +
+      ", sortCount=" + sortCount() +
+      ", resultCount=" + resultCount() +
+      ", resultSize=" + resultSize() +
+      ", mutationCount=" + mutationCount() +
+      ", errorCount=" + errorCount() +
+      ", warningCount=" + warningCount() +
+      '}';
   }
 }
