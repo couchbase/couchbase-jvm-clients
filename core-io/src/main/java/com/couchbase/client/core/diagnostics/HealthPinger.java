@@ -32,11 +32,9 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbThrowables;
-import com.couchbase.client.core.util.HostAndPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -161,7 +159,7 @@ public class HealthPinger {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
-            RequestTarget target = new RequestTarget(serviceType, portInfo.identifier(), null);
+            RequestTarget target = new RequestTarget(serviceType, portInfo.id(), null);
             log.message("extractPingTargets: adding target from global config: " + target);
             targets.add(target);
           }
@@ -179,9 +177,9 @@ public class HealthPinger {
               // do not check bucket-level resources from a global level (null bucket name will not work)
               continue;
             }
-            RequestTarget target = new RequestTarget(serviceType, nodeInfo.identifier(), null);
+            RequestTarget target = new RequestTarget(serviceType, nodeInfo.id(), null);
             log.message("extractPingTargets: adding target from bucket config via global config: " + target);
-            targets.add(new RequestTarget(serviceType, nodeInfo.identifier(), null));
+            targets.add(new RequestTarget(serviceType, nodeInfo.id(), null));
           }
         }
       }
@@ -193,9 +191,9 @@ public class HealthPinger {
           for (ServiceType serviceType : advertisedServices(nodeInfo)) {
             RequestTarget target;
             if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
-              target = new RequestTarget(serviceType, nodeInfo.identifier(), null);
+              target = new RequestTarget(serviceType, nodeInfo.id(), null);
             } else {
-              target = new RequestTarget(serviceType, nodeInfo.identifier(), bucketName.get());
+              target = new RequestTarget(serviceType, nodeInfo.id(), bucketName.get());
             }
 
             log.message("extractPingTargets: adding target from bucket config: " + target);
@@ -235,17 +233,13 @@ public class HealthPinger {
     return result;
   }
 
-  private static String format(NodeIdentifier id) {
-      return new HostAndPort(id.address(), id.managerPort()).format();
-  }
-
   /**
    * Returns a map where the key is a redacted node identifier (stringified),
    * and the value is the list of service types (stringified) associated with that node.
    */
   static Map<String, List<String>> formatGroupedByNode(Collection<RequestTarget> targets) {
     Map<String, List<RequestTarget>> grouped = targets.stream()
-      .collect(Collectors.groupingBy(requestTarget -> redactSystem(format(requestTarget.nodeIdentifier())).toString()));
+      .collect(Collectors.groupingBy(requestTarget -> redactSystem(requestTarget.nodeIdentifier()).toString()));
     return transformValues(grouped, it -> transform(it, target -> target.serviceType().toString()));
   }
 

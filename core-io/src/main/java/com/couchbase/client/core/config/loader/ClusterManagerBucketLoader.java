@@ -23,9 +23,9 @@ import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.NoAccessDuringConfigLoadException;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;

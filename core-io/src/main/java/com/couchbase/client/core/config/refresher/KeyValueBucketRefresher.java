@@ -273,7 +273,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         ctx,
         new CollectionIdentifier(name, Optional.empty(), Optional.empty()),
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier(),
+        nodeInfo.id(),
         currentVersion(name)
       );
       core.send(request);

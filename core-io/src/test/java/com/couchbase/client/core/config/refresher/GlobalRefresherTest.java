@@ -22,12 +22,12 @@ import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.GlobalConfig;
-import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigResponse;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.NanoTimestamp;
 import org.junit.jupiter.api.AfterEach;
@@ -36,10 +36,11 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.clusterTopology;
+import static com.couchbase.client.core.topology.TopologyTestUtils.node;
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,12 +85,14 @@ class GlobalRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.configChangeNotifications()).thenReturn(Flux.empty());
-    GlobalConfig config = mock(GlobalConfig.class);
+    GlobalConfig config = new GlobalConfig(clusterTopology(
+      listOf(
+        node("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
+        node("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
+      ))
+    );
+
     clusterConfig.setGlobalConfig(config);
-    when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap(), null),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap(), null)
-    ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);
 
@@ -132,12 +135,14 @@ class GlobalRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.configChangeNotifications()).thenReturn(Flux.empty());
-    GlobalConfig config = mock(GlobalConfig.class);
+    GlobalConfig config = new GlobalConfig(clusterTopology(
+      listOf(
+        node("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
+        node("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
+      ))
+    );
+
     clusterConfig.setGlobalConfig(config);
-    when(config.portInfos()).thenReturn(Arrays.asList(
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "foo", Collections.emptyMap(), null),
-      new PortInfo(mapOf("kv", 11210, "mgmt", 8091), "bar", Collections.emptyMap(), null)
-    ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);
 

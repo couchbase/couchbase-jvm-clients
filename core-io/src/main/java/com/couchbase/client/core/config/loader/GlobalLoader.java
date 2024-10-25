@@ -26,9 +26,9 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
@@ -66,8 +66,8 @@ public class GlobalLoader {
       .ensureServiceAt(seed, ServiceType.KV, port, Optional.empty())
       .then(discoverConfig(seed))
       .map(config -> new String(config, UTF_8))
-      .map(config -> config.replace("$HOST", seed.address()))
-      .map(config -> new ProposedGlobalConfigContext(config, seed.address()))
+      .map(config -> config.replace("$HOST", seed.hostForNetworkConnections()))
+      .map(config -> new ProposedGlobalConfigContext(config, seed.hostForNetworkConnections()))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException
         ? ex
         : new ConfigException("Caught exception while loading global config.", ex)

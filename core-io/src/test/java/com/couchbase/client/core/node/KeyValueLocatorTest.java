@@ -26,7 +26,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
-import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import org.junit.jupiter.api.Test;
@@ -36,7 +35,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeInfo;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -53,17 +55,15 @@ class KeyValueLocatorTest {
   void locateGetRequestForCouchbaseBucket() {
     Locator locator = new KeyValueLocator();
 
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
-      Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
-      Collections.EMPTY_MAP, null);
+    NodeInfo nodeInfo1 = nodeInfo("192.168.56.101", emptyMap());
+    NodeInfo nodeInfo2 = nodeInfo("192.168.56.102", emptyMap());
 
     GetRequest getRequestMock = mock(GetRequest.class);
     ClusterConfig configMock = mock(ClusterConfig.class);
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeInfo1.id());
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeInfo2.id());
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
     CouchbaseBucketConfig bucketMock = mock(CouchbaseBucketConfig.class);
     when(getRequestMock.bucket()).thenReturn("bucket");
@@ -86,16 +86,13 @@ class KeyValueLocatorTest {
   void pickFastForwardIfAvailableAndNmvbSeen() {
     Locator locator = new KeyValueLocator();
 
-    // Setup 2 nodes
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
-      Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
-      Collections.EMPTY_MAP, null);
+    NodeInfo nodeInfo1 = nodeInfo("192.168.56.101", emptyMap());
+    NodeInfo nodeInfo2 = nodeInfo("192.168.56.102", emptyMap());
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeInfo1.id());
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeInfo2.id());
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
@@ -144,15 +141,13 @@ class KeyValueLocatorTest {
   void pickCurrentIfNoFFMapAndRetry() {
     Locator locator = new KeyValueLocator();
 
-    // Setup 2 nodes
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
-      Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
-      Collections.EMPTY_MAP, null);
+    NodeInfo nodeInfo1 = nodeInfo("192.168.56.101", emptyMap());
+    NodeInfo nodeInfo2 = nodeInfo("192.168.56.102", emptyMap());
+
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeInfo1.id());
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeInfo2.id());
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
@@ -200,15 +195,13 @@ class KeyValueLocatorTest {
   void pickCurrentIfNoFFMapAndNmvbSeen() {
     Locator locator = new KeyValueLocator();
 
-    // Setup 2 nodes
-    NodeInfo nodeInfo1 = new NodeInfo("http://foo:1234", "192.168.56.101:8091",
-      Collections.EMPTY_MAP, null);
-    NodeInfo nodeInfo2 = new NodeInfo("http://foo:1234", "192.168.56.102:8091",
-      Collections.EMPTY_MAP, null);
+    NodeInfo nodeInfo1 = nodeInfo("192.168.56.101", emptyMap());
+    NodeInfo nodeInfo2 = nodeInfo("192.168.56.102", emptyMap());
+
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeInfo1.id());
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeInfo2.id());
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     // Configure Cluster and Bucket config
@@ -248,7 +241,7 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     Request<?> request = mock(CarrierBucketConfigRequest.class);
-    when(request.target()).thenReturn(new NodeIdentifier("localhost", 8091));
+    when(request.target()).thenReturn(nodeId("localhost", 8091));
 
     locator.dispatch(request, Collections.emptyList(), null, null);
 
@@ -260,11 +253,11 @@ class KeyValueLocatorTest {
     Locator locator = new KeyValueLocator();
 
     Request<?> request = mock(CarrierBucketConfigRequest.class);
-    when(request.target()).thenReturn(new NodeIdentifier("hostb", 8091));
+    when(request.target()).thenReturn(nodeId("hostb", 8091));
 
     Node node = mock(Node.class);
     when(node.state()).thenReturn(NodeState.CONNECTED);
-    when(node.identifier()).thenReturn(new NodeIdentifier("hosta", 8091));
+    when(node.identifier()).thenReturn(nodeId("hosta", 8091));
 
     locator.dispatch(request, Collections.singletonList(node), null, null);
 

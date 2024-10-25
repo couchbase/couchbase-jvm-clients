@@ -25,9 +25,9 @@ import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;

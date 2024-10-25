@@ -87,7 +87,7 @@ import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
@@ -631,7 +631,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         .values()
         .stream()
         .flatMap(bc -> bc.nodes().stream())
-        .anyMatch(ni -> ni.identifier().equals(node.identifier()));
+        .anyMatch(ni -> ni.id().equals(node.identifier()));
 
 
       boolean stillPresentInGlobal;
@@ -640,7 +640,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           .globalConfig()
           .portInfos()
           .stream()
-          .anyMatch(ni -> ni.identifier().equals(node.identifier()));
+          .anyMatch(ni -> ni.id().equals(node.identifier()));
       } else {
         stillPresentInGlobal = false;
       }
@@ -798,7 +798,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             .fromArray(ServiceType.values())
             .filter(s -> !services.containsKey(s))
             .flatMap(s -> removeServiceFrom(
-              ni.identifier(),
+              ni.id(),
               s,
               Optional.empty())
               .onErrorResume(throwable -> {
@@ -816,7 +816,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           Flux<Void> serviceAddFlux = Flux
             .fromIterable(services.entrySet())
             .flatMap(s -> ensureServiceAt(
-              ni.identifier(),
+              ni.id(),
               s.getKey(),
               s.getValue(),
               Optional.empty())
@@ -855,7 +855,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
             .fromArray(ServiceType.values())
             .filter(s -> !services.containsKey(s))
             .flatMap(s -> removeServiceFrom(
-              ni.identifier(),
+              ni.id(),
               s,
               s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
               .onErrorResume(throwable -> {
@@ -872,7 +872,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           Flux<Void> serviceAddFlux = Flux
             .fromIterable(services.entrySet())
             .flatMap(s -> ensureServiceAt(
-              ni.identifier(),
+              ni.id(),
               s.getKey(),
               s.getValue(),
               s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())

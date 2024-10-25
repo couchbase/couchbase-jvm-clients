@@ -16,7 +16,7 @@
 
 package com.couchbase.client.java.http;
 
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -87,7 +87,7 @@ class CouchbaseHttpClientIntegrationTest extends JavaIntegrationTest {
 
   NodeIdentifier firstNode() {
     TestNodeConfig n = config().nodes().get(0);
-    return new NodeIdentifier(n.hostname(), n.ports().get(Services.MANAGER));
+    return NodeIdentifier.forBootstrap(n.hostname(), n.ports().get(Services.MANAGER));
   }
 
   // On 6.0 and below, fails with:

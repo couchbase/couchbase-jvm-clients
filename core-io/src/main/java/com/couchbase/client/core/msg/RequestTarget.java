@@ -17,8 +17,8 @@
 package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.util.Objects;
 
@@ -97,7 +97,7 @@ public class RequestTarget {
 
   @Override
   public String toString() {
-    String base = serviceType + "@" + redactSystem(nodeIdentifier.address() + ":" + nodeIdentifier.managerPort());
+    String base = serviceType + "@" + redactSystem(nodeIdentifier);
     return bucketName == null ? base : base + "/" + redactMeta(bucketName);
   }
 

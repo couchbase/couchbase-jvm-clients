@@ -22,7 +22,7 @@ import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;

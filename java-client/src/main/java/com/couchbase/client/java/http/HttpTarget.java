@@ -18,10 +18,8 @@ package com.couchbase.client.java.http;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.RequestTarget;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
-
-import static java.util.Objects.requireNonNull;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 /**
  * Specifies which Couchbase service should receive the request.

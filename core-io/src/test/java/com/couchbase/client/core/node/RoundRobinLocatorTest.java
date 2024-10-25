@@ -19,10 +19,10 @@ package com.couchbase.client.core.node;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -51,10 +52,10 @@ class RoundRobinLocatorTest {
 
     Node node1Mock = mock(Node.class);
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeId("192.168.56.101", 8091));
     Node node2Mock = mock(Node.class);
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeId("192.168.56.102", 8091));
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock));
 
     locator.dispatch(request, nodes, configMock, null);
@@ -79,13 +80,13 @@ class RoundRobinLocatorTest {
     when(configMock.hasClusterOrBucketConfig()).thenReturn(true);
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeId("192.168.56.101", 8091));
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeId("192.168.56.102", 8091));
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     Node node3Mock = mock(Node.class);
-    when(node3Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.103", 8091));
+    when(node3Mock.identifier()).thenReturn(nodeId("192.168.56.103", 8091));
     when(node3Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock, node3Mock));
 
@@ -119,16 +120,16 @@ class RoundRobinLocatorTest {
     when(configMock.hasClusterOrBucketConfig()).thenReturn(true);
 
     Node node1Mock = mock(Node.class);
-    when(node1Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.101", 8091));
+    when(node1Mock.identifier()).thenReturn(nodeId("192.168.56.101", 8091));
     when(node1Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node2Mock = mock(Node.class);
-    when(node2Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.102", 8091));
+    when(node2Mock.identifier()).thenReturn(nodeId("192.168.56.102", 8091));
     when(node2Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(false);
     Node node3Mock = mock(Node.class);
-    when(node3Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.103", 8091));
+    when(node3Mock.identifier()).thenReturn(nodeId("192.168.56.103", 8091));
     when(node3Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     Node node4Mock = mock(Node.class);
-    when(node4Mock.identifier()).thenReturn(new NodeIdentifier("192.168.56.104", 8091));
+    when(node4Mock.identifier()).thenReturn(nodeId("192.168.56.104", 8091));
     when(node4Mock.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
     List<Node> nodes = new ArrayList<>(Arrays.asList(node1Mock, node2Mock, node3Mock, node4Mock));
 
@@ -162,11 +163,11 @@ class RoundRobinLocatorTest {
     Locator locator = new RoundRobinLocator(ServiceType.QUERY);
 
     Request<?> request = mock(BucketConfigRequest.class);
-    when(request.target()).thenReturn(new NodeIdentifier("hostb", 8091));
+    when(request.target()).thenReturn(nodeId("hostb", 8091));
 
     Node node = mock(Node.class);
     when(node.state()).thenReturn(NodeState.CONNECTED);
-    when(node.identifier()).thenReturn(new NodeIdentifier("hosta", 8091));
+    when(node.identifier()).thenReturn(nodeId("hosta", 8091));
     when(node.serviceEnabled(ServiceType.QUERY)).thenReturn(true);
 
     locator.dispatch(request, Collections.singletonList(node), null, null);

@@ -17,7 +17,7 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 

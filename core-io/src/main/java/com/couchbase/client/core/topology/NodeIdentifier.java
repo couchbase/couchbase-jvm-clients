@@ -19,8 +19,6 @@ package com.couchbase.client.core.topology;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.HostAndPort;
 
-import java.util.Objects;
-
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -28,13 +26,24 @@ public class NodeIdentifier {
   private final HostAndPort canonical; // manager host:port on default network
   private final String hostForNetworkConnections;
 
-  public NodeIdentifier(String host, int port, String hostForNetworkConnections) {
-    this(new HostAndPort(host, port), hostForNetworkConnections);
+  public NodeIdentifier(
+    String canonicalHost,
+    int canonicalPort,
+    String hostForNetworkConnections
+  ) {
+    this(new HostAndPort(canonicalHost, canonicalPort), hostForNetworkConnections);
   }
 
   public NodeIdentifier(HostAndPort canonical, String hostForNetworkConnections) {
     this.canonical = requireNonNull(canonical);
     this.hostForNetworkConnections = requireNonNull(hostForNetworkConnections);
+  }
+
+  public static NodeIdentifier forBootstrap(String bootstrapHost, int bootstrapPort) {
+    // This address isn't really "canonical", since it may be an "external" address.
+    // If it's an external address, the node created from this identifier will be discarded
+    // when the config with the _real_ canonical addresses is applied.
+    return new NodeIdentifier(new HostAndPort(bootstrapHost, bootstrapPort), bootstrapHost);
   }
 
   @Deprecated
@@ -56,12 +65,12 @@ public class NodeIdentifier {
 
   @Override
   public int hashCode() {
-    return Objects.hash(canonical);
+    return canonical.hashCode();
   }
 
   @Override
   public String toString() {
-    return "NodeID{" +
+    return "NodeIdentifier{" +
       "canonical=" + canonical +
       ", hostForNetworkConnections='" + hostForNetworkConnections + '\'' +
       '}';

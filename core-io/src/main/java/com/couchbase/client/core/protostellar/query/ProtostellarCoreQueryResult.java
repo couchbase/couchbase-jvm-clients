@@ -19,7 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.protostellar.query.v1.QueryResponse;
 
 import java.util.List;

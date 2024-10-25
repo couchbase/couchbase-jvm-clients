@@ -22,7 +22,7 @@ import com.couchbase.client.core.config.DefaultConfigurationProvider;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.config.loader.GlobalLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;

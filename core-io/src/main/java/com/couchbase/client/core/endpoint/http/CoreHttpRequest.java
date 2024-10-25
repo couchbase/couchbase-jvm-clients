@@ -40,9 +40,9 @@ import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import reactor.util.annotation.Nullable;
 
@@ -161,7 +161,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     ctx.put("method", method.toString());
     ctx.put("path", redactMeta(pathAndQueryString()));
     if (target() != null) {
-      ctx.put("target", redactSystem(target().address()));
+      ctx.put("target", redactSystem(target()));
     }
     if (bucket() != null) {
       ctx.put("bucket", redactMeta(bucket()));

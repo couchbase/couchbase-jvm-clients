@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 class ViewLocatorTest {
 
@@ -36,15 +37,19 @@ class ViewLocatorTest {
     CouchbaseBucketConfig bucketConfig = mock(CouchbaseBucketConfig.class);
     ClusterConfig config = mock(ClusterConfig.class);
     when(config.bucketConfig("bucket")).thenReturn(bucketConfig);
-    when(bucketConfig.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.4", 1234))).thenReturn(true);
-    when(bucketConfig.hasPrimaryPartitionsOnNode(new NodeIdentifier("1.2.3.5", 1234))).thenReturn(false);
+
+    NodeIdentifier id1 = NodeIdentifier.forBootstrap("1.2.3.4", 1234);
+    NodeIdentifier id2 = NodeIdentifier.forBootstrap("1.2.3.5", 1234);
+
+    when(bucketConfig.hasPrimaryPartitionsOnNode(id1.toLegacy())).thenReturn(true);
+    when(bucketConfig.hasPrimaryPartitionsOnNode(id2.toLegacy())).thenReturn(false);
 
     Node node1 = mock(Node.class);
-    when(node1.identifier()).thenReturn(new NodeIdentifier("1.2.3.4", 1234));
+    when(node1.identifier()).thenReturn(id1);
     assertTrue(locator.nodeCanBeUsed(node1, request, config));
 
     Node node2 = mock(Node.class);
-    when(node2.identifier()).thenReturn(new NodeIdentifier("1.2.3.5", 1234));
+    when(node2.identifier()).thenReturn(id2);
     assertFalse(locator.nodeCanBeUsed(node2, request, config));
   }
 

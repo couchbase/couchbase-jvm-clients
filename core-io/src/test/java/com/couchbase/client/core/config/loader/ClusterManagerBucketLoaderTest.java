@@ -26,7 +26,7 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigResponse;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

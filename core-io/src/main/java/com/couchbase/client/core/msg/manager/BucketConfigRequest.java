@@ -25,8 +25,8 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.TargetedRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.time.Duration;
 import java.util.Map;
@@ -84,7 +84,7 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
     ctx.put("type", serviceType().ident());
     ctx.put("bucket", redactMeta(bucketName));
     if (target != null) {
-      ctx.put("target", redactSystem(target.address()));
+      ctx.put("target", redactSystem(target));
     }
     return ctx;
   }

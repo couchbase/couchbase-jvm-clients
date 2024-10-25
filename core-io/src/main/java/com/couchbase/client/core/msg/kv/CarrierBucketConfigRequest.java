@@ -24,8 +24,8 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -87,7 +87,7 @@ public class CarrierBucketConfigRequest
   public Map<String, Object> serviceContext() {
     final Map<String, Object> ctx = super.serviceContext();
     if (target != null) {
-      ctx.put("target", redactSystem(target.address()));
+      ctx.put("target", redactSystem(target));
     }
     return ctx;
   }
@@ -100,7 +100,7 @@ public class CarrierBucketConfigRequest
   @Override
   public String toString() {
     return "CarrierBucketConfigRequest{" +
-      "target=" + redactSystem(target.address()) +
+      "target=" + redactSystem(target) +
       ", bucket=" + redactMeta(collectionIdentifier().bucket()) +
       ", ifNewerThan=" + ifNewerThan +
       '}';

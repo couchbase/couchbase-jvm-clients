@@ -25,8 +25,8 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
@@ -136,7 +136,7 @@ public class MultiObserveViaCasRequest
   @Override
   public Map<String, Object> serviceContext() {
     final Map<String, Object> parentCtx = super.serviceContext();
-    parentCtx.put("target", target.address());
+    parentCtx.put("target", target);
     parentCtx.put("numKeys", keys.size());
     return parentCtx;
   }

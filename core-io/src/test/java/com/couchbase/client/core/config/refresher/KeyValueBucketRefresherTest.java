@@ -22,9 +22,7 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
@@ -37,10 +35,10 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeInfo;
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
@@ -87,11 +85,9 @@ public class KeyValueBucketRefresherTest {
     BucketConfig config = mock(BucketConfig.class);
     when(config.name()).thenReturn("bucket");
     clusterConfig.setBucketConfig(config);
-    when(config.nodes()).thenReturn(Arrays.asList(
-      new NodeInfo("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091),
-        Collections.emptyMap(), Collections.emptyMap()),
-      new NodeInfo("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091),
-        Collections.emptyMap(), Collections.emptyMap())
+    when(config.nodes()).thenReturn(listOf(
+      nodeInfo("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
+      nodeInfo("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
     ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);

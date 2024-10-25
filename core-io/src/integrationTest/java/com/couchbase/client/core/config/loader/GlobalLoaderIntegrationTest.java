@@ -19,7 +19,7 @@ package com.couchbase.client.core.config.loader;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Capabilities;

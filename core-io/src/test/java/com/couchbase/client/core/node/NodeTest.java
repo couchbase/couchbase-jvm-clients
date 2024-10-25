@@ -39,6 +39,7 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

@@ -25,9 +25,9 @@ import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -35,6 +35,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Optional;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +51,7 @@ import static org.mockito.Mockito.when;
  */
 class BaseBucketLoaderTest {
 
-  private static final NodeIdentifier SEED = new NodeIdentifier("127.0.0.1", 8091);
+  private static final NodeIdentifier SEED = nodeId("127.0.0.1", 8091);
   private static final String BUCKET = "bucket";
   private static final int PORT = 1234;
   private static final ServiceType SERVICE = ServiceType.KV;

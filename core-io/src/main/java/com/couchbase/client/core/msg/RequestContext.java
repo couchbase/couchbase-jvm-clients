@@ -25,7 +25,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.util.annotation.Nullable;
@@ -404,7 +404,7 @@ public class RequestContext extends CoreContext {
     if (lastDispatchedTo != null) {
       input.put("lastDispatchedTo", redactSystem(lastDispatchedTo));
     } else if (lastDispatchedToNode != null) {
-      input.put("lastDispatchedTo", redactSystem(lastDispatchedToNode.address()));
+      input.put("lastDispatchedTo", redactSystem(lastDispatchedToNode));
     }
 
     if (lastDispatchedFrom != null) {

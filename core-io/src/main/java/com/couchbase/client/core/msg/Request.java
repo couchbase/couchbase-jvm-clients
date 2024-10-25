@@ -18,9 +18,9 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;

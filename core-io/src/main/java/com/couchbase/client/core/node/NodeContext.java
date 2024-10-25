@@ -17,6 +17,7 @@
 package com.couchbase.client.core.node;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.util.Map;
 
@@ -24,25 +25,27 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 public class NodeContext extends CoreContext {
 
-  /**
-   * The hostname of this node.
-   */
-  private final NodeIdentifier nodeIdentifier;
+  private final com.couchbase.client.core.node.NodeIdentifier legacyNodeIdentifier;
 
   public NodeContext(CoreContext ctx, NodeIdentifier nodeIdentifier) {
     super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
-    this.nodeIdentifier = nodeIdentifier;
+    this.legacyNodeIdentifier = nodeIdentifier.toLegacy();
   }
 
+  /**
+   * @deprecated This is the node's canonical hostname; it's not useful by itself,
+   * since it does not uniquely identify a node.
+   */
+  @Deprecated
   public String remoteHostname() {
-    return nodeIdentifier.address();
+    return legacyNodeIdentifier.address();
   }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
     input.put("remote", redactSystem(remoteHostname()));
-    input.put("managerPort", redactSystem(nodeIdentifier.managerPort()));
+    input.put("managerPort", redactSystem(legacyNodeIdentifier.managerPort()));
   }
 
 

@@ -28,14 +28,17 @@ import static java.util.Objects.requireNonNull;
 /**
  * Uniquely identifies a node within the cluster, using the node's
  * host and manager port from the default network.
+ *
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.NodeIdentifier}
  */
+@Deprecated
 public class NodeIdentifier {
 
   private final String canonicalHost;
   private final int canonicalManagerPort;
 
-  // Nullable only when created by  a
-  @Nullable private final String hostForNetworkConnections;
+  // Null only when created by a legacy global/bucket config parser
+  @Nullable private final com.couchbase.client.core.topology.NodeIdentifier topologyNodeIdentifier;
 
   @Deprecated
   public NodeIdentifier(
@@ -44,15 +47,7 @@ public class NodeIdentifier {
   ) {
     this.canonicalHost = canonicalHost;
     this.canonicalManagerPort = canonicalManagerPort;
-    this.hostForNetworkConnections = null;
-  }
-
-  @Stability.Internal
-  public static NodeIdentifier forBootstrap(String bootstrapHost, int bootstrapPort) {
-    // This address isn't really "canonical", since it may be an "external" address.
-    // If it's an external address, the node created from this identifier will be discarded
-    // when the config with the _real_ canonical addresses is applied.
-    return new NodeIdentifier(new HostAndPort(bootstrapHost, bootstrapPort), bootstrapHost);
+    this.topologyNodeIdentifier = null;
   }
 
   public NodeIdentifier(
@@ -61,7 +56,7 @@ public class NodeIdentifier {
   ) {
     this.canonicalHost = canonicalAddress.host();
     this.canonicalManagerPort = canonicalAddress.port();
-    this.hostForNetworkConnections = requireNonNull(hostForNetworkConnections);
+    this.topologyNodeIdentifier = new com.couchbase.client.core.topology.NodeIdentifier(canonicalHost, canonicalManagerPort, hostForNetworkConnections);
   }
 
   /**
@@ -72,13 +67,17 @@ public class NodeIdentifier {
    * @throws NoSuchElementException if this info is not available
    */
   public String hostForNetworkConnections() throws NoSuchElementException {
-    if (hostForNetworkConnections == null) {
-      throw new NoSuchElementException(
-        "This NodeIdentifier (" + this + ") doesn't have the host to use for network connections." +
-          " It might have been created by a legacy config parser or some other component that did not specify it."
+    return asTopologyNodeIdentifier().hostForNetworkConnections();
+  }
+
+  @Stability.Internal
+  public com.couchbase.client.core.topology.NodeIdentifier asTopologyNodeIdentifier() {
+    if (topologyNodeIdentifier == null) {
+      throw new NoSuchElementException("This NodeIdentifier (" + this + ") doesn't have the host to use for network connections." +
+        " It might have been created by a legacy config parser or some other component that did not specify it."
       );
     }
-    return hostForNetworkConnections;
+    return topologyNodeIdentifier;
   }
 
   /**
@@ -96,7 +95,7 @@ public class NodeIdentifier {
   public String toString() {
     return "NodeIdentifier{" +
       "canonicalAddress=" + redactSystem(canonicalHost + ":" + canonicalManagerPort) +
-      ", hostForNetworkConnections=" + hostForNetworkConnections +
+      ", hostForNetworkConnections=" + (topologyNodeIdentifier == null ? null : hostForNetworkConnections()) +
       "}";
   }
 

@@ -19,9 +19,9 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
-import reactor.util.annotation.Nullable;
 import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import reactor.util.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -104,8 +104,16 @@ public class PortInfo {
         this.serverGroup = serverGroup;
     }
 
+    /**
+     * @deprecated In favor of {@link #id()}
+     */
+    @Deprecated
     public NodeIdentifier identifier() {
-      return nodeIdentifier;
+        return nodeIdentifier;
+    }
+
+    public com.couchbase.client.core.topology.NodeIdentifier id() {
+        return nodeIdentifier.asTopologyNodeIdentifier();
     }
 
     /**

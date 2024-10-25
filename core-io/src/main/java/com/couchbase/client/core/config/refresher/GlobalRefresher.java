@@ -163,7 +163,7 @@ public class GlobalRefresher {
         configRequestTimeout,
         ctx,
         FailFastRetryStrategy.INSTANCE,
-        nodeInfo.identifier(),
+        nodeInfo.id(),
         currentVersion()
       );
       core.send(request);

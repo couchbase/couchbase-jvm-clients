@@ -29,8 +29,8 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.node.Node;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,10 +43,12 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
+import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -124,9 +126,10 @@ class CoreTest {
     configureMock(mock101, "mock101", "10.143.190.101", 8091);
     configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
-    final Map<String, Node> mocks = new HashMap<>();
-    mocks.put("10.143.190.101", mock101);
-    mocks.put("10.143.190.102", mock102);
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      mock102.identifier(), mock102
+    );
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
@@ -135,17 +138,15 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address());
+        return mocks.get(target);
       }
     }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig oneNodeConfig = BucketConfigParser.parse(
-        readResource("one_node_config.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig oneNodeConfig = topologyParser().parseBucketConfig(
+        readResource("one_node_config.json", CoreTest.class)
       );
       mockConfigProvider.accept(oneNodeConfig);
 
@@ -167,10 +168,8 @@ class CoreTest {
       verify(mock102, never()).addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, never()).addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-      BucketConfig twoNodeConfig = BucketConfigParser.parse(
-        readResource("two_nodes_config.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodeConfig = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodeConfig);
 
@@ -196,7 +195,7 @@ class CoreTest {
   }
 
   void configureMock(Node mock, String id, String ip, int port) {
-    when(mock.identifier()).thenReturn(new NodeIdentifier(ip, port));
+    when(mock.identifier()).thenReturn(nodeId(ip, port));
     when(mock.addService(any(ServiceType.class), anyInt(), any(Optional.class)))
       .thenAnswer((Answer<Mono<Void>>) invocation -> {
         logger.info("{}.addService called with arguments: {}", id, Arrays.toString(invocation.getArguments()));
@@ -222,9 +221,10 @@ class CoreTest {
     configureMock(mock101, "mock101", "10.143.190.101", 8091);
     configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
-    final Map<String, Node> mocks = new HashMap<>();
-    mocks.put("10.143.190.101", mock101);
-    mocks.put("10.143.190.102", mock102);
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      mock102.identifier(), mock102
+    );
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
@@ -233,17 +233,15 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address());
+        return mocks.get(target);
       }
     }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = BucketConfigParser.parse(
-        readResource("two_nodes_config.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesConfig);
 
@@ -266,10 +264,8 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-      BucketConfig twoNodesConfigMore = BucketConfigParser.parse(
-        readResource("two_nodes_config_more_services.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesConfigMore = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config_more_services.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesConfigMore);
 
@@ -306,9 +302,10 @@ class CoreTest {
     configureMock(mock101, "mock101", "10.143.190.101", 8091);
     configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
-    final Map<String, Node> mocks = new HashMap<>();
-    mocks.put("10.143.190.101", mock101);
-    mocks.put("10.143.190.102", mock102);
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      mock102.identifier(), mock102
+    );
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
@@ -318,17 +315,15 @@ class CoreTest {
       @Override
       protected Node createNode(final NodeIdentifier target) {
         logger.info("createNode {}", target);
-        return mocks.get(target.address());
+        return mocks.get(target);
       }
     }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = BucketConfigParser.parse(
-        readResource("two_nodes_config_more_services.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config_more_services.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesConfig);
 
@@ -340,7 +335,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -349,14 +344,12 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
-      BucketConfig twoNodesLessServices = BucketConfigParser.parse(
-        readResource("two_nodes_config.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesLessServices = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesLessServices);
 
@@ -375,9 +368,10 @@ class CoreTest {
     configureMock(mock101, "mock101", "10.143.190.101", 8091);
     configureMock(mock102, "mock102", "10.143.190.102", 8091);
 
-    final Map<String, Node> mocks = new HashMap<>();
-    mocks.put("10.143.190.101", mock101);
-    mocks.put("10.143.190.102", mock102);
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      mock102.identifier(), mock102
+    );
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
@@ -386,17 +380,15 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address());
+        return mocks.get(target);
       }
     }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = BucketConfigParser.parse(
-        readResource("two_nodes_config_more_services.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
+        readResource("two_nodes_config_more_services.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesConfig);
 
@@ -408,7 +400,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -417,14 +409,12 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
-      BucketConfig twoNodesLessServices = BucketConfigParser.parse(
-        readResource("one_node_config.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig twoNodesLessServices = topologyParser().parseBucketConfig(
+        readResource("one_node_config.json", CoreTest.class)
       );
       mockConfigProvider.accept(twoNodesLessServices);
 
@@ -444,13 +434,13 @@ class CoreTest {
 
     Node mock101 = mock(Node.class);
     Node mock102 = mock(Node.class);
-    configureMock(mock101, "mock101", LOCALHOST, 9000);
-    configureMock(mock102, "mock102", LOCALHOST, 9001);
+    configureMock(mock101, "mock101", "192.168.1.194", 9000);
+    configureMock(mock102, "mock102", "192.168.1.194", 9001);
 
-    final Map<String, Node> mocks = new HashMap<>();
-
-    mocks.put("127.0.0.1:9000", mock101);
-    mocks.put("127.0.0.1:9001", mock102);
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      mock102.identifier(), mock102
+    );
     try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
       @Override
       public ConfigurationProvider createConfigurationProvider() {
@@ -459,17 +449,15 @@ class CoreTest {
 
       @Override
       protected Node createNode(final NodeIdentifier target) {
-        return mocks.get(target.address() + ":" + target.managerPort());
+        return mocks.get(target);
       }
     }) {
       logger.info("Validating");
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig oneNodeConfig = BucketConfigParser.parse(
-        readResource("cluster_run_two_nodes.json", CoreTest.class),
-        ENV,
-        LOCALHOST
+      BucketConfig oneNodeConfig = topologyParser().parseBucketConfig(
+        readResource("config/cluster_run_two_nodes_same_host.json", CoreTest.class)
       );
       mockConfigProvider.accept(oneNodeConfig);
 
@@ -479,14 +467,14 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.MANAGER, 9000, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 12000, Optional.of("default"));
+        .addService(ServiceType.KV, 12000, Optional.of(oneNodeConfig.name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 9501, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.MANAGER, 9001, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 12002, Optional.of("default"));
+        .addService(ServiceType.KV, 12002, Optional.of(oneNodeConfig.name()));
     }
   }
 

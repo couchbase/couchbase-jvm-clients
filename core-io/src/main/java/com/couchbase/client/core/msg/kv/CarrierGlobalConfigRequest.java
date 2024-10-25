@@ -25,7 +25,7 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 import reactor.util.annotation.Nullable;
 
@@ -130,7 +130,7 @@ public class CarrierGlobalConfigRequest
   public Map<String, Object> serviceContext() {
     final Map<String, Object> ctx = super.serviceContext();
     if (target != null) {
-      ctx.put("target", redactSystem(target.address()));
+      ctx.put("target", redactSystem(target));
     }
     return ctx;
   }
@@ -143,7 +143,7 @@ public class CarrierGlobalConfigRequest
   @Override
   public String toString() {
     return "CarrierGlobalConfigRequest{" +
-      "target=" + redactSystem(target.address()) +
+      "target=" + redactSystem(target) +
       ", ifNewerThan=" + ifNewerThan +
       '}';
   }

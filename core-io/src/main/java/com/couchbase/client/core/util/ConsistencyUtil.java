@@ -25,13 +25,12 @@ import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.RequestTarget;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -274,7 +273,7 @@ public class ConsistencyUtil {
     if (core.clusterConfig().globalConfig() != null) {
       List<NodeIdentifier> nodes = core.clusterConfig().globalConfig().portInfos()
         .stream()
-        .map(PortInfo::identifier)
+        .map(PortInfo::id)
         .collect(Collectors.toList());
 
       logger.info("Adding nodes from global config: {}", nodes);
@@ -286,7 +285,7 @@ public class ConsistencyUtil {
     if (core.clusterConfig().bucketConfigs() != null) {
       List<NodeIdentifier> nodes = core.clusterConfig().bucketConfigs().entrySet()
         .stream()
-        .flatMap(v -> v.getValue().nodes().stream().map(x -> x.identifier()))
+        .flatMap(v -> v.getValue().nodes().stream().map(x -> x.id()))
         .collect(Collectors.toList());
 
       logger.info("Adding nodes from bucket configs: {}", nodes);
@@ -340,7 +339,7 @@ public class ConsistencyUtil {
 
       while (!done) {
 
-        String debug = String.format("%s:%d waiting for %s", node.address(), node.managerPort(), predicateDesc);
+        String debug = node + " waiting for " + predicateDesc;
 
         CoreHttpRequest request = createRequest.apply(node);
 

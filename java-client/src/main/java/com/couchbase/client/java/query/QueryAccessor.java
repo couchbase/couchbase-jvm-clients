@@ -24,8 +24,8 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommi
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
 import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.java.transactions.error.TransactionCommitAmbiguousException;
 import com.couchbase.client.java.transactions.error.TransactionExpiredException;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;

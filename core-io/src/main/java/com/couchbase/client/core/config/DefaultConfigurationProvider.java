@@ -58,7 +58,7 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;

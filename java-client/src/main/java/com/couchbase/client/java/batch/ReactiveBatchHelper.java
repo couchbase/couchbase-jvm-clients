@@ -28,7 +28,7 @@ import com.couchbase.client.core.msg.kv.MultiObserveViaCasRequest;
 import com.couchbase.client.core.msg.kv.MultiObserveViaCasResponse;
 import com.couchbase.client.core.msg.kv.ObserveViaCasResponse;
 import com.couchbase.client.core.node.KeyValueLocator;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.cnc.evnts.BatchHelperExistsCompletedEvent;
 import com.couchbase.client.java.kv.GetResult;
@@ -124,7 +124,7 @@ public class ReactiveBatchHelper {
 
     Map<NodeIdentifier, Map<byte[], Short>> nodeEntries = new HashMap<>(config.nodes().size());
     for (NodeInfo node : config.nodes()) {
-      nodeEntries.put(node.identifier(), new HashMap<>(ids.size() / config.nodes().size()));
+      nodeEntries.put(node.id(), new HashMap<>(ids.size() / config.nodes().size()));
     }
     CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) config;
 
@@ -139,7 +139,7 @@ public class ReactiveBatchHelper {
       int partitionId = KeyValueLocator.partitionForKey(encodedId, cbc.numberOfPartitions());
       int nodeId = cbc.nodeIndexForActive(partitionId, false);
       NodeInfo nodeInfo = cbc.nodeAtIndex(nodeId);
-      nodeEntries.get(nodeInfo.identifier()).put(encodedId, (short) partitionId);
+      nodeEntries.get(nodeInfo.id()).put(encodedId, (short) partitionId);
     }
 
     List<Mono<MultiObserveViaCasResponse>> responses = new ArrayList<>(nodeEntries.size());

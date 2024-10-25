@@ -22,7 +22,7 @@ import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.node.NodeIdentifier;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;

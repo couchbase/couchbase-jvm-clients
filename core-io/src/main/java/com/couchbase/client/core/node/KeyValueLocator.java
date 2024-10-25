@@ -38,6 +38,7 @@ import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.util.List;
 import java.util.Optional;
@@ -155,7 +156,7 @@ public class KeyValueLocator implements Locator {
 
     NodeInfo nodeInfo = config.nodeAtIndex(nodeId);
     for (Node node : nodes) {
-      if (node.identifier().equals(nodeInfo.identifier())) {
+      if (node.identifier().equals(nodeInfo.id())) {
         node.send(request);
         return;
       }
@@ -229,7 +230,7 @@ public class KeyValueLocator implements Locator {
       return;
     }
 
-    NodeIdentifier identifier = config.nodeForKey(request.key()).identifier();
+    NodeIdentifier identifier = config.nodeForKey(request.key()).id();
     request.partition((short) 0);
 
     for (Node node : nodes) {

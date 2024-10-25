@@ -157,8 +157,16 @@ public class NodeInfo implements KetamaRingNode {
         return hostname;
     }
 
+    /**
+     * @deprecated In favor of {@link #id()}
+     */
+    @Deprecated
     public NodeIdentifier identifier() {
         return nodeIdentifier;
+    }
+
+    public com.couchbase.client.core.topology.NodeIdentifier id() {
+      return nodeIdentifier.asTopologyNodeIdentifier();
     }
 
     public Map<ServiceType, Integer> services() {

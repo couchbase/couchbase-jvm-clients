@@ -30,6 +30,7 @@ import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;

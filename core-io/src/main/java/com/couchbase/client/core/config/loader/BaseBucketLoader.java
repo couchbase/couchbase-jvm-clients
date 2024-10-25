@@ -20,9 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
-import com.couchbase.client.core.node.NodeIdentifier;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -98,8 +98,8 @@ public abstract class BaseBucketLoader implements BucketLoader {
       .then(ensureServiceConnected(seed, serviceType, Optional.of(bucket)))
       .then(discoverConfig(seed, bucket))
       .map(config -> new String(config, UTF_8))
-      .map(config -> config.replace("$HOST", seed.address()))
-      .map(config -> new ProposedBucketConfigContext(bucket, config, seed.address()))
+      .map(config -> config.replace("$HOST", seed.hostForNetworkConnections()))
+      .map(config -> new ProposedBucketConfigContext(bucket, config, seed.hostForNetworkConnections()))
       .onErrorResume(ex -> Mono.error(ex instanceof ConfigException
         ? ex
         : new ConfigException("Caught exception while loading config.", ex)
