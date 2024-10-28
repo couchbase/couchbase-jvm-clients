@@ -1020,20 +1020,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
         var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
 
-        var content = ContentAsUtil.contentTypeList(request.getContentAs(),
-                () -> values.rowsAs(byte[].class),
-                () -> values.rowsAs(String.class),
-                () -> values.rowsAs(JsonObject.class),
-                () -> values.rowsAs(JsonArray.class),
-                () -> values.rowsAs(Boolean.class),
-                () -> values.rowsAs(Integer.class),
-                () -> values.rowsAs(Double.class));
+        var contentAs = request.getContentAs();
+        var rowType = ContentAsUtil.toJavaClass(contentAs);
+        var content = values.rowsAs(rowType).stream()
+                .map(row -> ContentAsUtil.toFitContent(row, contentAs))
+                .toList();
 
-        if (content.isFailure()) {
-          throw content.exception();
-        }
-
-        builder.addAllContent(content.value());
+        builder.addAllContent(content);
 
         // Metadata
         var convertedMetaData = convertMetaData(values.metaData());

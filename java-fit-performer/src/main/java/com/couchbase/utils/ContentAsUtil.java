@@ -20,8 +20,8 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.protocol.shared.ContentAs;
 import com.couchbase.client.protocol.shared.ContentTypes;
 import com.google.protobuf.ByteString;
+import reactor.util.annotation.Nullable;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 public class ContentAsUtil {
@@ -91,62 +91,38 @@ public class ContentAsUtil {
     }
   }
 
-  public static Try<List<ContentTypes>> contentTypeList(ContentAs contentAs,
-                                              Supplier<List<byte[]>> asByteArray,
-                                              Supplier<List<String>> asString,
-                                              Supplier<List<JsonObject>> asJsonObject,
-                                              Supplier<List<JsonArray>> asJsonArray,
-                                              Supplier<List<Boolean>> asBoolean,
-                                              Supplier<List<Integer>> asInteger,
-                                              Supplier<List<Double>> asDouble) {
-    try {
-      if (contentAs.hasAsByteArray()) {
-        return new Try<>(asByteArray.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsBytes(ByteString.copyFrom(v)).build()
-                        : getNullContentType().value())
-                .toList());
-      } else if (contentAs.hasAsString()) {
-        return new Try<>(asString.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsString(v).build()
-                        : getNullContentType().value()).toList());
-      } else if (contentAs.hasAsJsonObject()) {
-        return new Try<>(asJsonObject.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsBytes(ByteString.copyFrom(v.toBytes())).build()
-                        : getNullContentType().value())
-                .toList());
-      } else if (contentAs.hasAsJsonArray()) {
-        return new Try<>(asJsonArray.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsBytes(ByteString.copyFrom(v.toBytes())).build()
-                        : getNullContentType().value())
-                .toList());
-      } else if (contentAs.getAsBoolean()) {
-        return new Try<>(asBoolean.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsBool(v).build()
-                        : getNullContentType().value())
-                .toList());
-      } else if (contentAs.hasAsInteger()) {
-        return new Try<>(asInteger.get().stream()
-                .map(v -> v != null
-                        ? ContentTypes.newBuilder().setContentAsInt64(v).build()
-                        : getNullContentType().value())
-                .toList());
-      } else if (contentAs.hasAsFloatingPoint()) {
-        return new Try<>(asDouble.get().stream()
-                .map(v -> v != null
-                        ?ContentTypes.newBuilder().setContentAsDouble(v).build()
-                        : getNullContentType().value())
-                .toList());
-      } else {
-        throw new UnsupportedOperationException("Java performer cannot handle contentAs " + contentAs.toString());
-      }
-    } catch (RuntimeException err) {
-      return new Try<>(err);
+  public static Class<?> toJavaClass(ContentAs contentAs) {
+    return switch (contentAs.getAsCase()) {
+      case AS_STRING -> String.class;
+      case AS_BYTE_ARRAY -> byte[].class;
+      case AS_JSON_OBJECT -> JsonObject.class;
+      case AS_JSON_ARRAY -> JsonArray.class;
+      case AS_BOOLEAN -> Boolean.class;
+      case AS_INTEGER -> Integer.class;
+      case AS_FLOATING_POINT -> Double.class;
+
+      default -> throw new UnsupportedOperationException("Java performer cannot handle contentAs " + contentAs);
+    };
+  }
+
+  public static ContentTypes toFitContent(@Nullable Object value, ContentAs contentAs) {
+    ContentTypes.Builder builder = ContentTypes.newBuilder();
+
+    if (value == null) return builder.setContentAsNull(ContentTypes.NullValue.getDefaultInstance()).build();
+
+    switch (contentAs.getAsCase()) {
+      case AS_STRING -> builder.setContentAsString((String) value);
+      case AS_BYTE_ARRAY -> builder.setContentAsBytes(ByteString.copyFrom((byte[]) value));
+      case AS_JSON_OBJECT -> builder.setContentAsBytes(ByteString.copyFrom(((JsonObject) value).toBytes()));
+      case AS_JSON_ARRAY -> builder.setContentAsBytes(ByteString.copyFrom(((JsonArray) value).toBytes()));
+      case AS_BOOLEAN -> builder.setContentAsBool((Boolean) value);
+      case AS_INTEGER -> builder.setContentAsInt64((Integer) value);
+      case AS_FLOATING_POINT -> builder.setContentAsDouble((Double) value);
+
+      default -> throw new UnsupportedOperationException("Java performer cannot handle contentAs " + contentAs);
     }
+
+    return builder.build();
   }
 
   public static byte[] convert(ContentTypes content) {

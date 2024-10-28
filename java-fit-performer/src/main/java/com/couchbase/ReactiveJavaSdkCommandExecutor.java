@@ -17,8 +17,6 @@ package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.ReactiveCollection;
-import com.couchbase.client.java.json.JsonArray;
-import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.*;
 import com.couchbase.client.java.query.ReactiveQueryResult;
 import com.couchbase.client.java.kv.GetResult;
@@ -58,7 +56,6 @@ import com.couchbase.stream.FluxStreamer;
 import com.couchbase.utils.ClusterConnection;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -687,37 +684,25 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         return convertExceptionShared(raw);
     }
 
-    private Mono<Result> returnQueryResult(com.couchbase.client.protocol.sdk.query.Command request, Mono<ReactiveQueryResult> queryResult, Result.Builder result, Long start) {
-        return queryResult.publishOn(Schedulers.boundedElastic()).map(r -> {
-            result.setElapsedNanos(System.nanoTime() - start);
+  private Mono<Result> returnQueryResult(com.couchbase.client.protocol.sdk.query.Command request, Mono<ReactiveQueryResult> queryResult, Result.Builder result, Long start) {
+    return queryResult.flatMap(r -> {
+      result.setElapsedNanos(System.nanoTime() - start);
 
-            var builder = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder();
+      var contentAs = request.getContentAs();
+      var rowType = ContentAsUtil.toJavaClass(contentAs);
+      return r.rowsAs(rowType)
+              .map(it -> ContentAsUtil.toFitContent(it, contentAs))
+              .collectList()
+              .zipWith(r.metaData().map(JavaSdkCommandExecutor::convertMetaData))
+              .map(fitRowsAndMetadata -> {
+                var fitQueryResult = com.couchbase.client.protocol.sdk.query.QueryResult.newBuilder()
+                        .addAllContent(fitRowsAndMetadata.getT1())
+                        .setMetaData(fitRowsAndMetadata.getT2());
 
-            // FIT only supports testing blocking (not streaming) queries currently, so the .block() here to gather
-            // the rows is fine.
-            var content = ContentAsUtil.contentTypeList(request.getContentAs(),
-                    () -> r.rowsAs(byte[].class).collectList().block(),
-                    () -> r.rowsAs(String.class).collectList().block(),
-                    () -> r.rowsAs(JsonObject.class).collectList().block(),
-                    () -> r.rowsAs(JsonArray.class).collectList().block(),
-                    () -> r.rowsAs(Boolean.class).collectList().block(),
-                    () -> r.rowsAs(Integer.class).collectList().block(),
-                    () -> r.rowsAs(Double.class).collectList().block());
-
-            if (content.isFailure()) {
-              throw content.exception();
-            }
-
-            builder.addAllContent(content.value());
-
-            // Metadata
-            var convertedMetaData = convertMetaData(r.metaData().block());
-            builder.setMetaData(convertedMetaData);
-
-            result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
-                    .setQueryResult(builder));
-
-            return result.build();
-        });
-    }
+                result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
+                        .setQueryResult(fitQueryResult));
+                return result.build();
+              });
+    });
+  }
 }
