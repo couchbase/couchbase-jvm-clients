@@ -131,7 +131,8 @@ public class CouchbaseBucketConfig extends AbstractBucketConfig {
           getClusterCapabilities(cluster),
           "<origin-not-required>",
           getPortInfos(cluster),
-          LegacyConfigHelper.toLegacy(cluster.revision())
+          LegacyConfigHelper.toLegacy(cluster.revision()),
+          cluster
         );
 
         CouchbaseBucketTopology bucket = (CouchbaseBucketTopology) cluster.bucket();

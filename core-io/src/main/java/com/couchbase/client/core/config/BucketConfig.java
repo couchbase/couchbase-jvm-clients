@@ -16,9 +16,11 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 
 import java.util.List;
 import java.util.Map;
@@ -163,4 +165,9 @@ public interface BucketConfig {
    */
   List<PortInfo> portInfos();
 
+  /**
+   * @throws IllegalStateException if this BucketConfig was not created from a ClusterTopologyWithBucket.
+   */
+  @Stability.Internal
+  ClusterTopologyWithBucket asClusterTopology();
 }

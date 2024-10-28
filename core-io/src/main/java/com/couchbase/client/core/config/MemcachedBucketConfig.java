@@ -91,7 +91,8 @@ public class MemcachedBucketConfig extends AbstractBucketConfig {
             LegacyConfigHelper.getClusterCapabilities(cluster),
             "<origin-does-not-matter>",
             LegacyConfigHelper.getPortInfos(cluster),
-            LegacyConfigHelper.toLegacy(cluster.revision())
+            LegacyConfigHelper.toLegacy(cluster.revision()),
+            cluster
         );
 
         this.ketamaRing = KetamaRing.create(

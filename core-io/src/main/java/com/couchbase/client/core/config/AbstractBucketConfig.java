@@ -16,7 +16,10 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,6 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 @Deprecated
 public abstract class AbstractBucketConfig implements BucketConfig {
@@ -45,6 +49,9 @@ public abstract class AbstractBucketConfig implements BucketConfig {
     private final List<PortInfo> portInfos;
     private final ConfigVersion version;
 
+    // Null only if this bucket config was created by a legacy config parser
+    @Nullable private final ClusterTopologyWithBucket clusterTopology;
+
     /**
      * A "dumb" constructor that assigns the given values
      * directly to the corresponding fields, without any funny business.
@@ -60,7 +67,8 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities,
         String origin,
         List<PortInfo> portInfos,
-        ConfigVersion version
+        ConfigVersion version,
+        ClusterTopologyWithBucket clusterTopology
     ) {
         this.uuid = uuid;
         this.name = name;
@@ -73,6 +81,7 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.origin = origin;
         this.portInfos = portInfos;
         this.version = version;
+        this.clusterTopology = requireNonNull(clusterTopology);
     }
 
     protected AbstractBucketConfig(String uuid, String name, BucketNodeLocator locator, String uri, String streamingUri,
@@ -92,6 +101,15 @@ public abstract class AbstractBucketConfig implements BucketConfig {
         this.version = new ConfigVersion(revEpoch, rev);
         this.portInfos = portInfos == null ? Collections.emptyList() : portInfos;
         this.nodeInfo = portInfos == null ? nodeInfos : nodeInfoFromExtended(portInfos, nodeInfos);
+        this.clusterTopology = null;
+    }
+
+    @Stability.Internal
+    public ClusterTopologyWithBucket asClusterTopology() {
+        if (clusterTopology == null) {
+          throw new IllegalStateException("This BucketConfig instance was not created from a ClusterTopologyWithBucket.");
+        }
+        return clusterTopology;
     }
 
     static Set<BucketCapabilities> convertBucketCapabilities(final List<BucketCapabilities> input) {

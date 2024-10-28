@@ -16,12 +16,14 @@
 
 package com.couchbase.client.core.config;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JacksonInject;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
+import reactor.util.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,10 +48,14 @@ public class GlobalConfig {
   private final List<PortInfo> portInfos;
   private final Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities;
 
+  // Null only if the GlobalConfig was created by a legacy config parser
+  @Nullable private final ClusterTopology clusterTopology;
+
   public GlobalConfig(ClusterTopology topology) {
     this.version = LegacyConfigHelper.toLegacy(topology.revision());
     this.portInfos = LegacyConfigHelper.getPortInfos(topology);
     this.clusterCapabilities = LegacyConfigHelper.getClusterCapabilities(topology);
+    this.clusterTopology = topology;
   }
 
   @JsonCreator
@@ -63,8 +69,8 @@ public class GlobalConfig {
     this.version = new ConfigVersion(revEpoch, rev);
     this.portInfos = enrichPortInfos(portInfos, origin);
     this.clusterCapabilities = AbstractBucketConfig.convertClusterCapabilities(clusterCapabilities);
+    this.clusterTopology = null;
   }
-
 
   /**
    * Helper method to enrich the port infos with a synthetic origin host if not present.
@@ -125,6 +131,17 @@ public class GlobalConfig {
    */
   public List<PortInfo> portInfos() {
     return portInfos;
+  }
+
+  /**
+   * @throws IllegalStateException if this GlobalConfig was not created from a ClusterTopology.
+   */
+  @Stability.Internal
+  ClusterTopology asClusterTopology() {
+    if (clusterTopology == null) {
+      throw new IllegalStateException("This GlobalConfig instance was not created from a ClusterTopology.");
+    }
+    return clusterTopology;
   }
 
   @Override

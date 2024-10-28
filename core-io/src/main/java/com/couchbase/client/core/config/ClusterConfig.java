@@ -18,13 +18,19 @@ package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import reactor.util.annotation.Nullable;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static com.couchbase.client.core.util.CbCollections.transform;
 
 /**
  * The {@link ClusterConfig} holds bucket and global configurations in a central place.
@@ -47,6 +53,28 @@ public class ClusterConfig {
   public ClusterConfig() {
     bucketConfigs = new ConcurrentHashMap<>();
     globalConfig = new AtomicReference<>();
+  }
+
+  @Stability.Internal
+  public Set<String> bucketNames() {
+    return bucketConfigs.keySet();
+  }
+
+  @Stability.Internal
+  public @Nullable ClusterTopologyWithBucket bucketTopology(final String bucketName) {
+    BucketConfig bucketConfig = bucketConfigs.get(bucketName);
+    return bucketConfig == null ? null : bucketConfig.asClusterTopology();
+  }
+
+  @Stability.Internal
+  public Collection<ClusterTopologyWithBucket> bucketTopologies() {
+    return transform(bucketConfigs.values(), BucketConfig::asClusterTopology);
+  }
+
+  @Stability.Internal
+  public @Nullable ClusterTopology globalTopology() {
+    GlobalConfig g = globalConfig();
+    return g == null ? null : g.asClusterTopology();
   }
 
   public BucketConfig bucketConfig(final String bucketName) {
