@@ -30,7 +30,7 @@ import java.util.TreeMap;
  * Represents the partition information for a bucket.
  *
  * @since 1.1.0
- * @deprecated In favor of {@link com.couchbase.client.core.topology.PartitionMap
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.PartitionMap}
  */
 @Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)

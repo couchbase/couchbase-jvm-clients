@@ -23,7 +23,7 @@ import java.util.Comparator;
 import java.util.Objects;
 
 /**
- * @deprecated In favor of {@link com.couchbase.client.core.topology.TopologyRevision
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.TopologyRevision}
  */
 @Deprecated
 @Stability.Internal

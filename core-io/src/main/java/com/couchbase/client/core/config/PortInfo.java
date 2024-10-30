@@ -31,7 +31,7 @@ import static com.couchbase.client.core.config.NodeInfo.initNodeIdentifier;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @deprecated In favor of {@link com.couchbase.client.core.topology.HostAndServicePorts
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.HostAndServicePorts}
  */
 @Deprecated
 @JsonIgnoreProperties(ignoreUnknown = true)

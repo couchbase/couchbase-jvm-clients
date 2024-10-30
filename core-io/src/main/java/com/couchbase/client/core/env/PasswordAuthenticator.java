@@ -227,7 +227,7 @@ public class PasswordAuthenticator implements Authenticator {
     }
 
     /**
-     * @deprecated Please use {@link Builder(String, String) or {@link Builder(Supplier)} instead.
+     * @deprecated Please use {@link Builder(String, String)} or {@link Builder(Supplier)} instead.
      */
     @Deprecated
     public Builder() {

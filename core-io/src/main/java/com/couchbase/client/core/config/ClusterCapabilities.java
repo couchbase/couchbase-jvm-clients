@@ -22,7 +22,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonValue
  * Contains all the cluster capabilities this SDK supports (depending on the server version, the cluster may
  * export more than these).
  *
- * @deprecated In favor of {@link com.couchbase.client.core.topology.ClusterCapability
+ * @deprecated In favor of {@link com.couchbase.client.core.topology.ClusterCapability}
  */
 @Deprecated
 public enum ClusterCapabilities {
