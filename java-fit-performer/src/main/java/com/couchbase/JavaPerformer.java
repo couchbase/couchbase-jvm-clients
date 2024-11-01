@@ -81,6 +81,7 @@ import com.couchbase.client.protocol.shared.EchoResponse;
 import com.couchbase.utils.Capabilities;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.OptionsUtil;
+import com.couchbase.utils.UserSchedulerUtil;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -231,6 +232,12 @@ public class JavaPerformer extends CorePerformer {
             });
 
             var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
+
+            // [if:3.7.5] first version that allows specifying custom publishOn scheduler
+            var userExecutorAndScheduler = UserSchedulerUtil.userExecutorAndScheduler();
+            onClusterConnectionClose.add(userExecutorAndScheduler::dispose);
+            clusterEnvironment.publishOnScheduler(userExecutorAndScheduler::scheduler);
+            // [end]
 
             var connection = new ClusterConnection(request.getClusterHostname(),
                     request.getClusterUsername(),

@@ -66,6 +66,7 @@ import static com.couchbase.client.protocol.streams.Type.STREAM_KV_RANGE_SCAN;
 // [if:3.6.0]
 import static com.couchbase.search.SearchHelper.handleSearchReactive;
 // [end]
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 
 /**
@@ -105,7 +106,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 Mono<MutationResult> mr;
                 if (options == null) mr = collection.insert(docId, content);
                 else mr = collection.insert(docId, content, options);
-                return mr.map(r -> {
+                return withSchedulerCheck(mr).map(r -> {
                     result.setElapsedNanos(System.nanoTime() - start);
                     if (op.getReturnResult()) populateResult(result, r);
                     else setSuccess(result);
@@ -121,7 +122,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 Mono<GetResult> gr;
                 if (options == null) gr = collection.get(docId);
                 else gr = collection.get(docId, options);
-                return gr.map(r -> {
+                return withSchedulerCheck(gr).map(r -> {
                     result.setElapsedNanos(System.nanoTime() - start);
                     if (op.getReturnResult()) populateResult(request.getContentAs(), result, r);
                     else setSuccess(result);
@@ -138,7 +139,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 if (options == null) mr = collection.remove(docId);
                 else mr = collection.remove(docId, options);
                 result.setElapsedNanos(System.nanoTime() - start);
-                return mr.map(r -> {
+                return withSchedulerCheck(mr).map(r -> {
                     if (op.getReturnResult()) populateResult(result, r);
                     else setSuccess(result);
                     return result.build();
@@ -154,7 +155,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 Mono<MutationResult> mr;
                 if (options == null) mr = collection.replace(docId, content);
                 else mr = collection.replace(docId, content, options);
-                return mr.map(r -> {
+                return withSchedulerCheck(mr).map(r -> {
                     result.setElapsedNanos(System.nanoTime() - start);
                     if (op.getReturnResult()) populateResult(result, r);
                     else setSuccess(result);
@@ -172,7 +173,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 if (options == null) mr = collection.upsert(docId, content);
                 else mr = collection.upsert(docId, content, options);
                 result.setElapsedNanos(System.nanoTime() - start);
-                return mr.map(r -> {
+                return withSchedulerCheck(mr).map(r -> {
                     if (op.getReturnResult()) populateResult(result, r);
                     else setSuccess(result);
                     return result.build();
@@ -189,7 +190,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                 if (options != null) results = collection.scan(scanType, options);
                 else results = collection.scan(scanType);
                 result.setElapsedNanos(System.nanoTime() - start);
-                var streamer = new FluxStreamer<ScanResult>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+                var streamer = new FluxStreamer<ScanResult>(withSchedulerCheck(results), perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
                         (ScanResult r) -> processScanResult(request, r),
                         (Throwable err) -> convertException(err));
                 perRun.streamerOwner().addAndStart(streamer);
@@ -244,7 +245,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         gr = collection.getAndLock(docId, Duration.ofSeconds(duration.getSeconds()), options);
       }
-      return gr.map(r -> {
+      return withSchedulerCheck(gr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
         if (op.getReturnResult()) {
           populateResult(request.getContentAs(), result, r);
@@ -268,7 +269,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         gr = collection.unlock(docId, cas, options);
       }
-      return gr.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(gr).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -293,7 +294,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         gr = collection.getAndTouch(docId, expiry, options);
       }
-      return gr.map(r -> {
+      return withSchedulerCheck(gr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
         if (op.getReturnResult()) {
           populateResult(request.getContentAs(), result, r);
@@ -322,7 +323,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         mr = collection.touch(docId, expiry, options);
       }
-      return mr.map(r -> {
+      return withSchedulerCheck(mr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
         if (op.getReturnResult()) {
           populateResult(result, r);
@@ -337,7 +338,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       var request = clc.getExists();
       var docId = getDocId(request.getLocation());
       var exists = collection.exists(docId);
-      return exists.map(r -> {
+      return withSchedulerCheck(exists).map(r -> {
         if (op.getReturnResult()) {
           populateResult(result, r);
         } else {
@@ -357,7 +358,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList(), options);
       }
-      return mr.map(r -> {
+      return withSchedulerCheck(mr).map(r -> {
         if (op.getReturnResult()) {
           populateResult(result, r, request);
         } else {
@@ -380,7 +381,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         results = collection.getAllReplicas(docId, options);
       }
       result.setElapsedNanos(System.nanoTime() - start);
-      var streamer = new FluxStreamer<>(results, perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
+      var streamer = new FluxStreamer<>(withSchedulerCheck(results), perRun, request.getStreamConfig().getStreamId(), request.getStreamConfig(),
               (GetReplicaResult r) -> processGetAllReplicasResult(request, r),
               this::convertException);
       perRun.streamerOwner().addAndStart(streamer);
@@ -403,7 +404,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       } else {
         gr = collection.getAnyReplica(docId, options);
       }
-      return gr.map(r -> {
+      return withSchedulerCheck(gr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
         if (op.getReturnResult()) {
           populateResult(result, r, request.getContentAs());
@@ -431,7 +432,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
           cr = collection.binary().increment(docId, options);
         }
         result.setElapsedNanos(System.nanoTime() - start);
-        return cr.map(r -> {
+        return withSchedulerCheck(cr).map(r -> {
           if (op.getReturnResult()) {
             populateResult(result, r);
           } else {
@@ -454,7 +455,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
           cr = collection.binary().decrement(docId, options);
         }
         result.setElapsedNanos(System.nanoTime() - start);
-        return cr.map(r -> {
+        return withSchedulerCheck(cr).map(r -> {
           if (op.getReturnResult()) {
             populateResult(result, r);
           } else {
@@ -477,7 +478,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
           mr = collection.binary().append(docId, request.getContent().toByteArray(), options);
         }
         result.setElapsedNanos(System.nanoTime() - start);
-        return mr.map(r -> {
+        return withSchedulerCheck(mr).map(r -> {
           if (op.getReturnResult()) {
             populateResult(result, r);
           } else {
@@ -500,7 +501,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
           mr = collection.binary().prepend(docId, request.getContent().toByteArray(), options);
         }
         result.setElapsedNanos(System.nanoTime() - start);
-        return mr.map(r -> {
+        return withSchedulerCheck(mr).map(r -> {
           if (op.getReturnResult()) {
             populateResult(result, r);
           } else {
@@ -537,7 +538,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         queryResult = scope.reactive().query(query);
       }
 
-      return returnQueryResult(request, queryResult, result, start);
+      return returnQueryResult(request, withSchedulerCheck(queryResult), result, start);
     }
     // [end]
 
@@ -581,7 +582,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         response = bucket.waitUntilReady(timeout);
       }
 
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -614,7 +615,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         response = cluster.waitUntilReady(timeout);
       }
 
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -673,7 +674,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
         queryResult = connection.cluster().reactive().query(query);
       }
 
-      return returnQueryResult(request, queryResult, result, start);
+      return returnQueryResult(request, withSchedulerCheck(queryResult), result, start);
     }
 
     return Mono.error(new UnsupportedOperationException("Unknown command " + op));

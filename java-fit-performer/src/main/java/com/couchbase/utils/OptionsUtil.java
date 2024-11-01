@@ -92,15 +92,14 @@ public class OptionsUtil {
 
     private OptionsUtil() {}
 
-    @Nullable public static
+    public static
     ClusterEnvironment.Builder convertClusterConfig(ClusterConnectionCreateRequest request,
                                                     Supplier<ClusterConnection> getCluster,
                                                     ArrayList<Runnable> onClusterConnectionClose) {
-        ClusterEnvironment.Builder clusterEnvironment = null;
+        ClusterEnvironment.Builder clusterEnvironment = ClusterEnvironment.builder();
 
         if (request.hasClusterConfig()) {
             var cc = request.getClusterConfig();
-            clusterEnvironment = ClusterEnvironment.builder();
 
             if (cc.getUseCustomSerializer()) {
                 clusterEnvironment.jsonSerializer(new CustomSerializer());

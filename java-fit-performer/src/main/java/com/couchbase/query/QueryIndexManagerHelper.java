@@ -40,12 +40,12 @@ import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 public class QueryIndexManagerHelper {
   private QueryIndexManagerHelper() {
@@ -301,7 +301,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().createPrimaryIndex(options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -326,7 +326,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().createIndex(request.getIndexName(), fields, options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -350,7 +350,7 @@ public class QueryIndexManagerHelper {
           indexes = collection.queryIndexes().getAllIndexes(options);
         }
       }
-      return indexes.collectList().map(i -> {
+      return withSchedulerCheck(indexes).collectList().map(i -> {
         result.setElapsedNanos(System.nanoTime() - start);
         if (op.getReturnResult()) {
           populateResult(result, i);
@@ -378,7 +378,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().dropPrimaryIndex(options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -402,7 +402,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().dropIndex(request.getIndexName(), options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -426,7 +426,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().watchIndexes(request.getIndexNamesList().stream().toList(), Duration.ofMillis(request.getTimeoutMsecs()), options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();
@@ -450,7 +450,7 @@ public class QueryIndexManagerHelper {
           res = collection.queryIndexes().buildDeferredIndexes(options);
         }
       }
-      return res.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(res).then(Mono.fromCallable(() -> {
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
         return result.build();

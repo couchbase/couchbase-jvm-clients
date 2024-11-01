@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 
 public class CollectionManagerHelper {
@@ -137,7 +138,7 @@ public class CollectionManagerHelper {
         var options = createGetAllScopesOptions(request.getOptions(), spans);
         response = cluster.bucket(bucketName).collections().getAllScopes(options);
       }
-      Flux<Result> f = response.map(r -> {
+      Flux<Result> f = withSchedulerCheck(response).map(r -> {
         populateResult(result, r);
         return result.build();
       });
@@ -151,7 +152,7 @@ public class CollectionManagerHelper {
       } else {
         r = collections.createScope(request.getName());
       }
-      return r.then(Mono.fromSupplier(() -> {
+      return withSchedulerCheck(r).then(Mono.fromSupplier(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -164,7 +165,7 @@ public class CollectionManagerHelper {
       } else {
         r = collections.dropScope(request.getName());
       }
-      return r.then(Mono.fromSupplier(() -> {
+      return withSchedulerCheck(r).then(Mono.fromSupplier(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -178,7 +179,7 @@ public class CollectionManagerHelper {
       } else {
         r = collections.createCollection(request.getScopeName(), request.getName(), settings);
       }
-      return r.then(Mono.fromSupplier(() -> {
+      return withSchedulerCheck(r).then(Mono.fromSupplier(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -192,7 +193,7 @@ public class CollectionManagerHelper {
       } else {
         r = collections.updateCollection(request.getScopeName(), request.getName(), settings);
       }
-      return r.then(Mono.fromSupplier(() -> {
+      return withSchedulerCheck(r).then(Mono.fromSupplier(() -> {
         setSuccess(result);
         return result.build();
       }));
@@ -205,7 +206,7 @@ public class CollectionManagerHelper {
       } else {
         r = collections.dropCollection(request.getScopeName(), request.getName());
       }
-      return r.then(Mono.fromSupplier(() -> {
+      return withSchedulerCheck(r).then(Mono.fromSupplier(() -> {
         setSuccess(result);
         return result.build();
       }));

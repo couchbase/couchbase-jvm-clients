@@ -30,6 +30,7 @@ import reactor.core.publisher.Mono;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.utils.OptionsUtil.convertDuration;
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 public class EventingHelper {
 
@@ -82,7 +83,7 @@ public class EventingHelper {
       }
 
 
-      return response.map(r -> {
+      return withSchedulerCheck(response).map(r -> {
         minimalEventingFunctionFromResult(result, r);
         return result.build();
       });

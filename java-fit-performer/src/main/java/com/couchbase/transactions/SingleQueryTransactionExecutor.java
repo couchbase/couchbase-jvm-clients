@@ -43,6 +43,7 @@ import com.couchbase.utils.ResultValidation;
 import com.couchbase.utils.ResultsUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -51,6 +52,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 /**
  * Executes single query transactions (tximplicit).
@@ -106,16 +109,18 @@ public class SingleQueryTransactionExecutor {
                                                            ClusterConnection connection,
                                                            ConcurrentHashMap<String, RequestSpan> spans) {
         QueryOptions options = setSingleQueryTransactionOptions(request, connection, spans);
-        ReactiveQueryResult result;
+        Mono<ReactiveQueryResult> resultMono;
 
         if (request.getQuery().hasScope()) {
             String bucketName = request.getQuery().getScope().getBucketName();
             String scopeName = request.getQuery().getScope().getScopeName();
             Scope scope = connection.cluster().bucket(bucketName).scope(scopeName);
-            result = scope.reactive().query(request.getQuery().getStatement(), options).block();
+            resultMono = scope.reactive().query(request.getQuery().getStatement(), options);
         } else {
-            result = connection.cluster().reactive().query(request.getQuery().getStatement(), options).block();
+            resultMono = connection.cluster().reactive().query(request.getQuery().getStatement(), options);
         }
+
+        ReactiveQueryResult result = withSchedulerCheck(resultMono).block();
 
         AtomicReference<TransactionException> errorDuringStreaming = new AtomicReference<>();
         AtomicReference<ExternalException> causeDuringStreaming = new AtomicReference<>();

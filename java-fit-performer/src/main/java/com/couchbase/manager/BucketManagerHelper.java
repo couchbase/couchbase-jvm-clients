@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 
 public class BucketManagerHelper {
@@ -157,7 +158,7 @@ public class BucketManagerHelper {
         var options = createBucketOptions(request.getOptions(), spans);
         response = cluster.buckets().createBucket(createBucketSettings(request.getSettings(), spans), options);
       }
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         populateResult(start, result, null);
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
@@ -173,7 +174,7 @@ public class BucketManagerHelper {
         var options = updateBucketOptions(request.getOptions(), spans);
         response = cluster.buckets().updateBucket(updateBucketSettings(request.getSettings(), spans), options);
       }
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         populateResult(start, result, null);
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
@@ -189,7 +190,7 @@ public class BucketManagerHelper {
         var options = dropBucketOptions(request.getOptions(), spans);
         response = cluster.buckets().dropBucket(request.getBucketName(), options);
       }
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         populateResult(start, result, null);
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
@@ -205,7 +206,7 @@ public class BucketManagerHelper {
         var options = flushBucketOptions(request.getOptions(), spans);
         response = cluster.buckets().flushBucket(request.getBucketName(), options);
       }
-      return response.then(Mono.fromCallable(() -> {
+      return withSchedulerCheck(response).then(Mono.fromCallable(() -> {
         populateResult(start, result, null);
         result.setElapsedNanos(System.nanoTime() - start);
         setSuccess(result);
@@ -220,7 +221,7 @@ public class BucketManagerHelper {
         var options = createGetAllBucketsOptions(request.getOptions(), spans);
         response = cluster.buckets().getAllBuckets(options);
       }
-      return response.map(rr -> {
+      return withSchedulerCheck(response).map(rr -> {
         rr.forEach((name, settings) ->
                 populateResult(start, result, settings));
         return result.build();

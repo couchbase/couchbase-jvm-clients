@@ -48,6 +48,7 @@ import java.util.stream.Stream;
 import static com.couchbase.JavaSdkCommandExecutor.convertExceptionShared;
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 public class LookupInHelper {
   public static Result.Builder handleLookupIn(PerRun perRun,
@@ -247,7 +248,7 @@ public class LookupInHelper {
       result = collection.lookupIn(docId, specs);
     }
 
-    return result.doOnNext(r -> {
+    return withSchedulerCheck(result).doOnNext(r -> {
       out.setElapsedNanos(System.nanoTime() - start);
 
       if (command.getReturnResult()) {
@@ -284,7 +285,7 @@ public class LookupInHelper {
       result = collection.lookupInAnyReplica(docId, specs);
     }
 
-    return result
+    return withSchedulerCheck(result)
             .doOnError(err -> err.printStackTrace())
             .doFinally(v -> System.out.println("Finished"))
             .doOnNext(v -> {
@@ -331,7 +332,7 @@ public class LookupInHelper {
     out.setElapsedNanos(System.nanoTime() - start);
 
     var streamer = new FluxStreamer<LookupInReplicaResult>(
-            results,
+            withSchedulerCheck(results),
             perRun,
             req.getStreamConfig().getStreamId(),
             req.getStreamConfig(),

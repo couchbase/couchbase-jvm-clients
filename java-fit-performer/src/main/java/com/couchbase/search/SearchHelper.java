@@ -104,6 +104,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 import static com.couchbase.JavaSdkCommandExecutor.convertMutationState;
 import static com.couchbase.JavaSdkCommandExecutor.setSuccess;
 import static com.couchbase.client.performer.core.util.TimeUtil.getTimeNow;
@@ -688,7 +689,7 @@ public class SearchHelper {
         }
       }
 
-      return r.doOnNext(re -> {
+      return withSchedulerCheck(r).doOnNext(re -> {
         result.setElapsedNanos(System.nanoTime() - start);
 
         var streamer = new ReactiveSearchResultStreamer(re,
@@ -774,7 +775,7 @@ public class SearchHelper {
         }
       }
 
-      return r.doOnNext(re -> {
+      return withSchedulerCheck(r).doOnNext(re -> {
         result.setElapsedNanos(System.nanoTime() - start);
 
         var streamer = new ReactiveSearchResultStreamer(re,

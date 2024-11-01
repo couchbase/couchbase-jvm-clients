@@ -67,6 +67,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
+
 /**
  * Version of TwoWayTransaction that uses the reactive API.
  */
@@ -381,7 +383,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
             }
 
             return preOp
-                    .then(op.get())
+                    .then(withSchedulerCheck(op.get()))
                     .then(Mono.defer(() -> {
                         if (!performanceMode) {
                             logger.info("Took {} millis to run command '{}'", System.currentTimeMillis() - now, opDebug);
