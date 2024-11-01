@@ -32,8 +32,8 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
-import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.java.analytics.AnalyticsAccessor;
 import com.couchbase.client.java.analytics.AnalyticsOptions;
 import com.couchbase.client.java.analytics.ReactiveAnalyticsResult;
@@ -426,7 +426,7 @@ public class ReactiveCluster {
    * @param timeout overriding the default disconnect timeout if needed.
    */
   public Mono<Void> disconnect(final Duration timeout) {
-    return asyncCluster.disconnectInternal(timeout);
+    return reactor.publishOnUserScheduler(asyncCluster.disconnectInternal(timeout));
   }
 
   /**
