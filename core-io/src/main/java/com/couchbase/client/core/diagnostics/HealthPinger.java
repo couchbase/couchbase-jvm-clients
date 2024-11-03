@@ -19,11 +19,7 @@ package com.couchbase.client.core.diagnostics;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.GlobalConfig;
-import com.couchbase.client.core.config.NodeInfo;
-import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.TimeoutException;
@@ -34,17 +30,22 @@ import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.HostAndServicePorts;
 import com.couchbase.client.core.util.CbThrowables;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,7 +63,6 @@ import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.core.util.CbCollections.transformValues;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toSet;
 
 /**
  * The {@link HealthPinger} allows to "ping" individual services with real operations for their health.
@@ -81,6 +81,11 @@ public class HealthPinger {
     VIEWS,
     SEARCH,
     ANALYTICS
+  ));
+
+  private static final Set<ServiceType> servicesThatRequireBucket = unmodifiableSet(EnumSet.of(
+    KV,
+    VIEWS
   ));
 
   @Stability.Internal
@@ -140,97 +145,55 @@ public class HealthPinger {
     final Optional<String> bucketName,
     final WaitUntilReadyHelper.WaitUntilReadyLogger log
   ) {
-    final Set<ServiceType> serviceTypes = isNullOrEmpty(serviceTypesOrEmpty)
+    final String bucket = bucketName.orElse(null);
+    final Set<ServiceType> serviceTypeFilter = isNullOrEmpty(serviceTypesOrEmpty)
       ? EnumSet.allOf(ServiceType.class)
       : EnumSet.copyOf(serviceTypesOrEmpty);
-    serviceTypes.retainAll(pingableServices); // narrow to the ones we can actually ping
+    serviceTypeFilter.retainAll(pingableServices); // narrow to the ones we can actually ping
 
-    Set<RequestTarget> targets = new HashSet<>();
-    log.message("extractPingTargets: starting ping target extraction with candidate services: " + serviceTypes);
+    log.message("extractPingTargets: starting ping target extraction with candidate services: " + serviceTypeFilter + " and bucket: " + bucket);
 
-    if (!bucketName.isPresent()) {
-      if (clusterConfig.globalConfig() != null) {
-        GlobalConfig globalConfig = clusterConfig.globalConfig();
-
-        log.message("extractPingTargets: getting ping targets from global config portInfos: " + globalConfig.portInfos());
-        for (PortInfo portInfo : globalConfig.portInfos()) {
-          for (ServiceType serviceType : advertisedServices(portInfo)) {
-            if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
-              // do not check bucket-level resources from a global level (null bucket name will not work)
-              continue;
-            }
-            RequestTarget target = new RequestTarget(serviceType, portInfo.id(), null);
-            log.message("extractPingTargets: adding target from global config: " + target);
-            targets.add(target);
-          }
-        }
-        log.message("extractPingTargets: ping targets after scanning global config: " + targets);
-      } else {
-        log.message("extractPingTargets: globalConfig is absent");
-      }
-      for (Map.Entry<String, BucketConfig> bucketConfig : clusterConfig.bucketConfigs().entrySet()) {
-        log.message("extractPingTargets: getting targets from bucket config via global config for bucket " + bucketConfig.getKey() + " : " + bucketConfig.getValue());
-
-        for (NodeInfo nodeInfo : bucketConfig.getValue().nodes()) {
-          for (ServiceType serviceType : advertisedServices(nodeInfo)) {
-            if (serviceType == ServiceType.KV || serviceType == ServiceType.VIEWS) {
-              // do not check bucket-level resources from a global level (null bucket name will not work)
-              continue;
-            }
-            RequestTarget target = new RequestTarget(serviceType, nodeInfo.id(), null);
-            log.message("extractPingTargets: adding target from bucket config via global config: " + target);
-            targets.add(new RequestTarget(serviceType, nodeInfo.id(), null));
-          }
-        }
-      }
+    final List<ClusterTopology> topologiesToScan = new ArrayList<>();
+    if (bucket != null) {
+      topologiesToScan.add(clusterConfig.bucketTopology(bucket));
     } else {
-      BucketConfig bucketConfig = clusterConfig.bucketConfig(bucketName.get());
-      if (bucketConfig != null) {
-        log.message("extractPingTargets: Getting targets from bucket config: " + bucketConfig);
-        for (NodeInfo nodeInfo : bucketConfig.nodes()) {
-          for (ServiceType serviceType : advertisedServices(nodeInfo)) {
-            RequestTarget target;
-            if (serviceType != ServiceType.VIEWS && serviceType != ServiceType.KV) {
-              target = new RequestTarget(serviceType, nodeInfo.id(), null);
-            } else {
-              target = new RequestTarget(serviceType, nodeInfo.id(), bucketName.get());
-            }
-
-            log.message("extractPingTargets: adding target from bucket config: " + target);
-            targets.add(target);
-          }
-        }
-      } else {
-        log.message("extractPingTargets: Bucket name was present, but clusterConfig has no config for bucket " + bucketName);
-      }
+      serviceTypeFilter.removeAll(servicesThatRequireBucket); // narrow to the ones that can be pinged without a bucket
+      topologiesToScan.add(clusterConfig.globalTopology());
+      topologiesToScan.addAll(clusterConfig.bucketTopologies());
     }
 
-    // Narrow the results to only pingable services the caller is interested in.
-    targets = targets.stream()
-      .filter(t -> serviceTypes.contains(t.serviceType()))
-      .collect(toSet());
+    Set<RequestTarget> result = new HashSet<>();
+    topologiesToScan.stream()
+      .filter(Objects::nonNull) // global or specific bucket topology might be absent
+      .forEach(topology -> {
+        log.message("extractPingTargets: scanning " + describe(topology));
+        for (HostAndServicePorts node : topology.nodes()) {
+          for (ServiceType advertisedService : advertisedServices(node)) {
+            if (serviceTypeFilter.contains(advertisedService)) {
+              boolean serviceRequiresBucket = servicesThatRequireBucket.contains(advertisedService);
+              String targetBucketOrNull = serviceRequiresBucket ? bucket : null;
+              RequestTarget target = new RequestTarget(advertisedService, node.id(), targetBucketOrNull);
+              if (result.add(target)) {
+                log.message("extractPingTargets: found new target " + target);
+              }
+            }
+          }
+        }
+      });
 
-    log.message(
-      "extractPingTargets: Finished. Returning filtered targets (grouped by node): " + formatGroupedByNode(targets)
-    );
-
-    return targets;
-  }
-
-  private static Set<ServiceType> advertisedServices(PortInfo info) {
-    Set<ServiceType> result = EnumSet.noneOf(ServiceType.class);
-    // add both because only is populated
-    result.addAll(info.ports().keySet());
-    result.addAll(info.sslPorts().keySet());
+    log.message("extractPingTargets: Finished. Returning filtered targets (grouped by node): " + formatGroupedByNode(result));
     return result;
   }
 
-  private static Set<ServiceType> advertisedServices(NodeInfo info) {
-    Set<ServiceType> result = EnumSet.noneOf(ServiceType.class);
-    // add both because only is populated
-    result.addAll(info.services().keySet());
-    result.addAll(info.sslServices().keySet());
-    return result;
+  private static String describe(ClusterTopology topology) {
+    String bucketOrGlobal = (topology instanceof ClusterTopologyWithBucket)
+      ? "bucket '" + topology.requireBucket().bucket().name() + "'"
+      : "global";
+    return "topology from " + bucketOrGlobal + " ; nodes=" + topology.nodes();
+  }
+
+  private static Set<ServiceType> advertisedServices(HostAndServicePorts node) {
+    return node.ports().keySet();
   }
 
   /**
