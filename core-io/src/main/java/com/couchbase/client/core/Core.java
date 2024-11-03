@@ -69,6 +69,7 @@ import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
@@ -98,12 +99,14 @@ import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.CoreIdGenerator;
+import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -111,6 +114,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -523,6 +527,32 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           coreContext,
           name
         )));
+    });
+  }
+
+  @Stability.Internal
+  public Mono<ClusterTopology> waitForClusterTopology(Duration timeout) {
+    return Mono.defer(() -> {
+      Deadline deadline = Deadline.of(timeout);
+
+      return Mono.fromCallable(() -> {
+          ClusterTopology globalTopology = clusterConfig().globalTopology();
+          if (globalTopology != null) {
+            return globalTopology;
+          }
+
+          for (ClusterTopologyWithBucket topology : clusterConfig().bucketTopologies()) {
+            return topology;
+          }
+
+          throw deadline.exceeded()
+            ? new UnambiguousTimeoutException("Timed out while waiting for cluster topology", null)
+            : new NoSuchElementException(); // trigger retry!
+        })
+        .retryWhen(Retry
+          .fixedDelay(Long.MAX_VALUE, Duration.ofMillis(100))
+          .filter(t -> t instanceof NoSuchElementException)
+        );
     });
   }
 
