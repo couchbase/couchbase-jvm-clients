@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.16.5-SNAPSHOT</version><!--REL-->
+    <version>1.16.5</version><!--REL-->
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -15,17 +15,17 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <osgi-feature.version>3.7.5-SNAPSHOT</osgi-feature.version><!--REL-->
-        <java-examples.version>1.7.5-SNAPSHOT</java-examples.version><!--REL-->
-        <java-client.version>3.7.5-SNAPSHOT</java-client.version><!--REL-->
-        <core-io.version>3.7.5-SNAPSHOT</core-io.version><!--REL-->
-        <core-io-deps.version>1.7.5-SNAPSHOT</core-io-deps.version><!--REL-->
-        <scala-client.version>1.7.5-SNAPSHOT</scala-client.version><!--REL-->
-        <kotlin-client.version>1.4.5-SNAPSHOT</kotlin-client.version><!--REL-->
-        <columnar-java-client.version>1.0.5-SNAPSHOT</columnar-java-client.version><!--REL-->
-        <tracing-opentelemetry.version>1.5.5-SNAPSHOT</tracing-opentelemetry.version><!--REL-->
-        <metrics-opentelemetry.version>0.7.5-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
-        <test-utils.version>1.7.5-SNAPSHOT</test-utils.version><!--REL-->
+        <osgi-feature.version>3.7.5</osgi-feature.version><!--REL-->
+        <java-examples.version>1.7.5</java-examples.version><!--REL-->
+        <java-client.version>3.7.5</java-client.version><!--REL-->
+        <core-io.version>3.7.5</core-io.version><!--REL-->
+        <core-io-deps.version>1.7.5</core-io-deps.version><!--REL-->
+        <scala-client.version>1.7.5</scala-client.version><!--REL-->
+        <kotlin-client.version>1.4.5</kotlin-client.version><!--REL-->
+        <columnar-java-client.version>1.0.5</columnar-java-client.version><!--REL-->
+        <tracing-opentelemetry.version>1.5.5</tracing-opentelemetry.version><!--REL-->
+        <metrics-opentelemetry.version>0.7.5</metrics-opentelemetry.version><!--REL-->
+        <test-utils.version>1.7.5</test-utils.version><!--REL-->
 
         <junit.version>5.11.2</junit.version>
         <assertj.version>3.23.1</assertj.version>
