@@ -53,11 +53,9 @@ import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedE
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
-import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
@@ -87,12 +85,14 @@ import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
-import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
@@ -107,6 +107,7 @@ import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -626,24 +627,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   private Mono<Void> maybeRemoveNode(final Node node, final ClusterConfig config) {
     return Mono.defer(() -> {
-      boolean stillPresentInBuckets = config
-        .bucketConfigs()
-        .values()
-        .stream()
-        .flatMap(bc -> bc.nodes().stream())
-        .anyMatch(ni -> ni.id().equals(node.identifier()));
+      boolean stillPresentInBuckets = config.bucketTopologies().stream()
+        .anyMatch(topology -> hasNode(topology, node.identifier()));
 
-
-      boolean stillPresentInGlobal;
-      if (config.globalConfig() != null) {
-        stillPresentInGlobal = config
-          .globalConfig()
-          .portInfos()
-          .stream()
-          .anyMatch(ni -> ni.id().equals(node.identifier()));
-      } else {
-        stillPresentInGlobal = false;
-      }
+      ClusterTopology globalTopology = config.globalTopology();
+      boolean stillPresentInGlobal = globalTopology != null && hasNode(globalTopology, node.identifier());
 
       if ((!stillPresentInBuckets && !stillPresentInGlobal) || !node.hasServicesEnabled()) {
         return node.disconnect().doOnTerminate(() -> nodes.remove(node));
@@ -651,6 +639,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
       return Mono.empty();
     });
+  }
+
+  private static boolean hasNode(ClusterTopology topology, NodeIdentifier nodeId) {
+    return topology.nodes().stream()
+      .anyMatch(node -> node.id().equals(nodeId));
   }
 
   /**
@@ -688,7 +681,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           invalidStateWatchdog.dispose();
 
           return Flux
-            .fromIterable(currentConfig.bucketConfigs().keySet())
+            .fromIterable(currentConfig.bucketNames())
             .flatMap(this::closeBucket)
             .then(configurationProvider.shutdown())
             .then(configurationProcessor.awaitTermination())
@@ -717,18 +710,18 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   private void reconfigure(Runnable doFinally) {
     final ClusterConfig configForThisAttempt = currentConfig;
 
-    if (configForThisAttempt.bucketConfigs().isEmpty() && configForThisAttempt.globalConfig() == null) {
+    final ClusterTopology globalTopology = configForThisAttempt.globalTopology();
+    final Collection<ClusterTopologyWithBucket> bucketTopologies = configForThisAttempt.bucketTopologies();
+
+    if (bucketTopologies.isEmpty() && globalTopology == null) {
       reconfigureDisconnectAll(doFinally);
       return;
     }
 
     final NanoTimestamp start = NanoTimestamp.now();
-    Flux<BucketConfig> bucketConfigFlux = Flux
-      .just(configForThisAttempt)
-      .flatMap(cc -> Flux.fromIterable(cc.bucketConfigs().values()));
 
-    reconfigureBuckets(bucketConfigFlux)
-      .then(reconfigureGlobal(configForThisAttempt.globalConfig()))
+    reconfigureBuckets(Flux.fromIterable(bucketTopologies))
+      .then(reconfigureGlobal(globalTopology))
       .then(Mono.defer(() ->
         Flux
           .fromIterable(new ArrayList<>(nodes))
@@ -781,115 +774,75 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       );
   }
 
-  private Mono<Void> reconfigureGlobal(final GlobalConfig config) {
-    return Mono.defer(() -> {
-      if (config == null) {
-        return Mono.empty();
-      }
-
-      return Flux
-        .fromIterable(config.portInfos())
-        .flatMap(ni -> {
-          boolean tls = coreContext.environment().securityConfig().tlsEnabled();
-
-          final Map<ServiceType, Integer> services = tls ? ni.sslPorts() : ni.ports();
-
-          Flux<Void> serviceRemoveFlux = Flux
-            .fromArray(ServiceType.values())
-            .filter(s -> !services.containsKey(s))
-            .flatMap(s -> removeServiceFrom(
-              ni.id(),
-              s,
-              Optional.empty())
-              .onErrorResume(throwable -> {
-                eventBus.publish(new ServiceReconfigurationFailedEvent(
-                  coreContext,
-                  ni.hostname(),
-                  s,
-                  throwable
-                ));
-                return Mono.empty();
-              })
-            );
-
-
-          Flux<Void> serviceAddFlux = Flux
-            .fromIterable(services.entrySet())
-            .flatMap(s -> ensureServiceAt(
-              ni.id(),
-              s.getKey(),
-              s.getValue(),
-              Optional.empty())
-              .onErrorResume(throwable -> {
-                eventBus.publish(new ServiceReconfigurationFailedEvent(
-                  coreContext,
-                  ni.hostname(),
-                  s.getKey(),
-                  throwable
-                ));
-                return Mono.empty();
-              })
-            );
-
-          return Flux.merge(serviceAddFlux, serviceRemoveFlux);
-        })
-        .then();
-    });
+  private Mono<Void> reconfigureGlobal(final @Nullable ClusterTopology topology) {
+    return topology == null
+      ? Mono.empty()
+      : reconfigureGlobalOrBucket(topology, null);
   }
 
   /**
    * Contains logic to perform reconfiguration for a bucket config.
    *
-   * @param bucketConfigs the flux of bucket configs currently open.
+   * @param bucketTopologies the flux of topologies from currently open buckets
    * @return a mono once reconfiguration for all buckets is complete
    */
-  private Mono<Void> reconfigureBuckets(final Flux<BucketConfig> bucketConfigs) {
-    return bucketConfigs.flatMap(bc ->
-      Flux.fromIterable(bc.nodes())
-        .flatMap(ni -> {
-          boolean tls = coreContext.environment().securityConfig().tlsEnabled();
+  private Mono<Void> reconfigureBuckets(final Flux<ClusterTopologyWithBucket> bucketTopologies) {
+    return bucketTopologies.flatMap(bc -> reconfigureGlobalOrBucket(bc, bc.bucket().name()))
+      .then();
+  }
 
-          final Map<ServiceType, Integer> services = tls ? ni.sslServices() : ni.services();
-
-          Flux<Void> serviceRemoveFlux = Flux
-            .fromArray(ServiceType.values())
-            .filter(s -> !services.containsKey(s))
-            .flatMap(s -> removeServiceFrom(
+  /**
+   * @param bucketName pass non-null if using the topology to configure bucket-scoped services.
+   *
+   * @implNote Maybe in the future we can inspect the ClusterTopology to see if it has a BucketTopology,
+   * and get the bucket name from there. However, let's make it explicit for now; this leaves the door open
+   * to using a ClusterTopologyWithBucket to configure global services (by passing a null bucket name).
+   */
+  private Mono<Void> reconfigureGlobalOrBucket(
+    ClusterTopology topology,
+    @Nullable String bucketName
+  ) {
+    return Flux.fromIterable(topology.nodes())
+      .flatMap(ni -> {
+        Flux<Void> serviceRemoveFlux = Flux
+          .fromArray(ServiceType.values())
+          .filter(s -> !ni.has(s))
+          .flatMap(s -> removeServiceFrom(
               ni.id(),
               s,
-              s.scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
+              s.scope() == ServiceScope.BUCKET ? Optional.ofNullable(bucketName) : Optional.empty())
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
-                  ni.hostname(),
+                  ni.host(),
                   s,
                   throwable
                 ));
                 return Mono.empty();
               })
-            );
+          );
 
-          Flux<Void> serviceAddFlux = Flux
-            .fromIterable(services.entrySet())
-            .flatMap(s -> ensureServiceAt(
+        Flux<Void> serviceAddFlux = Flux
+          .fromIterable(ni.ports().entrySet())
+          .flatMap(s -> ensureServiceAt(
               ni.id(),
               s.getKey(),
               s.getValue(),
-              s.getKey().scope() == ServiceScope.BUCKET ? Optional.of(bc.name()) : Optional.empty())
+              s.getKey().scope() == ServiceScope.BUCKET ? Optional.ofNullable(bucketName) : Optional.empty())
               .onErrorResume(throwable -> {
                 eventBus.publish(new ServiceReconfigurationFailedEvent(
                   coreContext,
-                  ni.hostname(),
+                  ni.host(),
                   s.getKey(),
                   throwable
                 ));
                 return Mono.empty();
               })
-            );
+          );
 
-          return Flux.merge(serviceAddFlux, serviceRemoveFlux);
-        })
-    ).then();
+        return Flux.merge(serviceAddFlux, serviceRemoveFlux);
+      })
+      .then();
   }
 
   /**
