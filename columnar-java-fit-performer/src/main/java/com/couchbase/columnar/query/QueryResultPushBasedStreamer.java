@@ -152,10 +152,13 @@ class PushBasedStreamer extends Thread {
 
   private RowProcessingResult processRow(Row row) {
     if (executeQueryRequest.hasContentAs()) {
-      var content = ContentAsUtil.contentType(executeQueryRequest.getContentAs(),
+      var content = ContentAsUtil.contentType(
+        executeQueryRequest.getContentAs(),
         () -> row.bytes(),
         () -> row.asNullable(JsonArray.class),
-        () -> row.asNullable(JsonObject.class));
+        () -> row.asNullable(JsonObject.class),
+        () -> row.asNullable(String.class)
+      );
 
       if (content.isSuccess()) {
         return new RowProcessingResult(null, fit.columnar.QueryRowResponse.newBuilder()

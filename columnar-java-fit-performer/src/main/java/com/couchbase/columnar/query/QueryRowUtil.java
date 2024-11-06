@@ -36,7 +36,8 @@ public class QueryRowUtil {
         executeQueryRequest.getContentAs(),
         () -> row.bytes(),
         () -> row.asNullable(JsonArray.class),
-        () -> row.asNullable(JsonObject.class)
+        () -> row.asNullable(JsonObject.class),
+        () -> row.asNullable(String.class)
       );
 
       if (content.isSuccess()) {

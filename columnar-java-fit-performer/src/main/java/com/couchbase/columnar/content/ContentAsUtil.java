@@ -29,7 +29,8 @@ public class ContentAsUtil {
     fit.columnar.ContentAs contentAs,
     Supplier<byte[]> asByteArray,
     Supplier<JsonArray> asList,
-    Supplier<JsonObject> asMap
+    Supplier<JsonObject> asMap,
+    Supplier<String> asString
   ) {
     try {
       if (contentAs.hasAsByteArray()) {
@@ -43,6 +44,10 @@ public class ContentAsUtil {
       } else if (contentAs.hasAsMap()) {
         return new Try<>(fit.columnar.ContentWas.newBuilder()
           .setContentWasMap(ProtobufConversions.jsonObjectToStruct(asMap.get()))
+          .build());
+      } else if (contentAs.hasAsString()) {
+        return new Try<>(fit.columnar.ContentWas.newBuilder()
+          .setContentWasString(asString.get())
           .build());
       } else {
         throw new UnsupportedOperationException("Java performer cannot handle contentAs " + contentAs);

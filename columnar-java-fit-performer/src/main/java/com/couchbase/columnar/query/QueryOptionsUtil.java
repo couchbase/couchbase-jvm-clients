@@ -19,6 +19,7 @@ package com.couchbase.columnar.query;
 import com.couchbase.columnar.client.java.QueryOptions;
 import com.couchbase.columnar.client.java.QueryPriority;
 import com.couchbase.columnar.client.java.ScanConsistency;
+import com.couchbase.columnar.util.CustomDeserializer;
 import com.couchbase.columnar.util.grpc.ProtobufConversions;
 import reactor.util.annotation.Nullable;
 
@@ -59,6 +60,10 @@ public class QueryOptionsUtil {
       }
       if (opts.hasTimeout()) {
         options.timeout(Duration.ofSeconds(opts.getTimeout().getSeconds()));
+      }
+      if (opts.hasDeserializer() && opts.getDeserializer().hasCustom()) {
+        CustomDeserializer customDeserializer = new CustomDeserializer();
+        options.deserializer(customDeserializer);
       }
     };
   }

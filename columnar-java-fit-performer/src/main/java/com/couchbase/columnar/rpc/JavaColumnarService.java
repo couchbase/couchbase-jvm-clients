@@ -19,9 +19,9 @@ package com.couchbase.columnar.rpc;
 import com.couchbase.client.protocol.shared.EchoRequest;
 import com.couchbase.client.protocol.shared.EchoResponse;
 import com.couchbase.columnar.cluster.ColumnarClusterConnection;
-import com.couchbase.columnar.modes.Mode;
 import com.couchbase.columnar.fit.core.exceptions.ExceptionGrpcMappingUtil;
 import com.couchbase.columnar.fit.core.util.VersionUtil;
+import com.couchbase.columnar.modes.Mode;
 import com.couchbase.columnar.util.ResultUtil;
 import fit.columnar.CloseAllColumnarClustersRequest;
 import fit.columnar.ClusterCloseRequest;
@@ -61,11 +61,13 @@ public class JavaColumnarService extends ColumnarServiceGrpc.ColumnarServiceImpl
         .setExecuteQueryReturns(fit.columnar.PerApiElementExecuteQuery.ExecuteQueryReturns.EXECUTE_QUERY_RETURNS_QUERY_RESULT)
         .setRowIteration(fit.columnar.PerApiElementExecuteQuery.RowIteration.ROW_ITERATION_BUFFERED)
         .setRowDeserialization(fit.columnar.PerApiElementExecuteQuery.RowDeserialization.ROW_DESERIALIZATION_STATIC_ROW_TYPING_INDIVIDUAL)
+        .setSupportsCustomDeserializer(true)
         .build();
       var executeQueryPushBased = fit.columnar.PerApiElementExecuteQuery.newBuilder()
         .setExecuteQueryReturns(fit.columnar.PerApiElementExecuteQuery.ExecuteQueryReturns.EXECUTE_QUERY_RETURNS_QUERY_METADATA)
         .setRowIteration(fit.columnar.PerApiElementExecuteQuery.RowIteration.ROW_ITERATION_STREAMING_PUSH_BASED)
         .setRowDeserialization(fit.columnar.PerApiElementExecuteQuery.RowDeserialization.ROW_DESERIALIZATION_STATIC_ROW_TYPING_INDIVIDUAL)
+        .setSupportsCustomDeserializer(true)
         .build();
       builder.putClusterExecuteQuery(Mode.PUSH_BASED_STREAMING.ordinal(), executeQueryPushBased);
       builder.putClusterExecuteQuery(Mode.BUFFERED.ordinal(), executeQueryBuffered);
