@@ -59,7 +59,7 @@ class OrchestratorProxy {
 
   private final CouchbaseBucketConfig bucketConfig;
 
-  public OrchestratorProxy(final CoreEnvironment environment, boolean capabilityEnabled) {
+  public OrchestratorProxy(final CoreEnvironment environment, boolean capabilityEnabled, Map<Short, List<CoreRangeScanItem>> data) {
     // Set up Bucket Config
     ClusterConfig clusterConfig = new ClusterConfig();
     bucketConfig = mock(CouchbaseBucketConfig.class);
@@ -81,9 +81,11 @@ class OrchestratorProxy {
     when(core.configurationProvider()).thenReturn(configurationProvider);
 
     rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
+
+    prepare(data);
   }
 
-  void prepare(final Map<Short, List<CoreRangeScanItem>> data) {
+  private void prepare(final Map<Short, List<CoreRangeScanItem>> data) {
     when(bucketConfig.numberOfPartitions()).thenReturn(data.size());
 
     Map<Short, String> uuids = new HashMap<>();

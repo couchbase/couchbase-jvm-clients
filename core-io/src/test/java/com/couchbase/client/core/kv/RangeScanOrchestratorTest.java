@@ -21,21 +21,21 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbStrings.MAX_CODE_POINT_AS_STRING;
 import static com.couchbase.client.core.util.CbStrings.MIN_CODE_POINT_AS_STRING;
+import static java.util.Collections.emptyMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -46,16 +46,13 @@ class RangeScanOrchestratorTest {
 
   private static final CoreEnvironment ENVIRONMENT = CoreEnvironment.create();
 
-  private OrchestratorProxy orchestrator;
-
-  @BeforeEach
-  void beforeEach() {
-    orchestrator = new OrchestratorProxy(ENVIRONMENT, true);
-  }
-
   @AfterAll
   static void afterAll() {
     ENVIRONMENT.shutdown();
+  }
+
+  private static OrchestratorProxy newProxy(Map<Short, List<CoreRangeScanItem>> data) {
+    return new OrchestratorProxy(ENVIRONMENT, true, data);
   }
 
   /**
@@ -63,10 +60,10 @@ class RangeScanOrchestratorTest {
    */
   @Test
   void streamsUnsortedRangeScan() {
-    Map<Short, List<CoreRangeScanItem>> data = new HashMap<>();
-    data.put((short) 0, randomItemsSorted(5));
-    data.put((short) 1, randomItemsSorted(3));
-    orchestrator.prepare(data);
+    OrchestratorProxy orchestrator = newProxy(mapOf(
+      (short) 0, randomItemsSorted(5),
+      (short) 1, randomItemsSorted(3)
+    ));
 
     List<CoreRangeScanItem> result = orchestrator.runRangeScan(new TestRangeScan(), new TestScanOptions());
     assertEquals(8, result.size());
@@ -77,10 +74,10 @@ class RangeScanOrchestratorTest {
    */
   @Test
   void streamsUnsortedSamplingScan() {
-    Map<Short, List<CoreRangeScanItem>> data = new HashMap<>();
-    data.put((short) 0, randomItemsSorted(3));
-    data.put((short) 1, randomItemsSorted(4));
-    orchestrator.prepare(data);
+    OrchestratorProxy orchestrator = newProxy(mapOf(
+      (short) 0, randomItemsSorted(3),
+      (short) 1, randomItemsSorted(4)
+    ));
 
     List<CoreRangeScanItem> result = orchestrator.runSamplingScan(new TestSamplingScan(10), new TestScanOptions());
     assertEquals(7, result.size());
@@ -91,10 +88,10 @@ class RangeScanOrchestratorTest {
    */
   @Test
   void samplingStopsAtLimit() {
-    Map<Short, List<CoreRangeScanItem>> data = new HashMap<>();
-    data.put((short) 0, randomItemsSorted(12));
-    data.put((short) 1, randomItemsSorted(10));
-    orchestrator.prepare(data);
+    OrchestratorProxy orchestrator = newProxy(mapOf(
+      (short) 0, randomItemsSorted(12),
+      (short) 1, randomItemsSorted(10)
+    ));
 
     List<CoreRangeScanItem> result = orchestrator.runSamplingScan( new TestSamplingScan(10), new TestScanOptions());
     assertEquals(10, result.size());
@@ -105,7 +102,7 @@ class RangeScanOrchestratorTest {
    */
   @Test
   void failIfBucketCapabilityNotAvailable() {
-    OrchestratorProxy orchestrator = new OrchestratorProxy(ENVIRONMENT, false);
+    OrchestratorProxy orchestrator = new OrchestratorProxy(ENVIRONMENT, false, emptyMap());
     assertThrows(FeatureNotAvailableException.class, () -> orchestrator.runRangeScan(new TestRangeScan(), new TestScanOptions()));
   }
 
