@@ -30,10 +30,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.kv.ObserveViaSeqnoRequest;
 import com.couchbase.client.core.msg.kv.PredeterminedPartitionRequest;
-import com.couchbase.client.core.msg.kv.ReplicaGetRequest;
-import com.couchbase.client.core.msg.kv.ReplicaSubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SyncDurabilityRequest;
 import com.couchbase.client.core.retry.AuthErrorDecider;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -205,15 +202,10 @@ public class KeyValueLocator implements Locator {
     // having the request being stuck on the server side during rebalance.
     boolean useFastForward = config.hasFastForwardMap() && request.rejectedWithNotMyVbucket() > 0;
 
-    if (request instanceof ReplicaGetRequest) {
-      return config.nodeIndexForReplica(partitionId, ((ReplicaGetRequest) request).replica() - 1, useFastForward);
-    } else if (request instanceof ReplicaSubdocGetRequest) {
-      return config.nodeIndexForReplica(partitionId, ((ReplicaSubdocGetRequest) request).replica() - 1, useFastForward);
-    } else if (request instanceof ObserveViaSeqnoRequest && ((ObserveViaSeqnoRequest) request).replica() > 0) {
-      return config.nodeIndexForReplica(partitionId, ((ObserveViaSeqnoRequest) request).replica() - 1, useFastForward);
-    } else {
-      return config.nodeIndexForActive(partitionId, useFastForward);
-    }
+    int replica = request.replica();
+    return replica == 0
+      ? config.nodeIndexForActive(partitionId, useFastForward)
+      : config.nodeIndexForReplica(partitionId, replica - 1, useFastForward);
   }
 
 

@@ -50,7 +50,8 @@ public class ReplicaGetRequest extends GetRequest {
     }
   }
 
-  public short replica() {
+  @Override
+  public int replica() {
     return replica;
   }
 

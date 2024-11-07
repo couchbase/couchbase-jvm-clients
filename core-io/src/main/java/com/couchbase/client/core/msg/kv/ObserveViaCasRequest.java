@@ -44,6 +44,7 @@ public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasRespo
     this.replica = replica;
   }
 
+  @Override
   public int replica() {
     return replica;
   }

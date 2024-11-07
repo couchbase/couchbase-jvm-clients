@@ -52,6 +52,7 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
     }
   }
 
+  @Override
   public int replica() {
     return replica;
   }

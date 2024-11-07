@@ -46,6 +46,19 @@ public interface KeyValueRequest<R extends Response> extends Request<R>, ScopedR
   void partition(short partition);
 
   /**
+   * Returns the index of the replica set member this request targets.
+   * <ul>
+   *   <li>0 = primary ("active")
+   *   <li>1 = first replica
+   *   <li>2 = second replica
+   *   <li>3 = third replica
+   * </ul>
+   */
+  default int replica() {
+    return 0;
+  }
+
+  /**
    * Encode this request with the given allocator and opaque.
    *
    * @param alloc the allocator where to grab the buffers from.

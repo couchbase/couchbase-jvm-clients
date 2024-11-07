@@ -50,7 +50,8 @@ public class ReplicaSubdocGetRequest extends SubdocGetRequest {
     }
   }
 
-  public short replica() {
+  @Override
+  public int replica() {
     return replica;
   }
 
