@@ -17,11 +17,18 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.topology.NodeIdentifier;
+import com.couchbase.client.core.util.CbThrowables;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
+import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
+import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
 
 @Stability.Internal
 public interface CoreQueryOps {
@@ -43,6 +50,30 @@ public interface CoreQueryOps {
                                         @Nullable NodeIdentifier target,
                                         @Nullable Function<Throwable, RuntimeException> errorConverter) {
     return queryAsync(statement, options, queryContext, target, errorConverter).toBlocking();
+  }
+
+  default CoreQueryMetaData queryBlockingStreaming(
+      String statement,
+      CoreQueryOptions options,
+      @Nullable CoreQueryContext queryContext,
+      @Nullable NodeIdentifier target,
+      @Nullable Function<Throwable, RuntimeException> errorConverter,
+      Consumer<QueryChunkRow> callback
+  ) {
+    try {
+      CoreReactiveQueryResult response = queryReactive(statement, options, queryContext, target, errorConverter)
+          .blockOptional()
+          .orElseThrow(NoSuchElementException::new);
+
+      forEachBlocking(response.rows(), 16, callback);
+      return response.metaData().block();
+
+    } catch (Exception e) {
+      // in case the thread was interrupted in a reactor "block" operator
+      CbThrowables.findCause(e, InterruptedException.class)
+          .ifPresent(it -> { throw propagateAsCancellation(it); });
+      throw e;
+    }
   }
 
   CoreAsyncResponse<CoreQueryResult> queryAsync(String statement,

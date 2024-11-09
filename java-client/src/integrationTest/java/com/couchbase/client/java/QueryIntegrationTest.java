@@ -17,13 +17,15 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ParsingFailureException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.kv.GetOptions;
@@ -31,6 +33,7 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.java.kv.MutationState;
+import com.couchbase.client.java.query.QueryMetaData;
 import com.couchbase.client.java.query.QueryMetrics;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryProfile;
@@ -48,16 +51,29 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.REQUIRE_MB_50132;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.stream.Collectors.toList;
+import static org.assertj.core.api.Fail.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -118,6 +134,163 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertEquals(0, metrics.errorCount());
         assertEquals(0, metrics.warningCount());
         assertEquals(1, metrics.resultCount());
+    }
+
+    private static class GreetingHolder {
+        public String greeting;
+    }
+
+    @Test
+    void simpleBlockingStreamingSelect() {
+        List<JsonObject> jsonObjects = new ArrayList<>();
+        List<Map<String, Object>> maps = new ArrayList<>();
+        List<GreetingHolder> pojos = new ArrayList<>();
+
+        QueryMetaData metaData = cluster.queryStreaming(
+            "SELECT 'hello world' AS greeting",
+            queryOptions().metrics(true),
+            row -> {
+                jsonObjects.add(row.contentAsObject());
+                maps.add(row.contentAs(new TypeRef<Map<String, Object>>() {}));
+                pojos.add(row.contentAs(GreetingHolder.class));
+            }
+        );
+
+        assertEquals(
+            listOf(JsonObject.create().put("greeting", "hello world")),
+            jsonObjects
+        );
+        assertEquals(
+            listOf(mapOf("greeting", "hello world")),
+            maps
+        );
+        assertEquals(
+            listOf("hello world"),
+            transform(pojos, pojo -> pojo.greeting)
+        );
+
+        assertNotNull(metaData.requestId());
+        assertFalse(metaData.clientContextId().isEmpty());
+        assertEquals(QueryStatus.SUCCESS, metaData.status());
+        assertEquals(emptyList(), metaData.warnings());
+        assertTrue(metaData.signature().isPresent());
+
+        QueryMetrics metrics = metaData.metrics().get();
+        assertEquals(0, metrics.errorCount());
+        assertEquals(0, metrics.warningCount());
+        assertEquals(1, metrics.resultCount());
+    }
+
+    /**
+     * The blocking streaming implementation processes rows in batches.
+     * Make sure it works when the result row count is greater than the batch size.
+     */
+    @Test
+    void blockingStreamingCanReturnManyRows() {
+        int numRows = 10_000;
+        List<Integer> resultIds = new ArrayList<>();
+        cluster.queryStreaming(
+            "SELECT RAW i FROM ARRAY_RANGE(0," + numRows + ") AS i",
+            row -> resultIds.add(row.contentAs(Integer.class))
+        );
+
+        assertEquals(
+            IntStream.range(0, numRows).boxed().collect(toList()),
+            resultIds
+        );
+    }
+
+    private static final class FakeException extends RuntimeException {}
+
+    @Test
+    void blockingStreamingPropagatesException() {
+        assertThrows(
+            FakeException.class,
+            () -> cluster.queryStreaming(
+                "SELECT 1",
+                row -> {
+                    throw new FakeException();
+                }
+            )
+        );
+    }
+
+    @Test
+    void blockingStreamingRowAsAllowsNull() {
+        List<String> results = new ArrayList<>();
+        cluster.queryStreaming(
+            "SELECT RAW null",
+            row -> results.add(row.contentAs(String.class))
+        );
+        assertEquals(
+            singletonList(null),
+            results
+        );
+    }
+
+    @Test
+    void simpleBlockingStreamingRowAsThrowsDecodingFailure() {
+        assertThrows(
+            DecodingFailureException.class,
+            () -> cluster.queryStreaming(
+                "SELECT 1",
+                row -> row.contentAs(GreetingHolder.class)
+            )
+        );
+    }
+
+    @Test
+    void blockingStreamingRowActionRunsInCallerThread() {
+        AtomicReference<Thread> rowActionThread = new AtomicReference<>();
+        cluster.queryStreaming(
+            "SELECT 1",
+            row -> rowActionThread.set(Thread.currentThread())
+        );
+        assertSame(Thread.currentThread(), rowActionThread.get());
+    }
+
+    @Test
+    void blockingStreamingCanTimeOut() {
+        // Thanks vsr1! https://www.couchbase.com/forums/t/how-to-force-a-sql-query-to-take-a-long-time/39658
+        String verySlowStatement = "SELECT COUNT (1) AS c FROM" +
+            " ARRAY_RANGE(0,100000) AS d1," +
+            " ARRAY_RANGE(0,100000) AS d2," +
+            " ARRAY_RANGE(0,100000) AS d3";
+
+        assertThrows(
+            TimeoutException.class,
+            () -> cluster.queryStreaming(
+                verySlowStatement,
+                queryOptions()
+                    .timeout(Duration.ofMillis(1)),
+                row -> fail("Did not expect to receive result row")
+            )
+        );
+    }
+
+    @Test
+    void blockingStreamingThrowsCancellationWhenThreadAlreadyInterrupted() {
+        Thread.currentThread().interrupt();
+        assertThrows(
+            CancellationException.class,
+            () -> cluster.queryStreaming(
+                "SELECT 1",
+                row -> fail("Did not expect to receive result row")
+          )
+        );
+        assertTrue(Thread.interrupted());
+    }
+
+    @Test
+    void blockingStreamingThrowsCancellationWhenInterruptedInCallback() {
+        assertThrows(
+            CancellationException.class,
+            () -> cluster.queryStreaming(
+                "SELECT 1",
+                row -> Thread.currentThread().interrupt()
+            )
+        );
+        assertTrue(Thread.interrupted());
     }
 
     @Test

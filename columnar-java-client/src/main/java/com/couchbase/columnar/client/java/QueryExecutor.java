@@ -39,6 +39,7 @@ import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryAction;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.columnar.client.java.codec.Deserializer;
@@ -61,8 +62,8 @@ import static com.couchbase.client.core.retry.RetryReason.ENDPOINT_NOT_AVAILABLE
 import static com.couchbase.client.core.retry.RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
-import static com.couchbase.columnar.client.java.internal.ReactorHelper.forEachBlocking;
-import static com.couchbase.columnar.client.java.internal.ReactorHelper.propagateAsCancellation;
+import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
+import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -359,7 +360,17 @@ class QueryExecutor {
       .takeUntilOther(wholeStreamDeadlineAsMono);
 
     forEachBlocking(rows, DEFAULT_STREAM_BUFFER_ROWS, callback);
-    return new QueryMetadata(response.header(), response.trailer().blockOptional().get());
+
+    try {
+      return new QueryMetadata(response.header(), response.trailer().blockOptional().get());
+    } catch (Exception e) {
+      // in case the thread was interrupted immediately before blocking for the trailer
+      CbThrowables.findCause(e, InterruptedException.class)
+        .ifPresent(it -> {
+          throw propagateAsCancellation(it);
+        });
+      throw e;
+    }
   }
 
   private class ColumnarRetryStrategy extends BestEffortRetryStrategy {

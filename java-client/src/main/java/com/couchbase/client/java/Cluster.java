@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreLimiter;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.PingResult;
@@ -45,8 +46,10 @@ import com.couchbase.client.java.manager.query.QueryIndexManager;
 import com.couchbase.client.java.manager.search.SearchIndexManager;
 import com.couchbase.client.java.manager.user.UserManager;
 import com.couchbase.client.java.query.QueryAccessor;
+import com.couchbase.client.java.query.QueryMetaData;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryRow;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.SearchRequest;
@@ -58,7 +61,9 @@ import java.io.Closeable;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -406,6 +411,68 @@ public class Cluster implements Closeable {
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
     return new QueryResult(async().queryOps.queryBlocking(statement, opts, null, null, QueryAccessor::convertCoreQueryError), serializer);
+  }
+
+  /**
+   * Executes a SQL++ query statement using default options,
+   * (no query parameters, etc.), and passes result rows to the given
+   * {@code rowAction} callback, one by one as they arrive from the server.
+   * <p>
+   * The callback action is guaranteed to execute in the same thread
+   * (or virtual thread) that called this method. If the callback throws
+   * an exception, the query is cancelled and the exception is re-thrown
+   * by this method.
+   * <p>
+   * If the calling thread is interrupted, this method throws
+   * {@link CancellationException} and sets the thread's interrupted flag.
+   *
+   * @param statement The SQL++ statement to execute.
+   * @return Query metadata.
+   * @throws CancellationException if the calling thread is interrupted.
+   * @throws TimeoutException if the query does not complete before the timeout expires.
+   * @throws RuntimeException if the row action callback throws an exception.
+   */
+  @Stability.Volatile
+  public QueryMetaData queryStreaming(String statement, Consumer<QueryRow> rowAction) {
+    return queryStreaming(statement, DEFAULT_QUERY_OPTIONS, rowAction);
+  }
+
+  /**
+   * Executes a SQL++ query statement using the specified options,
+   * (query parameters, etc.), and passes result rows to the given
+   * {@code rowAction} callback, one by one as they arrive from the server.
+   * <p>
+   * The callback action is guaranteed to execute in the same thread
+   * (or virtual thread) that called this method. If the callback throws
+   * an exception, the query is cancelled and the exception is re-thrown
+   * by this method.
+   * <p>
+   * If the calling thread is interrupted, this method throws
+   * {@link CancellationException} and sets the thread's interrupted flag.
+   *
+   * @param statement The SQL++ statement to execute.
+   * @param options Custom query options.
+   * @return Query metadata.
+   * @throws CancellationException if the calling thread is interrupted.
+   * @throws TimeoutException if the query does not complete before the timeout expires.
+   * @throws RuntimeException if the row action callback throws an exception.
+   */
+  @Stability.Volatile
+  public QueryMetaData queryStreaming(String statement, QueryOptions options, Consumer<QueryRow> rowAction) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+
+    CoreQueryMetaData coreMetadata = async().queryOps.queryBlockingStreaming(
+      statement,
+      opts,
+      null,
+      null,
+      QueryAccessor::convertCoreQueryError,
+      coreRow -> rowAction.accept(new QueryRow(coreRow.data(), serializer))
+    );
+
+    return new QueryMetaData(coreMetadata);
   }
 
   /**

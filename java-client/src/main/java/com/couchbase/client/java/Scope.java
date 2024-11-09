@@ -19,6 +19,7 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
@@ -30,8 +31,10 @@ import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.manager.eventing.ScopeEventingFunctionManager;
 import com.couchbase.client.java.manager.search.ScopeSearchIndexManager;
 import com.couchbase.client.java.query.QueryAccessor;
+import com.couchbase.client.java.query.QueryMetaData;
 import com.couchbase.client.java.query.QueryOptions;
 import com.couchbase.client.java.query.QueryResult;
+import com.couchbase.client.java.query.QueryRow;
 import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.SearchRequest;
@@ -39,7 +42,9 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.vector.VectorSearch;
 
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.AsyncUtils.block;
@@ -178,6 +183,68 @@ public class Scope {
     final QueryOptions.Built opts = options.build();
     JsonSerializer serializer = opts.serializer() == null ?  environment().jsonSerializer() : opts.serializer();
     return new QueryResult(async().queryOps.queryBlocking(statement, opts, asyncScope.queryContext, null, QueryAccessor::convertCoreQueryError), serializer);
+  }
+
+  /**
+   * Executes a SQL++ query statement in this scope using default options,
+   * (no query parameters, etc.), and passes result rows to the given
+   * {@code rowAction} callback, one by one as they arrive from the server.
+   * <p>
+   * The callback action is guaranteed to execute in the same thread
+   * (or virtual thread) that called this method. If the callback throws
+   * an exception, the query is cancelled and the exception is re-thrown
+   * by this method.
+   * <p>
+   * If the calling thread is interrupted, this method throws
+   * {@link CancellationException} and sets the thread's interrupted flag.
+   *
+   * @param statement The SQL++ statement to execute.
+   * @return Query metadata.
+   * @throws CancellationException if the calling thread is interrupted.
+   * @throws TimeoutException if the query does not complete before the timeout expires.
+   * @throws RuntimeException if the row action callback throws an exception.
+   */
+  @Stability.Volatile
+  public QueryMetaData queryStreaming(String statement, Consumer<QueryRow> rowAction) {
+    return queryStreaming(statement, DEFAULT_QUERY_OPTIONS, rowAction);
+  }
+
+  /**
+   * Executes a SQL++ query statement in this scope using the specified options,
+   * (query parameters, etc.), and passes result rows to the given
+   * {@code rowAction} callback, one by one as they arrive from the server.
+   * <p>
+   * The callback action is guaranteed to execute in the same thread
+   * (or virtual thread) that called this method. If the callback throws
+   * an exception, the query is cancelled and the exception is re-thrown
+   * by this method.
+   * <p>
+   * If the calling thread is interrupted, this method throws
+   * {@link CancellationException} and sets the thread's interrupted flag.
+   *
+   * @param statement The SQL++ statement to execute.
+   * @param options Custom query options.
+   * @return Query metadata.
+   * @throws CancellationException if the calling thread is interrupted.
+   * @throws TimeoutException if the query does not complete before the timeout expires.
+   * @throws RuntimeException if the row action callback throws an exception.
+   */
+  @Stability.Volatile
+  public QueryMetaData queryStreaming(String statement, QueryOptions options, Consumer<QueryRow> rowAction) {
+    notNull(options, "QueryOptions", () -> new ReducedQueryErrorContext(statement));
+    final QueryOptions.Built opts = options.build();
+    JsonSerializer serializer = opts.serializer() == null ? environment().jsonSerializer() : opts.serializer();
+
+    CoreQueryMetaData coreMetadata = async().queryOps.queryBlockingStreaming(
+      statement,
+      opts,
+      asyncScope.queryContext,
+      null,
+      QueryAccessor::convertCoreQueryError,
+      coreRow -> rowAction.accept(new QueryRow(coreRow.data(), serializer))
+    );
+
+    return new QueryMetaData(coreMetadata);
   }
 
   /**

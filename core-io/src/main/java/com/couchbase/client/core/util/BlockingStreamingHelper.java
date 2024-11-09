@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.couchbase.columnar.client.java.internal;
+package com.couchbase.client.core.util;
 
-import org.jetbrains.annotations.ApiStatus;
+import com.couchbase.client.core.annotation.Stability;
 import reactor.core.Disposable;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -30,10 +30,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
-@ApiStatus.Internal
-public class ReactorHelper {
+@Stability.Internal
+public class BlockingStreamingHelper {
 
-  private ReactorHelper() {
+  private BlockingStreamingHelper() {
     throw new AssertionError("not instantiable");
   }
 
