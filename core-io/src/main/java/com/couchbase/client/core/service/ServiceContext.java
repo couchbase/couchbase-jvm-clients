@@ -17,23 +17,14 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.util.HostAndPort;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-
 public class ServiceContext extends CoreContext {
 
-  /**
-   * The hostname of this service.
-   */
-  private final String remoteHostname;
-
-  /**
-   * The port of this service.
-   */
-  private final int remotePort;
+  private final HostAndPort remote;
 
   /**
    * The service type of this context.
@@ -45,24 +36,35 @@ public class ServiceContext extends CoreContext {
   public ServiceContext(CoreContext ctx, String remoteHostname, int remotePort,
                         ServiceType serviceType, Optional<String> bucket) {
     super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
-    this.remoteHostname = remoteHostname;
-    this.remotePort = remotePort;
     this.bucket = bucket;
     this.serviceType = serviceType;
+    this.remote = new HostAndPort(remoteHostname, remotePort);
   }
 
+  /**
+   * @deprecated In favor of {@link #remote()}
+   */
+  @Deprecated
   public String remoteHostname() {
-    return remoteHostname;
+    return remote.host();
   }
 
+  /**
+   * @deprecated In favor of {@link #remote()}
+   */
+  @Deprecated
   public int remotePort() {
-    return remotePort;
+    return remote.port();
+  }
+
+  public HostAndPort remote() {
+    return remote;
   }
 
   @Override
   public void injectExportableParams(final Map<String, Object> input) {
     super.injectExportableParams(input);
-    input.put("remote", redactSystem(remoteHostname() + ":" + remotePort()));
+    input.put("remote", remote.toString());
     input.put("type", serviceType);
     bucket.ifPresent(b -> input.put("bucket", b));
   }

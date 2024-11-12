@@ -84,10 +84,7 @@ public interface Service extends Stateful<ServiceState> {
    * Returns the remote address for this service.
    */
   default HostAndPort address() {
-    return new HostAndPort(
-      context().remoteHostname(),
-      context().remotePort()
-    );
+    return context().remote();
   }
 
   @Stability.Internal
