@@ -16,10 +16,10 @@
 
 package com.couchbase.client.core.cnc;
 
-import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.NativeImageHelper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -137,7 +137,7 @@ public class DefaultEventBus implements EventBus {
   }
 
   private DefaultEventBus(final Builder builder) {
-    eventQueue = new MpscArrayQueue<>(builder.queueCapacity);
+    eventQueue = NativeImageHelper.createMpscArrayQueue(builder.queueCapacity);
     scheduler = builder.scheduler;
     errorLogging = builder.errorLogging.orElse(null);
     threadName = builder.threadName;

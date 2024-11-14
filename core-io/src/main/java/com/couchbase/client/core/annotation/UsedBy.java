@@ -33,6 +33,7 @@ public @interface UsedBy {
   Project value();
 
   enum Project {
-    SPRING_DATA_COUCHBASE
+    SPRING_DATA_COUCHBASE,
+    QUARKUS_COUCHBASE
   }
 }

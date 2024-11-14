@@ -17,6 +17,7 @@
 package com.couchbase.client.java.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.VersionAndGitHash;
@@ -34,6 +35,7 @@ import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static com.couchbase.client.core.annotation.UsedBy.Project.QUARKUS_COUCHBASE;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -70,6 +72,7 @@ public class ClusterEnvironment extends CoreEnvironment {
    * Be very careful not to reference any classes from the optional Jackson library otherwise users will get
    * NoClassDefFoundError when Jackson is absent.
    */
+  @UsedBy(QUARKUS_COUCHBASE)
   private JsonSerializer newDefaultSerializer(CryptoManager cryptoManager) {
     return nonShadowedJacksonPresent()
         ? JacksonJsonSerializer.create(cryptoManager)

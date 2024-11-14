@@ -16,6 +16,10 @@
       <!-- Prevent unintentional dependency on unbundled Jackson -->
       <property name="illegalPkgs" value="com.fasterxml.jackson"/>
 
+<!--        Warns that using certain classes from jctools (namely in org.jctools.queues)
+            is not native image compatible -->
+      <property name="illegalPkgs" value="com.couchbase.client.core.deps.org.jctools"/>
+
       <!-- Prevent unintentional direct access to org.iq80.snappy, which only works
            on little-endian hardware in JVMs where `sun.misc.Unsafe` is accessible.
            Most code should use SnappyCodec.instance() instead, because it has a fallback

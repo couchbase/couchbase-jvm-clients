@@ -20,7 +20,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.tracing.OrphanRecordDroppedEvent;
 import com.couchbase.client.core.cnc.events.tracing.OrphanReporterFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.tracing.OrphansRecordedEvent;
-import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.env.OrphanReporterConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
@@ -29,6 +28,7 @@ import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.NativeImageHelper;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -86,7 +86,7 @@ public class OrphanReporter {
   @Stability.Internal
   public OrphanReporter(final EventBus eventBus, final OrphanReporterConfig config) {
     this.eventBus = eventBus;
-    this.orphanQueue = new MpscArrayQueue<>(config.queueLength());
+    this.orphanQueue = NativeImageHelper.createMpscArrayQueue(config.queueLength());
     this.emitInterval = config.emitInterval();
     this.sampleSize = config.sampleSize();
     this.enabled = config.enabled();

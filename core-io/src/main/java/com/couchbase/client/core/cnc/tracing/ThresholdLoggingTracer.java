@@ -21,7 +21,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecordedEvent;
-import com.couchbase.client.core.deps.org.jctools.queues.MpscArrayQueue;
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.error.TracerException;
 import com.couchbase.client.core.msg.Request;
@@ -29,6 +28,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.NativeImageHelper;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -121,7 +121,7 @@ public class ThresholdLoggingTracer implements RequestTracer {
    */
   private ThresholdLoggingTracer(final EventBus eventBus, ThresholdLoggingTracerConfig config) {
     this.eventBus = eventBus;
-    this.overThresholdQueue = new MpscArrayQueue<>(config.queueLength());
+    this.overThresholdQueue = NativeImageHelper.createMpscArrayQueue(config.queueLength());
     kvThreshold = config.kvThreshold().toNanos();
     analyticsThreshold = config.analyticsThreshold().toNanos();
     searchThreshold = config.searchThreshold().toNanos();
