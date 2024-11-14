@@ -20,6 +20,8 @@ import com.couchbase.client.core.cnc.Counter;
 
 public class NoopCounter implements Counter {
 
+  public static final NoopCounter INSTANCE = new NoopCounter();
+
   @Override
   public void incrementBy(long number) {
 

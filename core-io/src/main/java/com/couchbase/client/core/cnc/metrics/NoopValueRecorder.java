@@ -20,6 +20,8 @@ import com.couchbase.client.core.cnc.ValueRecorder;
 
 public class NoopValueRecorder implements ValueRecorder {
 
+  public static final NoopValueRecorder INSTANCE = new NoopValueRecorder();
+
   @Override
   public void recordValue(long value) {
 

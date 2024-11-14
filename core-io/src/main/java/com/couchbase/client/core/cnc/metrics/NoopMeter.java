@@ -30,12 +30,12 @@ public class NoopMeter implements Meter {
 
   @Override
   public Counter counter(String name, Map<String, String> tags) {
-    return new NoopCounter();
+    return NoopCounter.INSTANCE;
   }
 
   @Override
   public ValueRecorder valueRecorder(String name, Map<String, String> tags) {
-    return new NoopValueRecorder();
+    return NoopValueRecorder.INSTANCE;
   }
 
   @Override
