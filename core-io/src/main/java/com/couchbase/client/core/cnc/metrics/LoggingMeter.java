@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +48,7 @@ public class LoggingMeter implements Meter {
   private final Thread worker;
   private final AtomicBoolean running = new AtomicBoolean(false);
 
-  private final Map<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
+  private final ConcurrentMap<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
 
   private final long emitIntervalMs;
   private final LoggingMeterConfig config;
@@ -86,7 +87,7 @@ public class LoggingMeter implements Meter {
   }
 
   @Override
-  public synchronized ValueRecorder valueRecorder(String name, Map<String, String> tags) {
+  public ValueRecorder valueRecorder(String name, Map<String, String> tags) {
     try {
       return valueRecorders.computeIfAbsent(
         new NameAndTags(name, tags),
@@ -141,7 +142,7 @@ public class LoggingMeter implements Meter {
     }
 
     @SuppressWarnings("unchecked")
-    private synchronized void dumpMetrics() {
+    private void dumpMetrics() {
       Map<String,  Object> output = new HashMap<>();
 
       Map<String, Object> meta = new HashMap<>();
