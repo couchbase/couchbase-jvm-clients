@@ -258,11 +258,18 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                             if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
                                 throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
                             }
-                            ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
+                            if (options == null) {
+                                ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
+                            }
+                            // [start:3.6.2]
+                            else {
+                                ctx.replace(r, content, options);
+                            }
+                            // [end:3.6.2]
                         } else {
                             var collection = connection.collection(request.getLocation());
                             var r = ctx.get(collection, executor.getDocId(request.getLocation()));
-                            if (options != null) {
+                            if (options == null) {
                                 ctx.replace(r, content);
                             }
                             // [start:3.6.2]
