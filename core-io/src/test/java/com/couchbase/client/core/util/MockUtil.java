@@ -16,7 +16,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.Core;
-// import com.couchbase.client.core.CoreResources;
+import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 
@@ -28,14 +28,13 @@ public class MockUtil {
 
   public static Core mockCore() {
     Core core = mock(Core.class);
-    // Will be enabled in a future commit
-//    CoreResources coreResources = new CoreResources() {
-//      @Override
-//      public RequestTracer requestTracer() {
-//        return NoopRequestTracer.INSTANCE;
-//      }
-//    };
-//    when(core.coreResources()).thenReturn(coreResources);
+    CoreResources coreResources = new CoreResources() {
+      @Override
+      public RequestTracer requestTracer() {
+        return NoopRequestTracer.INSTANCE;
+      }
+    };
+    when(core.coreResources()).thenReturn(coreResources);
     return core;
   }
 }
