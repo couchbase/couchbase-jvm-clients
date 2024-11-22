@@ -61,10 +61,21 @@ abstract class DeferredCloseEndpoint extends BaseEndpoint {
   @Stability.Internal
   @Override
   public synchronized void markRequestCompletion() {
+    maybeResumeDisconnect();
     super.markRequestCompletion();
-    if (closeWhenDone && outstandingRequests() <= 0) {
+  }
+
+  @Stability.Internal
+  @Override
+  public synchronized void notifyChannelInactive() {
+    maybeResumeDisconnect();
+    super.notifyChannelInactive();
+  }
+
+  private void maybeResumeDisconnect() {
+    if (closeWhenDone) {
       endpointContext.get().environment().eventBus().publish(new EndpointDisconnectResumedEvent(endpointContext.get()));
-      closeChannel(this.channel);
+      super.disconnect();
       closeWhenDone = false;
     }
   }
