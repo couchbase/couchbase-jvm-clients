@@ -30,6 +30,7 @@ import com.couchbase.client.core.msg.kv.KvPingRequest;
 import com.couchbase.client.core.msg.kv.KvPingResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.BucketCapability;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.HostAndServicePorts;
@@ -155,7 +156,11 @@ public class HealthPinger {
 
     final List<ClusterTopology> topologiesToScan = new ArrayList<>();
     if (bucket != null) {
-      topologiesToScan.add(clusterConfig.bucketTopology(bucket));
+      ClusterTopologyWithBucket topology = clusterConfig.bucketTopology(bucket);
+      if (topology != null && !topology.bucket().hasCapability(BucketCapability.COUCHAPI)) {
+        serviceTypeFilter.remove(VIEWS);
+      }
+      topologiesToScan.add(topology);
     } else {
       serviceTypeFilter.removeAll(servicesThatRequireBucket); // narrow to the ones that can be pinged without a bucket
       topologiesToScan.add(clusterConfig.globalTopology());
