@@ -94,6 +94,7 @@ import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterIdentifier;
+import com.couchbase.client.core.topology.ClusterIdentifierUtil;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.NodeIdentifier;
@@ -348,7 +349,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     );
 
     this.transactionsCleanup = new CoreTransactionsCleanup(this, environment.transactionsConfig());
-    this.transactionsContext = new CoreTransactionsContext(environment.meter());
+    this.transactionsContext = new CoreTransactionsContext(this, environment.meter());
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
   }
@@ -629,7 +630,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       }
     }
     final String finalExceptionSimpleName = exceptionSimpleName;
-    final ClusterIdentifier clusterIdent = currentConfig == null ? null : currentConfig.globalConfig() == null ? null : currentConfig.globalConfig().clusterIdent();
+    final ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(currentConfig);
 
     return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request, exceptionSimpleName, clusterIdent), key -> {
       Map<String, String> tags = new HashMap<>(9);

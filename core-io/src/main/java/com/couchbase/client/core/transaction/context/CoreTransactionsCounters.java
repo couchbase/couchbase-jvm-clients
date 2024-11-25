@@ -15,15 +15,21 @@
  */
 package com.couchbase.client.core.transaction.context;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.config.ClusterConfig;
+import com.couchbase.client.core.topology.ClusterIdentifier;
+import com.couchbase.client.core.topology.ClusterIdentifierUtil;
 import com.couchbase.client.core.util.CbCollections;
+import reactor.util.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.cnc.TracingIdentifiers.METER_TRANSACTION_ATTEMPTS;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.METER_TRANSACTION_TOTAL;
@@ -31,21 +37,63 @@ import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTI
 
 @Stability.Internal
 public class CoreTransactionsCounters {
-  private final Counter transactions;
-  private final Counter attempts;
-  // A histogram of transaction durations
+    @Stability.Internal
+    public static class TransactionMetricIdentifier {
 
-  public CoreTransactionsCounters(Meter meter) {
-    Map<String, String> tags = CbCollections.mapOf(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);
-    transactions = meter.counter(METER_TRANSACTION_TOTAL, tags);
-    attempts = meter.counter(METER_TRANSACTION_ATTEMPTS, tags);
-  }
+        private final @Nullable String clusterName;
+        private final @Nullable String clusterUuid;
 
-  public Counter attempts() {
-    return attempts;
-  }
+        TransactionMetricIdentifier(@Nullable ClusterIdentifier clusterIdent) {
+            clusterName = clusterIdent == null ? null : clusterIdent.clusterName();
+            clusterUuid = clusterIdent == null ? null : clusterIdent.clusterUuid();
+        }
 
-  public Counter transactions() {
-    return transactions;
-  }
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            TransactionMetricIdentifier that = (TransactionMetricIdentifier) o;
+            return Objects.equals(clusterName, that.clusterName)
+                    && Objects.equals(clusterUuid, that.clusterUuid);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(clusterName, clusterUuid);
+        }
+    }
+
+    private final Map<TransactionMetricIdentifier, Counter> transactionsMetrics = new ConcurrentHashMap<>();
+    private final Map<TransactionMetricIdentifier, Counter> attemptMetrics = new ConcurrentHashMap<>();
+    private final Core core;
+    private final Meter meter;
+
+    public CoreTransactionsCounters(Core core, Meter meter) {
+        this.core = core;
+        this.meter = meter;
+    }
+
+    public Counter attempts() {
+        return genericCounter(METER_TRANSACTION_ATTEMPTS, attemptMetrics);
+    }
+
+    public Counter transactions() {
+        return genericCounter(METER_TRANSACTION_TOTAL, transactionsMetrics);
+    }
+
+    private Counter genericCounter(String name, Map<TransactionMetricIdentifier, Counter> metricsMap) {
+        ClusterConfig config = core.configurationProvider().config();
+        ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(config);
+        return metricsMap.computeIfAbsent(new TransactionMetricIdentifier(clusterIdent), id -> {
+            HashMap<String, String> tags = new HashMap<>();
+            tags.put(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+            if (id.clusterName != null) {
+                tags.put(TracingIdentifiers.ATTR_CLUSTER_NAME, id.clusterName);
+            }
+            if (id.clusterUuid != null) {
+                tags.put(TracingIdentifiers.ATTR_CLUSTER_UUID, id.clusterUuid);
+            }
+            return meter.counter(name, tags);
+        });
+    }
 }
