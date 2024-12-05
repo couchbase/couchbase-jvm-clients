@@ -39,7 +39,9 @@ public class SeedNodesUpdatedEvent extends AbstractEvent {
 
   @Override
   public String description() {
-    return "Seed nodes updated from "+ oldSeedNodes +" to " + newSeedNodes;
+    return oldSeedNodes.equals(newSeedNodes)
+      ? "Seed nodes unchanged: " + newSeedNodes
+      : "Seed nodes updated from " + oldSeedNodes + " to " + newSeedNodes;
   }
 
 }
