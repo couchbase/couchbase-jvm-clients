@@ -6,7 +6,7 @@
 
     <groupId>com.example</groupId>
     <artifactId>couchbase-columnar-java-example</artifactId>
-    <version>1.0.6</version><!--REL-->
+    <version>1.0.7-SNAPSHOT</version><!--REL-->
 
     <name>Couchbase Columnar Java SDK Project Template</name>
     <description>Examples project for Couchbase Columnar Java SDK</description>

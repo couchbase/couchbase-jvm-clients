@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.16.6</version><!--REL-->
+    <version>1.16.7-SNAPSHOT</version><!--REL-->
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -15,17 +15,17 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <osgi-feature.version>3.7.6</osgi-feature.version><!--REL-->
-        <java-examples.version>1.7.6</java-examples.version><!--REL-->
-        <java-client.version>3.7.6</java-client.version><!--REL-->
-        <core-io.version>3.7.6</core-io.version><!--REL-->
-        <core-io-deps.version>1.7.6</core-io-deps.version><!--REL-->
-        <scala-client.version>1.7.6</scala-client.version><!--REL-->
-        <kotlin-client.version>1.4.6</kotlin-client.version><!--REL-->
-        <columnar-java-client.version>1.0.6</columnar-java-client.version><!--REL-->
-        <tracing-opentelemetry.version>1.5.6</tracing-opentelemetry.version><!--REL-->
-        <metrics-opentelemetry.version>0.7.6</metrics-opentelemetry.version><!--REL-->
-        <test-utils.version>1.7.6</test-utils.version><!--REL-->
+        <osgi-feature.version>3.7.7-SNAPSHOT</osgi-feature.version><!--REL-->
+        <java-examples.version>1.7.7-SNAPSHOT</java-examples.version><!--REL-->
+        <java-client.version>3.7.7-SNAPSHOT</java-client.version><!--REL-->
+        <core-io.version>3.7.7-SNAPSHOT</core-io.version><!--REL-->
+        <core-io-deps.version>1.7.7-SNAPSHOT</core-io-deps.version><!--REL-->
+        <scala-client.version>1.7.7-SNAPSHOT</scala-client.version><!--REL-->
+        <kotlin-client.version>1.4.7-SNAPSHOT</kotlin-client.version><!--REL-->
+        <columnar-java-client.version>1.0.7-SNAPSHOT</columnar-java-client.version><!--REL-->
+        <tracing-opentelemetry.version>1.5.7-SNAPSHOT</tracing-opentelemetry.version><!--REL-->
+        <metrics-opentelemetry.version>0.7.7-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
+        <test-utils.version>1.7.7-SNAPSHOT</test-utils.version><!--REL-->
 
         <junit.version>5.11.2</junit.version>
         <assertj.version>3.23.1</assertj.version>
