@@ -35,6 +35,7 @@ import com.couchbase.client.core.msg.kv.MutationToken
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
+import com.couchbase.client.scala.transformers.JacksonTransformers
 import com.couchbase.client.scala.util.DurationConversions._
 
 import java.{lang, time}
@@ -324,7 +325,7 @@ case class QueryOptions(
       override def namedParameters(): ObjectNode = parameters match {
         case Some(v: QueryParameters.Named) =>
           try {
-            Mapper.convertValue(v.parameters.asJava, classOf[ObjectNode])
+              JacksonTransformers.MAPPER.convertValue(v.parameters.asJava, classOf[ObjectNode])
           } catch {
             case e: JsonProcessingException =>
               throw new InvalidArgumentException("Unable to convert named parameters", e, null)
@@ -345,7 +346,7 @@ case class QueryOptions(
       override def positionalParameters(): ArrayNode = parameters match {
         case Some(v: QueryParameters.Positional) =>
           try {
-            Mapper.convertValue(v.parameters.asJava, classOf[ArrayNode])
+            JacksonTransformers.MAPPER.convertValue(v.parameters.asJava, classOf[ArrayNode])
           } catch {
             case e: JsonProcessingException =>
               throw new InvalidArgumentException("Unable to convert named parameters", e, null)
@@ -361,8 +362,9 @@ case class QueryOptions(
       }
 
       override def raw(): JsonNode = x.raw match {
-        case Some(value) => Mapper.convertValue(value.asJava, classOf[ObjectNode])
-        case _           => null
+        case Some(value) =>
+          JacksonTransformers.MAPPER.convertValue(value.asJava, classOf[ObjectNode])
+        case _ => null
       }
 
       override def readonly(): Boolean = x.readonly.getOrElse(false)

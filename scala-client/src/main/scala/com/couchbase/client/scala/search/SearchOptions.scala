@@ -30,6 +30,7 @@ import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.search.facet.SearchFacet
 import com.couchbase.client.scala.search.sort.SearchSort
+import com.couchbase.client.scala.transformers.JacksonTransformers
 
 import java.{lang, util}
 import scala.compat.java8.OptionConverters._
@@ -288,7 +289,7 @@ case class SearchOptions(
       override def limit(): Integer = x.limit.map(_.asInstanceOf[Integer]).orNull
 
       override def raw(): JsonNode =
-        x.raw.map(v => Mapper.convertValue(v, classOf[JsonNode])).orNull
+        x.raw.map(v => JacksonTransformers.MAPPER.convertValue(v, classOf[JsonNode])).orNull
 
       override def skip(): Integer = x.skip.map(_.asInstanceOf[Integer]).orNull
 
