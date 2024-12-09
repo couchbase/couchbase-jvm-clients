@@ -18,6 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCounterType;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -171,15 +172,18 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
 
       cancellationReason = reason;
       final Throwable exception;
+      final AppTelemetryCounterType appTelemetryCounterType;
 
       final String msg = this.getClass().getSimpleName() + ", Reason: " + reason;
       final CancellationErrorContext ctx = new CancellationErrorContext(context());
       if (reason == CancellationReason.TIMEOUT) {
+        appTelemetryCounterType = AppTelemetryCounterType.TIMED_OUT;
         exception = idempotent() ? new UnambiguousTimeoutException(msg, ctx) : new AmbiguousTimeoutException(msg, ctx);
       } else {
+        appTelemetryCounterType = AppTelemetryCounterType.CANCELLED;
         exception = new RequestCanceledException(msg, reason, ctx);
       }
-
+      context().core().appTelemetryCollector().increment(this, appTelemetryCounterType);
       response.completeExceptionally(exceptionTranslator.apply(exception));
     }
   }

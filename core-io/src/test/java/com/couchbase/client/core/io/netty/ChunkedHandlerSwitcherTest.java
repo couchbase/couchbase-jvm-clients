@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggregator;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
@@ -42,6 +43,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.core.util.MockUtil.mockCoreContext;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -72,8 +75,9 @@ class ChunkedHandlerSwitcherTest {
 
   @BeforeEach
   void setup() {
-    endpointContext = mock(EndpointContext.class);
-    when(endpointContext.environment()).thenReturn(env);
+    Core core = mockCore(env);
+    endpointContext = mockCoreContext(core, EndpointContext.class);
+
     endpoint = mock(BaseEndpoint.class);
     when(endpoint.context()).thenReturn(endpointContext);
     when(endpoint.pipelined()).thenReturn(false);

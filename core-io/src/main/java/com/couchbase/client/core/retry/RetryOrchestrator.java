@@ -19,6 +19,7 @@ package com.couchbase.client.core.retry;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCounterType;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
 import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -28,6 +29,8 @@ import com.couchbase.client.core.msg.UnmonitoredRequest;
 
 import java.time.Duration;
 import java.util.Optional;
+
+import static com.couchbase.client.core.retry.RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT;
 
 /**
  * The {@link RetryOrchestrator} is responsible for checking if a request is eligible for retry
@@ -52,6 +55,10 @@ public class RetryOrchestrator {
                                 final RetryReason reason) {
     if (request.completed()) {
       return;
+    }
+
+    if (reason == CHANNEL_CLOSED_WHILE_IN_FLIGHT) {
+      ctx.core().appTelemetryCollector().increment(request, AppTelemetryCounterType.CANCELLED);
     }
 
     if (reason.alwaysRetry()) {

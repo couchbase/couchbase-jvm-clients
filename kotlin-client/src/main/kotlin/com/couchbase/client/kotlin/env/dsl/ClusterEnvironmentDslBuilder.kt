@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.Meter
 import com.couchbase.client.core.cnc.RequestTracer
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
+import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_DISABLE_APP_TELEMETRY
 import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_MAX_NUM_REQUESTS_IN_RETRY
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.kotlin.annotations.UncommittedCouchbaseApi
@@ -184,6 +185,13 @@ public class ClusterEnvironmentDslBuilder {
      */
     public var preferredServerGroup: String?
             by observable(null) { _, _, it -> wrapped.preferredServerGroup(it) }
+
+    /**
+     * @see CoreEnvironment.Builder.disableAppTelemetry
+     */
+    @VolatileCouchbaseApi
+    public var disableAppTelemetry: Boolean
+            by observable(DEFAULT_DISABLE_APP_TELEMETRY) { _, _, it -> wrapped.disableAppTelemetry(it) }
 
     internal fun toCore() = wrapped
 }

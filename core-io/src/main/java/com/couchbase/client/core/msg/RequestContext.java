@@ -25,8 +25,8 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.HostAndPort;
 import reactor.util.annotation.Nullable;
 
@@ -164,6 +164,12 @@ public class RequestContext extends CoreContext {
   public RequestContext dispatchLatency(long dispatchLatency) {
     this.dispatchLatency = dispatchLatency;
     this.totalDispatchLatency.addAndGet(dispatchLatency);
+
+    requireNonNull(
+      core(),
+      "Expected core to be non-null, because only core sets dispatch latency."
+    ).appTelemetryCollector().recordLatency(request);
+
     return this;
   }
 

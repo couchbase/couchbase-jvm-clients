@@ -39,6 +39,8 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.cnc.apptelemetry.AppTelemetry;
+import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
 import com.couchbase.client.core.cnc.events.core.BucketClosedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenFailedEvent;
 import com.couchbase.client.core.cnc.events.core.BucketOpenInitiatedEvent;
@@ -254,6 +256,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final CoreResources coreResources;
 
+  private final AppTelemetry appTelemetry;
+
   /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
@@ -328,6 +332,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         reconfigure(doFinally);
       }
     );
+
+    this.appTelemetry = AppTelemetry.from(coreContext);
 
     this.beforeSendRequestCallbacks = environment
       .requestCallbacks()
@@ -733,7 +739,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   @Stability.Internal
   public Mono<Void> shutdown(final Duration timeout) {
-    return transactionsCleanup.shutdown(timeout)
+    return Mono.fromRunnable(appTelemetry::close)
+      .then(transactionsCleanup.shutdown(timeout))
       .then(Mono.defer(() -> {
         NanoTimestamp start = NanoTimestamp.now();
         if (shutdown.compareAndSet(false, true)) {
@@ -1004,6 +1011,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   public CoreResources coreResources() {
     return coreResources;
   }
+
+  @Stability.Internal
+  public AppTelemetryCollector appTelemetryCollector() { return appTelemetry.collector; }
 
   @Override
   public CompletableFuture<Void> waitUntilReady(

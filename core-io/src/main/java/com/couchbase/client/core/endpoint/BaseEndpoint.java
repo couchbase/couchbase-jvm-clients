@@ -231,7 +231,8 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param eventLoopGroup the group to compare against.
    * @return the channel class selected.
    */
-  private static Class<? extends Channel> channelFrom(final EventLoopGroup eventLoopGroup) {
+  @Stability.Internal
+  public static Class<? extends Channel> channelFrom(final EventLoopGroup eventLoopGroup) {
     if (eventLoopGroup instanceof KQueueEventLoopGroup) {
       return KQueueSocketChannel.class;
     } else if (eventLoopGroup instanceof EpollEventLoopGroup) {

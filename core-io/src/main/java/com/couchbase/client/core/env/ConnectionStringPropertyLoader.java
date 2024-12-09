@@ -65,6 +65,9 @@ public class ConnectionStringPropertyLoader extends AbstractMapPropertyLoader<Co
     COMPAT_ALIAS.put("num_kv_connections", "io.numKvConnections");
     COMPAT_ALIAS.put("max_http_connections", "io.maxHttpConnections");
     COMPAT_ALIAS.put("idle_http_connection_timeout", "io.idleHttpConnectionTimeout");
+
+    COMPAT_ALIAS.put("app_telemetry_endpoint", "appTelemetryEndpoint");
+    COMPAT_ALIAS.put("disable_app_telemetry", "disableAppTelemetry");
   }
 
   public ConnectionStringPropertyLoader(final String connectionString) {

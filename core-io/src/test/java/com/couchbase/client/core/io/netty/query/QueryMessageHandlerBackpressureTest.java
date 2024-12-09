@@ -49,6 +49,7 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -110,9 +111,12 @@ class QueryMessageHandlerBackpressureTest {
    */
   @Test
   void requestRecordsExplicitly() throws Exception {
+    HostAndPort dummyRemote = new HostAndPort("127.0.0.1", 1234);
+    NodeIdentifier dummyNodeId = NodeIdentifier.forBootstrap(dummyRemote.host(), dummyRemote.port());
+
     EndpointContext endpointContext = new EndpointContext(
       core.context(),
-      new HostAndPort("127.0.0.1", 1234),
+      dummyRemote,
       NoopCircuitBreaker.INSTANCE,
       ServiceType.QUERY,
       Optional.empty(),
@@ -151,6 +155,7 @@ class QueryMessageHandlerBackpressureTest {
       null,
       null
     );
+    request.context().lastDispatchedToNode(dummyNodeId);
     channel.writeAndFlush(request);
 
     final QueryResponse response = request.response().get();

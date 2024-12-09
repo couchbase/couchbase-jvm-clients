@@ -19,6 +19,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -94,6 +95,7 @@ public class MockUtil {
 
     Core core = mock(Core.class);
     when(core.coreResources()).thenReturn(coreResources);
+    when(core.appTelemetryCollector()).thenReturn(AppTelemetryCollector.NOOP);
     when(core.environment()).thenReturn(env);
 
     CoreContext ctx = coreContextFactory.apply(core);

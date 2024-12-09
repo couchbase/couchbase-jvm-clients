@@ -49,6 +49,7 @@ import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -71,6 +72,7 @@ import java.util.function.Supplier;
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -88,6 +90,9 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
    * Default maximum requests being queued in retry before performing backpressure cancellations.
    */
   public static final long DEFAULT_MAX_NUM_REQUESTS_IN_RETRY = 32768;
+
+  @Stability.Volatile
+  public static final boolean DEFAULT_DISABLE_APP_TELEMETRY = false;
 
   /**
    * Service Loader for Environment Profiles.
@@ -127,6 +132,8 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
   private final Set<String> appliedProfiles;
   private final CoreTransactionsSchedulers transactionsSchedulers = new CoreTransactionsSchedulers();
   private final @Nullable String preferredServerGroup;
+  private final @Nullable URI appTelemetryEndpoint;
+  private final boolean appTelemetryDisabled;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -217,6 +224,8 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
 
     this.requestCallbacks = Collections.unmodifiableList(builder.requestCallbacks);
     this.preferredServerGroup = builder.preferredServerGroup;
+    this.appTelemetryEndpoint = builder.appTelemetryEndpoint;
+    this.appTelemetryDisabled = builder.disableAppTelemetry;
 
     checkInsecureTlsConfig();
   }
@@ -462,6 +471,26 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
   }
 
   /**
+   * If this is non-null, and application telemetry is not disabled,
+   * the SDK reports app telemetry to this WebSocket URI
+   * instead of any endpoint supplied by Couchbase Server.
+   *
+   * @see #appTelemetryDisabled
+   */
+  @Stability.Volatile
+  public @Nullable URI appTelemetryEndpoint() {
+    return appTelemetryEndpoint;
+  }
+
+  /**
+   * If true, the SDK should neither capture nor report application telemetry information.
+   */
+  @Stability.Volatile
+  public boolean appTelemetryDisabled() {
+    return appTelemetryDisabled;
+  }
+
+  /**
    * Shuts down this Environment with the default disconnect timeout.
    *
    * <p>Note that once shutdown, the environment cannot be restarted so it is advised to perform this operation
@@ -604,6 +633,10 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
 
     input.put("preferredServerGroup", redactMeta(preferredServerGroup));
 
+    input.put("appTelemetryDisabled", appTelemetryDisabled);
+    input.put("appTelemetryEndpoint", redactSystem(appTelemetryEndpoint));
+
+
     return format.apply(input);
   }
 
@@ -639,6 +672,8 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     private final List<RequestCallback> requestCallbacks = new ArrayList<>();
     protected CoreTransactionsConfig transactionsConfig = null;
     private String preferredServerGroup = null;
+    private URI appTelemetryEndpoint = null;
+    private boolean disableAppTelemetry = DEFAULT_DISABLE_APP_TELEMETRY;
 
     private final Set<String> appliedProfiles = new LinkedHashSet<>();
 
@@ -1218,6 +1253,46 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     @SinceCouchbase("7.6.2")
     public SELF preferredServerGroup(final @Nullable String preferredServerGroup) {
       this.preferredServerGroup = preferredServerGroup;
+      return self();
+    }
+
+    /**
+     * WebSocket URI for a custom application telemetry collection server,
+     * or null to let Couchbase Server tell the SDK whether/where to send telemetry.
+     * <p>
+     * Defaults to null.
+     *
+     * @param appTelemetryEndpoint A WebSocket URI of the form "ws://example.com:1234/app_telemetry"
+     * indicating where the SDK should report application telemetry, or null to let Couchbase Server decide.
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Volatile
+    public SELF appTelemetryEndpoint(final @Nullable String appTelemetryEndpoint) {
+      if (appTelemetryEndpoint == null) {
+        this.appTelemetryEndpoint = null;
+        return self();
+      }
+      try {
+        this.appTelemetryEndpoint = new URI(appTelemetryEndpoint);
+        if (!"ws".equals(this.appTelemetryEndpoint.getScheme())) {
+          throw new IllegalArgumentException("App telemetry endpoint must be a URI with scheme 'ws'");
+        }
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Invalid app telemetry endpoint; " + e.getMessage() + "; Expected a WebSocket URI like \"ws://example.com:1234/app_telemetry\" but got: " + appTelemetryEndpoint, e);
+      }
+      return self();
+    }
+
+    /**
+     * Pass true to disable application telemetry capture and reporting.
+     * <p>
+     * Defaults to {@value DEFAULT_DISABLE_APP_TELEMETRY}.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    @Stability.Volatile
+    public SELF disableAppTelemetry(boolean disable) {
+      this.disableAppTelemetry = disable;
       return self();
     }
 
