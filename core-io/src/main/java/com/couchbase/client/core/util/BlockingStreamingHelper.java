@@ -49,7 +49,7 @@ public class BlockingStreamingHelper {
     Thread.currentThread().interrupt();
 
     CancellationException t = new CancellationException("Thread was interrupted.");
-    t.addSuppressed(e);
+    t.initCause(e);
     return t;
   }
 

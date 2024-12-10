@@ -72,6 +72,7 @@ import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Fail.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -271,25 +272,28 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     @Test
     void blockingStreamingThrowsCancellationWhenThreadAlreadyInterrupted() {
         Thread.currentThread().interrupt();
-        assertThrows(
+        CancellationException e = assertThrows(
             CancellationException.class,
             () -> cluster.queryStreaming(
                 "SELECT 1",
                 row -> fail("Did not expect to receive result row")
           )
         );
+        assertInstanceOf(InterruptedException.class, e.getCause());
         assertTrue(Thread.interrupted());
     }
 
     @Test
     void blockingStreamingThrowsCancellationWhenInterruptedInCallback() {
-        assertThrows(
+      CancellationException e = assertThrows(
             CancellationException.class,
             () -> cluster.queryStreaming(
                 "SELECT 1",
                 row -> Thread.currentThread().interrupt()
             )
         );
+
+        assertInstanceOf(InterruptedException.class, e.getCause());
         assertTrue(Thread.interrupted());
     }
 
