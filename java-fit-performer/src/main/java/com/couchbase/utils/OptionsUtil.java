@@ -574,7 +574,7 @@ public class OptionsUtil {
             }
 
             if (qo.hasProfile()) {
-                queryOptions.profile(QueryProfile.valueOf(qo.getProfile()));
+                queryOptions.profile(QueryProfile.valueOf(qo.getProfile().toUpperCase()));
             }
 
             if (qo.hasReadonly()) {
