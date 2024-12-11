@@ -204,7 +204,7 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
 
         TransactionResult tr = cluster.transactions().run((ctx) -> {
             TransactionGetResult doc = ctx.get(collection, docId);
-            ctx.replace(doc, updated);
+            TransactionGetResult postReplace = ctx.replace(doc, updated);
         });
 
         assertEquals(updated, collection.get(docId).contentAsObject());
@@ -221,6 +221,31 @@ public class TransactionsIntegrationTest extends JavaIntegrationTest {
                         ctx.get(collection.reactive(), docId)
                                 .flatMap(doc -> ctx.replace(doc, updated)))
                 .block();
+
+        assertEquals(updated, collection.get(docId).contentAsObject());
+    }
+
+    // Test for JCBC-2152
+    @Test
+    void replaceReturnsUpdatedBody() {
+        String docId = UUID.randomUUID().toString();
+        JsonObject initial = JsonObject.create().put("foo", "bar");
+        JsonObject updated = JsonObject.create().put("foo", "baz");
+        collection.insert(docId, initial);
+
+        TransactionResult tr = cluster.transactions().run((ctx) -> {
+            TransactionGetResult oldDoc = ctx.get(collection, docId);
+            TransactionGetResult replacedDoc = ctx.replace(oldDoc, updated);
+            TransactionGetResult ryowDoc = ctx.get(collection, docId);
+
+            JsonObject oldContent = oldDoc.contentAsObject();
+            JsonObject replacedContent = replacedDoc.contentAsObject();
+            JsonObject ryowContent = ryowDoc.contentAsObject();
+
+            assertEquals(initial, oldContent);
+            assertEquals(updated, ryowContent);
+            assertEquals(updated, replacedContent);
+        });
 
         assertEquals(updated, collection.get(docId).contentAsObject());
     }

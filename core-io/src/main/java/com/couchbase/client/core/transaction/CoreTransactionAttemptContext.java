@@ -1655,7 +1655,7 @@ public class CoreTransactionAttemptContext {
                     // Save the new CAS
                     .flatMap(updatedDoc -> {
                         CoreTransactionGetResult out = createTransactionGetResult(operationId, collection, id,
-                                contentOfExistingDocument, userFlagsOfExistingDocument, contentToStage, userFlagsOfContentToStage, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
+                                contentToStage, userFlagsOfExistingDocument, contentToStage, userFlagsOfContentToStage, updatedDoc.cas(), documentMetadata, OperationTypes.REPLACE, crc32OfGet);
                         return supportsReplaceBodyWithXattr(collection.bucket())
                                 .flatMap(supports -> addStagedMutation(new StagedMutation(operationId, id, collection, updatedDoc.cas(), documentMetadata, crc32OfGet,
                                         userFlagsOfExistingDocument, supports ? null : contentToStage, userFlagsOfContentToStage, StagedMutationType.REPLACE))
