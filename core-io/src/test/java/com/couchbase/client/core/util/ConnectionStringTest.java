@@ -128,6 +128,22 @@ class ConnectionStringTest {
   }
 
   @Test
+  void shouldParseParameterValueThatLooksLikeUri() {
+    ConnectionString cs = ConnectionString.create("couchbase://127.0.0.1?uri=ws://example.com");
+    assertEquals(COUCHBASE, cs.scheme());
+    assertEquals("127.0.0.1", cs.hosts().get(0).host());
+    assertEquals(mapOf("uri", "ws://example.com"), cs.params());
+  }
+
+  @Test
+  void shouldParseParameterValueThatLooksLikeUriEvenIfSchemeIsOmitted() {
+    ConnectionString cs = ConnectionString.create("127.0.0.1?uri=ws://example.com");
+    assertEquals(COUCHBASE, cs.scheme());
+    assertEquals("127.0.0.1", cs.hosts().get(0).host());
+    assertEquals(mapOf("uri", "ws://example.com"), cs.params());
+  }
+
+  @Test
   void shouldParseHostList() {
     ConnectionString parsed = ConnectionString.create("couchbase://localhost");
     assertEquals(COUCHBASE, parsed.scheme());

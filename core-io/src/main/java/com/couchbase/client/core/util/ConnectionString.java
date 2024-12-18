@@ -49,7 +49,7 @@ public class ConnectionString {
   public static final String DEFAULT_SCHEME = "couchbase://";
 
   private static final Pattern connectionStringPattern = Pattern.compile(
-      "((?<scheme>.*?)://)?" +
+      "((?<scheme>[^?]*?)://)?" +
           "((?<user>.*?)@)?" +
           "(?<hosts>.*?)" +
           "(\\?(?<params>.*?))?"
