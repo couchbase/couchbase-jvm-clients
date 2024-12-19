@@ -46,7 +46,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.config.ConfigurationProvider.TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION;
@@ -96,12 +95,6 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * Holds the config provider as a reference.
    */
   private final ConfigurationProvider provider;
-
-  /**
-   * The global offset is used to make sure each KV node eventually gets used
-   * by shifting on each invocation.
-   */
-  private final AtomicLong nodeOffset = new AtomicLong(0);
 
   /**
    * Holds all current registrations and their last timestamp when the bucket has been
@@ -242,7 +235,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     }
 
     List<NodeInfo> nodes = new ArrayList<>(config.nodes());
-    shiftNodeList(nodes);
+    Collections.shuffle(nodes);
 
     return nodes
       .stream()
@@ -311,16 +304,6 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   private ConfigVersion currentVersion(String bucketName) {
     BucketConfig config = provider.config().bucketConfig(bucketName);
     return config == null ? ConfigVersion.ZERO : config.version();
-  }
-
-  /**
-   * Helper method to transparently rearrange the node list based on the current global offset.
-   *
-   * @param nodeList the list to shift.
-   */
-  private <T> void shiftNodeList(final List<T> nodeList) {
-    int shiftBy = (int) (nodeOffset.getAndIncrement() % nodeList.size());
-    Collections.rotate(nodeList, -shiftBy);
   }
 
   @Override
