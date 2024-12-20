@@ -17,7 +17,7 @@
 package com.couchbase.columnar.client.java.codec;
 
 import com.couchbase.columnar.client.java.internal.ThreadSafe;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 
@@ -34,8 +34,7 @@ public interface Deserializer {
    * @param <T> the generic type to deserialize into.
    * @return the deserialized output.
    */
-  @Nullable
-  <T> T deserialize(Class<T> target, byte[] input) throws IOException;
+  <T> @Nullable T deserialize(Class<T> target, byte[] input) throws IOException;
 
   /**
    * Deserializes raw input into the target type.
@@ -45,6 +44,5 @@ public interface Deserializer {
    * @param <T> the type to deserialize into.
    * @return the deserialized output.
    */
-  @Nullable
-  <T> T deserialize(TypeRef<T> target, byte[] input) throws IOException;
+  <T> @Nullable T deserialize(TypeRef<T> target, byte[] input) throws IOException;
 }

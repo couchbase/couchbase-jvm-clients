@@ -23,7 +23,7 @@ import com.couchbase.columnar.client.java.internal.ThreadSafe;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
 import com.couchbase.columnar.client.java.json.JsonValue;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -106,8 +106,7 @@ public final class Row {
    * @throws DataConversionException if the row could not be deserialized
    * into an instance of the specified type.
    */
-  @Nullable
-  public <T> T asNullable(Class<T> type) {
+  public <T> @Nullable T asNullable(Class<T> type) {
     requireNonNull(type, "`type` argument must be non-null");
     try {
       // Fail fast with a helpful message if user tries to
@@ -149,8 +148,7 @@ public final class Row {
    * @throws DataConversionException if the row could not be deserialized
    * into an instance of the specified type.
    */
-  @Nullable
-  public <T> T asNullable(TypeRef<T> type) {
+  public <T> @Nullable T asNullable(TypeRef<T> type) {
     requireNonNull(type, "`type` argument must be non-null");
     try {
       return deserializer.deserialize(type, content);

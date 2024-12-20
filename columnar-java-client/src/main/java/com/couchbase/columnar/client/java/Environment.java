@@ -19,6 +19,7 @@ package com.couchbase.columnar.client.java;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.VersionAndGitHash;
 import com.couchbase.columnar.client.java.codec.Deserializer;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
@@ -51,7 +52,7 @@ class Environment extends CoreEnvironment {
   }
 
   static class Builder extends CoreEnvironment.Builder<Builder> {
-    private Deserializer deserializer;
+    private @Nullable Deserializer deserializer;
 
     Builder() {
       super();

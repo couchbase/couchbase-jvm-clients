@@ -19,7 +19,7 @@ package com.couchbase.columnar.client.java.internal;
 
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.nio.file.Path;
@@ -98,13 +98,11 @@ public class TrustSource {
     return from(InsecureTrustManagerFactory.INSTANCE);
   }
 
-  @Nullable
-  public List<X509Certificate> certificates() {
+  public @Nullable List<X509Certificate> certificates() {
     return certificates;
   }
 
-  @Nullable
-  public TrustManagerFactory trustManagerFactory() {
+  public @Nullable TrustManagerFactory trustManagerFactory() {
     return factory;
   }
 
@@ -121,7 +119,7 @@ public class TrustSource {
 
   }
 
-  private static int countNonNull(Object... objects) {
+  private static int countNonNull(@Nullable Object... objects) {
     return (int) Arrays.stream(objects).filter(Objects::nonNull).count();
   }
 

@@ -17,7 +17,7 @@
 /**
  * Simple classes for manipulating JSON.
  */
-@NonNullApi
+@NullMarked
 package com.couchbase.columnar.client.java.json;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

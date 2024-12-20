@@ -18,7 +18,7 @@
  * Classes that turn query result rows into Java objects
  * when you call {@code row.as(Class)} or {@code row.as(TypeRef)}.
  */
-@NonNullApi
+@NullMarked
 package com.couchbase.columnar.client.java.codec;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

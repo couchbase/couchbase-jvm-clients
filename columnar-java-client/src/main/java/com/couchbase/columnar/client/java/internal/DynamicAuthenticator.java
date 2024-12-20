@@ -24,6 +24,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.service.ServiceType;
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Supplier;
 
@@ -52,7 +53,7 @@ public class DynamicAuthenticator implements Authenticator {
   }
 
   @Override
-  public CallCredentials protostellarCallCredentials() {
+  public @Nullable CallCredentials protostellarCallCredentials() {
     return supplier.get().protostellarCallCredentials();
   }
 

@@ -17,7 +17,7 @@
 /**
  * Start here by creating a {@link com.couchbase.columnar.client.java.Cluster}.
  */
-@NonNullApi
+@NullMarked
 package com.couchbase.columnar.client.java;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

@@ -28,7 +28,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.Simp
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
 import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 

@@ -43,11 +43,11 @@ import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.columnar.client.java.codec.Deserializer;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -60,10 +60,10 @@ import static com.couchbase.client.core.retry.AuthErrorDecider.getTlsHandshakeFa
 import static com.couchbase.client.core.retry.RetryReason.AUTHENTICATION_ERROR;
 import static com.couchbase.client.core.retry.RetryReason.ENDPOINT_NOT_AVAILABLE;
 import static com.couchbase.client.core.retry.RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;
-import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
-import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
 import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
+import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
+import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

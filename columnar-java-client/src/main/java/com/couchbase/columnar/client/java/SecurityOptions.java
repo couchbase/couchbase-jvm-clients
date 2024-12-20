@@ -19,7 +19,7 @@ package com.couchbase.columnar.client.java;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.columnar.client.java.internal.Certificates;
 import com.couchbase.columnar.client.java.internal.TrustSource;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.nio.file.Path;

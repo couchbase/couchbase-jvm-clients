@@ -15,7 +15,7 @@
  */
 package com.couchbase.columnar.client.java.json;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -56,8 +56,7 @@ public abstract class JsonValue {
    * @throws IllegalArgumentException if conversion is not possible.
    */
   @SuppressWarnings("unchecked")
-  @Nullable
-  static Object coerce(@Nullable Object value) {
+  static @Nullable Object coerce(@Nullable Object value) {
     if (isSupportedType(value)) {
       return value;
     }

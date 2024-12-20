@@ -5,9 +5,54 @@ Tips for dealing with absent values in a consistent way.
 
 == @Nullable annotation
 
-All fields, parameters, and return values that allow null should be annotated with `@reactor.util.annotation.Nullable`.
+All fields, parameters, and return values that allow null should be annotated with `@org.jspecify.annotations.Nullable`.
+Put the annotation as close to the type as possible.
 
 Fields, parameters, and return values are assumed non-nullable by default.
+When creating a new package, consider making this explicit by adding a `package-info.java` and annotating the package with `@org.specify.annotations.NullMarked`.
+
+For more information, see https://jspecify.dev[JSpecify].
+
+Here's an example of how to annotate nullable fields, parameters, and return values.
+Pay special attention to the byte array field.
+
+[source,java]
+----
+@NullMarked // <1>
+public class GoodExample {
+  private final String id;
+  private final @Nullable String name;
+  private final byte @Nullable [] nameBytes; // <2>
+
+  public GoodExample(String id, @Nullable String name) {
+    this.id = requireNonNull(id);
+    this.name = name;
+    this.nameBytes = name == null ? null : name.getBytes(UTF_8);
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public @Nullable String getName() {
+    return name;
+  }
+
+  public byte @Nullable [] getNameBytes() {
+    return nameBytes;
+  }
+
+  public static List<@Nullable String> getNames(List<GoodExample> items) {
+    return items.stream()
+      .map(GoodExample::getName)
+      .collect(toList());
+  }
+}
+----
+<1> If possible, use a `package-info.java` file to annotate the whole package as `@NullMarked` instead of annotating individual classes.
+<2> It might look strange at first, but this is how JSpecify wants us to annotate a nullable array of non-null elements.
+In other words, the reference to the array is nullable, but elements of the array are not.
+See https://jspecify.dev/docs/user-guide/#type-use-annotation-syntax[JSpecify type-use annotation syntax].
 
 == Container Types
 

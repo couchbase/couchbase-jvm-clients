@@ -16,7 +16,7 @@
 
 package com.couchbase.columnar.client.java;
 
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.function.Consumer;

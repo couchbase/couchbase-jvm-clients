@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@NonNullApi
+@NullMarked
 package com.couchbase.columnar.client.java.examples.codec;
 
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

@@ -19,8 +19,8 @@
  * and may change in any way at any time.
  */
 @ApiStatus.Internal
-@NonNullApi
+@NullMarked
 package com.couchbase.columnar.client.java.internal;
 
 import org.jetbrains.annotations.ApiStatus;
-import reactor.util.annotation.NonNullApi;
+import org.jspecify.annotations.NullMarked;

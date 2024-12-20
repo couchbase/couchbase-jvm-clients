@@ -21,7 +21,7 @@ import com.couchbase.columnar.client.java.QueryPriority;
 import com.couchbase.columnar.client.java.ScanConsistency;
 import com.couchbase.columnar.util.CustomDeserializer;
 import com.couchbase.columnar.util.grpc.ProtobufConversions;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.function.Consumer;

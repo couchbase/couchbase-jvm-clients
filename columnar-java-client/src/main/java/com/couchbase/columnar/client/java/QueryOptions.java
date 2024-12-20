@@ -27,7 +27,7 @@ import com.couchbase.columnar.client.java.internal.JsonSerializer;
 import com.couchbase.columnar.client.java.json.JsonArray;
 import com.couchbase.columnar.client.java.json.JsonObject;
 import org.jetbrains.annotations.ApiStatus.Experimental;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -250,8 +250,7 @@ public final class QueryOptions {
       return Mapper.decodeIntoTree(jsonArrayBytes);
     }
 
-    @Nullable
-    public QueryPriority priority() {
+    public @Nullable QueryPriority priority() {
       return priority;
     }
 
@@ -263,38 +262,31 @@ public final class QueryOptions {
       return emptyMap();
     }
 
-    @Nullable
-    public Duration timeout() {
+    public @Nullable Duration timeout() {
       return timeout;
     }
 
-    @Nullable
-    public String clientContextId() {
+    public @Nullable String clientContextId() {
       return clientContextId;
     }
 
-    @Nullable
-    public Map<String, ?> namedParameters() {
+    public @Nullable Map<String, ?> namedParameters() {
       return namedParameters;
     }
 
-    @Nullable
-    public List<?> positionalParameters() {
+    public @Nullable List<?> positionalParameters() {
       return positionalParameters;
     }
 
-    @Nullable
-    public ScanConsistency scanConsistency() {
+    public @Nullable ScanConsistency scanConsistency() {
       return scanConsistency;
     }
 
-    @Nullable
-    public Duration scanWait() {
+    public @Nullable Duration scanWait() {
       return scanWait;
     }
 
-    @Nullable
-    public Deserializer deserializer() {
+    public @Nullable Deserializer deserializer() {
       return deserializer;
     }
 

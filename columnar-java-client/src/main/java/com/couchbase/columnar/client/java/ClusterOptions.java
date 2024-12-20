@@ -18,7 +18,7 @@ package com.couchbase.columnar.client.java;
 
 import com.couchbase.columnar.client.java.codec.Deserializer;
 import com.couchbase.columnar.client.java.internal.DefaultJacksonDeserializerHolder;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Consumer;
 

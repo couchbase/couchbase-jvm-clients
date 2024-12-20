@@ -19,7 +19,7 @@ package com.couchbase.columnar.client.java.json;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.columnar.client.java.internal.JacksonTransformers;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -44,7 +44,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
   /**
    * The backing list of the array.
    */
-  private final List<Object> content;
+  private final List<@Nullable Object> content;
 
   /**
    * Creates a new {@link JsonArray} with the default capacity.
@@ -177,8 +177,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public Object get(int index) {
+  public @Nullable Object get(int index) {
     return content.get(index);
   }
 
@@ -227,8 +226,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public String getString(int index) {
+  public @Nullable String getString(int index) {
     return (String) content.get(index);
   }
 
@@ -252,8 +250,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public Long getLong(int index) {
+  public @Nullable Long getLong(int index) {
     Number n = (Number) content.get(index);
     if (n == null) {
       return null;
@@ -284,8 +281,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public Integer getInt(int index) {
+  public @Nullable Integer getInt(int index) {
     Number n = (Number) content.get(index);
     if (n == null) {
       return null;
@@ -316,8 +312,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public Double getDouble(int index) {
+  public @Nullable Double getDouble(int index) {
     Number n = (Number) content.get(index);
     if (n == null) {
       return null;
@@ -379,7 +374,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  public JsonObject getObject(int index) {
+  public @Nullable JsonObject getObject(int index) {
     return (JsonObject) content.get(index);
   }
 
@@ -428,8 +423,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public JsonArray getArray(int index) {
+  public @Nullable JsonArray getArray(int index) {
     return (JsonArray) content.get(index);
   }
 
@@ -440,8 +434,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at the given index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public BigInteger getBigInteger(int index) {
+  public @Nullable BigInteger getBigInteger(int index) {
     return (BigInteger) content.get(index);
   }
 
@@ -452,8 +445,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at the given index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public BigDecimal getBigDecimal(int index) {
+  public @Nullable BigDecimal getBigDecimal(int index) {
     Object found = content.get(index);
     if (found == null) {
       return null;
@@ -470,8 +462,7 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    * @return the value at the given index.
    * @throws IndexOutOfBoundsException if the index is negative or too large.
    */
-  @Nullable
-  public Number getNumber(int index) {
+  public @Nullable Number getNumber(int index) {
     return (Number) content.get(index);
   }
 
@@ -482,8 +473,8 @@ public final class JsonArray extends JsonValue implements Iterable<Object> {
    *
    * @return the content of the {@link JsonArray} in a new {@link List}.
    */
-  public List<Object> toList() {
-    List<Object> copy = new ArrayList<>(content.size());
+  public List<@Nullable Object> toList() {
+    List<@Nullable Object> copy = new ArrayList<>(content.size());
     for (Object o : content) {
       if (o instanceof JsonObject) {
         copy.add(((JsonObject) o).toMap());

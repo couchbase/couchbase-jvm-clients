@@ -18,7 +18,7 @@ package com.couchbase.columnar.client.java.json;
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.columnar.client.java.internal.JacksonTransformers;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -45,7 +45,7 @@ public final class JsonObject extends JsonValue {
   /**
    * The backing {@link Map} for the object.
    */
-  private final Map<String, Object> content;
+  private final Map<String, @Nullable Object> content;
 
   /**
    * Private constructor to create the object.
@@ -167,8 +167,7 @@ public final class JsonObject extends JsonValue {
    * @param name the key of the field.
    * @return the value of the field, or null if it does not exist.
    */
-  @Nullable
-  public Object get(final String name) {
+  public @Nullable Object get(final String name) {
     return content.get(name);
   }
 
@@ -190,8 +189,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public String getString(String name) {
+  public @Nullable String getString(String name) {
     return (String) content.get(name);
   }
 
@@ -215,8 +213,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public Integer getInt(String name) {
+  public @Nullable Integer getInt(String name) {
     //let it fail in the more general case where it isn't actually a number
     Number number = (Number) content.get(name);
     if (number == null) {
@@ -248,8 +245,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public Long getLong(String name) {
+  public @Nullable Long getLong(String name) {
     //let it fail in the more general case where it isn't actually a number
     Number number = (Number) content.get(name);
     if (number == null) {
@@ -281,8 +277,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public Double getDouble(String name) {
+  public @Nullable Double getDouble(String name) {
     //let it fail in the more general case where it isn't actually a number
     Number number = (Number) content.get(name);
     if (number == null) {
@@ -312,8 +307,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public Boolean getBoolean(String name) {
+  public @Nullable Boolean getBoolean(String name) {
     return (Boolean) content.get(name);
   }
 
@@ -350,8 +344,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public JsonObject getObject(String name) {
+  public @Nullable JsonObject getObject(String name) {
     return (JsonObject) content.get(name);
   }
 
@@ -396,8 +389,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public JsonArray getArray(String name) {
+  public @Nullable JsonArray getArray(String name) {
     return (JsonArray) content.get(name);
   }
 
@@ -407,8 +399,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public BigInteger getBigInteger(String name) {
+  public @Nullable BigInteger getBigInteger(String name) {
     return (BigInteger) content.get(name);
   }
 
@@ -418,8 +409,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public BigDecimal getBigDecimal(String name) {
+  public @Nullable BigDecimal getBigDecimal(String name) {
     Object found = content.get(name);
     if (found == null) {
       return null;
@@ -435,8 +425,7 @@ public final class JsonObject extends JsonValue {
    * @param name the name of the field.
    * @return the result or null if it does not exist.
    */
-  @Nullable
-  public Number getNumber(String name) {
+  public @Nullable Number getNumber(String name) {
     return (Number) content.get(name);
   }
 
@@ -491,8 +480,8 @@ public final class JsonObject extends JsonValue {
    *
    * @return the content copied as a {@link Map}.
    */
-  public Map<String, Object> toMap() {
-    Map<String, Object> copy = new HashMap<>(content.size());
+  public Map<String, @Nullable Object> toMap() {
+    Map<String, @Nullable Object> copy = new HashMap<>(content.size());
     for (Map.Entry<String, Object> entry : content.entrySet()) {
       Object content = entry.getValue();
       if (content instanceof JsonObject) {
