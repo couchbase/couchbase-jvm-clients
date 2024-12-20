@@ -47,16 +47,10 @@ public class CbStrings {
   }
 
   public static String removeStart(String s, String removeMe) {
-    if (s == null || removeMe == null) {
-      return s;
-    }
     return s.startsWith(removeMe) ? s.substring(removeMe.length()) : s;
   }
 
   public static String removeEnd(String s, String removeMe) {
-    if (s == null || removeMe == null) {
-      return s;
-    }
     return s.endsWith(removeMe) ? s.substring(0, s.length() - removeMe.length()) : s;
   }
 }

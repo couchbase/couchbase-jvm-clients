@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CbStringsTest {
 
   @Test
+  @SuppressWarnings({"ConstantExpression", "ObviousNullCheck"})
   void nullToEmpty() {
     assertEquals("", CbStrings.nullToEmpty(null));
     assertEquals("", CbStrings.nullToEmpty(""));
@@ -24,6 +26,7 @@ class CbStringsTest {
   }
 
   @Test
+  @SuppressWarnings("ConstantValue")
   void isNullOrEmpty() {
     assertTrue(CbStrings.isNullOrEmpty(null));
     assertTrue(CbStrings.isNullOrEmpty(""));
@@ -31,17 +34,26 @@ class CbStringsTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
+  void removeStartRejectsNulls() {
+    assertThrows(NullPointerException.class, () -> CbStrings.removeStart(null, null));
+    assertThrows(NullPointerException.class, () -> CbStrings.removeStart(null, "xyzzy"));
+    assertThrows(NullPointerException.class, () -> CbStrings.removeStart("xyzzy", null));
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  void removeEndRejectsNulls() {
+    assertThrows(NullPointerException.class, () -> CbStrings.removeEnd(null, null));
+    assertThrows(NullPointerException.class, () -> CbStrings.removeEnd(null, "xyzzy"));
+    assertThrows(NullPointerException.class, () -> CbStrings.removeEnd("xyzzy", null));
+  }
+
+  @Test
   void removeStart() {
-    assertNull(CbStrings.removeStart(null, null));
-    assertNull(CbStrings.removeStart(null, ""));
-    assertNull(CbStrings.removeStart(null, "xyzzy"));
-
-
-    assertEquals("", CbStrings.removeStart("", null));
     assertEquals("", CbStrings.removeStart("", ""));
     assertEquals("", CbStrings.removeStart("", "xyzzy"));
 
-    assertEquals("xyzzy", CbStrings.removeStart("xyzzy", null));
     assertEquals("xyzzy", CbStrings.removeStart("xyzzy", ""));
     assertEquals("xyzzy", CbStrings.removeStart("xyzzy", "foo"));
     assertEquals("zzy", CbStrings.removeStart("xyzzy", "xy"));
@@ -52,21 +64,13 @@ class CbStringsTest {
 
   @Test
   void removeEnd() {
-    assertNull(CbStrings.removeEnd(null, null));
-    assertNull(CbStrings.removeEnd(null, ""));
-    assertNull(CbStrings.removeEnd(null, "xyzzy"));
-
-
-    assertEquals("", CbStrings.removeEnd("", null));
     assertEquals("", CbStrings.removeEnd("", ""));
     assertEquals("", CbStrings.removeEnd("", "xyzzy"));
 
-    assertEquals("xyzzy", CbStrings.removeEnd("xyzzy", null));
     assertEquals("xyzzy", CbStrings.removeEnd("xyzzy", ""));
     assertEquals("xyzzy", CbStrings.removeEnd("xyzzy", "foo"));
     assertEquals("xyz", CbStrings.removeEnd("xyzzy", "zy"));
     assertEquals("", CbStrings.removeEnd("xyzzy", "xyzzy"));
-
 
     assertEquals("xyzzy", CbStrings.removeEnd("xyzzy", "xyzzyxyzzy"));
   }
