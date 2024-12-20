@@ -18,7 +18,7 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.HostAndPort;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public interface KetamaRingNode {

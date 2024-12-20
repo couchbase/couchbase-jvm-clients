@@ -24,7 +24,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -72,8 +72,7 @@ class HostAndServicePortsParser {
    * Returns the host and non-TLS port for the KV service on the default network,
    * or null if there's no such port.
    */
-  @Nullable
-  private static HostAndPort getKetamaAuthority(Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo) {
+  private static @Nullable HostAndPort getKetamaAuthority(Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo) {
     HostAndRawServicePorts defaultNodeMap = networkToNodeInfo.get(NetworkResolution.DEFAULT);
     if (defaultNodeMap == null) {
       return null;
@@ -120,8 +119,7 @@ class HostAndServicePortsParser {
     return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections);
   }
 
-  @Nullable
-  private static Integer getPort(HostAndRawServicePorts nodeMap, PortSelector portSelector, ServiceType serviceType) {
+  private static @Nullable Integer getPort(HostAndRawServicePorts nodeMap, PortSelector portSelector, ServiceType serviceType) {
     Map<ServiceType, Integer> ports = portSelector.selectPorts(nodeMap.rawServicePorts);
     return ports.get(serviceType);
   }

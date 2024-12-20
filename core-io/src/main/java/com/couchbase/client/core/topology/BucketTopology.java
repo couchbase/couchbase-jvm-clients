@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Set;

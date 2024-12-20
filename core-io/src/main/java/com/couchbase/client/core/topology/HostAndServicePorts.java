@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -57,8 +57,8 @@ public class HostAndServicePorts implements KetamaRingNode {
   private final String host;
   private final Map<ServiceType, Integer> ports;
   private final NodeIdentifier id;
-  @Nullable private final HostAndPort ketamaAuthority;
-  @Nullable private final String serverGroup;
+  private final @Nullable HostAndPort ketamaAuthority;
+  private final @Nullable String serverGroup;
 
   public HostAndServicePorts(
     String host,
@@ -95,8 +95,7 @@ public class HostAndServicePorts implements KetamaRingNode {
    * If the node has no non-TLS KV port, then this method returns
    * null, and the node cannot participate in a ketama ring.
    */
-  @Nullable
-  public HostAndPort ketamaAuthority() {
+  public @Nullable HostAndPort ketamaAuthority() {
     return ketamaAuthority;
   }
 

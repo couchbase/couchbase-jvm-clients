@@ -17,6 +17,8 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import java.util.function.Supplier;
 
@@ -28,11 +30,23 @@ public class CbObjects {
     throw new AssertionError("not instantiable");
   }
 
+  /**
+   * @implNote NullUnmarked because the nullability of the return value depends on the nullability of {@code defaultValue}.
+   * At some point we could revisit this, perhaps by adding a nullableDefaultIfNull() flavor that is explicitly nullable,
+   * and making defaultIfNull reject null default values.
+   */
+  @NullUnmarked
   public static <T> T defaultIfNull(T value, T defaultValue) {
     return value == null ? defaultValue : value;
   }
 
-  public static <T> T defaultIfNull(T value, Supplier<? extends T> defaultValueSupplier) {
+  /**
+   * @implNote NullUnmarked because the nullability of the return value depends on the nullability of {@code defaultValue}.
+   * At some point we could revisit this, perhaps by adding a nullableDefaultIfNull() flavor that is explicitly nullable,
+   * and making defaultIfNull reject null default values.
+   */
+  @NullUnmarked
+  public static <T> T defaultIfNull(T value, Supplier<? extends @Nullable T> defaultValueSupplier) {
     requireNonNull(defaultValueSupplier);
     return value == null ? defaultValueSupplier.get() : value;
   }

@@ -18,7 +18,7 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Set;

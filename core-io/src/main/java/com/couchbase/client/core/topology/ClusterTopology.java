@@ -18,7 +18,7 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -36,7 +36,7 @@ public class ClusterTopology {
   private final NetworkResolution network;
   private final Set<ClusterCapability> capabilities;
   private final List<HostAndServicePorts> nodes;
-  @Nullable private final ClusterIdentifier clusterIdent;
+  private final @Nullable ClusterIdentifier clusterIdent;
 
   public static ClusterTopology of(
     TopologyRevision revision,

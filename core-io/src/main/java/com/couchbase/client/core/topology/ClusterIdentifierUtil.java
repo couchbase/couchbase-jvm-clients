@@ -16,7 +16,7 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.config.ClusterConfig;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 public class ClusterIdentifierUtil {
   private ClusterIdentifierUtil() {}

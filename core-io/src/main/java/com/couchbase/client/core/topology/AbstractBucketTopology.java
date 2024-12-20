@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectReader;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.CouchbaseException;
+import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.List;
@@ -85,7 +86,7 @@ abstract class AbstractBucketTopology implements BucketTopology {
       return emptySet();
     }
     try {
-      Set<BucketCapability> result = bucketCapabilitiesReader.readValue(capabilitiesNode);
+      Set<@Nullable BucketCapability> result = bucketCapabilitiesReader.readValue(capabilitiesNode);
       return result.stream()
         .filter(Objects::nonNull)
         .collect(Collectors.toSet());

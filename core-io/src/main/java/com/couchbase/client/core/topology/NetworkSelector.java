@@ -20,6 +20,7 @@ package com.couchbase.client.core.topology;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
@@ -68,7 +69,7 @@ public interface NetworkSelector {
   @SuppressWarnings({"OptionalAssignedToNull", "OptionalUsedAsFieldOrParameterType"})
   class AutoNetworkSelector implements NetworkSelector {
     private final Set<SeedNode> seedNodes;
-    private Optional<NetworkResolution> cachedResult; // @GuardedBy(this)
+    private @Nullable Optional<NetworkResolution> cachedResult; // @GuardedBy(this)
 
     public AutoNetworkSelector(Set<SeedNode> seedNodes) {
       this.seedNodes = setCopyOf(seedNodes);
