@@ -32,6 +32,7 @@ import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.util.TriFunction;
+import org.jspecify.annotations.NullUnmarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,15 +59,18 @@ public class ConsistencyUtil {
 
   private final static ObjectMapper mapper = new ObjectMapper().disable(FAIL_ON_UNKNOWN_PROPERTIES);
 
+  @NullUnmarked
   static class Collection {
     public String name;
   }
 
+  @NullUnmarked
   static class Scope {
     public String name;
     public List<Collection> collections;
   }
 
+  @NullUnmarked
   static class ScopesResponse {
     public List<Scope> scopes;
   }
@@ -326,6 +330,7 @@ public class ConsistencyUtil {
     }
   }
 
+  @NullUnmarked
   private static void waitUntilAllNodesMatchPredicate(Core core,
                                                       TriFunction<Integer, CoreHttpResponse, RuntimeException, Boolean> onResult,
                                                       String predicateDesc,

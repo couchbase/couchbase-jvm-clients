@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.util;
 
-import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.context.ErrorContext;
 
 import java.util.Collection;
 import java.util.List;
@@ -42,6 +42,7 @@ public class Validators {
    * @param identifier the identifier that is part of the exception message.
    */
   public static <T> T notNull(final T input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null");
     }
@@ -66,6 +67,7 @@ public class Validators {
    * @param identifier the identifier that is part of the exception message.
    */
   public static String notNullOrEmpty(final String input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
@@ -82,6 +84,7 @@ public class Validators {
   }
 
   public static byte[] notNullOrEmpty(final byte[] input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null || input.length == 0) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
@@ -98,6 +101,7 @@ public class Validators {
   }
 
   public static <T> List<T> notNullOrEmpty(final List<T> input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
@@ -114,6 +118,7 @@ public class Validators {
   }
 
   public static <T> Set<T> notNullOrEmpty(final Set<T> input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }
@@ -121,6 +126,7 @@ public class Validators {
   }
 
   public static <T> Collection<T> notNullOrEmpty(final Collection<T> input, final String identifier) {
+    //noinspection ConstantValue
     if (input == null || input.isEmpty()) {
       throw InvalidArgumentException.fromMessage(identifier + " cannot be null or empty");
     }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -37,7 +38,7 @@ public class CbAnnotations {
    * @param annotationClass the type of annotation to look for
    * @return Matching annotation, or null if not found.
    */
-  public static <T extends Annotation> T findAnnotation(AnnotatedElement element, Class<T> annotationClass) {
+  public static <T extends Annotation> @Nullable T findAnnotation(AnnotatedElement element, Class<T> annotationClass) {
     for (Annotation a : element.getAnnotations()) {
       T meta = findAnnotation(a, annotationClass);
       if (meta != null) {
@@ -54,12 +55,12 @@ public class CbAnnotations {
    * @param annotationClass the type of annotation to look for
    * @return Matching annotation, or null if not found.
    */
-  public static <T extends Annotation> T findAnnotation(Annotation annotation, Class<T> annotationClass) {
+  public static <T extends Annotation> @Nullable T findAnnotation(Annotation annotation, Class<T> annotationClass) {
     return findAnnotationRecursive(annotation, annotationClass, new HashSet<>());
   }
 
-  private static <T extends Annotation> T findAnnotationRecursive(Annotation annotation, Class<T> annotationClass, Set<Class> seen) {
-    final Class c = annotation.annotationType();
+  private static <T extends Annotation> @Nullable T findAnnotationRecursive(Annotation annotation, Class<T> annotationClass, Set<Class<?>> seen) {
+    final Class<?> c = annotation.annotationType();
 
     // Annotations can be annotated with themselves (@Documented is common example)
     // in which case we need to bail out to avoid stack overflow.

@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.util;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.List;
  * @author Erik Kline
  * @since 5.0
  */
+@NullUnmarked
 final class InetAddresses {
 
   private static final int IPV4_PART_COUNT = 4;

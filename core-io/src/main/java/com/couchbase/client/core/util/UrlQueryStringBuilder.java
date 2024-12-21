@@ -17,6 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -62,7 +63,7 @@ public class UrlQueryStringBuilder {
     return this;
   }
 
-  public UrlQueryStringBuilder setIfNotNull(String name, String value) {
+  public UrlQueryStringBuilder setIfNotNull(String name, @Nullable String value) {
     if (value != null) {
       setSafeValue(name, urlEncode(value));
     }
@@ -90,7 +91,7 @@ public class UrlQueryStringBuilder {
     return addSafeValue(name, urlEncode(value));
   }
 
-  public UrlQueryStringBuilder addIfNotNull(String name, String value) {
+  public UrlQueryStringBuilder addIfNotNull(String name, @Nullable String value) {
     if (value != null) {
       addSafeValue(name, urlEncode(value));
     }

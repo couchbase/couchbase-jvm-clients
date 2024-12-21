@@ -25,8 +25,8 @@ import com.couchbase.client.core.deps.org.xbill.DNS.TextParseException;
 import com.couchbase.client.core.deps.org.xbill.DNS.Type;
 import com.couchbase.client.core.deps.org.xbill.DNS.lookup.LookupSession;
 import com.couchbase.client.core.deps.org.xbill.DNS.lookup.NoSuchDomainException;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import javax.naming.NameNotFoundException;
 import java.net.InetAddress;
@@ -41,7 +41,7 @@ import static java.util.stream.Collectors.toList;
 public class DnsSrvResolver {
 
   private final Executor executor;
-  @Nullable private final String nameserver;
+  private final @Nullable String nameserver;
 
   public DnsSrvResolver(Executor executor) {
     this(executor, null);

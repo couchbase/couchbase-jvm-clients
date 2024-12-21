@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.util;
 
-import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 

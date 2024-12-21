@@ -19,7 +19,7 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectHashMap;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -51,8 +51,7 @@ public interface IntMap<E> {
    *
    * @param key the short associated with the value to return
    */
-  @Nullable
-  default E get(short key) {
+  default @Nullable E get(short key) {
     // reinterpret as positive integer
     return get(key & 0xffff);
   }
@@ -63,8 +62,7 @@ public interface IntMap<E> {
    *
    * @param key the byte associated with the value to return
    */
-  @Nullable
-  default E get(byte key) {
+  default @Nullable E get(byte key) {
     // reinterpret as positive integer
     return get(key & 0xff);
   }
@@ -116,6 +114,7 @@ public interface IntMap<E> {
     }
 
     for (Integer key : map.keySet()) {
+      //noinspection ConstantValue
       if (key == null || key < 0) {
         throw new IllegalArgumentException("IntMap key must be non-null and non-negative, but got: " + key);
       }
@@ -153,7 +152,7 @@ class CompactIntMap<E> implements IntMap<E> {
   }
 
   @Override
-  public E get(int key) {
+  public @Nullable E get(int key) {
     try {
       if (key >= indexToValue.length) return null;
       return indexToValue[key];
@@ -187,7 +186,7 @@ class SparseIntMap<E> implements IntMap<E> {
   }
 
   @Override
-  public E get(int key) {
+  public @Nullable E get(int key) {
     E result = indexToValue.get(key);
     if (result == null && key < 0) {
       throw new IllegalArgumentException("key must be non-negative, but got " + key);

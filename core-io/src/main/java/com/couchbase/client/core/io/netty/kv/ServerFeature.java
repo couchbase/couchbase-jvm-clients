@@ -295,6 +295,6 @@ public enum ServerFeature {
    * Returns the server feature associated with the raw short value, or null if not found.
    */
   static ServerFeature from(final int input) {
-    return lookupTable.getOrDefault(input, null);
+    return lookupTable.get(input);
   }
 }

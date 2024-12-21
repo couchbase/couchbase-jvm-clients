@@ -19,7 +19,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -40,7 +40,7 @@ public class ProtostellarUtil {
   }
 
   public static @Nullable AutoCloseable activateSpan(Optional<RequestSpan> parentSpan, @Nullable RequestSpan span, @Nullable RequestTracer tracer) {
-    if (tracer != null && tracer instanceof GrpcAwareRequestTracer) {
+    if (tracer instanceof GrpcAwareRequestTracer) {
       if (span != null) {
         return ((GrpcAwareRequestTracer) tracer).activateSpan(span);
       }

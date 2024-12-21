@@ -16,6 +16,9 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
+
 import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,6 +38,7 @@ import static java.util.Objects.requireNonNull;
  * In high-concurrency, mutation-heavy use cases, a standard {@code EnumSet}
  * wrapped by {@link Collections#synchronizedSet(Set)} might perform better.
  */
+@Stability.Internal
 public class AtomicEnumSet<E extends Enum<E>> extends AbstractSet<E> {
   private final AtomicLong bits = new AtomicLong();
   private final Class<E> enumClass;
@@ -61,13 +65,17 @@ public class AtomicEnumSet<E extends Enum<E>> extends AbstractSet<E> {
   }
 
   @Override
-  public boolean contains(Object value) {
+  public boolean contains(@Nullable Object value) {
+    if (value == null) {
+      return false;
+    }
+
     try {
       @SuppressWarnings("unchecked")
       E e = (E) value;
       return (bits.get() & mask(e)) != 0;
 
-    } catch (ClassCastException | NullPointerException e) {
+    } catch (ClassCastException e) {
       return false;
     }
   }
@@ -89,13 +97,6 @@ public class AtomicEnumSet<E extends Enum<E>> extends AbstractSet<E> {
     } catch (ClassCastException | NullPointerException e) {
       return false;
     }
-  }
-
-  public boolean contains(E value) {
-    if (value == null) {
-      return false;
-    }
-    return (bits.get() & mask(value)) != 0;
   }
 
   @Override

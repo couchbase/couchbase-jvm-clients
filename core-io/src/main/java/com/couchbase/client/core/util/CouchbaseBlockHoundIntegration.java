@@ -19,7 +19,6 @@ package com.couchbase.client.core.util;
 import com.couchbase.client.core.annotation.Stability;
 import reactor.blockhound.BlockHound;
 import reactor.blockhound.integration.BlockHoundIntegration;
-import reactor.core.scheduler.Scheduler;
 
 import java.security.SecureRandom;
 

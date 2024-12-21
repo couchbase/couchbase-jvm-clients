@@ -17,6 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CbStrings {
@@ -34,15 +35,15 @@ public class CbStrings {
     return new String(Character.toChars(codePoint));
   }
 
-  public static String nullToEmpty(String s) {
+  public static String nullToEmpty(@Nullable String s) {
     return s == null ? "" : s;
   }
 
-  public static String emptyToNull(String s) {
+  public static @Nullable String emptyToNull(@Nullable String s) {
     return isNullOrEmpty(s) ? null : s;
   }
 
-  public static boolean isNullOrEmpty(String s) {
+  public static boolean isNullOrEmpty(@Nullable String s) {
     return s == null || s.isEmpty();
   }
 

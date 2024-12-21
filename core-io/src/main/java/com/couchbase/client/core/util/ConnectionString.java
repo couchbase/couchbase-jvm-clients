@@ -18,7 +18,7 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -133,8 +133,7 @@ public class ConnectionString {
     return scheme;
   }
 
-  @Nullable
-  public String username() {
+  public @Nullable String username() {
     return username;
   }
 

@@ -19,11 +19,11 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 import reactor.core.CorePublisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
-import reactor.util.annotation.Nullable;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;

@@ -18,7 +18,7 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,20 +95,24 @@ public class CbCollections {
   /**
    * Returns a new unmodifiable list with the same contents as the given collection.
    * Subsequent changes to the original collection are not reflected in the returned list.
+   * <p>
+   * If appropriate, prefer {@link #listCopyOf(Collection)} which rejects null argument and elements.
    *
-   * @param c may be {@code null}, in which case an empty list is returned.
+   * @param c may be null, in which case an empty list is returned. May contain null elements.
    */
-  public static <T> List<T> copyToUnmodifiableList(@Nullable Collection<T> c) {
+  public static <T extends @Nullable Object> List<T> copyToUnmodifiableList(@Nullable Collection<T> c) {
     return isNullOrEmpty(c) ? emptyList() : unmodifiableList(new ArrayList<>(c));
   }
 
   /**
    * Returns a new unmodifiable set with the same contents as the given collection.
    * Subsequent changes to the original collection are not reflected in the returned set.
+   * <p>
+   * If appropriate, prefer {@link #setCopyOf(Collection)} which rejects null argument and elements.
    *
    * @param c may be {@code null}, in which case an empty set is returned.
    */
-  public static <T> Set<T> copyToUnmodifiableSet(@Nullable Collection<T> c) {
+  public static <T extends @Nullable Object> Set<T> copyToUnmodifiableSet(@Nullable Collection<T> c) {
     return isNullOrEmpty(c) ? emptySet() : unmodifiableSet(new HashSet<>(c));
   }
 

@@ -17,13 +17,13 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
 import reactor.core.scheduler.Scheduler;
-import reactor.util.annotation.NonNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -68,7 +68,7 @@ public class LatestStateSubscription<T> {
 
   private boolean upstreamTerminated;
   private boolean processingInProgress;
-  private T deferredValue;
+  private @Nullable T deferredValue;
 
   public LatestStateSubscription(
     Flux<T> flux,
@@ -84,7 +84,7 @@ public class LatestStateSubscription<T> {
       .subscribe(
         new BaseSubscriber<T>() {
           @Override
-          protected void hookOnNext(@NonNull T value) {
+          protected void hookOnNext(T value) {
             synchronized (lock) {
               if (processingInProgress) {
                 deferredValue = value;
@@ -95,7 +95,7 @@ public class LatestStateSubscription<T> {
           }
 
           @Override
-          protected void hookFinally(@NonNull SignalType type) {
+          protected void hookFinally(SignalType type) {
             synchronized (lock) {
               upstreamTerminated = true;
               if (!processingInProgress) {

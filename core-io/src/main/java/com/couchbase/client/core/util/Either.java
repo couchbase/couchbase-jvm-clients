@@ -17,7 +17,7 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.function.Consumer;

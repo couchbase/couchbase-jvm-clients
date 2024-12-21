@@ -17,17 +17,20 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.function.Function;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides efficient lookup for enums whose values are associated with small integers.
  */
 @Stability.Internal
 public class EnumLookupTable<E extends Enum<E>> {
-  private final E[] indexToValue;
+  private final @Nullable E[] indexToValue;
 
   @SuppressWarnings("unchecked")
   private EnumLookupTable(Class<E> enumClass, Function<E, Integer> enumToIndex) {
@@ -66,14 +69,24 @@ public class EnumLookupTable<E extends Enum<E>> {
    * @param index the integer associated with the enum value to return
    */
   public E getOrDefault(int index, E defaultValue) {
+    requireNonNull(defaultValue);
+    E result = get(index);
+    return result == null ? defaultValue : result;
+  }
+
+  /**
+   * Returns the enum value associated with the given integer, or null if not found.
+   *
+   * @param index the integer associated with the enum value to return
+   */
+  public @Nullable E get(int index) {
     try {
-      E value = indexToValue[index];
-      return value == null ? defaultValue : value;
+      return indexToValue[index];
     } catch (IndexOutOfBoundsException e) {
       if (index < 0) {
         throw new IllegalArgumentException("index must be positive but got " + index);
       }
-      return defaultValue;
+      return null;
     }
   }
 }
