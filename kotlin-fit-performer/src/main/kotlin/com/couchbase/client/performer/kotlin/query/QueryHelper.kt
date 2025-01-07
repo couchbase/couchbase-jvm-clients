@@ -21,10 +21,8 @@ import com.couchbase.client.kotlin.query.QueryProfile
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.execute
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
-import com.couchbase.client.performer.kotlin.util.ContentAsUtil
 import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.createCommon
-import com.couchbase.client.performer.kotlin.util.JsonArray
-import com.couchbase.client.performer.kotlin.util.JsonObject
+import com.couchbase.client.performer.kotlin.util.convert
 import com.couchbase.client.performer.kotlin.util.setSuccess
 import com.couchbase.client.performer.kotlin.util.toKotlin
 import com.couchbase.client.performer.kotlin.util.toProtobufDuration
@@ -171,22 +169,7 @@ class QueryHelper {
             out: com.couchbase.client.protocol.run.Result.Builder,
             result: com.couchbase.client.kotlin.query.QueryResult
         ): Unit {
-
-
-            val content = result.rows.map {
-                val row = it
-                ContentAsUtil
-                    .contentType(
-                        request.contentAs,
-                        { row.contentAs<ByteArray>() },
-                        { row.contentAs<String>() },
-                        { row.contentAs<JsonObject>() },
-                        { row.contentAs<JsonArray>() },
-                        { row.contentAs<Boolean>() },
-                        { row.contentAs<Int>() },
-                        { row.contentAs<Double>() })
-            }
-
+            val content = result.rows.map { row -> request.contentAs.convert(row) }
             val md = result.metadata
 
             val metaData = com.couchbase.client.protocol.sdk.query.QueryMetaData.newBuilder()

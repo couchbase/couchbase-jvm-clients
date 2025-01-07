@@ -17,7 +17,6 @@
 package com.couchbase.client.performer.kotlin
 
 import com.couchbase.client.core.msg.kv.MutationToken
-import com.couchbase.client.kotlin.codec.RawStringTranscoder
 import com.couchbase.client.kotlin.codec.Transcoder
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
@@ -25,11 +24,7 @@ import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.MutationState
 import com.couchbase.client.kotlin.kv.ScanTerm
 import com.couchbase.client.kotlin.kv.ScanType
-import com.couchbase.client.performer.kotlin.util.ContentAsUtil
-import com.couchbase.client.performer.kotlin.util.JsonArray
-import com.couchbase.client.performer.kotlin.util.JsonObject
-import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.protobuf.ByteString
+import com.couchbase.client.performer.kotlin.util.convert
 import com.couchbase.client.protocol.run.Result as FitRunResult
 import com.couchbase.client.protocol.sdk.kv.rangescan.Range as FitRange
 import com.couchbase.client.protocol.sdk.kv.rangescan.Scan as FitScan
@@ -124,18 +119,7 @@ fun processScanResult(request: FitScan, documentOrId: Any): FitRunResult = try {
                 null
             }
 
-            if (request.hasContentAs()) {
-                val content = ContentAsUtil.contentType(request.contentAs,
-                    { contentAs<ByteArray>(transcoder) },
-                    { contentAs<String>(transcoder) },
-                    { contentAs<JsonObject>(transcoder) },
-                    { contentAs<JsonArray>(transcoder) },
-                    { contentAs<Boolean>(transcoder) },
-                    { contentAs<Int>(transcoder) },
-                    { contentAs<Double>(transcoder) })
-
-                builder.content = content
-            }
+            if (request.hasContentAs()) builder.content = request.contentAs.convert(documentOrId, transcoder)
         }
 
         else -> throw AssertionError("Expected String or GetResult, but got ${documentOrId::class.java}")

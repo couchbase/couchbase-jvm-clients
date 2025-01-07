@@ -49,11 +49,9 @@ import com.couchbase.client.performer.kotlin.manager.handleSearchIndexManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
 import com.couchbase.client.performer.kotlin.search.SearchHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
-import com.couchbase.client.performer.kotlin.util.ContentAsUtil
 import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.createCommon
 import com.couchbase.client.performer.kotlin.util.ConverterUtil.Companion.setSuccess
-import com.couchbase.client.performer.kotlin.util.JsonArray
-import com.couchbase.client.performer.kotlin.util.JsonObject
+import com.couchbase.client.performer.kotlin.util.convert
 import com.couchbase.client.protocol.sdk.cluster.waituntilready.WaitUntilReadyRequest
 import com.couchbase.client.protocol.sdk.kv.Get
 import com.couchbase.client.protocol.sdk.kv.rangescan.ScanOptions
@@ -421,14 +419,7 @@ class KotlinSdkCommandExecutor(
     }
 
     private fun populateResult(request: Get, result: FitRunResult.Builder, value: GetResult) {
-        val content = ContentAsUtil.contentType(request.contentAs,
-            { value.contentAs<ByteArray>() },
-            { value.contentAs<String>() },
-            { value.contentAs<JsonObject>() },
-            { value.contentAs<JsonArray>() },
-            { value.contentAs<Boolean>() },
-            { value.contentAs<Int>() },
-            { value.contentAs<Double>() })
+        val content = request.contentAs.convert(value)
 
         val builder = FitGetResult.newBuilder()
             .setCas(value.cas)

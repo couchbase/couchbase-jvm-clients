@@ -47,7 +47,7 @@ import com.couchbase.client.kotlin.search.VectorSearchSpec
 import com.couchbase.client.kotlin.search.execute
 import com.couchbase.client.performer.kotlin.manager.toByteString
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
-import com.couchbase.client.performer.kotlin.util.ContentAsUtil
+import com.couchbase.client.performer.kotlin.util.convert
 import com.couchbase.client.performer.kotlin.util.toKotlin
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.ClusterLevelCommand
@@ -63,8 +63,6 @@ import kotlinx.coroutines.runBlocking
 import java.time.Instant
 import kotlin.Any
 import kotlin.Boolean
-import kotlin.ByteArray
-import kotlin.Double
 import kotlin.Int
 import kotlin.Number
 import kotlin.String
@@ -433,17 +431,7 @@ fun convertRow(row: SearchRow, fieldsAs: ContentAs?): FitSearchRow {
 
         addAllLocations(row.locations.map { it.toFit() })
 
-        if (fieldsAs != null) {
-            fields = ContentAsUtil.contentType(
-                fieldsAs,
-                { row.fieldsAs<ByteArray>()!! },
-                { row.fieldsAs<String>()!! },
-                { row.fieldsAs<JsonObject>()!! },
-                { row.fieldsAs<JsonArray>()!! },
-                { row.fieldsAs<Boolean>()!! },
-                { row.fieldsAs<Int>()!! },
-                { row.fieldsAs<Double>()!! })
-        }
+        if (fieldsAs != null) fields = fieldsAs.convert(row)
     }.build()
 }
 
