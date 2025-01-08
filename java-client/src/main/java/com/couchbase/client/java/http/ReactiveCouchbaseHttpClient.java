@@ -107,16 +107,43 @@ public class ReactiveCouchbaseHttpClient {
    * Specify a request body via the options:
    * <pre>
    * // form data
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.form(Map.of("foo", "bar")));
    *
    * // JSON document
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.json("{}")));
    * </pre>
    */
   public Mono<HttpResponse> put(HttpTarget target, HttpPath path, HttpPutOptions options) {
     return reactor.publishOnUserScheduler(() -> async.put(target, path, options));
+  }
+
+  /**
+   * Returns a Mono that, when subscribed, issues a PATCH request with the given options.
+   * <p>
+   * Specify a request body via the options:
+   * <pre>
+   * // form data
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.form(Map.of("foo", "bar")));
+   *
+   * // JSON document
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.json("{}")));
+   * </pre>
+   */
+  public Mono<HttpResponse> patch(HttpTarget target, HttpPath path, HttpPatchOptions options) {
+    return reactor.publishOnUserScheduler(() -> async.patch(target, path, options));
+  }
+
+  /**
+   * Returns a Mono that, when subscribed, issues a PATCH request with no body and default options.
+   * <p>
+   * To specify a request body, use the overload that takes {@link HttpPatchOptions}.
+   */
+  public Mono<HttpResponse> patch(HttpTarget target, HttpPath path) {
+    return reactor.publishOnUserScheduler(() -> async.patch(target, path));
   }
 
   /**

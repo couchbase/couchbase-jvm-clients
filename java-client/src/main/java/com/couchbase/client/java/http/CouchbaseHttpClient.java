@@ -134,16 +134,43 @@ public class CouchbaseHttpClient {
    * Specify a request body via the options:
    * <pre>
    * // form data
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.form(Map.of("foo", "bar")));
    *
    * // JSON document
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.json("{}")));
    * </pre>
    */
   public HttpResponse put(HttpTarget target, HttpPath path, HttpPutOptions options) {
     return block(async.put(target, path, options));
+  }
+
+  /**
+   * Issues a PATCH request with no body and default options.
+   * <p>
+   * To specify a request body, use the overload that takes {@link HttpPatchOptions}.
+   */
+  public HttpResponse patch(HttpTarget target, HttpPath path) {
+    return block(async.patch(target, path));
+  }
+
+  /**
+   * Issues a PATCH request with the given options.
+   * <p>
+   * Specify a request body via the options:
+   * <pre>
+   * // form data
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.form(Map.of("foo", "bar")));
+   *
+   * // JSON document
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.json("{}")));
+   * </pre>
+   */
+  public HttpResponse patch(HttpTarget target, HttpPath path, HttpPatchOptions options) {
+    return block(async.patch(target, path, options));
   }
 
   /**

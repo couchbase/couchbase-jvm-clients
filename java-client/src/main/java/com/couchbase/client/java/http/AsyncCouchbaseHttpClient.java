@@ -34,6 +34,7 @@ import static com.couchbase.client.core.util.CbThrowables.findCause;
 import static com.couchbase.client.core.util.CbThrowables.propagate;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.java.http.HttpDeleteOptions.httpDeleteOptions;
+import static com.couchbase.client.java.http.HttpPatchOptions.httpPatchOptions;
 import static com.couchbase.client.java.http.HttpPostOptions.httpPostOptions;
 import static com.couchbase.client.java.http.HttpPutOptions.httpPutOptions;
 import static java.util.Objects.requireNonNull;
@@ -139,11 +140,11 @@ public class AsyncCouchbaseHttpClient {
    * Specify a request body via the options:
    * <pre>
    * // form data
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.form(Map.of("foo", "bar")));
    *
    * // JSON document
-   * httpClient.put(target, path, HttpPostOptions.httpPutOptions()
+   * httpClient.put(target, path, HttpPutOptions.httpPutOptions()
    *     .body(HttpBody.json("{}")));
    * </pre>
    */
@@ -154,6 +155,42 @@ public class AsyncCouchbaseHttpClient {
 
     HttpPutOptions.Built builtOpts = options.build();
     return exec(HttpMethod.PUT, target, path, builtOpts, req -> {
+      if (builtOpts.body() != null) {
+        req.content(builtOpts.body().content, builtOpts.body().contentType);
+      }
+    });
+  }
+
+  /**
+   * Issues a PATCH request with no body and default options.
+   * <p>
+   * To specify a request body, use the overload that takes {@link HttpPatchOptions}.
+   */
+  public CompletableFuture<HttpResponse> patch(HttpTarget target, HttpPath path) {
+    return patch(target, path, httpPatchOptions());
+  }
+
+  /**
+   * Issues a PATCH request with the given options.
+   * <p>
+   * Specify a request body via the options:
+   * <pre>
+   * // form data
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.form(Map.of("foo", "bar")));
+   *
+   * // JSON document
+   * httpClient.patch(target, path, HttpPatchOptions.httpPatchOptions()
+   *     .body(HttpBody.json("{}")));
+   * </pre>
+   */
+  public CompletableFuture<HttpResponse> patch(HttpTarget target, HttpPath path, HttpPatchOptions options) {
+    notNull(target, "target");
+    notNull(path, "path");
+    notNull(options, "options");
+
+    HttpPatchOptions.Built builtOpts = options.build();
+    return exec(HttpMethod.PATCH, target, path, builtOpts, req -> {
       if (builtOpts.body() != null) {
         req.content(builtOpts.body().content, builtOpts.body().contentType);
       }
