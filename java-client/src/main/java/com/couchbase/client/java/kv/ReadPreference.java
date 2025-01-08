@@ -15,9 +15,12 @@
  */
 package com.couchbase.client.java.kv;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
-import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.env.CoreEnvironment;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Represents the read preference for a given replica get operation.
@@ -26,23 +29,26 @@ public enum ReadPreference {
   /**
    * No preference is set.
    */
-  NO_PREFERENCE,
+  NO_PREFERENCE(CoreReadPreference.NO_PREFERENCE),
 
-    /**
-     * This operation will aim to read from a preferred server group,
-   * that is configured at Cluster initialization time.
+  /**
+   * This operation will aim to read from the preferred server group
+   * configured on the cluster environment.
+   *
+   * @see CoreEnvironment.Builder#preferredServerGroup(String)
    */
-  PREFERRED_SERVER_GROUP;
+  @SinceCouchbase("7.6.2")
+  PREFERRED_SERVER_GROUP(CoreReadPreference.PREFERRED_SERVER_GROUP),
+  ;
+
+  private final CoreReadPreference coreReadPreference;
+
+  ReadPreference(CoreReadPreference coreReadPreference) {
+    this.coreReadPreference = requireNonNull(coreReadPreference);
+  }
 
   @Stability.Internal
   CoreReadPreference toCore() {
-    switch (this) {
-      case NO_PREFERENCE:
-        return CoreReadPreference.NO_PREFERENCE;
-      case PREFERRED_SERVER_GROUP:
-        return CoreReadPreference.PREFERRED_SERVER_GROUP;
-      default:
-        throw InvalidArgumentException.fromMessage("Unexpected ReadPreference value: " + this);
-    }
+    return coreReadPreference;
   }
 }

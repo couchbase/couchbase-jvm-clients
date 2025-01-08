@@ -18,8 +18,8 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Timer;
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.DefaultEventBus;
 import com.couchbase.client.core.cnc.EventBus;
@@ -70,6 +70,7 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -600,6 +601,8 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     if (!appliedProfiles.isEmpty()) {
       input.put("profiles", appliedProfiles);
     }
+
+    input.put("preferredServerGroup", redactMeta(preferredServerGroup));
 
     return format.apply(input);
   }
@@ -1212,6 +1215,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
      *
      * @return this {@link Builder} for chaining purposes.
      */
+    @SinceCouchbase("7.6.2")
     public SELF preferredServerGroup(final @Nullable String preferredServerGroup) {
       this.preferredServerGroup = preferredServerGroup;
       return self();
