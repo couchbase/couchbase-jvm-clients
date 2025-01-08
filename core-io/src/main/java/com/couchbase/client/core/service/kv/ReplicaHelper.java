@@ -22,9 +22,9 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
+import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
-import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.IndividualReplicaGetFailedEvent;
@@ -409,9 +409,7 @@ public class ReplicaHelper {
         }
       }
       if (requests.isEmpty()) {
-        CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
-        future.completeExceptionally(DocumentUnretrievableException.noReplicasSuitable());
-        return future;
+        return failedFuture(DocumentUnretrievableException.noReplicasSuitable());
       }
       return CompletableFuture.completedFuture(requests.stream());
     } else if (config == null) {
@@ -430,9 +428,7 @@ public class ReplicaHelper {
       }, retryDelay);
       return future;
     } else {
-      final CompletableFuture<Stream<GetRequest>> future = new CompletableFuture<>();
-      future.completeExceptionally(CommonExceptions.getFromReplicaNotCouchbaseBucket());
-      return future;
+      return failedFuture(CommonExceptions.getFromReplicaNotCouchbaseBucket());
     }
   }
 
@@ -495,9 +491,7 @@ public class ReplicaHelper {
         }
       }
       if (requests.isEmpty()) {
-        CompletableFuture<Stream<SubdocGetRequest>> future = new CompletableFuture<>();
-        future.completeExceptionally(DocumentUnretrievableException.noReplicasSuitable());
-        return future;
+        return failedFuture(DocumentUnretrievableException.noReplicasSuitable());
       }
       return CompletableFuture.completedFuture(requests.stream());
     } else if (config == null) {
