@@ -177,6 +177,33 @@ public class CouchbaseHttpClient internal constructor(
     }
 
     /**
+     * Issues a `PATCH` request to the [target] Couchbase service.
+     *
+     * If the [path] has variable parts, consider using [formatPath]
+     * to build the path string.
+     *
+     * Request content and type is defined by [body]. Specifying a body
+     * automatically sets the "Content-Type" header appropriately.
+     *
+     * There's usually no reason to set extra [headers] unless you're
+     * invoking an API that requires a special header.
+     */
+    public suspend fun patch(
+        target: HttpTarget,
+        path: String,
+        common: CommonOptions = CommonOptions.Default,
+        body: HttpBody? = null,
+        headers: List<Header> = emptyList(),
+    ): CouchbaseHttpResponse {
+        val request = CoreHttpClient(core, target.coreTarget)
+            .patch(CoreHttpPath.path(path), common.toCore())
+
+        body?.let { request.content(it.content, it.contentType) }
+
+        return exec(request, headers)
+    }
+
+    /**
      * Issues a `DELETE` request to the [target] Couchbase service.
      *
      * If the [path] has variable parts, consider using [formatPath]
