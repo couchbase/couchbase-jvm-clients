@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
-import com.couchbase.client.core.api.kv.CoreReadPreference
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.error.CasMismatchException
@@ -30,7 +29,12 @@ import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext
 import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.kv.*
+import com.couchbase.client.core.kv.CoreRangeScan
+import com.couchbase.client.core.kv.CoreRangeScanItem
+import com.couchbase.client.core.kv.CoreSamplingScan
+import com.couchbase.client.core.kv.CoreScanOptions
+import com.couchbase.client.core.kv.CoreScanTerm
+import com.couchbase.client.core.kv.RangeScanOrchestrator
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
 import com.couchbase.client.core.msg.Request
 import com.couchbase.client.core.msg.Response
@@ -59,6 +63,7 @@ import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInResult
 import com.couchbase.client.kotlin.kv.MutateInSpec
 import com.couchbase.client.kotlin.kv.MutationResult
+import com.couchbase.client.kotlin.kv.ReadPreference
 import com.couchbase.client.kotlin.kv.ScanType
 import com.couchbase.client.kotlin.kv.StoreSemantics
 import com.couchbase.client.kotlin.manager.query.CollectionQueryIndexManager
@@ -71,7 +76,7 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirst
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import reactor.core.publisher.Flux
-import java.util.*
+import java.util.Optional
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -328,6 +333,12 @@ public class Collection internal constructor(
         }
     }
 
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public fun getAllReplicas(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+    ): Flow<GetReplicaResult> = getAllReplicas(id, common)
+
     /**
      * Like [get], but sends the request to all replicas in addition to the active.
      * Returns the results from all available sources.
@@ -335,10 +346,17 @@ public class Collection internal constructor(
     public fun getAllReplicas(
         id: String,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
     ): Flow<GetReplicaResult> {
-        return kvOps.getAllReplicasReactive(common.toCore(), id, CoreReadPreference.NO_PREFERENCE)
+        return kvOps.getAllReplicasReactive(common.toCore(), id, readPreference.toCore())
             .asFlow().map { GetReplicaResult(id, it, defaultTranscoder) }
     }
+
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public suspend fun getAnyReplica(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+    ): GetReplicaResult = getAnyReplica(id, common)
 
     /**
      * Like [get], but sends the request to all replicas in addition to the active.
@@ -350,10 +368,18 @@ public class Collection internal constructor(
     public suspend fun getAnyReplica(
         id: String,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
     ): GetReplicaResult {
-        return getAnyReplicaOrNull(id, common)
+        return getAnyReplicaOrNull(id, common, readPreference)
             ?: throw DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionId))
     }
+
+    @VolatileCouchbaseApi
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public suspend fun getAnyReplicaOrNull(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+    ): GetReplicaResult? = getAnyReplicaOrNull(id, common)
 
     /**
      * Like [getAnyReplica], but returns null instead of throwing
@@ -363,8 +389,9 @@ public class Collection internal constructor(
     public suspend fun getAnyReplicaOrNull(
         id: String,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
     ): GetReplicaResult? {
-        val response = kvOps.getAnyReplicaReactive(common.toCore(), id, CoreReadPreference.NO_PREFERENCE)
+        val response = kvOps.getAnyReplicaReactive(common.toCore(), id, readPreference.toCore())
             .awaitFirstOrNull() ?: return null
 
         return GetReplicaResult(id, response, defaultTranscoder)
@@ -603,6 +630,15 @@ public class Collection internal constructor(
         return LookupInResult(coreResult, defaultJsonSerializer, spec)
     }
 
+    @SinceCouchbase("7.6")
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public suspend inline fun <T, L : LookupInSpec> lookupInAnyReplica(
+        id: String,
+        spec: L,
+        common: CommonOptions = CommonOptions.Default,
+        block: LookupInReplicaResult.() -> T
+    ): T = lookupInAnyReplica(id, spec, common, ReadPreference.none(), block)
+
     /**
      * Like [lookupIn], but sends the request to all replicas in addition to the active.
      * Returns the result from whichever server node responded quickest.
@@ -620,11 +656,20 @@ public class Collection internal constructor(
         id: String,
         spec: L,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
         block: LookupInReplicaResult.() -> T
     ): T {
-        val result = lookupInAnyReplica(id, spec, common)
+        val result = lookupInAnyReplica(id, spec, common, readPreference)
         return block(result)
     }
+
+    @SinceCouchbase("7.6")
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public suspend fun lookupInAnyReplica(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+    ): LookupInReplicaResult = lookupInAnyReplica(id, spec, common)
 
     /**
      * Like [lookupIn], but sends the request to all replicas in addition to the active.
@@ -640,16 +685,25 @@ public class Collection internal constructor(
         id: String,
         spec: LookupInSpec,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
     ): LookupInReplicaResult {
         val coreResult = kvOps.subdocGetAnyReplicaReactive(
             common.toCore(),
             id,
             spec.commands,
-            CoreReadPreference.NO_PREFERENCE,
+            readPreference.toCore(),
         ).awaitFirst()
 
         return LookupInReplicaResult(coreResult, defaultJsonSerializer, spec)
     }
+
+    @SinceCouchbase("7.6")
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public fun lookupInAllReplicas(
+        id: String,
+        spec: LookupInSpec,
+        common: CommonOptions = CommonOptions.Default,
+    ): Flow<LookupInReplicaResult> = lookupInAllReplicas(id, spec, common)
 
     /**
      * Like [lookupIn], but sends the request to all replicas in addition to the active.
@@ -660,12 +714,13 @@ public class Collection internal constructor(
         id: String,
         spec: LookupInSpec,
         common: CommonOptions = CommonOptions.Default,
+        readPreference: ReadPreference = ReadPreference.none(),
     ): Flow<LookupInReplicaResult> {
         val flux = kvOps.subdocGetAllReplicasReactive(
             common.toCore(),
             id,
             spec.commands,
-            CoreReadPreference.NO_PREFERENCE,
+            readPreference.toCore(),
         )
         return flux
             .map { coreResult -> LookupInReplicaResult(coreResult, defaultJsonSerializer, spec) }

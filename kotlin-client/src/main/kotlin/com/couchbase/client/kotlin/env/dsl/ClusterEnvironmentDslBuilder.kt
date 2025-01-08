@@ -179,5 +179,11 @@ public class ClusterEnvironmentDslBuilder {
     public var maxNumRequestsInRetry: Long
             by observable(DEFAULT_MAX_NUM_REQUESTS_IN_RETRY) { _, _, it -> wrapped.maxNumRequestsInRetry(it) }
 
+    /**
+     * @see CoreEnvironment.Builder.preferredServerGroup
+     */
+    public var preferredServerGroup: String?
+            by observable(null) { _, _, it -> wrapped.preferredServerGroup(it) }
+
     internal fun toCore() = wrapped
 }
