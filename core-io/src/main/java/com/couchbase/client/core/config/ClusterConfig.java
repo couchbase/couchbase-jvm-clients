@@ -82,8 +82,8 @@ public class ClusterConfig {
   }
 
   @Stability.Internal
-  public void setBucketConfig(final BucketConfig config) {
-    bucketConfigs.put(config.name(), config);
+  public void setBucketConfig(final ClusterTopologyWithBucket topology) {
+    bucketConfigs.put(topology.bucket().name(), LegacyConfigHelper.toLegacyBucketConfig(topology));
   }
 
   @Stability.Internal
@@ -100,8 +100,8 @@ public class ClusterConfig {
   }
 
   @Stability.Internal
-  public void setGlobalConfig(final GlobalConfig config) {
-    globalConfig.set(config);
+  public void setGlobalConfig(final ClusterTopology config) {
+    globalConfig.set(new GlobalConfig(config));
   }
 
   @Stability.Internal

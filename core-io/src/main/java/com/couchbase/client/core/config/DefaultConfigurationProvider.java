@@ -58,6 +58,8 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
+import com.couchbase.client.core.topology.BucketTopology;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -421,9 +423,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           return;
         }
 
-        ClusterTopologyWithBucket cluster = parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
-        BucketConfig config = LegacyConfigHelper.toLegacyBucketConfig(cluster);
-        checkAndApplyConfig(config, ctx.forcesOverride());
+        ClusterTopologyWithBucket clusterTopologyWithBucket = parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
+        checkAndApplyConfig(clusterTopologyWithBucket, ctx.forcesOverride());
 
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
@@ -462,8 +463,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         }
 
         ClusterTopology topology = parseClusterTopology(ctx.config(), ctx.origin());
-        GlobalConfig config = new GlobalConfig(topology);
-        checkAndApplyConfig(config, ctx.forcesOverride());
+        checkAndApplyConfig(topology, ctx.forcesOverride());
 
       } catch (Exception ex) {
         eventBus.publish(new ConfigIgnoredEvent(
@@ -644,22 +644,22 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private synchronized void checkAndApplyConfig(final BucketConfig newConfig, final boolean force) {
-    final String name = newConfig.name();
-    final BucketConfig oldConfig = currentConfig.bucketConfig(name);
+  private synchronized void checkAndApplyConfig(final ClusterTopologyWithBucket newConfig, final boolean force) {
+    final String name = newConfig.bucket().name();
+    final ClusterTopologyWithBucket oldConfig = currentConfig.bucketTopology(name);
 
-    if (!force && oldConfig != null && newConfig.version().isLessThanOrEqualTo(oldConfig.version())) {
+    if (!force && oldConfig != null && !newConfig.revision().newerThan(oldConfig.revision())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
         Optional.empty(),
         Optional.empty(),
-        Optional.of(newConfig.name())
+        Optional.of(name)
       ));
       return;
     }
 
-    if (newConfig.tainted()) {
+    if (tainted(newConfig.bucket())) {
       keyValueRefresher.markTainted(name);
       clusterManagerRefresher.markTainted(name);
     } else {
@@ -667,10 +667,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       clusterManagerRefresher.markUntainted(name);
     }
 
-    eventBus.publish(new BucketConfigUpdatedEvent(core.context(), newConfig));
+    eventBus.publish(new BucketConfigUpdatedEvent(core.context(), LegacyConfigHelper.toLegacyBucketConfig(newConfig)));
     currentConfig.setBucketConfig(newConfig);
     updateSeedNodeList();
     pushConfig(false);
+  }
+
+  private static boolean tainted(BucketTopology bucketTopology) {
+    return bucketTopology instanceof CouchbaseBucketTopology &&
+      ((CouchbaseBucketTopology) bucketTopology).partitionsForward().isPresent();
   }
 
   /**
@@ -678,10 +683,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    *
    * @param newConfig the config to apply.
    */
-  private synchronized void checkAndApplyConfig(final GlobalConfig newConfig, final boolean force) {
-    final GlobalConfig oldConfig = currentConfig.globalConfig();
+  private synchronized void checkAndApplyConfig(final ClusterTopology newConfig, final boolean force) {
+    final ClusterTopology oldConfig = currentConfig.globalTopology();
 
-    if (!force && oldConfig != null && newConfig.version().isLessThanOrEqualTo(oldConfig.version())) {
+    if (!force && oldConfig != null && !newConfig.revision().newerThan(oldConfig.revision())) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
@@ -692,7 +697,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       return;
     }
 
-    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), newConfig));
+    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), new GlobalConfig(newConfig)));
     currentConfig.setGlobalConfig(newConfig);
     updateSeedNodeList();
     pushConfig(false);

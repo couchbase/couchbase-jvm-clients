@@ -16,46 +16,35 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyBuilder;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Set;
 
-import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
-import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class ClusterConfigTest {
-
-  private static PortInfo minimalPortInfo(String host) {
-    return new PortInfo(mapOf("mgmt", 8091), host, emptyMap(), null);
-  }
-
-  private static NodeInfo minimalNodeInfo(String host, int port) {
-    return new NodeInfo("", new HostAndPort(host, port).format(), emptyMap(), emptyMap());
-  }
 
   @Test
   void returnsEmptyAllNodeAddresses() {
     ClusterConfig config = new ClusterConfig();
-    assertTrue(config.allNodeAddresses().isEmpty());
+    assertEquals(emptySet(), config.allNodeAddresses());
   }
 
   @Test
   void allNodeAddressesWithOnlyGlobalConfig() {
     ClusterConfig config = new ClusterConfig();
 
-    GlobalConfig gc = mock(GlobalConfig.class);
-    when(gc.portInfos()).thenReturn(listOf(
-      minimalPortInfo("hostname1"),
-      minimalPortInfo("hostname2")
-    ));
+    ClusterTopology gc = minimalTopology(
+      "hostname1",
+      "hostname2"
+    ).build();
     config.setGlobalConfig(gc);
 
     Set<String> expected = setOf(
@@ -70,13 +59,11 @@ class ClusterConfigTest {
   void allNodeAddressesWithOnlyBucketConfig() {
     ClusterConfig config = new ClusterConfig();
 
-    BucketConfig bc = mock(BucketConfig.class);
-    when(bc.name()).thenReturn("bucket-name");
-    when(bc.nodes()).thenReturn(listOf(
-      minimalNodeInfo("hostname1", 11210),
-      minimalNodeInfo("hostname2", 11210),
-      minimalNodeInfo("hostname3", 11210)
-    ));
+    ClusterTopologyWithBucket bc = minimalTopology(
+      "hostname1",
+      "hostname2",
+      "hostname3"
+    ).couchbaseBucket("bucket-name").build();
     config.setBucketConfig(bc);
 
     Set<String> expected = setOf(
@@ -92,20 +79,17 @@ class ClusterConfigTest {
   void allNodeAddressesWithGlobalAndBucketConfigs() {
     ClusterConfig config = new ClusterConfig();
 
-    GlobalConfig gc = mock(GlobalConfig.class);
-    when(gc.portInfos()).thenReturn(Arrays.asList(
-      minimalPortInfo("hostname1"),
-      minimalPortInfo("hostname2")
-    ));
+    ClusterTopology gc = minimalTopology(
+      "hostname1",
+      "hostname2"
+    ).build();
     config.setGlobalConfig(gc);
 
-    BucketConfig bc = mock(BucketConfig.class);
-    when(bc.name()).thenReturn("bucket-name");
-    when(bc.nodes()).thenReturn(listOf(
-      minimalNodeInfo("hostname1", 11210),
-      minimalNodeInfo("hostname2", 11210),
-      minimalNodeInfo("hostname3", 11210)
-    ));
+    ClusterTopologyWithBucket bc = minimalTopology(
+      "hostname1",
+      "hostname2",
+      "hostname3"
+    ).couchbaseBucket("bucket-name").build();
     config.setBucketConfig(bc);
 
     Set<String> expected = setOf(
@@ -117,4 +101,14 @@ class ClusterConfigTest {
     assertEquals(expected, config.allNodeAddresses());
   }
 
+  static ClusterTopologyBuilder minimalTopology(String... hosts) {
+    ClusterTopologyBuilder builder = new ClusterTopologyBuilder();
+    for (String host : hosts) {
+      builder.addNode(host, node -> node.ports(mapOf(
+        ServiceType.MANAGER, 8091,
+        ServiceType.KV, 11210
+      )));
+    }
+    return builder;
+  }
 }

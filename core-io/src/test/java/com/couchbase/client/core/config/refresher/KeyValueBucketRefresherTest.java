@@ -28,6 +28,8 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigResponse;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopologyBuilder;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.util.Bytes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,13 +85,15 @@ public class KeyValueBucketRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.configChangeNotifications()).thenReturn(Flux.empty());
-    BucketConfig config = mock(BucketConfig.class);
-    when(config.name()).thenReturn("bucket");
+
+    ClusterTopologyWithBucket config = new ClusterTopologyBuilder()
+      .addNode("foo", node -> node.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .addNode("bar", node -> node.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .couchbaseBucket("bucket")
+      .replicas(2)
+      .build();
+
     clusterConfig.setBucketConfig(config);
-    when(config.nodes()).thenReturn(listOf(
-      nodeInfo("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
-      nodeInfo("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
-    ));
 
     final AtomicInteger invocationCounter = new AtomicInteger(0);
 

@@ -19,8 +19,6 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.core.InitGlobalConfigFailedEvent;
-import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.config.BucketConfigParser;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.env.Authenticator;
@@ -30,8 +28,10 @@ import com.couchbase.client.core.error.GlobalConfigNotFoundException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConnectionString;
+import com.couchbase.client.test.Resources;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,6 @@ import java.util.Optional;
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -106,11 +105,17 @@ class CoreTest {
       });
     }
 
-    public void accept(BucketConfig bucketConfig) throws InterruptedException {
+    public void accept(ClusterTopologyWithBucket bucketConfig) {
       clusterConfig.setBucketConfig(bucketConfig);
       logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
       configs.tryEmitNext(clusterConfig).orThrow();
     }
+  }
+
+  private static ClusterTopologyWithBucket readTopology(String resourceName) {
+    return topologyParser()
+      .parse(Resources.from(CoreTest.class).getString(resourceName))
+      .requireBucket();
   }
 
   /**
@@ -145,9 +150,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig oneNodeConfig = topologyParser().parseBucketConfig(
-        readResource("one_node_config.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket oneNodeConfig = readTopology("one_node_config.json");
       mockConfigProvider.accept(oneNodeConfig);
 
       logger.info("Validating 1");
@@ -168,9 +171,7 @@ class CoreTest {
       verify(mock102, never()).addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, never()).addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-      BucketConfig twoNodeConfig = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodeConfig = readTopology("two_nodes_config.json");
       mockConfigProvider.accept(twoNodeConfig);
 
       logger.info("Validating");
@@ -240,9 +241,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesConfig = readTopology("two_nodes_config.json");
       mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
@@ -264,9 +263,7 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.KV, 11210, Optional.of("travel-sample"));
 
-      BucketConfig twoNodesConfigMore = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config_more_services.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesConfigMore = readTopology("two_nodes_config_more_services.json");
       mockConfigProvider.accept(twoNodesConfigMore);
 
       logger.info("Validating");
@@ -322,9 +319,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config_more_services.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesConfig = readTopology("two_nodes_config_more_services.json");
       mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
@@ -335,7 +330,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.bucket().name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -344,13 +339,11 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.bucket().name()));
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
-      BucketConfig twoNodesLessServices = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesLessServices = readTopology("two_nodes_config.json");
       mockConfigProvider.accept(twoNodesLessServices);
 
       logger.info("Validating");
@@ -387,9 +380,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig twoNodesConfig = topologyParser().parseBucketConfig(
-        readResource("two_nodes_config_more_services.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesConfig = readTopology("two_nodes_config_more_services.json");
       mockConfigProvider.accept(twoNodesConfig);
 
       logger.info("Validating");
@@ -400,7 +391,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.bucket().name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 8092, Optional.empty());
@@ -409,13 +400,11 @@ class CoreTest {
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.QUERY, 8093, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.name()));
+        .addService(ServiceType.KV, 11210, Optional.of(twoNodesConfig.bucket().name()));
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.SEARCH, 8094, Optional.empty());
 
-      BucketConfig twoNodesLessServices = topologyParser().parseBucketConfig(
-        readResource("one_node_config.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket twoNodesLessServices = readTopology("one_node_config.json");
       mockConfigProvider.accept(twoNodesLessServices);
 
       logger.info("Validating");
@@ -456,9 +445,7 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
       verify(mock102, timeout(TIMEOUT).times(0)).addService(any(), anyInt(), any());
 
-      BucketConfig oneNodeConfig = topologyParser().parseBucketConfig(
-        readResource("config/cluster_run_two_nodes_same_host.json", CoreTest.class)
-      );
+      ClusterTopologyWithBucket oneNodeConfig = readTopology("config/cluster_run_two_nodes_same_host.json");
       mockConfigProvider.accept(oneNodeConfig);
 
       logger.info("Validating");
@@ -467,14 +454,14 @@ class CoreTest {
       verify(mock101, timeout(TIMEOUT).times(1))
         .addService(ServiceType.MANAGER, 9000, Optional.empty());
       verify(mock101, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 12000, Optional.of(oneNodeConfig.name()));
+        .addService(ServiceType.KV, 12000, Optional.of(oneNodeConfig.bucket().name()));
 
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.VIEWS, 9501, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
         .addService(ServiceType.MANAGER, 9001, Optional.empty());
       verify(mock102, timeout(TIMEOUT).times(1))
-        .addService(ServiceType.KV, 12002, Optional.of(oneNodeConfig.name()));
+        .addService(ServiceType.KV, 12002, Optional.of(oneNodeConfig.bucket().name()));
     }
   }
 

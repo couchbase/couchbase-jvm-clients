@@ -21,13 +21,14 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigResponse;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
+import com.couchbase.client.core.topology.ClusterTopologyBuilder;
 import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.NanoTimestamp;
 import org.junit.jupiter.api.AfterEach;
@@ -38,9 +39,6 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.couchbase.client.core.topology.TopologyTestUtils.clusterTopology;
-import static com.couchbase.client.core.topology.TopologyTestUtils.node;
-import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -86,12 +84,10 @@ class GlobalRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.configChangeNotifications()).thenReturn(Flux.empty());
-    GlobalConfig config = new GlobalConfig(clusterTopology(
-      listOf(
-        node("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
-        node("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
-      ))
-    );
+    ClusterTopology config = new ClusterTopologyBuilder()
+      .addNode("foo", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .addNode("bar", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .build();
 
     clusterConfig.setGlobalConfig(config);
 
@@ -136,12 +132,10 @@ class GlobalRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.configChangeNotifications()).thenReturn(Flux.empty());
-    GlobalConfig config = new GlobalConfig(clusterTopology(
-      listOf(
-        node("foo", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)),
-        node("bar", mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091))
-      ))
-    );
+    ClusterTopology config = new ClusterTopologyBuilder()
+      .addNode("foo", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .addNode("bar", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
+      .build();
 
     clusterConfig.setGlobalConfig(config);
 

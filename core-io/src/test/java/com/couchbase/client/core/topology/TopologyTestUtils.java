@@ -20,16 +20,13 @@ import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.LegacyConfigHelper;
 import com.couchbase.client.core.config.NodeInfo;
-import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
-import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 
 public class TopologyTestUtils {
@@ -51,18 +48,6 @@ public class TopologyTestUtils {
   @Deprecated
   public static NodeInfo nodeInfo(String host, Map<ServiceType, Integer> ports) {
     return new NodeInfo(host, ports, emptyMap(), null, nodeId(host, ports.getOrDefault(ServiceType.MANAGER, 8091)).toLegacy());
-  }
-
-  public static ClusterTopology clusterTopology(List<HostAndServicePorts> nodes) {
-    return ClusterTopology.of(
-      new TopologyRevision(1, 1),
-      null,
-      nodes,
-      emptySet(),
-      NetworkResolution.DEFAULT,
-      PortSelector.NON_TLS,
-      null // no bucket
-    );
   }
 
   public static TestTopologyParser topologyParser() {

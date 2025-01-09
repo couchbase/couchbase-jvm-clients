@@ -18,34 +18,34 @@ package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
 import com.couchbase.client.core.msg.kv.RangeScanCreateRequest;
 import com.couchbase.client.core.msg.kv.RangeScanCreateResponse;
+import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.BucketCapability;
+import com.couchbase.client.core.topology.ClusterTopologyBuilder;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
+import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static java.util.Collections.emptySet;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -57,16 +57,23 @@ class OrchestratorProxy {
 
   private final RangeScanOrchestrator rangeScanOrchestrator;
 
-  private final CouchbaseBucketConfig bucketConfig;
+  private ClusterTopologyWithBucket newTopologyWithPartitionCount(int partitions, Set<BucketCapability> bucketCapabilities) {
+    return new ClusterTopologyBuilder()
+      .addNode("127.0.0.1", node -> node.ports(mapOf(ServiceType.MANAGER, 8091, ServiceType.KV, 11210)))
+      .couchbaseBucket("test-bucket")
+      .capabilities(bucketCapabilities)
+      .numPartitions(partitions)
+      .build();
+  }
 
   public OrchestratorProxy(final CoreEnvironment environment, boolean capabilityEnabled, Map<Short, List<CoreRangeScanItem>> data) {
     // Set up Bucket Config
+    Set<BucketCapability> bucketCapabilities = capabilityEnabled
+      ? setOf(BucketCapability.RANGE_SCAN)
+      : emptySet();
+    ClusterTopologyWithBucket bucketConfig = newTopologyWithPartitionCount(data.size(), bucketCapabilities);
+    CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault(bucketConfig.bucket().name());
     ClusterConfig clusterConfig = new ClusterConfig();
-    bucketConfig = mock(CouchbaseBucketConfig.class);
-    CollectionIdentifier collectionIdentifier = CollectionIdentifier.fromDefault("testbucket");
-    when(bucketConfig.name()).thenReturn(collectionIdentifier.bucket());
-    when(bucketConfig.bucketCapabilities())
-      .thenReturn(capabilityEnabled ? EnumSet.of(BucketCapabilities.RANGE_SCAN) : Collections.emptySet());
     clusterConfig.setBucketConfig(bucketConfig);
 
     // Set up config provider
@@ -86,8 +93,6 @@ class OrchestratorProxy {
   }
 
   private void prepare(final Map<Short, List<CoreRangeScanItem>> data) {
-    when(bucketConfig.numberOfPartitions()).thenReturn(data.size());
-
     Map<Short, String> uuids = new HashMap<>();
     Map<String, Short> reverseUuids = new HashMap<>();
     for (Short k : data.keySet()) {
