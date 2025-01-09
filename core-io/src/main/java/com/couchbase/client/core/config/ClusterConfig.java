@@ -117,24 +117,22 @@ public class ClusterConfig {
    * Dynamically aggregates all node addresses from global and bucket configs into a set (no duplicates).
    *
    * @return all node addresses found in global and bucket configs without duplicates.
+   * @deprecated Because it reinforces the mistaken assumption that each node runs on a unique host.
    */
+  @Deprecated
   public Set<String> allNodeAddresses() {
-    Set<String> nodes = new HashSet<>();
+    Set<String> hosts = new HashSet<>();
 
-    GlobalConfig gc = globalConfig.get();
-    if (gc != null) {
-      for (PortInfo ni : gc.portInfos()) {
-        nodes.add(ni.hostname());
-      }
+    ClusterTopology global = globalTopology();
+    if (global != null) {
+      global.nodes().forEach(node -> hosts.add(node.host()));
     }
 
-    for (BucketConfig bc : bucketConfigs().values()) {
-      for (NodeInfo ni : bc.nodes()) {
-        nodes.add(ni.hostname());
-      }
+    for (ClusterTopologyWithBucket bucket : bucketTopologies()) {
+      bucket.nodes().forEach(node -> hosts.add(node.host()));
     }
 
-    return nodes;
+    return hosts;
   }
 
   @Override
