@@ -21,6 +21,7 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.reactor.Backoff;
 import com.couchbase.client.core.retry.reactor.IterationContext;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -129,15 +130,15 @@ public class BestEffortRetryStrategy implements RetryStrategy {
   private static class RetryStrategyIterationContext implements IterationContext<Void> {
 
     private final long iteration;
-    private final Duration lastBackoff;
+    private final @Nullable Duration lastBackoff;
 
-    RetryStrategyIterationContext(long iteration, Duration lastBackoff) {
+    RetryStrategyIterationContext(long iteration, @Nullable Duration lastBackoff) {
       this.iteration = iteration;
       this.lastBackoff = lastBackoff;
     }
 
     @Override
-    public Void applicationContext() {
+    public @Nullable Void applicationContext() {
       return null;
     }
 
@@ -147,7 +148,7 @@ public class BestEffortRetryStrategy implements RetryStrategy {
     }
 
     @Override
-    public Duration backoff() {
+    public @Nullable Duration backoff() {
       return lastBackoff;
     }
   }

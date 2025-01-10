@@ -21,7 +21,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.service.ServiceType;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -54,8 +54,7 @@ public class AuthErrorDecider {
     return ed.internal.type() == ServiceType.KV && !ed.internal.namespace().isPresent();
   }
 
-  @Nullable
-  public static Throwable getTlsHandshakeFailure(Core core) {
+  public static @Nullable Throwable getTlsHandshakeFailure(Core core) {
     return core.internalDiagnostics()
       .filter(AuthErrorDecider::isGcccpEndpoint)
       .map(it -> it.tlsHandshakeFailure)

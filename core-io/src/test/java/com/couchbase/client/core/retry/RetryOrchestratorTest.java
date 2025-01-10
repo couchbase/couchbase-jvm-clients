@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.request.RequestNotRetriedEvent;
 import com.couchbase.client.core.cnc.events.request.RequestRetryScheduledEvent;
 import com.couchbase.client.core.env.Authenticator;
@@ -27,7 +28,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -40,9 +40,7 @@ import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -60,7 +58,8 @@ class RetryOrchestratorTest {
     Request<?> request = mock(Request.class);
     when(request.completed()).thenReturn(true);
 
-    RetryOrchestrator.maybeRetry(null, request, RetryReason.UNKNOWN);
+    CoreContext ctx = mock(CoreContext.class);
+    RetryOrchestrator.maybeRetry(ctx, request, RetryReason.UNKNOWN);
 
     verify(request, times(1)).completed();
     verifyNoMoreInteractions(request);

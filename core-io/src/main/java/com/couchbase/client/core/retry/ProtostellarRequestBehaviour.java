@@ -16,16 +16,17 @@
 package com.couchbase.client.core.retry;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Determines what to do with a request.
- *
+ * <p>
  * This is an Either - if retryDuration is null, RuntimeException must not be.
- *
+ * <p>
  * Both can be null, in which case the operation succeeded (used for LookupIn).
  */
 @Stability.Internal
@@ -40,16 +41,18 @@ public class ProtostellarRequestBehaviour {
    */
   private final @Nullable RuntimeException exception;
 
-  public ProtostellarRequestBehaviour(@Nullable Duration retryDuration, @Nullable RuntimeException exception) {
+  private ProtostellarRequestBehaviour(@Nullable Duration retryDuration, @Nullable RuntimeException exception) {
     this.retryDuration = retryDuration;
     this.exception = exception;
   }
 
   public static ProtostellarRequestBehaviour retry(Duration retryDuration) {
+    requireNonNull(retryDuration);
     return new ProtostellarRequestBehaviour(retryDuration, null);
   }
 
   public static ProtostellarRequestBehaviour fail(RuntimeException err) {
+    requireNonNull(err);
     return new ProtostellarRequestBehaviour(null, err);
   }
 
@@ -57,13 +60,11 @@ public class ProtostellarRequestBehaviour {
     return new ProtostellarRequestBehaviour(null, null);
   }
 
-  @Nullable
-  public Duration retryDuration() {
+  public @Nullable Duration retryDuration() {
     return retryDuration;
   }
 
-  @Nullable
-  public RuntimeException exception() {
+  public @Nullable RuntimeException exception() {
     return exception;
   }
 }

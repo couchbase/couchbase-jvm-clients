@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the functionality of the {@link BestEffortRetryStrategy}.
@@ -41,7 +42,8 @@ class BestEffortRetryStrategyTest {
       }
     };
 
-    RetryAction retryAction = customStrategy.shouldRetry(null, RetryReason.ENDPOINT_CIRCUIT_OPEN).get();
+    Request<?> request = mock(Request.class);
+    RetryAction retryAction = customStrategy.shouldRetry(request, RetryReason.ENDPOINT_CIRCUIT_OPEN).get();
     assertEquals(RetryAction.noRetry(), retryAction);
   }
 
