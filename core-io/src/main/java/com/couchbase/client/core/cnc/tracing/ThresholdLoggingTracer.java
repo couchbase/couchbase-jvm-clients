@@ -24,8 +24,6 @@ import com.couchbase.client.core.cnc.events.tracing.OverThresholdRequestsRecorde
 import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.error.TracerException;
 import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.NativeImageHelper;
@@ -180,24 +178,28 @@ public class ThresholdLoggingTracer implements RequestTracer {
    */
   private boolean isOverThreshold(final Request<?> request) {
     final long tookNanos = request.context().logicalRequestLatency();
-    final ServiceType serviceType = request.serviceType();
-    if (serviceType == null) {
-      // Virtual service
-      if (request instanceof CoreTransactionRequest) {
+    final String serviceTracingId = request.serviceTracingId();
+    switch (serviceTracingId) {
+      case TracingIdentifiers.SERVICE_TRANSACTIONS:
         return tookNanos >= transactionsThreshold;
-      }
-      return false;
-    }
-    else if (serviceType == ServiceType.KV && tookNanos >= kvThreshold) {
-      return true;
-    } else if (serviceType == ServiceType.QUERY && tookNanos >= queryThreshold) {
-      return true;
-    } else if (serviceType == ServiceType.ANALYTICS && tookNanos >= analyticsThreshold) {
-      return true;
-    } else if (serviceType == ServiceType.SEARCH && tookNanos >= searchThreshold) {
-      return true;
-    } else {
-      return serviceType == ServiceType.VIEWS && tookNanos >= viewThreshold;
+
+      case TracingIdentifiers.SERVICE_KV:
+        return tookNanos >= kvThreshold;
+
+      case TracingIdentifiers.SERVICE_QUERY:
+        return tookNanos >= queryThreshold;
+
+      case TracingIdentifiers.SERVICE_ANALYTICS:
+        return tookNanos >= analyticsThreshold;
+
+      case TracingIdentifiers.SERVICE_SEARCH:
+        return tookNanos >= searchThreshold;
+
+      case TracingIdentifiers.SERVICE_VIEWS:
+        return tookNanos >= viewThreshold;
+
+      default:
+        return false;
     }
   }
 
@@ -302,32 +304,41 @@ public class ThresholdLoggingTracer implements RequestTracer {
         if (request == null) {
           return;
         }
-        final ServiceType serviceType = request.serviceType();
-        if (serviceType == null) {
-          // Virtual service
-          if (request instanceof CoreTransactionRequest) {
+        final String serviceTracingId = request.serviceTracingId();
+        switch (serviceTracingId) {
+          case TracingIdentifiers.SERVICE_TRANSACTIONS:
             updateThreshold(transactionsThresholds, request);
             transactionsThresholdCount += 1;
-          }
-        }
-        else if (serviceType == ServiceType.KV) {
-          updateThreshold(kvThresholds, request);
-          kvThresholdCount += 1;
-        } else if (serviceType == ServiceType.QUERY) {
-          updateThreshold(n1qlThresholds, request);
-          n1qlThresholdCount += 1;
-        } else if (serviceType == ServiceType.VIEWS) {
-          updateThreshold(viewThresholds, request);
-          viewThresholdCount += 1;
-        } else if (serviceType == ServiceType.SEARCH) {
-          updateThreshold(ftsThresholds, request);
-          ftsThresholdCount += 1;
-        } else if (serviceType == ServiceType.ANALYTICS) {
-          updateThreshold(analyticsThresholds, request);
-          analyticsThresholdCount += 1;
-        } else {
-          // TODO: log error
-          // LOGGER.warn("Unknown service in span {}", service);
+            break;
+
+          case TracingIdentifiers.SERVICE_KV:
+            updateThreshold(kvThresholds, request);
+            kvThresholdCount += 1;
+            break;
+
+          case TracingIdentifiers.SERVICE_QUERY:
+            updateThreshold(n1qlThresholds, request);
+            n1qlThresholdCount += 1;
+            break;
+
+          case TracingIdentifiers.SERVICE_VIEWS:
+            updateThreshold(viewThresholds, request);
+            viewThresholdCount += 1;
+            break;
+
+          case TracingIdentifiers.SERVICE_SEARCH:
+            updateThreshold(ftsThresholds, request);
+            ftsThresholdCount += 1;
+            break;
+
+          case TracingIdentifiers.SERVICE_ANALYTICS:
+            updateThreshold(analyticsThresholds, request);
+            analyticsThresholdCount += 1;
+            break;
+
+          default:
+            // TODO: log error
+            // LOGGER.warn("Unknown service in span {}", service);
         }
       }
     }

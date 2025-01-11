@@ -99,7 +99,6 @@ import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
-import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.CoreIdGenerator;
@@ -634,14 +633,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request, exceptionSimpleName, clusterIdent), key -> {
       Map<String, String> tags = new HashMap<>(9);
-      if (key.serviceType == null) {
-        // Virtual service
-        if (request instanceof CoreTransactionRequest) {
-          tags.put(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_TRANSACTIONS);
-        }
-      } else {
-        tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType);
-      }
+      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceTracingId);
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
 
       // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
@@ -1026,7 +1018,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Stability.Internal
   public static class ResponseMetricIdentifier {
 
-    private final String serviceType;
+    private final String serviceTracingId;
     private final String requestName;
     private final @Nullable String bucketName;
     private final @Nullable String scopeName;
@@ -1037,16 +1029,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     ResponseMetricIdentifier(final Request<?> request, @Nullable String exceptionSimpleName, @Nullable ClusterIdentifier clusterIdent) {
       this.exceptionSimpleName = exceptionSimpleName;
-      if (request.serviceType() == null) {
-        if (request instanceof CoreTransactionRequest) {
-          this.serviceType = TracingIdentifiers.SERVICE_TRANSACTIONS;
-        } else {
-          // Safer than throwing
-          this.serviceType = TracingIdentifiers.SERVICE_UNKNOWN;
-        }
-      } else {
-        this.serviceType = CbTracing.getTracingId(request.serviceType());
-      }
+      this.serviceTracingId = request.serviceTracingId();
       this.requestName = request.name();
       this.clusterName = clusterIdent == null ? null : clusterIdent.clusterName();
       this.clusterUuid = clusterIdent == null ? null : clusterIdent.clusterUuid();
@@ -1077,8 +1060,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       }
     }
 
-    public ResponseMetricIdentifier(final String serviceType, final String requestName) {
-      this.serviceType = serviceType;
+    public ResponseMetricIdentifier(final String serviceTracingId, final String requestName) {
+      this.serviceTracingId = serviceTracingId;
       this.requestName = requestName;
       this.bucketName = null;
       this.scopeName = null;
@@ -1088,8 +1071,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       this.clusterUuid = null;
     }
 
-    public String serviceType() {
-      return serviceType;
+    public String serviceTracingId() {
+      return serviceTracingId;
     }
 
     public String requestName() {
@@ -1101,7 +1084,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       if (this == o) return true;
       if (o == null || getClass() != o.getClass()) return false;
       ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
-      return serviceType.equals(that.serviceType)
+      return serviceTracingId.equals(that.serviceTracingId)
         && Objects.equals(requestName, that.requestName)
         && Objects.equals(bucketName, that.bucketName)
         && Objects.equals(scopeName, that.scopeName)
@@ -1113,7 +1096,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     @Override
     public int hashCode() {
-      return Objects.hash(serviceType, requestName, bucketName, scopeName, collectionName, exceptionSimpleName, clusterName, clusterUuid);
+      return Objects.hash(serviceTracingId, requestName, bucketName, scopeName, collectionName, exceptionSimpleName, clusterName, clusterUuid);
     }
   }
 

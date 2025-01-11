@@ -16,16 +16,18 @@
 
 package com.couchbase.client.core.msg;
 
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.NodeIdentifier;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -144,13 +146,29 @@ public interface Request<R extends Response> {
   /**
    * The service type of this request.
    * <p>
-   * Can be null if this is a 'virtual service' (e.g. transactions), which don't map 1:1 to a particular cluster service,
-   * but need to integrate into various codepaths that are built around ServiceType such as ThresholdLoggingTracer.
-   * Virtual requests must not be sent into core at present, as there is limited support for them.
+   * Callers that expect virtual services should use {@link #serviceTracingId()} instead.
    *
-   * @return the service type for this request.
+   * @throws NoSuchElementException if the request is for a virtual service (transactions, for example).
    */
-  @Nullable ServiceType serviceType();
+  ServiceType serviceType() throws NoSuchElementException;
+
+  /**
+   * Returns the tracing ID of the service associated with this request,
+   * or {@link TracingIdentifiers#SERVICE_UNKNOWN} if the ID could not be determined.
+   * <p>
+   * Distinct from {@link #serviceType()}, because virtual services (like transactions)
+   * have a tracing ID but no service type.
+   * <p>
+   * Virtual service requests should override this method to return
+   * the tracing ID of the virtual service.
+   */
+  default String serviceTracingId() {
+    try {
+      return CbTracing.getTracingId(serviceType());
+    } catch (NoSuchElementException requestHasNoServiceType) {
+      return TracingIdentifiers.SERVICE_UNKNOWN;
+    }
+  }
 
   /**
    * Returns the name of the bucket this request is scoped to, or null if not scoped to a bucket.

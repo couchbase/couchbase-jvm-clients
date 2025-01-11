@@ -158,7 +158,7 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   public ValueRecorder responseMetric(final Core.ResponseMetricIdentifier rmi) {
     return responseMetrics.computeIfAbsent(rmi, key -> {
       Map<String, String> tags = new HashMap<>(4);
-      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceType());
+      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceTracingId());
       tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName());
       return ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
     });

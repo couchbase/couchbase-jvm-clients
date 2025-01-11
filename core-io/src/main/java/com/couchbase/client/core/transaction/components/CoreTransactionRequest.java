@@ -17,15 +17,18 @@ package com.couchbase.client.core.transaction.components;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 
 import java.time.Duration;
+import java.util.NoSuchElementException;
 
 /**
  * This doesn't correspond to an individual server request.  It just makes it easier to slot into some existing
- * components, such as the ThresholdLoggingTracer, if we model a transaction as a BaseRequest.
+ * components, such as the {@link ThresholdLoggingTracer}, if we model a transaction as a {@link BaseRequest}.
  */
 public class CoreTransactionRequest extends BaseRequest<CoreTransactionResponse> {
 
@@ -35,9 +38,14 @@ public class CoreTransactionRequest extends BaseRequest<CoreTransactionResponse>
 
   @Override
   public ServiceType serviceType() {
-    // This is part of the transactions 'virtual service'.  We don't want to add ServiceType.TRANSACTIONS
-    // as that's a very wide-reaching change (e.g. users could waitUntilReady on it).
-    return null;
+    throw new NoSuchElementException(
+      getClass().getSimpleName() + " is for a virtual service, and does not have a service type." +
+        " Should have called `serviceTracingId()` instead of `serviceType()`.");
+  }
+
+  @Override
+  public String serviceTracingId() {
+    return TracingIdentifiers.SERVICE_TRANSACTIONS;
   }
 
   @Override
