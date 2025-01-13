@@ -325,7 +325,7 @@ case class QueryOptions(
       override def namedParameters(): ObjectNode = parameters match {
         case Some(v: QueryParameters.Named) =>
           try {
-              JacksonTransformers.MAPPER.convertValue(v.parameters.asJava, classOf[ObjectNode])
+            JacksonTransformers.MAPPER.convertValue(v.parameters.asJava, classOf[ObjectNode])
           } catch {
             case e: JsonProcessingException =>
               throw new InvalidArgumentException("Unable to convert named parameters", e, null)
