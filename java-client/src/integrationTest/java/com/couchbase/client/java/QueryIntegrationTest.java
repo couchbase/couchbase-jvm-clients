@@ -254,9 +254,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     void blockingStreamingCanTimeOut() {
         // Thanks vsr1! https://www.couchbase.com/forums/t/how-to-force-a-sql-query-to-take-a-long-time/39658
         String verySlowStatement = "SELECT COUNT (1) AS c FROM" +
-            " ARRAY_RANGE(0,100000) AS d1," +
-            " ARRAY_RANGE(0,100000) AS d2," +
-            " ARRAY_RANGE(0,100000) AS d3";
+            " ARRAY_RANGE(0,10000) AS d1," +
+            " ARRAY_RANGE(0,10000) AS d2," +
+            " ARRAY_RANGE(0,10000) AS d3";
 
         assertThrows(
             TimeoutException.class,
