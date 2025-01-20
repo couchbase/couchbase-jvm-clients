@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.manager;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -35,8 +34,6 @@ import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -70,9 +67,6 @@ class ManagerMessageHandlerTest {
     ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
   }
 
-  private static final String USER = "Admin";
-  private static final String PASS = "pass";
-
   private static CoreEnvironment ENV;
 
   @BeforeAll
@@ -91,7 +85,7 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void returnsNewConfigsWhenChunked() throws Exception {
-    CoreContext ctx = new CoreContext(mockCore(), 1, ENV, PasswordAuthenticator.create(USER, PASS));
+    CoreContext ctx = mockCore(ENV).context();
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(ENV);
@@ -159,7 +153,7 @@ class ManagerMessageHandlerTest {
    */
   @Test
   void closesStreamIfChannelClosed() throws Exception {
-    CoreContext ctx = new CoreContext(mock(Core.class), 1, ENV,  PasswordAuthenticator.create(USER, PASS));
+    CoreContext ctx = mockCore(ENV).context();
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EndpointContext endpointContext = mock(EndpointContext.class);
     when(endpointContext.environment()).thenReturn(ENV);
@@ -210,7 +204,7 @@ class ManagerMessageHandlerTest {
       .build();
 
     try {
-      CoreContext ctx = new CoreContext(mock(Core.class), 1, env, PasswordAuthenticator.create(USER, PASS));
+      CoreContext ctx = mockCore(env).context();
       BaseEndpoint endpoint = mock(BaseEndpoint.class);
       EndpointContext endpointContext = mock(EndpointContext.class);
       when(endpointContext.environment()).thenReturn(env);

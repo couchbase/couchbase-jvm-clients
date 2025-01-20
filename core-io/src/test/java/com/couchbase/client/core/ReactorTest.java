@@ -31,6 +31,8 @@ import reactor.test.StepVerifier;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.core.util.MockUtil.mockCoreContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -39,15 +41,21 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the behavior of the {@link Reactor} utility class methods.
- *
- * @since 2.0.0
  */
 class ReactorTest {
 
+  private static NoopRequest newNoopRequest() {
+    return new NoopRequest(
+      Duration.ZERO,
+      mockCoreContext(mockCore(), RequestContext.class),
+      mock(RetryStrategy.class),
+      mock(CollectionIdentifier.class)
+    );
+  }
+
   @Test
   void completesWithSuccessAfterSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     NoopResponse response = mock(NoopResponse.class);
@@ -59,8 +67,7 @@ class ReactorTest {
 
   @Test
   void completesWithErrorAfterSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     RequestCanceledException exception = mock(RequestCanceledException.class);
@@ -72,8 +79,7 @@ class ReactorTest {
 
   @Test
   void completesWithSuccessBeforeSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     NoopResponse response = mock(NoopResponse.class);
     request.succeed(response);
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
@@ -84,8 +90,7 @@ class ReactorTest {
 
   @Test
   void completesWithErrorBeforeSubscription() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     RequestCanceledException exception = mock(RequestCanceledException.class);
     request.fail(exception);
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
@@ -96,8 +101,7 @@ class ReactorTest {
 
   @Test
   void propagatesCancellation() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), true);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
@@ -107,8 +111,7 @@ class ReactorTest {
 
   @Test
   void ignoresCancellationPropagation() {
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-      mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
     Mono<NoopResponse> mono = Reactor.wrap(request, request.response(), false);
 
     assertThrows(Exception.class, () -> mono.timeout(Duration.ofMillis(10)).block());
@@ -121,8 +124,7 @@ class ReactorTest {
     AtomicInteger droppedErrors = new AtomicInteger(0);
     Hooks.onErrorDropped(v -> droppedErrors.incrementAndGet());
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-            mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
 
     // Because this is a multi-step CompleteableFuture, the RequestCanceledException will be wrapped in a
     // CompletionException in the internals.  It will be unwrapped by the time it is raised to the app.
@@ -144,8 +146,7 @@ class ReactorTest {
     AtomicInteger droppedErrors = new AtomicInteger(0);
     Hooks.onErrorDropped(v -> droppedErrors.incrementAndGet());
 
-    NoopRequest request = new NoopRequest(Duration.ZERO, mock(RequestContext.class),
-            mock(RetryStrategy.class), mock(CollectionIdentifier.class));
+    NoopRequest request = newNoopRequest();
 
     // Because this is a single-stage CompleteableFuture, the RequestCanceledException will raised directly in the
     // internals.

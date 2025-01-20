@@ -18,7 +18,6 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigResponse;
 import com.couchbase.client.core.service.ServiceContext;
@@ -34,6 +33,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,8 +47,15 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     TestNodeConfig node = config().nodes().get(0);
 
     env = CoreEnvironment.create();
+
+    CoreContext coreContext = mockCore(
+      env,
+      config().adminUsername(),
+      config().adminPassword()
+    ).context();
+
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env, PasswordAuthenticator.create(config().adminUsername(), config().adminPassword())),
+      coreContext,
       node.hostname(),
       node.ports().get(Services.MANAGER),
       ServiceType.MANAGER,

@@ -16,7 +16,6 @@
 package com.couchbase.client.core.config.refresher;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
@@ -66,10 +65,7 @@ class GlobalRefresherTest {
       .ioConfig(io -> io.configPollInterval(FAST_CONFIG_POLL_INTERVAL))
       .build();
 
-    CoreContext coreContext = mock(CoreContext.class);
-    core = mockCore();
-    when(core.context()).thenReturn(coreContext);
-    when(coreContext.environment()).thenReturn(env);
+    core = mockCore(env);
   }
 
   @AfterEach

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -24,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,7 +66,7 @@ class BaseRequestTest {
   private static class DummyRequest extends BaseRequest<Response> {
 
     public DummyRequest() {
-      super(Duration.ofSeconds(10), mock(CoreContext.class), BestEffortRetryStrategy.INSTANCE);
+      super(Duration.ofSeconds(10), mockCore().context(), BestEffortRetryStrategy.INSTANCE);
     }
 
     @Override

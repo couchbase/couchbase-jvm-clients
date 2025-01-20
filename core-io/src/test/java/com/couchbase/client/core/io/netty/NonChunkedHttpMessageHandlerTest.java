@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
@@ -30,7 +31,6 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
@@ -45,6 +45,8 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.core.util.MockUtil.mockCoreContext;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -76,9 +78,8 @@ class NonChunkedHttpMessageHandlerTest {
   @BeforeEach
   void setup() {
     endpoint = mock(BaseEndpoint.class);
-    EndpointContext endpointContext = mock(EndpointContext.class);
-    when(endpointContext.environment()).thenReturn(env);
-    when(endpointContext.authenticator()).thenReturn(PasswordAuthenticator.create("user", "pass"));
+    Core core = mockCore(env, "user", "pass");
+    EndpointContext endpointContext = mockCoreContext(core, EndpointContext.class);
     when(endpoint.context()).thenReturn(endpointContext);
     channel = new EmbeddedChannel();
   }

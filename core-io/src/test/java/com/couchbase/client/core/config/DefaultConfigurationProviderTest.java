@@ -17,7 +17,6 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
@@ -33,7 +32,6 @@ import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.core.util.MockUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -56,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.stream.Collectors.toSet;
@@ -64,8 +63,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class DefaultConfigurationProviderTest {
 
@@ -282,16 +279,6 @@ class DefaultConfigurationProviderTest {
       assertEquals(8091, sn.clusterManagerPort().orElse(null));
       assertTrue(sn.address().equals("10.143.193.101") || sn.address().equals("10.143.193.102"));
     }
-  }
-
-  static Core mockCore(CoreEnvironment env) {
-    CoreContext ctx = mock(CoreContext.class);
-    when(ctx.environment()).thenReturn(env);
-
-    Core core = MockUtil.mockCore();
-    when(core.context()).thenReturn(ctx);
-    when(core.environment()).thenReturn(env);
-    return core;
   }
 
   @Test
