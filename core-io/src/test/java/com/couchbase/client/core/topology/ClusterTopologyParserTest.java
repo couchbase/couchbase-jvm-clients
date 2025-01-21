@@ -291,6 +291,30 @@ public class ClusterTopologyParserTest {
     );
   }
 
+  @Test
+  void appTelemetryPathIsNullIfAbsent() {
+    ClusterTopology config = parser.parseResource("config_7.2.2_1kv_2query.json");
+    config.nodes().forEach(node -> assertNull(node.appTelemetryPath()));
+  }
+
+  @Test
+  void shouldParseAppTelemetryPathIfPresent() {
+    // TODO: replace with config from actual 8.0.0 build
+    ClusterTopology config = parser.parseResource("config_8.0.0-prerelease_app_telemetry.json");
+    assertEquals(
+      mapOf(
+        "192.168.106.128", "/foo",
+        "192.168.106.129", "/bar",
+        "192.168.106.130", "/zot"
+      ),
+      config.nodes().stream()
+        .collect(toMap(
+          HostAndServicePorts::host,
+          hostAndServicePorts -> requireNonNull(hostAndServicePorts.appTelemetryPath(), "Missing app telemetry path: " + hostAndServicePorts)
+        ))
+    );
+  }
+
   public CouchbaseBucketTopology requireCouchbaseBucket(ClusterTopology cluster) {
     try {
       return (CouchbaseBucketTopology) cluster.requireBucket().bucket();

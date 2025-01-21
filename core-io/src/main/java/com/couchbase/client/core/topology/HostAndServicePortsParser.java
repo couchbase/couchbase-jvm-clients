@@ -54,8 +54,8 @@ class HostAndServicePortsParser {
   ) {
     Map<NetworkResolution, HostAndRawServicePorts> raw = parseIntermediate(json);
     HostAndPort ketamaAuthority = getKetamaAuthority(raw);
-    String serverGroup = json.path("serverGroup").asText(); // Absent prior to Couchbase Server 7.6.2
-    final String serverGroupFinal = serverGroup.isEmpty() ? null : serverGroup;
+    String serverGroup = json.path("serverGroup").textValue(); // Added in Couchbase Server 7.6.2
+    String appTelemetryPath = json.path("appTelemetryPath").textValue(); // Added in Couchbase Server 8.0.0
 
     return transformValues(raw, value ->
       new HostAndServicePorts(
@@ -63,7 +63,8 @@ class HostAndServicePortsParser {
         portSelector.selectPorts(value.rawServicePorts),
         getId(value.host, raw),
         ketamaAuthority,
-        serverGroupFinal
+        serverGroup,
+        appTelemetryPath
       )
     );
   }

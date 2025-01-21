@@ -52,6 +52,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     emptyMap(),
     new NodeIdentifier("<inaccessible>", 0, "<inaccessible>"),
     null,
+    null,
     null
   );
 
@@ -60,19 +61,22 @@ public class HostAndServicePorts implements KetamaRingNode {
   private final NodeIdentifier id;
   private final @Nullable HostAndPort ketamaAuthority;
   private final @Nullable String serverGroup;
+  private final @Nullable String appTelemetryPath;
 
   public HostAndServicePorts(
     String host,
     Map<ServiceType, Integer> ports,
     NodeIdentifier id,
     @Nullable HostAndPort ketamaAuthority,
-    @Nullable String serverGroup
+    @Nullable String serverGroup,
+    @Nullable String appTelemetryPath
   ) {
     this.host = requireNonNull(host);
     this.ports = unmodifiableMap(newEnumMap(ServiceType.class, ports));
     this.id = requireNonNull(id);
     this.ketamaAuthority = ketamaAuthority;
     this.serverGroup = serverGroup;
+    this.appTelemetryPath = appTelemetryPath;
   }
 
   public boolean inaccessible() {
@@ -109,8 +113,21 @@ public class HostAndServicePorts implements KetamaRingNode {
     return ports;
   }
 
+  /**
+   * Returns the name of the server group this node belongs to,
+   * or null if Couchbase Server version is less than 7.6.2.
+   */
   public @Nullable String serverGroup() {
     return serverGroup;
+  }
+
+  /**
+   * Returns the HTTP path that accepts application telemetry WebSocket connections
+   * (on management service part), or null if this node does not currently accept
+   * application telemetry connections.
+   */
+  public @Nullable String appTelemetryPath() {
+    return appTelemetryPath;
   }
 
   public boolean has(ServiceType serviceType) {
@@ -129,7 +146,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       temp.remove(t);
     }
 
-    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority, this.serverGroup);
+    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority, this.serverGroup, this.appTelemetryPath);
   }
 
   @Stability.Internal
@@ -137,7 +154,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     if (Objects.equals(this.ketamaAuthority, ketamaAuthority)) {
       return this;
     }
-    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority, this.serverGroup);
+    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority, this.serverGroup, this.appTelemetryPath);
   }
 
   boolean matches(SeedNode seedNode) {
@@ -153,10 +170,14 @@ public class HostAndServicePorts implements KetamaRingNode {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     HostAndServicePorts that = (HostAndServicePorts) o;
-    return host.equals(that.host) && ports.equals(that.ports) && Objects.equals(ketamaAuthority, that.ketamaAuthority);
+    return Objects.equals(host, that.host) &&
+      Objects.equals(ports, that.ports) &&
+      Objects.equals(id, that.id) &&
+      Objects.equals(ketamaAuthority, that.ketamaAuthority)
+      && Objects.equals(serverGroup, that.serverGroup)
+      && Objects.equals(appTelemetryPath, that.appTelemetryPath);
   }
 
   @Override
@@ -172,6 +193,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       ", id=" + redactSystem(id) +
       ", ketamaAuthority=" + redactSystem(ketamaAuthority) +
       ", serverGroup=" + redactMeta(serverGroup) +
+      ", appTelemetryPath=" + redactSystem(appTelemetryPath) +
       '}';
   }
 
