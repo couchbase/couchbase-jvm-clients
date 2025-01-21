@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.OptionalInt;
 
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbCollections.newEnumMap;
 import static java.util.Collections.emptyMap;
@@ -170,6 +171,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       ", ports=" + redactSystem(ports) +
       ", id=" + redactSystem(id) +
       ", ketamaAuthority=" + redactSystem(ketamaAuthority) +
+      ", serverGroup=" + redactMeta(serverGroup) +
       '}';
   }
 
