@@ -31,7 +31,6 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.ConnectionString;
-import com.couchbase.client.test.Resources;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -114,7 +113,8 @@ class CoreTest {
 
   private static ClusterTopologyWithBucket readTopology(String resourceName) {
     return topologyParser()
-      .parse(Resources.from(CoreTest.class).getString(resourceName))
+      .withResourcesFrom(CoreTest.class)
+      .parseResource(resourceName)
       .requireBucket();
   }
 

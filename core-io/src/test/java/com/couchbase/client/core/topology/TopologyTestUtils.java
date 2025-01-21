@@ -16,13 +16,11 @@
 
 package com.couchbase.client.core.topology;
 
-import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.config.GlobalConfig;
-import com.couchbase.client.core.config.LegacyConfigHelper;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.test.Resources;
 
 import java.util.Map;
 
@@ -55,6 +53,7 @@ public class TopologyTestUtils {
   }
 
   public static class TestTopologyParser {
+    private Resources resources = Resources.from(TestTopologyParser.class);
     private String originHost = "127.0.0.1";
     private NetworkSelector networkSelector = NetworkSelector.DEFAULT;
     private PortSelector portSelector = PortSelector.NON_TLS;
@@ -63,41 +62,36 @@ public class TopologyTestUtils {
     private TestTopologyParser() {
     }
 
-    private TestTopologyParser(String originHost, NetworkSelector networkSelector, PortSelector portSelector, MemcachedHashingStrategy memcachedHashingStrategy) {
+    private TestTopologyParser(Resources resources, String originHost, NetworkSelector networkSelector, PortSelector portSelector, MemcachedHashingStrategy memcachedHashingStrategy) {
+      this.resources = requireNonNull(resources);
       this.originHost = requireNonNull(originHost);
       this.networkSelector = requireNonNull(networkSelector);
       this.portSelector = requireNonNull(portSelector);
       this.memcachedHashingStrategy = requireNonNull(memcachedHashingStrategy);
     }
 
-    public TestTopologyParser originHost(String originHost) {
-      return new TestTopologyParser(originHost, networkSelector, portSelector, memcachedHashingStrategy);
+    public TestTopologyParser withResourcesFrom(Class<?> classLoader) {
+      return new TestTopologyParser(Resources.from(classLoader), originHost, networkSelector, portSelector, memcachedHashingStrategy);
     }
 
-    public TestTopologyParser networkSelector(NetworkSelector networkSelector) {
-      return new TestTopologyParser(originHost, networkSelector, portSelector, memcachedHashingStrategy);
+    public TestTopologyParser withOriginHost(String originHost) {
+      return new TestTopologyParser(resources, originHost, networkSelector, portSelector, memcachedHashingStrategy);
     }
 
-    public TestTopologyParser portSelector(PortSelector portSelector) {
-      return new TestTopologyParser(originHost, networkSelector, portSelector, memcachedHashingStrategy);
+    public TestTopologyParser withNetworkSelector(NetworkSelector networkSelector) {
+      return new TestTopologyParser(resources, originHost, networkSelector, portSelector, memcachedHashingStrategy);
     }
 
-    public TestTopologyParser memcachedHashingStrategy(MemcachedHashingStrategy memcachedHashingStrategy) {
-      return new TestTopologyParser(originHost, networkSelector, portSelector, memcachedHashingStrategy);
+    public TestTopologyParser withPortSelector(PortSelector portSelector) {
+      return new TestTopologyParser(resources, originHost, networkSelector, portSelector, memcachedHashingStrategy);
     }
 
-    public ClusterTopology parse(String json) {
-      return new TopologyParser(networkSelector, portSelector, memcachedHashingStrategy).parse(json, originHost);
+    public TestTopologyParser withMemcachedHashingStrategy(MemcachedHashingStrategy memcachedHashingStrategy) {
+      return new TestTopologyParser(resources, originHost, networkSelector, portSelector, memcachedHashingStrategy);
     }
 
-    @Deprecated
-    public BucketConfig parseBucketConfig(String json) {
-      return LegacyConfigHelper.toLegacyBucketConfig(parse(json).requireBucket());
-    }
-
-    @Deprecated
-    public GlobalConfig parseGlobalConfig(String json) {
-      return new GlobalConfig(parse(json));
+    public ClusterTopology parseResource(String jsonResourceName) {
+      return new TopologyParser(networkSelector, portSelector, memcachedHashingStrategy).parse(resources.getString(jsonResourceName), originHost);
     }
   }
 

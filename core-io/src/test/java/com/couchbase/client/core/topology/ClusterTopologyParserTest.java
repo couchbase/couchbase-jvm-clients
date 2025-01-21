@@ -17,12 +17,10 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.config.CouchbaseBucketConfigTranslationTest;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
-import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.TopologyTestUtils.TestTopologyParser;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.Test;
 
@@ -32,10 +30,10 @@ import java.util.OptionalInt;
 
 import static com.couchbase.client.core.topology.BucketCapability.CBHELLO;
 import static com.couchbase.client.core.topology.BucketCapability.NODES_EXT;
+import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.CbCollections.transform;
-import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,11 +45,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link com.couchbase.client.core.topology.ClusterTopologyParser}.
  */
 public class ClusterTopologyParserTest {
+  private static final TestTopologyParser parser = topologyParser()
+    .withResourcesFrom(CouchbaseBucketConfigTranslationTest.class);
 
   @Test
   void canParseMemcached() {
     String origin = "origin.example.com";
-    ClusterTopology config = read("config-memcached-7.6.0.json", origin);
+    ClusterTopology config = parser
+      .withOriginHost(origin)
+      .parseResource("config-memcached-7.6.0.json");
     MemcachedBucketTopology bucket = requireMemcachedBucket(config);
     assertEquals("mc", bucket.name());
     assertEquals("995747a3b1cc309a5cf421e1de927124", bucket.uuid());
@@ -62,9 +64,11 @@ public class ClusterTopologyParserTest {
 
   @Test
   void canParseMemcachedExternal() {
-    String origin = "origin.example.com";
     String externalHostname = "booper";
-    ClusterTopology config = read("config-memcached-7.6.0.json", origin, PortSelector.NON_TLS, NetworkSelector.EXTERNAL);
+    ClusterTopology config = parser
+      .withOriginHost("origin.example.com")
+      .withNetworkSelector(NetworkSelector.EXTERNAL)
+      .parseResource("config-memcached-7.6.0.json");
     MemcachedBucketTopology bucket = requireMemcachedBucket(config);
     assertEquals(listOf(externalHostname), transform(config.nodes(), HostAndServicePorts::host));
     assertSame(config.nodes().get(0), bucket.nodeForKey("xyzzy".getBytes(UTF_8)));
@@ -72,7 +76,7 @@ public class ClusterTopologyParserTest {
 
   @Test
   void magmaBucketIsNotEphemeral() {
-    ClusterTopology config = read("config_magma_two_nodes.json");
+    ClusterTopology config = parser.parseResource("config_magma_two_nodes.json");
     CouchbaseBucketTopology bucket = requireCouchbaseBucket(config);
     assertEquals("foo", bucket.name());
     assertFalse(bucket.ephemeral());
@@ -80,25 +84,29 @@ public class ClusterTopologyParserTest {
 
   @Test
   void parsesRevEpoch() {
-    ClusterTopology config = read("config_magma_two_nodes.json");
+    ClusterTopology config = parser.parseResource("config_magma_two_nodes.json");
     assertEquals(new TopologyRevision(1, 1017), config.revision());
   }
 
   @Test
   void shouldReplaceHostPlaceholder() {
-    ClusterTopology config = read("config_with_host_placeholder.json", "example.com");
+    ClusterTopology config = parser
+      .withOriginHost("example.com")
+      .parseResource("config_with_host_placeholder.json");
     assertEquals("example.com", config.nodes().get(0).host());
   }
 
   @Test
   void shouldReplaceHostPlaceholderIpv6() {
-    ClusterTopology config = read("config_with_host_placeholder.json", new HostAndPort("::1", 0).host());
+    ClusterTopology config = parser
+      .withOriginHost(new HostAndPort("::1", 0).host())
+      .parseResource("config_with_host_placeholder.json");
     assertEquals("0:0:0:0:0:0:0:1", config.nodes().get(0).host());
   }
 
   @Test
   void shouldGracefullyHandleEmptyPartitions() {
-    ClusterTopology config = read("config_with_no_partitions.json");
+    ClusterTopology config = parser.parseResource("config_with_no_partitions.json");
     CouchbaseBucketTopology bucket = requireCouchbaseBucket(config);
     assertEquals(-2, bucket.nodeIndexForActive(24, false));
     assertEquals(-2, bucket.nodeIndexForReplica(24, 1, false));
@@ -107,7 +115,7 @@ public class ClusterTopologyParserTest {
 
   @Test
   void shouldLoadEphemeralBucketConfig() {
-    ClusterTopology config = read("ephemeral_bucket_config.json");
+    ClusterTopology config = parser.parseResource("ephemeral_bucket_config.json");
 
     assertTrue(requireCouchbaseBucket(config).ephemeral());
     assertTrue(hasService(config, ServiceType.KV));
@@ -120,7 +128,7 @@ public class ClusterTopologyParserTest {
 
   @Test
   void shouldLoadConfigWithSameNodesButDifferentPorts() {
-    ClusterTopology config = read("cluster_run_two_nodes_same_host.json");
+    ClusterTopology config = parser.parseResource("cluster_run_two_nodes_same_host.json");
     CouchbaseBucketTopology bucket = requireCouchbaseBucket(config);
     assertFalse(bucket.ephemeral());
     assertEquals(1, bucket.numberOfReplicas());
@@ -135,7 +143,9 @@ public class ClusterTopologyParserTest {
 
   @Test
   void shouldLoadConfigWithIPv6() {
-    ClusterTopology config = read("config_with_ipv6.json", new HostAndPort("::1", 0).host());
+    ClusterTopology config = parser
+      .withOriginHost(new HostAndPort("::1", 0).host())
+      .parseResource("config_with_ipv6.json");
     CouchbaseBucketTopology bucket = requireCouchbaseBucket(config);
 
     assertEquals(2, config.nodes().size());
@@ -152,7 +162,7 @@ public class ClusterTopologyParserTest {
    */
   @Test
   void shouldIgnoreUnknownBucketCapabilities() {
-    ClusterTopology config = read("config_with_invalid_capability.json");
+    ClusterTopology config = parser.parseResource("config_with_invalid_capability.json");
     assertEquals(1, config.nodes().size());
   }
 
@@ -161,7 +171,9 @@ public class ClusterTopologyParserTest {
    */
   @Test
   void shouldIncludeExternalIfPresent() {
-    ClusterTopology config = read("config_with_external.json", "127.0.0.1", PortSelector.NON_TLS, NetworkSelector.EXTERNAL);
+    ClusterTopology config = parser
+      .withNetworkSelector(NetworkSelector.EXTERNAL)
+      .parseResource("config_with_external.json");
 
     List<HostAndServicePorts> nodes = config.nodes();
     assertEquals(3, nodes.size());
@@ -191,7 +203,10 @@ public class ClusterTopologyParserTest {
     );
 
     // Again, TLS port this time
-    config = read("config_with_external.json", "127.0.0.1", PortSelector.TLS, NetworkSelector.EXTERNAL);
+    config = parser
+      .withNetworkSelector(NetworkSelector.EXTERNAL)
+      .withPortSelector(PortSelector.TLS)
+      .parseResource("config_with_external.json");
     assertEquals(32773, config.nodes().get(0).port(ServiceType.MANAGER).orElse(0));
 
     // Ketama authority is the same for non-TLS and TLS port selector.
@@ -207,7 +222,7 @@ public class ClusterTopologyParserTest {
    */
   @Test
   void partitionMapHasCompactStringRepresentation() {
-    ClusterTopologyWithBucket config = read("config_with_external.json").requireBucket();
+    ClusterTopologyWithBucket config = parser.parseResource("config_with_external.json").requireBucket();
     CouchbaseBucketTopology bucket = (CouchbaseBucketTopology) config.bucket();
     assertEquals(
       "{0..170=[0,1], 171..341=[0,2], 342..512=[1,0], 513..682=[1,2], 683..853=[2,0], 854..1023=[2,1]}",
@@ -219,12 +234,11 @@ public class ClusterTopologyParserTest {
   void nodeIdsComeFromInternalNetwork() {
     String originHost = "private-endpoint.nyarjaj-crhge67o.sandbox.nonprod-project-avengers.com";
 
-    ClusterTopology config = read(
-      "config_7.6_external_manager_ports_not_unique.json",
-      originHost,
-      PortSelector.TLS,
-      NetworkSelector.autoDetect(setOf(SeedNode.create(originHost).withKvPort(11208)))
-    );
+    ClusterTopology config = parser
+      .withOriginHost(originHost)
+      .withPortSelector(PortSelector.TLS)
+      .withNetworkSelector(NetworkSelector.autoDetect(setOf(SeedNode.create(originHost).withKvPort(11208))))
+      .parseResource("config_7.6_external_manager_ports_not_unique.json");
 
     assertEquals(NetworkResolution.EXTERNAL, config.network());
 
@@ -247,30 +261,6 @@ public class ClusterTopologyParserTest {
     assertEquals(
       listOf(externalHost, externalHost, externalHost, externalHost, externalHost),
       transform(nodeIds, NodeIdentifier::hostForNetworkConnections)
-    );
-  }
-
-  private static ClusterTopology read(String resourceName) {
-    return read(resourceName, "127.0.0.1");
-  }
-
-  private static ClusterTopology read(String resourceName, String originHost) {
-    return read(resourceName, originHost, PortSelector.NON_TLS, NetworkSelector.DEFAULT);
-  }
-
-  private static ClusterTopology read(
-    String resourceName,
-    String originHost,
-    PortSelector portSelector,
-    NetworkSelector networkSelector
-  ) {
-    String json = readResource(resourceName, CouchbaseBucketConfigTranslationTest.class);
-    return ClusterTopologyParser.parse(
-      (ObjectNode) Mapper.decodeIntoTree(json),
-      originHost,
-      portSelector,
-      networkSelector,
-      StandardMemcachedHashingStrategy.INSTANCE
     );
   }
 
