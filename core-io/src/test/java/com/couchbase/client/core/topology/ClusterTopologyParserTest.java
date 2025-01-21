@@ -32,11 +32,15 @@ import static com.couchbase.client.core.topology.BucketCapability.CBHELLO;
 import static com.couchbase.client.core.topology.BucketCapability.NODES_EXT;
 import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -261,6 +265,29 @@ public class ClusterTopologyParserTest {
     assertEquals(
       listOf(externalHost, externalHost, externalHost, externalHost, externalHost),
       transform(nodeIds, NodeIdentifier::hostForNetworkConnections)
+    );
+  }
+
+  @Test
+  void serverGroupIsNullIfAbsent() {
+    ClusterTopology config = parser.parseResource("config_7.2.2_1kv_2query.json");
+    config.nodes().forEach(node -> assertNull(node.serverGroup()));
+  }
+
+  @Test
+  void shouldParseServerGroupsIfPresent() {
+    ClusterTopology config = parser.parseResource("config_7.6.4_server_groups.json");
+    assertEquals(
+      mapOf(
+        "192.168.106.128", "Group 1",
+        "192.168.106.129", "Group 1",
+        "192.168.106.130", "Group 2"
+      ),
+      config.nodes().stream()
+        .collect(toMap(
+          HostAndServicePorts::host,
+          hostAndServicePorts -> requireNonNull(hostAndServicePorts.serverGroup(), "Missing server group: " + hostAndServicePorts)
+        ))
     );
   }
 
