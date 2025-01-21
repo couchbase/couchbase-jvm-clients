@@ -315,6 +315,43 @@ public class ClusterTopologyParserTest {
     );
   }
 
+  @Test
+  void nodeUuidDefaultsToCanonicalHostAndPort() {
+    ClusterTopology config = parser.parseResource("config_7.2.2_1kv_2query.json");
+    assertEquals(
+      mapOf(
+        "192.168.106.128", "192.168.106.128:8091",
+        "192.168.106.129", "192.168.106.129:8091",
+        "192.168.106.130", "192.168.106.130:8091"
+      ),
+      config.nodes().stream()
+        .collect(toMap(
+          HostAndServicePorts::host,
+          hostAndServicePorts -> hostAndServicePorts.id().uuid()
+        ))
+    );
+
+    config.nodes().forEach(node -> assertNull(node.appTelemetryPath()));
+  }
+
+  @Test
+  void shouldParseNodeUuidIfPresent() {
+    // TODO: replace with config from actual 8.0.0 build
+    ClusterTopology config = parser.parseResource("config_8.0.0-prerelease_app_telemetry.json");
+    assertEquals(
+      mapOf(
+        "192.168.106.128", "abc",
+        "192.168.106.129", "def",
+        "192.168.106.130", "ghi"
+      ),
+      config.nodes().stream()
+        .collect(toMap(
+          HostAndServicePorts::host,
+          hostAndServicePorts -> hostAndServicePorts.id().uuid()
+        ))
+    );
+  }
+
   public CouchbaseBucketTopology requireCouchbaseBucket(ClusterTopology cluster) {
     try {
       return (CouchbaseBucketTopology) cluster.requireBucket().bucket();

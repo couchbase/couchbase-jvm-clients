@@ -18,32 +18,76 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.HostAndPort;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class NodeIdentifier {
-  private final HostAndPort canonical; // manager host:port on default network
+  private final HostAndPort canonical;
   private final String hostForNetworkConnections;
+  private final String uuid;
 
+  /**
+   * Creates an instance with a synthetic UUID derived from the canonical host and port.
+   */
   public NodeIdentifier(
     String canonicalHost,
     int canonicalPort,
     String hostForNetworkConnections
   ) {
-    this(new HostAndPort(canonicalHost, canonicalPort), hostForNetworkConnections);
+    this(canonicalHost, canonicalPort, hostForNetworkConnections, null);
   }
 
-  public NodeIdentifier(HostAndPort canonical, String hostForNetworkConnections) {
+  /**
+   * @param uuid The node's UUID, or null to derive a synthetic UUID from the canonical host and port.
+   */
+  public NodeIdentifier(
+    String canonicalHost,
+    int canonicalPort,
+    String hostForNetworkConnections,
+    @Nullable String uuid
+  ) {
+    this(new HostAndPort(canonicalHost, canonicalPort), hostForNetworkConnections, uuid);
+  }
+
+  /**
+   * @param uuid The node's UUID, or null to derive a synthetic UUID from the canonical host and port.
+   */
+  public NodeIdentifier(
+    HostAndPort canonical,
+    String hostForNetworkConnections,
+    @Nullable String uuid
+  ) {
     this.canonical = requireNonNull(canonical);
     this.hostForNetworkConnections = requireNonNull(hostForNetworkConnections);
+    this.uuid = uuid == null
+      ? canonical().format() // Fall back to manager host:port
+      : uuid; // Couchbase Server 8 and later!
   }
 
   public static NodeIdentifier forBootstrap(String bootstrapHost, int bootstrapPort) {
     // This address isn't really "canonical", since it may be an "external" address.
     // If it's an external address, the node created from this identifier will be discarded
     // when the config with the _real_ canonical addresses is applied.
-    return new NodeIdentifier(new HostAndPort(bootstrapHost, bootstrapPort), bootstrapHost);
+    return new NodeIdentifier(new HostAndPort(bootstrapHost, bootstrapPort), bootstrapHost, null);
+  }
+
+  /**
+   * Returns an opaque string that uniquely identifies this node within the cluster.
+   */
+  public String uuid() {
+    return uuid;
+  }
+
+  /**
+   * Returns manager host:port on the default network.
+   * <p>
+   * The SDK should not attempt to connect to this address, because it might not be accessible on the client's network.
+   * If you're looking for an address to connect to, see {@link #hostForNetworkConnections}.
+   */
+  public HostAndPort canonical() {
+    return canonical;
   }
 
   @Deprecated
@@ -73,6 +117,7 @@ public class NodeIdentifier {
     return "NodeIdentifier{" +
       "canonical=" + canonical +
       ", hostForNetworkConnections='" + hostForNetworkConnections + '\'' +
+      ", uuid='" + uuid + '\'' +
       '}';
   }
 }

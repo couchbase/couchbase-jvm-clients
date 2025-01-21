@@ -56,12 +56,13 @@ class HostAndServicePortsParser {
     HostAndPort ketamaAuthority = getKetamaAuthority(raw);
     String serverGroup = json.path("serverGroup").textValue(); // Added in Couchbase Server 7.6.2
     String appTelemetryPath = json.path("appTelemetryPath").textValue(); // Added in Couchbase Server 8.0.0
+    String nodeUuid = json.path("nodeUUID").textValue(); // Added in Couchbase Server 8.0.0
 
     return transformValues(raw, value ->
       new HostAndServicePorts(
         value.host,
         portSelector.selectPorts(value.rawServicePorts),
-        getId(value.host, raw),
+        getId(value.host, raw, nodeUuid),
         ketamaAuthority,
         serverGroup,
         appTelemetryPath
@@ -98,7 +99,8 @@ class HostAndServicePortsParser {
    */
   private static NodeIdentifier getId(
     String hostForNetworkConnections,
-    Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo
+    Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo,
+    @Nullable String nodeUuid
   ) {
     HostAndRawServicePorts defaultNodeMap = networkToNodeInfo.get(NetworkResolution.DEFAULT);
     if (defaultNodeMap == null) {
@@ -117,7 +119,7 @@ class HostAndServicePortsParser {
       );
     }
 
-    return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections);
+    return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections, nodeUuid);
   }
 
   private static @Nullable Integer getPort(HostAndRawServicePorts nodeMap, PortSelector portSelector, ServiceType serviceType) {
