@@ -23,9 +23,11 @@ import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
+import com.couchbase.client.core.api.query.CoreQueryProfile;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
+import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent;
@@ -281,15 +283,18 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
   @Stability.Internal
   public static ObjectNode convertOptions(CoreQueryOptions opts) {
     ObjectNode json = Mapper.createObjectNode();
-    json.put("client_context_id", opts.clientContextId() == null ? UUID.randomUUID().toString() : opts.clientContextId());
+    String clientContextId = opts.clientContextId();
+    json.put("client_context_id", clientContextId == null ? UUID.randomUUID().toString() : clientContextId);
 
-    boolean positionalPresent = opts.positionalParameters() != null && !opts.positionalParameters().isEmpty();
-    if (opts.namedParameters() != null && !opts.namedParameters().isEmpty()) {
+    ArrayNode positionalParameters = opts.positionalParameters();
+    ObjectNode namedParameters = opts.namedParameters();
+    boolean positionalPresent = positionalParameters != null && !positionalParameters.isEmpty();
+    if (namedParameters != null && !namedParameters.isEmpty()) {
       if (positionalPresent) {
         throw InvalidArgumentException.fromMessage("Both positional and named parameters cannot be present at the same time!");
       }
 
-      opts.namedParameters().fields().forEachRemaining(param -> {
+      namedParameters.fields().forEachRemaining(param -> {
         String key = param.getKey();
         json.set(
             key.charAt(0) == '$' ? key : '$' + key,
@@ -299,16 +304,18 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     if (positionalPresent) {
-      json.put("args", opts.positionalParameters());
+      json.put("args", positionalParameters);
     }
 
-    if (opts.scanConsistency() != null) {
-      json.put("scan_consistency", opts.scanConsistency().toString());
+    CoreQueryScanConsistency scanConsistency = opts.scanConsistency();
+    if (scanConsistency != null) {
+      json.put("scan_consistency", scanConsistency.toString());
     }
 
-    if (opts.consistentWith() != null) {
+    CoreMutationState consistentWith = opts.consistentWith();
+    if (consistentWith != null) {
       ObjectNode mutationState = Mapper.createObjectNode();
-      for (MutationToken token : opts.consistentWith().tokens()) {
+      for (MutationToken token : consistentWith.tokens()) {
         ObjectNode bucket = (ObjectNode) mutationState.get(token.bucketName());
         if (bucket == null) {
           bucket = Mapper.createObjectNode();
@@ -324,30 +331,36 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("scan_consistency", "at_plus");
     }
 
-    if (opts.profile() != null) {
-      json.put("profile", opts.profile().toString());
+    CoreQueryProfile profile = opts.profile();
+    if (profile != null) {
+      json.put("profile", profile.toString());
     }
 
-    if (opts.scanWait() != null) {
-      if (opts.scanConsistency() == null || CoreQueryScanConsistency.NOT_BOUNDED != opts.scanConsistency()) {
-        json.put("scan_wait", Golang.encodeDurationToMs(opts.scanWait()));
+    Duration scanWait = opts.scanWait();
+    if (scanWait != null) {
+      if (CoreQueryScanConsistency.NOT_BOUNDED != scanConsistency) {
+        json.put("scan_wait", Golang.encodeDurationToMs(scanWait));
       }
     }
 
-    if (opts.maxParallelism() != null) {
-      json.put("max_parallelism", opts.maxParallelism().toString());
+    Integer maxParallelism = opts.maxParallelism();
+    if (maxParallelism != null) {
+      json.put("max_parallelism", maxParallelism.toString());
     }
 
-    if (opts.pipelineCap() != null) {
-      json.put("pipeline_cap", opts.pipelineCap().toString());
+    Integer pipelineCap = opts.pipelineCap();
+    if (pipelineCap != null) {
+      json.put("pipeline_cap", pipelineCap.toString());
     }
 
-    if (opts.pipelineBatch() != null) {
-      json.put("pipeline_batch", opts.pipelineBatch().toString());
+    Integer pipelineBatch = opts.pipelineBatch();
+    if (pipelineBatch != null) {
+      json.put("pipeline_batch", pipelineBatch.toString());
     }
 
-    if (opts.scanCap() != null) {
-      json.put("scan_cap", opts.scanCap().toString());
+    Integer scanCap = opts.scanCap();
+    if (scanCap != null) {
+      json.put("scan_cap", scanCap.toString());
     }
 
     if (!opts.metrics()) {
@@ -362,12 +375,14 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       json.put("use_fts", true);
     }
 
-    if (opts.preserveExpiry() != null) {
-      json.put("preserve_expiry", opts.preserveExpiry());
+    Boolean preserveExpiry = opts.preserveExpiry();
+    if (preserveExpiry != null) {
+      json.put("preserve_expiry", preserveExpiry);
     }
 
-    if (opts.useReplica() != null) {
-      json.put("use_replica", opts.useReplica() ? "on" : "off");
+    Boolean useReplica = opts.useReplica();
+    if (useReplica != null) {
+      json.put("use_replica", useReplica ? "on" : "off");
     }
 
     JsonNode raw = opts.raw();
