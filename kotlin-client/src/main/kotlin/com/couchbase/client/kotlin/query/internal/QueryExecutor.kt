@@ -148,24 +148,11 @@ internal fun CoreQueryOptions(
         override fun maxParallelism(): Int? = maxParallelism
         override fun metrics(): Boolean = metrics
 
-        override fun namedParameters(): ObjectNode? = (parameters as? QueryParameters.Named)?.let { params ->
-            // Let the user's serializer serialize arguments
-            val map = mutableMapOf<String, Any?>()
-            params.inject(map)
-            val queryBytes = actualSerializer.serialize(map, typeRef())
-            Mapper.decodeIntoTree(queryBytes) as ObjectNode
-        }
+        override fun namedParameters(): ObjectNode? = parameters.serializeIfNamed(actualSerializer)
+        override fun positionalParameters(): ArrayNode? = parameters.serializeIfPositional(actualSerializer)
 
         override fun pipelineBatch(): Int? = pipelineBatch
         override fun pipelineCap(): Int? = pipelineCap
-
-        override fun positionalParameters(): ArrayNode? = (parameters as? QueryParameters.Positional)?.let { params ->
-            // Let the user's serializer serialize arguments
-            val map = mutableMapOf<String, Any?>()
-            params.inject(map)
-            val queryBytes = actualSerializer.serialize(map, typeRef())
-            Mapper.decodeIntoTree(queryBytes).get("args") as? ArrayNode
-        }
 
         override fun profile(): CoreQueryProfile = profile.core
 

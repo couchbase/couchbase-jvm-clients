@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
+// Some examples declare unused variables for illustrative purposes
+@file:Suppress("UNUSED_VARIABLE")
+
 package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.query.QueryMetadata
+import com.couchbase.client.kotlin.query.QueryParameters
 import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.execute
+import kotlinx.serialization.Serializable
 
-@Suppress("UNUSED_VARIABLE")
 internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
     // Single-value query with anonymous result
     val count = cluster
@@ -30,7 +34,6 @@ internal suspend fun singleValueQueryAnonymous(cluster: Cluster) {
         .valueAs<Long>() // uses default name "$1"
 }
 
-@Suppress("UNUSED_VARIABLE")
 internal suspend fun singleValueQueryNamed(cluster: Cluster) {
     // Single-value query with named result
     val count = cluster
@@ -39,7 +42,6 @@ internal suspend fun singleValueQueryNamed(cluster: Cluster) {
         .valueAs<Long>("count")
 }
 
-@Suppress("UNUSED_VARIABLE")
 internal suspend fun bufferedQuery(cluster: Cluster) {
     // Buffered query, for when results are known to fit in memory
     val result: QueryResult = cluster
@@ -49,11 +51,57 @@ internal suspend fun bufferedQuery(cluster: Cluster) {
     println(result.metadata)
 }
 
-@Suppress("UNUSED_VARIABLE")
 internal suspend fun streamingQuery(cluster: Cluster) {
     // Streaming query, for when result size is large or unbounded
     val metadata: QueryMetadata = cluster
         .query("select * from `travel-sample`")
         .execute { row -> println(row) }
     println(metadata)
+}
+
+internal suspend fun queryWithNamedParameters(cluster: Cluster) {
+    // Query with named parameters
+    val result: QueryResult = cluster
+        .query(
+            "select * from `travel-sample` where type = @type limit @limit",
+            parameters = QueryParameters.named {
+                param("type", "airline")
+                param("limit", 3)
+            }
+        )
+        .execute()
+
+    result.rows.forEach { println(it) }
+}
+
+internal suspend fun queryWithPositionalParameters(cluster: Cluster) {
+    // Query with positional parameters
+    val result: QueryResult = cluster
+        .query(
+            "select * from `travel-sample` where type = ? limit ?",
+            parameters = QueryParameters.positional {
+                param("airline")
+                param(3)
+            }
+        )
+        .execute()
+
+    result.rows.forEach { println(it) }
+}
+
+internal suspend fun queryWithNamedParameterBlock(cluster: Cluster) {
+    // Query with named parameters from a parameter block
+    @Serializable // (or whatever annotation your JsonSerializer requires)
+    data class MyParameters(val type: String, val limit: Int)
+
+    val result: QueryResult = cluster
+        .query(
+            "select * from `travel-sample` where type = @type limit @limit",
+            parameters = QueryParameters.namedFrom(
+                MyParameters(type = "airline", limit = 3)
+            )
+        )
+        .execute()
+
+    result.rows.forEach { println(it) }
 }
