@@ -64,6 +64,9 @@ internal class KotlinxSerializationJsonSerializerTest {
     @Serializable
     data class SerializeMe(val magicWord: String?)
 
+    @Serializable
+    data class SerializeMeNonNullProperty(val magicWord: String)
+
     @Test
     fun `list of serializable objects survives round trip`() {
         val testSubject: List<SerializeMe> = listOf(SerializeMe("alakazam"), SerializeMe("abracadabra"))
@@ -82,6 +85,14 @@ internal class KotlinxSerializationJsonSerializerTest {
         assertEquals("""{"magicWord":null}""", encoded.toStringUtf8())
 
         assertEquals(testSubject, serializer.deserialize<SerializeMe>(encoded))
+    }
+
+    @Test
+    fun `throws if non-nullable property is null`() {
+        assertThrows<SerializationException> {
+            val encoded = """{"magicWord":null}"""
+            serializer.deserialize<SerializeMeNonNullProperty>(encoded.toByteArray(), typeRef())
+        }
     }
 
     @Serializable
