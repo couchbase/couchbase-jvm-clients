@@ -16,43 +16,92 @@
 
 package com.couchbase.client.kotlin.analytics
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
+import com.couchbase.client.kotlin.analytics.AnalyticsParameters.Companion.named
+import com.couchbase.client.kotlin.analytics.AnalyticsParameters.Companion.positional
+import com.couchbase.client.kotlin.codec.JsonSerializer
+import com.couchbase.client.kotlin.codec.NamedParametersBuilder
+import com.couchbase.client.kotlin.codec.PositionalParametersBuilder
+import com.couchbase.client.kotlin.codec.ValueAndType
+import com.couchbase.client.kotlin.codec.ValueAndType.Companion.serializeAsArrayNode
+import com.couchbase.client.kotlin.codec.ValueAndType.Companion.serializeAsObjectNode
+
 /**
  * Create instances using the [positional] or [named] factory methods.
  */
 public sealed class AnalyticsParameters {
 
-    internal abstract fun inject(queryJson: MutableMap<String, Any?>)
+    internal open fun serialize(serializer: JsonSerializer): JsonNode? = null
 
-    public object None : AnalyticsParameters() {
-        override fun inject(queryJson: MutableMap<String, Any?>) {
-        }
+    public object None : AnalyticsParameters()
+
+    private class Positional(
+        private val values: List<ValueAndType<*>>,
+    ) : AnalyticsParameters() {
+        override fun serialize(serializer: JsonSerializer) = serializer.serializeAsArrayNode(values)
     }
 
-    private class Named internal constructor(
-        private val values: Map<String, Any?>,
+    private class Named(
+        private val nameToValue: Map<String, ValueAndType<*>>,
     ) : AnalyticsParameters() {
-        override fun inject(queryJson: MutableMap<String, Any?>): Unit =
-            values.forEach { (key, value) ->
-                queryJson[key.addPrefixIfAbsent("$")] = value
-            }
-
-        private fun String.addPrefixIfAbsent(prefix: String) =
-            if (startsWith(prefix)) this else prefix + this
-    }
-
-    private class Positional internal constructor(
-        private val values: List<Any?>,
-    ) : AnalyticsParameters() {
-        override fun inject(queryJson: MutableMap<String, Any?>): Unit {
-            if (values.isNotEmpty()) {
-                queryJson["args"] = values
-            }
-        }
+        override fun serialize(serializer: JsonSerializer) = serializer.serializeAsObjectNode(nameToValue)
     }
 
     public companion object {
-        public fun positional(values: List<Any?>): AnalyticsParameters = Positional(values)
-        public fun named(values: Map<String, Any?>): AnalyticsParameters = Named(values)
-        public fun named(vararg values: Pair<String, Any?>): AnalyticsParameters = Named(values.toMap())
+        /**
+         * Values to plug into positional placeholders in the statement.
+         * ```
+         * parameters = AnalyticsParameters.positional {
+         *     param("airline") // replacement for first ?
+         *     param(3)         // replacement for second ?
+         * }
+         * ```
+         */
+        public fun positional(paramSetterBlock: PositionalParametersBuilder.() -> Unit): AnalyticsParameters {
+            val builder = PositionalParametersBuilder()
+            builder.apply(paramSetterBlock)
+            return Positional(builder.build())
+        }
+
+
+        /**
+         * Values to plug into named placeholders in the query statement.
+         * ```
+         * parameters = QueryParameters.named {
+         *     param("type", "airline")
+         *     param("limit", 3)
+         * }
+         * ```
+         * @sample com.couchbase.client.kotlin.samples.queryWithNamedParameters
+         */
+        public fun named(paramSetterBlock: NamedParametersBuilder.() -> Unit): AnalyticsParameters {
+            val builder = NamedParametersBuilder()
+            builder.apply(paramSetterBlock)
+            return Named(builder.build())
+        }
+
+        @Deprecated(
+            level = DeprecationLevel.WARNING,
+            message = "Not compatible with JsonSerializer implementations that require type information, like kotlinx.serialization." +
+                    " Please use the overload that takes a parameter builder lambda."
+        )
+        public fun named(values: Map<String, Any?>): AnalyticsParameters = Named(values.mapValues { entry -> ValueAndType.untyped(entry.value) })
+
+        @Deprecated(
+            level = DeprecationLevel.WARNING,
+            message = "Not compatible with JsonSerializer implementations that require type information, like kotlinx.serialization." +
+                    " Please use the overload that takes a parameter builder lambda."
+        )
+        @Suppress("DeprecatedCallableAddReplaceWith")
+        public fun named(vararg values: Pair<String, Any?>): AnalyticsParameters = named(values.toMap())
+
+        @Deprecated(
+            level = DeprecationLevel.WARNING,
+            message = "Not compatible with JsonSerializer implementations that require type information, like kotlinx.serialization." +
+                    " Please use the overload that takes a parameter builder lambda."
+        )
+        @Suppress("DeprecatedCallableAddReplaceWith")
+        public fun positional(values: List<Any?>): AnalyticsParameters = Positional(values.map { ValueAndType.untyped(it) })
+
     }
 }

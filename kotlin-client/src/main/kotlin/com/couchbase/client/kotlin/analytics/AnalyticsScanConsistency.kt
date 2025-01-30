@@ -16,6 +16,7 @@
 
 package com.couchbase.client.kotlin.analytics
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency.Companion.notBounded
 import com.couchbase.client.kotlin.analytics.AnalyticsScanConsistency.Companion.requestPlus
 import com.couchbase.client.kotlin.query.QueryScanConsistency.Companion.notBounded
@@ -31,8 +32,8 @@ public sealed class AnalyticsScanConsistency(
     private val wireName: String?,
 ) {
 
-    internal open fun inject(queryJson: MutableMap<String, Any?>): Unit {
-        wireName?.let { queryJson["scan_consistency"] = it }
+    internal open fun inject(queryJson: ObjectNode) {
+        wireName?.let { queryJson.put("scan_consistency", it) }
     }
 
     public companion object {

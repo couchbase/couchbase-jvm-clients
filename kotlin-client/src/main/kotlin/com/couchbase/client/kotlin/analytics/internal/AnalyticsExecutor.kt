@@ -18,6 +18,9 @@ package com.couchbase.client.kotlin.analytics.internal
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.core.util.Golang
 import com.couchbase.client.kotlin.CommonOptions
@@ -64,25 +67,32 @@ internal class AnalyticsExecutor(
 
         val timeout = with(core.env) { common.actualAnalyticsTimeout() }
 
-        // use interface type so less capable serializers don't freak out
-        val queryJson: MutableMap<String, Any?> = HashMap<String, Any?>()
+        val queryJson: ObjectNode = Mapper.createObjectNode()
 
-        queryJson["statement"] = statement
-        queryJson["timeout"] = Golang.encodeDurationToMs(timeout)
+        queryJson.put("statement", statement)
+        queryJson.put("timeout", Golang.encodeDurationToMs(timeout))
 
-        if (readonly) queryJson["readonly"] = true
+        if (readonly) queryJson.put("readonly", true)
 
-        clientContextId?.let { queryJson["client_context_id"] = it }
+        clientContextId?.let { queryJson.put("client_context_id", it) }
 
         consistency.inject(queryJson)
-        parameters.inject(queryJson)
-
-        queryContext?.let { queryJson["query_context"] = it }
-
-        queryJson.putAll(raw)
 
         val actualSerializer = serializer ?: core.env.jsonSerializer
-        val queryBytes = actualSerializer.serialize(queryJson, typeRef())
+        when (val args = parameters.serialize(actualSerializer)) {
+            is ArrayNode -> if (!args.isEmpty()) queryJson.replace("args", args)
+            is ObjectNode -> args.fields().forEach { (name, value) -> queryJson.replace(name.addPrefixIfAbsent("$"), value) }
+        }
+
+        queryContext?.let { queryJson.put("query_context", it) }
+
+        if (raw.isNotEmpty()) {
+            val rawJsonBytes = actualSerializer.serialize(raw, typeRef())
+            val rawObjectNode = Mapper.decodeIntoTree(rawJsonBytes) as ObjectNode
+            rawObjectNode.fields().forEach { (name, value) -> queryJson.replace(name, value) }
+        }
+
+        val queryBytes = Mapper.encodeAsBytes(queryJson)
 
         return flow {
             val request = with(core.env) {
@@ -108,11 +118,13 @@ internal class AnalyticsExecutor(
 
                 val response = request.response().await()
 
-                emitAll(response.rows().asFlow()
-                    .map { AnalyticsRow(it.data(), actualSerializer) })
+                emitAll(
+                    response.rows().asFlow()
+                        .map { AnalyticsRow(it.data(), actualSerializer) })
 
-                emitAll(response.trailer().asFlow()
-                    .map { AnalyticsMetadata(response.header(), it) })
+                emitAll(
+                    response.trailer().asFlow()
+                        .map { AnalyticsMetadata(response.header(), it) })
 
             } finally {
                 request.logicallyComplete()
@@ -120,3 +132,6 @@ internal class AnalyticsExecutor(
         }
     }
 }
+
+private fun String.addPrefixIfAbsent(prefix: String) =
+    if (startsWith(prefix)) this else prefix + this
