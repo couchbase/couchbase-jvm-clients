@@ -18,9 +18,13 @@ package com.couchbase.client.kotlin.query
 
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
-import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.kotlin.codec.JsonSerializer
-import com.couchbase.client.kotlin.codec.TypeRef
+import com.couchbase.client.kotlin.codec.NamedParametersBuilder
+import com.couchbase.client.kotlin.codec.PositionalParametersBuilder
+import com.couchbase.client.kotlin.codec.ValueAndType
+import com.couchbase.client.kotlin.codec.ValueAndType.Companion.serializeAsArrayNode
+import com.couchbase.client.kotlin.codec.ValueAndType.Companion.serializeAsJsonNode
+import com.couchbase.client.kotlin.codec.ValueAndType.Companion.serializeAsObjectNode
 import com.couchbase.client.kotlin.codec.typeRef
 import com.couchbase.client.kotlin.query.QueryParameters.Companion.named
 import com.couchbase.client.kotlin.query.QueryParameters.Companion.positional
@@ -37,40 +41,20 @@ public sealed class QueryParameters {
     private class Positional(
         private val values: List<ValueAndType<*>>,
     ) : QueryParameters() {
-        override fun serializeIfPositional(serializer: JsonSerializer): ArrayNode {
-            val node = Mapper.createArrayNode()
-            values.forEach { node.add(serializer.serializeAsJsonNode(it)) }
-            return node
-        }
+        override fun serializeIfPositional(serializer: JsonSerializer): ArrayNode = serializer.serializeAsArrayNode(values)
     }
 
     private class Named(
         private val nameToValue: Map<String, ValueAndType<*>>,
     ) : QueryParameters() {
-        override fun serializeIfNamed(serializer: JsonSerializer): ObjectNode {
-            val node = Mapper.createObjectNode()
-            nameToValue.forEach { node.replace(it.key, serializer.serializeAsJsonNode(it.value)) }
-            return node
-        }
+        override fun serializeIfNamed(serializer: JsonSerializer): ObjectNode = serializer.serializeAsObjectNode(nameToValue)
     }
 
     private class NamedFromParameterBlock(
         private val value: ValueAndType<*>,
     ) : QueryParameters() {
-        override fun serializeIfNamed(serializer: JsonSerializer): ObjectNode =
-            serializer.serializeAsJsonNode(value) as ObjectNode
+        override fun serializeIfNamed(serializer: JsonSerializer): ObjectNode = serializer.serializeAsJsonNode(value) as ObjectNode
     }
-
-    @PublishedApi
-    internal data class ValueAndType<T>(val value: T, val type: TypeRef<T>) {
-        companion object {
-            private val any = typeRef<Any?>()
-            fun untyped(value: Any?) = ValueAndType(value, any)
-        }
-    }
-
-    internal fun <T> JsonSerializer.serializeAsJsonNode(valueAndType: ValueAndType<T>) =
-        Mapper.decodeIntoTree(serialize(valueAndType.value, valueAndType.type))
 
     public companion object {
         /**
@@ -83,25 +67,10 @@ public sealed class QueryParameters {
          * ```
          * @sample com.couchbase.client.kotlin.samples.queryWithPositionalParameters
          */
-        public fun positional(paramSetterBlock: PositionalBuilder.() -> Unit): QueryParameters {
-            val builder = PositionalBuilder()
+        public fun positional(paramSetterBlock: PositionalParametersBuilder.() -> Unit): QueryParameters {
+            val builder = PositionalParametersBuilder()
             builder.apply(paramSetterBlock)
-            return builder.build()
-        }
-
-        public class PositionalBuilder internal constructor() {
-            private val list: MutableList<ValueAndType<*>> = mutableListOf()
-
-            public inline fun <reified T> param(value: T) {
-                typedParam(ValueAndType(value, typeRef<T>()))
-            }
-
-            @PublishedApi
-            internal fun <T> typedParam(value: ValueAndType<T>) {
-                list.add(value)
-            }
-
-            internal fun build(): QueryParameters = Positional(list)
+            return Positional(builder.build())
         }
 
         /**
@@ -114,25 +83,10 @@ public sealed class QueryParameters {
          * ```
          * @sample com.couchbase.client.kotlin.samples.queryWithNamedParameters
          */
-        public fun named(paramSetterBlock: NamedBuilder.() -> Unit): QueryParameters {
-            val builder = NamedBuilder()
+        public fun named(paramSetterBlock: NamedParametersBuilder.() -> Unit): QueryParameters {
+            val builder = NamedParametersBuilder()
             builder.apply(paramSetterBlock)
-            return builder.build()
-        }
-
-        public class NamedBuilder internal constructor() {
-            private val map: MutableMap<String, ValueAndType<*>> = mutableMapOf()
-
-            public inline fun <reified T> param(name: String, value: T) {
-                typedParam(name, ValueAndType(value, typeRef<T>()))
-            }
-
-            @PublishedApi
-            internal fun <T> typedParam(name: String, value: ValueAndType<T>) {
-                map[name] = value
-            }
-
-            internal fun build(): QueryParameters = Named(map)
+            return Named(builder.build())
         }
 
         /**
