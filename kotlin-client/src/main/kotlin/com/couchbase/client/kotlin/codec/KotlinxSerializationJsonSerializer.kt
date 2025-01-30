@@ -19,6 +19,7 @@ package com.couchbase.client.kotlin.codec
 import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import java.lang.reflect.Type
@@ -54,7 +55,11 @@ public class KotlinxSerializationJsonSerializer(
 
     override fun <T> deserialize(json: ByteArray, type: TypeRef<T>): T {
         // Json.decodeFromStream takes 3x longer for some reason?
-        return jsonFormat.decodeFromString(serializer(type), String(json))
+        val result = jsonFormat.decodeFromString(serializer(type), String(json))
+        if (result == null && !type.nullable) {
+            throw kotlinx.serialization.SerializationException("Can't deserialize null value into non-nullable type $type")
+        }
+        return result
     }
 
     private fun <T> serializer(typeRef: TypeRef<T>): KSerializer<T> {
@@ -65,6 +70,6 @@ public class KotlinxSerializationJsonSerializer(
         // As a compromise, create the KSerializer from the Java Type, and cache it.
         // This is a partial solution that works well for non-nullable types.
         @Suppress("UNCHECKED_CAST")
-        return serializerCache.getOrPut(typeRef.type) { serializer(typeRef.type) } as KSerializer<T>
+        return serializerCache.getOrPut(typeRef.type) { serializer(typeRef.type).nullable } as KSerializer<T>
     }
 }

@@ -27,7 +27,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -36,13 +35,11 @@ internal class KotlinxSerializationJsonSerializerTest {
     private val serializer = KotlinxSerializationJsonSerializer()
 
     @Test
-    @Disabled("Known limitation of current implementation")
     fun `can serialize null`() {
         assertArrayEquals("null".toByteArray(), serializer.serialize(null as String?))
     }
 
     @Test
-    @Disabled("Known limitation of current implementation")
     fun `can deserialize null`() {
         assertNull(serializer.deserialize<String?>("null".toByteArray()))
     }
@@ -102,7 +99,7 @@ internal class KotlinxSerializationJsonSerializerTest {
 
     @Test
     fun `user can configure json parsing options`() {
-        val jsonWithUnknownKey = """{"magicWord":"alakazam","bogusProperty":123}""".toByteArray();
+        val jsonWithUnknownKey = """{"magicWord":"alakazam","bogusProperty":123}""".toByteArray()
 
         assertThrows<SerializationException> {
             serializer.deserialize(jsonWithUnknownKey, typeRef<SerializeMe>())
