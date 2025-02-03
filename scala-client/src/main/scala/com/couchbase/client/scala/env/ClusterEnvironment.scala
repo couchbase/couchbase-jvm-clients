@@ -18,6 +18,7 @@ package com.couchbase.client.scala.env
 
 import java.util.concurrent.{Executors, ThreadFactory}
 import com.couchbase.client.core
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
 import com.couchbase.client.core.cnc.{EventBus, Meter, RequestTracer}
 import com.couchbase.client.core.env.{
@@ -87,7 +88,8 @@ object ClusterEnvironment {
       private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
       private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None,
       private[scala] val transactionsConfig: Option[TransactionsConfig] = None,
-      private[scala] val error: Option[Throwable] = None
+      private[scala] val error: Option[Throwable] = None,
+      private[scala] val preferredServerGroup: Option[String] = None
   ) {
 
     def build: Try[ClusterEnvironment] = error match {
@@ -294,6 +296,12 @@ object ClusterEnvironment {
         copy(error = Some(new IllegalArgumentException(s"Unknown profile name ${profileName}")))
       }
     }
+
+    /** Specify the preferred server group to use for operations that support that. */
+    @SinceCouchbase("7.6.2")
+    def preferredServerGroup(value: String): ClusterEnvironment.Builder = {
+      copy(preferredServerGroup = Some(value))
+    }
   }
 }
 
@@ -377,6 +385,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
         CoreTransactionsConfig.createDefault(TransactionsSupportedExtensionsUtil.Supported)
       )
   }
+  builder.preferredServerGroup.foreach(v => coreBuilder.preferredServerGroup(v))
 
   coreBuilder.loadSystemProperties()
 

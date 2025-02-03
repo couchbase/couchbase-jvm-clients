@@ -23,11 +23,11 @@ import com.couchbase.client.core.error.{DocumentExistsException, DocumentNotFoun
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
-import com.couchbase.client.performer.scala.util.ClusterConnection
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
 import com.couchbase.client.performer.scala.util.ResultValidation.{anythingAllowed, dbg}
 import com.couchbase.client.protocol.shared.Latch
 import com.couchbase.client.protocol.transactions._
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.transactions.TransactionGetResult
 import com.couchbase.client.scala.transactions.error.TransactionFailedException
 import com.couchbase.utils.ResultsUtil
@@ -229,7 +229,39 @@ abstract class TransactionShared(
       logger.warn("Ignoring request to check doc status")
   }
 
-  protected def handleWaitOnLatch(
+    protected def handleGetReplicaFromPreferredServerGroupResult(
+                                         request: CommandGetReplicaFromPreferredServerGroup,
+                                         result: TransactionGetResult,
+                                         cc: ClusterConnection
+                                 ): Unit = {
+        stashedGet.set(result)
+        if (request.hasStashInSlot) {
+            stashedGetMap.put(request.getStashInSlot, result)
+            logger.info("Stashed {} in slot {}", result.id, request.getStashInSlot)
+        }
+        if (request.hasContentAsValidation) {
+          val contentAs = request.getContentAsValidation
+            val content = ContentAsUtil.contentType(
+                contentAs.getContentAs,
+                () => result.contentAs[Array[Byte]],
+                () => result.contentAs[String],
+                () => result.contentAs[JsonObject],
+                () => result.contentAs[JsonArray],
+                () => result.contentAs[Boolean],
+                () => result.contentAs[Int],
+                () => result.contentAs[Double]
+            )
+
+            if (contentAs.getExpectSuccess != content.isSuccess) throw new TestFailure(new RuntimeException("ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess))
+
+            if (contentAs.hasExpectedContentBytes) {
+                val bytes: Array[Byte] = ContentAsUtil.convert(content.get)
+                if (!java.util.Arrays.equals(contentAs.getExpectedContentBytes.toByteArray, bytes)) throw new TestFailure(new RuntimeException("Content bytes " + java.util.Arrays.toString(bytes) + " did not equal expected bytes " + contentAs.getExpectedContentBytes))
+            }
+        }
+    }
+
+    protected def handleWaitOnLatch(
       request: CommandWaitOnLatch,
       txnLogger: CoreTransactionLogger
   ): Unit = {

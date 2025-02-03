@@ -27,7 +27,8 @@ case class GetAnyReplicaOptions(
     private[scala] val timeout: Duration = Duration.MinusInf,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
-    private[scala] val transcoder: Option[Transcoder] = None
+    private[scala] val transcoder: Option[Transcoder] = None,
+    private[scala] val readPreference: Option[ReadPreference] = None
 ) {
 
   /** Changes the timeout setting used for this operation.
@@ -90,12 +91,8 @@ case class GetAnyReplicaOptions(
     copy(retryStrategy = Some(value))
   }
 
-  private[scala] def convert: GetAllReplicasOptions = {
-    var opts = GetAllReplicasOptions()
-      .parentSpan(parentSpan)
-      .timeout(timeout)
-    transcoder.foreach(v => opts = opts.transcoder(v))
-    retryStrategy.foreach(v => opts = opts.retryStrategy(v))
-    opts
+  /** Specify a read preference to control which replicas are used for this operation. */
+  def readPreference(value: ReadPreference): GetAnyReplicaOptions = {
+    copy(readPreference = Some(value))
   }
 }

@@ -431,7 +431,7 @@ class ReactiveCollection(async: AsyncCollection) {
         convert(options),
         id,
         LookupInSpec.map(spec).asJava,
-        CoreReadPreference.NO_PREFERENCE
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
       )
     ).map(result => convertLookupInReplica(result, environment))
   }
@@ -488,7 +488,7 @@ class ReactiveCollection(async: AsyncCollection) {
         convert(options),
         id,
         LookupInSpec.map(spec).asJava,
-        CoreReadPreference.NO_PREFERENCE
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
       )
     ).map(result => convertLookupInReplica(result, environment))
   }
@@ -512,8 +512,13 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAnyReplicaOptions
   ): SMono[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
-      .map(result => convertReplica(result, environment, options.transcoder))
+    convert(
+      kvOps.getAnyReplicaReactive(
+        convert(options),
+        id,
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+      )
+    ).map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Retrieves all available versions of the document.
@@ -535,8 +540,13 @@ class ReactiveCollection(async: AsyncCollection) {
       id: String,
       options: GetAllReplicasOptions
   ): SFlux[GetReplicaResult] = {
-    convert(kvOps.getAllReplicasReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
-      .map(result => convertReplica(result, environment, options.transcoder))
+    convert(
+      kvOps.getAllReplicasReactive(
+        convert(options),
+        id,
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+      )
+    ).map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Updates the expiry of the document with the given id.

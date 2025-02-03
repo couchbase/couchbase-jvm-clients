@@ -29,7 +29,8 @@ object TransactionsSupportedExtensionsUtil {
     CoreTransactionsExtension.EXT_REPLACE_BODY_WITH_XATTR,
     CoreTransactionsExtension.EXT_INSERT_EXISTING,
     CoreTransactionsExtension.EXT_QUERY_CONTEXT,
-    CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING
+    CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING,
+    CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP
 
     // Not currently supported:
 //  CoreTransactionsExtension.EXT_SINGLE_QUERY,

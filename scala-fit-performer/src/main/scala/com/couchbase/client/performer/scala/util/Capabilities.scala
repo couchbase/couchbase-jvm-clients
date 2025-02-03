@@ -78,6 +78,10 @@ object Capabilities {
     out.add(Caps.SDK_VECTOR_SEARCH_BASE64)
     // [end:1.6.2]
 
+    // [start:1.8.0]
+    out.add(Caps.SDK_ZONE_AWARE_READ_FROM_REPLICA)
+    // [end:1.8.0]
+
     out
   }
 

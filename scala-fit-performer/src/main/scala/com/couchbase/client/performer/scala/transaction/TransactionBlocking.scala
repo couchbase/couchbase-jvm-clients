@@ -333,6 +333,22 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           handleGetOptionalResult(request, req, out, connection)
         }
       )
+    // [start:1.8.0]
+    } else if (op.hasGetFromPreferredServerGroup) {
+      val request = op.getGetFromPreferredServerGroup
+      performOperation(
+        dbg + "get-from-preferred-server-group",
+        ctx,
+        request.getExpectedResultList.asScala,
+        op.getDoNotPropagateError,
+        performanceMode,
+        () => {
+          val collection = connection.collection(request.getDocId)
+          val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          handleGetReplicaFromPreferredServerGroupResult(request, result, connection)
+      }
+    )
+    // [end:1.8.0]
     } else if (op.hasWaitOnLatch) {
       val request   = op.getWaitOnLatch
       val latchName = request.getLatchName

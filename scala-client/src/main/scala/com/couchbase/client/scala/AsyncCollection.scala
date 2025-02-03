@@ -507,9 +507,13 @@ class AsyncCollection(
       id: String,
       options: GetAnyReplicaOptions
   ): Future[GetReplicaResult] = {
-    convert(kvOps.getAnyReplicaReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
-      .map(result => convertReplica(result, environment, options.transcoder))
-      .toFuture
+    convert(
+      kvOps.getAnyReplicaReactive(
+        convert(options),
+        id,
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+      )
+    ).map(result => convertReplica(result, environment, options.transcoder)).toFuture
   }
 
   /** Retrieves all available versions of the document.
@@ -543,8 +547,13 @@ class AsyncCollection(
     // Since the API here returns a Seq and not a Future, there is unfortunately
     // no option but to block & buffer the stream and return already completed/failed Futures.
     // Users that require a true streaming solution should use the reactive version.
-    convert(kvOps.getAllReplicasReactive(convert(options), id, CoreReadPreference.NO_PREFERENCE))
-      .map(result => convertReplica(result, environment, options.transcoder))
+    convert(
+      kvOps.getAllReplicasReactive(
+        convert(options),
+        id,
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+      )
+    ).map(result => convertReplica(result, environment, options.transcoder))
       .collectSeq()
       .block(options.timeout)
       .map(result => Future.successful(result))
@@ -585,7 +594,7 @@ class AsyncCollection(
         convert(options),
         id,
         LookupInSpec.map(spec).asJava,
-        CoreReadPreference.NO_PREFERENCE
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
       )
     ).map(result => convertLookupInReplica(result, environment)).toFuture
   }
@@ -633,7 +642,7 @@ class AsyncCollection(
         convert(options),
         id,
         LookupInSpec.map(spec).asJava,
-        CoreReadPreference.NO_PREFERENCE
+        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
       )
     ).map(result => convertLookupInReplica(result, environment))
       .collectSeq()

@@ -370,6 +370,15 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
+      // [start:1.8.0]
+      if (opts.hasReadPreference) {
+        opts.getReadPreference match {
+          case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+        }
+      }
+      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None
@@ -387,6 +396,15 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
+      // [start:1.8.0]
+      if (opts.hasReadPreference) {
+        opts.getReadPreference match {
+          case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+        }
+      }
+      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None

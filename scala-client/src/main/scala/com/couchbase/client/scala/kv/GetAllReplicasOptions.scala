@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.codec.Transcoder
@@ -27,7 +28,8 @@ case class GetAllReplicasOptions(
     private[scala] val timeout: Duration = Duration.MinusInf,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
-    private[scala] val transcoder: Option[Transcoder] = None
+    private[scala] val transcoder: Option[Transcoder] = None,
+    private[scala] val readPreference: Option[ReadPreference] = None
 ) {
 
   /** Changes the timeout setting used for this operation.
@@ -88,5 +90,11 @@ case class GetAllReplicasOptions(
     */
   def retryStrategy(value: RetryStrategy): GetAllReplicasOptions = {
     copy(retryStrategy = Some(value))
+  }
+
+  /** Specify a read preference to control which replicas are used for this operation. */
+  @SinceCouchbase("7.6.2")
+  def readPreference(value: ReadPreference): GetAllReplicasOptions = {
+    copy(readPreference = Some(value))
   }
 }

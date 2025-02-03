@@ -47,6 +47,27 @@ class TransactionAttemptContext private[scala] (
     Try(internal.get(collection.reactive, id).block())
   }
 
+  /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
+    * <p>
+    * It will be fetched only from document copies that on nodes in the preferred server group, which can
+    * be configured with [[com.couchbase.client.scala.env.ClusterEnvironment.Builder.preferredServerGroup]].
+    * <p>
+    * If no replica can be retrieved, which can include for reasons such as this preferredServerGroup not being set,
+    * and misconfigured server groups, then [[com.couchbase.client.core.error.DocumentUnretrievableException]]
+    * can be raised.  It is strongly recommended that this method always be used with a fallback strategy to use
+    * ctx.get() on failure.
+    *
+    * @param collection the Couchbase collection the document exists on
+    * @param id         the document's ID
+    * @return a <code>TransactionGetResult</code> containing the document
+    */
+  def getReplicaFromPreferredServerGroup(
+      collection: Collection,
+      id: String
+  ): Try[TransactionGetResult] = {
+    Try(internal.getReplicaFromPreferredServerGroup(collection.reactive, id).block())
+  }
+
   /**
     * Mutates the specified <code>doc</code> with new content.
     * <p>

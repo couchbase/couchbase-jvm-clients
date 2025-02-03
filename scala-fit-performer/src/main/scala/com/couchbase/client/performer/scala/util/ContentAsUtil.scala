@@ -112,4 +112,8 @@ object ContentAsUtil {
         s"Scala performer cannot handle contentAs ${contentAs}"
       )
   }
+
+    def convert(content: ContentTypes): Array[Byte] = if (content.hasContentAsBytes) content.getContentAsBytes.toByteArray
+    else if (content.hasContentAsString) content.getContentAsString.getBytes
+    else throw new UnsupportedOperationException("Cannot convert " + content)
 }

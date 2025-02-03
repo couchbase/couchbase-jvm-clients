@@ -117,6 +117,7 @@ object ResultsUtil {
         case _: DocumentAlreadyInTransactionException =>
           ExternalException.DocumentAlreadyInTransaction
         case _: DocumentExistsException          => ExternalException.DocumentExistsException
+        case _: DocumentUnretrievableException   => ExternalException.DocumentUnretrievableException
         case _: DocumentNotFoundException        => ExternalException.DocumentNotFoundException
         case _: FeatureNotAvailableException     => ExternalException.FeatureNotAvailableException
         case _: PreviousOperationFailedException => ExternalException.PreviousOperationFailed

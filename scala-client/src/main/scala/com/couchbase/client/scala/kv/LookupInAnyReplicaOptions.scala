@@ -25,7 +25,8 @@ import scala.concurrent.duration.Duration
 case class LookupInAnyReplicaOptions(
     private[scala] val timeout: Duration = Duration.MinusInf,
     private[scala] val parentSpan: Option[RequestSpan] = None,
-    private[scala] val retryStrategy: Option[RetryStrategy] = None
+    private[scala] val retryStrategy: Option[RetryStrategy] = None,
+    private[scala] val readPreference: Option[ReadPreference] = None
 ) {
 
   /** Changes the timeout setting used for this operation.
@@ -70,5 +71,10 @@ case class LookupInAnyReplicaOptions(
     */
   def retryStrategy(value: RetryStrategy): LookupInAnyReplicaOptions = {
     copy(retryStrategy = Some(value))
+  }
+
+  /** Specify a read preference to control which replicas are used for this operation. */
+  def readPreference(value: ReadPreference): LookupInAnyReplicaOptions = {
+    copy(readPreference = Some(value))
   }
 }

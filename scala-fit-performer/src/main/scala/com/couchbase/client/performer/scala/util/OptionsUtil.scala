@@ -232,6 +232,11 @@ object OptionsUtil {
     if (securityConfig != null) {
       out = clusterEnvironment.securityConfig(securityConfig)
     }
+    // [if:1.8.0]
+    if (cc.hasPreferredServerGroup) {
+      out = out.preferredServerGroup(cc.getPreferredServerGroup)
+    }
+    // [end]
     out
   }
 
