@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeRefere
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.Golang;
+import com.couchbase.client.core.util.StorageSize;
 
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -314,6 +315,7 @@ public class BuilderPropertySetter {
         .register(Duration.class, "a duration qualified by a time unit (like \"2.5s\" or \"300ms\")",
             d -> requireNonNegative(Golang.parseDuration(d)))
 
+        .register(StorageSize.class, "a storage size qualified by a size unit (like \"256B\" for 256 bytes, \"64KiB\" for 64 kibibytes, etc.)", StorageSize::parse)
         .register(Path.class, "an open file from a path", Paths::get)
 
         .register(Iterable.class, new CollectionConverter(ArrayList.class))

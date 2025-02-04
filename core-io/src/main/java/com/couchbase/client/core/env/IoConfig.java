@@ -17,6 +17,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.channel.WriteBufferWaterMark;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
@@ -24,7 +25,8 @@ import com.couchbase.client.core.node.Sdk2CompatibleMemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
 import com.couchbase.client.core.service.AbstractPooledEndpointServiceConfig;
 import com.couchbase.client.core.service.ServiceType;
-import reactor.util.annotation.Nullable;
+import com.couchbase.client.core.util.StorageSize;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -37,6 +39,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
+import static java.util.Objects.requireNonNull;
 
 public class IoConfig {
 
@@ -51,6 +54,12 @@ public class IoConfig {
   public static final Duration DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT = AbstractPooledEndpointServiceConfig.DEFAULT_IDLE_TIME;
   public static final Duration DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT = Duration.ofMinutes(5);
   public static final MemcachedHashingStrategy DEFAULT_MEMCACHED_HASHING_STRATEGY = StandardMemcachedHashingStrategy.INSTANCE;
+
+  @Stability.Volatile
+  public static final StorageSize DEFAULT_LOW_WATER_MARK = StorageSize.ofBytes(WriteBufferWaterMark.DEFAULT.low());
+
+  @Stability.Volatile
+  public static final StorageSize DEFAULT_HIGH_WATER_MARK = StorageSize.ofBytes(WriteBufferWaterMark.DEFAULT.high());
 
   private final boolean mutationTokensEnabled;
   private final Duration configPollInterval;
@@ -73,6 +82,10 @@ public class IoConfig {
   private final Duration configIdleRedialTimeout;
   private final MemcachedHashingStrategy memcachedHashingStrategy;
   private final TimerConfig timerConfig;
+  private final StorageSize lowWaterMark;
+  private final StorageSize highWaterMark;
+  private final @Nullable StorageSize sendBuffer;
+  private final @Nullable StorageSize receiveBuffer;
 
   private IoConfig(Builder builder) {
     mutationTokensEnabled = builder.mutationTokensEnabled;
@@ -100,6 +113,17 @@ public class IoConfig {
     configIdleRedialTimeout = builder.configIdleRedialTimeout;
     memcachedHashingStrategy = builder.memcachedHashingStrategy;
     timerConfig = builder.timerConfig.build();
+
+    lowWaterMark = builder.lowWaterMark;
+    highWaterMark = builder.highWaterMark;
+    if (lowWaterMark.bytes() >= highWaterMark.bytes()) {
+      throw new IllegalArgumentException(
+        "Low-water mark must be less than high-water mark, but got low='" + lowWaterMark + "' / high='" + highWaterMark + "'." +
+          " Check `io.lowWaterMark` and `io.highWaterMark` client settings.");
+    }
+
+    sendBuffer = builder.sendBuffer;
+    receiveBuffer = builder.receiveBuffer;
   }
 
   /**
@@ -399,6 +423,26 @@ public class IoConfig {
     return timerConfig;
   }
 
+  @Stability.Volatile
+  public StorageSize lowWaterMark() {
+    return lowWaterMark;
+  }
+
+  @Stability.Volatile
+  public StorageSize highWaterMark() {
+    return highWaterMark;
+  }
+
+  @Stability.Volatile
+  public @Nullable StorageSize sendBuffer() {
+    return sendBuffer;
+  }
+
+  @Stability.Volatile
+  public @Nullable StorageSize receiveBuffer() {
+    return receiveBuffer;
+  }
+
   /**
    * Returns this config as a map so it can be exported into i.e. JSON for display.
    */
@@ -426,6 +470,10 @@ public class IoConfig {
     export.put("configIdleRedialTimeoutMs", configIdleRedialTimeout.toMillis());
     export.put("memcachedHashingStrategy", memcachedHashingStrategy.getClass().getSimpleName());
     export.put("timerConfig", timerConfig.exportAsMap());
+    export.put("lowWaterMark", lowWaterMark);
+    export.put("highWaterMark", highWaterMark);
+    export.put("sendBuffer", sendBuffer);
+    export.put("receiveBuffer", receiveBuffer);
     return export;
   }
 
@@ -452,9 +500,75 @@ public class IoConfig {
     private Duration configIdleRedialTimeout = DEFAULT_CONFIG_IDLE_REDIAL_TIMEOUT;
     private MemcachedHashingStrategy memcachedHashingStrategy = DEFAULT_MEMCACHED_HASHING_STRATEGY;
     private final TimerConfig.Builder timerConfig = new TimerConfig.Builder();
+    private StorageSize lowWaterMark = DEFAULT_LOW_WATER_MARK;
+    private StorageSize highWaterMark = DEFAULT_HIGH_WATER_MARK;
+    private @Nullable StorageSize sendBuffer = null;
+    private @Nullable StorageSize receiveBuffer = null;
 
     public IoConfig build() {
       return new IoConfig(this);
+    }
+
+    /**
+     * Advanced setting for tuning network channel backpressure.
+     * <p>
+     * We recommend leaving this at the default value unless you are working
+     * with Couchbase technical support to diagnose a network performance issue.
+     * <p>
+     * Defaults to {@link #DEFAULT_LOW_WATER_MARK}.
+     */
+    @Stability.Volatile
+    public Builder lowWaterMark(StorageSize lowWaterMark) {
+      this.lowWaterMark = requireNonNull(lowWaterMark).requireInt();
+      return this;
+    }
+
+    /**
+     * Advanced setting for tuning network channel backpressure.
+     * <p>
+     * We recommend leaving this at the default value unless you are working
+     * with Couchbase technical support to diagnose a network performance issue.
+     * <p>
+     * Defaults to {@link #DEFAULT_HIGH_WATER_MARK}.
+     */
+    @Stability.Volatile
+    public Builder highWaterMark(StorageSize highWaterMark) {
+      this.highWaterMark = requireNonNull(highWaterMark).requireInt();
+      return this;
+    }
+
+    /**
+     * Advanced setting for tuning socket send buffer size.
+     * <p>
+     * This value is just a hint to the operating system. The actual buffer size
+     * may differ, depending on how the OS interprets the hint.
+     * <p>
+     * We recommend leaving this at the default value unless you are working
+     * with Couchbase technical support to diagnose a network performance issue.
+     * <p>
+     * Defaults to null, which means "use OS default."
+     */
+    @Stability.Volatile
+    public Builder sendBuffer(@Nullable StorageSize sendBuffer) {
+      this.sendBuffer = sendBuffer == null ? null : sendBuffer.requireInt();
+      return this;
+    }
+
+    /**
+     * Advanced setting for tuning socket receive buffer size.
+     * <p>
+     * This value is just a hint to the operating system. The actual buffer size
+     * may differ, depending on how the OS interprets the hint.
+     * <p>
+     * We recommend leaving this at the default value unless you are working
+     * with Couchbase technical support to diagnose a network performance issue.
+     * <p>
+     * Defaults to null, which means "use OS default."
+     */
+    @Stability.Volatile
+    public Builder receiveBuffer(@Nullable StorageSize receiveBuffer) {
+      this.receiveBuffer = receiveBuffer == null ? null : receiveBuffer.requireInt();
+      return this;
     }
 
     public Builder configPollInterval(Duration configPollInterval) {

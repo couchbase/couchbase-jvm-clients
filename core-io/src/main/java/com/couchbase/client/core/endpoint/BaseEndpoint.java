@@ -37,6 +37,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.WriteBufferWaterMark;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollSocketChannel;
@@ -48,6 +49,7 @@ import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChann
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -301,11 +303,18 @@ public abstract class BaseEndpoint implements Endpoint {
           throw new IllegalStateException("Event Loop is already shut down, not pursuing connect attempt!");
         }
 
+        IoConfig io = env.ioConfig();
+        WriteBufferWaterMark writeBufferWaterMark = new WriteBufferWaterMark(
+          io.lowWaterMark().bytesAsInt(),
+          io.highWaterMark().bytesAsInt()
+        );
+
         final Bootstrap channelBootstrap = new Bootstrap()
           .remoteAddress(remoteAddress())
           .group(eventLoopGroup)
           .channel(channelFrom(eventLoopGroup))
           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
+          .option(ChannelOption.WRITE_BUFFER_WATER_MARK, writeBufferWaterMark)
           .handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(final Channel ch) {
@@ -326,6 +335,9 @@ public abstract class BaseEndpoint implements Endpoint {
               pipeline.addLast(new PipelineErrorHandler(BaseEndpoint.this));
             }
           });
+
+        Optional.ofNullable(io.sendBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_SNDBUF, it.bytesAsInt()));
+        Optional.ofNullable(io.receiveBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_RCVBUF, it.bytesAsInt()));
 
         if (env.ioConfig().tcpKeepAlivesEnabled() && !(eventLoopGroup instanceof DefaultEventLoopGroup)) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
