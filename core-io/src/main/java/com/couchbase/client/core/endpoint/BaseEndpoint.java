@@ -56,6 +56,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
+import com.couchbase.client.core.io.netty.SslSessionLoggingHandler;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
 import com.couchbase.client.core.io.netty.kv.ConnectTimings;
@@ -323,7 +324,10 @@ public abstract class BaseEndpoint implements Endpoint {
               SecurityConfig config = env.securityConfig();
               if (config.tlsEnabled()) {
                 try {
-                  pipeline.addFirst(SslHandlerFactory.get(ch.alloc(), config, endpointContext));
+                  pipeline.addFirst(
+                    SslHandlerFactory.get(ch.alloc(), config, endpointContext),
+                    SslSessionLoggingHandler.INSTANCE
+                  );
                 } catch (Exception e) {
                   throw new SecurityException("Could not instantiate SSL Handler", e);
                 }
