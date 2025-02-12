@@ -38,7 +38,7 @@ public class FeatureNotAvailableException extends CouchbaseException {
   public static FeatureNotAvailableException clusterLevelQuery(final ServiceType serviceType) {
     return new FeatureNotAvailableException("The cluster does not support cluster-level queries " +
       "(only Couchbase Server 6.5 and later) and no bucket is open. If an older Couchbase Server version " +
-      "is used, at least one bucket needs to be opened to dispatch this " + serviceType.ident() + " request!");
+      "is used, at least one bucket needs to be opened to dispatch this " + serviceType.id() + " request!");
   }
 
   public static FeatureNotAvailableException scopeLevelQuery(final ServiceType serviceType) {

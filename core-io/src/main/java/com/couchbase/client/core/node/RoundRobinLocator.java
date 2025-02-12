@@ -115,7 +115,7 @@ public class RoundRobinLocator implements Locator {
         // retry will not help resolve the situation so let's make it clear in the exception what's
         //going on.
         request.fail(new ServiceNotAvailableException(
-          "The " + request.serviceType().ident()
+          "The " + request.serviceType().id()
             + " service is not available in the cluster.",
           new GenericRequestErrorContext(request)
         ));

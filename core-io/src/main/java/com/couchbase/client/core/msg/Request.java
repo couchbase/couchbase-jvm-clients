@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
@@ -164,7 +163,7 @@ public interface Request<R extends Response> {
    */
   default String serviceTracingId() {
     try {
-      return CbTracing.getTracingId(serviceType());
+      return serviceType().id();
     } catch (NoSuchElementException requestHasNoServiceType) {
       return TracingIdentifiers.SERVICE_UNKNOWN;
     }

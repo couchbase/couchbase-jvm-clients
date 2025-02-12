@@ -150,7 +150,7 @@ public class ProtostellarRequest<TGrpcRequest> {
     if (!(core.context().environment().meter() instanceof NoopMeter)) {
       long latency = logicalRequestLatency();
       if (latency > 0) {
-        Core.ResponseMetricIdentifier rmi = new Core.ResponseMetricIdentifier(serviceType.ident(), requestName);
+        Core.ResponseMetricIdentifier rmi = new Core.ResponseMetricIdentifier(serviceType.id(), requestName);
         core.responseMetric(rmi).recordValue(latency);
       }
     }

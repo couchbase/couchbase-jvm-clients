@@ -23,13 +23,10 @@ import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestSpan;
-import com.couchbase.client.core.service.ServiceType;
 
-import java.util.EnumMap;
 import java.util.Map;
 
 import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
-import static java.util.Collections.unmodifiableMap;
 
 @Stability.Internal
 public class CbTracing {
@@ -99,25 +96,5 @@ public class CbTracing {
         span.attribute(k, String.valueOf(v));
       }
     });
-  }
-
-  private static final Map<ServiceType, String> serviceTypeToTracingId;
-
-  static {
-    Map<ServiceType, String> map = new EnumMap<>(ServiceType.class);
-    map.put(ServiceType.ANALYTICS, TracingIdentifiers.SERVICE_ANALYTICS);
-    map.put(ServiceType.EVENTING, TracingIdentifiers.SERVICE_EVENTING);
-    map.put(ServiceType.BACKUP, TracingIdentifiers.SERVICE_BACKUP);
-    map.put(ServiceType.KV, TracingIdentifiers.SERVICE_KV);
-    map.put(ServiceType.MANAGER, TracingIdentifiers.SERVICE_MGMT);
-    map.put(ServiceType.QUERY, TracingIdentifiers.SERVICE_QUERY);
-    map.put(ServiceType.SEARCH, TracingIdentifiers.SERVICE_SEARCH);
-    map.put(ServiceType.VIEWS, TracingIdentifiers.SERVICE_VIEWS);
-
-    serviceTypeToTracingId = unmodifiableMap(map);
-  }
-
-  public static String getTracingId(ServiceType serviceType) {
-    return serviceTypeToTracingId.getOrDefault(serviceType, serviceType.ident());
   }
 }

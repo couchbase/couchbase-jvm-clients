@@ -96,7 +96,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.name = name;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, CbTracing.getTracingId(target.serviceType()));
+      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, target.serviceType().id());
       span.attribute(TracingIdentifiers.ATTR_OPERATION, builder.method + " " + builder.path.format());
     }
   }
