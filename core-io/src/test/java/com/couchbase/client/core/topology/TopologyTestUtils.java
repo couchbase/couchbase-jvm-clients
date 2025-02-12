@@ -40,7 +40,7 @@ public class TopologyTestUtils {
   }
 
   public static HostAndServicePorts node(String host, Map<ServiceType, Integer> ports) {
-    return new HostAndServicePorts(host, ports, nodeId(host, ports.getOrDefault(ServiceType.MANAGER, 8091)), null, null, null);
+    return new HostAndServicePorts(host, ports, nodeId(host, ports.getOrDefault(ServiceType.MANAGER, 8091)), null, null, null, null);
   }
 
   @Deprecated

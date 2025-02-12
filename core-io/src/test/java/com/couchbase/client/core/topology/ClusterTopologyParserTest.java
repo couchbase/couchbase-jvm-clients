@@ -316,21 +316,9 @@ public class ClusterTopologyParserTest {
   }
 
   @Test
-  void nodeUuidDefaultsToCanonicalHostAndPort() {
+  void nodeUuidIsNullIfAbsent() {
     ClusterTopology config = parser.parseResource("config_7.2.2_1kv_2query.json");
-    assertEquals(
-      mapOf(
-        "192.168.106.128", "192.168.106.128:8091",
-        "192.168.106.129", "192.168.106.129:8091",
-        "192.168.106.130", "192.168.106.130:8091"
-      ),
-      config.nodes().stream()
-        .collect(toMap(
-          HostAndServicePorts::host,
-          hostAndServicePorts -> hostAndServicePorts.id().uuid()
-        ))
-    );
-
+    config.nodes().forEach(node -> assertNull(node.uuid()));
     config.nodes().forEach(node -> assertNull(node.appTelemetryPath()));
   }
 
@@ -347,7 +335,7 @@ public class ClusterTopologyParserTest {
       config.nodes().stream()
         .collect(toMap(
           HostAndServicePorts::host,
-          hostAndServicePorts -> hostAndServicePorts.id().uuid()
+          hostAndServicePorts -> requireNonNull(hostAndServicePorts.uuid())
         ))
     );
   }

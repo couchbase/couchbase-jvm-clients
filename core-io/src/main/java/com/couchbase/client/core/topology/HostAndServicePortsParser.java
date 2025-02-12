@@ -62,10 +62,11 @@ class HostAndServicePortsParser {
       new HostAndServicePorts(
         value.host,
         portSelector.selectPorts(value.rawServicePorts),
-        getId(value.host, raw, nodeUuid),
+        getId(value.host, raw),
         ketamaAuthority,
         serverGroup,
-        appTelemetryPath
+        appTelemetryPath,
+        nodeUuid
       )
     );
   }
@@ -99,8 +100,7 @@ class HostAndServicePortsParser {
    */
   private static NodeIdentifier getId(
     String hostForNetworkConnections,
-    Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo,
-    @Nullable String nodeUuid
+    Map<NetworkResolution, HostAndRawServicePorts> networkToNodeInfo
   ) {
     HostAndRawServicePorts defaultNodeMap = networkToNodeInfo.get(NetworkResolution.DEFAULT);
     if (defaultNodeMap == null) {
@@ -119,7 +119,7 @@ class HostAndServicePortsParser {
       );
     }
 
-    return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections, nodeUuid);
+    return new NodeIdentifier(defaultNodeMap.host, idPort, hostForNetworkConnections);
   }
 
   private static @Nullable Integer getPort(HostAndRawServicePorts nodeMap, PortSelector portSelector, ServiceType serviceType) {

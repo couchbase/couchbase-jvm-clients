@@ -120,7 +120,7 @@ public final class ClusterTopologyBuilder {
 
     public HostAndServicePorts build() {
       NodeIdentifier id = this.id != null ? this.id : new NodeIdentifier(canonicalHost, 8091, hostForNetworkConnections);
-      return new HostAndServicePorts(hostForNetworkConnections, ports, id, ketamaAuthority, serverGroup, null);
+      return new HostAndServicePorts(hostForNetworkConnections, ports, id, ketamaAuthority, serverGroup, null, null);
     }
   }
 

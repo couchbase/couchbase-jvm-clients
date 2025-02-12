@@ -76,7 +76,7 @@ class NodeTest {
   private static CoreContext CTX;
 
   private static NodeIdentifier testNodeIdentifier() {
-    return new NodeIdentifier(new HostAndPort("example.com", 8091), "example.com", null);
+    return new NodeIdentifier(new HostAndPort("example.com", 8091), "example.com");
   }
 
   @BeforeAll

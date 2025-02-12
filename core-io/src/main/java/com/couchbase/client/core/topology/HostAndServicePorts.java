@@ -53,6 +53,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     new NodeIdentifier("<inaccessible>", 0, "<inaccessible>"),
     null,
     null,
+    null,
     null
   );
 
@@ -62,6 +63,7 @@ public class HostAndServicePorts implements KetamaRingNode {
   private final @Nullable HostAndPort ketamaAuthority;
   private final @Nullable String serverGroup;
   private final @Nullable String appTelemetryPath;
+  private final @Nullable String uuid;
 
   public HostAndServicePorts(
     String host,
@@ -69,7 +71,8 @@ public class HostAndServicePorts implements KetamaRingNode {
     NodeIdentifier id,
     @Nullable HostAndPort ketamaAuthority,
     @Nullable String serverGroup,
-    @Nullable String appTelemetryPath
+    @Nullable String appTelemetryPath,
+    @Nullable String nodeUuid
   ) {
     this.host = requireNonNull(host);
     this.ports = unmodifiableMap(newEnumMap(ServiceType.class, ports));
@@ -77,6 +80,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     this.ketamaAuthority = ketamaAuthority;
     this.serverGroup = serverGroup;
     this.appTelemetryPath = appTelemetryPath;
+    this.uuid = nodeUuid;
   }
 
   public boolean inaccessible() {
@@ -130,6 +134,13 @@ public class HostAndServicePorts implements KetamaRingNode {
     return appTelemetryPath;
   }
 
+  /**
+   * Returns this node's UUID, or null if the Couchbase Server version is less than 8.0.0.
+   */
+  public @Nullable String uuid() {
+    return uuid;
+  }
+
   public boolean has(ServiceType serviceType) {
     return ports.containsKey(serviceType);
   }
@@ -146,7 +157,7 @@ public class HostAndServicePorts implements KetamaRingNode {
       temp.remove(t);
     }
 
-    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority, this.serverGroup, this.appTelemetryPath);
+    return new HostAndServicePorts(this.host, temp, this.id, this.ketamaAuthority, this.serverGroup, this.appTelemetryPath, this.uuid);
   }
 
   @Stability.Internal
@@ -154,7 +165,7 @@ public class HostAndServicePorts implements KetamaRingNode {
     if (Objects.equals(this.ketamaAuthority, ketamaAuthority)) {
       return this;
     }
-    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority, this.serverGroup, this.appTelemetryPath);
+    return new HostAndServicePorts(this.host, this.ports, this.id, ketamaAuthority, this.serverGroup, this.appTelemetryPath, this.uuid);
   }
 
   boolean matches(SeedNode seedNode) {
