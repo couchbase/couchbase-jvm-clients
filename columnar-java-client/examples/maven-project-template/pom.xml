@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>couchbase-columnar-java-client</artifactId>
-            <version>1.0.0</version><!--REL--><!-- needs to be set to previous release -->
+            <version>1.0.8</version><!--REL--><!-- needs to be set to previous release -->
         </dependency>
 
         <!-- Including this optional dependency lets IntelliJ IDEA
