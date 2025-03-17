@@ -16,35 +16,15 @@
 
 package com.couchbase.client.kotlin.codec
 
-import com.couchbase.client.kotlin.annotations.VolatileCouchbaseApi
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
-import java.lang.reflect.Type
-import java.util.concurrent.ConcurrentHashMap
-
-private val serializerCache = ConcurrentHashMap<Type, KSerializer<*>>()
 
 /**
  * A JsonSerializer for integrating with `kotlinx.serialization`.
  *
- * **CAVEAT:** This class uses experimental Kotlin Serialization APIs,
- * and only works with non-nullable types. We plan to lift these limitations after
- * [kotlinx.serialization issue 1348](https://github.com/Kotlin/kotlinx.serialization/issues/1348)
- * is resolved.
- *
- * In the meantime, if you prefer not to rely on experimental APIs, or if you must read or write a nullable type,
- * we advise doing the serialization "manually" as shown in the following sample.
- * Note that you can still make [KotlinxSerializationJsonSerializer] the default serializer,
- * and override the serialization for nullable types as needed.
- *
  * @sample com.couchbase.client.kotlin.samples.configureKotlinxSerializationJsonSerializer
- * @sample com.couchbase.client.kotlin.samples.manualKotlinxSerialization
  */
-@ExperimentalSerializationApi
-@VolatileCouchbaseApi
 public class KotlinxSerializationJsonSerializer(
     private val jsonFormat: Json = Json
 ) : JsonSerializer {
@@ -55,21 +35,11 @@ public class KotlinxSerializationJsonSerializer(
 
     override fun <T> deserialize(json: ByteArray, type: TypeRef<T>): T {
         // Json.decodeFromStream takes 3x longer for some reason?
-        val result = jsonFormat.decodeFromString(serializer(type), String(json))
-        if (result == null && !type.nullable) {
-            throw kotlinx.serialization.SerializationException("Can't deserialize null value into non-nullable type $type")
-        }
-        return result
+        return jsonFormat.decodeFromString(serializer(type), String(json))
     }
 
     private fun <T> serializer(typeRef: TypeRef<T>): KSerializer<T> {
-        // Ideally we'd capture the Kotlin KType (or, more likely, the KSerializer) when creating the
-        // TypeRef, but as of Kotlin 1.7 that's very slow, to the extent that it dominates
-        // serialization time. See https://github.com/Kotlin/kotlinx.serialization/issues/1348
-        //
-        // As a compromise, create the KSerializer from the Java Type, and cache it.
-        // This is a partial solution that works well for non-nullable types.
         @Suppress("UNCHECKED_CAST")
-        return serializerCache.getOrPut(typeRef.type) { serializer(typeRef.type).nullable } as KSerializer<T>
+        return jsonFormat.serializersModule.serializer(typeRef.ktype) as KSerializer<T>
     }
 }

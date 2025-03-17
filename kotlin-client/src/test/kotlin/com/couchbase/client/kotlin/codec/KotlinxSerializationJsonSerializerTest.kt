@@ -17,7 +17,6 @@
 package com.couchbase.client.kotlin.codec
 
 import com.couchbase.client.kotlin.internal.toStringUtf8
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -30,7 +29,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-@OptIn(ExperimentalSerializationApi::class)
 internal class KotlinxSerializationJsonSerializerTest {
     private val serializer = KotlinxSerializationJsonSerializer()
 
