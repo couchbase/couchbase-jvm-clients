@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
+import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
@@ -59,6 +60,33 @@ public class TransactionAttemptContext internal constructor(
      */
     public suspend fun get(collection: Collection, id: String): TransactionGetResult {
         val core = internal.get(collection.collectionId, id).awaitSingle()
+        return TransactionGetResult(core, defaultJsonSerializer)
+    }
+
+    /**
+     * Gets a document (possibly a replica) from the specified Couchbase [collection] matching the specified [id].
+     *
+     * It will be fetched only from nodes in the preferred server group, which can be configured with
+     * the `preferredServerGroup` client setting. If this client setting is unset or refers to a nonexistent server group,
+     * or if no node in group has the document, then [DocumentUnretrievableException] is thrown.
+     *
+     * It is strongly recommended to that this method always be used with a fallback strategy, like:
+     * ```
+     * val result = try {
+     *     getReplicaFromPreferredServerGroup(collection, id)
+     * } catch (e: DocumentUnretrievableException) {
+     *     get(collection, id)
+     * }
+     * ```
+     *
+     * @param collection the Couchbase collection containing the document
+     * @param id the ID of the document to get
+     * @throws DocumentUnretrievableException if for any reason the document cannot be fetched.
+     *
+     * @sample com.couchbase.client.kotlin.samples.configurePreferredServerGroup
+     */
+    public suspend fun getReplicaFromPreferredServerGroup(collection: Collection, id: String): TransactionGetResult {
+        val core = internal.getReplicaFromPreferredServerGroup(collection.collectionId, id).awaitSingle()
         return TransactionGetResult(core, defaultJsonSerializer)
     }
 
