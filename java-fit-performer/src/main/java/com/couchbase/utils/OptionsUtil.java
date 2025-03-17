@@ -159,6 +159,18 @@ public class OptionsUtil {
               clusterEnvironment.preferredServerGroup(cc.getPreferredServerGroup());
               // [end]
             }
+
+            if (cc.hasAppTelemetryEndpoint()) {
+              // [if:3.8.0]
+              clusterEnvironment.appTelemetryEndpoint(cc.getAppTelemetryEndpoint());
+              // [end]
+            }
+
+            if (cc.hasEnableAppTelemetry()) {
+              // [if:3.8.0]
+              clusterEnvironment.disableAppTelemetry(!cc.getEnableAppTelemetry());
+              // [end]
+            }
         }
 
         return clusterEnvironment;
