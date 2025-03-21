@@ -16,13 +16,12 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -33,13 +32,13 @@ import static java.util.stream.Collectors.toList;
  */
 class PathTree {
   private String jsonPointer;
-  private Optional<Consumer<MatchedValue>> callback = Optional.empty();
+  private @Nullable Consumer<MatchedValue> callback = null;
 
   private final Map<String, PathTree> children = new HashMap<>();
   private final String name;
-  private final PathTree parent;
+  private final @Nullable PathTree parent;
 
-  private PathTree(PathTree parent, String name) {
+  private PathTree(@Nullable PathTree parent, String name) {
     this.parent = parent;
     this.name = requireNonNull(name);
   }
@@ -48,7 +47,7 @@ class PathTree {
     return new PathTree(null, "$ROOT");
   }
 
-  Optional<Consumer<MatchedValue>> callback() {
+  @Nullable Consumer<MatchedValue> callback() {
     return callback;
   }
 
@@ -56,12 +55,14 @@ class PathTree {
     return jsonPointer;
   }
 
+  @Nullable
   PathTree parent() {
     return parent;
   }
 
-  Optional<PathTree> subtree(String name) {
-    return Optional.ofNullable(children.get(name));
+  @Nullable
+  PathTree subtree(String name) {
+    return children.get(name);
   }
 
   private PathTree getOrCreateSubtree(String name) {
@@ -70,7 +71,7 @@ class PathTree {
 
   static List<String> parseJsonPointer(String jsonPointer) {
     if (!jsonPointer.startsWith("/") && !jsonPointer.isEmpty()) {
-      throw InvalidArgumentException.fromMessage("JSON pointer must be empty or start with forward slash (/) but got \"" + jsonPointer + "\"");
+      throw new IllegalArgumentException("JSON pointer must be empty or start with forward slash (/) but got \"" + jsonPointer + "\"");
     }
 
     final int HONOR_ALL_DELIMITERS = -1;
@@ -96,7 +97,7 @@ class PathTree {
     for (String p : path) {
       tree = tree.getOrCreateSubtree(p);
 
-      if (tree.callback.isPresent()) {
+      if (tree.callback != null) {
         // only leaf nodes may have a callback, and only one callback per node
         throw new IllegalStateException("Already have a callback for path " + path + " or one of its ancestors.");
       }
@@ -107,11 +108,11 @@ class PathTree {
     }
 
     tree.jsonPointer = jsonPointer;
-    tree.callback = Optional.of(callback);
+    tree.callback = callback;
   }
 
   @Override
   public String toString() {
-    return "\"" + name + "\"" + (children.values().isEmpty() ? "!" : (":" + children.values()));
+    return "\"" + name + "\"" + (children.isEmpty() ? "!" : (":" + children.values()));
   }
 }

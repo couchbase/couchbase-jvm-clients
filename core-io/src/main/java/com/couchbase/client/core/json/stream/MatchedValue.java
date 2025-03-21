@@ -16,65 +16,77 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
-import com.couchbase.client.core.error.DecodingFailureException;
-import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
 
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import static com.couchbase.client.core.json.stream.JsonStreamParser.jsonFactory;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
-public class MatchedValue {
+public final class MatchedValue {
   private final String jsonPointer;
   private final byte[] json;
 
   MatchedValue(String jsonPointer, byte[] json) {
-    this.jsonPointer = jsonPointer;
+    this.jsonPointer = requireNonNull(jsonPointer);
     this.json = requireNonNull(json);
+  }
+
+  public byte[] bytes() {
+    return json;
   }
 
   public boolean isNull() {
     return json[0] == 'n';
   }
 
+  /**
+   * @deprecated In favor of {@link #bytes()}
+   */
+  @Deprecated
   public byte[] readBytes() {
-    return json;
-  }
-
-  public JsonNode readTree() {
-    try {
-      return requireNonNull(Mapper.decodeIntoTree(json));
-    } catch (Exception shouldNeverHappen) {
-      throw new AssertionError("Value at " + jsonPointer + " is not JSON.", shouldNeverHappen);
-    }
+    return bytes();
   }
 
   public String readString() {
-    return read(String.class);
+    return parseOneToken(JsonParser::getValueAsString);
   }
 
   public double readDouble() {
-    return read(Double.class);
+    return parseOneToken(JsonParser::getDoubleValue);
   }
 
   public long readLong() {
-    return read(Long.class);
+    return parseOneToken(JsonParser::getLongValue);
   }
 
   public boolean readBoolean() {
-    return read(Boolean.class);
+    return parseOneToken(JsonParser::getBooleanValue);
   }
 
-  private <T> T read(Class<T> type) {
-    try {
-      return requireNonNull(Mapper.decodeInto(json, type));
-    } catch (Exception e) {
-      throw new DecodingFailureException("Value at " + jsonPointer + " is not a " + type.getSimpleName(), e);
+  private interface IoFunction<T, R> {
+    R apply(T t) throws IOException;
+  }
+
+  private <T> T parseOneToken(IoFunction<JsonParser, T> reader) {
+    try (JsonParser parser = jsonFactory.createParser(json)) {
+      JsonToken token = parser.nextToken();
+      if (token == null) throw new UncheckedIOException(new EOFException("Unexpected end of stream for value at " + jsonPointer));
+      if (token == JsonToken.VALUE_NULL) throw new NullPointerException("Value at " + jsonPointer + " is null.");
+      return reader.apply(parser);
+
+    } catch (IOException e) {
+      throw new ClassCastException("Value at " + jsonPointer + " does not match requested type; " + e);
     }
   }
 
   @Override
   public String toString() {
-    return "JsonValue{" +
+    return "MatchedValue{" +
       "jsonPointer='" + jsonPointer + '\'' +
       ", json=" + new String(json, UTF_8) +
       '}';

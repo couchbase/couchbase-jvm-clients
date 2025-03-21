@@ -17,12 +17,11 @@
 package com.couchbase.client.core.io.netty.chunk;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelConfig;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
-import com.couchbase.client.core.json.stream.CopyingStreamWindow;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
@@ -32,6 +31,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
+import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -47,11 +47,6 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    * Holds the current stream parser created by the child.
    */
   private JsonStreamParser parser;
-
-  /**
-   * Scratch buffer reused by each stream parser.
-   */
-  private final ByteBuf scratchBuffer = Unpooled.unreleasableBuffer(Unpooled.buffer());
 
   /**
    * Remember if the stream parser threw an exception so we can skip the rest of the stream.
@@ -144,17 +139,27 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
 
   @Override
   public void feed(ByteBuf input) {
-    if (decodingFailure != null) {
-      return;
-    }
-
     try {
-      parser.feed(input);
+      if (decodingFailure != null) {
+        return;
+      }
 
-    } catch (DecodingFailureException e) {
-      decodingFailure = e;
-      failRows(e);
-      failTrailer(e);
+      if (input.nioBufferCount() != -1) {
+        for (ByteBuffer nioBuffer : input.nioBuffers()) {
+          parser.feed(nioBuffer);
+        }
+      } else {
+        // Shouldn't end up here, but just in case...
+        parser.feed(ByteBuffer.wrap(ByteBufUtil.getBytes(input)));
+      }
+
+    } catch (Exception e) {
+      decodingFailure = new DecodingFailureException(e);
+      failRows(decodingFailure);
+      failTrailer(decodingFailure);
+
+    } finally {
+      input.release();
     }
   }
 
@@ -166,7 +171,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   @Override
   public void initialize(final ChannelConfig channelConfig) {
     cleanup();
-    parser = parserBuilder().build(scratchBuffer, new CopyingStreamWindow(channelConfig.getAllocator()));
+    parser = parserBuilder().build();
     this.channelConfig = channelConfig;
     this.trailer = Sinks.one();
     this.requested.set(0);

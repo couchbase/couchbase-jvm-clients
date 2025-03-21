@@ -16,24 +16,21 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-
-import java.io.Closeable;
-
 /**
  * A sliding window over the contents of a byte stream.
- * <p>
- * Implementations may use different buffering strategies for remembering recent stream data.
  */
-public interface StreamWindow extends Closeable {
+interface StreamWindow {
   /**
-   * Appends the given buffer to the end of the stream. The window takes ownership
-   * of the buffer (and may even release it immediately).
+   * Appends the given bytes to the end of the stream.
    */
-  void add(ByteBuf buffer);
+  void add(byte[] bytes, int offset, int len);
+
+  default void add(byte[] bytes) {
+    add(bytes, 0, bytes.length);
+  }
 
   /**
-   * Forgets any bytes with stream offsets lower then the given offset.
+   * Forgets any bytes with stream offsets lower than the given offset.
    *
    * @param offset offset relative to the start of the stream.
    * @throws IndexOutOfBoundsException if the given offset is positive and outside the window
@@ -48,9 +45,4 @@ public interface StreamWindow extends Closeable {
    * @throws IndexOutOfBoundsException if the window does not contain all of the requested region
    */
   byte[] getBytes(long startOffset, long endOffset);
-
-  /**
-   * Releases all buffers owned by the window.
-   */
-  void close();
 }

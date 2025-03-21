@@ -16,34 +16,23 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A stream window implementation that copies input data into a single accumulator buffer.
  */
-public class CopyingStreamWindow implements StreamWindow {
-  private final ByteBuf window;
+class CopyingStreamWindow implements StreamWindow {
+  private final Buffer window = new Buffer();
 
   /**
    * Offset from the beginning of the stream to the end of the window.
    */
   private long streamOffset;
 
-  public CopyingStreamWindow(ByteBufAllocator allocator) {
-    this.window = allocator.buffer();
-  }
-
   @Override
-  public void add(ByteBuf buf) {
-    streamOffset += buf.readableBytes();
-    try {
-      window.writeBytes(buf);
-    } finally {
-      buf.release();
-    }
+  public void add(byte[] bytes, int offset, int len) {
+    window.writeBytes(bytes, offset, len);
+    streamOffset += len;
   }
 
   @Override
@@ -75,14 +64,11 @@ public class CopyingStreamWindow implements StreamWindow {
   }
 
   @Override
-  public void close() {
-    if (window.refCnt() > 0) {
-      window.release();
-    }
-  }
-
-  @Override
   public String toString() {
-    return window + ", streamOffset=" + streamOffset + ", content=`" + window.toString(UTF_8) + "`";
+    return "CopyingStreamWindow{" +
+            "window=" + window +
+            ", streamOffset=" + streamOffset +
+            ", windowContents='" + window.toString(UTF_8) + "'" +
+            '}';
   }
 }

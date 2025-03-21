@@ -20,48 +20,38 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonFactory;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonParser;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.async.ByteArrayFeeder;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.error.DecodingFailureException;
-import com.couchbase.client.core.error.InvalidArgumentException;
+import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
-
-import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Create an instance with {@link #builder()}. Use the builder to register
  * JSON pointers and associated callbacks.
  * <p>
- * Supply the input JSON by calling {@link #feed(ByteBuf)} repeatedly.
- * Close the parser after feeding the last of the data.
+ * Supply the input JSON by calling {@link #feed} repeatedly.
+ * When you're done feeding the parser JSON, call {@link #endOfInput()}
+ * to validate the input was well-formed.
+ * <p>
+ * Finally, call {@link #close()} to release resources used by the parser.
  * <p>
  * Not thread safe.
  */
-public class JsonStreamParser implements Closeable {
-  private static final JsonFactory jsonFactory = new JsonFactory();
+public final class JsonStreamParser implements Closeable {
+  static final JsonFactory jsonFactory = new JsonFactory();
 
-  /**
-   * Jackson non-blocking parser tokenizes the input sent to the feeder.
-   */
   private final JsonParser parser;
   private final ByteArrayFeeder feeder;
 
-  /**
-   * KLUDGE: An unpooled heap buffer used for feeding Jackson. As of Jackson 2.9.8,
-   * the non-blocking parser can only be fed from offset zero of a byte array.
-   * Input is copied to this buffer's backing array before being fed to Jackson.
-   */
-  private final ByteBuf scratchBuffer;
+  private final Buffer scratchBuffer = new Buffer();
 
   /**
    * Recent history of the input stream retained in memory.
    */
-  private final StreamWindow window;
+  private final StreamWindow window = new CopyingStreamWindow();
 
   /**
    * Offset from beginning of stream where the current capture starts.
@@ -74,38 +64,21 @@ public class JsonStreamParser implements Closeable {
   private final StructureNavigator navigator;
 
   /**
-   * Remember whether the parser has been closed so close() may be called repeatedly.
-   */
-  private boolean closed;
-
-  /**
    * Construct new parser instances using the builder returned by this method.
    */
   public static Builder builder() {
     return new Builder();
   }
 
-  private JsonStreamParser(PathTree pathTree, ByteBuf scratchBuffer, StreamWindow window) {
-    this.scratchBuffer = checkScratchBuffer(scratchBuffer);
-    this.window = requireNonNull(window);
+  private JsonStreamParser(PathTree pathTree) {
     this.navigator = new StructureNavigator(this, pathTree);
 
     try {
       this.parser = jsonFactory.createNonBlockingByteArrayParser();
       this.feeder = (ByteArrayFeeder) parser.getNonBlockingInputFeeder();
-    } catch (IOException impossible) {
-      throw new AssertionError(impossible);
+    } catch (IOException shouldNotHappen) {
+      throw new UncheckedIOException(shouldNotHappen);
     }
-  }
-
-  private static ByteBuf checkScratchBuffer(ByteBuf buf) {
-    // Must have backing array because Jackson 2.x can only be fed from array.
-    // Must have offset 0 due to https://github.com/FasterXML/jackson-core/issues/531
-    // Must have unlimited capacity because we don't know how big the feeding buffers will be.
-    if (buf.hasArray() && buf.arrayOffset() == 0 && buf.maxCapacity() == Integer.MAX_VALUE) {
-      return buf;
-    }
-    throw InvalidArgumentException.fromMessage("Expected uncapped unpooled heap buffer but got " + buf);
   }
 
   /**
@@ -114,18 +87,24 @@ public class JsonStreamParser implements Closeable {
    * <p>
    * Call this method repeatedly as more input becomes available.
    *
-   * @throws DecodingFailureException if malformed JSON is detected in this chunk of input
-   *                                 or if a value consumer throws an exception.
+   * @throws UncheckedIOException if malformed JSON is detected in this chunk of input
+   * @throws RuntimeException if a value consumer throws an exception
    */
-  public void feed(ByteBuf input) throws DecodingFailureException {
+  public void feed(byte[] array, int offset, int len) {
     try {
-      feedJackson(input);
+      feedJackson(array, offset, len);
       processTokens();
       collectGarbage();
 
-    } catch (Throwable t) {
-      throw new DecodingFailureException(t);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
+  }
+
+  public void feed(ByteBuffer input) {
+    scratchBuffer.clear();
+    scratchBuffer.writeBytes(input);
+    feed(scratchBuffer.array(), 0, scratchBuffer.readableBytes());
   }
 
   /**
@@ -133,33 +112,32 @@ public class JsonStreamParser implements Closeable {
    * After calling this method no more data can be fed and parser assumes
    * no more data will be available.
    *
-   * @throws DecodingFailureException if malformed JSON is detected in this chunk of input.
+   * @throws UncheckedIOException if malformed JSON is detected in this chunk of input.
+   * @throws RuntimeException if a value consumer throws an exception
    */
   public void endOfInput() {
     try {
       feeder.endOfInput();
       processTokens();
 
-    } catch (Throwable t) {
-      throw new DecodingFailureException(t);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
   }
 
-  private void feedJackson(ByteBuf input) throws IOException {
-    // Until a ByteBufferFeeder implementation arrives in Jackson 3, must copy input
-    // to a heap buffer and feed from the backing array.
-    input.markReaderIndex();
-    scratchBuffer.clear();
-    scratchBuffer.writeBytes(input);
-    input.resetReaderIndex();
+  private void feedJackson(byte[] bytes, int offset, int len) throws IOException {
+    // Remember the JSON so we can retrieve matched values later.
+    window.add(bytes, offset, len);
 
-    // Do this after copying into the feeder buffer because the input buffer is
-    // not guaranteed to be accessible after it's added to the history window.
-    // Do this before calling feedInput because that may throw an exception and we need
-    // to make sure the input buffer is released when parser is closed.
-    window.add(input);
+    // Workaround for https://github.com/FasterXML/jackson-core/issues/1412
+    if (offset != 0) {
+      scratchBuffer.clear();
+      scratchBuffer.writeBytes(bytes, offset, len);
+      bytes = scratchBuffer.array();
+      offset = 0;
+    }
 
-    feeder.feedInput(scratchBuffer.array(), scratchBuffer.arrayOffset(), scratchBuffer.writerIndex());
+    feeder.feedInput(bytes, offset, offset + len); // Watch out! Second argument is an offset, not necessarily length.
   }
 
   private void processTokens() throws IOException {
@@ -191,8 +169,9 @@ public class JsonStreamParser implements Closeable {
     }
   }
 
+  @Nullable
   String getCurrentName() throws IOException {
-    return parser.getCurrentName();
+    return parser.currentName();
   }
 
   void beginCapture() {
@@ -201,11 +180,11 @@ public class JsonStreamParser implements Closeable {
 
   private long tokenStartOffset() {
     // Jackson treats this offset as one-based. We want zero-based, so subtract 1.
-    return parser.getTokenLocation().getByteOffset() - 1;
+    return parser.currentTokenLocation().getByteOffset() - 1;
   }
 
   private long tokenEndOffset() {
-    return parser.getCurrentLocation().getByteOffset();
+    return parser.currentLocation().getByteOffset();
   }
 
   void emitCapturedValue(String jsonPointer, Consumer<MatchedValue> consumer) {
@@ -218,17 +197,10 @@ public class JsonStreamParser implements Closeable {
    */
   @Override
   public void close() {
-    if (closed) {
-      return;
-    }
-    closed = true;
-    scratchBuffer.release();
-    window.close();
-
     try {
       parser.close();
-    } catch (IOException inconceivable) {
-      throw new AssertionError("non-blocking parser should not have thrown exception on close", inconceivable);
+    } catch (IOException shouldNotHappen) {
+      throw new UncheckedIOException("Jackson non-blocking JsonParser threw an exception on close, which is totally unexpected.", shouldNotHappen);
     }
   }
 
@@ -238,9 +210,12 @@ public class JsonStreamParser implements Closeable {
    * <p>
    * Not thread safe.
    */
-  public static class Builder {
+  public static final class Builder {
     private final PathTree tree = PathTree.createRoot();
-    private boolean frozen;
+    private volatile boolean frozen;
+
+    Builder() {
+    }
 
     /**
      * Register a callback to invoke when the target of the JSON pointer is found.
@@ -259,22 +234,8 @@ public class JsonStreamParser implements Closeable {
      * to get fresh parsers with the same configuration.
      */
     public JsonStreamParser build() {
-      return build(null, null);
-    }
-
-    /**
-     * Return a new parser that uses the given scratch buffer and stream window.
-     * May be called repeatedly to get fresh parsers with the same configuration, but care must
-     * be taken to ensure only one parser is using the scratch buffer at a time.
-     *
-     * @param scratchBuffer for reading
-     * @param window for allocating the stream window's composite buffer.
-     */
-    public JsonStreamParser build(ByteBuf scratchBuffer, StreamWindow window) {
       frozen = true;
-      return new JsonStreamParser(tree,
-        defaultIfNull(scratchBuffer, Unpooled::buffer),
-        defaultIfNull(window, () -> new CopyingStreamWindow(UnpooledByteBufAllocator.DEFAULT)));
+      return new JsonStreamParser(tree);
     }
 
     private void checkNotFrozen() {

@@ -21,8 +21,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonToken;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.function.Consumer;
 
+import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -31,7 +31,8 @@ import static java.util.Objects.requireNonNull;
  */
 class StructureNavigator {
 
-  interface State extends Consumer<JsonToken> {
+  interface State  {
+    void accept(JsonToken token);
   }
 
   /**
@@ -53,8 +54,6 @@ class StructureNavigator {
   private final State fastForwardObject = new FastForwarding(JsonToken.START_OBJECT, JsonToken.END_OBJECT);
   private final State fastForwardArray = new FastForwarding(JsonToken.START_ARRAY, JsonToken.END_ARRAY);
 
-  private State state;
-
   private enum Mode {
     SCAN, // The current value or one of its descendants might be a match.
     SKIP, // The current value is a dead end.
@@ -72,7 +71,8 @@ class StructureNavigator {
   /**
    * Tracks the nested structure of JSON Objects and Arrays.
    */
-  private final Deque<Scope> scopeStack = new ArrayDeque<>();
+  private final Deque<Scope> scopeStack = new ArrayDeque<>(singletonList(new RootScope()));
+  private State state = scopeStack.getFirst();
 
   /**
    * The navigator is not aware of token offsets or buffer contents;
@@ -83,7 +83,6 @@ class StructureNavigator {
   StructureNavigator(JsonStreamParser parser, PathTree pathTree) {
     this.pathTree = requireNonNull(pathTree);
     this.parser = requireNonNull(parser);
-    pushScope(new RootScope());
   }
 
   public void accept(JsonToken token) {
@@ -123,7 +122,7 @@ class StructureNavigator {
       // All we need to do is indicate we're no longer skipping.
       mode = Mode.SCAN;
     } else {
-      pathTree = pathTree.parent();
+      pathTree = requireNonNull(pathTree.parent(), "expected non-null parent");
     }
     //   System.out.println("  UP TREE -> " + mode + " / " + pathTree);
   }
@@ -138,7 +137,7 @@ class StructureNavigator {
     }
 
     final String fieldName = currentScope().getCurrentName();
-    final PathTree subtree = pathTree.subtree(fieldName).orElse(null);
+    final PathTree subtree = pathTree.subtree(fieldName);
 
     if (subtree == null) {
       mode = Mode.SKIP;
@@ -146,7 +145,7 @@ class StructureNavigator {
     } else {
       pathTree = subtree;
 
-      if (subtree.callback().isPresent()) {
+      if (subtree.callback() != null) {
         mode = Mode.CAPTURE;
         parser.beginCapture();
       } else {
@@ -195,7 +194,7 @@ class StructureNavigator {
           return;
 
         default: // Jackson should have caught and reported this
-          throw new AssertionError("Unexpected token: " + token);
+          throw new RuntimeException("Unexpected token: " + token);
       }
     }
   }
@@ -282,8 +281,10 @@ class StructureNavigator {
   private void finishValue() {
     if (mode == Mode.CAPTURE) {
       mode = Mode.SCAN;
-      parser.emitCapturedValue(pathTree.jsonPointer(), pathTree.callback()
-        .orElseThrow(() -> new AssertionError("missing callback for path tree " + pathTree)));
+      parser.emitCapturedValue(
+        pathTree.jsonPointer(),
+        requireNonNull(pathTree.callback(), "missing callback for path tree " + pathTree)
+      );
     }
     transitionTo(currentScope()); // return control to the parent Object/Array handler
     climbPathTree();

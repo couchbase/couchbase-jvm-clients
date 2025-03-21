@@ -16,60 +16,78 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JsonStreamParserTest {
 
-  static {
-    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-  }
-
   @Test
   void exampleUsage() {
-    final List<String> matches = new ArrayList<>();
-
-    JsonStreamParser parser = JsonStreamParser.builder()
-      .doOnValue("/name", v -> matches.add("Hello " + v.readString()))
-      .doOnValue("/pets/-/name", v -> matches.add("I see you have a pet named " + v.readString()))
-      .doOnValue("/blob", v -> matches.add("Here's a blob of JSON: " + new String(v.readBytes(), UTF_8)))
-      .build();
-
     byte[] json = "{'name':'Jon','pets':[{'name':'Odie'},{'name':'Garfield'}],'blob':{'magicWord':'xyzzy'}}"
       .replace("'", "\"")
       .getBytes(UTF_8);
 
-    int half = json.length / 2;
-    ByteBuf firstChunk = Unpooled.copiedBuffer(json, 0, half);
-    ByteBuf secondChunk = Unpooled.copiedBuffer(json, half, json.length - half);
+    List<String> matches = new ArrayList<>();
 
-    try {
-      parser.feed(firstChunk); // parser takes ownership of the buffer and will release it.
-      assertEquals(Arrays.asList("Hello Jon", "I see you have a pet named Odie"), matches);
+    JsonStreamParser.Builder builder = JsonStreamParser.builder()
+      .doOnValue("/name", v -> matches.add("Hello " + v.readString()))
+      .doOnValue("/pets/-/name", v -> matches.add("I see you have a pet named " + v.readString()))
+      .doOnValue("/blob", v -> matches.add("Here's a blob of JSON: " + new String(v.bytes(), UTF_8)));
+
+    try (JsonStreamParser parser = builder.build()) {
+      int half = json.length / 2;
+      parser.feed(json, 0, half);
+      assertEquals(
+        Arrays.asList(
+          "Hello Jon",
+          "I see you have a pet named Odie"
+        ),
+        matches
+      );
+
       matches.clear();
-
-      parser.feed(secondChunk);
-      assertEquals(Arrays.asList("I see you have a pet named Garfield", "Here's a blob of JSON: {\"magicWord\":\"xyzzy\"}"), matches);
-      matches.clear();
-
-
-    } finally {
-      // Must always call close() when done to release the buffers owned by the parser.
-      parser.close();
+      parser.feed(json, half, json.length - half);
+      assertEquals(
+        Arrays.asList(
+          "I see you have a pet named Garfield",
+          "Here's a blob of JSON: {\"magicWord\":\"xyzzy\"}"
+        ),
+        matches
+      );
     }
+  }
+
+  @Test
+  void canFeedFromByteBuffer() {
+    byte[] json = "{'magicWord':'xyzzy'}"
+      .replace("'", "\"")
+      .getBytes(UTF_8);
+
+    List<String> matches = new ArrayList<>();
+
+    JsonStreamParser.Builder builder = JsonStreamParser.builder()
+      .doOnValue("/magicWord", v -> matches.add(v.readString()));
+
+    try (JsonStreamParser parser = builder.build()) {
+      int half = json.length / 2;
+      parser.feed(ByteBuffer.wrap(json, 0, half));
+      parser.feed(ByteBuffer.wrap(json, half, json.length - half));
+      parser.endOfInput();
+    }
+
+    assertEquals(singletonList("xyzzy"), matches);
   }
 
   @Test
@@ -249,7 +267,7 @@ class JsonStreamParserTest {
       }
     }
 
-    private final List<ResultChecker.ListenerCheck> checks = new ArrayList<>();
+    private final List<ListenerCheck> checks = new ArrayList<>();
     private final JsonStreamParser.Builder builder = JsonStreamParser.builder();
     private final byte[] json;
 
@@ -262,14 +280,14 @@ class JsonStreamParserTest {
         .map(ResultChecker::normalizeQuotes)
         .collect(toList());
 
-      ResultChecker.ListenerCheck check = new ResultChecker.ListenerCheck(jsonPointer, expected);
-      builder.doOnValue(jsonPointer, value -> check.addActual(new String(value.readBytes(), UTF_8)));
+      ListenerCheck check = new ListenerCheck(jsonPointer, expected);
+      builder.doOnValue(jsonPointer, value -> check.addActual(new String(value.bytes(), UTF_8)));
       checks.add(check);
       return this;
     }
 
     private static String normalizeQuotes(String s) {
-      return s == null ? null : s.replace("'", "\"");
+      return s.replace("'", "\"");
     }
 
     void check() throws IOException {
@@ -281,26 +299,23 @@ class JsonStreamParserTest {
     }
 
     void checkWithChunkSizeAndStreamWindow(final int chunkSize) throws IOException {
-      //System.out.println("testing with chunk size " + chunkSize);
       checks.forEach(c -> c.actual.clear()); // reset
 
       try (JsonStreamParser parser = builder.build()) {
-        ByteBuf buf = Unpooled.wrappedBuffer(json);
+        Buffer buf = new Buffer();
+        buf.writeBytes(json);
 
-        parser.feed(Unpooled.buffer()); // make sure empty chunk doesn't break anything
+        parser.feed(new byte[0], 0, 0); // make sure empty chunk doesn't break anything
 
-        int offset = 0;
         while (buf.isReadable()) {
-          ByteBuf chunk = Unpooled.buffer();
+          Buffer chunk = new Buffer();
           chunk.writeBytes(buf, min(chunkSize, buf.readableBytes()));
-//          System.out.println("feeding (offset " + offset + ") : `" + chunk.toString(UTF_8) + "`");
-          offset += chunkSize;
-          parser.feed(chunk);
+          parser.feed(chunk.array(), chunk.readerIndex(), chunk.readableBytes());
         }
         parser.endOfInput();
       }
 
-      checks.forEach(ResultChecker.ListenerCheck::checkResult);
+      checks.forEach(ListenerCheck::checkResult);
     }
   }
 }

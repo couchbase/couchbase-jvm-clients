@@ -16,12 +16,12 @@
 
 package com.couchbase.client.core.json.stream;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -36,7 +36,7 @@ class PathTreeTest {
 
   @Test
   void nonEmptyPointersMustHaveLeadingSlash() {
-    assertThrows(InvalidArgumentException.class, () -> PathTree.parseJsonPointer("foo"));
+    assertThrows(IllegalArgumentException.class, () -> PathTree.parseJsonPointer("foo"));
   }
 
   @Test
@@ -47,12 +47,13 @@ class PathTreeTest {
     root.add("/a/c", v -> {
     });
 
-    assertEquals(root, root.subtree("").orElseThrow(AssertionError::new).parent());
+    assertEquals(root, requireNonNull(root.subtree("")).parent());
 
-    PathTree a = root.subtree("").orElseThrow(AssertionError::new)
-      .subtree("a").orElseThrow(AssertionError::new);
+    PathTree a = requireNonNull(
+      requireNonNull(root.subtree("")).subtree("a")
+    );
 
-    assertEquals(a, a.subtree("b").orElseThrow(AssertionError::new).parent());
-    assertEquals(a, a.subtree("c").orElseThrow(AssertionError::new).parent());
+    assertEquals(a, requireNonNull(a.subtree("b")).parent());
+    assertEquals(a, requireNonNull(a.subtree("c")).parent());
   }
 }
