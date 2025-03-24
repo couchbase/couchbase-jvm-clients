@@ -1315,7 +1315,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasCas()) out.cas(opts.getCas());
 
-            convertDurability(opts.getDurability(), out);
+            if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
 
             return out;
         }
@@ -1329,7 +1329,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasCas()) out.cas(opts.getCas());
 
-            convertDurability(opts.getDurability(), out);
+            if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
 
             return out;
         }
