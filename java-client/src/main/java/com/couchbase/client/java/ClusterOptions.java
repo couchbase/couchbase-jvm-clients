@@ -82,7 +82,6 @@ public class ClusterOptions {
    * This is the recommended way to configure the cluster environment
    * unless you need to share an environment between multiple clusters.
    */
-  @Stability.Uncommitted
   public ClusterOptions environment(final Consumer<ClusterEnvironment.Builder> environmentCustomizer) {
     notNull(environmentCustomizer, "environmentCustomizer");
     if (this.environment != null) {
