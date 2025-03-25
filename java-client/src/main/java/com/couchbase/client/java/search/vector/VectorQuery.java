@@ -17,8 +17,10 @@ package com.couchbase.client.java.search.vector;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.api.search.vector.CoreVector;
 import com.couchbase.client.core.api.search.vector.CoreVectorQuery;
+import com.couchbase.client.java.search.SearchQuery;
 import reactor.util.annotation.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -27,6 +29,7 @@ public class VectorQuery {
   private final CoreVector vector;
   private final String vectorField;
   private @Nullable Integer numCandidates;
+  private @Nullable CoreSearchQuery prefilter;
   private @Nullable Double boost;
 
   private VectorQuery(String vectorField, float[] vector) {
@@ -68,6 +71,22 @@ public class VectorQuery {
   }
 
   /**
+   * This is the prefilter query.
+   * <p>
+   * The server first executes this non-vector query to get an intermediate result.
+   * Then it executes the vector query on the intermediate result to get the final result.
+   * <p>
+   * If no prefilter is specified, the server executes the vector query on all indexed documents.
+   *
+   * @return this, for chaining.
+   */
+  @SinceCouchbase("7.6.4")
+  public VectorQuery prefilter(@Nullable SearchQuery prefilter) {
+    this.prefilter = prefilter == null ? null : prefilter.toCore();
+    return this;
+  }
+
+  /**
    * Can be used to control how much weight to give the results of this query vs other queries.
    * <p>
    * See the <a href="https://docs.couchbase.com/server/current/fts/fts-query-string-syntax-boosting.html">FTS documentation</a> for details.
@@ -81,6 +100,6 @@ public class VectorQuery {
 
   @Stability.Internal
   public CoreVectorQuery toCore() {
-    return new CoreVectorQuery(vector, vectorField, numCandidates, boost);
+    return new CoreVectorQuery(vector, vectorField, numCandidates, boost, prefilter);
   }
 }

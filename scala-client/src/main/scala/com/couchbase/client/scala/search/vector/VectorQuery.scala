@@ -17,14 +17,15 @@
 package com.couchbase.client.scala.search.vector
 
 import com.couchbase.client.core.annotation.SinceCouchbase
-import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.{CoreVector, CoreVectorQuery}
+import com.couchbase.client.scala.search.queries.SearchQuery
 
 /** Represents a vector query. */
 case class VectorQuery private (
     private val vectorQuery: Either[Array[Float], String],
     private val vectorField: String,
     private val numCandidates: Option[Int] = None,
+    private val prefilter: Option[SearchQuery] = None,
     private val boost: Option[Double] = None
 ) {
 
@@ -44,6 +45,19 @@ case class VectorQuery private (
   def numCandidates(numCandidates: Int): VectorQuery =
     copy(numCandidates = Some(numCandidates))
 
+  /** This is the prefilter query.
+    *
+    * The server first executes this non-vector query to get an intermediate result.
+    * Then it executes the vector query on the intermediate result to get the final result.
+    *
+    * If no prefilter is specified, the server executes the vector query on all indexed documents.
+    *
+    * @return a copy of this, for chaining.
+    */
+  @SinceCouchbase("7.6.4")
+  def prefilter(prefilter: SearchQuery): VectorQuery =
+    copy(prefilter = Some(prefilter))
+
   private[scala] def toCore: CoreVectorQuery =
     new CoreVectorQuery(
       vectorQuery match {
@@ -52,7 +66,8 @@ case class VectorQuery private (
       },
       vectorField,
       numCandidates.map(Integer.valueOf).orNull,
-      boost.map(java.lang.Double.valueOf).orNull
+      boost.map(java.lang.Double.valueOf).orNull,
+      prefilter.map(_.toCore).orNull
     )
 }
 

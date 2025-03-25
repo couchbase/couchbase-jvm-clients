@@ -57,13 +57,15 @@ internal data class InternalVectorQuery(
     val base64EncodedVector: String?,
     val field: String,
     val numCandidates: Int,
+    val prefilter: SearchQuery?,
     val boost: Double? = null,
 ) : VectorQuery() {
     override val core = CoreVectorQuery(
         CoreVector.eitherOf(vector, base64EncodedVector),
         field,
         numCandidates,
-        boost
+        boost,
+        prefilter?.core
     )
 
     override fun withBoost(boost: Double?) = copy(boost = boost)
@@ -81,6 +83,7 @@ internal data class InternalVectorQuery(
         if (base64EncodedVector != other.base64EncodedVector) return false
         if (field != other.field) return false
         if (numCandidates != other.numCandidates) return false
+        if (prefilter != other.prefilter) return false
         if (boost != other.boost) return false
 
         return true

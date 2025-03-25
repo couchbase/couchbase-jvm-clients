@@ -41,6 +41,17 @@ internal fun searchSpecSimpleVectorQuery(floatArray: FloatArray) {
     val spec: VectorQuery = SearchSpec.vector("reviews", floatArray)
 }
 
+internal fun searchSpecFilteredVectorQuery(floatArray: FloatArray) {
+    // A search specification for a prefiltered vector query.
+    // The server first executes the non-vector prefilter query,
+    // then executes the vector query against the filtered results.
+    val spec: VectorQuery = SearchSpec.vector(
+        field = "reviews",
+        vector = floatArray,
+        prefilter = SearchSpec.match("pizza"),
+    )
+}
+
 internal fun searchSpecVectorAnyOf(floatArray: FloatArray, otherFloatArray: FloatArray) {
     // A search specification that ORs together multiple vector queries.
     val spec = SearchSpec.anyOf(

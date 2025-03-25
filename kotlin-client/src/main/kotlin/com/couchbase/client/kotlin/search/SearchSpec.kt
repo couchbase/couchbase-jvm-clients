@@ -405,8 +405,12 @@ public sealed class SearchSpec {
          *
          * @param vector The vector to compare against.
          * @param field The document field to search.
+         * @param prefilter The prefilter query. The server first executes this non-vector query to get an intermediate result.
+         * Then it executes the vector query on the intermediate result to get the final result.
+         * If no prefilter is specified, the server executes the vector query on all indexed documents.
          *
          * @sample com.couchbase.client.kotlin.samples.searchSpecSimpleVectorQuery
+         * @sample com.couchbase.client.kotlin.samples.searchSpecFilteredVectorQuery
          * @sample com.couchbase.client.kotlin.samples.searchSpecVectorAnyOf
          * @sample com.couchbase.client.kotlin.samples.searchSpecMixedMode
          */
@@ -415,7 +419,15 @@ public sealed class SearchSpec {
             field: String,
             vector: FloatArray,
             numCandidates: Int = 3,
-        ): VectorQuery = InternalVectorQuery(vector.clone(), null, field, numCandidates)
+            @SinceCouchbase("7.6.4") prefilter: SearchQuery? = null,
+        ): VectorQuery = InternalVectorQuery(vector.clone(), null, field, numCandidates, prefilter)
+
+        @Deprecated(level = DeprecationLevel.HIDDEN, message = "Present for binary compatibility with pre 1.5.0")
+        public fun vector(
+            field: String,
+            vector: FloatArray,
+            numCandidates: Int = 3,
+        ): VectorQuery = vector(field, vector, numCandidates, null)
 
         /**
          * A Vector query, with the vector specified as a Base64-encoded sequence of little-endian IEEE 754 floats.
@@ -424,13 +436,24 @@ public sealed class SearchSpec {
          *
          * @param vector The vector to compare against, as a Base64-encoded sequence of little-endian IEEE 754 floats.
          * @param field The document field to search.
+         * @param prefilter The prefilter query. The server first executes this non-vector query to get an intermediate result.
+         * Then it executes the vector query on the intermediate result to get the final result.
+         * If no prefilter is specified, the server executes the vector query on all indexed documents.
          */
         @SinceCouchbase("7.6.2")
         public fun vector(
             field: String,
             vector: String,
             numCandidates: Int = 3,
-        ): VectorQuery = InternalVectorQuery(null, vector, field, numCandidates)
+            @SinceCouchbase("7.6.4") prefilter: SearchQuery? = null,
+        ): VectorQuery = InternalVectorQuery(null, vector, field, numCandidates, prefilter)
+
+        @Deprecated(level = DeprecationLevel.HIDDEN, message = "Present for binary compatibility with pre 1.5.0")
+        public fun vector(
+            field: String,
+            vector: String,
+            numCandidates: Int = 3,
+        ): VectorQuery = vector(field, vector, numCandidates, null)
 
         /**
          * Combines vector queries using logical OR.
