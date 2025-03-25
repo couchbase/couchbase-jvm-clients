@@ -23,7 +23,6 @@ import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.service.ServiceContext;
@@ -41,6 +40,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Optional;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,7 +61,7 @@ class ViewEndpointIntegrationTest extends CoreIntegrationTest {
 
     env = environment().ioConfig(io -> io.captureTraffic(ServiceType.VIEWS)).build();
     serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env, authenticator()),
+      new CoreContext(mockCore(env), 1, env, authenticator()),
       node.hostname(),
       node.ports().get(Services.VIEW),
       ServiceType.VIEWS,

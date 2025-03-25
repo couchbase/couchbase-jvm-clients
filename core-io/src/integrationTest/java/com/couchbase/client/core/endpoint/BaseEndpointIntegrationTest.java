@@ -18,6 +18,7 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.Event;
+import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.deps.io.netty.bootstrap.ServerBootstrap;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -32,7 +33,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +46,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -83,7 +84,7 @@ class BaseEndpointIntegrationTest extends CoreIntegrationTest {
     LocalServerController localServerController = startLocalServer(eventLoopGroup);
 
     ServiceContext serviceContext = new ServiceContext(
-      new CoreContext(null, 1, env, authenticator()),
+      new CoreContext(mockCore(env), 1, env, authenticator()),
       "127.0.0.1",
       1234,
       ServiceType.KV,
