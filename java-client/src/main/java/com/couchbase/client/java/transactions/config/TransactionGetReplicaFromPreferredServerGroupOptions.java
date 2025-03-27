@@ -25,8 +25,6 @@ import reactor.util.annotation.Nullable;
  */
 @Stability.Volatile
 public class TransactionGetReplicaFromPreferredServerGroupOptions {
-    public static final TransactionGetReplicaFromPreferredServerGroupOptions DEFAULT = new TransactionGetReplicaFromPreferredServerGroupOptions();
-
     private @Nullable Transcoder transcoder;
 
     private TransactionGetReplicaFromPreferredServerGroupOptions() {

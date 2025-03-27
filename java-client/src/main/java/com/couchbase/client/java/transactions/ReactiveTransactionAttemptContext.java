@@ -35,12 +35,29 @@ import com.couchbase.client.java.transactions.config.TransactionGetOptions;
 import com.couchbase.client.java.transactions.config.TransactionGetReplicaFromPreferredServerGroupOptions;
 import com.couchbase.client.java.transactions.config.TransactionInsertOptions;
 import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiOptions;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupOptions;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupResult;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiResult;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiSpec;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiUtil;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_INSERT;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REMOVE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REPLACE;
 import static com.couchbase.client.core.util.Validators.notNull;
+import static com.couchbase.client.java.transactions.config.TransactionGetOptions.transactionGetOptions;
+import static com.couchbase.client.java.transactions.config.TransactionGetReplicaFromPreferredServerGroupOptions.transactionGetReplicaFromPreferredServerGroupOptions;
+import static com.couchbase.client.java.transactions.config.TransactionInsertOptions.transactionInsertOptions;
+import static com.couchbase.client.java.transactions.config.TransactionReplaceOptions.transactionReplaceOptions;
+import static com.couchbase.client.java.transactions.getmulti.TransactionGetMultiOptions.transactionGetMultiOptions;
+import static com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupOptions.transactionGetMultiReplicasFromPreferredServerGroupOptions;
 import static com.couchbase.client.java.transactions.internal.ConverterUtil.makeCollectionIdentifier;
 import static com.couchbase.client.java.transactions.internal.EncodingUtil.encode;
 import static java.util.Objects.requireNonNull;
@@ -50,6 +67,13 @@ import static java.util.Objects.requireNonNull;
  * as commit or rollback the transaction.
  */
 public class ReactiveTransactionAttemptContext {
+    private static final TransactionGetOptions DEFAULT_GET_OPTIONS = transactionGetOptions();
+    private static final TransactionInsertOptions DEFAULT_INSERT_OPTIONS = transactionInsertOptions();
+    private static final TransactionReplaceOptions DEFAULT_REPLACE_OPTIONS = transactionReplaceOptions();
+    private static final TransactionGetReplicaFromPreferredServerGroupOptions DEFAULT_GET_REPLICA_OPTIONS = transactionGetReplicaFromPreferredServerGroupOptions();
+    private static final TransactionGetMultiOptions DEFAULT_GET_MULTI_OPTIONS = transactionGetMultiOptions();
+    private static final TransactionGetMultiReplicasFromPreferredServerGroupOptions DEFAULT_GET_MULTI_REPLICA_OPTIONS = transactionGetMultiReplicasFromPreferredServerGroupOptions();
+
     private final CoreTransactionAttemptContext internal;
     private final JsonSerializer serializer;
     private final ReactorOps reactor;
@@ -75,7 +99,7 @@ public class ReactiveTransactionAttemptContext {
      * @return a <code>TransactionGetResult</code> containing the document
      */
     public Mono<TransactionGetResult> get(ReactiveCollection collection, String id) {
-        return get(collection, id, TransactionGetOptions.DEFAULT);
+        return get(collection, id, DEFAULT_GET_OPTIONS);
     }
 
     /**
@@ -101,7 +125,7 @@ public class ReactiveTransactionAttemptContext {
      * using default options.
      */
     public Mono<TransactionGetResult> getReplicaFromPreferredServerGroup(ReactiveCollection collection, String id) {
-        return getReplicaFromPreferredServerGroup(collection, id, TransactionGetReplicaFromPreferredServerGroupOptions.DEFAULT);
+        return getReplicaFromPreferredServerGroup(collection, id, DEFAULT_GET_REPLICA_OPTIONS);
     }
 
     /**
@@ -136,6 +160,51 @@ public class ReactiveTransactionAttemptContext {
     }
 
     /**
+     * A convenience wrapper around {@link #getMulti(List, TransactionGetMultiOptions)} using default options.
+     */
+    @Stability.Uncommitted
+    public Mono<TransactionGetMultiResult> getMulti(List<TransactionGetMultiSpec> specs) {
+        return getMulti(specs, DEFAULT_GET_MULTI_OPTIONS);
+    }
+
+    @Stability.Uncommitted
+    public Mono<TransactionGetMultiResult> getMulti(List<TransactionGetMultiSpec> specs, TransactionGetMultiOptions options) {
+        notNull(options, "options");
+        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_GET_MULTI, internal.span());
+
+        return reactor.publishOnUserScheduler(
+            internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), new SpanWrapper(span), options.build(), false)
+                .map(result -> TransactionGetMultiUtil.convert(result, specs, serializer()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(span::end));
+    }
+
+    /**
+     * A convenience wrapper around {@link #getMulti(List, TransactionGetMultiOptions)} using default options.
+     */
+    @Stability.Uncommitted
+    public Mono<TransactionGetMultiReplicasFromPreferredServerGroupResult> getMultiReplicasFromPreferredServerGroup(List<TransactionGetMultiReplicasFromPreferredServerGroupSpec> specs) {
+        return getMultiReplicasFromPreferredServerGroup(specs, DEFAULT_GET_MULTI_REPLICA_OPTIONS);
+    }
+
+    /**
+     * Similar to {@link #getMulti(List, TransactionGetMultiOptions)}, but fetches the documents from replicas in the preferred server group.
+     * <p>
+     * Note that the nature of replicas is that they are eventually consistent with the active, and so the effectiveness of read skew detection may be impacted.
+     */
+    @Stability.Uncommitted
+    public Mono<TransactionGetMultiReplicasFromPreferredServerGroupResult> getMultiReplicasFromPreferredServerGroup(List<TransactionGetMultiReplicasFromPreferredServerGroupSpec> specs, TransactionGetMultiReplicasFromPreferredServerGroupOptions options) {
+        notNull(options, "options");
+        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP, internal.span());
+
+        return reactor.publishOnUserScheduler(
+            internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), new SpanWrapper(span), options.build(), true)
+                .map(result -> TransactionGetMultiUtil.convertReplica(result, specs, serializer()))
+                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
+                .doOnTerminate(span::end));
+    }
+
+    /**
      * Inserts a new document into the specified Couchbase <code>collection</code>.
      *
      * @param collection the Couchbase collection in which to insert the doc
@@ -144,7 +213,7 @@ public class ReactiveTransactionAttemptContext {
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
      */
     public Mono<TransactionGetResult> insert(ReactiveCollection collection, String id, Object content) {
-        return insert(collection, id, content, TransactionInsertOptions.DEFAULT);
+        return insert(collection, id, content, DEFAULT_INSERT_OPTIONS);
     }
 
     /**
@@ -183,7 +252,7 @@ public class ReactiveTransactionAttemptContext {
      * object is modified.
      */
     public Mono<TransactionGetResult> replace(TransactionGetResult doc, Object content) {
-        return replace(doc, content, TransactionReplaceOptions.DEFAULT);
+        return replace(doc, content, DEFAULT_REPLACE_OPTIONS);
     }
 
     /**

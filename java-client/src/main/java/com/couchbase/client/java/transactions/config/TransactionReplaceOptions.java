@@ -25,8 +25,6 @@ import reactor.util.annotation.Nullable;
  */
 @Stability.Volatile
 public class TransactionReplaceOptions {
-  public static final TransactionReplaceOptions DEFAULT = new TransactionReplaceOptions();
-
     private @Nullable Transcoder transcoder;
 
     private TransactionReplaceOptions() {

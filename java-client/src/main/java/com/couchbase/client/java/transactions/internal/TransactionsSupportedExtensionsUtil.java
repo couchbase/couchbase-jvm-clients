@@ -60,6 +60,9 @@ public class TransactionsSupportedExtensionsUtil {
         CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING,
 
         /* @since 3.7.4 */
-        CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP
+        CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP,
+
+        /* @since 3.8.0 */
+        CoreTransactionsExtension.EXT_GET_MULTI
     );
 }

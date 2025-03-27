@@ -37,7 +37,7 @@ import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.Content;
-import com.couchbase.client.protocol.shared.ContentAs;
+import com.couchbase.client.protocol.shared.ContentTypes;
 import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
 import com.couchbase.client.protocol.transactions.CommandBatch;
 import com.couchbase.client.protocol.transactions.CommandGet;
@@ -60,6 +60,7 @@ import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDr
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.ContentAsUtil;
 import com.couchbase.utils.ResultsUtil;
+import com.couchbase.utils.Try;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -362,15 +363,19 @@ public abstract class TwoWayTransactionShared {
                     () -> getResult.contentAs(Integer.class),
                     () -> getResult.contentAs(Double.class));
 
-            if (contentAs.getExpectSuccess() != content.isSuccess()) {
-                throw new TestFailure(new RuntimeException("ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess()));
-            }
+            handleContentAsPerformerValidation(content, contentAs);
+        }
+    }
 
-            if (contentAs.hasExpectedContentBytes()) {
-                byte[] bytes = ContentAsUtil.convert(content.value());
-                if (!Arrays.equals(contentAs.getExpectedContentBytes().toByteArray(), bytes)) {
-                    throw new TestFailure(new RuntimeException("Content bytes " + Arrays.toString(bytes) + " did not equal expected bytes " + contentAs.getExpectedContentBytes()));
-                }
+    public static void handleContentAsPerformerValidation(Try<ContentTypes> actualContent, ContentAsPerformerValidation expectedContent) {
+        if (expectedContent.getExpectSuccess() != actualContent.isSuccess()) {
+            throw new TestFailure(new RuntimeException("ContentAs result " + actualContent + " did not equal expected result " + expectedContent.getExpectSuccess()));
+        }
+
+        if (expectedContent.hasExpectedContentBytes()) {
+            byte[] bytes = ContentAsUtil.convert(actualContent.value());
+            if (!Arrays.equals(expectedContent.getExpectedContentBytes().toByteArray(), bytes)) {
+                throw new TestFailure(new RuntimeException("Content bytes " + Arrays.toString(bytes) + " did not equal expected bytes " + expectedContent.getExpectedContentBytes()));
             }
         }
     }

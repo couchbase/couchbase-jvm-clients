@@ -43,11 +43,13 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.IntNod
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.util.RawValue;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryNotFoundException;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordFullException;
@@ -91,6 +93,7 @@ import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordEntry;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordUtil;
+import com.couchbase.client.core.transaction.components.CoreTransactionGetMultiSpec;
 import com.couchbase.client.core.transaction.components.DocRecord;
 import com.couchbase.client.core.transaction.components.DocumentGetter;
 import com.couchbase.client.core.transaction.components.DocumentMetadata;
@@ -102,6 +105,13 @@ import com.couchbase.client.core.transaction.error.internal.ErrorClass;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiOptions;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiPhase;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiSignal;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiSignalAndReason;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiState;
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiUtil;
+import com.couchbase.client.core.transaction.getmulti.CoreTransactionGetMultiMode;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.AttemptState;
 import com.couchbase.client.core.transaction.support.OptionsUtil;
@@ -123,6 +133,7 @@ import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.util.BucketConfigUtil;
 import com.couchbase.client.core.util.CbPreconditions;
+import com.couchbase.client.core.util.Either;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -133,12 +144,15 @@ import reactor.util.function.Tuple2;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -169,6 +183,8 @@ import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FA
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.FAIL_TRANSIENT;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.TRANSACTION_OPERATION_FAILED;
 import static com.couchbase.client.core.transaction.error.internal.ErrorClass.classify;
+import static com.couchbase.client.core.transaction.getmulti.CoreGetMultiState.DEFAULT_INITIAL_DOC_FETCH_BOUND;
+import static com.couchbase.client.core.transaction.getmulti.CoreGetMultiState.DEFAULT_READ_SKEW_BOUND;
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_COMMIT_DOC_CHANGED;
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_ROLLBACK_DOC_CHANGED;
 import static com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks.HOOK_STAGING_DOC_CHANGED;
@@ -724,6 +740,436 @@ public class CoreTransactionAttemptContext {
         });
     }
 
+    static class RetryGetMulti extends RuntimeException {
+        public RetryGetMulti(String message) {
+            super(message);
+        }
+    }
+
+    static class ResetAndRetryGetMulti extends RuntimeException {
+        public ResetAndRetryGetMulti(String message) {
+            super(message);
+        }
+    }
+
+
+    public Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgo(List<CoreTransactionGetMultiSpec> specs, SpanWrapper pspan, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {
+
+        if (replicasFromPreferredServerGroup) {
+            if (core.environment().preferredServerGroup() == null) {
+                return Mono.error(new CouchbaseException("Preferred server group must be set previously at the environment level"));
+            }
+        }
+
+        return doKVOperation("getMulti", pspan, CoreTransactionAttemptContextHooks.HOOK_GET_MULTI, null, null,
+                (operationId, span, lockToken) -> Mono.defer(() -> {
+                    if (queryModeLocked()) {
+                        return Mono.error(new FeatureNotAvailableException("getMulti cannot be used in a transaction after any SQL++ commands have been executed.  If possible then move the getMulti to before any SQL++ commands."));
+                    } else {
+                        return unlock(lockToken, "getMulti")
+                                .then(getMultiAlgoInternal(specs, pspan, options, replicasFromPreferredServerGroup));
+                    }
+                }));
+    }
+
+    private Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgoInternal(List<CoreTransactionGetMultiSpec> specs, SpanWrapper pspan, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {
+        return Mono.defer(() -> {
+            Instant deadline = Instant.now().plus(DEFAULT_INITIAL_DOC_FETCH_BOUND);
+            CoreGetMultiState operationState = new CoreGetMultiState(specs, deadline, replicasFromPreferredServerGroup, options);
+
+            return Mono.defer(() -> {
+                        LOGGER.info(attemptId, "getMulti: state={}", operationState.toString());
+
+                        throwIfExpired(CoreTransactionAttemptContextHooks.HOOK_GET_MULTI);
+
+                        return getMultiDocumentFetch(operationState)
+
+                                .flatMap(getMultiDocumentSignal -> {
+                                    switch (getMultiDocumentSignal) {
+                                        case CONTINUE:
+                                            return Mono.empty();
+                                        case BOUND_EXCEEDED:
+                                            if (operationState.alreadyFetched().size() == operationState.originalSpecs.size()) {
+                                                LOGGER.info(attemptId, "getMulti: deadline expiring and have all docs, returning");
+                                                // Sort the results according to the original specs before returning to user.
+                                                return Mono.just(operationState.alreadyFetched().stream()
+                                                        .sorted()
+                                                        .collect(Collectors.toList()));
+                                            }
+                                            else {
+                                                LOGGER.info(attemptId, "getMulti: deadline expiring and do not have all docs, failing");
+                                                return Mono.error(operationFailed(createError()
+                                                        .retryTransaction()
+                                                        .cause(new RuntimeException("Operation timeout was exceeded, but do not have results for all documents (have " + operationState.alreadyFetched().size() + " of " + operationState.originalSpecs.size() + ")"))
+                                                        .build()));
+                                            }
+                                        default:
+                                            return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + getMultiDocumentSignal + " received")).build()));
+                                    }
+                                })
+
+                                .then(getMultiDocumentDisambiguation(operationState))
+
+                                .flatMap(documentDisambiguationSignal -> {
+                                    LOGGER.info(attemptId, "getMulti: documentDisambiguation returned {}", documentDisambiguationSignal);
+                                    switch (documentDisambiguationSignal.signal) {
+                                        case COMPLETED:
+                                            return Mono.empty();
+                                        case RESET_AND_RETRY:
+                                            return Mono.error(new ResetAndRetryGetMulti(documentDisambiguationSignal.reason));
+                                        case RETRY:
+                                            return Mono.error(new RetryGetMulti(documentDisambiguationSignal.reason));
+                                        case CONTINUE:
+                                            return getMultiReadSkewResolution(operationState)
+                                                    .flatMap(readSkewSignal -> {
+                                                        LOGGER.info(attemptId, "getMulti: readSkewResolution returned {}", readSkewSignal);
+                                                        switch (readSkewSignal.signal) {
+                                                            case COMPLETED:
+                                                                return Mono.empty();
+                                                            case RESET_AND_RETRY:
+                                                                return Mono.error(new ResetAndRetryGetMulti(readSkewSignal.reason));
+                                                            case RETRY:
+                                                                return Mono.error(new RetryGetMulti(readSkewSignal.reason));
+                                                            default:
+                                                                return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + readSkewSignal + " received")).build()));
+                                                        }
+                                                    });
+                                        case BOUND_EXCEEDED:
+                                            if (operationState.alreadyFetched().size() == operationState.originalSpecs.size()) {
+                                                LOGGER.info(attemptId, "getMulti: deadline expiring and have all docs, returning");
+                                                // Sort the results according to the original specs before returning to user.
+                                                return Mono.just(operationState.alreadyFetched().stream()
+                                                        .sorted()
+                                                        .collect(Collectors.toList()));
+                                            }
+                                            else {
+                                                LOGGER.info(attemptId, "getMulti: deadline expiring and do not have all docs, failing");
+                                                return Mono.error(operationFailed(createError()
+                                                        .retryTransaction()
+                                                        .cause(new RuntimeException("Operation timeout was exceeded, but do not have results for all documents (have " + operationState.alreadyFetched().size() + " of " + operationState.originalSpecs.size() + ")"))
+                                                        .build()));
+                                            }
+                                        default:
+                                            return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + documentDisambiguationSignal + " received")).build()));
+                                    }
+                                })
+
+                                // Sort the results according to the original specs before returning to user.
+                                .then(Mono.defer(() -> Mono.just(operationState.alreadyFetched().stream()
+                                        .sorted()
+                                        .collect(Collectors.toList()))));
+                    })
+
+                    // Using exceptions for non-error retry control flow as it's the only solution reactor offers.
+                    .retryWhen(reactor.util.retry.Retry.backoff(Integer.MAX_VALUE, Duration.ofMillis(1))
+                            .filter(err -> err instanceof ResetAndRetryGetMulti || err instanceof RetryGetMulti)
+                            .doBeforeRetry(v -> {
+                                boolean resetFirst = v.failure() instanceof ResetAndRetryGetMulti;
+                                LOGGER.info(attemptId, "Retrying multi-get {}", v.failure().getMessage(), resetFirst ? "after resetting" : "");
+                                if (resetFirst) {
+                                    operationState.reset(LOGGER);
+                                }
+                            }));
+        });
+    }
+
+    public Mono<Either<CoreTransactionOptionalGetMultiResult, CoreGetMultiSignal>> getMultiSingleDocumentFetch(CoreTransactionGetMultiSpec spec, CoreGetMultiState operationState) {
+        return Mono.defer(() -> {
+                    long start = System.nanoTime();
+                    Duration operationTimeout = Duration.ofMillis(Math.min(
+                            Duration.between(Instant.now(), operationState.deadline).toMillis(),
+                            kvTimeoutNonMutating().toMillis()));
+                    LOGGER.info(attemptId, "getMulti: getting doc {} with timeout {}", spec, operationTimeout);
+
+                    throwIfExpired(CoreTransactionAttemptContextHooks.HOOK_GET_MULTI_INDIVIDUAL_DOCUMENT);
+
+                    return DocumentGetter.justGetDoc(core, spec.collectionIdentifier, spec.id, operationTimeout, null, !operationState.replicasFromPreferredServerGroup, LOGGER, meteringUnitsBuilder, operationState.replicasFromPreferredServerGroup)
+
+                            .flatMap(doc -> {
+                                LOGGER.info(attemptId, "getMulti: completed get of {} in {}us",
+                                        spec, TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start));
+                                Mono<Void> possibleForwardCompatCheck = Mono.empty();
+                                if (doc.isPresent()
+                                    && doc.get().getT1().isInTransaction()) {
+                                    possibleForwardCompatCheck = forwardCompatibilityCheck(ForwardCompatibilityStage.GET_MULTI_GET, Objects.requireNonNull(doc.get().getT1().links()).forwardCompatibility())
+                                            .then(forwardCompatibilityCheck(ForwardCompatibilityStage.GETS, Objects.requireNonNull(doc.get().getT1().links()).forwardCompatibility()));
+                                }
+                                return possibleForwardCompatCheck.then(doc
+                                        .map(d -> Mono.just(new CoreTransactionOptionalGetMultiResult(spec, Optional.of(d.getT1()))))
+                                        .orElseGet(() -> Mono.just(new CoreTransactionOptionalGetMultiResult(spec, Optional.empty()))));
+                            })
+
+                            .map(Either::<CoreTransactionOptionalGetMultiResult, CoreGetMultiSignal>ofLeft)
+
+                            .onErrorResume(err -> {
+                                ErrorClass ec = classify(err);
+                                LOGGER.info("getMulti: document-fetch hit error on {}: {}", spec, err);
+                                if (err instanceof DocumentUnretrievableException) {
+                                    return Mono.just(Either.ofLeft(new CoreTransactionOptionalGetMultiResult(spec, Optional.empty())));
+                                }
+                                else if (err instanceof TimeoutException) {
+                                    if (operationState.options.mode == CoreTransactionGetMultiMode.PRIORITISE_READ_SKEW_DETECTION) {
+                                        return Mono.error(new RetryGetMulti("Retrying individual single doc fetch"));
+                                    }
+                                    return Mono.just(Either.ofRight(CoreGetMultiSignal.BOUND_EXCEEDED));
+                                }
+                                else if (ec == FAIL_TRANSIENT) {
+                                    // Using exceptions for non-error retry control flow as it's the only solution reactor offers.
+                                    return Mono.error(new RetryGetMulti("Retrying individual single doc fetch"));
+                                }
+                                return Mono.error(operationFailed(createError()
+                                        .cause(err)
+                                        .rollbackAttempt(ec == FAIL_HARD)
+                                        .build()));
+                            });
+                })
+                .retryWhen(reactor.util.retry.Retry.backoff(Integer.MAX_VALUE, Duration.ofMillis(1))
+                        .filter(err -> err instanceof RetryGetMulti)
+                        .doBeforeRetry(v -> LOGGER.info("getMulti: document fetch {} retry attempt {}", spec, v.totalRetries())));
+    }
+
+    public Mono<CoreGetMultiSignal> getMultiDocumentFetch(CoreGetMultiState operationState) {
+        return Mono.defer(() -> {
+            LOGGER.info(attemptId, "getMulti: document fetch {}", operationState.toString());
+            int desiredParallelism = 100;
+            long start = System.nanoTime();
+
+            return Flux.fromIterable(operationState.toFetch())
+                    // Any propagated error from this causes the Flux to automatically and immediately cancel any parallel operations, which is what we want.
+                    // This is cancel in the reactive sense - as is in the operations just disappear, with no onError or onNext signal.
+                    .flatMap(spec -> getMultiSingleDocumentFetch(spec, operationState), desiredParallelism)
+                    .collectList()
+                    .map(allDocs -> {
+                        LOGGER.info(attemptId, "getMulti: have got %d doc reports (not necessarily docs) in {}us",
+                                allDocs.size(), TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start));
+                        List<CoreTransactionOptionalGetMultiResult> alreadyFetched = new ArrayList<>();
+                        alreadyFetched.addAll(operationState.alreadyFetched());
+                        alreadyFetched.addAll(allDocs.stream()
+                                .filter(v -> v.left().isPresent())
+                                .map(v -> v.left().get())
+                                .collect(Collectors.toList()));
+                        operationState.update(LOGGER, Collections.emptyList(),
+                                alreadyFetched,
+                                operationState.phase(),
+                                operationState.deadline);
+                        Optional<Either<CoreTransactionOptionalGetMultiResult, CoreGetMultiSignal>> anySignal = allDocs.stream()
+                                .filter(v -> v.right().isPresent())
+                                .findAny();
+                        if (anySignal.isPresent()) {
+                            CoreGetMultiSignal signal = anySignal.get().right().get();
+                            LOGGER.info(attemptId, "getMulti: returning signal {} from individual doc fetch", signal);
+                            return signal;
+                        }
+                        if (operationState.options.mode == CoreTransactionGetMultiMode.DISABLE_READ_SKEW_DETECTION) {
+                            return CoreGetMultiSignal.COMPLETED;
+                        }
+                        if (operationState.phase() == CoreGetMultiPhase.FIRST_DOC_FETCH) {
+                            Instant newDeadline = operationState.options.mode == CoreTransactionGetMultiMode.PRIORITISE_LATENCY
+                                    ? Instant.now().plus(DEFAULT_READ_SKEW_BOUND)
+                                    : Instant.now().plus(Duration.ofMillis(expiryRemainingMillis()));
+                            LOGGER.info(attemptId, "getMulti: setting deadline to {}", newDeadline);
+                            operationState.update(LOGGER,
+                                    operationState.toFetch(),
+                                    operationState.alreadyFetched(),
+                                    CoreGetMultiPhase.SUBSEQUENT_TO_FIRST_DOC_FETCH,
+                                    newDeadline);
+                        }
+                        return CoreGetMultiSignal.CONTINUE;
+                    });
+        });
+    }
+
+    private Mono<CoreGetMultiSignalAndReason> getMultiDocumentDisambiguation(CoreGetMultiState operationState) {
+        return Mono.defer(() -> {
+            List<CoreTransactionGetMultiResult> fetchedAndPresent = operationState.fetchedAndPresent();
+
+            if (fetchedAndPresent.isEmpty()) {
+                LOGGER.info(attemptId, "getMultiDD: no docs present");
+                return Mono.just(CoreGetMultiSignalAndReason.COMPLETED);
+            } else if (fetchedAndPresent.size() == 1) {
+                LOGGER.info(attemptId, "getMultiDD: just one doc present, performing MAV");
+                CoreTransactionGetMultiResult single = fetchedAndPresent.get(0);
+
+                Mono<Optional<CoreTransactionGetResult>> mavRead = DocumentGetter.getAsync(core, LOGGER, single.spec.collectionIdentifier, config, single.spec.id, attemptId, true, attemptSpan, Optional.empty(), meteringUnitsBuilder, overall.supported(), false);
+
+                return mavRead.flatMap(doc -> {
+                    CoreTransactionOptionalGetMultiResult r = new CoreTransactionOptionalGetMultiResult(single.spec, doc);
+
+                    List<CoreTransactionOptionalGetMultiResult> updated = new ArrayList<>(operationState.alreadyFetched().stream()
+                            .filter(result -> result.spec.specIndex != single.spec.specIndex)
+                            .collect(Collectors.toList()));
+                    updated.add(r);
+
+                    operationState.update(logger(), operationState.toFetch(), updated, operationState.phase(), operationState.deadline);
+                    return Mono.just(CoreGetMultiSignalAndReason.COMPLETED);
+                });
+            } else {
+                // 2 or more docs, read skew possible
+                Set<String> transactionIdsInvolved = fetchedAndPresent.stream()
+                        .filter(v -> Objects.requireNonNull(v.internal.links()).isDocumentInTransaction())
+                        .map(v -> Objects.requireNonNull(v.internal.links()).stagedTransactionId().get())
+                        .collect(Collectors.toSet());
+
+                LOGGER.info(attemptId, "getMultiDD: involves these other transactions: {}", transactionIdsInvolved);
+
+                if (transactionIdsInvolved.isEmpty()) {
+                    // No docs are mid-transaction, so we either have no read skew or missed it.
+                    return Mono.just(CoreGetMultiSignalAndReason.COMPLETED);
+                } else if (transactionIdsInvolved.size() > 1) {
+                    return Mono.error(new RetryGetMulti("Too many transaction ids involved " + transactionIdsInvolved.size()));
+                } else {
+                    return Mono.just(CoreGetMultiSignalAndReason.CONTINUE);
+                }
+            }
+        });
+    }
+
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
+    private Mono<CoreGetMultiSignalAndReason> getMultiReadSkewResolution(CoreGetMultiState operationState) {
+        return Mono.defer(() -> {
+            LOGGER.info(attemptId, "getMultiRSR: {}", operationState.toString());
+
+            // 2+ docs and 1+ of them are staged in the same transaction T1.
+            CoreGetMultiSignalAndReason signal = operationState.assertInReadSkewResolutionState();
+            if (signal.signal != CoreGetMultiSignal.CONTINUE) {
+                return Mono.just(signal);
+            }
+
+            if (operationState.deadlineExceededSoon()) {
+                return Mono.just(CoreGetMultiSignalAndReason.BOUND_EXCEEDED);
+            }
+
+            List<CoreTransactionGetMultiResult> fetchedAndPresent = operationState.fetchedAndPresent();
+
+            TransactionLinks t1 = fetchedAndPresent.stream()
+                    .filter(v -> v.internal.isInTransaction())
+                    .findFirst()
+                    // This is ok due to assertInReadSkewResolutionState check above
+                    .get()
+                    .internal.links();
+
+            CollectionIdentifier atrCollection = new CollectionIdentifier(t1.atrBucketName().get(), t1.atrScopeName(), t1.atrCollectionName());
+            String t1TransactionId = t1.stagedTransactionId().get();
+
+            Duration operationTimeout = Duration.ofMillis(Math.min(
+                    Duration.between(Instant.now(), operationState.deadline).toMillis(),
+                    kvTimeoutNonMutating().toMillis()));
+            LOGGER.info(attemptId, "getMultiRSR: getting T1 entry {} with timeout {}", t1TransactionId, operationTimeout);
+
+            return ActiveTransactionRecord.findEntryForTransaction(core, atrCollection, t1.atrId().get(), t1.stagedAttemptId().get(), config, null, LOGGER, meteringUnitsBuilder, operationTimeout)
+
+                    .flatMap(atrResult -> getMultiReadSkewResolutionAfterT1AtrEntryRead(operationState, atrResult, t1TransactionId));
+        });
+    }
+
+    private boolean isIn(List<CoreTransactionGetMultiResult> results, CoreTransactionGetMultiResult check) {
+        return results.stream()
+                .anyMatch(v -> v.internal.collection().equals(check.internal.collection()) && v.internal.id().equals(check.internal.id()));
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private Mono<CoreGetMultiSignalAndReason> getMultiReadSkewResolutionAfterT1AtrEntryRead(CoreGetMultiState operationState,
+                                                                     Optional<ActiveTransactionRecordEntry> atrResult,
+                                                                     String t1TransactionId) {
+        return Mono.fromSupplier(() -> {
+            List<CoreTransactionGetMultiResult> fetchedAndPresent = operationState.fetchedAndPresent();
+
+            List<CoreTransactionGetMultiResult> fetchedInT1 = fetchedAndPresent.stream()
+                    .filter(result -> result.internal.isInTransaction(t1TransactionId))
+                    .collect(Collectors.toList());
+
+            List<CoreTransactionOptionalGetMultiResult> fetchedNotInT1 = operationState.alreadyFetched().stream()
+                    .filter(result -> !result.isPresent() || !isIn(fetchedInT1, result.get()))
+                    .collect(Collectors.toList());
+
+            LOGGER.info(attemptId, "getMultiRSRA: T1={} fetchedInT1={} fetchedNotInT1={} state={}", atrResult,
+                    fetchedInT1.stream().map(v -> DebugUtil.docId(v.spec.collectionIdentifier, v.spec.id)).collect(Collectors.toList()),
+                    fetchedNotInT1.size(),
+                    operationState.toString());
+
+            if (fetchedNotInT1.size() + fetchedInT1.size() != operationState.originalSpecs.size()) {
+                return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RESET_AND_RETRY, "Internal bug");
+            }
+
+            if (!atrResult.isPresent()) {
+                if (operationState.phase() == CoreGetMultiPhase.RESOLVING_T1_ATR_ENTRY_MISSING) {
+                    if (!fetchedInT1.isEmpty()) {
+                        return CoreGetMultiSignalAndReason.COMPLETED;
+                    } else {
+                        return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RESET_AND_RETRY, "Remain in ambiguous state after refetching when T1 ATR entry is missing.  Polling until simpler state");
+                    }
+                } else {
+                    CoreGetMultiSignalAndReason signal = operationState.update(LOGGER, CoreGetMultiUtil.toSpecs(fetchedInT1),
+                            fetchedNotInT1,
+                            CoreGetMultiPhase.RESOLVING_T1_ATR_ENTRY_MISSING,
+                            operationState.deadline);
+                    if (signal.signal != CoreGetMultiSignal.CONTINUE) {
+                        return signal;
+                    }
+                    return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RETRY, "Have found T1's ATR entry missing.  Refetching its docs to disambiguate T1 state.");
+                }
+            } else {
+                AttemptState state = atrResult.get().state();
+                switch (state) {
+                    case PENDING:
+                        // If T1 is uncommitted, ok to use these docs for reads.  Writes are likely to hit a WWC and retry then though.
+                        return CoreGetMultiSignalAndReason.COMPLETED;
+                    case ABORTED:
+                        // If T1 is rolling back, ok to use these docs for reads.  Writes are likely to hit a WWC and retry then though.
+                        return CoreGetMultiSignalAndReason.COMPLETED;
+                    case COMMITTED:
+
+                        if (operationState.phase() == CoreGetMultiPhase.SUBSEQUENT_TO_FIRST_DOC_FETCH) {
+                            List<CoreTransactionGetMultiResult> wereInT1 = fetchedNotInT1.stream()
+                                    .filter(CoreTransactionOptionalGetMultiResult::isPresent).map(CoreTransactionOptionalGetMultiResult::get)
+                                    .filter(v -> atrResult.get().containsDocument(v.internal.collection(), v.internal.id()))
+                                    .collect(Collectors.toList());
+                            List<CoreTransactionOptionalGetMultiResult> remainder = operationState.alreadyFetched().stream()
+                                    .filter(v -> !v.isPresent() || !isIn(wereInT1, v.get()))
+                                    .collect(Collectors.toList());
+
+                            if (wereInT1.isEmpty()) {
+                                List<CoreTransactionOptionalGetMultiResult> toReturn = new ArrayList<>(fetchedNotInT1);
+                                toReturn.addAll(fetchedInT1.stream()
+                                        .map(v -> v.convertToPostTransaction().toOptional())
+                                        .collect(Collectors.toList()));
+                                CoreGetMultiSignalAndReason signal = operationState.update(LOGGER, Collections.emptyList(), toReturn, CoreGetMultiPhase.SUBSEQUENT_TO_FIRST_DOC_FETCH, operationState.deadline);
+                                if (signal != CoreGetMultiSignalAndReason.CONTINUE) {
+                                    return signal;
+                                }
+                                return CoreGetMultiSignalAndReason.COMPLETED;
+                            } else {
+                                CoreGetMultiSignalAndReason signal = operationState.update(LOGGER, CoreGetMultiUtil.toSpecs(wereInT1), remainder, CoreGetMultiPhase.SUBSEQUENT_TO_FIRST_DOC_FETCH, operationState.deadline);
+                                if (signal != CoreGetMultiSignalAndReason.CONTINUE) {
+                                    return signal;
+                                }
+                                return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RETRY, "Fetched some docs that we've later discovered to be involved in T1: refetching them");
+                            }
+
+                        } else if (operationState.phase() == CoreGetMultiPhase.DISCOVERED_DOCS_IN_T1) {
+                            CoreGetMultiSignalAndReason signal = operationState.update(LOGGER,
+                                    Collections.emptyList(),
+                                    operationState.alreadyFetched().stream()
+                                            .map(CoreTransactionOptionalGetMultiResult::convertToPostTransaction)
+                                            .collect(Collectors.toList()),
+                                    CoreGetMultiPhase.SUBSEQUENT_TO_FIRST_DOC_FETCH,
+                                    operationState.deadline);
+                            if (signal != CoreGetMultiSignalAndReason.CONTINUE) {
+                                return signal;
+                            }
+                            return CoreGetMultiSignalAndReason.COMPLETED;
+                        } else {
+                            // should be impossible - got here in ModeResolvingT1ATREntryMissing but T1's entry is now present
+                            return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RESET_AND_RETRY, "Impossible situation");
+                        }
+                    default:
+                        return new CoreGetMultiSignalAndReason(CoreGetMultiSignal.RESET_AND_RETRY, "Unknown ATR state " + state);
+                }
+            }
+
+        });
+    }
+
     boolean hasExpiredClientSide(String place, Optional<String> docId) {
         boolean over = overall.hasExpiredClientSide();
         boolean hook = hooks.hasExpiredClientSideHook.apply(this, place, docId);
@@ -864,7 +1310,7 @@ public class CoreTransactionAttemptContext {
 
                     .map(rows -> {
                         if (rows.isEmpty()) {
-                            throw operationFailed(TransactionOperationFailedException.Builder.createError()
+                            throw operationFailed(createError()
                                     .cause(new IllegalStateException("Did not get any rows back while KV inserting with query"))
                                     .build());
                         }
@@ -1032,7 +1478,7 @@ public class CoreTransactionAttemptContext {
      * <p>
      * The callback is required to unlock the mutex iff it returns without error. This method will handle unlocking on errors.
      */
-    private <T> Mono<T> doKVOperation(String lockDebugOrig, SpanWrapper span, String stageName, CollectionIdentifier docCollection, String docId,
+    private <T> Mono<T> doKVOperation(String lockDebugOrig, SpanWrapper span, String stageName, @Nullable CollectionIdentifier docCollection, @Nullable String docId,
                                       TriFunction<String, SpanWrapper, ReactiveLock.Waiter, Mono<T>> op) {
         return createMonoBridge(lockDebugOrig, Mono.defer(() -> {
             String operationId = UUID.randomUUID().toString();
@@ -1053,7 +1499,7 @@ public class CoreTransactionAttemptContext {
                                     return Mono.error(returnEarly);
                                 }
 
-                                if (hasExpiredClientSide(stageName, Optional.of(docId))) {
+                                if (hasExpiredClientSide(stageName, Optional.ofNullable(docId))) {
                                     LOGGER.info(attemptId, "has expired in stage {}, setting expiry-overtime-mode", stageName);
 
                                     // Combo of setting this mode and throwing AttemptExpired will result in an attempt to
@@ -1407,7 +1853,8 @@ public class CoreTransactionAttemptContext {
                         config,
                         span,
                         logger(),
-                        units).flatMap(atrEntry -> {
+                        units,
+                        null).flatMap(atrEntry -> {
                     if (atrEntry.isPresent()) {
                         ActiveTransactionRecordEntry ae = atrEntry.get();
 
@@ -3102,6 +3549,17 @@ public class CoreTransactionAttemptContext {
 
     private void throwIfExpired(String id, String stage) {
         if (hasExpiredClientSide(stage, Optional.of(id))) {
+            LOGGER.info(attemptId, "has expired in stage {}", stage);
+            throw operationFailed(createError()
+                    .raiseException(FinalErrorToRaise.TRANSACTION_EXPIRED)
+                    .doNotRollbackAttempt()
+                    .cause(new AttemptExpiredException("Attempt has expired in stage " + stage))
+                    .build());
+        }
+    }
+
+    private void throwIfExpired(String stage) {
+        if (hasExpiredClientSide(stage, Optional.empty())) {
             LOGGER.info(attemptId, "has expired in stage {}", stage);
             throw operationFailed(createError()
                     .raiseException(FinalErrorToRaise.TRANSACTION_EXPIRED)

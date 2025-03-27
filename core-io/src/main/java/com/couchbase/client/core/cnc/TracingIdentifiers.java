@@ -295,6 +295,8 @@ public class TracingIdentifiers {
   public static final String TRANSACTION_OP_REMOVE = "transaction_remove";
   public static final String TRANSACTION_OP_GET = "transaction_get";
   public static final String TRANSACTION_OP_GET_REPLICA_FROM_PREFERRED_SERVER_GROUP = "transaction_get_replica_from_preferred_server_group";
+  public static final String TRANSACTION_OP_GET_MULTI = "transaction_get_multi";
+  public static final String TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP = "transaction_get_multi_replicas_from_preferred_server_group";
   public static final String TRANSACTION_OP_QUERY = "transaction_query";
   public static final String TRANSACTION_OP_INSERT_STAGE = "transaction_insert_stage";
   public static final String TRANSACTION_OP_REPLACE_STAGE = "transaction_replace_stage";

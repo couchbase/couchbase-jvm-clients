@@ -37,6 +37,12 @@ import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
 import static com.couchbase.client.java.transactions.config.TransactionReplaceOptions.transactionReplaceOptions;
 // [end:3.6.2]
+// [if:3.8.0]
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupResult;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiResult;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiSpec;
+// [end]
 import com.couchbase.client.performer.core.commands.BatchExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.API;
@@ -63,11 +69,19 @@ import com.couchbase.utils.ResultValidation;
 import io.grpc.stub.StreamObserver;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
+// [if:3.8.0]
+import static com.couchbase.transactions.GetMultiHelper.convertToGetMulti;
+import static com.couchbase.transactions.GetMultiHelper.convertToGetMultiReplicas;
+import static com.couchbase.transactions.GetMultiHelper.handleGetMultiFromPreferredServerGroupResult;
+import static com.couchbase.transactions.GetMultiHelper.handleGetMultiResult;
+// [end]
 
 
 /**
@@ -402,6 +416,62 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         }
                         handleGetReplicaFromPreferredServerGroupResult(request, out, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                     });
+        // [end]
+        // [if:3.8.0]
+        } else if (op.hasGetMulti()) {
+            var request = op.getGetMulti();
+            if (!request.getGetMultiReplicasFromPreferredServerGroup()) {
+                var specs = new ArrayList<TransactionGetMultiSpec>();
+                for (int i = 0; i < request.getSpecsCount(); i++) {
+                    var spec = request.getSpecs(i);
+                    var collection = connection.collection(spec.getLocation());
+                    var docId = executor.getDocId(spec.getLocation());
+                    var created = TransactionGetMultiSpec.create(collection, docId);
+                    if (spec.hasTranscoder()) {
+                        created.transcoder(JavaSdkCommandExecutor.convertTranscoder(spec.getTranscoder()));
+                    }
+                    specs.add(created);
+                }
+
+                performOperation(dbg + "getMulti", ctx, Collections.emptyList(), op.getDoNotPropagateError(), performanceMode,
+                        () -> {
+                            TransactionGetMultiResult results;
+                            if (request.hasOptions()) {
+                                var options = convertToGetMulti(request.getOptions());
+                                results = ctx.getMulti(specs, options);
+                            } else {
+                                results = ctx.getMulti(specs);
+                            }
+
+                            handleGetMultiResult(request, results);
+                        });
+            }
+            else {
+                var specs = new ArrayList<TransactionGetMultiReplicasFromPreferredServerGroupSpec>();
+                for (int i = 0; i < request.getSpecsCount(); i++) {
+                    var spec = request.getSpecs(i);
+                    var collection = connection.collection(spec.getLocation());
+                    var docId = executor.getDocId(spec.getLocation());
+                    var created = TransactionGetMultiReplicasFromPreferredServerGroupSpec.create(collection, docId);
+                    if (spec.hasTranscoder()) {
+                        created.transcoder(JavaSdkCommandExecutor.convertTranscoder(spec.getTranscoder()));
+                    }
+                    specs.add(created);
+                }
+
+                performOperation(dbg + "getMultiReplicasFromPreferredServerGroup", ctx, Collections.emptyList(), op.getDoNotPropagateError(), performanceMode,
+                        () -> {
+                            TransactionGetMultiReplicasFromPreferredServerGroupResult results;
+                            if (request.hasOptions()) {
+                                var options = convertToGetMultiReplicas(request.getOptions());
+                                results = ctx.getMultiReplicasFromPreferredServerGroup(specs, options);
+                            } else {
+                                results = ctx.getMultiReplicasFromPreferredServerGroup(specs);
+                            }
+
+                            handleGetMultiFromPreferredServerGroupResult(request, results);
+                        });
+            }
         // [end]
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();

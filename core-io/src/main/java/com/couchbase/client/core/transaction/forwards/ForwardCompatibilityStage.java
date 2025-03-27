@@ -35,7 +35,8 @@ public enum ForwardCompatibilityStage {
     CLEANUP_ENTRY("CL_E"),
     CAS_MISMATCH_DURING_COMMIT("CM_C"),
     CAS_MISMATCH_DURING_ROLLBACK("CM_R"),
-    CAS_MISMATCH_DURING_STAGING("CM_S");
+    CAS_MISMATCH_DURING_STAGING("CM_S"),
+    GET_MULTI_GET("GM_G");
 
     private final String value;
 

@@ -82,8 +82,9 @@ public class ActiveTransactionRecord {
                                                                                      String attemptId,
                                                                                      CoreMergedTransactionConfig config,
                                                                                      @Nullable SpanWrapper pspan,
-                                                                                     @Nullable CoreTransactionLogger logger) {
-      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null);
+                                                                                     @Nullable CoreTransactionLogger logger,
+                                                                                     @Nullable Duration timeout) {
+      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null, timeout);
     }
 
     public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
@@ -93,9 +94,10 @@ public class ActiveTransactionRecord {
                                                                                       CoreMergedTransactionConfig config,
                                                                                       @Nullable SpanWrapper pspan,
                                                                                       @Nullable CoreTransactionLogger logger,
-                                                                                      @Nullable MeteringUnits.MeteringUnitsBuilder units) {
+                                                                                      @Nullable MeteringUnits.MeteringUnitsBuilder units,
+                                                                                      @Nullable Duration timeout) {
 
-        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, kvTimeoutNonMutating(core),
+        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout == null ? kvTimeoutNonMutating(core) : timeout,
                         false, createClientContext("ATR::findEntryForTransaction"), pspan,
                         false,
                         Arrays.asList(

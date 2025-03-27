@@ -153,7 +153,15 @@ public class CoreTransactionGetResult {
     public boolean isBinary() {
       return links.stagedContentBinary().isPresent();
     }
-    
+
+    public boolean isInTransaction(String transactionId) {
+        return links != null && links.stagedTransactionId().isPresent() && links.stagedTransactionId().get().equals(transactionId);
+    }
+
+    public boolean isInTransaction() {
+        return links != null && links.isDocumentInTransaction();
+    }
+
     @Stability.Internal
     static CoreTransactionGetResult createFromInsert(CollectionIdentifier collection,
                                                      String id,

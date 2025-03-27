@@ -25,8 +25,6 @@ import reactor.util.annotation.Nullable;
  */
 @Stability.Volatile
 public class TransactionInsertOptions {
-    public static final TransactionInsertOptions DEFAULT = new TransactionInsertOptions();
-
     private @Nullable Transcoder transcoder;
 
     private TransactionInsertOptions() {

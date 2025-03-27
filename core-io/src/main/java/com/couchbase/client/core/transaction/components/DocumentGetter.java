@@ -203,7 +203,7 @@ public class DocumentGetter {
         }
     }
 
-    private static Mono<Optional<CoreTransactionGetResult>> lookupStatusFromATR(Core core,
+    public static Mono<Optional<CoreTransactionGetResult>> lookupStatusFromATR(Core core,
                                                                                 CollectionIdentifier collection,
                                                                                 CoreTransactionGetResult doc,
                                                                                 String byAttemptId,
@@ -219,7 +219,7 @@ public class DocumentGetter {
         String atrId = doc.links().atrId().get();
         String attemptIdOfDoc = doc.links().stagedAttemptId().get();
 
-        return ActiveTransactionRecord.findEntryForTransaction(core, collection, atrId, attemptIdOfDoc, config, span, logger, units)
+        return ActiveTransactionRecord.findEntryForTransaction(core, collection, atrId, attemptIdOfDoc, config, span, logger, units, null)
                 .onErrorResume(err -> {
                     units.add(err);
                     ErrorClass ec = ErrorClass.classify(err);

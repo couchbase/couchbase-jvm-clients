@@ -81,10 +81,10 @@ public class TwoWayTransactionMarshaller {
 
                     Thread t = new Thread(() -> {
                         if (req.getApi() == API.DEFAULT) {
-                            twoWay = new TwoWayTransactionBlocking(null);
+                            twoWay = new TwoWayTransactionBlocking(twoWay.executor);
                         }
                         else {
-                            twoWay = new TwoWayTransactionReactive();
+                            twoWay = new TwoWayTransactionReactive(twoWay.executor);
                         }
                         twoWay.create(req);
 

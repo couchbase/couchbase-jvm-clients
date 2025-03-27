@@ -54,6 +54,7 @@ public enum CoreTransactionsExtension {
     EXT_BINARY_SUPPORT("BS"),
     EXT_PARALLEL_UNSTAGING("PU"),
     EXT_REPLICA_FROM_PREFERRED_GROUP("RP"),
+    EXT_GET_MULTI("GM"),
     ;
 
     private final String value;

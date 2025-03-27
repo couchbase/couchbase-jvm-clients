@@ -17,6 +17,7 @@
 package com.couchbase.client.core.transaction.components;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.support.AttemptState;
@@ -166,6 +167,25 @@ public class ActiveTransactionRecordEntry {
 
     public Optional<DurabilityLevel> durabilityLevel() {
         return durabilityLevel;
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private static boolean containsDocument(Optional<List<DocRecord>> input, CollectionIdentifier collectionIdentifier, String id) {
+        if (!input.isPresent()) {
+            return false;
+        }
+
+        return input.get().stream()
+                .anyMatch(v -> v.bucketName().equals(collectionIdentifier.bucket())
+                        && v.scopeName().equals(collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE))
+                        && v.collectionName().equals(collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION))
+                        && v.id().equals(id));
+    }
+
+    public boolean containsDocument(CollectionIdentifier collectionIdentifier, String id) {
+        return containsDocument(insertedIds, collectionIdentifier, id)
+                || containsDocument(replacedIds, collectionIdentifier, id)
+                || containsDocument(removedIds, collectionIdentifier, id);
     }
 
     @Override

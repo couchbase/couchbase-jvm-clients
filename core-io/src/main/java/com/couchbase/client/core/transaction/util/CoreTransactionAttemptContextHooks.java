@@ -52,6 +52,8 @@ public class CoreTransactionAttemptContextHooks {
     public static final String HOOK_QUERY_KV_REMOVE = "queryKvRemove";
     public static final String HOOK_QUERY_KV_INSERT = "queryKvInsert";
     public static final String HOOK_BEFORE_RETRY = "beforeRetry";
+    public static final String HOOK_GET_MULTI = "getMulti";
+    public static final String HOOK_GET_MULTI_INDIVIDUAL_DOCUMENT = "getMultiIndividualDocument";
 
     public static final String HOOK_ATR_COMMIT = "atrCommit";
     public static final String HOOK_ATR_COMMIT_AMBIGUITY_RESOLUTION = "atrCommitAmbiguityResolution";

@@ -36,7 +36,7 @@ public class TransactionGetResult {
     private final @Nullable Transcoder transcoder;
 
     @Stability.Internal
-    TransactionGetResult(CoreTransactionGetResult internal, JsonSerializer serializer, @Nullable Transcoder transcoder) {
+    public TransactionGetResult(CoreTransactionGetResult internal, JsonSerializer serializer, @Nullable Transcoder transcoder) {
         this.internal = Objects.requireNonNull(internal);
         this.serializer = Objects.requireNonNull(serializer);
         this.transcoder = transcoder;
