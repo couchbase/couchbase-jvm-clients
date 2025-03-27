@@ -218,6 +218,9 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
     if (settings.storageBackend() != null) {
       params.put("storageBackend", settings.storageBackend().alias());
     }
+    if (settings.numVBuckets() != null) {
+      params.put("numVBuckets", settings.numVBuckets().toString());
+    }
 
     params.put("name", settings.name());
     if (settings.bucketType() != null) {

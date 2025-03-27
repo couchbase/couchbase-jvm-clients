@@ -59,6 +59,7 @@ public class BucketManager(core: Core) {
         @SinceCouchbase("7.2") historyRetentionCollectionDefault: Boolean? = null,
         @SinceCouchbase("7.2") historyRetentionSize: StorageSize? = null,
         @SinceCouchbase("7.2") historyRetentionDuration: Duration? = null,
+        @SinceCouchbase("8.0") numVBuckets: Int? = null,
     ) {
         val params = toMap(
             name = name,
@@ -76,6 +77,48 @@ public class BucketManager(core: Core) {
             maximumExpiry = maximumExpiry,
             compressionMode = compressionMode,
             minimumDurability = minimumDurability,
+            numVBuckets = numVBuckets,
+        )
+
+        coreManager.createBucket(params.toMap(), common.toCore()).await()
+    }
+
+    @Deprecated(level = DeprecationLevel.HIDDEN, message = "Retained for binary compatibility")
+    public suspend fun createBucket(
+        name: String,
+        common: CommonOptions = CommonOptions.Default,
+        ramQuota: StorageSize = 100.mebibytes,
+        bucketType: BucketType? = null,
+        storageBackend: StorageBackend? = null,
+        evictionPolicy: EvictionPolicyType? = null,
+        flushEnabled: Boolean? = null,
+        replicas: Int? = null,
+        maximumExpiry: Expiry? = null,
+        compressionMode: CompressionMode? = null,
+        minimumDurability: Durability? = null,
+        conflictResolutionType: ConflictResolutionType? = null,
+        replicateViewIndexes: Boolean? = null,
+        @SinceCouchbase("7.2") historyRetentionCollectionDefault: Boolean? = null,
+        @SinceCouchbase("7.2") historyRetentionSize: StorageSize? = null,
+        @SinceCouchbase("7.2") historyRetentionDuration: Duration? = null,
+    ) {
+        val params = toMap(
+            name = name,
+            ramQuota = ramQuota,
+            bucketType = bucketType,
+            storageBackend = storageBackend,
+            evictionPolicy = evictionPolicy,
+            flushEnabled = flushEnabled,
+            conflictResolutionType = conflictResolutionType,
+            replicas = replicas,
+            replicateViewIndexes = replicateViewIndexes,
+            historyRetentionCollectionDefault = historyRetentionCollectionDefault,
+            historyRetentionDuration = historyRetentionDuration,
+            historyRetentionSize = historyRetentionSize,
+            maximumExpiry = maximumExpiry,
+            compressionMode = compressionMode,
+            minimumDurability = minimumDurability,
+            numVBuckets = null,
         )
 
         coreManager.createBucket(params.toMap(), common.toCore()).await()
@@ -152,6 +195,7 @@ public class BucketManager(core: Core) {
             conflictResolutionType = null,
             storageBackend = null,
             replicateViewIndexes = null,
+            numVBuckets = null,
         )
         coreManager.updateBucket(params, common.toCore()).await()
     }
@@ -261,6 +305,7 @@ public class BucketManager(core: Core) {
         historyRetentionCollectionDefault: Boolean?,
         historyRetentionSize: StorageSize?,
         historyRetentionDuration: Duration?,
+        numVBuckets: Int?,
     ): Map<String, String> {
         val params = mutableMapOf<String, Any>("name" to name)
         ramQuota?.let { params["ramQuotaMB"] = it.inWholeMebibytes }
@@ -275,6 +320,7 @@ public class BucketManager(core: Core) {
         historyRetentionCollectionDefault?.let { params["historyRetentionCollectionDefault"] = it }
         historyRetentionSize?.let { params["historyRetentionBytes"] = it.inBytes }
         historyRetentionDuration?.let { params["historyRetentionSeconds"] = it.inWholeSeconds }
+        numVBuckets?.let { params["numVBuckets"] = it }
 
         maximumExpiry?.let {
             require(it is Expiry.None || it is Expiry.Relative) {

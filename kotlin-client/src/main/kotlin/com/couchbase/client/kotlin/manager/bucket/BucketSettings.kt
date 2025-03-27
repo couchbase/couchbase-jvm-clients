@@ -231,6 +231,7 @@ public class BucketSettings internal constructor(
     @SinceCouchbase("7.2") public val historyRetentionCollectionDefault: Boolean?,
     @SinceCouchbase("7.2") public val historyRetentionSize: StorageSize?,
     @SinceCouchbase("7.2") public val historyRetentionDuration: Duration?,
+    @SinceCouchbase("8.0") public val numVBuckets: Int?,
     // NOTE: All new fields should be nullable, please.
     // That way, field values can be fed back into `updateBucket`
     // without fear of passing a value not supported by the server.
@@ -273,11 +274,12 @@ public class BucketSettings internal constructor(
                 historyRetentionCollectionDefault = json.get("historyRetentionCollectionDefault")?.booleanValue(),
                 historyRetentionSize = json.get("historyRetentionBytes")?.longValue()?.bytes?.simplify(),
                 historyRetentionDuration = json.get("historyRetentionSeconds")?.longValue()?.seconds,
+                numVBuckets = json.get("numVBuckets")?.intValue(),
             )
         }
     }
 
     override fun toString(): String {
-        return "BucketSettings(name='$name', ramQuota=$ramQuota, bucketType=$bucketType, storageBackend=$storageBackend, flushEnabled=$flushEnabled, replicas=$replicas, maximumExpiry=$maximumExpiry, compressionMode=$compressionMode, conflictResolutionType=$conflictResolutionType, minimumDurability=$minimumDurability, evictionPolicy=$evictionPolicy, replicateViewIndexes=$replicateViewIndexes, historyRetentionCollectionDefault=$historyRetentionCollectionDefault, historyRetentionSize=$historyRetentionSize, historyRetentionDuration=$historyRetentionDuration)"
+        return "BucketSettings(name='$name', ramQuota=$ramQuota, bucketType=$bucketType, storageBackend=$storageBackend, numVBuckets=$numVBuckets, flushEnabled=$flushEnabled, replicas=$replicas, maximumExpiry=$maximumExpiry, compressionMode=$compressionMode, conflictResolutionType=$conflictResolutionType, minimumDurability=$minimumDurability, evictionPolicy=$evictionPolicy, replicateViewIndexes=$replicateViewIndexes, historyRetentionCollectionDefault=$historyRetentionCollectionDefault, historyRetentionSize=$historyRetentionSize, historyRetentionDuration=$historyRetentionDuration)"
     }
 }

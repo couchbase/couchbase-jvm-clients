@@ -123,6 +123,7 @@ suspend fun createBucket(cluster: Cluster, request: CreateBucketRequest, result:
         historyRetentionSize = if (!settings.hasHistoryRetentionBytes()) null else settings.historyRetentionBytes.bytes,
         historyRetentionDuration = if (!settings.hasHistoryRetentionSeconds()) null else settings.historyRetentionSeconds.seconds,
         // [end]
+        numVBuckets = if (!settings.hasNumVbuckets()) null else settings.numVbuckets,
     )
 
     result.success()
@@ -265,6 +266,7 @@ private fun BucketSettings.toFit(): FitBucketSettings.Builder {
         sdk.historyRetentionCollectionDefault?.let { historyRetentionCollectionDefault = it }
         sdk.historyRetentionDuration?.let { historyRetentionSeconds = it.inWholeSeconds }
         sdk.historyRetentionSize?.let { historyRetentionBytes = it.inBytes }
+        sdk.numVBuckets?.let { numVbuckets = it }
     }
 }
 

@@ -29,9 +29,12 @@ import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import reactor.core.publisher.Mono;
 
@@ -45,7 +48,6 @@ import static com.couchbase.client.core.error.HttpStatusCodeException.couchbaseR
 import static com.couchbase.client.core.error.HttpStatusCodeException.httpResponseBody;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
-import static com.couchbase.client.core.util.CbThrowables.propagate;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -90,7 +92,7 @@ public class CoreBucketManager {
         .exceptionally(t -> {
           throw httpResponseBody(t).contains("Bucket with given name already exists")
               ? BucketExistsException.forBucket(bucketName)
-              : propagate(t);
+              : propagateHttpException(t);
         })
         .thenApply(response -> null);
   }
@@ -159,8 +161,17 @@ public class CoreBucketManager {
     return t -> {
       throw couchbaseResponseStatus(t) == ResponseStatus.NOT_FOUND
           ? BucketNotFoundException.forBucket(bucketName)
-          : propagate(t);
+          : propagateHttpException(t);
     };
+  }
+
+  private static RuntimeException propagateHttpException(Throwable t) {
+    CbThrowables.findCause(t, HttpStatusCodeException.class).ifPresent(cause -> {
+      if (cause.httpStatusCode() == 400) {
+        throw new InvalidArgumentException("Unexpected HTTP status code 400 Bad Request", t, cause.context());
+      }
+    });
+    throw CbThrowables.propagate(t);
   }
 
   public CompletableFuture<Map<String, byte[]>> getAllBuckets(CoreCommonOptions options) {

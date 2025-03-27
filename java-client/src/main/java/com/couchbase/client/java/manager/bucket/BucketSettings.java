@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.manager.bucket;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
@@ -27,6 +28,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 
@@ -70,6 +72,7 @@ public class BucketSettings {
   private Boolean historyRetentionCollectionDefault;
   private Long historyRetentionBytes;
   private Duration historyRetentionDuration;
+  private Integer numVBuckets;
   // Remember to add any new user settings into the merge function.
 
   private boolean healthy = true;
@@ -149,6 +152,7 @@ public class BucketSettings {
       }
     }
 
+    this.numVBuckets = internal.numVBuckets();
     this.historyRetentionCollectionDefault = internal.historyRetentionCollectionDefault();
     this.historyRetentionBytes = internal.historyRetentionBytes();
     this.historyRetentionDuration = internal.historyRetentionDuration();
@@ -422,6 +426,26 @@ public class BucketSettings {
   }
 
   /**
+   * Configures the number of virtual buckets (partitions) for this bucket.
+   *
+   * @return this {@link BucketSettings} instance for chaining purposes.
+   */
+  @SinceCouchbase("8.0")
+  public BucketSettings numVBuckets(final @Nullable Integer numVBuckets) {
+    this.numVBuckets = numVBuckets;
+    return this;
+  }
+
+  /**
+   * Returns the number of virtual buckets (partitions) for this bucket,
+   * or null if not applicable or Couchbase Server version is older than 8.0.
+   */
+  @SinceCouchbase("8.0")
+  public @Nullable Integer numVBuckets() {
+    return numVBuckets;
+  }
+
+  /**
    * Configures historyRetentionCollectionDefault for this bucket.
    *
    * @param historyRetentionCollectionDefault
@@ -601,6 +625,11 @@ public class BucketSettings {
       }
 
       @Override
+      public @Nullable Integer numVBuckets() {
+        return numVBuckets;
+      }
+
+      @Override
       public Boolean historyRetentionCollectionDefault() {
         return historyRetentionCollectionDefault;
       }
@@ -632,6 +661,7 @@ public class BucketSettings {
       ", evictionPolicy=" + evictionPolicy +
       ", minimumDurabilityLevel=" + minimumDurabilityLevel +
       ", storageBackend=" + storageBackend +
+      ", numVBuckets=" + numVBuckets +
       ", historyRetentionCollectionDefault=" + historyRetentionCollectionDefault +
       ", historyRetentionBytes=" + historyRetentionBytes +
       ", historyRetentionDuration=" + historyRetentionDuration +
@@ -658,6 +688,7 @@ public class BucketSettings {
     out.historyRetentionCollectionDefault = defaultIfNull(fromUser.historyRetentionCollectionDefault, base.historyRetentionCollectionDefault);
     out.historyRetentionBytes = defaultIfNull(fromUser.historyRetentionBytes, base.historyRetentionBytes);
     out.historyRetentionDuration = defaultIfNull(fromUser.historyRetentionDuration, base.historyRetentionDuration);
+    out.numVBuckets = defaultIfNull(fromUser.numVBuckets, base.numVBuckets);
     return out;
   }
 

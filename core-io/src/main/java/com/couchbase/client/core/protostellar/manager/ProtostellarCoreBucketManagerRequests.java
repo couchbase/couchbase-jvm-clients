@@ -156,6 +156,11 @@ public class ProtostellarCoreBucketManagerRequests {
       }
     }
 
+    if (settings.numVBuckets() != null) {
+      // Requires https://jira.issues.couchbase.com/browse/ING-1036
+      throw new UnsupportedOperationException("numVBuckets is not yet supported when using couchbase2");
+    }
+
     if (settings.historyRetentionCollectionDefault() != null
       || settings.historyRetentionDuration() != null
       || settings.historyRetentionBytes() != null) {

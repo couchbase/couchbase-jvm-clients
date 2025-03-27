@@ -61,6 +61,9 @@ public interface CoreBucketSettings {
   CoreStorageBackend storageBackend();
 
   @Nullable
+  Integer numVBuckets();
+
+  @Nullable
   Boolean historyRetentionCollectionDefault();
 
   @Nullable

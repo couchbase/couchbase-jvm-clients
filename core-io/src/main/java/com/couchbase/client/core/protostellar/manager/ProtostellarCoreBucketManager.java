@@ -217,6 +217,12 @@ public class ProtostellarCoreBucketManager implements CoreBucketManagerOps {
       }
 
       @Override
+      public Integer numVBuckets() {
+        // Requires https://jira.issues.couchbase.com/browse/ING-1036
+        return null;
+      }
+
+      @Override
       public Boolean historyRetentionCollectionDefault() {
         return null;
       }

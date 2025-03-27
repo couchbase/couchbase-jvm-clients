@@ -57,6 +57,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
   private final @Nullable Boolean historyRetentionCollectionDefault;
   private final @Nullable Long historyRetentionBytes;
   private final @Nullable Duration historyRetentionDuration;
+  private final @Nullable Integer numVBuckets;
 
   @Stability.Internal
   @JsonCreator
@@ -73,6 +74,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
       @JsonProperty("evictionPolicy") final CoreEvictionPolicyType evictionPolicy,
       @JsonProperty("durabilityMinLevel") final String durabilityMinLevel,
       @JsonProperty("storageBackend") final CoreStorageBackend storageBackend,
+      @JsonProperty("numVBuckets") final Integer numVBuckets,
       @JsonProperty("historyRetentionCollectionDefault") final Boolean historyRetentionCollectionDefault,
       @JsonProperty("historyRetentionBytes") final Long historyRetentionBytes,
       @JsonProperty("historyRetentionSeconds") final Long historyRetentionDurationSeconds
@@ -93,6 +95,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
     this.historyRetentionCollectionDefault = historyRetentionCollectionDefault;
     this.historyRetentionBytes = historyRetentionBytes;
     this.historyRetentionDuration = historyRetentionDurationSeconds == null ? null : Duration.ofSeconds(historyRetentionDurationSeconds);
+    this.numVBuckets = numVBuckets;
   }
 
   static CoreBucketSettings create(final byte[] bytes) {
@@ -153,6 +156,10 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
     return storageBackend;
   }
 
+  public @Nullable Integer numVBuckets() {
+    return numVBuckets;
+  }
+
   public CoreEvictionPolicyType evictionPolicy() {
     return evictionPolicy;
   }
@@ -187,6 +194,7 @@ public class CoreBucketSettingsJson implements CoreBucketSettings {
         ", evictionPolicy=" + evictionPolicy +
         ", minimumDurabilityLevel=" + minimumDurabilityLevel +
         ", storageBackend=" + storageBackend +
+        ", numVBuckets=" + numVBuckets +
         ", historyRetentionCollectionDefault=" + historyRetentionCollectionDefault +
         ", historyRetentionBytes=" + historyRetentionBytes +
         ", historyRetentionDuration=" + historyRetentionDuration +

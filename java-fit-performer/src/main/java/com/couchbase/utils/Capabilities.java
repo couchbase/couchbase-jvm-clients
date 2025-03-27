@@ -94,6 +94,7 @@ public class Capabilities {
 
         // [if:3.8.0]
         out.add(Caps.SDK_APP_TELEMETRY);
+        out.add(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS);
         // [end]
 
         return out;
