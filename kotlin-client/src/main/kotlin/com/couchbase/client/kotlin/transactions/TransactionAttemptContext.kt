@@ -20,12 +20,16 @@ import com.couchbase.client.core.api.query.CoreQueryResult
 import com.couchbase.client.core.cnc.CbTracing
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI
+import com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.DocumentUnretrievableException
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
+import com.couchbase.client.core.transaction.components.CoreTransactionGetMultiSpec
+import com.couchbase.client.core.transaction.getmulti.CoreGetMultiOptions
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.kotlin.Collection
 import com.couchbase.client.kotlin.CommonOptions
@@ -61,6 +65,57 @@ public class TransactionAttemptContext internal constructor(
     public suspend fun get(collection: Collection, id: String): TransactionGetResult {
         val core = internal.get(collection.collectionId, id).awaitSingle()
         return TransactionGetResult(core, defaultJsonSerializer)
+    }
+
+    /**
+     * Shorthand for creating a [TransactionDocumentSpec].
+     *
+     * Example:
+     * ```
+     * var myCollection: Collection = myBucket.defaultCollection()
+     * var mySpec: TransactionDocumentSpec = myCollection + "myDocumentId"
+     * ```
+     */
+    public operator fun Collection.plus(documentId: String): TransactionDocumentSpec = TransactionDocumentSpec(this, documentId)
+
+    /**
+     * Gets multiple documents at once, spending a tunable level of effort to minimize read skew.
+     *
+     * @param specs specifies the documents to get.
+     * @param mode level of effort to spend on minimizing read skew. The default is intentionally unspecified.
+     * @sample com.couchbase.client.kotlin.samples.transactionGetMulti
+     */
+    public suspend fun getMulti(
+        specs: List<TransactionDocumentSpec>,
+        mode: TransactionGetMultiMode? = null,
+    ): TransactionGetMultiResult = doGetMulti(specs, mode, replicasFromPreferredServerGroup = false)
+
+    /**
+     * Similar to [getMulti], but fetches the documents from replicas in the preferred server group.
+     *
+     * Note that the nature of replicas is that they are eventually consistent with the active,
+     * and so the effectiveness of read skew detection may be impacted.
+     *
+     * @param specs specifies the documents to get
+     * @param mode level of effort to spend on minimizing read skew. The default is intentionally unspecified.
+     * @sample com.couchbase.client.kotlin.samples.transactionGetMulti
+     */
+    public suspend fun getMultiReplicasFromPreferredServerGroup(
+        specs: List<TransactionDocumentSpec>,
+        mode: TransactionGetMultiMode? = null,
+    ): TransactionGetMultiResult = doGetMulti(specs, mode, replicasFromPreferredServerGroup = true)
+
+    private suspend fun doGetMulti(
+        specs: List<TransactionDocumentSpec>,
+        mode: TransactionGetMultiMode?,
+        replicasFromPreferredServerGroup: Boolean,
+    ): TransactionGetMultiResult {
+        val tracingId = if (replicasFromPreferredServerGroup) TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP else TRANSACTION_OP_GET_MULTI
+        val span: RequestSpan = CbTracing.newSpan(internal.core().context(), tracingId, internal.span())
+
+        val internalSpecs = specs.mapIndexed { index, spec -> CoreTransactionGetMultiSpec(spec.collection.collectionId, spec.documentId, index) }
+        val coreResults = internal.getMultiAlgo(internalSpecs, SpanWrapper(span), CoreGetMultiOptions(mode?.toCore()), replicasFromPreferredServerGroup).awaitSingle()
+        return TransactionGetMultiResult(specs, coreResults, defaultJsonSerializer)
     }
 
     /**

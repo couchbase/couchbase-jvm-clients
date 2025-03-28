@@ -18,6 +18,8 @@ package com.couchbase.client.kotlin.samples
 
 import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.kotlin.Collection
+import com.couchbase.client.kotlin.transactions.TransactionDocumentSpec
+import com.couchbase.client.kotlin.transactions.TransactionGetMultiMode
 import com.couchbase.client.kotlin.transactions.TransactionGetResult
 import kotlin.random.Random
 
@@ -58,5 +60,26 @@ internal suspend fun simpleTransactionExample(
         require(newDestValue >= 0) { "transfer would result in dest value overflow" }
 
         replace(dest, newDestValue)
+    }
+}
+
+internal suspend fun transactionGetMulti(
+    cluster: Cluster,
+    collection: Collection,
+) {
+    // Get multiple documents at once, making great effort to avoid read skew.
+    cluster.transactions.run {
+        val spec1 = TransactionDocumentSpec(collection, "someDocumentId")
+
+        // Or use shorthand:
+        val spec2 = collection + "anotherDocumentId"
+
+        val result = getMulti(
+            specs = listOf(spec1, spec2),
+            mode = TransactionGetMultiMode.prioritizeReadSkewDetection(),
+        )
+
+        println(result.getOrNull(spec1)?.content)
+        println(result.getOrNull(spec2)?.content)
     }
 }
