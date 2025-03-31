@@ -310,7 +310,7 @@ class ScalaPerformer extends CorePerformer {
       val l = new CoreTransactionLogger(null, "")
       val merged = new CoreMergedTransactionConfig(config.toCore)
       val atrEntry = ActiveTransactionRecord
-        .findEntryForTransaction(connection.cluster.async.core, collection, request.getAtr.getDocId, request.getAttemptId, merged, null, l)
+        .findEntryForTransaction(connection.cluster.async.core, collection, request.getAtr.getDocId, request.getAttemptId, merged, null, l, null)
         .block
         .asScala
       val response: TransactionCleanupAttempt = atrEntry match {
