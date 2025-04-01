@@ -75,16 +75,15 @@ public class ActiveTransactionRecord {
     private ActiveTransactionRecord() {
     }
 
-    // Called from FIT
+    // Called from FIT, and needs to be compatible with all SDK versions - do not change this method signature.
     public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
                                                                                      CollectionIdentifier atrCollection,
                                                                                      String atrId,
                                                                                      String attemptId,
                                                                                      CoreMergedTransactionConfig config,
                                                                                      @Nullable SpanWrapper pspan,
-                                                                                     @Nullable CoreTransactionLogger logger,
-                                                                                     @Nullable Duration timeout) {
-      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null, timeout);
+                                                                                     @Nullable CoreTransactionLogger logger) {
+      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null, null);
     }
 
     public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,

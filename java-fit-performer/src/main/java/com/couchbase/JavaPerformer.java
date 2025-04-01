@@ -372,8 +372,7 @@ public class JavaPerformer extends CorePerformer {
                             request.getAttemptId(),
                             merged,
                             null,
-                            logger,
-                            null)
+                            logger)
                     .block();
 
             TransactionCleanupAttempt response;
