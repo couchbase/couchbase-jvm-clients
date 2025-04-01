@@ -358,7 +358,8 @@ case class CreateBucketSettings(
       override def historyRetentionDuration(): java.time.Duration =
         x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
 
-      override def numVBuckets(): Integer = null // TODO https://jira.issues.couchbase.com/browse/SCBC-479
+      override def numVBuckets(): Integer =
+        null // TODO https://jira.issues.couchbase.com/browse/SCBC-479
     }
   }
 }
