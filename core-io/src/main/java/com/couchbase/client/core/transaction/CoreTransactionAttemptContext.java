@@ -752,6 +752,8 @@ public class CoreTransactionAttemptContext {
         }
     }
 
+    static class BoundExceeded extends RuntimeException {
+    }
 
     public Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgo(List<CoreTransactionGetMultiSpec> specs, SpanWrapper pspan, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {
 
@@ -788,21 +790,14 @@ public class CoreTransactionAttemptContext {
                                     switch (getMultiDocumentSignal) {
                                         case CONTINUE:
                                             return Mono.empty();
+                                        case COMPLETED:
+                                            return Mono.empty();
+                                        case RESET_AND_RETRY:
+                                            return Mono.error(new ResetAndRetryGetMulti("reset and retry in getMultiDocumentFetch"));
+                                        case RETRY:
+                                            return Mono.error(new RetryGetMulti("retry in getMultiDocumentFetch"));
                                         case BOUND_EXCEEDED:
-                                            if (operationState.alreadyFetched().size() == operationState.originalSpecs.size()) {
-                                                LOGGER.info(attemptId, "getMulti: deadline expiring and have all docs, returning");
-                                                // Sort the results according to the original specs before returning to user.
-                                                return Mono.just(operationState.alreadyFetched().stream()
-                                                        .sorted()
-                                                        .collect(Collectors.toList()));
-                                            }
-                                            else {
-                                                LOGGER.info(attemptId, "getMulti: deadline expiring and do not have all docs, failing");
-                                                return Mono.error(operationFailed(createError()
-                                                        .retryTransaction()
-                                                        .cause(new RuntimeException("Operation timeout was exceeded, but do not have results for all documents (have " + operationState.alreadyFetched().size() + " of " + operationState.originalSpecs.size() + ")"))
-                                                        .build()));
-                                            }
+                                            return Mono.error(new BoundExceeded());
                                         default:
                                             return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + getMultiDocumentSignal + " received")).build()));
                                     }
@@ -819,6 +814,8 @@ public class CoreTransactionAttemptContext {
                                             return Mono.error(new ResetAndRetryGetMulti(documentDisambiguationSignal.reason));
                                         case RETRY:
                                             return Mono.error(new RetryGetMulti(documentDisambiguationSignal.reason));
+                                        case BOUND_EXCEEDED:
+                                            return Mono.error(new BoundExceeded());
                                         case CONTINUE:
                                             return getMultiReadSkewResolution(operationState)
                                                     .flatMap(readSkewSignal -> {
@@ -830,25 +827,12 @@ public class CoreTransactionAttemptContext {
                                                                 return Mono.error(new ResetAndRetryGetMulti(readSkewSignal.reason));
                                                             case RETRY:
                                                                 return Mono.error(new RetryGetMulti(readSkewSignal.reason));
+                                                            case BOUND_EXCEEDED:
+                                                                return Mono.error(new BoundExceeded());
                                                             default:
                                                                 return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + readSkewSignal + " received")).build()));
                                                         }
                                                     });
-                                        case BOUND_EXCEEDED:
-                                            if (operationState.alreadyFetched().size() == operationState.originalSpecs.size()) {
-                                                LOGGER.info(attemptId, "getMulti: deadline expiring and have all docs, returning");
-                                                // Sort the results according to the original specs before returning to user.
-                                                return Mono.just(operationState.alreadyFetched().stream()
-                                                        .sorted()
-                                                        .collect(Collectors.toList()));
-                                            }
-                                            else {
-                                                LOGGER.info(attemptId, "getMulti: deadline expiring and do not have all docs, failing");
-                                                return Mono.error(operationFailed(createError()
-                                                        .retryTransaction()
-                                                        .cause(new RuntimeException("Operation timeout was exceeded, but do not have results for all documents (have " + operationState.alreadyFetched().size() + " of " + operationState.originalSpecs.size() + ")"))
-                                                        .build()));
-                                            }
                                         default:
                                             return Mono.error(operationFailed(createError().cause(new RuntimeException("Internal bug: Unexpected signal " + documentDisambiguationSignal + " received")).build()));
                                     }
@@ -869,8 +853,27 @@ public class CoreTransactionAttemptContext {
                                 if (resetFirst) {
                                     operationState.reset(LOGGER);
                                 }
-                            }));
-        });
+                            }))
+
+                    .onErrorResume(err -> {
+                        if (err instanceof BoundExceeded) {
+                            if (operationState.alreadyFetched().size() == operationState.originalSpecs.size()) {
+                                LOGGER.info(attemptId, "getMulti: deadline expiring and have all docs, returning");
+                                // Sort the results according to the original specs before returning to user.
+                                return Mono.just(operationState.alreadyFetched().stream()
+                                        .sorted()
+                                        .collect(Collectors.toList()));
+                            } else {
+                                LOGGER.info(attemptId, "getMulti: deadline expiring and do not have all docs, failing");
+                                return Mono.error(operationFailed(createError()
+                                        .retryTransaction()
+                                        .cause(new RuntimeException("Operation timeout was exceeded, but do not have results for all documents (have " + operationState.alreadyFetched().size() + " of " + operationState.originalSpecs.size() + ")"))
+                                        .build()));
+                            }
+                        }
+                        return Mono.error(err);
+                    });
+            });
     }
 
     public Mono<Either<CoreTransactionOptionalGetMultiResult, CoreGetMultiSignal>> getMultiSingleDocumentFetch(CoreTransactionGetMultiSpec spec, CoreGetMultiState operationState) {
