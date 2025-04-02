@@ -62,9 +62,11 @@ public class NodeIndexCalculator {
       nodeIndex = topology.nodeIndexForReplica(partitionId, replicaIndex, useFastForward);
     }
 
-    logger.trace("Checking whether doc can use node.  doc={} isActive={} replica={} pid={} ni={} allowed={}", documentId, isActive, replicaIndex, partitionId, nodeIndex, allowedNodeIndexes);
+    boolean ret = check(nodeIndex);
 
-    return check(nodeIndex);
+    logger.trace("Checking whether doc can use node.  doc={} isActive={} replica={} pid={} ni={} allowed={} canUse={}", documentId, isActive, replicaIndex, partitionId, nodeIndex, allowedNodeIndexes, ret);
+
+    return ret;
   }
 
   public boolean canUseNodeForActive(String documentId) {

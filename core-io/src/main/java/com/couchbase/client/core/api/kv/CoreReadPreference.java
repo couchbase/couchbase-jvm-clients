@@ -17,5 +17,6 @@ package com.couchbase.client.core.api.kv;
 
 public enum CoreReadPreference {
   NO_PREFERENCE,
-  PREFERRED_SERVER_GROUP
+  PREFERRED_SERVER_GROUP,
+  PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE
 }

@@ -47,6 +47,8 @@ import com.couchbase.client.core.msg.kv.ReplicaSubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -70,6 +72,8 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class ReplicaHelper {
+  private static final Logger logger = LoggerFactory.getLogger(ReplicaHelper.class);
+
   private ReplicaHelper() {
     throw new AssertionError("not instantiable");
   }
@@ -387,27 +391,7 @@ public class ReplicaHelper {
 
     if (config instanceof CouchbaseBucketConfig) {
       CouchbaseBucketConfig topology = (CouchbaseBucketConfig) config;
-      int numReplicas = topology.numberOfReplicas();
-      List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
-      NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
-
-      if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
-        RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
-        GetRequest activeRequest = new GetRequest(documentId, timeout, coreContext, collectionIdentifier, retryStrategy, span);
-        activeRequest.context().clientContext(clientContext);
-        requests.add(activeRequest);
-      }
-
-      for (short replica = 1; replica <= numReplicas; replica++) {
-        if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
-          RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
-          ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
-            documentId, timeout, coreContext, collectionIdentifier, retryStrategy, replica, replicaSpan
-          );
-          replicaRequest.context().clientContext(clientContext);
-          requests.add(replicaRequest);
-        }
-      }
+      List<GetRequest> requests = getAllReplicaRequestsWithFallback(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, parent, readPreference, topology);
       if (requests.isEmpty()) {
         return failedFuture(DocumentUnretrievableException.noReplicasSuitable());
       }
@@ -430,6 +414,44 @@ public class ReplicaHelper {
     } else {
       return failedFuture(CommonExceptions.getFromReplicaNotCouchbaseBucket());
     }
+  }
+
+  private static List<GetRequest> getAllReplicaRequestsWithFallback(Core core,
+                                                                    CollectionIdentifier collectionIdentifier,
+                                                                    String documentId,
+                                                                    Map<String, Object> clientContext,
+                                                                    RetryStrategy retryStrategy,
+                                                                    Duration timeout,
+                                                                    RequestSpan parent,
+                                                                    CoreReadPreference readPreference,
+                                                                    CouchbaseBucketConfig topology) {
+    CoreContext coreContext = core.context();
+    int numReplicas = topology.numberOfReplicas();
+    List<GetRequest> requests = new ArrayList<>(numReplicas + 1);
+    NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
+
+    if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
+      RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET, parent);
+      GetRequest activeRequest = new GetRequest(documentId, timeout, coreContext, collectionIdentifier, retryStrategy, span);
+      activeRequest.context().clientContext(clientContext);
+      requests.add(activeRequest);
+    }
+
+    for (short replica = 1; replica <= numReplicas; replica++) {
+      if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
+        RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parent);
+        ReplicaGetRequest replicaRequest = new ReplicaGetRequest(
+          documentId, timeout, coreContext, collectionIdentifier, retryStrategy, replica, replicaSpan
+        );
+        replicaRequest.context().clientContext(clientContext);
+        requests.add(replicaRequest);
+      }
+    }
+    if (requests.isEmpty() && readPreference == CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE) {
+      logger.trace("Unable to find suitable replicas with PREFERRED_SERVER_GROUP_WITH_FALLBACK, falling back to NO_PREFERENCE");
+      return getAllReplicaRequestsWithFallback(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, parent, CoreReadPreference.NO_PREFERENCE, topology);
+    }
+    return requests;
   }
 
   /**
@@ -459,7 +481,6 @@ public class ReplicaHelper {
     notNullOrEmpty(documentId, "Id");
 
     final CoreContext coreContext = core.context();
-    final CoreEnvironment environment = coreContext.environment();
     final BucketConfig config = core.clusterConfig().bucketConfig(collectionIdentifier.bucket());
 
     if (config instanceof CouchbaseBucketConfig) {
@@ -469,27 +490,7 @@ public class ReplicaHelper {
         return failedFuture(FeatureNotAvailableException.subdocReadReplica());
       }
 
-      int numReplicas = topology.numberOfReplicas();
-      List<SubdocGetRequest> requests = new ArrayList<>(numReplicas + 1);
-      NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
-
-      if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
-        RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
-        SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, span);
-        activeRequest.context().clientContext(clientContext);
-        requests.add(activeRequest);
-      }
-
-      for (short replica = 1; replica <= numReplicas; replica++) {
-        if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
-          RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
-          ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
-            timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, replica, replicaSpan
-          );
-          replicaRequest.context().clientContext(clientContext);
-          requests.add(replicaRequest);
-        }
-      }
+      List<SubdocGetRequest> requests = lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, readPreference, topology);
       if (requests.isEmpty()) {
         return failedFuture(DocumentUnretrievableException.noReplicasSuitable());
       }
@@ -512,6 +513,45 @@ public class ReplicaHelper {
     } else {
       return failedFuture(CommonExceptions.getFromReplicaNotCouchbaseBucket());
     }
+  }
+
+  private static List<SubdocGetRequest> lookupInAllReplicasRequestsWithFallback(Core core,
+                                                                                CollectionIdentifier collectionIdentifier,
+                                                                                String documentId,
+                                                                                List<CoreSubdocGetCommand> commands,
+                                                                                Map<String, Object> clientContext,
+                                                                                RetryStrategy retryStrategy,
+                                                                                Duration timeout,
+                                                                                RequestSpan parent,
+                                                                                CoreReadPreference readPreference,
+                                                                                CouchbaseBucketConfig topology) {
+    CoreContext coreContext = core.context();
+
+    int numReplicas = topology.numberOfReplicas();
+    List<SubdocGetRequest> requests = new ArrayList<>(numReplicas + 1);
+    NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
+    if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
+      RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
+      SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, span);
+      activeRequest.context().clientContext(clientContext);
+      requests.add(activeRequest);
+    }
+
+    for (short replica = 1; replica <= numReplicas; replica++) {
+      if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
+        RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
+        ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
+          timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, replica, replicaSpan
+        );
+        replicaRequest.context().clientContext(clientContext);
+        requests.add(replicaRequest);
+      }
+    }
+    if (requests.isEmpty() && readPreference == CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE) {
+      logger.trace("Unable to find suitable replicas with PREFERRED_SERVER_GROUP_WITH_FALLBACK, falling back to NO_PREFERENCE");
+      return lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, CoreReadPreference.NO_PREFERENCE, topology);
+    }
+    return requests;
   }
 
   private static <T> CompletableFuture<T> failedFuture(Throwable t) {
