@@ -104,13 +104,12 @@ Prefix the description of an asynchronous exception with "(async) ".
 
 == Nullability
 
-If null is a valid value for a parameter or return value, indicate this by prefixing the description with "(nullable) ".
-The description should include a statement of how a null parameter is interpreted, or under what circumstances null is returned.
+If null is a valid value for a parameter or return value, the description should include a statement of how a null parameter is interpreted, or under what circumstances null is returned.
 
 .Example:
 ```java
 /**
- * @param foo (nullable) If null, the global default is used instead.
- * @returns (nullable) Something or other, or null if the given foo is null and there is no global default.
+ * @param foo If null, the global default is used instead.
+ * @returns Something or other, or null if the given foo is null and there is no global default.
  */
 ```
