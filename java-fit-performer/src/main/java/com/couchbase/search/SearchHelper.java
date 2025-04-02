@@ -547,7 +547,7 @@ public class SearchHelper {
           out.should(converted.toArray(new SearchQuery[0]));
         }
         if (qr.getMustNotCount() > 0) {
-          var converted = convertSearchQueries(qr.getMustList());
+          var converted = convertSearchQueries(qr.getMustNotList());
           out.mustNot(converted.toArray(new SearchQuery[0]));
         }
         if (qr.hasShouldMin()) {
