@@ -61,6 +61,9 @@ import com.couchbase.client.protocol.shared.ContentAs
 import com.google.protobuf.Timestamp
 import kotlinx.coroutines.runBlocking
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import kotlin.Any
 import kotlin.Boolean
 import kotlin.Int
@@ -69,7 +72,10 @@ import kotlin.String
 import kotlin.Suppress
 import kotlin.TODO
 import kotlin.apply
+import kotlin.getOrThrow
 import kotlin.let
+import kotlin.recoverCatching
+import kotlin.runCatching
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.with
 import com.couchbase.client.protocol.sdk.Result as FitResult
@@ -669,22 +675,22 @@ private fun FitSearchQuery.toSdk(): SearchQuery = when {
         // test a few combinations to verify correct defaults for `inclusiveStart` and `inclusiveEnd`.
             SearchSpec.dateRange(
                 field = if (hasField()) field else "_all",
-                start = if (hasStart()) Instant.parse(start) else null,
-                end = if (hasEnd()) Instant.parse(end) else null,
+                start = if (hasStart()) parseFtsTimestamp(start) else null,
+                end = if (hasEnd()) parseFtsTimestamp(end) else null,
                 inclusiveEnd = if (hasInclusiveEnd()) inclusiveEnd else false,
             )
         else if (!hasInclusiveEnd())
             SearchSpec.dateRange(
                 field = if (hasField()) field else "_all",
-                start = if (hasStart()) Instant.parse(start) else null,
+                start = if (hasStart()) parseFtsTimestamp(start) else null,
                 inclusiveStart = if (hasInclusiveStart()) inclusiveStart else true,
-                end = if (hasEnd()) Instant.parse(end) else null,
+                end = if (hasEnd()) parseFtsTimestamp(end) else null,
             )
         else SearchSpec.dateRange(
             field = if (hasField()) field else "_all",
-            start = if (hasStart()) Instant.parse(start) else null,
+            start = if (hasStart()) parseFtsTimestamp(start) else null,
             inclusiveStart = inclusiveStart,
-            end = if (hasEnd()) Instant.parse(end) else null,
+            end = if (hasEnd()) parseFtsTimestamp(end) else null,
             inclusiveEnd = inclusiveEnd
         )
 
@@ -765,4 +771,36 @@ private fun SearchQuery.maybeBoost(hasBoost: Boolean, boost: Number): SearchQuer
 
 private fun VectorQuery.maybeBoost(hasBoost: Boolean, boost: Number): VectorQuery {
     return if (hasBoost) (this boost boost) else this
+}
+
+/**
+ * Couchbase Server allows date range queries to use
+ * [a variety of timestamp formats](https://docs.couchbase.com/cloud/search/default-date-time-parsers-reference.html),
+ * some of which omit time-of-day and zone offset information. When these components
+ * are omitted, the server assumes start of day (T00:00:00) and UTC.
+ *
+ * The FIT protocol for FTS uses strings to represent timestamps in date range queries,
+ * so it can convey the full range of supported user inputs.
+ *
+ * Meanwhile, the Kotlin SDK requires users to specify a date range query using Instants,
+ * so there's no ambiguity about hour-of-day or offsets.
+ *
+ * This method converts the following input formats to Instants,
+ * using the same strategy as Couchbase Server.
+ *
+ * * Local date (`"2024-01-02"`) -> `2024-01-02T00:00:00Z`
+ * * Local datetime (`"2024-01-02T01:02:03.456"`) -> `2024-01-02T01:02:03.456Z`
+ * * Offset datetime (`"2024-01-02T00:00:00-07:00"`) -> `2024-01-02T07:00:00Z`
+ * * Zulu datetime (`"2024-01-02T01:02:03Z"`) -> `2024-01-02T01:02:03Z` (same as input)
+ *
+ * Does not handle these formats accepted by FTS:
+ *
+ * * `"2024-01-02 01:02:03.456"`
+ * * `"2023-09-15 14:24:50 +0530"`
+ */
+private fun parseFtsTimestamp(timestamp: String): Instant {
+    return runCatching { Instant.parse(timestamp) }
+        .recoverCatching { LocalDateTime.parse(timestamp).toInstant(ZoneOffset.UTC) }
+        .recoverCatching { LocalDate.parse(timestamp).atStartOfDay().toInstant(ZoneOffset.UTC) }
+        .getOrThrow()
 }
