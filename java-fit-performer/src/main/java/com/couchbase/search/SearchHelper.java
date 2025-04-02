@@ -260,7 +260,7 @@ public class SearchHelper {
           var f = v.getNumericRange();
           if (f.hasSize()) {
             facet = SearchFacet.numericRange(f.getField(), f.getSize(), f.getNumericRangesList().stream()
-                    .map(nr -> NumericRange.create(nr.getName(), (double) nr.getMin(), (double) nr.getMax()))
+                    .map(nr -> NumericRange.create(nr.getName(), roundToDouble(nr.getMin()), roundToDouble(nr.getMax())))
                     .toList());
           } else {
             throw new UnsupportedOperationException("The Java SDK has size as a mandatory param for NumericRangeFacet");
@@ -443,16 +443,16 @@ public class SearchHelper {
         var out = SearchQuery.numericRange();
         if (qr.hasMin()) {
           if (qr.hasInclusiveMin()) {
-            out.min(qr.getMin(), qr.getInclusiveMin());
+            out.min(roundToDouble(qr.getMin()), qr.getInclusiveMin());
           } else {
-            out.min(qr.getMin());
+            out.min(roundToDouble(qr.getMin()));
           }
         }
         if (qr.hasMax()) {
           if (qr.hasInclusiveMax()) {
-            out.max(qr.getMax(), qr.getInclusiveMax());
+            out.max(roundToDouble(qr.getMax()), qr.getInclusiveMax());
           } else {
-            out.max(qr.getMax());
+            out.max(roundToDouble(qr.getMax()));
           }
         }
         if (qr.hasField()) {
@@ -615,8 +615,23 @@ public class SearchHelper {
     return query;
   }
 
+  /**
+   * Returns the double with the same string representation as the given float.
+   * <p>
+   * Need to do this because the protobuf uses floats for numeric range endpoints,
+   * and converting floats to doubles would normally introduce (well, preserve actually!)
+   * artifacts due to the limited precision of floating point numbers.
+   * <p>
+   * For a good illustration of the problem, see https://stackoverflow.com/a/9173262/611819
+   */
+  private static double roundToDouble(float f) {
+    return Double.parseDouble(Float.toString(f));
+  }
+
   private static Coordinate convertLocation(Location location) {
-    return Coordinate.ofLonLat(location.getLon(), location.getLat());
+    return Coordinate
+            .lon(roundToDouble(location.getLon()))
+            .lat(roundToDouble(location.getLat()));
   }
 
   public static Result handleSearchQueryBlocking(Cluster cluster,
@@ -1481,6 +1496,11 @@ public class SearchHelper {
       if (opts.hasBoost()) {
         sdk.boost(opts.getBoost());
       }
+      // [if:3.9.0]
+      if (opts.hasPrefilter()) {
+        sdk.prefilter(convertSearchQuery(opts.getPrefilter()));
+      }
+      // [end]
     }
   }
   // [end]

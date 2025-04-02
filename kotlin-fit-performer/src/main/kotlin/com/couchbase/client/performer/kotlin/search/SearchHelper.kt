@@ -66,6 +66,8 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.Any
 import kotlin.Boolean
+import kotlin.Double
+import kotlin.Float
 import kotlin.Int
 import kotlin.Number
 import kotlin.String
@@ -146,9 +148,9 @@ private fun FitDateRange.toSdk() = when {
 }
 
 private fun FitNumericRange.toSdk() = when {
-    hasMin() && hasMax() -> NumericRange.bounds(min = min, max = max, name = name)
-    hasMin() -> NumericRange.lowerBound(min = min, name = name)
-    hasMax() -> NumericRange.upperBound(max = max, name = name)
+    hasMin() && hasMax() -> NumericRange.bounds(min = min.roundToDouble(), max = max.roundToDouble(), name = name)
+    hasMin() -> NumericRange.lowerBound(min = min.roundToDouble(), name = name)
+    hasMax() -> NumericRange.upperBound(max = max.roundToDouble(), name = name)
     else -> TODO("unrecognized facet numeric range")
 }
 
@@ -468,24 +470,35 @@ private fun FitVectorSearch.toSdk(): VectorSearchSpec {
 
 private fun FitVectorQuery.toSdk(): VectorQuery {
     val query: VectorQuery
+    val prefilter: SearchQuery? = if (hasOptions() && options.hasPrefilter()) options.prefilter.toSdk() else null
 
     if (hasBase64VectorQuery()) {
         query = if (!hasOptions() || !options.hasNumCandidates())
-            SearchSpec.vector(vectorFieldName, base64VectorQuery)
+            SearchSpec.vector(
+                field = vectorFieldName,
+                vector = base64VectorQuery,
+                prefilter = prefilter,
+            )
         else
             SearchSpec.vector(
                 field = vectorFieldName,
                 vector = base64VectorQuery,
                 numCandidates = options.numCandidates,
+                prefilter = prefilter,
             )
     } else {
         query = if (!hasOptions() || !options.hasNumCandidates())
-            SearchSpec.vector(vectorFieldName, vectorQueryList.toFloatArray())
+            SearchSpec.vector(
+                field = vectorFieldName,
+                vector = vectorQueryList.toFloatArray(),
+                prefilter = prefilter,
+            )
         else
             SearchSpec.vector(
                 field = vectorFieldName,
                 vector = vectorQueryList.toFloatArray(),
                 numCandidates = options.numCandidates,
+                prefilter = prefilter,
             )
     }
 
@@ -646,22 +659,22 @@ private fun FitSearchQuery.toSdk(): SearchQuery = when {
         // test a few combinations to verify correct defaults for `inclusiveMin` and `inclusiveMax`.
             SearchSpec.numericRange(
                 field = if (hasField()) field else "_all",
-                min = if (hasMin()) min else null,
-                max = if (hasMax()) max else null,
+                min = if (hasMin()) min.roundToDouble() else null,
+                max = if (hasMax()) max.roundToDouble() else null,
                 inclusiveMax = if (hasInclusiveMax()) inclusiveMax else false,
             )
         else if (!hasInclusiveMax())
             SearchSpec.numericRange(
                 field = if (hasField()) field else "_all",
-                min = if (hasMin()) min else null,
+                min = if (hasMin()) min.roundToDouble() else null,
                 inclusiveMin = if (hasInclusiveMin()) inclusiveMin else true,
-                max = if (hasMax()) max else null,
+                max = if (hasMax()) max.roundToDouble() else null,
             )
         else SearchSpec.numericRange(
             field = if (hasField()) field else "_all",
-            min = if (hasMin()) min else null,
+            min = if (hasMin()) min.roundToDouble() else null,
             inclusiveMin = inclusiveMin,
-            max = if (hasMax()) max else null,
+            max = if (hasMax()) max.roundToDouble() else null,
             inclusiveMax = inclusiveMax,
         )
 
@@ -762,8 +775,18 @@ private fun FitSearchQuery.toSdk(): SearchQuery = when {
     else -> TODO("unrecognized search query: $this")
 }
 
+/**
+ * Returns the double with the same string representation as the given float.
+ *
+ * Need to do this because the protobuf uses floats for numeric range endpoints,
+ * and converting floats to doubles would normally introduce (well, preserve actually!)
+ * artifacts due to the limited precision of floating point numbers.
+ *
+ * For a good illustration of the problem, see https://stackoverflow.com/a/9173262/611819
+ */
+private fun Float.roundToDouble(): Double = this.toString().toDouble()
 
-private fun FitLocation.toSdk() = GeoPoint.coordinates(lat = lat.toDouble(), lon = lon.toDouble())
+private fun FitLocation.toSdk() = GeoPoint.coordinates(lat = lat.roundToDouble(), lon = lon.roundToDouble())
 
 private fun SearchQuery.maybeBoost(hasBoost: Boolean, boost: Number): SearchQuery {
     return if (hasBoost) (this boost boost) else this

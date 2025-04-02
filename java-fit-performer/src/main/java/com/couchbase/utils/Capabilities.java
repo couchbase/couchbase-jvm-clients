@@ -97,6 +97,10 @@ public class Capabilities {
         out.add(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS);
         // [end]
 
+        // [if:3.9.0]
+        out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH);
+        // [end]
+
         return out;
     }
 }
