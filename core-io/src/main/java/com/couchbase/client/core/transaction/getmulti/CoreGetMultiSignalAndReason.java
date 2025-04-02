@@ -32,4 +32,12 @@ public class CoreGetMultiSignalAndReason {
         this.signal = requireNonNull(signal);
         this.reason = requireNonNull(reason);
     }
+
+    @Override
+    public String toString() {
+        return "CoreGetMultiSignalAndReason{" +
+                "signal=" + signal +
+                ", reason='" + reason + '\'' +
+                '}';
+    }
 }

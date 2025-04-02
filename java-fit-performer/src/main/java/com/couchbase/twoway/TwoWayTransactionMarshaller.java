@@ -17,7 +17,9 @@
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.JavaTransactionCommandExecutor;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.transactions.BroadcastToOtherConcurrentTransactionsRequest;
 import com.couchbase.client.protocol.transactions.CommandSetLatch;
@@ -78,13 +80,16 @@ public class TwoWayTransactionMarshaller {
                 if (next.hasCreate()) {
                     final TransactionCreateRequest req = next.getCreate();
                     final String bp = req.getName() + ": ";
+                    final var counters = new Counters();
 
                     Thread t = new Thread(() -> {
+                        var connection = clusterConnections.get(req.getClusterConnectionId());
+                        var executor = new JavaTransactionCommandExecutor(connection, counters, spans);
                         if (req.getApi() == API.DEFAULT) {
-                            twoWay = new TwoWayTransactionBlocking(twoWay.executor);
+                            twoWay = new TwoWayTransactionBlocking(executor);
                         }
                         else {
-                            twoWay = new TwoWayTransactionReactive(twoWay.executor);
+                            twoWay = new TwoWayTransactionReactive(executor);
                         }
                         twoWay.create(req);
 
@@ -106,7 +111,7 @@ public class TwoWayTransactionMarshaller {
 
                         var cc = clusterConnections.get(req.getClusterConnectionId());
 
-                        TransactionResult result = twoWay.run(clusterConnections.get(req.getClusterConnectionId()),
+                        TransactionResult result = twoWay.run(cc,
                                 req,
                                 toTest,
                                 false,

@@ -349,7 +349,7 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                             } else {
                                 return ctx.getMultiReplicasFromPreferredServerGroup(specs);
                             }
-                        }).doOnNext(results -> handleGetMultiFromPreferredServerGroupResult(request, results)));
+                        }).doOnNext(results -> handleGetMultiFromPreferredServerGroupResult(request, results, getLogger(ctx))));
             }
             // [end]
         } else if (op.hasWaitOnLatch()) {

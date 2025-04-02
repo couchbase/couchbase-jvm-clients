@@ -34,7 +34,6 @@ import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.RemoveResponse;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -155,7 +154,7 @@ public class TransactionKVHandler {
 
             if (preferredReplicaMode) {
                 CompletableFuture<CoreSubdocGetResult> replicas = ReplicaHelper.lookupInAnyReplicaAsync(core, collectionIdentifier, id, convertCommandsToCore(commands), timeout, BestEffortRetryStrategy.INSTANCE,
-                        clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP, (r) -> r);
+                        clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE, (r) -> r);
 
                 return Reactor.wrap(replicas, () -> {})
                         .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionIdentifier))))

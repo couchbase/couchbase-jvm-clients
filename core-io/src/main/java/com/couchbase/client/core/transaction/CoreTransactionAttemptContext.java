@@ -889,8 +889,8 @@ public class CoreTransactionAttemptContext {
                     return DocumentGetter.justGetDoc(core, spec.collectionIdentifier, spec.id, operationTimeout, null, !operationState.replicasFromPreferredServerGroup, LOGGER, meteringUnitsBuilder, operationState.replicasFromPreferredServerGroup)
 
                             .flatMap(doc -> {
-                                LOGGER.info(attemptId, "getMulti: completed get of {} in {}us",
-                                        spec, TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start));
+                                LOGGER.info(attemptId, "getMulti: completed get of {} in {}us, present={}, inTransaction={}",
+                                        spec, TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - start), doc.isPresent(), doc.map(v -> v.getT1().isInTransaction()));
                                 Mono<Void> possibleForwardCompatCheck = Mono.empty();
                                 if (doc.isPresent()
                                     && doc.get().getT1().isInTransaction()) {
@@ -993,7 +993,7 @@ public class CoreTransactionAttemptContext {
                 LOGGER.info(attemptId, "getMultiDD: just one doc present, performing MAV");
                 CoreTransactionGetMultiResult single = fetchedAndPresent.get(0);
 
-                Mono<Optional<CoreTransactionGetResult>> mavRead = DocumentGetter.getAsync(core, LOGGER, single.spec.collectionIdentifier, config, single.spec.id, attemptId, true, attemptSpan, Optional.empty(), meteringUnitsBuilder, overall.supported(), false);
+                Mono<Optional<CoreTransactionGetResult>> mavRead = DocumentGetter.getAsync(core, LOGGER, single.spec.collectionIdentifier, config, single.spec.id, attemptId, false, attemptSpan, Optional.empty(), meteringUnitsBuilder, overall.supported(), false);
 
                 return mavRead.flatMap(doc -> {
                     CoreTransactionOptionalGetMultiResult r = new CoreTransactionOptionalGetMultiResult(single.spec, doc);

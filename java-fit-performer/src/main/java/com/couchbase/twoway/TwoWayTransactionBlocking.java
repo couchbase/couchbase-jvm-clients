@@ -469,7 +469,7 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                                 results = ctx.getMultiReplicasFromPreferredServerGroup(specs);
                             }
 
-                            handleGetMultiFromPreferredServerGroupResult(request, results);
+                            handleGetMultiFromPreferredServerGroupResult(request, results, getLogger(ctx));
                         });
             }
         // [end]

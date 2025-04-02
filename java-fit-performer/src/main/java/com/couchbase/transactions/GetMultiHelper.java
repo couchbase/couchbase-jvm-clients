@@ -18,6 +18,7 @@ package com.couchbase.transactions;
 // [skip:<3.8.0]
 
 import com.couchbase.InternalPerformerFailure;
+import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiMode;
@@ -96,7 +97,8 @@ public class GetMultiHelper {
     }
   }
 
-  public static void handleGetMultiFromPreferredServerGroupResult(CommandGetMulti request, TransactionGetMultiReplicasFromPreferredServerGroupResult results) {
+  // The logger provided just for debugging purposes in async envs
+  public static void handleGetMultiFromPreferredServerGroupResult(CommandGetMulti request, TransactionGetMultiReplicasFromPreferredServerGroupResult results, CoreTransactionLogger logger) {
     if (request.getSpecsCount() != results.size()) {
       throw new TestFailure(new RuntimeException(String.format("Expected %d results but got %d", request.getSpecsCount(), results.size())));
     }
