@@ -32,20 +32,22 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 @Stability.Internal
 public class AppTelemetryReporterImpl implements AppTelemetryReporter {
   private static final Logger log = LoggerFactory.getLogger(AppTelemetryReporterImpl.class);
 
   private static final ThreadFactory threadFactory = new CouchbaseThreadFactory("app-telemetry-reporter-");
+  private static final BackoffCalculator backoffCalculator = new BackoffCalculator(Duration.ofMillis(100), Duration.ofHours(1));
 
-  private static final Duration backoff = Duration.ofSeconds(5);
-
+  private final AtomicLong connectionAttempt = new AtomicLong();
   private final AppTelemetryCollector collector;
   private final Thread thread;
   private volatile boolean done; // guarded by "this"
@@ -69,7 +71,7 @@ public class AppTelemetryReporterImpl implements AppTelemetryReporter {
       try {
         while (!done) {
           try {
-            sleepForBackoff();
+            sleepForBackoff(connectionAttempt.getAndIncrement());
 
             URI remote = selectRemote();
             if (remote == null) {
@@ -77,10 +79,11 @@ public class AppTelemetryReporterImpl implements AppTelemetryReporter {
               throw new RuntimeException("unreachable");
             }
 
-            webSocketClient.connectAndWaitForClose(remote);
+            webSocketClient.connectAndWaitForClose(remote, this::resetBackoff);
             log.info("App telemetry connection closed by peer; recalibrating!");
 
           } catch (InterruptedException e) {
+            resetBackoff();
             log.info("App telemetry reporter interrupted; recalibrating!");
 
           } catch (Exception e) {
@@ -94,18 +97,18 @@ public class AppTelemetryReporterImpl implements AppTelemetryReporter {
     this.thread.start();
   }
 
+  private void resetBackoff() {
+    connectionAttempt.set(0);
+  }
+
   private static void sleepUntilInterrupted() throws InterruptedException {
     Thread.sleep(Long.MAX_VALUE);
   }
 
-  private void sleepForBackoff() throws InterruptedException {
-    long sleepMillis = withFullJitter(backoff.toMillis());
-    log.debug("App telemetry reporter sleeping for backoff: {} ms", sleepMillis);
-    Thread.sleep(sleepMillis);
-  }
-
-  private static long withFullJitter(long value) {
-    return (long) (value * random.nextDouble());
+  private void sleepForBackoff(long attempt) throws InterruptedException {
+    Duration delay = backoffCalculator.delayForAttempt(attempt);
+    log.debug("App telemetry reporter connection attempt {} sleeping for backoff: {}", attempt, delay);
+    MILLISECONDS.sleep(delay.toMillis());
   }
 
   private synchronized @Nullable URI selectRemote() {

@@ -86,10 +86,10 @@ class AppTelemetryWebSocketClient {
    * @throws InterruptedException if the thread was interrupted
    * @throws RuntimeException if the connection attempt failed for any other reason
    */
-  void connectAndWaitForClose(URI remote) throws InterruptedException {
+  void connectAndWaitForClose(URI remote, Runnable doOnSuccessfulConnection) throws InterruptedException {
     Channel channel = null;
     try {
-      channel = newChannel(remote);
+      channel = newChannel(remote, doOnSuccessfulConnection);
       channel.closeFuture().sync();
     } finally {
       if (channel != null) channel.close();
@@ -112,7 +112,7 @@ class AppTelemetryWebSocketClient {
     }
   }
 
-  private Channel newChannel(URI uri) {
+  private Channel newChannel(URI uri, Runnable doOnSuccessfulConnection) {
     String host = uri.getHost();
     int port = getPort(uri);
 
@@ -162,6 +162,7 @@ class AppTelemetryWebSocketClient {
         handler.handshakeFuture().addListener(((ChannelFuture f) -> {
           if (f.isSuccess()) {
             log.info("WebSocket handshake successful for remote: {}", redactSystem(uri));
+            doOnSuccessfulConnection.run();
           } else {
             log.warn("WebSocket handshake failed for remote: {}", redactSystem(uri));
             connectFuture.channel().close();
