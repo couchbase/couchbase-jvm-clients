@@ -41,7 +41,7 @@ import java.util.function.Consumer;
 
 import static com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryRequestClassifier.classify;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
+import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toSet;
 
@@ -204,8 +204,8 @@ public final class AppTelemetryCollectorImpl implements AppTelemetryCollector {
   }
 
   /**
-   * Returns the given node's `nodeUuid`, or null if no matching node
-   * is present in the current cluster topology.
+   * Returns the given node's `nodeUuid` (possibly empty string if server is older than 8.0)
+   * or null if no matching node is present in the current cluster topology.
    */
   private @Nullable String getNodeUuid(NodeAndBucket nodeAndBucket) {
     ClusterTopology topology = latestTopology;
@@ -214,7 +214,7 @@ public final class AppTelemetryCollectorImpl implements AppTelemetryCollector {
     return topology.nodes().stream()
       .filter(node -> node.id().equals(nodeAndBucket.nodeId))
       .findFirst()
-      .map(node -> defaultIfNull(node.uuid(), node.id().canonical().format()))
+      .map(node -> nullToEmpty(node.uuid()))
       .orElse(null);
   }
 }
