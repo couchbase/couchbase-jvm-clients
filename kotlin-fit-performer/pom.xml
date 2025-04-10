@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.17.0</version><!--REL-->
+        <version>1.17.1-SNAPSHOT</version><!--REL-->
     </parent>
 
     <artifactId>fit-performer-kotlin</artifactId>
