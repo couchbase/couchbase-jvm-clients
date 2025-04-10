@@ -7,11 +7,11 @@
     <parent>
         <groupId>com.couchbase.client</groupId>
         <artifactId>couchbase-jvm-clients</artifactId>
-        <version>1.17.1-SNAPSHOT</version><!--REL-->
+        <version>1.18.0-SNAPSHOT</version><!--REL-->
     </parent>
 
     <artifactId>core-io</artifactId>
-    <version>3.8.1-SNAPSHOT</version><!--REL-->
+    <version>3.9.0-SNAPSHOT</version><!--REL-->
 
     <!-- Ideally, this would be like java-client and not use packaging-bundle -->
     <!-- But I haven't figured out how to run the felix plugin *after* the shading has been done, then update the MANIFEST.MF -->
