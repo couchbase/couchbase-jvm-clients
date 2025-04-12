@@ -24,7 +24,7 @@
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>tracing-opentelemetry-deps</artifactId>
-            <version>1.6.0-SNAPSHOT</version><!--REL-->
+            <version>1.7.0-SNAPSHOT</version><!--REL-->
         </dependency>
 
         <dependency>
