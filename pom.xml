@@ -21,7 +21,7 @@
         <core-io.version>3.9.0-SNAPSHOT</core-io.version><!--REL-->
         <core-io-deps.version>1.9.0-SNAPSHOT</core-io-deps.version><!--REL-->
         <scala-client.version>1.9.0-SNAPSHOT</scala-client.version><!--REL-->
-        <kotlin-client.version>1.9.0-SNAPSHOT</kotlin-client.version><!--REL-->
+        <kotlin-client.version>1.6.0-SNAPSHOT</kotlin-client.version><!--REL-->
         <columnar-java-client.version>1.2.0-SNAPSHOT</columnar-java-client.version><!--REL-->
         <tracing-opentelemetry.version>1.7.0-SNAPSHOT</tracing-opentelemetry.version><!--REL-->
         <metrics-opentelemetry.version>0.9.0-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
