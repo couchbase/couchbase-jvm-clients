@@ -15,6 +15,8 @@
  */
 package com.couchbase.client.java.search.result;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.result.CoreSearchRow;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.codec.TypeRef;
@@ -62,6 +64,19 @@ public class SearchRow {
     public double score() {
         return internal.score();
     }
+
+    /**
+     * Returns the keyset of this search row, which contains the keys
+     * associated with the result. The keyset is used for pagination
+     * or other advanced search operations.
+     *
+     * @return the keyset of this search row
+     * @see SearchOptions#searchBefore(SearchKeyset)
+     * @see SearchOptions#searchAfter(SearchKeyset)
+     */
+    @SinceCouchbase("6.6.1")
+    @Stability.Volatile
+    public SearchKeyset keyset() { return new SearchKeyset(this.internal.keyset()); }
 
     /**
      * If {@link SearchOptions#explain(boolean)} was set to true, returns an explanation of the match.

@@ -16,8 +16,10 @@
 
 package com.couchbase.client.java.search;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreHighlightStyle;
+import com.couchbase.client.core.api.search.CoreSearchKeyset;
 import com.couchbase.client.core.api.search.CoreSearchOptions;
 import com.couchbase.client.core.api.search.CoreSearchScanConsistency;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
@@ -32,6 +34,7 @@ import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.kv.MutationState;
 import com.couchbase.client.java.query.QueryOptionsUtil;
 import com.couchbase.client.java.search.facet.SearchFacet;
+import com.couchbase.client.java.search.result.SearchKeyset;
 import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.result.SearchRow;
 import com.couchbase.client.java.search.sort.SearchSort;
@@ -63,6 +66,8 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private Integer skip;
   private @Nullable List<CoreSearchSort> sort;
   private Boolean includeLocations;
+  private @Nullable SearchKeyset searchBefore;
+  private @Nullable SearchKeyset searchAfter;
 
   public static SearchOptions searchOptions() {
     return new SearchOptions();
@@ -118,13 +123,16 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   }
 
   /**
-   * Set the number of rows to skip (eg. for pagination).
-   *
+   * Set the number of rows to skip (e.g. for pagination).
+   * Note that you cannot use this method and {@link #searchAfter(SearchKeyset)} and {@link #searchBefore(SearchKeyset)} at the same time,
+   * since they are mutually incompatible. As a general rule of thumb the last method called will win.
    * @param skip the number of results to skip.
    * @return this SearchQuery for chaining.
    */
   public SearchOptions skip(int skip) {
     this.skip = skip;
+    searchAfter = null;
+    searchBefore = null;
     return this;
   }
 
@@ -318,6 +326,36 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     return this;
   }
 
+  /**
+   * Note that you cannot use this method and {@link #skip(int)} and {@link #searchAfter(SearchKeyset)} at the same time,
+   * since they are mutually incompatible. As a general rule of thumb the last method called will win.
+   * @param searchBefore
+   * @return this SearchQuery for chaining.
+   */
+  @SinceCouchbase("6.6.1")
+  @Stability.Volatile
+  public SearchOptions searchBefore(SearchKeyset searchBefore) {
+    this.searchBefore = searchBefore;
+    searchAfter = null;
+    skip = null;
+    return this;
+  }
+
+  /**
+   * Note that you cannot use this method and {@link #skip(int)} and {@link #searchBefore(SearchKeyset)} at the same time,
+   * since they are mutually incompatible. As a general rule of thumb the last method called will win.
+   * @param searchAfter
+   * @return this SearchQuery for chaining.
+   */
+  @SinceCouchbase("6.6.1")
+  @Stability.Volatile
+  public SearchOptions searchAfter(SearchKeyset searchAfter) {
+    this.searchAfter = searchAfter;
+    searchBefore = null;
+    skip = null;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -433,6 +471,16 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     @Override
     public CoreCommonOptions commonOptions() {
       return this;
+    }
+
+    @Override
+    public @Nullable CoreSearchKeyset searchBefore() {
+      return searchBefore == null ? null : searchBefore.toCore();
+    }
+
+    @Override
+    public @Nullable CoreSearchKeyset searchAfter() {
+      return searchAfter == null ? null : searchAfter.toCore();
     }
   }
 
