@@ -18,11 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import reactor.core.publisher.Flux;
@@ -33,13 +29,14 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
+import static com.couchbase.client.core.io.netty.EventLoopGroups.isNio;
+import static com.couchbase.client.core.io.netty.EventLoopGroups.newIoHandlerFactory;
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.Validators.notNull;
 
@@ -395,8 +392,8 @@ public class IoEnvironment {
    * @param group the group to check.
    */
   private void sanityCheckEventLoop(final OwnedOrExternal<EventLoopGroup> group) {
-    if (!nativeIoEnabled && !(group.get() instanceof NioEventLoopGroup)) {
-      throw InvalidArgumentException.fromMessage("Native IO is disabled and the EventLoopGroup is not a NioEventLoopGroup");
+    if (!nativeIoEnabled && !isNio(group.get())) {
+      throw InvalidArgumentException.fromMessage("Native IO is disabled and the EventLoopGroup is not backed by NIO");
     }
   }
 
@@ -536,12 +533,12 @@ public class IoEnvironment {
   /**
    * Helper method to select the best event loop group type based on the features
    * available on the current platform.
-   *
-   * <p>If KQueue or Epoll native transports are available, it will use those. If not
-   * there is always the fallback to the Nio transport which is always available.</p>
+   * <p>
+   * If KQueue or Epoll native transports are available, it will use those. If not
+   * there is always the fallback to the Nio transport which is always available.
    *
    * @param nativeIoEnabled native IO enabled.
-   * @param numThreads number of threads to to assign to the group.
+   * @param numThreads number of threads to assign to the group.
    * @param poolName the name of the threads.
    * @return the created group.
    */
@@ -550,15 +547,13 @@ public class IoEnvironment {
     final int numThreads,
     final String poolName
   ) {
-    final ThreadFactory threadFactory = new DefaultThreadFactory(poolName, true);
-
-    if (nativeIoEnabled && Epoll.isAvailable()) {
-      return owned(new EpollEventLoopGroup(numThreads, threadFactory));
-    } else if (nativeIoEnabled && KQueue.isAvailable()) {
-      return owned(new KQueueEventLoopGroup(numThreads, threadFactory));
-    } else {
-      return owned(new NioEventLoopGroup(numThreads, threadFactory));
-    }
+    return owned(
+      new MultiThreadIoEventLoopGroup(
+        numThreads,
+        new DefaultThreadFactory(poolName, true),
+        newIoHandlerFactory(nativeIoEnabled)
+      )
+    );
   }
 
   /**

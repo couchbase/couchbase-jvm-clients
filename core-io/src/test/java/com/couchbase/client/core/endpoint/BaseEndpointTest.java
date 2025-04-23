@@ -34,11 +34,11 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOutboundHandlerAdapter;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
@@ -89,7 +89,7 @@ class BaseEndpointTest {
 
   @BeforeEach
   void beforeEach() {
-    eventLoopGroup = new NioEventLoopGroup(1);
+    eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
     eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     environment = CoreEnvironment.builder().eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mockCore(), 1, environment, authenticator);

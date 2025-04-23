@@ -24,10 +24,11 @@ import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdapter;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalAddress;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
+import com.couchbase.client.core.deps.io.netty.channel.local.LocalIoHandler;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalServerChannel;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpResponse;
@@ -83,7 +84,7 @@ class QueryMessageHandlerBackpressureTest {
 
   @BeforeAll
   static void beforeAll() {
-    eventLoopGroup = new DefaultEventLoopGroup();
+    eventLoopGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
   }
 
   @BeforeEach
@@ -127,7 +128,7 @@ class QueryMessageHandlerBackpressureTest {
     when(endpoint.pipelined()).thenReturn(false);
     Bootstrap client = new Bootstrap()
       .channel(LocalChannel.class)
-      .group(new DefaultEventLoopGroup())
+      .group(eventLoopGroup)
       .remoteAddress(new LocalAddress("s1"))
       .handler(new ChannelInitializer<LocalChannel>() {
         @Override

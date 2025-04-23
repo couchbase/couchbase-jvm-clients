@@ -17,7 +17,17 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
+import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
+import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
+import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
+import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -33,14 +43,6 @@ import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
-import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
-import com.couchbase.client.core.deps.io.netty.channel.Channel;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
-import com.couchbase.client.core.cnc.SimpleEventBus;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -52,9 +54,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Tests the direct lower level communication of a full KV channel against
@@ -66,7 +68,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
 
   private static CoreEnvironment env;
   private static EndpointContext endpointContext;
-  private static NioEventLoopGroup eventLoopGroup;
+  private static EventLoopGroup eventLoopGroup;
 
   /**
    * Some tests raise warnings which are expected (i.e. auth failures), so we silence them
@@ -89,7 +91,7 @@ class KeyValueChannelIntegrationTest extends CoreIntegrationTest {
       Optional.of(config().bucketname()),
       Optional.empty()
     );
-    eventLoopGroup = new NioEventLoopGroup(1);
+    eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
   }
 
   @AfterAll

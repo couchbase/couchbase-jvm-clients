@@ -28,8 +28,6 @@ import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
@@ -71,22 +69,13 @@ public class SslHandlerFactory {
 
     endpointContext.authenticator().applyTlsProperties(context);
 
-    final SslHandler sslHandler = context.build().newHandler(
+    context.endpointIdentificationAlgorithm(config.hostnameVerificationEnabled() ? "HTTPS" : null);
+
+    return context.build().newHandler(
       allocator,
       endpointContext.remoteSocket().host(),
       endpointContext.remoteSocket().port()
     );
-
-    SSLEngine sslEngine = sslHandler.engine();
-    SSLParameters sslParameters = sslEngine.getSSLParameters();
-
-    if (config.hostnameVerificationEnabled()) {
-      sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-    }
-
-    sslEngine.setSSLParameters(sslParameters);
-
-    return sslHandler;
   }
 
   private static SslContextBuilder sslContextBuilder(final boolean nativeTlsEnabled) {

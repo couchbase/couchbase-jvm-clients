@@ -29,31 +29,25 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointWriteFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.WriteBufferWaterMark;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollSocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueSocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.local.LocalChannel;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioSocketChannel;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.BucketNotFoundException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.SecurityException;
+import com.couchbase.client.core.io.netty.EventLoopGroups;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.SslSessionLoggingHandler;
@@ -70,6 +64,8 @@ import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.SingleStateful;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
@@ -89,6 +85,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.io.netty.EventLoopGroups.isEpoll;
+import static com.couchbase.client.core.io.netty.EventLoopGroups.isLocal;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
 
@@ -103,6 +101,37 @@ import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
  * @since 2.0.0
  */
 public abstract class BaseEndpoint implements Endpoint {
+  private static final Logger log = LoggerFactory.getLogger(BaseEndpoint.class);
+
+  private static final String ALLOCATOR_SYSTEM_PROPERTY_NAME = "com.couchbase.client.core.deps.io.netty.allocator.type";
+  private static final ByteBufAllocator allocator;
+
+  // Netty 4.2 changed the default allocator from `pooled` to `adaptive`.
+  // To minimize risk, we'll continue defaulting to `pooled` for a while
+  // as recommended by https://netty.io/wiki/netty-4.2-migration-guide.html
+  static {
+    String propertyValue = System.getProperty(ALLOCATOR_SYSTEM_PROPERTY_NAME);
+    if (propertyValue == null) {
+      allocator = PooledByteBufAllocator.DEFAULT;
+
+      log.debug("ByteBufAllocator: Defaulting to {}." +
+          " A future version of the Couchbase SDK might default to AdaptiveByteBufAllocator instead." +
+          " If you'd like to use AdaptiveByteBufAllocator now, set the Java system property '{}' to 'adaptive'." +
+          " If you'd like to isolate yourself from future changes to the default, set the property to 'pooled'.",
+        allocator,
+        ALLOCATOR_SYSTEM_PROPERTY_NAME
+      );
+
+    } else {
+      allocator = ByteBufAllocator.DEFAULT;
+
+      log.debug("ByteBufAllocator: Using {} because the Java system property '{}' was set to '{}'.",
+        allocator,
+        ALLOCATOR_SYSTEM_PROPERTY_NAME,
+        propertyValue
+      );
+    }
+  }
 
   /**
    * Holds the current state of this endpoint.
@@ -232,19 +261,7 @@ public abstract class BaseEndpoint implements Endpoint {
    */
   @Stability.Internal
   public static Class<? extends Channel> channelFrom(final EventLoopGroup eventLoopGroup) {
-    if (eventLoopGroup instanceof KQueueEventLoopGroup) {
-      return KQueueSocketChannel.class;
-    } else if (eventLoopGroup instanceof EpollEventLoopGroup) {
-      return EpollSocketChannel.class;
-    } else if (eventLoopGroup instanceof NioEventLoopGroup) {
-      return NioSocketChannel.class;
-    } else if (eventLoopGroup instanceof DefaultEventLoopGroup) {
-      // Used for testing!
-      return LocalChannel.class;
-    } else {
-      throw InvalidArgumentException.fromMessage("Unknown EventLoopGroup Type: "
-        + eventLoopGroup.getClass().getSimpleName());
-    }
+    return EventLoopGroups.channelType(eventLoopGroup);
   }
 
   /**
@@ -342,6 +359,7 @@ public abstract class BaseEndpoint implements Endpoint {
           .channel(channelFrom(eventLoopGroup))
           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
           .option(ChannelOption.WRITE_BUFFER_WATER_MARK, writeBufferWaterMark)
+          .option(ChannelOption.ALLOCATOR, allocator)
           .handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(final Channel ch) {
@@ -370,9 +388,9 @@ public abstract class BaseEndpoint implements Endpoint {
         Optional.ofNullable(io.sendBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_SNDBUF, it.bytesAsInt()));
         Optional.ofNullable(io.receiveBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_RCVBUF, it.bytesAsInt()));
 
-        if (env.ioConfig().tcpKeepAlivesEnabled() && !(eventLoopGroup instanceof DefaultEventLoopGroup)) {
+        if (env.ioConfig().tcpKeepAlivesEnabled() && !isLocal(eventLoopGroup)) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-          if (eventLoopGroup instanceof EpollEventLoopGroup) {
+          if (isEpoll(eventLoopGroup)) {
             channelBootstrap.option(
               EpollChannelOption.TCP_KEEPIDLE,
               (int) TimeUnit.MILLISECONDS.toSeconds(env.ioConfig().tcpKeepAliveTime().toMillis()));

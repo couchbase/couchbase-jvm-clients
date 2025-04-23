@@ -25,9 +25,11 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.Channel;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.core.deps.io.netty.channel.DefaultEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.SimpleChannelInboundHandler;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalAddress;
+import com.couchbase.client.core.deps.io.netty.channel.local.LocalIoHandler;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalServerChannel;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.service.ServiceContext;
@@ -59,14 +61,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BaseEndpointIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
-  private DefaultEventLoopGroup eventLoopGroup;
+  private EventLoopGroup eventLoopGroup;
   private SimpleEventBus eventBus;
 
   @BeforeEach
   void beforeEach() {
     eventBus = new SimpleEventBus(true);
     env = environment().eventBus(eventBus).build();
-    eventLoopGroup = new DefaultEventLoopGroup();
+    eventLoopGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
   }
 
   @AfterEach
@@ -147,7 +149,7 @@ class BaseEndpointIntegrationTest extends CoreIntegrationTest {
     assertTrue(hasDisconnectEvent);
   }
 
-  private LocalServerController startLocalServer(final DefaultEventLoopGroup eventLoopGroup) {
+  private LocalServerController startLocalServer(final EventLoopGroup eventLoopGroup) {
     final LocalServerController localServerController = new LocalServerController();
 
     ServerBootstrap bootstrap = new ServerBootstrap()
