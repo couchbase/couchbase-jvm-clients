@@ -253,6 +253,11 @@
                         <autoReleaseAfterClose>true</autoReleaseAfterClose>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>3.5.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -360,6 +365,34 @@
                     <executable>java</executable>
                 </configuration>
             </plugin>
+
+            <!-- Require profile `snapshot` or `release` when deploying.
+                 Having explicit profiles (instead of relying on deploy plugin's
+                 automatic snapshot/release routing) prevents the "on push"
+                 snapshot publish action from accidentally publishing a release version. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-deploy-has-active-profile</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireProfileIdsExist/>
+                                <requireActiveProfile>
+                                    <profiles>snapshot,release</profiles>
+                                    <all>false</all>
+                                </requireActiveProfile>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -413,6 +446,56 @@
                                 <goals>
                                     <goal>sign</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>enforce-release</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireReleaseVersion>
+                                            <message>Not a release version (remove -SNAPSHOT suffix!)</message>
+                                        </requireReleaseVersion>
+                                        <requireReleaseDeps>
+                                            <message>Can't release with snapshot dependencies!</message>
+                                        </requireReleaseDeps>
+                                    </rules>
+                                    <fail>true</fail>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>snapshot</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>enforce-snapshot</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireSnapshotVersion>
+                                            <message>Not a SNAPSHOT version!</message>
+                                        </requireSnapshotVersion>
+                                    </rules>
+                                    <fail>true</fail>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
