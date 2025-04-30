@@ -37,7 +37,7 @@ trait SearchQuery {
 
   /** @return the String representation of the FTS query, which is its JSON representation without global parameters.
     */
-  override def toString: String = toCore.toString
+  override def toString: String = toCore.export.toString
 }
 
 object SearchQuery {
