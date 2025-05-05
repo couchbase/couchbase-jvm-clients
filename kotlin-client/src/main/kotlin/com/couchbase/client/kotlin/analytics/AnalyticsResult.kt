@@ -43,9 +43,6 @@ public class AnalyticsResult(
      *
      * @throws IllegalArgumentException if there is more than one result row
      * @throws NoSuchElementException if there is no field with the given name
-     *
-     * @sample com.couchbase.client.kotlin.samples.singleValueAnalyticsAnonymous
-     * @sample com.couchbase.client.kotlin.samples.singleValueAnalyticsNamed
      */
     @VolatileCouchbaseApi
     public inline fun <reified T> valueAs(name: String = "$1", serializer: JsonSerializer? = null): T {
