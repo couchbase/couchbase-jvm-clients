@@ -33,12 +33,7 @@ public class QueryRowUtil {
   public static RowProcessingResult processRow(fit.columnar.ExecuteQueryRequest executeQueryRequest, Row row) {
     if (executeQueryRequest.hasContentAs()) {
       var content = ContentAsUtil.contentType(
-        executeQueryRequest.getContentAs(),
-        () -> row.bytes(),
-        () -> row.asNullable(JsonArray.class),
-        () -> row.asNullable(JsonObject.class),
-        () -> row.asNullable(String.class)
-      );
+        executeQueryRequest.getContentAs(), row);
 
       if (content.isSuccess()) {
         return new RowProcessingResult(null, QueryRowResponse.newBuilder()

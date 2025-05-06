@@ -16,9 +16,15 @@
 
 package com.couchbase.columnar.util;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
 import com.couchbase.columnar.client.java.codec.Deserializer;
 import com.couchbase.columnar.client.java.codec.TypeRef;
-import com.couchbase.columnar.client.java.json.JsonObject;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
 
 /**
  * CustomJsonDeserializer provides a generic implementation of the Deserializer interface.
@@ -41,17 +47,31 @@ import com.couchbase.columnar.client.java.json.JsonObject;
  */
 
 public class CustomDeserializer implements Deserializer {
+  private static final JsonMapper mapper = JsonMapper.builder().build();
+
   @Override
   public <T> T deserialize(Class<T> target, byte[] input) {
-    JsonObject obj = JsonObject.fromJson(input);
-    obj.put("Serialized", false);
-    return (T) obj.toString();
+    requireObjectNode(target);
+
+    try {
+      ObjectNode obj = (ObjectNode) mapper.readTree(input);
+      obj.put("Serialized", false);
+      return (T) obj;
+
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
   public <T> T deserialize(TypeRef<T> target, byte[] input) {
-    JsonObject obj = JsonObject.fromJson(input);
-    obj.put("Serialized", false);
-    return (T) obj.toString();
+    requireObjectNode(target.type());
+    return (T) deserialize(ObjectNode.class, input);
+  }
+
+  private static void requireObjectNode(Type type) {
+    if (!type.equals(ObjectNode.class)) {
+      throw new UnsupportedOperationException("Expected target class to be ObjectNode, but got: " + type);
+    }
   }
 }
