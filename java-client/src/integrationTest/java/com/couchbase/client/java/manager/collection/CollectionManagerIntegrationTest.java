@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.collection;
 
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionExistsException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.ScopeExistsException;
@@ -231,7 +230,7 @@ class CollectionManagerIntegrationTest extends JavaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.6")
+  @IgnoreWhen(clusterVersionIsBelow = "7.6", missesCapabilities = Capabilities.ENTERPRISE_EDITION)
   void expiryCanBeNeverExpire() {
     String scopeName = randomString();
     collections.createScope(scopeName);
