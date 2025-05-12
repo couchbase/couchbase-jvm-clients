@@ -27,7 +27,7 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.util.Bytes;
+import com.couchbase.client.core.util.CbDurations;
 
 import java.time.Duration;
 
@@ -60,7 +60,8 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
 
     try {
       key = encodedKeyWithCollection(alloc, ctx);
-      extras = alloc.buffer(Integer.BYTES).writeInt((int) lockFor.getSeconds());
+      long secondsToLock = CbDurations.getSecondsCeil(lockFor);
+      extras = alloc.buffer(Integer.BYTES).writeInt(Math.toIntExact(secondsToLock));
 
       return MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
         partition(), opaque, noCas(), extras, key, noBody());
