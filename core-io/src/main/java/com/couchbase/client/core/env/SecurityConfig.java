@@ -87,6 +87,8 @@ public class SecurityConfig {
     }
   }
 
+  private static final int PRINT_N_CERTS = 5;
+
   private final boolean nativeTlsEnabled;
   private final boolean hostnameVerificationEnabled;
   private final boolean tlsEnabled;
@@ -346,7 +348,7 @@ public class SecurityConfig {
     export.put("tlsEnabled", tlsEnabled);
     export.put("nativeTlsEnabled", nativeTlsEnabled);
     export.put("hostnameVerificationEnabled", hostnameVerificationEnabled);
-    export.put("trustCertificates", trustCertificates != null ? trustCertificatesToString() : null);
+    export.put("trustCertificates", trustCertificates != null ? trustCertificatesToString(PRINT_N_CERTS) : null);
     export.put("trustManagerFactory", trustManagerFactory != null ? trustManagerFactory.getClass().getSimpleName() : null);
     export.put("ciphers", ciphers);
     return export;
@@ -607,15 +609,22 @@ public class SecurityConfig {
     return SslHandlerFactory.defaultCiphers(nativeTlsEnabled);
   }
 
-  private String trustCertificatesToString() {
+  @Stability.Internal
+  public String trustCertificatesToString() {
+    return trustCertificatesToString(Integer.MAX_VALUE);
+  }
+
+  private String trustCertificatesToString(final int printNCerts) {
     if (isNullOrEmpty(trustCertificates)) {
       return null;
     }
 
-    return trustCertificates.stream()
-        .map(it -> it.getSubjectDN() + " (valid from " + it.getNotBefore().toInstant() + " to " + it.getNotAfter().toInstant() + ")")
-        .collect(toList())
-        .toString();
+    return new StringBuilder().append(trustCertificates.stream()
+      .map(it -> it.getSubjectDN() + " (valid from " + it.getNotBefore().toInstant() + " to " + it.getNotAfter().toInstant() + ")")
+      .limit(printNCerts)
+      .collect(toList()))
+      .append(trustCertificates.size() > printNCerts ? " (and " + (trustCertificates.size() - printNCerts) + " more)" : "")
+      .toString();
   }
 
   /**

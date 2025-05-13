@@ -107,6 +107,8 @@ import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -133,6 +135,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
+import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
 import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString;
 import static com.couchbase.client.core.util.ConnectionStringUtil.sanityCheckPorts;
 import static java.util.Collections.emptySet;
@@ -148,6 +151,7 @@ import static java.util.Objects.requireNonNull;
  */
 @Stability.Volatile
 public class Core implements CoreCouchbaseOps, AutoCloseable {
+  private static final Logger logger = LoggerFactory.getLogger(Core.class);
 
   /**
    * Locates the right node for the KV service.
@@ -343,6 +347,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .collect(Collectors.toList());
 
     eventBus.publish(new CoreCreatedEvent(coreContext, environment, emptySet(), CoreLimiter.numInstances(), connectionString));
+
+    if (!isNullOrEmpty(coreContext.environment().securityConfig().trustCertificates())) {
+      logger.debug("Trusted certificates: {}", coreContext.environment().securityConfig().trustCertificatesToString());
+    }
 
     long watchdogInterval = INVALID_STATE_WATCHDOG_INTERVAL.getSeconds();
     if (watchdogInterval <= 1) {

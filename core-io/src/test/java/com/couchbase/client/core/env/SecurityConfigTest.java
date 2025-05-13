@@ -73,13 +73,30 @@ class SecurityConfigTest {
 
   @Test
   void trustTwoCertificatesFromFile() {
-    checkCertificatesFromFile(
+    SecurityConfig config = checkCertificatesFromFile(
         "two-certificates.pem",
         listOf(
             "CN=Couchbase Server 1d6c9ec6",
             "CN=Couchbase Server f233ba43"
         )
     );
+    assertFalse(config.exportAsMap().get("trustCertificates").toString().contains(" (and "));
+  }
+
+  @Test
+  void trustSixCertificatesFromFile() {
+    SecurityConfig config = checkCertificatesFromFile(
+      "six-certificates.pem",
+      listOf(
+        "CN=Couchbase Server 1d6c9ec6",
+        "CN=Couchbase Server f233ba43",
+        "CN=Couchbase Server 1d6c9ec6",
+        "CN=Couchbase Server f233ba43",
+        "CN=Couchbase Server 1d6c9ec6",
+        "CN=Couchbase Server f233ba43"
+      )
+    );
+    assertTrue(config.exportAsMap().get("trustCertificates").toString().contains(" (and 1 more)"));
   }
 
   @Test
@@ -92,7 +109,7 @@ class SecurityConfigTest {
     assertEquals(jvm.size() + capella.size(), defaults.size());
   }
 
-  private void checkCertificatesFromFile(
+  private SecurityConfig checkCertificatesFromFile(
       String resourceName,
       List<String> expectedSubjectDns
   ) {
@@ -105,6 +122,7 @@ class SecurityConfigTest {
             .map(it -> it.getSubjectDN().getName())
             .collect(toList())
     );
+    return config;
   }
 
   private static Path getResourceAsPath(
