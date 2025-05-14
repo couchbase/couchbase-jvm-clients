@@ -48,8 +48,7 @@ public class ErrorUtil {
     private static final Map<String, CouchbaseExceptionType> irregular = Map.of(
             "DurableWriteReCommitInProgressException", SDK_DURABLE_WRITE_RECOMMIT_IN_PROGRESS_EXCEPTION,
             "RequestCanceledException", SDK_REQUEST_CANCELLED_EXCEPTION,
-            "PathTooDeepException", SDK_PATH_TOO_BIG_EXCEPTION,
-            "DocumentTooDeepException", SDK_PATH_TOO_DEEP_EXCEPTION
+            "PathTooDeepException", SDK_PATH_TOO_BIG_EXCEPTION
     );
 
     public static @Nullable CouchbaseExceptionType convertException(String simpleClassName) {
