@@ -217,7 +217,8 @@ case class TransactionQueryOptions private (
       adhoc,
       deferredException,
       None,
-      raw
+      raw,
+      flexIndex
     )
     converted.toCore
   }
