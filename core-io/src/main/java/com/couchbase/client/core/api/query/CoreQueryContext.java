@@ -45,7 +45,7 @@ public class CoreQueryContext {
   }
 
   public String format() {
-    return "`" + namespace + "`:`" + bucket + "`.`" + scope + "`";
+    return namespace + ":`" + bucket + "`.`" + scope + "`";
   }
 
   public String bucket() {
