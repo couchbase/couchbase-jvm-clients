@@ -252,21 +252,26 @@ class QueryIntegrationTest extends JavaIntegrationTest {
 
     @Test
     void blockingStreamingCanTimeOut() {
-        // Thanks vsr1! https://www.couchbase.com/forums/t/how-to-force-a-sql-query-to-take-a-long-time/39658
-        String verySlowStatement = "SELECT COUNT (1) AS c FROM" +
-            " ARRAY_RANGE(0,10000) AS d1," +
-            " ARRAY_RANGE(0,10000) AS d2," +
-            " ARRAY_RANGE(0,10000) AS d3";
-
         assertThrows(
             TimeoutException.class,
             () -> cluster.queryStreaming(
-                verySlowStatement,
+                verySlowQueryStatement(),
                 queryOptions()
                     .timeout(Duration.ofMillis(1)),
                 row -> fail("Did not expect to receive result row")
             )
         );
+    }
+
+    /**
+     * Returns a query statement that is not expected to complete in a reasonable amount of time.
+     */
+    static String verySlowQueryStatement() {
+        // Thanks vsr1! https://www.couchbase.com/forums/t/how-to-force-a-sql-query-to-take-a-long-time/39658
+        return "SELECT COUNT (1) AS c FROM" +
+            " ARRAY_RANGE(0,10000) AS d1," +
+            " ARRAY_RANGE(0,10000) AS d2," +
+            " ARRAY_RANGE(0,10000) AS d3";
     }
 
     @Test

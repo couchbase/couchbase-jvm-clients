@@ -16,132 +16,134 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectDelayedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectResumedEvent;
-import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
-import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.java.env.ClusterEnvironment;
-import com.couchbase.client.java.query.QueryScanConsistency;
+import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.java.QueryIntegrationTest.verySlowQueryStatement;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
+import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-/**
- * Verifies the delayed disconnect of an in-progress query Must be in package com.couchbase.client.core to override
- * Core.createConfigurationProvider()
- * <p>
- * Disabling against 5.5. See comment on QueryIndexManagerIntegrationTest for details.
- */
 @IgnoreWhen(missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
 class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
-
-  private static ClusterEnvironment initEnv;
-  private static Cluster initCluster;
-
-  private static ClusterEnvironment environment;
-  private static Cluster cluster;
-
-  private static SimpleEventBus eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
-
-  @BeforeAll
-  static void setup() throws ExecutionException, InterruptedException {
-
-    // create a cluster for initialization.
-    // do not use the same cluster for testing as the initialization cluster is polluted by accessing the bucket.
-
-    initEnv = ClusterEnvironment.builder().build();
-    ClusterOptions initOpts = ClusterOptions.clusterOptions(authenticator()).environment(initEnv);
-    initCluster = Cluster.connect(connectionString(), initOpts);//createCluster(env ->  ClusterEnvironment.builder().eventBus(eventBus).build());
-    Bucket bucket = initCluster.bucket(config().bucketname());
-
-    bucket.waitUntilReady(WAIT_UNTIL_READY_DEFAULT);
-    waitForService(bucket, ServiceType.QUERY);
-    waitForQueryIndexerToHaveKeyspace(initCluster, config().bucketname());
-
-    createPrimaryIndex(initCluster, config().bucketname());
-
-    for (int i = 0; i < 100; i++) {
-      initCluster.bucket(config().bucketname()).defaultCollection().upsert("" + i, "{}");
-    }
-
-    // create a cluster for testing
-
-    environment = ClusterEnvironment.builder().eventBus(eventBus).ioConfig(io -> io.configPollInterval(Duration.ofHours(24))).build();
-    ClusterOptions opts = ClusterOptions.clusterOptions(authenticator()).environment(environment);
-    cluster = Cluster.connect(connectionString(), opts);
-
-  }
-
-  @BeforeEach
-  void beforeEach() {
-  }
-
-  @AfterEach
-  void afterEach() {
-    eventBus.clear();
-  }
-
-  @AfterAll
-  static void tearDown() {
-    cluster.disconnect();
-    environment.shutdown();
-
-    for (int i = 0; i < 100; i++) {
-      initCluster.bucket(config().bucketname()).defaultCollection().remove("" + i);
-    }
-    initCluster.disconnect();
-    initEnv.shutdown();
-  }
+  private static final Logger log = LoggerFactory.getLogger(QueryDelayDisconnectIntegrationTest.class);
 
   @Test
-  void simpleQueryClose() throws InterruptedException, ExecutionException {
-
-    // Start a query.
-    // When the first row is retrieved, modify the configuration by removing the n1ql nodes
-    // The query endpoint will not be closed until the query completes
-
-    AtomicBoolean first = new AtomicBoolean(true);
-    cluster.reactive().query(
-        "select * from `" + config().bucketname() + "` a  UNNEST(SELECT b.* FROM `" + config().bucketname()
-          + "` b limit 100) AS c limit 10000",
-        queryOptions().metrics(true).scanConsistency(QueryScanConsistency.REQUEST_PLUS)
-      ).block()
-      .rowsAs(byte[].class).doOnNext(it -> {
-        if (first.compareAndSet(true, false)) {
-          cluster.reactive().core().configurationProvider().proposeGlobalConfig(
-            new ProposedGlobalConfigContext(dummyConfig, "localhost", true)
-          );
-        }
-      }).blockLast();
-    cluster.reactive().core().shutdown().block(); // flush out events
-    List<Class> events = new LinkedList<>();
-    eventBus.publishedEvents().stream().filter(e -> e instanceof EndpointDisconnectDelayedEvent || e instanceof EndpointDisconnectResumedEvent).forEach(e -> events.add(e.getClass()));
-    assertEquals(2, events.size());
-    assertEquals(events.get(0), EndpointDisconnectDelayedEvent.class);
-    assertEquals(events.get(1), EndpointDisconnectResumedEvent.class);
-
+  void inflightQueryIsAllowedToCompleteIfNodeLeavesCluster() throws Throwable {
+    // This test relies on a query timeout expiring. Minimize typical execution time by
+    // starting with short timeout and trying again with a longer timeout if necessary.
+    try {
+      testWithQueryTimeout(Duration.ofSeconds(4)); // long enough for laptop or GHA
+    } catch (Throwable t) {
+      log.warn("Test failed with short query timeout. Trying again with longer timeout.", t);
+      testWithQueryTimeout(Duration.ofSeconds(40)); // long enough for a glacial CI environment
+    }
   }
 
-  String dummyConfig = "{\n" +
+  static void testWithQueryTimeout(Duration queryTimeout) throws Exception {
+    Duration gracePeriod = queryTimeout.dividedBy(3);
+    log.info("Testing with queryTimeout={} gracePeriod={}", queryTimeout, gracePeriod);
+
+    SimpleEventBus eventBus = new SimpleEventBus(true);
+
+    try (Cluster cluster = createCluster(env -> env
+      .eventBus(eventBus)
+      .ioConfig(io -> io.configPollInterval(Duration.ofHours(24)))
+    )) {
+      String clientContextId = UUID.randomUUID().toString(); // so we can monitor query state
+      CompletableFuture<Throwable> queryErrorFuture = new CompletableFuture<>();
+
+      log.info("Scheduling a query we expect to time out.");
+      cluster.reactive()
+        .query(
+          verySlowQueryStatement(),
+          queryOptions()
+            .clientContextId(clientContextId)
+            .timeout(queryTimeout)
+        )
+        .subscribe(
+          result -> queryErrorFuture.complete(new AssertionFailedError("Expected query to time out.")),
+          queryErrorFuture::complete
+        );
+
+      log.info("Waiting for query execution to start.");
+      waitUntilCondition(
+        () -> assertEquals("running", getQueryState(cluster, clientContextId), "query state"),
+        gracePeriod
+      );
+
+      log.info("Tricking the SDK into thinking all query nodes went away.");
+      cluster.core().configurationProvider().proposeGlobalConfig(
+        new ProposedGlobalConfigContext(dummyConfigWithNoQueryNodes, "127.0.0.1", true)
+      );
+
+      log.info("Verifying network channel closure was deferred.");
+      waitUntilEvents(eventBus, gracePeriod, listOf(
+        EndpointDisconnectDelayedEvent.class
+      ));
+
+      log.info("Waiting for query timeout.");
+      Duration pollTimeout = queryTimeout.plus(gracePeriod);
+      Throwable t = queryErrorFuture.get(pollTimeout.toMillis(), MILLISECONDS);
+      assertInstanceOf(TimeoutException.class, t);
+
+      log.info("Verifying network channel was closed.");
+      waitUntilEvents(eventBus, gracePeriod, listOf(
+        EndpointDisconnectDelayedEvent.class,
+        EndpointDisconnectResumedEvent.class
+      ));
+    }
+  }
+
+  private static void waitUntilEvents(SimpleEventBus eventBus, Duration gracePeriod, List<Class<?>> expectedEventClasses) {
+    waitUntilCondition(
+      () -> assertEquals(expectedEventClasses, getEventClasses(eventBus)),
+      gracePeriod
+    );
+  }
+
+  private static List<Class<?>> getEventClasses(SimpleEventBus eventBus) {
+    return eventBus.publishedEvents().stream()
+      .filter(e -> e instanceof EndpointDisconnectDelayedEvent || e instanceof EndpointDisconnectResumedEvent)
+      .map(Event::getClass)
+      .collect(toList());
+  }
+
+  private static @Nullable String getQueryState(Cluster cluster, String clientContextId) {
+    return cluster.query(
+        "SELECT RAW state FROM system:active_requests WHERE clientContextID = ?",
+        queryOptions()
+          .parameters(JsonArray.from(clientContextId))
+      )
+      .rowsAs(String.class)
+      .stream().findFirst().orElse(null);
+  }
+
+  private static final String dummyConfigWithNoQueryNodes = "{\n" +
     "  \"revEpoch\": 9999999999,\n" +
     "  \"rev\": 13205,\n" +
     "  \"nodesExt\": [\n" +
