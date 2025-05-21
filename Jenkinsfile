@@ -118,7 +118,7 @@ pipeline {
                 expression { notTriggeredByGerrit() }
             }
             steps {
-                buildScala(defaultBuildJvm(), "2.13", "2.13.7", REFSPEC)
+                buildScala(defaultBuildJvm(), "2.13", "2.13.16", REFSPEC)
             }
         }
 
