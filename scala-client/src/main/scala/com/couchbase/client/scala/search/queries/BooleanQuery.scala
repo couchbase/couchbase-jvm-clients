@@ -22,7 +22,7 @@ import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
   *
   * @since 1.0.0
   */
-case class BooleanQuery private (
+case class BooleanQuery (
     private[scala] val must: Option[ConjunctionQuery] = None,
     private[scala] val should: Option[DisjunctionQuery] = None,
     private[scala] val mustNot: Option[DisjunctionQuery] = None,

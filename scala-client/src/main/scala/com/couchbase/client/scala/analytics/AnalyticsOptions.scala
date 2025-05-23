@@ -30,7 +30,7 @@ import scala.concurrent.duration.Duration
   * @author Graham Pople
   * @since 1.0.0
   */
-case class AnalyticsOptions private (
+case class AnalyticsOptions (
     private[scala] val parameters: Option[AnalyticsParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
