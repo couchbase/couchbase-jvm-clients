@@ -33,7 +33,7 @@ object VectorQueryCombination {
 }
 
 /** Options related to executing a [[VectorSearch]]. */
-case class VectorSearchOptions private (
+case class VectorSearchOptions (
     private val vectorQueryCombination: Option[VectorQueryCombination] = None
 ) {
 

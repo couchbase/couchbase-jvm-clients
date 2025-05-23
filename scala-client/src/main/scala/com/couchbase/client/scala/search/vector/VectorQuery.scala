@@ -21,7 +21,7 @@ import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.search.vector.{CoreVector, CoreVectorQuery}
 
 /** Represents a vector query. */
-case class VectorQuery private (
+case class VectorQuery (
     private val vectorQuery: Either[Array[Float], String],
     private val vectorField: String,
     private val numCandidates: Option[Int] = None,

@@ -35,7 +35,7 @@ import scala.concurrent.duration.Duration
 /**
   * Provides all configurable parameters for Couchbase transactions.
   */
-case class TransactionsConfig private (
+case class TransactionsConfig (
     private val cleanupConfig: Option[TransactionsCleanupConfig] = None,
     private val durabilityLevel: Option[DurabilityLevel] = None,
     private val timeout: Option[Duration] = None,
