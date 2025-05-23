@@ -25,6 +25,7 @@ import com.couchbase.client.performer.scala.util.OptionsUtil.{
 }
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.Command
+import com.couchbase.client.protocol.sdk.cluster.bucketmanager
 import com.couchbase.client.protocol.shared.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.manager.bucket
@@ -300,6 +301,9 @@ object BucketManagerHelper {
           })
       case _ =>
     }
+    // [if:1.8.2]
+    if (bs.hasNumVbuckets) cs = cs.numVBuckets(bs.getNumVbuckets)
+    // [end]
     cs
   }
 
@@ -393,6 +397,15 @@ object BucketManagerHelper {
     response.historyRetentionCollectionDefault.foreach(v => builder.setHistoryRetentionCollectionDefault(v))
     response.historyRetentionBytes.foreach(v => builder.setHistoryRetentionBytes(v))
     response.historyRetentionDuration.foreach(v => builder.setHistoryRetentionSeconds(v.toSeconds))
+    // [if:1.8.2]
+    response.numVBuckets.foreach(v => builder.setNumVbuckets(v))
+    // [end]
+
+    response.storageBackend match {
+      case Some(StorageBackend.Magma) => builder.setStorageBackend(bucketmanager.StorageBackend.MAGMA)
+      case Some(StorageBackend.Couchstore) => builder.setStorageBackend(bucketmanager.StorageBackend.COUCHSTORE)
+      case _ =>
+    }
 
     builder.build
   }

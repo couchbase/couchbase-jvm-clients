@@ -82,6 +82,10 @@ object Capabilities {
     out.add(Caps.SDK_ZONE_AWARE_READ_FROM_REPLICA)
     // [end:1.8.0]
 
+    // [start:1.8.2]
+    out.add(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
+    // [end:1.8.2]
+
     out
   }
 

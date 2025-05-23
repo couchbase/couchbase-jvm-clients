@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.manager.bucket
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.Internal
 import com.couchbase.client.core.config
 import com.couchbase.client.core.error.CouchbaseException
@@ -221,7 +222,8 @@ case class CreateBucketSettings(
     private[scala] val storageBackend: Option[StorageBackend] = None,
     private[scala] val historyRetentionCollectionDefault: Option[Boolean] = None,
     private[scala] val historyRetentionBytes: Option[Long] = None,
-    private[scala] val historyRetentionDuration: Option[Duration] = None
+    private[scala] val historyRetentionDuration: Option[Duration] = None,
+    private[scala] val numVBuckets: Option[Int] = None
 ) {
 
   def flushEnabled(value: Boolean): CreateBucketSettings = {
@@ -284,6 +286,11 @@ case class CreateBucketSettings(
   def historyRetentionDuration(value: Duration): CreateBucketSettings = {
     copy(historyRetentionDuration = Some(value))
   }
+
+  /** Specifies the number of vbuckets (partitions) the created bucket should have.
+   */
+  @SinceCouchbase("8.0")
+  def numVBuckets(value: Int): CreateBucketSettings = copy(numVBuckets = Some(value))
 
   private[scala] def toCore: CoreBucketSettings = {
     val x = this
@@ -359,7 +366,7 @@ case class CreateBucketSettings(
         x.historyRetentionDuration.map(v => DurationConversions.scalaDurationToJava(v)).orNull
 
       override def numVBuckets(): Integer =
-        null // TODO https://jira.issues.couchbase.com/browse/SCBC-479
+        x.numVBuckets.map(lang.Integer.valueOf).orNull
     }
   }
 }
@@ -379,7 +386,8 @@ case class BucketSettings(
     storageBackend: Option[StorageBackend] = None,
     historyRetentionCollectionDefault: Option[Boolean] = None,
     historyRetentionBytes: Option[Long] = None,
-    historyRetentionDuration: Option[Duration] = None
+    historyRetentionDuration: Option[Duration] = None,
+    numVBuckets: Option[Int] = None
 ) {
   def toCreateBucketSettings: CreateBucketSettings = {
     CreateBucketSettings(
@@ -397,7 +405,8 @@ case class BucketSettings(
       storageBackend,
       historyRetentionCollectionDefault,
       historyRetentionBytes,
-      historyRetentionDuration
+      historyRetentionDuration,
+      numVBuckets
     )
   }
 }
@@ -452,7 +461,8 @@ private[scala] object BucketSettings {
       if (core.historyRetentionBytes != null) Some(core.historyRetentionBytes) else None,
       if (core.historyRetentionDuration != null)
         Some(core.historyRetentionDuration).map(DurationConversions.javaDurationToScala)
-      else None
+      else None,
+      Some(core.numVBuckets)
     )
     out
   }
