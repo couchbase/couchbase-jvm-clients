@@ -118,7 +118,7 @@ pipeline {
                 expression { notTriggeredByGerrit() }
             }
             steps {
-                buildScala(defaultBuildJvm(), "2.13", "2.13.16", REFSPEC)
+                buildScala(defaultBuildJvm(), "2.13", REFSPEC)
             }
         }
 
@@ -541,7 +541,6 @@ void test(Map args=[:],
 
 void buildScala(Jvm buildJvm,
                 String scalaCompatVersion,
-                String scalaLibraryVersion,
                 String refspec) {
     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
         cleanupWorkspace()
@@ -549,7 +548,7 @@ void buildScala(Jvm buildJvm,
         dir('couchbase-jvm-clients') {
             doCheckout(refspec)
             makeDeps(buildJvm)
-            runMaven(buildJvm, null, "-Dmaven.test.skip -Dscala.compat.version=${scalaCompatVersion} -Dscala.compat.library.version=${scalaLibraryVersion} clean compile")
+            runMaven(buildJvm, null, "-Dmaven.test.skip -Pscala-${scalaCompatVersion} clean compile")
         }
     }
 }
