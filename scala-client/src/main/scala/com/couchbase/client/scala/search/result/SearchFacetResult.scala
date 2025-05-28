@@ -62,7 +62,7 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class DateRange (private val internal: CoreSearchDateRange) {
+  case class DateRange(private val internal: CoreSearchDateRange) {
     def name: String = internal.name
 
     def start: String = internal.start.toString
@@ -99,7 +99,7 @@ object SearchFacetResult {
       internal.numericRanges.asScala.toSeq.map(v => NumericRange(v))
   }
 
-  case class NumericRange (private val internal: CoreSearchNumericRange) {
+  case class NumericRange(private val internal: CoreSearchNumericRange) {
     def name: String = internal.name
 
     def min: Double = internal.min
@@ -127,7 +127,7 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class TermRange (private val internal: CoreSearchTermRange) {
+  case class TermRange(private val internal: CoreSearchTermRange) {
     def term: String = internal.name
 
     def count: Long = internal.count

@@ -288,7 +288,7 @@ case class CreateBucketSettings(
   }
 
   /** Specifies the number of vbuckets (partitions) the created bucket should have.
-   */
+    */
   @SinceCouchbase("8.0")
   def numVBuckets(value: Int): CreateBucketSettings = copy(numVBuckets = Some(value))
 

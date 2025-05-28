@@ -28,7 +28,7 @@ import scala.util.{Failure, Success, Try}
   *
   * If both are provided, the FS service will merge the results.
   */
-case class SearchRequest (
+case class SearchRequest(
     private val searchQuery: Option[SearchQuery] = None,
     private val vectorSearch: Option[VectorSearch] = None,
     private val deferredError: Option[Throwable] = None

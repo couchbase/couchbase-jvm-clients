@@ -27,7 +27,7 @@ import com.couchbase.client.scala.query.{
 
 /** Customize the execution of a N1QL query performed inside a transaction.
   */
-case class TransactionQueryOptions (
+case class TransactionQueryOptions(
     private[scala] val parameters: Option[QueryParameters] = None,
     private[scala] val clientContextId: Option[String] = None,
     private[scala] val pipelineBatch: Option[Int] = None,

@@ -21,7 +21,7 @@ import com.couchbase.client.core.api.search.vector.CoreVectorSearch
 import scala.collection.JavaConverters._
 
 /** Allows one or more [[VectorQuery]]s to be executed. */
-case class VectorSearch (
+case class VectorSearch(
     private val vectorQueries: Iterable[VectorQuery],
     private val vectorSearchOptions: Option[VectorSearchOptions] = None
 ) {

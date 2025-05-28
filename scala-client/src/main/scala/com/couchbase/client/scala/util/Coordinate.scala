@@ -30,7 +30,7 @@ object Coordinate {
   def ofLonLat(lon: Double, lat: Double) = new Coordinate(lon, lat)
 }
 
-case class Coordinate (
+case class Coordinate(
     /**
       * The longitude of this coordinate.
       */

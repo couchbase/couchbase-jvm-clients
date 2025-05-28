@@ -23,7 +23,7 @@ import com.couchbase.client.scala.Collection
 /**
   * Allows configuring a single-query-transaction.
   */
-case class SingleQueryTransactionOptions (
+case class SingleQueryTransactionOptions(
     private val durabilityLevel: Option[DurabilityLevel] = None,
     private val attemptContextFactory: Option[TransactionAttemptContextFactory] = None,
     private val metadataCollection: Option[CollectionIdentifier] = None
