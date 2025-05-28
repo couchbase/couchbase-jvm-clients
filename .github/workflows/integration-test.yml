@@ -1,0 +1,109 @@
+name: Integration Test
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+on:
+  #  push:
+  #    branches:
+  #      - master
+  #  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 3 * * SAT'
+
+jobs:
+  test:
+    name: Test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - server: '7.6.5'
+            java-distribution: 'temurin'
+            java-version: '21'
+
+          - server: 'community-7.6.2'
+            java-distribution: 'temurin'
+            java-version: '17'
+
+#          - server: '7.2.7'
+#            java-distribution: 'temurin'
+#            java-version: '8'
+#
+#          - server: 'community-7.2.2'
+#            java-distribution: 'corretto'
+#            java-version: '8'
+#
+#          - server: '6.6.6'
+#            java-distribution: 'oracle'
+#            java-version: '17'
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ matrix.java-distribution }}
+          # Version from the matrix is for running tests. Second version is for building the SDK.
+          java-version: |
+            ${{ matrix.java-version }}
+            17
+
+      - name: Compile tests
+        run: |
+          make deps-only
+          ./mvnw --batch-mode install -f test-utils/pom.xml
+          ./mvnw --batch-mode clean test-compile install -DskipTests -Dmaven.javadoc.skip=true
+
+      - name: Select Couchbase services
+        run: |
+          if [[ "${{ matrix.server }}" == *community* ]]; then
+            echo 'COUCHBASE_SERVICES=[kv, n1ql, index, fts]' >> $GITHUB_ENV
+          else
+            echo 'COUCHBASE_SERVICES=[kv, n1ql, index, fts, cbas, eventing]' >> $GITHUB_ENV
+          fi
+
+      - name: Start Couchbase Server
+        id: cbdc
+        uses: ./.github/actions/cbdinocluster
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          def: |
+            nodes:
+              - count: 3
+                version: ${{ matrix.server }}
+                services: ${{ env.COUCHBASE_SERVICES }}
+            docker:
+              kv-memory: 2048
+
+      - name: Configure tests
+        run: |
+          cat <<EOF > integration.properties.template
+          cluster.type=unmanaged
+          cluster.adminUsername=Administrator
+          cluster.adminPassword=password
+          cluster.unmanaged.seed=${{ steps.cbdc.outputs.manager-address }}
+          cluster.unmanaged.numReplicas=0
+          EOF
+
+          if [ -f "${{ steps.cbdc.outputs.ca-certs-file }}" ]; then
+          cat <<'EOF' >> integration.properties.template
+          cluster.unmanaged.certsFile=${{ steps.cbdc.outputs.ca-certs-file }}
+          EOF
+          fi
+
+          find . -type f -name "integration.properties" -exec cp -v ./integration.properties.template {} \;
+
+      - name: Run tests
+        timeout-minutes: 40
+        run: |
+          TEST_JAVA_HOME=$JAVA_HOME_${{ matrix.java-version }}_X64
+          ./mvnw --batch-mode -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true verify -Djvm=${TEST_JAVA_HOME}/bin/java
+
+      - name: Publish test results
+        run: |
+          curl https://raw.githubusercontent.com/couchbaselabs/junit-markdown/refs/heads/main/JunitMarkdown.java --output ${{ runner.temp }}/JunitMarkdown.java
+          java ${{ runner.temp }}/JunitMarkdown.java . >> $GITHUB_STEP_SUMMARY

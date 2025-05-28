@@ -1,0 +1,61 @@
+name: 'cbdinocluster'
+description: 'Runs a Couchbase Server cluster'
+inputs:
+  def:
+    description: 'cluster definition yaml'
+    required: true
+  github-token:
+    description: 'GitHub token'
+    required: true
+outputs:
+  cluster-id:
+    description: "Cluster ID"
+    value: ${{ steps.start-cluster.outputs.cluster-id }}
+  ca-certs-file:
+    description: "Filesystem path to file containing PEM-encoded cluster CA certificate(s). File is absent if Community Edition."
+    value: ${{ steps.start-cluster.outputs.ca-certs-file }}
+  connstr:
+    description: "Couchbase connection string"
+    value: ${{ steps.start-cluster.outputs.connstr }}
+  mgmt:
+    description: "Couchbase management URL"
+    value: ${{ steps.start-cluster.outputs.mgmt }}
+  manager-address:
+    description: "Host and port of the manager service (non-TLS)"
+    value: ${{ steps.start-cluster.outputs.manager-address }}
+runs:
+  using: "composite"
+  steps:
+    - name: Install cbdinocluster
+      shell: bash
+      run: |
+        mkdir -p "$HOME/bin"
+        wget -nv -O $HOME/bin/cbdinocluster https://github.com/couchbaselabs/cbdinocluster/releases/download/v0.0.71/cbdinocluster-linux-amd64
+        chmod +x $HOME/bin/cbdinocluster
+        echo "$HOME/bin" >> $GITHUB_PATH
+
+    - name: Initialize cbdinocluster
+      shell: bash
+      run: cbdinocluster -v init --auto
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+
+    - name: Start Couchbase cluster
+      id: start-cluster
+      shell: bash
+      run: |
+        CBDC_ID=$(cbdinocluster -v alloc --def="${{ inputs.def }}")
+        CBDC_CERTS_FILE="${{ runner.temp }}/cbdinocluster-$CBDC_ID-ca.pem"
+        CBDC_CONNSTR=$(cbdinocluster -v connstr $CBDC_ID)
+        CBDC_MGMT=$(cbdinocluster -v mgmt $CBDC_ID)
+        MGMT_ADDR=${CBDC_MGMT#*://}
+        echo "cluster-id=$CBDC_ID" >> $GITHUB_OUTPUT
+        echo "ca-certs-file=$CBDC_CERTS_FILE" >> $GITHUB_OUTPUT
+        echo "connstr=$CBDC_CONNSTR" >> $GITHUB_OUTPUT
+        echo "mgmt=$CBDC_MGMT" >> $GITHUB_OUTPUT
+        echo "manager-address=$MGMT_ADDR" >> $GITHUB_OUTPUT
+
+    - name: Get cluster CA certificates
+      if: ${{ !contains(inputs.def, 'community') }}
+      shell: bash
+      run: cbdinocluster certificates get-ca ${{ steps.start-cluster.outputs.cluster-id }} > "${{ steps.start-cluster.outputs.ca-certs-file }}"
