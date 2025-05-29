@@ -17,6 +17,7 @@ set -x
 ./mvnw --batch-mode --file core-io-deps/pom.xml clean install
 
 # Improper shading should have been caught during PR verification, but let's double check.
+./mvnw --batch-mode --file test-utils/pom.xml clean install
 ./mvnw --batch-mode --file core-io/pom.xml install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
 cd core-io ; ./shade-check.sh ; cd ..
 ./mvnw --batch-mode --file java-client/pom.xml install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
