@@ -180,73 +180,6 @@
 
     </dependencies>
 
-    <profiles>
-        <profile>
-            <!-- We need 2 profile scala_2.13 & scala_NOT_2.13 to Cross-building custom scala collections.
-                 See https://docs.scala-lang.org/overviews/core/custom-collections.html#appendix-cross-building-custom-collections -->
-            <id>scala_2.13</id>
-            <activation>
-                <property>
-                    <name>scala.compat.version</name>
-                    <value>2.13</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>add-source</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>add-source</goal>
-                                </goals>
-                                <configuration>
-                                    <sources>
-                                        <source>src/main/scala-2.13+</source>
-                                    </sources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>scala_NOT_2.13</id>
-            <activation>
-                <property>
-                    <name>scala.compat.version</name>
-                    <value>!2.13</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>add-source</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>add-source</goal>
-                                </goals>
-                                <configuration>
-                                    <sources>
-                                        <source>src/main/scala-2.13-</source>
-                                    </sources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
@@ -261,7 +194,10 @@
         </testResources>
 
         <plugins>
-
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+            </plugin>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>
                 <artifactId>scala-maven-plugin</artifactId>
@@ -427,6 +363,21 @@
                 <version>${build-helper-maven-plugin.version}</version>
                 <executions>
                     <execution>
+                        <!-- Required for cross-building custom scala collections.
+                             See https://docs.scala-lang.org/overviews/core/custom-collections.html#appendix-cross-building-custom-collections -->
+                        <id>add-version-specific-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${scala.version-specific.src}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-integration-test-sources</id>
                         <phase>generate-test-sources</phase>
                         <goals>
                             <goal>add-test-source</goal>

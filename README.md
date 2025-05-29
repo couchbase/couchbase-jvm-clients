@@ -50,12 +50,12 @@ Yes, we need `make` because maven doesn't support the setup we need and neither 
 want to build for different Scala versions, after the first `make` you can do this through:
 
 ```sh
-$ ./mvnw -D"scala.compat.version=2.13" -D"scala.compat.library.version=2.13.13" clean install
+$ ./mvnw -Pscala-2.13 clean install
 ```
 
 Notes:
 + Couchbase provides, tests and supports builds for Scala 2.12 and 2.13.
-+ Default `scala.compat.`X properties are defined in file [.mvn/maven.config]
++ Default `scala.compat.`X properties are defined as properties in file [pom.xml]
 + You can always go into one of the sub-directories like `core-io` to only build or test an
 individual project:
     ```shell script
