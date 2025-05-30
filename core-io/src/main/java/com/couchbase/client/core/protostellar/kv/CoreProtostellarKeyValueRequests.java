@@ -36,6 +36,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
 import com.couchbase.client.core.protostellar.ProtostellarKeyValueRequest;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.core.util.CbDurations;
 import com.couchbase.client.protostellar.kv.v1.CompressionEnabled;
 import com.couchbase.client.protostellar.kv.v1.GetAndLockRequest;
 import com.couchbase.client.protostellar.kv.v1.GetAndTouchRequest;
@@ -128,12 +129,14 @@ public class CoreProtostellarKeyValueRequests {
 
     validateGetAndLockParams(opts, key, lockTime);
 
+    long lockTimeRoundUp = CbDurations.getSecondsCeil(lockTime);
+
     GetAndLockRequest.Builder request = com.couchbase.client.protostellar.kv.v1.GetAndLockRequest.newBuilder()
       .setBucketName(keyspace.bucket())
       .setScopeName(keyspace.scope())
       .setCollectionName(keyspace.collection())
       .setKey(key)
-      .setLockTime((int) lockTime.toMillis());
+      .setLockTime(Math.toIntExact(lockTimeRoundUp));
 
     if (compressionConfig.enabled()) {
       request.setCompression(CompressionEnabled.COMPRESSION_ENABLED_OPTIONAL);
