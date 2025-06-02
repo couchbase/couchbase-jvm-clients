@@ -85,6 +85,7 @@ public class AsyncCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    * @deprecated This method cannot be used to set the collection's "history" property.
+   * This method is not compatible with Couchbase Server Community Edition.
    * Please use {@link #createCollection(String, String, CreateCollectionSettings)} instead.
    */
   @Deprecated
@@ -104,6 +105,7 @@ public class AsyncCollectionManager {
    * @throws ScopeNotFoundException (async) if the specified scope does not exist.
    * @throws CouchbaseException (async) if any other generic unhandled/unexpected errors.
    * @deprecated This method cannot be used to set the collection's "history" property.
+   * This method is not compatible with Couchbase Server Community Edition.
    * Please use {@link #createCollection(String, String, CreateCollectionSettings, CreateCollectionOptions)} instead.
    */
   @Deprecated

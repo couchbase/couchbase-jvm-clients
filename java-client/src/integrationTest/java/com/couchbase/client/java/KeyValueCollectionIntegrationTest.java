@@ -60,12 +60,12 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
   @Test
   @IgnoreWhen(isProtostellarWillWorkLater = true) // Fails as CNG is not yet waiting for the collection to be ready before continuing
   void recognizesCollectionAfterCreation() {
-    String collId = UUID.randomUUID().toString().substring(0, 10);
-    CollectionSpec collectionSpec = CollectionSpec.create(collId, DEFAULT_SCOPE);
-    bucket.collections().createCollection(collectionSpec);
-    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), collectionSpec.scopeName(), collectionSpec.name());
+    String collectionName = UUID.randomUUID().toString().substring(0, 10);
+    String scopeName = DEFAULT_SCOPE;
+    bucket.collections().createCollection(scopeName, collectionName);
+    if (!config().isProtostellar()) ConsistencyUtil.waitUntilCollectionPresent(cluster.core(), bucket.name(), scopeName, collectionName);
 
-    Collection collection = bucket.collection(collId);
+    Collection collection = bucket.collection(collectionName);
 
     String id = UUID.randomUUID().toString();
     String content = "bar";
@@ -75,7 +75,7 @@ public class KeyValueCollectionIntegrationTest extends JavaIntegrationTest {
     assertEquals(upsertResult.cas(), getResult.cas());
     assertEquals(content, getResult.contentAs(String.class));
 
-    checkCachesScopesAndCollections(bucket.async(), collId);
+    checkCachesScopesAndCollections(bucket.async(), collectionName);
   }
 
   private void checkCachesScopesAndCollections(AsyncBucket bucket, String collId) {
