@@ -112,7 +112,8 @@ class UserManagerIntegrationTest extends JavaIntegrationTest {
             .password(origPassword)
             .roles(ADMIN));
 
-    ClusterOptions options = ClusterOptions.clusterOptions(username, origPassword);
+    ClusterOptions options = ClusterOptions.clusterOptions(username, origPassword)
+      .environment(environmentCustomizer());
 
     Cluster disposableCluster = Cluster.connect(connectionString(), options);
     disposableCluster.waitUntilReady(java.time.Duration.ofSeconds(30));
