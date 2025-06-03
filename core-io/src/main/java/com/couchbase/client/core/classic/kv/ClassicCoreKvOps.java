@@ -768,7 +768,8 @@ public final class ClassicCoreKvOps implements CoreKvOps {
         retryStrategy,
         common.clientContext(),
         common.parentSpan().orElse(null),
-        readPreference
+        readPreference,
+        (byte) 0
     );
   }
 

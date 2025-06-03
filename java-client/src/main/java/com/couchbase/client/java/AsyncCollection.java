@@ -712,6 +712,7 @@ public class AsyncCollection {
       opts.clientContext(),
       opts.parentSpan().orElse(null),
       opts.readPreference(),
+      (byte) 0,
       response -> LookupInReplicaResult.from(response, serializer));
   }
 
@@ -752,6 +753,7 @@ public class AsyncCollection {
       opts.clientContext(),
       opts.parentSpan().orElse(null),
       opts.readPreference(),
+      (byte) 0,
       response -> LookupInReplicaResult.from(response, serializer));
   }
 

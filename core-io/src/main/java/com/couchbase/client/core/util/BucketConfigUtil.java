@@ -22,6 +22,8 @@ import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.retry.reactor.Backoff;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
+import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -39,6 +41,7 @@ public class BucketConfigUtil {
      * A bucket config can be null while the bucket has not been opened.  This method allows easily for a config to be
      * available.
      */
+    @Deprecated
     public static Mono<BucketConfig> waitForBucketConfig(final Core core,
                                                          final String bucketName,
                                                          final Duration timeout) {
@@ -60,4 +63,26 @@ public class BucketConfigUtil {
                     }
                 });
     }
+
+  public static Mono<ClusterTopologyWithBucket> waitForBucketTopology(final Core core,
+                                                                      final String bucketName,
+                                                                      final Duration timeout) {
+    return Mono.fromCallable(() -> {
+        final ClusterTopologyWithBucket bucketConfig = core.clusterConfig().bucketTopology(bucketName);
+        if (bucketConfig == null) {
+          throw new NullPointerException();
+        }
+        return bucketConfig;
+      }).retryWhen(Retry.anyOf(NullPointerException.class)
+        .timeout(timeout)
+        .backoff(Backoff.fixed(retryDelay))
+        .toReactorRetry())
+      .onErrorResume(err -> {
+        if (Exceptions.isRetryExhausted(err)) {
+          return Mono.error(new UnambiguousTimeoutException("Timed out while waiting for bucket config", null));
+        } else {
+          return Mono.error(err);
+        }
+      });
+  }
 }

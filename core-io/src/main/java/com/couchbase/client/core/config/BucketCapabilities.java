@@ -47,7 +47,10 @@ public enum BucketCapabilities {
     DCP_IGNORE_PURGED_TOMBSTONES("dcp.IgnorePurgedTombstones"),
     RANGE_SCAN("rangeScan"),
     SUBDOC_READ_REPLICA("subdoc.ReplicaRead"),
-    NON_DEDUPED_HISTORY("nonDedupedHistory");
+    NON_DEDUPED_HISTORY("nonDedupedHistory"),
+    SUBDOC_BINARY_XATTR("subdoc.BinaryXattr"),
+    // Added in 8.0 (MB-66949)
+    SUBDOC_ACCESS_DELETED("subdoc.AccessDeleted");
 
     private final String raw;
 

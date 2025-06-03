@@ -53,6 +53,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.core.msg.kv.SubdocGetRequest.convertCommandsToCore;
+import static com.couchbase.client.core.topology.BucketCapability.SUBDOC_ACCESS_DELETED;
 
 /**
  * Transactions does a lot of KV work from core-io.  This logic is essentially a mini version of java-client, providing
@@ -153,8 +154,20 @@ public class TransactionKVHandler {
 
 
             if (preferredReplicaMode) {
-                CompletableFuture<CoreSubdocGetResult> replicas = ReplicaHelper.lookupInAnyReplicaAsync(core, collectionIdentifier, id, convertCommandsToCore(commands), timeout, BestEffortRetryStrategy.INSTANCE,
-                        clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE, (r) -> r);
+                CompletableFuture<CoreSubdocGetResult> replicas =
+                        BucketConfigUtil.waitForBucketTopology(core, collectionIdentifier.bucket(), timeout).toFuture()
+                                .thenCompose(bucketConfig -> {
+                                    byte flags = 0;
+                                    if (accessDeleted) {
+                                        // We can only accessDeleted when the server supports it (8.0+).
+                                        // Otherwise we will proceed with the operation though it is sub-optimal.
+                                        if (bucketConfig.bucket().capabilities().contains(SUBDOC_ACCESS_DELETED)) {
+                                            flags = SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
+                                        }
+                                    }
+                                    return ReplicaHelper.lookupInAnyReplicaAsync(core, collectionIdentifier, id, convertCommandsToCore(commands), timeout, BestEffortRetryStrategy.INSTANCE,
+                                            clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE, flags, (r) -> r);
+                                });
 
                 return Reactor.wrap(replicas, () -> {})
                         .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionIdentifier))))

@@ -41,6 +41,9 @@ public enum BucketCapability {
   RANGE_SCAN("rangeScan"),
   SUBDOC_READ_REPLICA("subdoc.ReplicaRead"),
   NON_DEDUPED_HISTORY("nonDedupedHistory"),
+  SUBDOC_BINARY_XATTR("subdoc.BinaryXattr"),
+  // Added in 8.0 (MB-66949)
+  SUBDOC_ACCESS_DELETED("subdoc.AccessDeleted")
   ;
 
   private final String wireName;

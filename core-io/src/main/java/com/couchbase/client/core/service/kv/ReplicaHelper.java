@@ -153,14 +153,15 @@ public class ReplicaHelper {
     final RetryStrategy retryStrategy,
     Map<String, Object> clientContext,
     RequestSpan parentSpan,
-    CoreReadPreference readPreference
+    CoreReadPreference readPreference,
+    byte flags
   ) {
     notNullOrEmpty(documentId, "Id", () -> ReducedKeyValueErrorContext.create(documentId, collectionIdentifier));
 
     CoreEnvironment env = core.context().environment();
     RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
     return Reactor
-      .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference))
+      .toMono(() -> lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference, flags))
       .flux()
       .flatMap(Flux::fromStream)
       .flatMap(request -> Reactor
@@ -239,11 +240,12 @@ public class ReplicaHelper {
     final Map<String, Object> clientContext,
     final RequestSpan parentSpan,
     final CoreReadPreference readPreference,
+    final byte flags,
     final Function<CoreSubdocGetResult, R> responseMapper
   ) {
     RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_GET_ALL_REPLICAS, parentSpan);
 
-    return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference)
+    return lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, getAllSpan, readPreference, flags)
       .thenApply(stream ->
         stream.map(request ->
           get(core, request)
@@ -312,13 +314,14 @@ public class ReplicaHelper {
     final Map<String, Object> clientContext,
     final RequestSpan parentSpan,
     final CoreReadPreference readPreference,
+    final byte flags,
     final Function<CoreSubdocGetResult, R> responseMapper) {
 
     RequestSpan getAnySpan = core.context().coreResources().requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ANY_REPLICA, parentSpan);
 
     CompletableFuture<List<CompletableFuture<R>>> listOfFutures = lookupInAllReplicasAsync(
-      core, collectionIdentifier, documentId, commands, timeout, retryStrategy, clientContext, getAnySpan, readPreference, responseMapper
+      core, collectionIdentifier, documentId, commands, timeout, retryStrategy, clientContext, getAnySpan, readPreference, flags, responseMapper
     );
 
     // Aggregating the futures here will discard the individual errors, which we don't need
@@ -476,7 +479,8 @@ public class ReplicaHelper {
     final RetryStrategy retryStrategy,
     final Duration timeout,
     final RequestSpan parent,
-    final CoreReadPreference readPreference
+    final CoreReadPreference readPreference,
+    final byte flags
   ) {
     notNullOrEmpty(documentId, "Id");
 
@@ -490,7 +494,7 @@ public class ReplicaHelper {
         return failedFuture(FeatureNotAvailableException.subdocReadReplica());
       }
 
-      List<SubdocGetRequest> requests = lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, readPreference, topology);
+      List<SubdocGetRequest> requests = lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, readPreference, topology, flags);
       if (requests.isEmpty()) {
         return failedFuture(DocumentUnretrievableException.noReplicasSuitable());
       }
@@ -501,7 +505,7 @@ public class ReplicaHelper {
       final Duration retryDelay = Duration.ofMillis(100);
       final CompletableFuture<Stream<SubdocGetRequest>> future = new CompletableFuture<>();
       coreContext.environment().timer().schedule(() -> {
-        lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout.minus(retryDelay), parent, readPreference).whenComplete((getRequestStream, throwable) -> {
+        lookupInAllReplicasRequests(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout.minus(retryDelay), parent, readPreference, flags).whenComplete((getRequestStream, throwable) -> {
           if (throwable != null) {
             future.completeExceptionally(throwable);
           } else {
@@ -524,7 +528,8 @@ public class ReplicaHelper {
                                                                                 Duration timeout,
                                                                                 RequestSpan parent,
                                                                                 CoreReadPreference readPreference,
-                                                                                CouchbaseBucketConfig topology) {
+                                                                                CouchbaseBucketConfig topology,
+                                                                                byte flags) {
     CoreContext coreContext = core.context();
 
     int numReplicas = topology.numberOfReplicas();
@@ -532,7 +537,7 @@ public class ReplicaHelper {
     NodeIndexCalculator allowedNodeIndexes = new NodeIndexCalculator(readPreference, topology, coreContext);
     if (allowedNodeIndexes.canUseNodeForActive(documentId)) {
       RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, parent);
-      SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, span);
+      SubdocGetRequest activeRequest = SubdocGetRequest.create(timeout, coreContext, collectionIdentifier, retryStrategy, documentId, flags, commands, span);
       activeRequest.context().clientContext(clientContext);
       requests.add(activeRequest);
     }
@@ -541,7 +546,7 @@ public class ReplicaHelper {
       if (allowedNodeIndexes.canUseNodeForReplica(documentId, replica - 1)) {
         RequestSpan replicaSpan = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parent);
         ReplicaSubdocGetRequest replicaRequest = ReplicaSubdocGetRequest.create(
-          timeout, coreContext, collectionIdentifier, retryStrategy, documentId, (byte) 0, commands, replica, replicaSpan
+          timeout, coreContext, collectionIdentifier, retryStrategy, documentId, flags, commands, replica, replicaSpan
         );
         replicaRequest.context().clientContext(clientContext);
         requests.add(replicaRequest);
@@ -549,7 +554,7 @@ public class ReplicaHelper {
     }
     if (requests.isEmpty() && readPreference == CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE) {
       logger.trace("Unable to find suitable replicas with PREFERRED_SERVER_GROUP_WITH_FALLBACK, falling back to NO_PREFERENCE");
-      return lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, CoreReadPreference.NO_PREFERENCE, topology);
+      return lookupInAllReplicasRequestsWithFallback(core, collectionIdentifier, documentId, commands, clientContext, retryStrategy, timeout, parent, CoreReadPreference.NO_PREFERENCE, topology, flags);
     }
     return requests;
   }
