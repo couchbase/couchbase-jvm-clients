@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.scala.codec
 
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.msg.kv.CodecFlags
 
 import scala.reflect.ClassTag
@@ -26,10 +27,10 @@ class JsonTranscoder() extends TranscoderWithSerializer {
     value match {
       case x: Array[Byte] =>
         Failure(
-          new IllegalArgumentException(
+          new InvalidArgumentException(
             "byte[] input is not supported for the " +
               "JsonTranscoder! If you want to store already encoded JSON, use the RawJsonTranscoder, otherwise store " +
-              "it with the RawBinaryTranscoder!"
+              "it with the RawBinaryTranscoder!", null, null
           )
         )
       case _ =>
@@ -44,10 +45,10 @@ class JsonTranscoder() extends TranscoderWithSerializer {
   ): Try[T] = {
     if (tag.runtimeClass.isAssignableFrom(classOf[Array[Byte]])) {
       Failure(
-        new IllegalArgumentException(
+        new InvalidArgumentException(
           "Array[Byte] input is not supported for the JsonTranscoder!. " +
             "If you want to read already encoded JSON, use the RawJsonTranscoder, otherwise read it " +
-            "with the RawBinaryTranscoder!"
+            "with the RawBinaryTranscoder!", null, null
         )
       )
     } else {
