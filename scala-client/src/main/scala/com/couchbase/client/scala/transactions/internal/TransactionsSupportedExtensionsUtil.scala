@@ -30,11 +30,12 @@ object TransactionsSupportedExtensionsUtil {
     CoreTransactionsExtension.EXT_INSERT_EXISTING,
     CoreTransactionsExtension.EXT_QUERY_CONTEXT,
     CoreTransactionsExtension.EXT_PARALLEL_UNSTAGING,
-    CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP
+    CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP,
+    CoreTransactionsExtension.EXT_BINARY_SUPPORT
 
     // Not currently supported:
-//  CoreTransactionsExtension.EXT_SINGLE_QUERY,
-//  CoreTransactionsExtension.EXT_OBSERVABILITY,
-//  CoreTransactionsExtension.EXT_BINARY_SUPPORT,
+//  CoreTransactionsExtension.EXT_SINGLE_QUERY
+//  CoreTransactionsExtension.EXT_OBSERVABILITY
+//  CoreTransactionsExtension.EXT_GET_MULTI
   )
 }

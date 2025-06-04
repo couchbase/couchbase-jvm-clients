@@ -27,6 +27,12 @@ import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
+import com.couchbase.client.scala.transactions.config.{
+  TransactionGetOptions,
+  TransactionGetReplicaFromPreferredServerGroupOptions,
+  TransactionInsertOptions,
+  TransactionReplaceOptions
+}
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.{ReactiveCollection, ReactiveScope}
@@ -56,9 +62,27 @@ class ReactiveTransactionAttemptContext private[scala] (
     * @return a <code>TransactionGetResult</code> containing the document
     */
   def get(collection: ReactiveCollection, id: String): SMono[TransactionGetResult] = {
+    get(collection, id, TransactionGetOptions.Default)
+  }
+
+  /**
+    * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
+    * <p>
+    * If the document does not exist it will raise a [[com.couchbase.client.core.error.DocumentNotFoundException]].
+    *
+    * @param collection the Couchbase collection the document exists on
+    * @param id         the document's ID
+    * @param options    options controlling the operation
+    * @return a <code>TransactionGetResult</code> containing the document
+    */
+  def get(
+      collection: ReactiveCollection,
+      id: String,
+      options: TransactionGetOptions
+  ): SMono[TransactionGetResult] = {
     FutureConversions
       .javaMonoToScalaMono(internal.get(collection.collectionIdentifier, id))
-      .map(TransactionGetResult)
+      .map(result => TransactionGetResult(result, options.transcoder))
   }
 
   /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
@@ -79,11 +103,37 @@ class ReactiveTransactionAttemptContext private[scala] (
       collection: ReactiveCollection,
       id: String
   ): SMono[TransactionGetResult] =
+    getReplicaFromPreferredServerGroup(
+      collection,
+      id,
+      TransactionGetReplicaFromPreferredServerGroupOptions.Default
+    )
+
+  /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
+    * <p>
+    * It will be fetched only from document copies that on nodes in the preferred server group, which can
+    * be configured with [[com.couchbase.client.scala.env.ClusterEnvironment.Builder.preferredServerGroup]].
+    * <p>
+    * If no replica can be retrieved, which can include for reasons such as this preferredServerGroup not being set,
+    * and misconfigured server groups, then [[com.couchbase.client.core.error.DocumentUnretrievableException]]
+    * can be raised.  It is strongly recommended that this method always be used with a fallback strategy to use
+    * ctx.get() on failure.
+    *
+    * @param collection the Couchbase collection the document exists on
+    * @param id         the document's ID
+    * @param options    options controlling the operation
+    * @return a <code>TransactionGetResult</code> containing the document
+    */
+  def getReplicaFromPreferredServerGroup(
+      collection: ReactiveCollection,
+      id: String,
+      options: TransactionGetReplicaFromPreferredServerGroupOptions
+  ): SMono[TransactionGetResult] =
     FutureConversions
       .javaMonoToScalaMono(
         internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id)
       )
-      .map(TransactionGetResult)
+      .map(result => TransactionGetResult(result, options.transcoder))
 
   /**
     * Inserts a new document into the specified Couchbase <code>collection</code>.
@@ -96,9 +146,29 @@ class ReactiveTransactionAttemptContext private[scala] (
   def insert[T](collection: ReactiveCollection, id: String, content: T)(
       implicit serializer: JsonSerializer[T]
   ): SMono[TransactionGetResult] = {
+    insert(collection, id, content, TransactionInsertOptions.Default)
+  }
+
+  /**
+    * Inserts a new document into the specified Couchbase <code>collection</code>.
+    *
+    * @param collection the Couchbase collection in which to insert the doc
+    * @param id         the document's unique ID
+    * @param content    $SupportedTypes
+    * @param options    options controlling the operation
+    * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
+    */
+  def insert[T](
+      collection: ReactiveCollection,
+      id: String,
+      content: T,
+      options: TransactionInsertOptions
+  )(
+      implicit serializer: JsonSerializer[T]
+  ): SMono[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
-    encode(content, span, serializer, internal.core.context) match {
+    encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
       case Success(encoded) =>
         FutureConversions
@@ -106,12 +176,12 @@ class ReactiveTransactionAttemptContext private[scala] (
             internal.insert(
               collection.collectionIdentifier,
               id,
-              encoded,
-              CodecFlags.JSON_COMPAT_FLAGS,
+              encoded.encoded,
+              encoded.flags,
               new SpanWrapper(span)
             )
           )
-          .map(TransactionGetResult)
+          .map(result => TransactionGetResult(result, options.transcoder))
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
           .doOnTerminate(() => span.end())
     }
@@ -128,17 +198,32 @@ class ReactiveTransactionAttemptContext private[scala] (
   def replace[T](doc: TransactionGetResult, content: T)(
       implicit serializer: JsonSerializer[T]
   ): SMono[TransactionGetResult] = {
+    replace(doc, content, TransactionReplaceOptions.Default)
+  }
+
+  /**
+    * Mutates the specified <code>doc</code> with new content.
+    *
+    * @param doc     the doc to be mutated
+    * @param content       $SupportedTypes
+    * @param options    options controlling the operation
+    * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
+    * object is modified.
+    */
+  def replace[T](doc: TransactionGetResult, content: T, options: TransactionReplaceOptions)(
+      implicit serializer: JsonSerializer[T]
+  ): SMono[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
-    encode(content, span, serializer, internal.core.context) match {
+    encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
       case Success(encoded) =>
         FutureConversions
           .javaMonoToScalaMono(
             internal
-              .replace(doc.internal, encoded, CodecFlags.JSON_COMPAT_FLAGS, new SpanWrapper(span))
+              .replace(doc.internal, encoded.encoded, encoded.flags, new SpanWrapper(span))
           )
-          .map(TransactionGetResult)
+          .map(result => TransactionGetResult(result, options.transcoder))
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
           .doOnTerminate(() => span.end())
     }

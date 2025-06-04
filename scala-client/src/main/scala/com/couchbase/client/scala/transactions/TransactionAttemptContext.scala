@@ -17,6 +17,12 @@ package com.couchbase.client.scala.transactions
 
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.codec.JsonSerializer
+import com.couchbase.client.scala.transactions.config.{
+  TransactionGetOptions,
+  TransactionGetReplicaFromPreferredServerGroupOptions,
+  TransactionInsertOptions,
+  TransactionReplaceOptions
+}
 import com.couchbase.client.scala.{Collection, Scope}
 
 import scala.util.Try
@@ -44,7 +50,24 @@ class TransactionAttemptContext private[scala] (
     * @return a [[TransactionGetResult]] containing the document
     */
   def get(collection: Collection, id: String): Try[TransactionGetResult] = {
-    Try(internal.get(collection.reactive, id).block())
+    get(collection, id, TransactionGetOptions.Default)
+  }
+
+  /**
+    * Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.  If
+    * the document is not found, a [[com.couchbase.client.core.error.DocumentNotFoundException]] is raised.
+    *
+    * @param collection the Couchbase collection the document exists on
+    * @param id     the document's ID
+    * @param options    options controlling the operation
+    * @return a [[TransactionGetResult]] containing the document
+    */
+  def get(
+      collection: Collection,
+      id: String,
+      options: TransactionGetOptions
+  ): Try[TransactionGetResult] = {
+    Try(internal.get(collection.reactive, id, options).block())
   }
 
   /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
@@ -65,7 +88,34 @@ class TransactionAttemptContext private[scala] (
       collection: Collection,
       id: String
   ): Try[TransactionGetResult] = {
-    Try(internal.getReplicaFromPreferredServerGroup(collection.reactive, id).block())
+    getReplicaFromPreferredServerGroup(
+      collection,
+      id,
+      TransactionGetReplicaFromPreferredServerGroupOptions.Default
+    )
+  }
+
+  /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.
+    * <p>
+    * It will be fetched only from document copies that on nodes in the preferred server group, which can
+    * be configured with [[com.couchbase.client.scala.env.ClusterEnvironment.Builder.preferredServerGroup]].
+    * <p>
+    * If no replica can be retrieved, which can include for reasons such as this preferredServerGroup not being set,
+    * and misconfigured server groups, then [[com.couchbase.client.core.error.DocumentUnretrievableException]]
+    * can be raised.  It is strongly recommended that this method always be used with a fallback strategy to use
+    * ctx.get() on failure.
+    *
+    * @param collection the Couchbase collection the document exists on
+    * @param id         the document's ID
+    * @param options    options controlling the operation
+    * @return a <code>TransactionGetResult</code> containing the document
+    */
+  def getReplicaFromPreferredServerGroup(
+      collection: Collection,
+      id: String,
+      options: TransactionGetReplicaFromPreferredServerGroupOptions
+  ): Try[TransactionGetResult] = {
+    Try(internal.getReplicaFromPreferredServerGroup(collection.reactive, id, options).block())
   }
 
   /**
@@ -86,7 +136,29 @@ class TransactionAttemptContext private[scala] (
   def replace[T](doc: TransactionGetResult, content: T)(
       implicit serializer: JsonSerializer[T]
   ): Try[TransactionGetResult] = {
-    Try(internal.replace(doc, content).block())
+    replace(doc, content, TransactionReplaceOptions.Default)
+  }
+
+  /**
+    * Mutates the specified <code>doc</code> with new content.
+    * <p>
+    * The mutation is staged until the transaction is committed.  That is, any read of the document by any Couchbase
+    * component will see the document's current value, rather than this staged or 'dirty' data.  If the attempt is
+    * rolled back, the staged mutation will be removed.
+    * <p>
+    * This staged data effectively locks the document from other transactional writes until the attempt completes
+    * (commits or rolls back).
+    *
+    * @param doc     the doc to be updated
+    * @param content       $SupportedTypes
+    * @param options    options controlling the operation
+    * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
+    * object is modified.
+    */
+  def replace[T](doc: TransactionGetResult, content: T, options: TransactionReplaceOptions)(
+      implicit serializer: JsonSerializer[T]
+  ): Try[TransactionGetResult] = {
+    Try(internal.replace(doc, content, options).block())
   }
 
   /**
@@ -101,12 +173,33 @@ class TransactionAttemptContext private[scala] (
     * @param collection the Couchbase collection in which to insert the doc
     * @param id         the document's unique ID
     * @param content       $SupportedTypes
-    * @the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
+    * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
     */
   def insert[T](collection: Collection, id: String, content: T)(
       implicit serializer: JsonSerializer[T]
   ): Try[TransactionGetResult] = {
-    Try(internal.insert(collection.reactive, id, content).block())
+    insert(collection, id, content, TransactionInsertOptions.Default)
+  }
+
+  /**
+    * Inserts a new document into the specified Couchbase <code>collection</code>.
+    * <p>
+    * The insert is staged until the transaction is committed.  No other actor will be able to see this inserted
+    * document until that point.
+    * <p>
+    * This staged data effectively locks the document from other transactional writes until the attempt completes
+    * (commits or rolls back).
+    *
+    * @param collection the Couchbase collection in which to insert the doc
+    * @param id         the document's unique ID
+    * @param content       $SupportedTypes
+    * @param options    options controlling the operation
+    * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
+    */
+  def insert[T](collection: Collection, id: String, content: T, options: TransactionInsertOptions)(
+      implicit serializer: JsonSerializer[T]
+  ): Try[TransactionGetResult] = {
+    Try(internal.insert(collection.reactive, id, content, options).block())
   }
 
   /**

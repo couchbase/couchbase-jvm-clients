@@ -16,8 +16,14 @@
 package com.couchbase.client.scala.transactions;
 
 import com.couchbase.client.core.transaction.CoreTransactionGetResult
-import com.couchbase.client.scala.codec.JsonDeserializer
+import com.couchbase.client.scala.codec.{
+  JsonDeserializer,
+  Transcoder,
+  TranscoderWithSerializer,
+  TranscoderWithoutSerializer
+}
 
+import scala.reflect.ClassTag
 import scala.util.Try
 
 /**
@@ -29,17 +35,24 @@ import scala.util.Try
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
 case class TransactionGetResult private[scala] (
-    private[scala] val internal: CoreTransactionGetResult
+    private[scala] val internal: CoreTransactionGetResult,
+    private[scala] val transcoder: Option[Transcoder] = None
 ) {
 
   /** The document's id. */
   def id: String = internal.id
 
   /** Return the content, converted into the application's preferred representation.
-g    *
+    *
     * @tparam T $SupportedTypes
     */
-  def contentAs[T](implicit deserializer: JsonDeserializer[T]): Try[T] = {
-    deserializer.deserialize(internal.contentAsBytes)
+  def contentAs[T](implicit deserializer: JsonDeserializer[T], tag: ClassTag[T]): Try[T] = {
+    transcoder match {
+      case Some(tc: TranscoderWithoutSerializer) =>
+        tc.decode[T](internal.contentAsBytes, internal.userFlags)(tag)
+      case Some(tc: TranscoderWithSerializer) =>
+        tc.decode[T](internal.contentAsBytes, internal.userFlags, deserializer)(tag)
+      case None => deserializer.deserialize(internal.contentAsBytes)
+    }
   }
 }
