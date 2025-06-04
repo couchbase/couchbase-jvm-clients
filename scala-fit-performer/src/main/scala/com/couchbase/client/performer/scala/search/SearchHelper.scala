@@ -385,7 +385,7 @@ object SearchHelper {
           out = out.should(converted: _*)
         }
         if (qr.getMustNotCount > 0) {
-          val converted = convertSearchQueries(qr.getMustList.asScala)
+          val converted = convertSearchQueries(qr.getMustNotList.asScala)
           out = out.mustNot(converted: _*)
         }
         if (qr.hasShouldMin) out = out.shouldMin(qr.getShouldMin)
@@ -545,6 +545,9 @@ object SearchHelper {
       val opts = vq.getOptions
       if (opts.hasNumCandidates) out = out.numCandidates(opts.getNumCandidates)
       if (opts.hasBoost) out = out.boost(opts.getBoost)
+      // [if:1.9.0]
+      if (opts.hasPrefilter) out = out.prefilter(convertSearchQuery(opts.getPrefilter))
+      // [end]
     }
     out
   }

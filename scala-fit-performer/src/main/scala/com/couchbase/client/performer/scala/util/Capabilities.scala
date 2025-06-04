@@ -86,6 +86,10 @@ object Capabilities {
     out.add(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
     // [end:1.8.2]
 
+    // [start:1.9.0]
+    out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH)
+    // [end:1.9.0]
+
     out
   }
 
