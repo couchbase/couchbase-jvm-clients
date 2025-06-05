@@ -24,6 +24,9 @@ import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
+import com.couchbase.client.performer.scala.Content
+import com.couchbase.client.protocol.shared.{Content => ProtocolContent, ContentAsPerformerValidation}
 import com.couchbase.client.performer.scala.util.ResultValidation.{anythingAllowed, dbg}
 import com.couchbase.client.protocol.shared.Latch
 import com.couchbase.client.protocol.transactions._
@@ -185,7 +188,8 @@ abstract class TransactionShared(
       request: CommandGet,
       req: CommandGetOptional,
       out: Try[TransactionGetResult],
-      cc: ClusterConnection
+      cc: ClusterConnection,
+      contentAs: Option[ContentAsPerformerValidation]
   ): Unit = {
     out match {
       case Failure(_: DocumentNotFoundException) =>
@@ -200,7 +204,7 @@ abstract class TransactionShared(
           logger.info("Document exists but isn't supposed to")
           throw new TestFailure(new DocumentExistsException(null))
         } else {
-          handleGetResult(request, out.get, cc)
+          handleGetResult(request, out.get, cc, contentAs)
         }
       case Failure(err) =>
         throw err
@@ -210,13 +214,39 @@ abstract class TransactionShared(
   protected def handleGetResult(
       request: CommandGet,
       getResult: TransactionGetResult,
-      cc: ClusterConnection
+      cc: ClusterConnection,
+      contentAs: Option[ContentAsPerformerValidation] = None
   ): Unit = {
     stashedGet.set(getResult)
     if (request.hasStashInSlot) {
       stashedGetMap.put(request.getStashInSlot, getResult)
       logger.info("Stashed {} in slot {}", getResult.id, request.getStashInSlot)
     }
+
+    contentAs.foreach { cas =>
+      val content = ContentAsUtil.contentType(
+        cas.getContentAs,
+        () => getResult.contentAs[Array[Byte]],
+        () => getResult.contentAs[String],
+        () => getResult.contentAs[JsonObject],
+        () => getResult.contentAs[JsonArray],
+        () => getResult.contentAs[Boolean],
+        () => getResult.contentAs[Int],
+        () => getResult.contentAs[Double]
+      )
+
+      if (cas.getExpectSuccess != content.isSuccess) {
+        throw new TestFailure(new RuntimeException(s"ContentAs result $content did not equal expected result ${cas.getExpectSuccess}"))
+      }
+
+      if (cas.hasExpectedContentBytes) {
+        val bytes = ContentAsUtil.convert(content.get)
+        if (!java.util.Arrays.equals(cas.getExpectedContentBytes.toByteArray, bytes)) {
+          throw new TestFailure(new RuntimeException(s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${cas.getExpectedContentBytes}"))
+        }
+      }
+    }
+
     if (request.getExpectedContentJson.nonEmpty) {
       val expected = JsonObject.fromJson(request.getExpectedContentJson)
       val actual = getResult.contentAs[JsonObject].get
@@ -294,6 +324,24 @@ abstract class TransactionShared(
         .setBroadcast(BroadcastToOtherConcurrentTransactionsRequest.newBuilder.setLatchSet(request))
         .build
     )
+  }
+
+  protected def readContent(contentJson: Option[String], content: Option[ProtocolContent]): Content = {
+    (contentJson, content) match {
+      case (Some(_), Some(_)) =>
+        throw new RuntimeException("Bug - must specify exactly one type of content")
+      case (Some(json), None) =>
+        try {
+          Content.ContentJson(JsonObject.fromJson(json))
+        } catch {
+          case e: Exception =>
+            throw new InternalPerformerFailure(new RuntimeException(e))
+        }
+      case (None, Some(c)) =>
+        ScalaSdkCommandExecutor.convertContent(c)
+      case (None, None) =>
+        throw new RuntimeException("Internal performer bug - must specify one type of content")
+    }
   }
 
   protected def hasResult(expectedResults: Seq[ExpectedResult], er: ExpectedResult): Boolean =

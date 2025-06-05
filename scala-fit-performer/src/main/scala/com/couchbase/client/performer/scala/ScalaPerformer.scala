@@ -94,6 +94,7 @@ class ScalaPerformer extends CorePerformer {
       .setPerformerUserAgent("scala")
       .addPerformerCaps(Caps.CLUSTER_CONFIG_CERT)
       .addPerformerCaps(Caps.CLUSTER_CONFIG_INSECURE)
+      .addPerformerCaps(Caps.CONTENT_AS_PERFORMER_VALIDATION)
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
 
     // [if:1.7.2]

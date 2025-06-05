@@ -27,6 +27,9 @@ import com.couchbase.client.performer.scala.transaction.TransactionShared.Expect
 import com.couchbase.client.performer.scala.util.{ClusterConnection, OptionsUtil, ResultValidation}
 import com.couchbase.client.protocol.shared.API
 import com.couchbase.client.protocol.transactions.{ExpectedResult, TransactionCommand, TransactionCreateRequest, TransactionStreamPerformerToDriver}
+import com.couchbase.client.scala.codec._
+import com.couchbase.client.scala.codec.Conversions._
+import com.couchbase.client.scala.json._
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transactions.TransactionAttemptContext
 import io.grpc.stub.StreamObserver
@@ -115,7 +118,10 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
 
     if (op.hasInsert) {
       val request    = op.getInsert
-      val content    = JsonObject.fromJson(request.getContentJson)
+      val content    = readContent(
+        if (request.hasContentJson) Some(request.getContentJson) else None,
+        if (request.hasContent) Some(request.getContent) else None
+      )
       val collection = connection.collection(request.getDocId)
       performOperation(
         dbg + "insert " + request.getDocId.getDocId,
@@ -131,7 +137,39 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          ctx.insert(collection, request.getDocId.getDocId, content).get
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionInsertOptions(request)
+          content match {
+            case ContentString(value) =>
+              options match {
+                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case None => ctx.insert(collection, request.getDocId.getDocId, value).get
+              }
+            case ContentJson(value) =>
+              options match {
+                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case None => ctx.insert(collection, request.getDocId.getDocId, value).get
+              }
+            case ContentByteArray(value) =>
+              options match {
+                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case None => ctx.insert(collection, request.getDocId.getDocId, value).get
+              }
+            case ContentNull(value) =>
+              options match {
+                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case None => ctx.insert(collection, request.getDocId.getDocId, value).get
+              }
+          }
+          // [end]
+          // [if:<1.9.0]
+          //? content match {
+          //?   case ContentString(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          //?   case ContentJson(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          //?   case ContentByteArray(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          //?   case ContentNull(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          //? }
+          // [end]
         }
       )
     } else if (op.hasInsertV2) {
@@ -145,21 +183,21 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getLocation)
+          val docId = executor.get.getDocId(request.getLocation)
           content match {
-            case ContentString(value) =>
-              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
-            case ContentJson(value) =>
-              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
-            case ContentByteArray(value) =>
-              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
-            case ContentNull(value) =>
-              ctx.insert(collection, executor.get.getDocId(request.getLocation), value).get
+            case ContentString(value) => ctx.insert(collection, docId, value).get
+            case ContentJson(value) => ctx.insert(collection, docId, value).get
+            case ContentByteArray(value) => ctx.insert(collection, docId, value).get
+            case ContentNull(value) => ctx.insert(collection, docId, value).get
           }
         }
       )
     } else if (op.hasReplace) {
       val request = op.getReplace
-      val content = JsonObject.fromJson(request.getContentJson)
+      val content = readContent(
+        if (request.hasContentJson) Some(request.getContentJson) else None,
+        if (request.hasContent) Some(request.getContent) else None
+      )
       performOperation(
         dbg + "replace " + request.getDocId.getDocId,
         ctx,
@@ -167,26 +205,127 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         op.getDoNotPropagateError,
         performanceMode,
         () => {
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionReplaceOptions(request)
           if (request.getUseStashedResult) {
-            ctx.replace(stashedGet.get, content).get
+            content match {
+              case ContentString(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
+                  case None => ctx.replace(stashedGet.get, value).get
+                }
+              case ContentJson(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
+                  case None => ctx.replace(stashedGet.get, value).get
+                }
+              case ContentByteArray(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
+                  case None => ctx.replace(stashedGet.get, value).get
+                }
+              case ContentNull(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
+                  case None => ctx.replace(stashedGet.get, value).get
+                }
+            }
           } else if (request.hasUseStashedSlot) {
             if (!stashedGetMap.contains(request.getUseStashedSlot))
               throw new IllegalStateException(
                 "Do not have a stashed get in slot " + request.getUseStashedSlot
               )
-            ctx.replace(stashedGetMap(request.getUseStashedSlot), content).get
+            content match {
+              case ContentString(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+                }
+              case ContentJson(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+                }
+              case ContentByteArray(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+                }
+              case ContentNull(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+                }
+            }
           } else {
             val collection = connection.collection(request.getDocId)
             logger.info(
-              "{} Performing replace operation on docId {} to new content {} on collection {}",
+              "{} Performing replace operation on docId {} to new content on collection {}",
               dbg,
               request.getDocId.getDocId,
-              request.getContentJson,
               request.getDocId.getCollectionName
             )
             val r = ctx.get(collection, request.getDocId.getDocId).get
-            ctx.replace(r, content).get
+            content match {
+              case ContentString(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(r, value, opts).get
+                  case None => ctx.replace(r, value).get
+                }
+              case ContentJson(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(r, value, opts).get
+                  case None => ctx.replace(r, value).get
+                }
+              case ContentByteArray(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(r, value, opts).get
+                  case None => ctx.replace(r, value).get
+                }
+              case ContentNull(value) =>
+                options match {
+                  case Some(opts) => ctx.replace(r, value, opts).get
+                  case None => ctx.replace(r, value).get
+                }
+            }
           }
+          // [end]
+          // [if:<1.9.0]
+          //? if (request.getUseStashedResult) {
+          //?   content match {
+          //?     case ContentString(value) => ctx.replace(stashedGet.get, value).get
+          //?     case ContentJson(value) => ctx.replace(stashedGet.get, value).get
+          //?     case ContentByteArray(value) => ctx.replace(stashedGet.get, value).get
+          //?     case ContentNull(value) => ctx.replace(stashedGet.get, value).get
+          //?   }
+          //? } else if (request.hasUseStashedSlot) {
+          //?   if (!stashedGetMap.contains(request.getUseStashedSlot))
+          //?     throw new IllegalStateException(
+          //?       "Do not have a stashed get in slot " + request.getUseStashedSlot
+          //?     )
+          //?   content match {
+          //?     case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          //?     case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          //?     case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          //?     case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          //?   }
+          //? } else {
+          //?   val collection = connection.collection(request.getDocId)
+          //?   logger.info(
+          //?     "{} Performing replace operation on docId {} to new content on collection {}",
+          //?     dbg,
+          //?     request.getDocId.getDocId,
+          //?     request.getDocId.getCollectionName
+          //?   )
+          //?   val r = ctx.get(collection, request.getDocId.getDocId).get
+          //?   content match {
+          //?     case ContentString(value) => ctx.replace(r, value).get
+          //?     case ContentJson(value) => ctx.replace(r, value).get
+          //?     case ContentByteArray(value) => ctx.replace(r, value).get
+          //?     case ContentNull(value) => ctx.replace(r, value).get
+          //?   }
+          //? }
+          // [end]
 
         }
       )
@@ -206,10 +345,10 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
                 "Do not have a stashed get in slot " + request.getUseStashedSlot
               )
             content match {
-              case ContentString(value) =>
-                ctx.replace(stashedGetMap(request.getUseStashedSlot), value)
-              case ContentJson(value) =>
-                ctx.replace(stashedGetMap(request.getUseStashedSlot), value)
+              case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
             }
           } else {
             val collection = connection.collection(request.getLocation)
@@ -217,7 +356,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
               ctx.get(collection, executor.get.getDocId(request.getLocation)).get
             content match {
               case ContentString(value) => ctx.replace(r, value).get
-              case ContentJson(value)   => ctx.replace(r, value).get
+              case ContentJson(value) => ctx.replace(r, value).get
+              case ContentByteArray(value) => ctx.replace(r, value).get
+              case ContentNull(value) => ctx.replace(r, value).get
             }
           }
 
@@ -292,9 +433,18 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          val out =
-            ctx.get(collection, request.getDocId.getDocId).get
-          handleGetResult(request, out, connection)
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionGetOptions(request)
+          val out = options match {
+            case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts).get
+            case None => ctx.get(collection, request.getDocId.getDocId).get
+          }
+          // [end]
+          // [if:<1.9.0]
+          //? val out = ctx.get(collection, request.getDocId.getDocId).get
+          // [end]
+          val contentAsValidation = if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
+          handleGetResult(request, out, connection, contentAsValidation)
 
         }
       )
@@ -308,7 +458,16 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getLocation)
-          ctx.get(collection, executor.get.getDocId(request.getLocation)).get
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionGetOptions(request)
+          options match {
+            case Some(opts) => ctx.get(collection, executor.get.getDocId(request.getLocation), opts).get
+            case None => ctx.get(collection, executor.get.getDocId(request.getLocation)).get
+          }
+          // [end]
+          // [if:<1.9.0]
+          //? ctx.get(collection, executor.get.getDocId(request.getLocation)).get
+          // [end]
         }
       )
     } else if (op.hasGetOptional) {
@@ -329,8 +488,18 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          val out = ctx.get(collection, request.getDocId.getDocId)
-          handleGetOptionalResult(request, req, out, connection)
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionGetOptions(request)
+          val out = options match {
+            case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts)
+            case None => ctx.get(collection, request.getDocId.getDocId)
+          }
+          // [end]
+          // [if:<1.9.0]
+          //? val out = ctx.get(collection, request.getDocId.getDocId)
+          // [end]
+          val contentAsValidation = if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
+          handleGetOptionalResult(request, req, out, connection, contentAsValidation)
         }
       )
     // [start:1.8.0]
@@ -344,7 +513,16 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getDocId)
-          val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          // [if:1.9.0]
+          val options = TransactionOptionsUtil.transactionGetReplicaFromPreferredServerGroupOptions(request)
+          val result = options match {
+            case Some(opts) => ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId, opts).get
+            case None => ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          }
+          // [end]
+          // [if:<1.9.0]
+          //? val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          // [end]
           handleGetReplicaFromPreferredServerGroupResult(request, result, connection)
       }
     )
