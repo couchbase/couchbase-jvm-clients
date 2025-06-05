@@ -178,6 +178,7 @@
     </scm>
 
     <modules>
+        <module>bom</module>
         <module>java-client</module>
         <module>osgi-feature</module>
         <module>java-examples</module>
