@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.couchbase.client</groupId>
     <artifactId>couchbase-jvm-clients</artifactId>
-    <version>1.18.0-SNAPSHOT</version><!--REL-->
+    <version>${revision}</version>
     <packaging>pom</packaging>
 
     <name>Couchbase JVM Client Parent</name>
@@ -14,18 +14,6 @@
         <maven.compiler.release>8</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <osgi-feature.version>3.9.0-SNAPSHOT</osgi-feature.version><!--REL-->
-        <java-examples.version>1.9.0-SNAPSHOT</java-examples.version><!--REL-->
-        <java-client.version>3.9.0-SNAPSHOT</java-client.version><!--REL-->
-        <core-io.version>3.9.0-SNAPSHOT</core-io.version><!--REL-->
-        <core-io-deps.version>1.9.0-SNAPSHOT</core-io-deps.version><!--REL-->
-        <scala-client.version>1.9.0-SNAPSHOT</scala-client.version><!--REL-->
-        <kotlin-client.version>1.6.0-SNAPSHOT</kotlin-client.version><!--REL-->
-        <columnar-java-client.version>1.2.0-SNAPSHOT</columnar-java-client.version><!--REL-->
-        <tracing-opentelemetry.version>1.7.0-SNAPSHOT</tracing-opentelemetry.version><!--REL-->
-        <metrics-opentelemetry.version>0.9.0-SNAPSHOT</metrics-opentelemetry.version><!--REL-->
-        <test-utils.version>1.9.0-SNAPSHOT</test-utils.version><!--REL-->
 
         <junit.version>5.11.2</junit.version>
         <assertj.version>3.23.1</assertj.version>
@@ -85,57 +73,72 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>core-io</artifactId>
-                <version>${core-io.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>java-client</artifactId>
-                <version>${java-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-implicits_2.12</artifactId>
-                <version>${scala-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-client_2.12</artifactId>
-                <version>${scala-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-implicits_2.13</artifactId>
-                <version>${scala-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-client_2.13</artifactId>
-                <version>${scala-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>kotlin-client</artifactId>
-                <version>${kotlin-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>couchbase-columnar-java-client</artifactId>
-                <version>${columnar-java-client.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>test-utils</artifactId>
-                <version>${test-utils.version}</version>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
-                <artifactId>tracing-opentelemetry</artifactId>
-                <version>${tracing-opentelemetry.version}</version>
+                <artifactId>metrics-micrometer</artifactId>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>metrics-opentelemetry</artifactId>
-                <version>${metrics-opentelemetry.version}</version>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>tracing-micrometer-observation</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>tracing-opentelemetry</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>tracing-opentracing</artifactId>
+                <version>${revision}</version>
             </dependency>
             <dependency>
                 <groupId>io.projectreactor.tools</groupId>
@@ -171,7 +174,7 @@
     <scm>
         <connection>scm:git:git://github.com/couchbase/couchbase-jvm-clients</connection>
         <developerConnection>scm:git:git://github.com/couchbase/couchbase-jvm-clients</developerConnection>
-        <url>https://github.com/couchbase/couchbase-jvm-clients</url>
+        <url>https://github.com/couchbase/couchbase-jvm-clients/tree/master</url>
     </scm>
 
     <modules>
@@ -265,7 +268,12 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
             </plugin>
-            <!-- By default, exclude submodules from publication. -->
+            <!-- By default, exclude submodules from publication.
+                 A submodule opts in to publication by including
+                 `central-publishing-maven-plugin` in its `plugins` section.
+                 See https://stackoverflow.com/a/78782937/611819
+
+                 We don't publish the parent POM, since submodules flatten their POMs. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
@@ -273,15 +281,6 @@
                 <configuration>
                     <skip>true</skip>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <!-- Publish parent (for now) but not all submodules.
-                     A submodule opts in to publication by including
-                     `central-publishing-maven-plugin` in its `plugins` section.
-                     See https://stackoverflow.com/a/78782937/611819 -->
-                <inherited>false</inherited>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
