@@ -21,5 +21,5 @@ set -x
 cd core-io ; ./shade-check.sh ; cd ..
 cd tracing-opentelemetry ; ./shade-check.sh ; cd ..
 
-./mvnw --batch-mode --settings deploy-settings.xml deploy -Dgpg.signer=bc -Dsurefire.rerunFailingTestsCount=1 --activate-profiles ${MAVEN_PROFILE}
-./mvnw --batch-mode --settings deploy-settings.xml clean deploy -Dgpg.signer=bc -Dmaven.test.skip=true --activate-profiles ${MAVEN_PROFILE},scala-2.13 --projects scala-implicits,scala-client
+./mvnw --batch-mode deploy -Dgpg.signer=bc -Dsurefire.rerunFailingTestsCount=1 --activate-profiles ${MAVEN_PROFILE}
+./mvnw --batch-mode clean deploy -Dgpg.signer=bc -Dmaven.test.skip=true --activate-profiles ${MAVEN_PROFILE},scala-2.13 --projects scala-implicits,scala-client

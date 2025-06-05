@@ -32,6 +32,10 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+          server-id: 'central'
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
       - name: Build and deploy to Maven Central
         run: .github/scripts/deploy.sh snapshot
         env:
