@@ -17,11 +17,19 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class VersionAndGitHash {
+  private static final Logger log = LoggerFactory.getLogger(VersionAndGitHash.class);
+
   private final String version;
   private final String gitHash;
 
@@ -46,13 +54,24 @@ public class VersionAndGitHash {
   }
 
   public static VersionAndGitHash from(Class<?> classInSamePackageAsVersionMetadata) {
-    String value = classInSamePackageAsVersionMetadata.getPackage().getImplementationVersion();
-    if (value == null) {
+    String resourceName = "version.properties";
+    try (InputStream is = classInSamePackageAsVersionMetadata.getResourceAsStream(resourceName)) {
+      if (is == null) {
+        log.warn("Resource '{}' not found in package {}", resourceName, classInSamePackageAsVersionMetadata.getPackage());
+        return UNKNOWN;
+      }
+      Properties properties = new Properties();
+      properties.load(is);
+      String version = properties.getProperty("version");
+      String gitHash = properties.getProperty("gitHash");
+
+      return new VersionAndGitHash(
+        version == null ? "0.0.0" : version,
+        gitHash == null ? "" : gitHash
+      );
+    } catch (IOException e) {
+      log.warn("Failed to load '{}' from {}", resourceName, classInSamePackageAsVersionMetadata, e);
       return UNKNOWN;
     }
-    String[] components = value.split("\\+", 2);
-    return components.length == 1
-      ? new VersionAndGitHash(value, "")
-      : new VersionAndGitHash(components[0], components[1]);
   }
 }
