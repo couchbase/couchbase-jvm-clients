@@ -51,6 +51,7 @@ jobs:
           java-version: |
             ${{ matrix.java-version }}
             17
+          cache: 'maven'
 
       - name: Compile tests
         run: |
@@ -102,6 +103,9 @@ jobs:
         run: |
           TEST_JAVA_HOME=$JAVA_HOME_${{ matrix.java-version }}_X64
           ./mvnw --batch-mode -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true verify -Djvm=${TEST_JAVA_HOME}/bin/java
+
+      - name: Remove artifacts from Maven repo so they're not cached
+        run: rm -rfv ~/.m2/repository/com/couchbase/client/
 
       - name: Publish test results
         run: |
