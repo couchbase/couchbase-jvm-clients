@@ -21,6 +21,7 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -29,9 +30,11 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -52,6 +55,7 @@ import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.node.KeyValueLocator.partitionForKey;
 import static com.couchbase.client.core.util.CbCollections.transform;
+import static com.couchbase.client.java.kv.GetAnyReplicaOptions.getAnyReplicaOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
@@ -148,6 +152,17 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   @Test
   void blockingGetAnyThrowsWhenNotFound() {
     assertThrows(DocumentUnretrievableException.class, () -> collection.getAnyReplica(absentId()));
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  void timesOutIfBucketNotFound() {
+    try (Cluster disposableCluster = createCluster()) {
+      assertThrows(UnambiguousTimeoutException.class, () ->
+        disposableCluster.bucket("this-bucket-does-not-exist").defaultCollection()
+          .getAnyReplica("12345", getAnyReplicaOptions().timeout(Duration.ofMillis(10)))
+      );
+    }
   }
 
   @Test

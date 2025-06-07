@@ -19,70 +19,56 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
-import com.couchbase.client.core.retry.reactor.Backoff;
-import com.couchbase.client.core.retry.reactor.Retry;
-import com.couchbase.client.core.retry.reactor.RetryExhaustedException;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
-import reactor.core.Exceptions;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 
-/**
- * Defines helpful routines for working with bucket configs.
- */
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+
 @Stability.Internal
 public class BucketConfigUtil {
-    private BucketConfigUtil() {}
+  private BucketConfigUtil() {
+  }
 
-    private static final Duration retryDelay = Duration.ofMillis(100);
+  private static final Duration retryDelay = Duration.ofMillis(100);
 
-    /**
-     * A bucket config can be null while the bucket has not been opened.  This method allows easily for a config to be
-     * available.
-     */
-    @Deprecated
-    public static Mono<BucketConfig> waitForBucketConfig(final Core core,
-                                                         final String bucketName,
-                                                         final Duration timeout) {
-        return Mono.fromCallable(() -> {
-            final BucketConfig bucketConfig = core.clusterConfig().bucketConfig(bucketName);
-            if (bucketConfig == null) {
-                throw new NullPointerException();
-            }
-            return bucketConfig;
-        }).retryWhen(Retry.anyOf(NullPointerException.class)
-                .timeout(timeout)
-                .backoff(Backoff.fixed(retryDelay))
-                .toReactorRetry())
-                .onErrorResume(err -> {
-                    if (err instanceof RetryExhaustedException) {
-                        return Mono.error(new UnambiguousTimeoutException("Timed out while waiting for bucket config", null));
-                    } else {
-                        return Mono.error(err);
-                    }
-                });
-    }
+  /**
+   * @deprecated In favor of {@link #waitForBucketTopology}
+   */
+  @Deprecated
+  public static Mono<BucketConfig> waitForBucketConfig(
+    Core core,
+    String bucketName,
+    Duration timeout
+  ) {
+    return waitForBucket(bucketName, timeout, () -> core.clusterConfig().bucketConfig(bucketName));
+  }
 
-  public static Mono<ClusterTopologyWithBucket> waitForBucketTopology(final Core core,
-                                                                      final String bucketName,
-                                                                      final Duration timeout) {
-    return Mono.fromCallable(() -> {
-        final ClusterTopologyWithBucket bucketConfig = core.clusterConfig().bucketTopology(bucketName);
-        if (bucketConfig == null) {
-          throw new NullPointerException();
-        }
-        return bucketConfig;
-      }).retryWhen(Retry.anyOf(NullPointerException.class)
-        .timeout(timeout)
-        .backoff(Backoff.fixed(retryDelay))
-        .toReactorRetry())
-      .onErrorResume(err -> {
-        if (Exceptions.isRetryExhausted(err)) {
-          return Mono.error(new UnambiguousTimeoutException("Timed out while waiting for bucket config", null));
-        } else {
-          return Mono.error(err);
-        }
-      });
+  public static Mono<ClusterTopologyWithBucket> waitForBucketTopology(
+    Core core,
+    String bucketName,
+    Duration timeout
+  ) {
+    return waitForBucket(bucketName, timeout, () -> core.clusterConfig().bucketTopology(bucketName));
+  }
+
+  private static <T> Mono<T> waitForBucket(
+    String bucketName,
+    Duration timeout,
+    Supplier<@Nullable T> topologySupplier
+  ) {
+    return Mono.fromSupplier(topologySupplier)
+      .repeatWhenEmpty(attempts -> attempts.delayElements(retryDelay))
+      .timeout(timeout)
+      .onErrorMap(
+        java.util.concurrent.TimeoutException.class,
+        t -> new UnambiguousTimeoutException(
+          "Topology for bucket '" + redactMeta(bucketName) + "' was not available within " + timeout + " -- Does this bucket exist? Does the user have permission to access it? Consider calling bucket.waitUntilReady() first.",
+          null
+        )
+      );
   }
 }

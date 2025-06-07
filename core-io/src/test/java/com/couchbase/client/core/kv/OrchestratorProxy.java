@@ -76,16 +76,9 @@ class OrchestratorProxy {
     ClusterConfig clusterConfig = new ClusterConfig();
     clusterConfig.setBucketConfig(bucketConfig);
 
-    // Set up config provider
-    ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
-    when(configurationProvider.configs()).thenReturn(Flux.just(clusterConfig));
-    when(configurationProvider.config()).thenReturn(clusterConfig);
-
     // Set up core
-    core = mockCore();
-    CoreContext coreContext = new CoreContext(core, 1, environment, null);
-    when(core.context()).thenReturn(coreContext);
-    when(core.configurationProvider()).thenReturn(configurationProvider);
+    core = mockCore(environment);
+    when(core.clusterConfig()).thenReturn(clusterConfig);
 
     rangeScanOrchestrator = new RangeScanOrchestrator(core, collectionIdentifier);
 
