@@ -33,7 +33,6 @@ import reactor.core.publisher.Sinks;
 
 import java.nio.ByteBuffer;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 
@@ -79,9 +78,17 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   private Sinks.Many<ROW> rowSink;
 
   /**
-   * Holds the currently user-requested rows for backpressure handling.
+   * For backpressure, a running total of the number of rows requested by the subscriber,
+   * minus the number of rows emitted. A negative value indicates a surplus of available rows.
+   * <p>
+   * A value of {@code Long.MAX_VALUE} indicates backpressure is disabled.
    */
-  private final AtomicLong requested = new AtomicLong(0);
+  private long demand = 0;
+
+  /**
+   * Guards access to `demand` and channel autoRead setting.
+   */
+  private final Object autoReadLock = new Object();
 
   /**
    * Subclass implements this to return the "meat" of the decoding, the chunk parser.
@@ -174,21 +181,56 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     parser = parserBuilder().build();
     this.channelConfig = channelConfig;
     this.trailer = Sinks.one();
-    this.requested.set(0);
+    synchronized (autoReadLock) {
+      this.demand = 0;
+    }
 
     this.rowSink = Sinks.many().unicast().onBackpressureBuffer();
     this.rows = rowSink
       .asFlux()
       .doOnRequest(v -> {
-        requested.addAndGet(v);
-        if (!channelConfig.isAutoRead()) {
-          channelConfig.setAutoRead(true);
+        synchronized (autoReadLock) {
+          if (demand == Long.MAX_VALUE) {
+            return;
+          }
+
+          try {
+            demand = Math.addExact(demand, v);
+
+          } catch (ArithmeticException e) {
+            // They asked for it, so open the floodgates.
+            demand = Long.MAX_VALUE;
+            channelConfig.setAutoRead(true);
+            return;
+          }
+
+          if (demand > 0 && !channelConfig.isAutoRead()) {
+            channelConfig.setAutoRead(true);
+          }
         }
       })
-      .doOnTerminate(() -> channelConfig.setAutoRead(true))
-      .doOnCancel(() -> channelConfig.setAutoRead(true))
+      .doOnTerminate(this::readRemainingRowsWithoutBackpressure)
+      .doOnCancel(this::readRemainingRowsWithoutBackpressure)
       .publish()
       .refCount();
+  }
+
+  /**
+   * Allow the remaining result rows to be consumed, even in the absence of demand.
+   * Must not be called before the row subscription is terminated or cancelled.
+   * <p>
+   * From a memory usage perspective, this is safe because future attempts to emit
+   * rows into the sink fail instead of buffering the items.
+   * <p>
+   * Do this because the current API contract requires publishing metadata
+   * even if the row sink terminates or is cancelled. Otherwise, we would
+   * probably be better off simply closing the HTTP connection.
+   */
+  private void readRemainingRowsWithoutBackpressure() {
+    synchronized (autoReadLock) {
+      demand = Long.MAX_VALUE;
+      channelConfig.setAutoRead(true);
+    }
   }
 
   @Override
@@ -241,9 +283,17 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
    */
   protected void emitRow(final ROW row) {
     rowSink.emitNext(row, emitFailureHandler());
-    requested.decrementAndGet();
-    if (requested.get() <= 0 && channelConfig.isAutoRead() && rowSink.currentSubscriberCount() > 0) {
-      channelConfig.setAutoRead(false);
+
+    synchronized (autoReadLock) {
+      if (demand == Long.MAX_VALUE) {
+        return;
+      }
+
+      demand--;
+
+      if (demand <= 0 && channelConfig.isAutoRead()) {
+        channelConfig.setAutoRead(false);
+      }
     }
   }
 
