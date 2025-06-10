@@ -58,14 +58,14 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
-import com.couchbase.client.core.topology.BucketTopology;
-import com.couchbase.client.core.topology.CouchbaseBucketTopology;
-import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.BucketTopology;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.core.topology.NetworkSelector;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.topology.PortSelector;
 import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.util.ConnectionString;
@@ -87,8 +87,6 @@ import javax.naming.NamingException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -99,10 +97,10 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
 import static java.util.Collections.emptySet;
-import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
@@ -408,80 +406,88 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public void proposeBucketConfig(final ProposedBucketConfigContext ctx) {
-    if (!shutdown.get()) {
-      try {
-        if (ctx.config().isEmpty()) {
-          // It came from an "ifNewerThan" request, and the result wasn't newer.
-          eventBus.publish(new ConfigIgnoredEvent(
-            core.context(),
-            ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
-            Optional.empty(),
-            Optional.empty(),
-            Optional.of(ctx.bucketName())
-          ));
-          return;
-        }
-
-        ClusterTopologyWithBucket clusterTopologyWithBucket = parseClusterTopology(ctx.config(), ctx.origin()).requireBucket();
-        checkAndApplyConfig(clusterTopologyWithBucket, ctx.forcesOverride());
-
-      } catch (Exception ex) {
-        eventBus.publish(new ConfigIgnoredEvent(
-          core.context(),
-          ConfigIgnoredEvent.Reason.PARSE_FAILURE,
-          Optional.of(ex),
-          Optional.of(ctx.config()),
-          Optional.of(ctx.bucketName())
-        ));
-      }
-    } else {
-      eventBus.publish(new ConfigIgnoredEvent(
-        core.context(),
-        ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
-        Optional.empty(),
-        Optional.of(ctx.config()),
-        Optional.of(ctx.bucketName())
-      ));
-    }
+  public void proposeGlobalConfig(final ProposedGlobalConfigContext ctx) {
+    proposeTopology(ctx.config(), ctx.origin(), null, ctx.forcesOverride());
   }
 
   @Override
-  public void proposeGlobalConfig(final ProposedGlobalConfigContext ctx) {
-    if (!shutdown.get()) {
-      try {
-        if (ctx.config().isEmpty()) {
-          // It came from an "ifNewerThan" request, and the result wasn't newer.
-          eventBus.publish(new ConfigIgnoredEvent(
-            core.context(),
-            ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty()
-          ));
-          return;
-        }
+  public void proposeBucketConfig(final ProposedBucketConfigContext ctx) {
+    proposeTopology(ctx.config(), ctx.origin(), ctx.bucketName(), ctx.forcesOverride());
+  }
 
-        ClusterTopology topology = parseClusterTopology(ctx.config(), ctx.origin());
-        checkAndApplyConfig(topology, ctx.forcesOverride());
-
-      } catch (Exception ex) {
-        eventBus.publish(new ConfigIgnoredEvent(
-          core.context(),
-          ConfigIgnoredEvent.Reason.PARSE_FAILURE,
-          Optional.of(ex),
-          Optional.of(ctx.config()),
-          Optional.empty()
-        ));
-      }
-    } else {
+  private void proposeTopology(
+    String topologyJson,
+    String origin,
+    @Nullable String bucketName,
+    boolean forceApply
+  ) {
+    if (shutdown.get()) {
       eventBus.publish(new ConfigIgnoredEvent(
         core.context(),
         ConfigIgnoredEvent.Reason.ALREADY_SHUTDOWN,
         Optional.empty(),
-        Optional.of(ctx.config()),
-        Optional.empty()
+        Optional.of(topologyJson),
+        Optional.ofNullable(bucketName)
       ));
+      return;
+    }
+
+    if (topologyJson.isEmpty()) {
+      // It came from an "ifNewerThan" request, and the result wasn't newer.
+      eventBus.publish(new ConfigIgnoredEvent(
+        core.context(),
+        ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+        Optional.empty(),
+        Optional.empty(),
+        Optional.ofNullable(bucketName)
+      ));
+      return;
+    }
+
+    final ClusterTopology topology;
+    try {
+      topology = parseClusterTopology(topologyJson, origin);
+    } catch (Exception ex) {
+      eventBus.publish(new ConfigIgnoredEvent(
+        core.context(),
+        ConfigIgnoredEvent.Reason.PARSE_FAILURE,
+        Optional.of(ex),
+        Optional.of(topologyJson),
+        Optional.ofNullable(bucketName)
+      ));
+      return;
+    }
+
+    synchronized (this) {
+      try {
+        final boolean globalTopologyApplied = checkAndApplyGlobalTopology(topology, forceApply);
+        log.debug("{} global topology revision {} from origin {}",
+          globalTopologyApplied ? "Applying" : "Ignoring",
+          topology.revision(),
+          origin
+        );
+
+        final boolean bucketTopologyApplied;
+        if (!(topology instanceof ClusterTopologyWithBucket)) {
+          bucketTopologyApplied = false;
+        } else {
+          bucketTopologyApplied = checkAndApplyBucketTopology(topology.requireBucket(), forceApply);
+
+          log.debug("{} bucket topology revision {} for bucket [{}] from origin {}",
+            bucketTopologyApplied ? "Applying" : "Ignoring",
+            topology.revision(),
+            topology.requireBucket().bucket().name(),
+            origin
+          );
+        }
+
+        if (globalTopologyApplied || bucketTopologyApplied) {
+          pushConfig(false);
+        }
+
+      } catch (Exception e) {
+        log.error("Failed to process proposed cluster topology: {}", redactMeta(topology), e);
+      }
     }
   }
 
@@ -640,23 +646,16 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   /**
-   * Analyzes the given config and decides if to apply it (and does so if needed).
+   * Applies the given topology if it is newer than the current topology, or if forceApply is true.
    *
-   * @param newConfig the config to apply.
+   * @param newConfig the proposed topology to consider.
+   * @return true if the proposed topology was applied.
    */
-  private synchronized void checkAndApplyConfig(final ClusterTopologyWithBucket newConfig, final boolean force) {
+  private synchronized boolean checkAndApplyBucketTopology(final ClusterTopologyWithBucket newConfig, final boolean forceApply) {
     final String name = newConfig.bucket().name();
-    final ClusterTopologyWithBucket oldConfig = currentConfig.bucketTopology(name);
 
-    if (!force && oldConfig != null && !newConfig.revision().newerThan(oldConfig.revision())) {
-      eventBus.publish(new ConfigIgnoredEvent(
-        core.context(),
-        ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(name)
-      ));
-      return;
+    if (shouldIgnore(currentConfig.bucketTopology(name), newConfig, forceApply)) {
+      return false;
     }
 
     if (tainted(newConfig.bucket())) {
@@ -669,8 +668,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
     eventBus.publish(new BucketConfigUpdatedEvent(core.context(), LegacyConfigHelper.toLegacyBucketConfig(newConfig)));
     currentConfig.setBucketConfig(newConfig);
-    updateSeedNodeList();
-    pushConfig(false);
+    return true;
   }
 
   private static boolean tainted(BucketTopology bucketTopology) {
@@ -679,85 +677,59 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   /**
-   * Analyzes the given config and decides if to apply it (and does so if needed).
+   * Applies the given topology if it is newer than the current topology, or if forceApply is true.
    *
-   * @param newConfig the config to apply.
+   * @param topology the proposed topology to consider.
+   * @return true if the proposed topology was applied.
    */
-  private synchronized void checkAndApplyConfig(final ClusterTopology newConfig, final boolean force) {
-    final ClusterTopology oldConfig = currentConfig.globalTopology();
-
-    if (!force && oldConfig != null && !newConfig.revision().newerThan(oldConfig.revision())) {
-      eventBus.publish(new ConfigIgnoredEvent(
-        core.context(),
-        ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty()
-      ));
-      return;
+  private synchronized boolean checkAndApplyGlobalTopology(final ClusterTopology topology, final boolean forceApply) {
+    if (shouldIgnore(currentConfig.globalTopology(), topology, forceApply)) {
+      return false;
     }
 
-    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), new GlobalConfig(newConfig)));
-    currentConfig.setGlobalConfig(newConfig);
-    updateSeedNodeList();
-    pushConfig(false);
+    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), new GlobalConfig(topology)));
+    currentConfig.setGlobalConfig(topology);
+    updateSeedNodeList(topology);
+    return true;
+  }
+
+  private boolean shouldIgnore(
+    @Nullable ClusterTopology current,
+    ClusterTopology proposed,
+    boolean forceApply
+  ) {
+    if (forceApply || current == null || proposed.revision().newerThan(current.revision())) {
+      return false;
+    }
+
+    String bucketName = proposed instanceof ClusterTopologyWithBucket ? proposed.requireBucket().bucket().name() : null;
+    eventBus.publish(new ConfigIgnoredEvent(
+      core.context(),
+      ConfigIgnoredEvent.Reason.OLD_OR_SAME_REVISION,
+      Optional.empty(),
+      Optional.empty(),
+      Optional.ofNullable(bucketName)
+    ));
+
+    return true;
   }
 
   /**
    * Helper method to take the current config and update the seed node list with the latest topology.
-   *
-   * <p>If we have a global config it is used for simplicity reasons. Otherwise we iterate the configs and collect
-   * all the nodes to build the list.</p>
    */
-  private void updateSeedNodeList() {
-    ClusterConfig config = currentConfig;
-    boolean tlsEnabled = core.context().environment().securityConfig().tlsEnabled();
+  private void updateSeedNodeList(ClusterTopology topology) {
+    Set<SeedNode> seedNodes = topology.nodes().stream()
+      .filter(it -> it.has(ServiceType.KV))
+      .map(it -> SeedNode.create(
+        it.host(),
+        Optional.of(it.ports().get(ServiceType.KV)),
+        Optional.ofNullable(it.ports().get(ServiceType.MANAGER))
+      ))
+      .collect(toSet());
 
-    if (config.globalConfig() != null) {
-      Set<SeedNode> seedNodes = unmodifiableSet(config.globalConfig().portInfos().stream().map(ni -> {
-        Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslPorts() : ni.ports();
-
-        if (!ports.containsKey(ServiceType.KV)) {
-          // We  only want seed nodes where the KV service is enabled
-          return null;
-        }
-
-        return SeedNode.create(
-          ni.hostname(),
-          Optional.ofNullable(ports.get(ServiceType.KV)),
-          Optional.ofNullable(ports.get(ServiceType.MANAGER))
-        );
-      }).filter(Objects::nonNull).collect(Collectors.toSet()));
-
-      if (!seedNodes.isEmpty()) {
-        eventBus.publish(new SeedNodesUpdatedEvent(core.context(), currentSeedNodes(), seedNodes));
-        setSeedNodes(seedNodes);
-      }
-
-      return;
-    }
-
-    Set<SeedNode> seedNodes = unmodifiableSet(config
-      .bucketConfigs()
-      .values()
-      .stream()
-      .flatMap(bc -> bc.nodes().stream())
-      .map(ni -> {
-        Map<ServiceType, Integer> ports = tlsEnabled ? ni.sslServices() : ni.services();
-
-        if (!ports.containsKey(ServiceType.KV)) {
-          // We  only want seed nodes where the KV service is enabled
-          return null;
-        }
-
-        return SeedNode.create(
-          ni.hostname(),
-          Optional.ofNullable(ports.get(ServiceType.KV)),
-          Optional.ofNullable(ports.get(ServiceType.MANAGER))
-        );
-      }).filter(Objects::nonNull).collect(Collectors.toSet()));
-
-    if (!seedNodes.isEmpty()) {
+    if (seedNodes.isEmpty()) {
+      log.warn("Cluster topology has no eligible seed nodes; skipping seed node update.");
+    } else {
       eventBus.publish(new SeedNodesUpdatedEvent(core.context(), currentSeedNodes(), seedNodes));
       setSeedNodes(seedNodes);
     }
