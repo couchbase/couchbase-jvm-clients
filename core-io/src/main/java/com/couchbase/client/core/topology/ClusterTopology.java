@@ -128,7 +128,7 @@ public class ClusterTopology {
   public String toString() {
     String bucket = this instanceof ClusterTopologyWithBucket ? this.requireBucket().bucket().toString() : "<N/A>";
 
-    return "ClusterTopology{" +
+    return getClass().getSimpleName() + "{" +
       "revision=" + revision +
       ", clusterIdent=" + clusterIdent +
       ", tls=" + tls +
