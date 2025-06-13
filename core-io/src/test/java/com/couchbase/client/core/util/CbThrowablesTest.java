@@ -20,7 +20,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
+import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
+import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -76,5 +79,39 @@ class CbThrowablesTest {
 
     assertThrows(IndexOutOfBoundsException.class, () ->
         CbThrowables.throwIfUnchecked(new IndexOutOfBoundsException()));
+  }
+
+  @Test
+  void canFilterStackTraceWithCircularCause() {
+    Throwable a = new RuntimeException();
+    Throwable b = new RuntimeException(a);
+    a.initCause(b);
+    filterStackTrace(a, frame -> true);
+  }
+
+  @Test
+  void canFilterStackTraceWithCircularSuppression() {
+    Throwable a = new RuntimeException();
+    Throwable b = new RuntimeException();
+    a.addSuppressed(b);
+    b.addSuppressed(a);
+    filterStackTrace(a, frame -> true);
+  }
+
+  @Test
+  void canFilterStackTrace() {
+    String className = getClass().getName();
+
+    Throwable t = new RuntimeException(new RuntimeException(new RuntimeException()));
+    t.addSuppressed(new RuntimeException(new RuntimeException()));
+
+    assertTrue(getStackTraceAsString(t).contains(className)); // sanity check
+
+    filterStackTrace(t, frame -> !frame.getClassName().equals(className));
+
+    String s = getStackTraceAsString(t);
+    assertFalse(
+      s.contains(className),
+      "Stack trace should not contain " + className + ", but got: " + s);
   }
 }

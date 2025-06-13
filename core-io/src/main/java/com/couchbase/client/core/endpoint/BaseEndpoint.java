@@ -78,9 +78,6 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -92,6 +89,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
 
 /**
  * This {@link BaseEndpoint} implements all common logic for endpoints that wrap the IO layer.
@@ -491,18 +489,10 @@ public abstract class BaseEndpoint implements Endpoint {
    * removing all the generic netty stack we do not need.
    *
    * @param input the input exception.
-   * @return the trimmed exception.
+   * @return the same exception instance, now with filtered stack trace.
    */
-  @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
-  private Throwable trimNettyFromStackTrace(final Throwable input) {
-    if (input == null) {
-      return null;
-    }
-
-    final List<StackTraceElement> elements = new LinkedList<>(Arrays.asList(input.getStackTrace()));
-    elements.removeIf(next -> next.getClassName().startsWith("com.couchbase.client.core.deps.io.netty"));
-    input.setStackTrace(elements.toArray(new StackTraceElement[]{}));
-    trimNettyFromStackTrace(input.getCause());
+  private static Throwable trimNettyFromStackTrace(final Throwable input) {
+    filterStackTrace(input, frame -> !frame.getClassName().startsWith("com.couchbase.client.core.deps.io.netty"));
     return input;
   }
 

@@ -18,11 +18,17 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
+import org.jspecify.annotations.Nullable;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 
+import static java.util.Collections.newSetFromMap;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -91,5 +97,42 @@ public class CbThrowables {
     StringWriter w = new StringWriter();
     t.printStackTrace(new PrintWriter(w));
     return w.toString();
+  }
+
+  /**
+   * Modifies the stack trace of the given throwable by removing elements
+   * that do not match the filter predicate.
+   * <p>
+   * Applies the modification recursively to the throwable's causal chain
+   * and suppressed throwables.
+   */
+  public static void filterStackTrace(
+    Throwable t,
+    Predicate<StackTraceElement> filter
+  ) {
+    requireNonNull(t);
+    filterStackTraceRecursive(t, filter, newSetFromMap(new IdentityHashMap<>()));
+  }
+
+  private static void filterStackTraceRecursive(
+    @Nullable Throwable t,
+    Predicate<StackTraceElement> filter,
+    Set<Throwable> seen
+  ) {
+    if (t == null || !seen.add(t)) {
+      return;
+    }
+
+    t.setStackTrace(
+      Arrays.stream(t.getStackTrace())
+        .filter(filter)
+        .toArray(StackTraceElement[]::new)
+    );
+
+    filterStackTraceRecursive(t.getCause(), filter, seen);
+
+    for (Throwable suppressed : t.getSuppressed()) {
+      filterStackTraceRecursive(suppressed, filter, seen);
+    }
   }
 }
