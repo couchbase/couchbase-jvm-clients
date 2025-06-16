@@ -40,6 +40,8 @@ jobs:
 #            java-distribution: 'oracle'
 #            java-version: '17'
 
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
