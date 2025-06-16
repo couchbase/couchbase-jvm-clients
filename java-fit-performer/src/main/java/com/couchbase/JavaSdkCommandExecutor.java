@@ -863,25 +863,32 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                         .setSequenceNumber(mt.sequenceNumber())
                         .setBucketName(mt.bucketName())));
 
-        AtomicInteger index = new AtomicInteger();
-        request.getSpecList().forEach(spec -> {
+        for (int i = 0; i < request.getSpecCount(); i ++) {
+            var spec = request.getSpec(i);
+            final int x = i;
             if (spec.hasContentAs()) {
                 var content = ContentAsUtil.contentType(spec.getContentAs(),
-                        () -> value.contentAs(index.get(), byte[].class),
-                        () -> value.contentAs(index.get(), String.class),
-                        () -> value.contentAs(index.get(), JsonObject.class),
-                        () -> value.contentAs(index.get(), JsonArray.class),
-                        () -> value.contentAs(index.get(), Boolean.class),
-                        () -> value.contentAs(index.get(), Integer.class),
-                        () -> value.contentAs(index.getAndIncrement(), Double.class));
+                        () -> value.contentAs(x, byte[].class),
+                        () -> value.contentAs(x, String.class),
+                        () -> value.contentAs(x, JsonObject.class),
+                        () -> value.contentAs(x, JsonArray.class),
+                        () -> value.contentAs(x, Boolean.class),
+                        () -> value.contentAs(x, Integer.class),
+                        () -> value.contentAs(x, Double.class));
+                var contentOut = ContentOrError.newBuilder();
+                if (content.isSuccess()) {
+                    contentOut.setContent(content.value());
+                } else {
+                    contentOut.setException(convertExceptionShared(content.exception()));
+                }
                 builder.addResults(
                         MutateInSpecResult.newBuilder()
-                                .setContentAsResult(ContentOrError.newBuilder().setContent(content.value()).build())
+                                .setContentAsResult(contentOut)
                                 .build()
                 );
             }
             else builder.addResults(MutateInSpecResult.newBuilder().build());
-        });
+        }
 
         result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder()
                 .setMutateInResult(builder));
