@@ -30,6 +30,7 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
+import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -101,85 +102,65 @@ public class OptionsUtil {
         if (request.hasClusterConfig()) {
             var cc = request.getClusterConfig();
 
-            if (cc.getUseCustomSerializer()) {
-                clusterEnvironment.jsonSerializer(new CustomSerializer());
-            }
-
             // [if:3.3.0]
             if (request.getClusterConfig().hasTransactionsConfig()) {
                 applyTransactionsConfig(request, getCluster, clusterEnvironment);
             }
             // [end]
 
-            SecurityConfig.Builder secBuilder = null;
-            if (cc.getUseTls()) {
-                secBuilder = SecurityConfig.builder();
-                secBuilder.enableTls(true);
-            }
+            applyClusterConfig(clusterEnvironment, cc, onClusterConnectionClose);
 
-            if (cc.hasCertPath()) {
-              if (secBuilder == null) secBuilder = SecurityConfig.builder();
-              logger.info("Using certificate from file {}", cc.getCertPath());
-              secBuilder.trustCertificate(Path.of(cc.getCertPath()));
-            }
-
-          if (cc.hasCert()) {
-            if (secBuilder == null) secBuilder = SecurityConfig.builder();
-            try {
-              CertificateFactory cFactory = CertificateFactory.getInstance("X.509");
-              var file = new ByteArrayInputStream(cc.getCert().getBytes(StandardCharsets.UTF_8));
-              logger.info("Using certificate {}", cc.getCert());
-              X509Certificate cert = (X509Certificate) cFactory.generateCertificate(file);
-
-              secBuilder.trustCertificates(List.of(cert));
-            }
-            catch (CertificateException err) {
-              throw new RuntimeException(err);
-            }
-          }
-
-          if (cc.hasInsecure() && cc.getInsecure()) {
-            if (secBuilder == null) secBuilder = SecurityConfig.builder();
-            // Cannot use enableCertificateVerification as it was added later
-            secBuilder.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
-          }
-
-          if (secBuilder != null) {
-              clusterEnvironment.securityConfig(secBuilder);
-            }
-
-            applyClusterConfig(clusterEnvironment, cc);
-
-            if (cc.hasObservabilityConfig()) {
-                applyObservabilityConfig(clusterEnvironment, cc, onClusterConnectionClose);
-            }
-
-            if (cc.hasPreferredServerGroup()) {
-              // [if:3.7.4]
-              clusterEnvironment.preferredServerGroup(cc.getPreferredServerGroup());
-              // [end]
-            }
-
-            if (cc.hasAppTelemetryEndpoint()) {
-              // [if:3.8.0]
-              clusterEnvironment.appTelemetryEndpoint(cc.getAppTelemetryEndpoint());
-              // [end]
-            }
-
-            if (cc.hasEnableAppTelemetry()) {
-              // [if:3.8.0]
-              clusterEnvironment.disableAppTelemetry(!cc.getEnableAppTelemetry());
-              // [end]
-            }
         }
 
         return clusterEnvironment;
     }
 
-    private static void applyClusterConfig(ClusterEnvironment.Builder clusterEnvironment, ClusterConfig cc) {
+    private static void applyClusterConfig(ClusterEnvironment.Builder clusterEnvironment,
+                                           ClusterConfig cc,
+                                           ArrayList<Runnable> onClusterConnectionClose) {
         IoConfig.Builder ioConfig = null;
         TimeoutConfig.Builder timeoutConfig = null;
 
+        if (cc.getUseCustomSerializer()) {
+            clusterEnvironment.jsonSerializer(new CustomSerializer());
+        }
+
+        SecurityConfig.Builder secBuilder = null;
+        if (cc.getUseTls()) {
+            secBuilder = SecurityConfig.builder();
+            secBuilder.enableTls(true);
+        }
+
+        if (cc.hasCertPath()) {
+            if (secBuilder == null) secBuilder = SecurityConfig.builder();
+            logger.info("Using certificate from file {}", cc.getCertPath());
+            secBuilder.trustCertificate(Path.of(cc.getCertPath()));
+        }
+
+        if (cc.hasCert()) {
+            if (secBuilder == null) secBuilder = SecurityConfig.builder();
+            try {
+                CertificateFactory cFactory = CertificateFactory.getInstance("X.509");
+                var file = new ByteArrayInputStream(cc.getCert().getBytes(StandardCharsets.UTF_8));
+                logger.info("Using certificate {}", cc.getCert());
+                X509Certificate cert = (X509Certificate) cFactory.generateCertificate(file);
+
+                secBuilder.trustCertificates(List.of(cert));
+            }
+            catch (CertificateException err) {
+                throw new RuntimeException(err);
+            }
+        }
+
+        if (cc.hasInsecure() && cc.getInsecure()) {
+            if (secBuilder == null) secBuilder = SecurityConfig.builder();
+            // Cannot use enableCertificateVerification as it was added later
+            secBuilder.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE);
+        }
+
+        if (secBuilder != null) {
+            clusterEnvironment.securityConfig(secBuilder);
+        }
         if (cc.hasKvConnectTimeoutSecs()) {
             if (timeoutConfig == null) timeoutConfig = TimeoutConfig.builder();
             timeoutConfig.connectTimeout(Duration.ofSeconds(cc.getKvConnectTimeoutSecs()));
@@ -291,6 +272,28 @@ public class OptionsUtil {
         }
         if (timeoutConfig != null) {
             clusterEnvironment.timeoutConfig(timeoutConfig);
+        }
+
+        if (cc.hasObservabilityConfig()) {
+            applyObservabilityConfig(clusterEnvironment, cc, onClusterConnectionClose);
+        }
+
+        if (cc.hasPreferredServerGroup()) {
+            // [if:3.7.4]
+            clusterEnvironment.preferredServerGroup(cc.getPreferredServerGroup());
+            // [end]
+        }
+
+        if (cc.hasAppTelemetryEndpoint()) {
+            // [if:3.8.0]
+            clusterEnvironment.appTelemetryEndpoint(cc.getAppTelemetryEndpoint());
+            // [end]
+        }
+
+        if (cc.hasEnableAppTelemetry()) {
+            // [if:3.8.0]
+            clusterEnvironment.disableAppTelemetry(!cc.getEnableAppTelemetry());
+            // [end]
         }
     }
 
