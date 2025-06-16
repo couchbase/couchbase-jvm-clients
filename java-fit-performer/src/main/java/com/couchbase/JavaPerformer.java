@@ -231,19 +231,30 @@ public class JavaPerformer extends CorePerformer {
                 });
             });
 
-            var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
-
-            // [if:3.7.5] first version that allows specifying custom publishOn scheduler
-            var userExecutorAndScheduler = UserSchedulerUtil.userExecutorAndScheduler();
-            onClusterConnectionClose.add(userExecutorAndScheduler::dispose);
-            clusterEnvironment.publishOnScheduler(userExecutorAndScheduler::scheduler);
-            // [end]
+            // [if:3.2.6]
+            // 3.2.6 added an easy way for SDK users to configure the SDK without having to take ownership of
+            // ClusterEnvironment management.  It also allows passing parameters in the connection string, which
+            // is not allowed with those externally owned ClusterEnvironments.
+            var clusterEnvironment = OptionsUtil.convertClusterConfigToConsumer(request, getCluster, onClusterConnectionClose);
 
             var connection = new ClusterConnection(request.getClusterHostname(),
                     request.getClusterUsername(),
                     request.getClusterPassword(),
                     clusterEnvironment,
                     onClusterConnectionClose);
+            // [end]
+
+            // [if:<3.2.6]
+            // Support falling back to the original way of creating
+            //? var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
+
+            //? var connection = new ClusterConnection(request.getClusterHostname(),
+            //?         request.getClusterUsername(),
+            //?         request.getClusterPassword(),
+            //?         clusterEnvironment,
+            //?         onClusterConnectionClose);
+            // [end]
+
             clusterConnections.put(clusterConnectionId, connection);
             logger.info("Created cluster connection {} for user {}, now have {}",
                     clusterConnectionId, request.getClusterUsername(), clusterConnections.size());

@@ -29,11 +29,12 @@ import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 
 public class ClusterConnection {
     private final Cluster cluster;
-    @Nullable private final ClusterEnvironment config;
+    @Nullable private final ClusterEnvironment environmentOwnedByCaller;
     public final String username;
     // Commands to run when this ClusterConnection is being closed.  Allows closing other related resources that have
     // the same lifetime.
@@ -49,15 +50,37 @@ public class ClusterConnection {
 
         var co = ClusterOptions.clusterOptions(username, password);
         if (config != null) {
-            this.config = config.build();
-            co.environment(this.config);
+            this.environmentOwnedByCaller = config.build();
+            co.environment(this.environmentOwnedByCaller);
         }
         else {
-            this.config = null;
+            this.environmentOwnedByCaller = null;
         }
 
         this.cluster = Cluster.connect(hostname, co);
     }
+
+    // [if:3.2.6]
+    public ClusterConnection(String hostname,
+                             String username,
+                             String password,
+                             @Nullable Consumer<ClusterEnvironment.Builder> config,
+                             ArrayList<Runnable> onClusterConnectionClose)  {
+        this.username = username;
+        this.onClusterConnectionClose = onClusterConnectionClose;
+
+        var co = ClusterOptions.clusterOptions(username, password)
+                .environment(env -> {
+                    if (config != null) {
+                        config.accept(env);
+                    }
+                });
+        // The SDK will manage things instead in this mode
+        this.environmentOwnedByCaller = null;
+
+        this.cluster = Cluster.connect(hostname, co);
+    }
+    // [end]
 
     public Cluster cluster(){
         return cluster;
@@ -104,8 +127,8 @@ public class ClusterConnection {
 
     public void close() {
         cluster.disconnect();
-        if (config != null) {
-            config.shutdown();
+        if (environmentOwnedByCaller != null) {
+            environmentOwnedByCaller.shutdown();
         }
         onClusterConnectionClose.forEach(Runnable::run);
     }

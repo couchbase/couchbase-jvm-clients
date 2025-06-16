@@ -30,7 +30,6 @@ import com.couchbase.client.core.env.ThresholdLoggingTracerConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.env.TimeoutConfig;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
-import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.env.ClusterEnvironment;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
@@ -72,7 +71,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.TrustManagerFactory;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -85,6 +83,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -92,6 +91,23 @@ public class OptionsUtil {
     private static final Logger logger = LoggerFactory.getLogger(OptionsUtil.class);
 
     private OptionsUtil() {}
+
+    public static Consumer<ClusterEnvironment.Builder> convertClusterConfigToConsumer(ClusterConnectionCreateRequest request,
+                                                                                      Supplier<ClusterConnection> getCluster,
+                                                                                      ArrayList<Runnable> onClusterConnectionClose) {
+        return (builder) -> {
+            if (request.hasClusterConfig()) {
+                var cc = request.getClusterConfig();
+                applyClusterConfig(builder, cc, onClusterConnectionClose);
+
+                // [if:3.3.0]
+                if (request.getClusterConfig().hasTransactionsConfig()) {
+                    applyTransactionsConfig(request, getCluster, builder);
+                }
+                // [end]
+            }
+        };
+    }
 
     public static
     ClusterEnvironment.Builder convertClusterConfig(ClusterConnectionCreateRequest request,
@@ -102,14 +118,10 @@ public class OptionsUtil {
         if (request.hasClusterConfig()) {
             var cc = request.getClusterConfig();
 
-            // [if:3.3.0]
-            if (request.getClusterConfig().hasTransactionsConfig()) {
-                applyTransactionsConfig(request, getCluster, clusterEnvironment);
-            }
-            // [end]
-
             applyClusterConfig(clusterEnvironment, cc, onClusterConnectionClose);
 
+            // No need to support transactions here, as this code is now only executed in <3.2.6 mode (transactions
+            // was introduced in 3.3.0)
         }
 
         return clusterEnvironment;
@@ -295,6 +307,12 @@ public class OptionsUtil {
             clusterEnvironment.disableAppTelemetry(!cc.getEnableAppTelemetry());
             // [end]
         }
+
+        // [if:3.7.5] first version that allows specifying custom publishOn scheduler
+        var userExecutorAndScheduler = UserSchedulerUtil.userExecutorAndScheduler();
+        onClusterConnectionClose.add(userExecutorAndScheduler::dispose);
+        clusterEnvironment.publishOnScheduler(userExecutorAndScheduler::scheduler);
+        // [end]
     }
 
     // [if:3.5.1]
