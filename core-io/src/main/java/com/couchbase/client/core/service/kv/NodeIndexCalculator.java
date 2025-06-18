@@ -25,6 +25,8 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 
+import static com.couchbase.client.core.api.kv.CoreReadPreference.PREFERRED_SERVER_GROUP;
+import static com.couchbase.client.core.api.kv.CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE;
 import static com.couchbase.client.core.node.KeyValueLocator.partitionForKey;
 
 @Stability.Internal
@@ -40,7 +42,7 @@ public class NodeIndexCalculator {
       boolean canUseNode = true;
       PortInfo node = topology.portInfos().get(nodeIndex);
 
-      if (readPreference == CoreReadPreference.PREFERRED_SERVER_GROUP) {
+      if (readPreference == PREFERRED_SERVER_GROUP || readPreference == PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE) {
         canUseNode = node.serverGroup() != null && node.serverGroup().equals(coreContext.environment().preferredServerGroup());
       }
 
