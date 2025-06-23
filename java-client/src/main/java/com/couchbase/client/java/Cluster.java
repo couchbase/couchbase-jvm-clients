@@ -703,5 +703,10 @@ public class Cluster implements Closeable {
     disconnect();
   }
 
+  @Override
+  public String toString() {
+    return asyncCluster.clusterToStringHelper(getClass());
+  }
+
 }
 

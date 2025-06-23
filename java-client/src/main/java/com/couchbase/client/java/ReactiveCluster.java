@@ -521,4 +521,9 @@ public class ReactiveCluster {
   public ReactiveTransactions transactions() {
     return new ReactiveTransactions(core(), environment().jsonSerializer());
   }
+
+  @Override
+  public String toString() {
+    return asyncCluster.clusterToStringHelper(getClass());
+  }
 }

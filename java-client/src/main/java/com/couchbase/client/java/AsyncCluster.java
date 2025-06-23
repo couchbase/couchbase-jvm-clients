@@ -23,8 +23,10 @@ import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
+import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
@@ -41,6 +43,7 @@ import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedAnalyticsErrorContext;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
+import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.ClusterCleanupTask;
@@ -151,6 +154,8 @@ public class AsyncCluster {
    */
   final CoreSearchOps searchOps;
 
+  final ConnectionString connectionString;
+
   /**
    * Connect to a Couchbase cluster with a username and a password as authentication credentials.
    *
@@ -225,6 +230,13 @@ public class AsyncCluster {
     return env;
   }
 
+  String clusterToStringHelper(Class clusterClass) {
+    String json = environment.get().exportAsString(Context.ExportFormat.JSON);
+    ObjectNode jsonObject = (ObjectNode) Mapper.decodeIntoTree(json);
+    jsonObject.put("connectionString", connectionString.original());
+    return clusterClass.getSimpleName() + jsonObject;
+  }
+
   /**
    * Creates a new cluster from a {@link ClusterEnvironment}.
    *
@@ -236,6 +248,7 @@ public class AsyncCluster {
     final ConnectionString connectionString
   ) {
     this.environment = environment;
+    this.connectionString = connectionString;
     this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), authenticator, connectionString);
     this.authenticator = authenticator;
     this.queryOps = couchbaseOps.queryOps();
@@ -660,6 +673,11 @@ public class AsyncCluster {
     notNull(options, "WaitUntilReadyOptions");
     final WaitUntilReadyOptions.Built opts = options.build();
     return couchbaseOps.waitUntilReady(opts.serviceTypes(), timeout, opts.desiredState(), null);
+  }
+
+  @Override
+  public String toString() {
+    return clusterToStringHelper(getClass());
   }
 
 }
