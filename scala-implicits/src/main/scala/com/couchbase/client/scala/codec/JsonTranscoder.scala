@@ -30,7 +30,9 @@ class JsonTranscoder() extends TranscoderWithSerializer {
           new InvalidArgumentException(
             "byte[] input is not supported for the " +
               "JsonTranscoder! If you want to store already encoded JSON, use the RawJsonTranscoder, otherwise store " +
-              "it with the RawBinaryTranscoder!", null, null
+              "it with the RawBinaryTranscoder!",
+            null,
+            null
           )
         )
       case _ =>
@@ -48,7 +50,9 @@ class JsonTranscoder() extends TranscoderWithSerializer {
         new InvalidArgumentException(
           "Array[Byte] input is not supported for the JsonTranscoder!. " +
             "If you want to read already encoded JSON, use the RawJsonTranscoder, otherwise read it " +
-            "with the RawBinaryTranscoder!", null, null
+            "with the RawBinaryTranscoder!",
+          null,
+          null
         )
       )
     } else {
