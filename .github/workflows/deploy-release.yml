@@ -55,3 +55,14 @@ jobs:
           upload "scala-client" "target/site/scaladocs"
           upload "kotlin-client" "target/dokka"
           upload "columnar-java-client" "target/reports/apidocs"
+
+      - name: Upload Java SDK archive
+        run: |
+          VERS=${{ inputs.tag }}
+          ARCHIVE_DIR=java-client/target/Couchbase-Java-Client-${VERS}
+          for module in core-io java-client metrics-opentelemetry metrics-micrometer; do
+            cp -v ${module}/target/${module}*.jar ${ARCHIVE_DIR}
+            cp -v ${module}/.flattened-pom.xml ${ARCHIVE_DIR}/${module}-${VERS}.pom
+          done      
+          zip --junk-paths ${ARCHIVE_DIR}.zip ${ARCHIVE_DIR}/*
+          aws s3 cp --acl public-read ${ARCHIVE_DIR}.zip s3://packages.couchbase.com/clients/java/${VERS}/
