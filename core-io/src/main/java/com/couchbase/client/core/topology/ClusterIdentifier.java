@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.core.topology;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -26,19 +27,23 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 public class ClusterIdentifier {
   private final String clusterUuid;
   private final String clusterName;
+  @SinceCouchbase("8.0")
+  private final @Nullable String prodName;
 
-  ClusterIdentifier(String clusterUuid, String clusterName) {
+  ClusterIdentifier(String clusterUuid, String clusterName, @Nullable String prodName) {
     this.clusterUuid = clusterUuid;
     this.clusterName = clusterName;
+    this.prodName = prodName;
   }
 
   public static @Nullable ClusterIdentifier parse(ObjectNode config) {
     JsonNode clusterUuid = config.path("clusterUUID");
     JsonNode clusterName = config.path("clusterName");
+    JsonNode prodName = config.path("prodName");
     if (clusterUuid.isMissingNode() || clusterName.isMissingNode()) {
       return null;
     }
-    return new ClusterIdentifier(clusterUuid.asText(), clusterName.asText());
+    return new ClusterIdentifier(clusterUuid.asText(), clusterName.asText(), prodName.isMissingNode() ? null : prodName.asText());
   }
 
   public String clusterUuid() {
@@ -49,11 +54,16 @@ public class ClusterIdentifier {
     return clusterName;
   }
 
+  public @Nullable String prodName() {
+    return prodName;
+  }
+
   @Override
   public String toString() {
     return "ClusterIdent{" +
       "clusterUuid='" + clusterUuid + '\'' +
       ", clusterName='" + redactMeta(clusterName) + '\'' +
+      ", prodName='" + prodName + '\'' +
       '}';
   }
 }

@@ -18,8 +18,10 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
+import com.couchbase.client.core.topology.ClusterProdName;
 import com.couchbase.client.java.codec.JsonSerializer;
 import reactor.core.publisher.Mono;
 
@@ -52,11 +54,28 @@ public class AnalyticsAccessor {
   }
 
   private static Mono<AnalyticsResponse> analyticsQueryInternal(final Core core, final AnalyticsRequest request) {
-    core.send(request);
-    return Reactor
-      .wrap(request, request.response(), true)
-      .doOnNext(ignored -> request.context().logicallyComplete())
-      .doOnError(err -> request.context().logicallyComplete(err));
+    return core.waitForClusterTopology(request.timeout())
+                    .flatMap(clusterTopology -> {
+
+                      if (clusterTopology.id() != null
+                              && clusterTopology.id().prodName() != null
+                              && !clusterTopology.id().prodName().startsWith(ClusterProdName.COUCHBASE_SERVER)) {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("This '");
+                        sb.append(clusterTopology.id().prodName());
+                        sb.append("' cluster cannot be used with this SDK, which is intended for use with operational clusters");
+                        if (clusterTopology.id().prodName().startsWith(ClusterProdName.ENTERPRISE_ANALYTICS)) {
+                          sb.append(". For this cluster, an Enterprise Analytics SDK should be used.");
+                        }
+                        return Mono.error(new CouchbaseException(sb.toString()));
+                      }
+
+                      return Mono.defer(() -> {
+                        core.send(request);
+                        return Reactor.wrap(request, request.response(), true);
+                      }).doOnNext(ignored -> request.context().logicallyComplete())
+                        .doOnError(err -> request.context().logicallyComplete(err));
+                    });
   }
 
 }

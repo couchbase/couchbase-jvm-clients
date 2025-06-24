@@ -44,6 +44,7 @@ public final class ClusterTopologyBuilder {
   private NetworkResolution networkResolution = NetworkResolution.DEFAULT;
   private String clusterName = "fake-cluster";
   private String clusterUuid = "fake-cluster-uuid";
+  private String prodName = ClusterProdName.COUCHBASE_SERVER;
   private Set<ClusterCapability> capabilities = EnumSet.allOf(ClusterCapability.class);
   private final List<HostAndServicePorts> nodes = new ArrayList<>();
 
@@ -54,7 +55,7 @@ public final class ClusterTopologyBuilder {
   private ClusterTopology buildWithOrWithoutBucket(@Nullable BucketTopology bucket) {
     return ClusterTopology.of(
       revision,
-      new ClusterIdentifier(clusterUuid, clusterName),
+      new ClusterIdentifier(clusterUuid, clusterName, prodName),
       nodes,
       capabilities,
       networkResolution,
