@@ -18,13 +18,15 @@ package com.couchbase.client.java.analytics;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
-import com.couchbase.client.core.topology.ClusterProdName;
+import com.couchbase.client.core.topology.ClusterType;
 import com.couchbase.client.java.codec.JsonSerializer;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -32,7 +34,20 @@ import java.util.concurrent.CompletableFuture;
  *
  * @since 3.0.0
  */
+@Stability.Internal
 public class AnalyticsAccessor {
+
+  private static volatile boolean skipClusterTypeCheck = false;
+
+  /**
+   * Call this method once when your app starts up to disable the check that
+   * prevents the operational SDK from being used with an Enterprise Analytics cluster.
+   * <p>
+   * This is super-extra-unsupported internal API.
+   */
+  public static void skipClusterTypeCheck() {
+    skipClusterTypeCheck = true;
+  }
 
   public static CompletableFuture<AnalyticsResult> analyticsQueryAsync(final Core core,
                                                                        final AnalyticsRequest request,
@@ -54,28 +69,33 @@ public class AnalyticsAccessor {
   }
 
   private static Mono<AnalyticsResponse> analyticsQueryInternal(final Core core, final AnalyticsRequest request) {
-    return core.waitForClusterTopology(request.timeout())
-                    .flatMap(clusterTopology -> {
-
-                      if (clusterTopology.id() != null
-                              && clusterTopology.id().prodName() != null
-                              && !clusterTopology.id().prodName().startsWith(ClusterProdName.COUCHBASE_SERVER)) {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("This '");
-                        sb.append(clusterTopology.id().prodName());
-                        sb.append("' cluster cannot be used with this SDK, which is intended for use with operational clusters");
-                        if (clusterTopology.id().prodName().startsWith(ClusterProdName.ENTERPRISE_ANALYTICS)) {
-                          sb.append(". For this cluster, an Enterprise Analytics SDK should be used.");
-                        }
-                        return Mono.error(new CouchbaseException(sb.toString()));
-                      }
-
-                      return Mono.defer(() -> {
-                        core.send(request);
-                        return Reactor.wrap(request, request.response(), true);
-                      }).doOnNext(ignored -> request.context().logicallyComplete())
-                        .doOnError(err -> request.context().logicallyComplete(err));
-                    });
+    return requireCouchbaseServer(core, request.timeout())
+      .then(Mono.defer(() -> {
+        core.send(request);
+        return Reactor.wrap(request, request.response(), true)
+          .doOnNext(ignored -> request.context().logicallyComplete())
+          .doOnError(err -> request.context().logicallyComplete(err));
+      }));
   }
 
+  private static Mono<Void> requireCouchbaseServer(Core core, Duration timeout) {
+    if (skipClusterTypeCheck) {
+      return Mono.empty();
+    }
+
+    return core.waitForClusterTopology(timeout)
+      .mapNotNull(clusterTopology -> {
+        ClusterType type = ClusterType.from(clusterTopology.id());
+        if (type.isCouchbaseServer()) {
+          return null; // success! complete the empty mono.
+        }
+
+        String message = "This SDK is for Couchbase Server (operational) clusters, but the remote cluster type is '" + type + "'.";
+        if (type.name().startsWith("Enterprise Analytics")) {
+          message += " Please use the Enterprise Analytics SDK to access this cluster.";
+        }
+
+        throw new CouchbaseException(message);
+      });
+  }
 }
