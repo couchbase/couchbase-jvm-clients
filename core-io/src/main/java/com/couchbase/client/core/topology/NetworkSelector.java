@@ -21,10 +21,11 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.setCopyOf;
@@ -36,7 +37,7 @@ import static java.util.Collections.emptySet;
 @Stability.Internal
 public interface NetworkSelector {
 
-  Optional<NetworkResolution> selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes);
+  NetworkResolution selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes);
 
   /**
    * @param network The config parser's final output will include only addresses for the specified network.
@@ -54,8 +55,8 @@ public interface NetworkSelector {
 
     return new NetworkSelector() {
       @Override
-      public Optional<NetworkResolution> selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
-        return Optional.of(network);
+      public NetworkResolution selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
+        return network;
       }
 
       @Override
@@ -66,16 +67,18 @@ public interface NetworkSelector {
 
   }
 
-  @SuppressWarnings({"OptionalAssignedToNull", "OptionalUsedAsFieldOrParameterType"})
   class AutoNetworkSelector implements NetworkSelector {
+    private static final Logger log = LoggerFactory.getLogger(AutoNetworkSelector.class);
+
     private final Set<SeedNode> seedNodes;
-    private @Nullable Optional<NetworkResolution> cachedResult; // @GuardedBy(this)
+    private @Nullable NetworkResolution cachedResult; // @GuardedBy(this)
+    private boolean usedFallback; // @GuardedBy(this)
 
     public AutoNetworkSelector(Set<SeedNode> seedNodes) {
       this.seedNodes = setCopyOf(seedNodes);
     }
 
-    public synchronized Optional<NetworkResolution> selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
+    public synchronized NetworkResolution selectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
       if (cachedResult == null) {
         cachedResult = doSelectNetwork(nodes);
       }
@@ -86,11 +89,11 @@ public interface NetworkSelector {
     public synchronized String toString() {
       String network = cachedResult == null
         ? "<TBD>"
-        : cachedResult.map(NetworkResolution::name).orElse("no match -> default");
+        : (usedFallback ? "no match -> " : "") + cachedResult.name();
       return "auto(" + network + "; seedNodes=" + seedNodes + ")";
     }
 
-    private Optional<NetworkResolution> doSelectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
+    private NetworkResolution doSelectNetwork(List<Map<NetworkResolution, HostAndServicePorts>> nodes) {
       // Search the given map for nodes whose host and KV or Manager port
       // match one of the addresses used to bootstrap the connection to the cluster.
       for (Map<NetworkResolution, HostAndServicePorts> node : nodes) {
@@ -99,14 +102,23 @@ public interface NetworkSelector {
             if (entry.getValue().matches(seedNode)) {
               // We bootstrapped using an address associated with this network+node,
               // so this is very likely the correct network.
-              return Optional.of(entry.getKey());
+              NetworkResolution exactMatch = entry.getKey();
+              log.debug("Found exact match for {} in network '{}'", seedNode, exactMatch);
+              return exactMatch;
             }
           }
         }
       }
 
       // Didn't find a match.
-      return Optional.empty();
+      NetworkResolution fallback = nodes.stream().anyMatch(it -> it.containsKey(NetworkResolution.EXTERNAL))
+        ? NetworkResolution.EXTERNAL
+        : NetworkResolution.DEFAULT;
+
+      log.info("Automatic network selection was requested, but no bootstrap address exactly matches an address in the cluster topology. Falling back to network: {}", fallback);
+
+      usedFallback = true;
+      return fallback;
     }
   }
 

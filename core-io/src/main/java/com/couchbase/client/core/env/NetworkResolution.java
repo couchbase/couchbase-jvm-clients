@@ -18,7 +18,7 @@ package com.couchbase.client.core.env;
 
 import java.util.Objects;
 
-import static com.couchbase.client.core.util.CbStrings.isNullOrEmpty;
+import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -64,7 +64,17 @@ public class NetworkResolution {
    * if the given name is null or empty.
    */
   public static NetworkResolution valueOf(final String name) {
-    return isNullOrEmpty(name) ? AUTO : new NetworkResolution(name);
+    switch (nullToEmpty(name)) {
+      case "":
+      case "auto":
+        return AUTO;
+
+      case "external":
+        return EXTERNAL;
+
+      default:
+        return new NetworkResolution(name);
+    }
   }
 
   /**

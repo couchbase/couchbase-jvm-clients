@@ -30,7 +30,9 @@ import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetCollectionIdResponse;
+import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.NodeIdentifier;
+import com.couchbase.client.core.topology.TopologyRevision;
 import com.couchbase.client.core.util.ConnectionString;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +62,7 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -149,13 +152,23 @@ class DefaultConfigurationProviderTest {
     provider.proposeBucketConfig(new ProposedBucketConfigContext(bucket, config, ORIGIN));
     assertEquals(1, configsPushed.get());
     assertFalse(provider.config().bucketConfigs().isEmpty());
-    assertEquals(1073, provider.config().bucketConfig("default").rev());
 
-    assertEquals(3, getSeedNodesFromConfig(provider).size());
-    for (SeedNode node : getSeedNodesFromConfig(provider)) {
-      assertEquals(11210, node.kvPort().orElse(null));
-      assertEquals(8091, node.clusterManagerPort().orElse(null));
-    }
+    ClusterTopology topology = provider.config().bucketTopology("default");
+    assertNotNull(topology);
+
+    assertEquals(new TopologyRevision(0, 1073), topology.revision());
+
+    // No address in the default network matches a seed node, so the SDK should fall back to external network.
+    assertEquals(NetworkResolution.EXTERNAL, topology.network());
+
+    assertEquals(
+      setOf(
+        SeedNode.create("192.168.132.234").withKvPort(32775).withManagerPort(32790),
+        SeedNode.create("192.168.132.234").withKvPort(32799).withManagerPort(32814),
+        SeedNode.create("192.168.132.234").withKvPort(32823).withManagerPort(32838)
+      ),
+      getSeedNodesFromConfig(provider)
+    );
   }
 
   @Test

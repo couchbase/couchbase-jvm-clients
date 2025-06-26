@@ -72,8 +72,14 @@ class ClusterTopologyParser {
       HostAndServicePortsParser.parse(addHostnameIfMissing(node, originHost), portSelector)
     );
 
-    NetworkResolution resolvedNetwork = networkSelector.selectNetwork(nodes)
-      .orElse(NetworkResolution.DEFAULT); // Hope for the best!
+    NetworkResolution resolvedNetwork = networkSelector.selectNetwork(nodes);
+
+    if (nodes.stream().noneMatch(it -> it.containsKey(resolvedNetwork))) {
+      // User explicitly specified a network that doesn't exist.
+      Set<NetworkResolution> availableNetworks = new HashSet<>();
+      nodes.forEach(it -> availableNetworks.addAll(it.keySet()));
+      throw new CouchbaseException("Requested network '" + resolvedNetwork + "' is not available for this cluster. Available networks: " + availableNetworks);
+    }
 
     // Discard node info from networks we don't care about.
     //
