@@ -38,12 +38,16 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
+import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleState;
+import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateEvent;
+import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateHandler;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectHashMap;
 import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
+import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -56,9 +60,11 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
 import com.couchbase.client.core.msg.kv.UnlockRequest;
+import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
@@ -70,6 +76,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
@@ -175,6 +182,71 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
   }
 
+  private IoConfig io() {
+    return endpointContext.environment().ioConfig();
+  }
+
+  private void addIdleStateHandler(ChannelHandlerContext ctx) {
+    long readerIdleNanos = io().configIdleRedialTimeout().toNanos() / 2;
+    ctx.pipeline().addFirst(new IdleStateHandler(readerIdleNanos, 0, 0, TimeUnit.NANOSECONDS));
+  }
+
+  @Override
+  public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    if (!(evt instanceof IdleStateEvent)) {
+      super.userEventTriggered(ctx, evt);
+      return;
+    }
+
+    IdleStateEvent e = (IdleStateEvent) evt;
+    if (e.state() != IdleState.READER_IDLE) {
+      log.warn("Unexpected idle state: {} ; {}", e.state(), endpointContext);
+      return;
+    }
+
+    if (e.isFirst()) {
+      writeNoop(ctx);
+
+    } else {
+      log.warn(
+        "Closing KV connection because there was no incoming traffic for {} (io.configIdleRedialTimeout); {}",
+        io().configIdleRedialTimeout(),
+        endpointContext
+      );
+      ctx.close();
+    }
+  }
+
+  private void writeNoop(ChannelHandlerContext ctx) {
+    log.debug("Writing NOOP; {}", endpointContext);
+
+    // Timeout and retry strategy are handled by higher layers,
+    // and have no effect when the request is written directly
+    // to the channel like this. That's okay, because they're
+    // not needed here; we're just trying to keep IdleStateHandler
+    // from firing a read timeout event for a healthy connection.
+    NoopRequest req = new NoopRequest(
+      io().configIdleRedialTimeout(), // not actually enforced
+      endpointContext.core().context(),
+      FailFastRetryStrategy.INSTANCE, // not actually enforced
+      null
+    );
+
+    ChannelPromise noopWritePromise = ctx.newPromise().addListener(future -> {
+      if (!future.isSuccess()) {
+        // Channel is saturated or already disconnected. That's okay.
+        log.debug("Failed to write NOOP; {}", endpointContext, future.cause());
+      } else {
+        log.debug("Wrote NOOP; {}", endpointContext);
+      }
+    });
+
+    write(ctx, req, noopWritePromise);
+    ctx.flush();
+
+    req.response().thenAccept(res -> log.debug("Read NOOP response; {}", endpointContext));
+  }
+
   /**
    * Actions to be performed when the channel becomes active.
    *
@@ -186,6 +258,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   @Override
   public void channelActive(final ChannelHandlerContext ctx) {
+    // Defer adding the idle state handler until the channel is active, because we don't want it to run
+    // until the connection handshake is complete and the KV handler is ready to dispatch requests.
+    // Prior to this point, connection timeouts are handled at a higher layer.
+    addIdleStateHandler(ctx);
+
     ioContext = new IoContext(
       endpointContext,
       ctx.channel().localAddress(),
