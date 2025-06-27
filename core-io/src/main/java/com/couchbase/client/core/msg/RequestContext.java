@@ -28,6 +28,8 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.HostAndPort;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -51,6 +53,7 @@ import static java.util.Objects.requireNonNull;
  * @since 2.0.0
  */
 public class RequestContext extends CoreContext {
+  private static final Logger log = LoggerFactory.getLogger(RequestContext.class);
 
   /**
    * Holds the last dispatch latency if set already (or at all).
@@ -239,7 +242,11 @@ public class RequestContext extends CoreContext {
     if (!(environment().meter() instanceof NoopMeter)) {
       long latency = logicalRequestLatency();
       if (latency > 0) {
-        core().responseMetric(request, err).recordValue(latency);
+        try {
+          core().responseMetric(request, err).recordValue(latency);
+        } catch (Exception e) {
+          log.warn("Failed to record request latency ({}). {}", Duration.ofNanos(latency), this, e);
+        }
       }
     }
 

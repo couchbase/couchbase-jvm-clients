@@ -31,10 +31,11 @@ import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,6 +50,8 @@ import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.conver
  */
 @Stability.Internal
 public class ProtostellarRequest<TGrpcRequest> {
+  private static final Logger log = LoggerFactory.getLogger(ProtostellarRequest.class);
+
   private final CoreProtostellar core;
   private final @Nullable RequestSpan span;
   private final long absoluteTimeout;
@@ -151,7 +154,11 @@ public class ProtostellarRequest<TGrpcRequest> {
       long latency = logicalRequestLatency();
       if (latency > 0) {
         Core.ResponseMetricIdentifier rmi = new Core.ResponseMetricIdentifier(serviceType.id(), requestName);
-        core.responseMetric(rmi).recordValue(latency);
+        try {
+          core.responseMetric(rmi).recordValue(latency);
+        } catch (Exception e) {
+          log.warn("Failed to record request latency ({}). {}", Duration.ofNanos(latency), context(), e);
+        }
       }
     }
   }
