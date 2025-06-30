@@ -25,6 +25,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.java.view.DesignDocumentNamespace;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   isProtostellar = true
 )
 @Disabled // JCBC-1529
+@ManagementApiTest
 class ViewManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

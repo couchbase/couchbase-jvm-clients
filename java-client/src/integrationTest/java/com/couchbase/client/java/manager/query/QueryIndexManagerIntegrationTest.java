@@ -24,6 +24,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -65,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   clusterVersionIsBelow = REQUIRE_MB_50132,
   isProtostellar = true
 )
+@ManagementApiTest
 public class QueryIndexManagerIntegrationTest extends JavaIntegrationTest {
   // Disabling against 5.5 as there appear to be several query bugs (SCBC-246, SCBC-251).  Hardcoding 5.5.6 as that's
   // the current 5.5-release and it's unlikely to change.

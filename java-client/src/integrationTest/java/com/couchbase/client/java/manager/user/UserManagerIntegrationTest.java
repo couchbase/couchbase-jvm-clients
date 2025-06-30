@@ -26,6 +26,7 @@ import com.couchbase.client.java.ClusterOptions;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import com.couchbase.client.test.Util;
@@ -64,6 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA},
   isProtostellarWillWorkLater = true // User management not yet in Protostellar
 )
+@ManagementApiTest
 class UserManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

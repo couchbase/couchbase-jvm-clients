@@ -26,7 +26,12 @@ import com.couchbase.client.scala.manager.eventing.{
 import com.couchbase.client.scala.query.QueryScanConsistency
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.Util.waitUntilCondition
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
+import com.couchbase.client.test.{
+  Capabilities,
+  ClusterAwareIntegrationTest,
+  IgnoreWhen,
+  ManagementApiTest
+}
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, assertTrue}
 import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -42,6 +47,7 @@ import scala.util.{Failure, Try}
   missesCapabilities = Array(Capabilities.COLLECTIONS, Capabilities.EVENTING),
   clusterVersionIsBelow = "7.1.2"
 ) // MB-52649
+@ManagementApiTest
 class EventingFunctionManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster                   = _
   private var sourceCollection: Collection       = _

@@ -29,6 +29,7 @@ import scala.util.{Failure, Success}
   // User management not available in PS.
   isProtostellar = true
 )
+@ManagementApiTest
 class UserManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _

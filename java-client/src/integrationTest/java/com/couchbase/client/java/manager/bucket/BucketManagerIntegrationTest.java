@@ -16,7 +16,6 @@
 
 package com.couchbase.client.java.manager.bucket;
 
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
@@ -32,6 +31,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -61,6 +61,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Verifies the functionality of the bucket manager.
  */
 @IgnoreWhen(clusterTypes = { ClusterType.MOCKED, ClusterType.CAPELLA })
+@ManagementApiTest
 @Execution(ExecutionMode.CONCURRENT)
 class BucketManagerIntegrationTest extends JavaIntegrationTest {
 

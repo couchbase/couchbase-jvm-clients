@@ -27,6 +27,7 @@ import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @IgnoreWhen(missesCapabilities = Capabilities.COLLECTIONS)
+@ManagementApiTest
 class CollectionManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

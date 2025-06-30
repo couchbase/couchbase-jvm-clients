@@ -23,6 +23,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = {Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION},
   isProtostellar = true
 )
+@ManagementApiTest
 class GroupManagerIntegrationTest extends JavaIntegrationTest {
   private static final Logger LOGGER = LoggerFactory.getLogger(GroupManagerIntegrationTest.class);
 

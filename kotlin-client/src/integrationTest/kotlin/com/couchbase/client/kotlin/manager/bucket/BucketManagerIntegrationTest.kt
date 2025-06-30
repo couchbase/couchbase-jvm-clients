@@ -26,6 +26,7 @@ import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import com.couchbase.client.test.ManagementApiTest
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -34,9 +35,10 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.util.*
+import java.util.UUID
 
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
+@ManagementApiTest
 internal class BucketManagerIntegrationTest : KotlinIntegrationTest() {
     private val buckets: BucketManager by lazy { cluster.buckets }
 

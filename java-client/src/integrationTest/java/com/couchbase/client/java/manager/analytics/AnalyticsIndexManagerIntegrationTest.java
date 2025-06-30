@@ -37,6 +37,7 @@ import com.couchbase.client.java.manager.analytics.link.S3ExternalAnalyticsLink;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Flaky;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
@@ -85,6 +86,7 @@ import static org.junit.jupiter.api.Assertions.fail;
   missesCapabilities = ANALYTICS,
   isProtostellar = true
 )
+@ManagementApiTest
 class AnalyticsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final String dataset = "myDataset";

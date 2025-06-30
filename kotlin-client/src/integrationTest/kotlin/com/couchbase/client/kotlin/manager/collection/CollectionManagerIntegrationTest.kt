@@ -25,6 +25,7 @@ import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.ClusterVersion
 import com.couchbase.client.test.IgnoreWhen
+import com.couchbase.client.test.ManagementApiTest
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -37,6 +38,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 
 @IgnoreWhen(missesCapabilities = [Capabilities.COLLECTIONS])
+@ManagementApiTest
 internal class CollectionManagerIntegrationTest : KotlinIntegrationTest() {
     private val manager: CollectionManager by lazy { bucket.collections }
 

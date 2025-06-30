@@ -37,6 +37,7 @@ import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.COLLECTIONS))
+@ManagementApiTest
 class CollectionManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster               = _
   private var collections: CollectionManager = _

@@ -31,6 +31,7 @@ import com.couchbase.client.test.Capabilities.COLLECTIONS
 import com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import com.couchbase.client.test.ManagementApiTest
 import com.couchbase.client.test.Services
 import com.couchbase.mock.deps.org.apache.http.auth.AuthScope
 import com.couchbase.mock.deps.org.apache.http.auth.UsernamePasswordCredentials
@@ -49,6 +50,7 @@ import org.junit.jupiter.api.assertThrows
 import kotlin.time.Duration.Companion.minutes
 
 @IgnoreWhen(clusterTypes = [ClusterType.MOCKED])
+@ManagementApiTest
 internal class UserManagerIntegrationTest : KotlinIntegrationTest() {
     private val users: UserManager by lazy { cluster.users }
 

@@ -36,6 +36,7 @@ import scala.util.{Failure, Success}
   clusterTypes = Array(ClusterType.MOCKED),
   missesCapabilities = Array(Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION)
 )
+@ManagementApiTest
 class GroupManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _

@@ -49,6 +49,7 @@ import scala.util.{Failure, Success}
   // Bucket manager not implemented for Protostellar currently
   isProtostellarWillWorkLater = true
 )
+@ManagementApiTest
 class BucketManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster       = _
   private var buckets: BucketManager = _

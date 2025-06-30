@@ -27,6 +27,7 @@ import com.couchbase.client.test.Capabilities.ENTERPRISE_EDITION
 import com.couchbase.client.test.Capabilities.USER_GROUPS
 import com.couchbase.client.test.ClusterType.MOCKED
 import com.couchbase.client.test.IgnoreWhen
+import com.couchbase.client.test.ManagementApiTest
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -44,6 +45,7 @@ private val log = LoggerFactory.getLogger(GroupManagerIntegrationTest::class.jav
     clusterTypes = [MOCKED],
     missesCapabilities = [USER_GROUPS, ENTERPRISE_EDITION],
 )
+@ManagementApiTest
 internal class GroupManagerIntegrationTest : KotlinIntegrationTest() {
     private val users: UserManager by lazy { cluster.users }
 

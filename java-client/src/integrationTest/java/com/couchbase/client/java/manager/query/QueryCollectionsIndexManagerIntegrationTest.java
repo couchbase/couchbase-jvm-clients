@@ -25,6 +25,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.couchbase.client.test.Util;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -69,6 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   missesCapabilities = { QUERY, COLLECTIONS, CLUSTER_LEVEL_QUERY },
   clusterVersionIsBelow = REQUIRE_MB_50132
 )
+@ManagementApiTest
 public class QueryCollectionsIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   // time to allow for watch operations that are expected to succeed eventually

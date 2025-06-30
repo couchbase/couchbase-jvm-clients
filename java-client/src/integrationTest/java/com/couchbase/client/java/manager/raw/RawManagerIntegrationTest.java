@@ -24,6 +24,7 @@ import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,6 +41,7 @@ import static org.mockito.Mockito.when;
 
 @IgnoreWhen(clusterTypes = MOCKED,
   isProtostellar = true)
+@ManagementApiTest
 class RawManagerIntegrationTest extends JavaIntegrationTest {
 
   private static Cluster cluster;

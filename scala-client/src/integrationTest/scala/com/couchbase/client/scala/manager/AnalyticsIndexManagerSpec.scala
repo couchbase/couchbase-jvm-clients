@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 package com.couchbase.client.scala.manager
-import java.nio.charset.StandardCharsets
-
 import com.couchbase.client.core.error._
 import com.couchbase.client.core.service.ServiceType
-import com.couchbase.client.scala.{Cluster, TestUtils}
 import com.couchbase.client.scala.manager.analytics._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
+import com.couchbase.client.scala.{Cluster, TestUtils}
+import com.couchbase.client.test.{
+  Capabilities,
+  ClusterAwareIntegrationTest,
+  IgnoreWhen,
+  ManagementApiTest
+}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
-import scala.concurrent.duration._
 
+import java.nio.charset.StandardCharsets
 import scala.util.{Failure, Success}
 
 @TestInstance(Lifecycle.PER_CLASS)
 @IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS))
+@ManagementApiTest
 class AnalyticsIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster                 = _
   private var bucketName: String               = _

@@ -21,22 +21,33 @@ jobs:
       matrix:
         include:
           - server: '7.6.5'
+            nodes: 3
             java-distribution: 'temurin'
             java-version: '21'
 
           - server: 'community-7.6.2'
+            nodes: 3
             java-distribution: 'temurin'
             java-version: '17'
 
+          - server: '7.6.5'
+            nodes: 1 # Management API tests require single node
+            mvn-test-args: -Dgroups=ManagementApi
+            java-distribution: 'temurin'
+            java-version: '21'
+
 #          - server: '7.2.7'
+#            nodes: 3
 #            java-distribution: 'temurin'
 #            java-version: '8'
 #
 #          - server: 'community-7.2.2'
+#            nodes: 3
 #            java-distribution: 'corretto'
 #            java-version: '8'
 #
 #          - server: '6.6.6'
+#            nodes: 3
 #            java-distribution: 'oracle'
 #            java-version: '17'
 
@@ -76,7 +87,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           def: |
             nodes:
-              - count: 3
+              - count: ${{ matrix.nodes }}
                 version: ${{ matrix.server }}
                 services: ${{ env.COUCHBASE_SERVICES }}
             docker:
@@ -104,7 +115,7 @@ jobs:
         timeout-minutes: 40
         run: |
           TEST_JAVA_HOME=$JAVA_HOME_${{ matrix.java-version }}_X64
-          ./mvnw --batch-mode -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true verify -Djvm=${TEST_JAVA_HOME}/bin/java
+          ./mvnw --batch-mode -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true verify -Djvm=${TEST_JAVA_HOME}/bin/java ${{ matrix.mvn-test-args }}
 
       - name: Remove artifacts from Maven repo so they're not cached
         run: rm -rfv ~/.m2/repository/com/couchbase/client/

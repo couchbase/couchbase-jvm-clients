@@ -25,6 +25,7 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
   clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101,
   isProtostellar = true
 )
+@ManagementApiTest
 class SearchIndexManagerIntegrationTest extends JavaIntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SearchIndexManagerIntegrationTest.class);

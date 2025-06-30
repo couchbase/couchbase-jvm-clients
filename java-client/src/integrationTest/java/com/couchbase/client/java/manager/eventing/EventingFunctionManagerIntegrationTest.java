@@ -32,6 +32,7 @@ import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.ClusterType;
 import com.couchbase.client.test.IgnoreWhen;
+import com.couchbase.client.test.ManagementApiTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING},
         clusterVersionIsBelow = "7.1.2",
         isProtostellar = true) // MB-52649
+@ManagementApiTest
 public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest {
   private static Logger LOGGER = LoggerFactory.getLogger(EventingFunctionManagerIntegrationTest.class);
 

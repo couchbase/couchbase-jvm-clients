@@ -38,6 +38,7 @@ import scala.util.Failure
   missesCapabilities = Array(Capabilities.SEARCH),
   clusterVersionIsBelow = ConsistencyUtil.CLUSTER_VERSION_MB_50101
 )
+@ManagementApiTest
 class SearchIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster            = _
   private var bucketName: String          = _

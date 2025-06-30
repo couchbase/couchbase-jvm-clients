@@ -23,7 +23,7 @@ import com.couchbase.client.scala.manager.analytics.AnalyticsLink.{
 }
 import com.couchbase.client.scala.manager.analytics._
 import com.couchbase.client.scala.util.ScalaIntegrationTest
-import com.couchbase.client.test.{Capabilities, Flaky, IgnoreWhen}
+import com.couchbase.client.test.{Capabilities, Flaky, IgnoreWhen, ManagementApiTest}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api._
 import com.couchbase.client.core.error.InvalidArgumentException
@@ -35,6 +35,7 @@ import scala.util.{Failure, Success}
 @TestInstance(Lifecycle.PER_CLASS)
 // Use COLLECTIONS as a proxy for 7.0. Analytics dataset management is only supported from 7.0.
 @IgnoreWhen(missesCapabilities = Array(Capabilities.ANALYTICS, Capabilities.COLLECTIONS))
+@ManagementApiTest
 class AnalyticsLinkManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster                 = _
   private var analytics: AnalyticsIndexManager = _

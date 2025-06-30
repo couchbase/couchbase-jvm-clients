@@ -49,6 +49,7 @@ import scala.util.{Failure, Success, Try}
   missesCapabilities = Array(Capabilities.COLLECTIONS),
   clusterVersionIsBelow = RequireMB50132
 )
+@ManagementApiTest
 class QueryIndexManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster           = _
   private var coll: Collection           = _

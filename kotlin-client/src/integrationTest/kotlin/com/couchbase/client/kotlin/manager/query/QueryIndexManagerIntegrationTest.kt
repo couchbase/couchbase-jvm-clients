@@ -28,6 +28,7 @@ import com.couchbase.client.kotlin.util.waitUntil
 import com.couchbase.client.test.Capabilities
 import com.couchbase.client.test.ClusterType
 import com.couchbase.client.test.IgnoreWhen
+import com.couchbase.client.test.ManagementApiTest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -58,6 +59,7 @@ private val watchTimeout = 15.seconds
     clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER,
     clusterVersionIsBelow = REQUIRE_MB_50132
 )
+@ManagementApiTest
 internal class QueryIndexManagerIntegrationTest : KotlinIntegrationTest() {
     private val indexes: QueryIndexManager by lazy { cluster.queryIndexes }
     private val defaultCollection: Keyspace by lazy { Keyspace(bucket.name) }
