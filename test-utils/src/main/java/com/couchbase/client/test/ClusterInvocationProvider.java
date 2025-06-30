@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.platform.commons.support.AnnotationSupport;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
  * This invocation provider starts and stops the couchbase cluster before and after
@@ -81,10 +81,9 @@ public class ClusterInvocationProvider
   public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
     TestCluster testCluster = accessAndMaybeInitTestCluster(context);
 
-    Optional<IgnoreWhen> annotation = AnnotationSupport
-      .findAnnotation(context.getElement(), IgnoreWhen.class);
-    if (annotation.isPresent()) {
-      IgnoreWhen found = annotation.get();
+    List<IgnoreWhen> annotations = AnnotationSupport
+      .findRepeatableAnnotations(context.getElement(), IgnoreWhen.class);
+    for (IgnoreWhen found : annotations) {
       for (ClusterType type : found.clusterTypes()) {
         if (testCluster.type().equals(type)) {
           return ConditionEvaluationResult.disabled("Test disabled on this ClusterType ("
