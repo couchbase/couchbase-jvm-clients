@@ -91,11 +91,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <links>
-                        <link>https://projectreactor.io/docs/core/release/api/</link>
-                    </links>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
