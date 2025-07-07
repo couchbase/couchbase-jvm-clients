@@ -191,7 +191,7 @@ public class ReplicaHelper {
   ) {
     RequestSpan getAllSpan = core.context().coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_LOOKUP_IN_ALL_REPLICAS, parentSpan);
 
-    return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, parentSpan, readPreference).toFuture()
+    return getAllReplicasRequests(core, collectionIdentifier, documentId, clientContext, retryStrategy, timeout, getAllSpan, readPreference).toFuture()
       .thenApply(list ->
             list.stream().map(request ->
                 get(core, request)
