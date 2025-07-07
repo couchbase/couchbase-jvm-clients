@@ -29,13 +29,14 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -52,6 +53,7 @@ import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.node.KeyValueLocator.partitionForKey;
 import static com.couchbase.client.core.util.CbCollections.transform;
+import static com.couchbase.client.java.kv.GetAnyReplicaOptions.getAnyReplicaOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
@@ -148,6 +150,17 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
   @Test
   void blockingGetAnyThrowsWhenNotFound() {
     assertThrows(DocumentUnretrievableException.class, () -> collection.getAnyReplica(absentId()));
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  void timesOutIfBucketNotFound() {
+    try (Cluster disposableCluster = createCluster()) {
+      assertThrows(UnambiguousTimeoutException.class, () ->
+        disposableCluster.bucket("this-bucket-does-not-exist").defaultCollection()
+          .getAnyReplica("12345", getAnyReplicaOptions().timeout(Duration.ofMillis(10)))
+      );
+    }
   }
 
   @Test

@@ -30,6 +30,7 @@ import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -91,6 +93,20 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       .map(i -> String.format("%0" + padLen + "d", i)) // zero-pad (in case we want to sort in the future?)
       .flatMap(id -> collection.reactive().upsert(id, JsonObject.create().put("payload","payload-" + id)))
       .blockLast();
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  void timesOutIfBucketNotFound() {
+    try (Cluster disposableCluster = createCluster()) {
+      assertThrows(UnambiguousTimeoutException.class, () ->
+        disposableCluster.bucket("this-bucket-does-not-exist").defaultCollection()
+          .scan(
+            ScanType.samplingScan(10),
+            scanOptions().timeout(Duration.ofMillis(10))
+          ).count()
+      );
+    }
   }
 
   @Test

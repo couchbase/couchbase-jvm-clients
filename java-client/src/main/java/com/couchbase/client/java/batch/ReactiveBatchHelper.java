@@ -19,7 +19,6 @@ package com.couchbase.client.java.batch;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.config.NodeInfo;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -46,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
+
+import static com.couchbase.client.core.util.BucketConfigUtil.waitForBucketConfig;
 
 /**
  * This helper class provides methods that make performing batch operations easy and comfortable.
@@ -107,76 +108,67 @@ public class ReactiveBatchHelper {
     final Core core = collection.core();
     final CoreEnvironment env = core.context().environment();
 
-    BucketConfig config = core.clusterConfig().bucketConfig(collection.bucketName());
+    return waitForBucketConfig(core, collection.bucketName(), env.timeoutConfig().kvTimeout())
+      .cast(CouchbaseBucketConfig.class)
+      .onErrorMap(ClassCastException.class, t -> new IllegalStateException("Only couchbase (and ephemeral) buckets are supported at this point!"))
+      .flatMapMany(bucketConfig -> {
+        long start = System.nanoTime();
 
-    if (core.configurationProvider().bucketConfigLoadInProgress() || config == null) {
-      // We might not have a config yet if bootstrap is still in progress, wait 100ms
-      // and then try again. In a steady state this should not happen.
-      return Mono
-       .delay(Duration.ofMillis(100), env.scheduler())
-       .flatMapMany(ign -> existsBytes(collection, ids));
-    }
+        Map<NodeIdentifier, Map<byte[], Short>> nodeEntries = new HashMap<>(bucketConfig.nodes().size());
+        for (NodeInfo node : bucketConfig.nodes()) {
+          nodeEntries.put(node.id(), new HashMap<>(ids.size() / bucketConfig.nodes().size()));
+        }
 
-    long start = System.nanoTime();
-    if (!(config instanceof CouchbaseBucketConfig)) {
-      throw new IllegalStateException("Only couchbase (and ephemeral) buckets are supported at this point!");
-    }
+        CollectionIdentifier ci = new CollectionIdentifier(
+          collection.bucketName(),
+          Optional.of(collection.scopeName()),
+          Optional.of(collection.name())
+        );
 
-    Map<NodeIdentifier, Map<byte[], Short>> nodeEntries = new HashMap<>(config.nodes().size());
-    for (NodeInfo node : config.nodes()) {
-      nodeEntries.put(node.id(), new HashMap<>(ids.size() / config.nodes().size()));
-    }
-    CouchbaseBucketConfig cbc = (CouchbaseBucketConfig) config;
+        for (String id : ids) {
+          byte[] encodedId = id.getBytes(StandardCharsets.UTF_8);
+          int partitionId = KeyValueLocator.partitionForKey(encodedId, bucketConfig.numberOfPartitions());
+          int nodeId = bucketConfig.nodeIndexForActive(partitionId, false);
+          NodeInfo nodeInfo = bucketConfig.nodeAtIndex(nodeId);
+          nodeEntries.get(nodeInfo.id()).put(encodedId, (short) partitionId);
+        }
 
-    CollectionIdentifier ci = new CollectionIdentifier(
-      collection.bucketName(),
-      Optional.of(collection.scopeName()),
-      Optional.of(collection.name())
-    );
+        List<Mono<MultiObserveViaCasResponse>> responses = new ArrayList<>(nodeEntries.size());
+        List<MultiObserveViaCasRequest> requests = new ArrayList<>(nodeEntries.size());
 
-    for (String id : ids) {
-      byte[] encodedId = id.getBytes(StandardCharsets.UTF_8);
-      int partitionId = KeyValueLocator.partitionForKey(encodedId, cbc.numberOfPartitions());
-      int nodeId = cbc.nodeIndexForActive(partitionId, false);
-      NodeInfo nodeInfo = cbc.nodeAtIndex(nodeId);
-      nodeEntries.get(nodeInfo.id()).put(encodedId, (short) partitionId);
-    }
+        for (Map.Entry<NodeIdentifier, Map<byte[], Short>> node : nodeEntries.entrySet()) {
+          if (node.getValue().isEmpty()) {
+            // We need to make sure to only send requests to the nodes which 1) have the kv
+            // service enabled and 2) have keys that we need to fetch
+            continue;
+          }
 
-    List<Mono<MultiObserveViaCasResponse>> responses = new ArrayList<>(nodeEntries.size());
-    List<MultiObserveViaCasRequest> requests = new ArrayList<>(nodeEntries.size());
+          MultiObserveViaCasRequest request = new MultiObserveViaCasRequest(
+            env.timeoutConfig().kvTimeout(),
+            core.context(),
+            env.retryStrategy(),
+            ci,
+            node.getKey(),
+            node.getValue(),
+            PMGET_PREDICATE
+          );
+          core.send(request);
+          requests.add(request);
+          responses.add(Reactor.wrap(request, request.response(), true));
+        }
 
-    for (Map.Entry<NodeIdentifier, Map<byte[], Short>> node : nodeEntries.entrySet()) {
-      if (node.getValue().isEmpty()) {
-        // We need to make sure to only send requests to the nodes which 1) have the kv
-        // service enabled and 2) have keys that we need to fetch
-        continue;
-      }
-
-      MultiObserveViaCasRequest request = new MultiObserveViaCasRequest(
-        env.timeoutConfig().kvTimeout(),
-        core.context(),
-        env.retryStrategy(),
-        ci,
-        node.getKey(),
-        node.getValue(),
-        PMGET_PREDICATE
-      );
-      core.send(request);
-      requests.add(request);
-      responses.add(Reactor.wrap(request, request.response(), true));
-    }
-
-    return env.publishOnUserScheduler(Flux
-      .merge(responses)
-      .flatMap(response -> Flux.fromIterable(response.observed().keySet()))
-      .onErrorMap(throwable -> {
-        BatchErrorContext ctx = new BatchErrorContext(Collections.unmodifiableList(requests));
-        return new BatchHelperFailureException("Failed to perform BatchHelper bulk operation", throwable, ctx);
-      })
-      .doOnComplete(() -> core.context().environment().eventBus().publish(new BatchHelperExistsCompletedEvent(
-          Duration.ofNanos(System.nanoTime() - start),
-          new BatchErrorContext(Collections.unmodifiableList(requests))
-      ))));
+        return env.publishOnUserScheduler(Flux
+          .merge(responses)
+          .flatMap(response -> Flux.fromIterable(response.observed().keySet()))
+          .onErrorMap(throwable -> {
+            BatchErrorContext ctx = new BatchErrorContext(Collections.unmodifiableList(requests));
+            return new BatchHelperFailureException("Failed to perform BatchHelper bulk operation", throwable, ctx);
+          })
+          .doOnComplete(() -> core.context().environment().eventBus().publish(new BatchHelperExistsCompletedEvent(
+            Duration.ofNanos(System.nanoTime() - start),
+            new BatchErrorContext(Collections.unmodifiableList(requests))
+          ))));
+      });
   }
 
 }
