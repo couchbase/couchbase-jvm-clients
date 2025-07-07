@@ -92,6 +92,7 @@ jobs:
                 services: ${{ env.COUCHBASE_SERVICES }}
             docker:
               kv-memory: 2048
+              use-dino-certs: true
 
       - name: Configure tests
         run: |
