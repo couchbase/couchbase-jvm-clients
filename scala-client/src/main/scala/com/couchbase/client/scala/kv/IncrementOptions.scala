@@ -166,3 +166,7 @@ case class IncrementOptions(
     copy(expiryTime = Some(value))
   }
 }
+
+object IncrementOptions {
+  private[scala] val Default: IncrementOptions = IncrementOptions()
+}

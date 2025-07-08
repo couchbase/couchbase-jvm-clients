@@ -1,11 +1,11 @@
 package com.couchbase.client.scala
 
 import java.util.concurrent.TimeUnit
-
 import com.couchbase.client.core.error.{DurabilityLevelNotAvailableException, TimeoutException}
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig}
+import com.couchbase.client.scala.kv.InsertOptions
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, ClusterAwareIntegrationTest, IgnoreWhen}
 import org.junit.jupiter.api.TestInstance.Lifecycle
@@ -26,7 +26,6 @@ class DurabilitySpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
@@ -38,8 +37,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def replicateTo_2(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.Two)) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(ClientVerified(ReplicateTo.Two))) match {
       case Success(result) =>
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -49,8 +48,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def persistTo_2(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = ClientVerified(ReplicateTo.None, PersistTo.Two)) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(ClientVerified(ReplicateTo.None, PersistTo.Two))) match {
       case Success(result) =>
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -59,8 +58,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def Disabled(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.Disabled) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(Durability.Disabled)) match {
       case Success(_)   =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -69,8 +68,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def MajorityTimeoutTooShort(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.Majority, timeout = Duration.Zero) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(Durability.Majority).timeout(Duration.Zero)) match {
       case Success(_)                     => assert(false, s"unexpected success")
       case Failure(err: TimeoutException) =>
       case Failure(err)                   => assert(false, s"unexpected error $err")
@@ -80,8 +79,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def Majority(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.Majority) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(Durability.Majority)) match {
       case Success(_)   =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -90,8 +89,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def MajorityAndPersistToActive(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.MajorityAndPersistToActive) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(Durability.MajorityAndPersistToActive)) match {
       case Success(_)   =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }
@@ -100,8 +99,8 @@ class DurabilitySpec extends ScalaIntegrationTest {
   @Test
   def PersistToMajority(): Unit = {
     val docId   = TestUtils.docId()
-    val content = ujson.Obj("hello" -> "world")
-    coll.insert(docId, content, durability = Durability.PersistToMajority) match {
+    val content = ujson.Obj("hello" -> "world").str
+    coll.insert(docId, content, InsertOptions().durability(Durability.PersistToMajority)) match {
       case Success(_)   =>
       case Failure(err) => assert(false, s"unexpected error $err")
     }

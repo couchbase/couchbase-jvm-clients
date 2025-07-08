@@ -40,7 +40,7 @@ import scala.util.Try
   * @author Graham Pople
   * @since 1.0.0
   **/
-case class LookupInReplicaResult private (
+case class LookupInReplicaResult (
     private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
     isReplica: Boolean

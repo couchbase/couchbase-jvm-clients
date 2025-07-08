@@ -26,12 +26,12 @@ import com.couchbase.client.scala.transactions.error.{
   TransactionExpiredException,
   TransactionFailedException
 }
-import reactor.core.scala.publisher.SMono;
+import reactor.core.publisher.Mono
 
 private[scala] object ErrorUtil {
 
-  def convertTransactionFailedInternal[T](err: Throwable): SMono[Nothing] = {
-    SMono.error(err match {
+  def convertTransactionFailedInternal[T](err: Throwable): Mono[T] = {
+    Mono.error[T](err match {
       case e: CoreTransactionCommitAmbiguousException =>
         new TransactionCommitAmbiguousException(e)
       case e: CoreTransactionExpiredException =>
@@ -41,13 +41,13 @@ private[scala] object ErrorUtil {
     })
   }
 
-  def convertTransactionFailedSingleQueryMono[T](err: Throwable): SMono[T] = {
+  def convertTransactionFailedSingleQueryMono[T](err: Throwable): Mono[T] = {
     convertTransactionFailedInternal(err)
       .onErrorResume {
         // From a cluster.query() transaction the user will be expecting the traditional SDK errors
-        case ex @ (_: TransactionExpiredException) =>
-          SMono.error(new UnambiguousTimeoutException(ex.getMessage, null));
-        case ex => SMono.error(ex)
+        case ex: TransactionExpiredException =>
+          Mono.error[T](new UnambiguousTimeoutException(ex.getMessage, null))
+        case ex => Mono.error[T](ex)
       };
   }
 

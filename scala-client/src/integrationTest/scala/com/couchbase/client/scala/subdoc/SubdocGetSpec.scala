@@ -27,6 +27,8 @@ import java.nio.charset.StandardCharsets
 import concurrent.duration._
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
+import com.couchbase.client.scala.util.ujson
+import com.couchbase.client.scala.util.TestJsonImplicits._
 
 @TestInstance(Lifecycle.PER_CLASS)
 class SubdocGetSpec extends ScalaIntegrationTest {
@@ -39,7 +41,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
@@ -79,58 +80,6 @@ class SubdocGetSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  @IgnoreWhen(clusterVersionIsBelow = "7.5.0", replicasLessThan = 1)
-  def lookupInAnyReplicaBlocking(): Unit = {
-    val docId        = TestUtils.docId()
-    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-    val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
-
-    coll.lookupInAnyReplica(docId, Array(get("foo"), get("age"))) match {
-      case Success(result) =>
-        assert(result.cas != 0)
-        assert(result.cas == insertResult.cas)
-        assert(result.contentAs[String](0).get == "bar")
-        assert(result.contentAsBytes(0).get sameElements "\"bar\"".getBytes(StandardCharsets.UTF_8))
-        assert(result.contentAs[Int](1).get == 22)
-        assert(result.expiry.isEmpty)
-      case Failure(err) => assert(false, s"unexpected error $err")
-    }
-  }
-
-  @Test
-  @IgnoreWhen(
-    clusterVersionIsBelow = "7.5.0",
-    replicasLessThan = 1,
-    clusterTypes = Array(ClusterType.MOCKED)
-  )
-  def lookupInAllReplicasBlocking(): Unit = {
-    val docId        = TestUtils.docId()
-    val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
-    val insertResult = coll.insert(docId, content, InsertOptions().expiry(60.seconds)).get
-
-    Util.waitUntilCondition(() => {
-      val results = coll.lookupInAllReplicas(docId, Array(get("foo"), get("age"))).get
-
-      try {
-        assertEquals(config.numReplicas() + 1, results.size);
-        for (result <- results) {
-          assert(result.cas != 0)
-          assert(result.cas == insertResult.cas)
-          assert(result.contentAs[String](0).get == "bar")
-          assert(
-            result.contentAsBytes(0).get sameElements "\"bar\"".getBytes(StandardCharsets.UTF_8)
-          )
-          assert(result.contentAs[Int](1).get == 22)
-          assert(result.expiry.isEmpty)
-        }
-        true
-      } catch {
-        case _: AssertionError => false
-      }
-    })
-  }
-
-  @Test
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
   def lookupInWithExpiration(): Unit = {
     val docId        = TestUtils.docId()
@@ -162,7 +111,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
           result.contentAs[Array[Byte]](0).get sameElements """["cat","dog"]"""
             .getBytes(CharsetUtil.UTF_8)
         )
-        assert(result.contentAs[ujson.Arr](0).get == ujson.Arr("cat", "dog"))
+        assert(result.contentAs[JsonArray](0).get == ujson.Arr("cat", "dog"))
         assert(result.contentAs[JsonArray](0).get == JsonArray("cat", "dog"))
 
         import Passthrough._
@@ -214,7 +163,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     coll.lookupIn(docId, Array(get("foo"), get("age"), get(""))) match {
       case Success(result) =>
         assert(result.contentAs[String](0).get == "bar")
-        result.contentAs[ujson.Obj](2) match {
+        result.contentAs[JsonObject](2) match {
           case Success(body) =>
             assert(body("hello").str == "world")
             assert(body("age").num == 22)
@@ -400,7 +349,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
     // with durability.
     val docId = TestUtils.docId(0)
     coll.remove(docId)
-    coll.upsert(docId, JsonObject.create, durability = Durability.MajorityAndPersistToActive).get
+    coll.upsert(docId, JsonObject.create, UpsertOptions().durability(Durability.MajorityAndPersistToActive)).get
 
     val result = coll
       .lookupIn(

@@ -73,3 +73,7 @@ case class ExistsOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object ExistsOptions {
+  private[scala] val Default: ExistsOptions = ExistsOptions()
+}

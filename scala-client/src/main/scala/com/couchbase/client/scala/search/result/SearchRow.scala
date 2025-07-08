@@ -28,7 +28,7 @@ import scala.util.Try
   *
   * @since 1.0.0
   */
-case class SearchRow private (private val internal: CoreSearchRow) {
+case class SearchRow (private val internal: CoreSearchRow) {
 
   /** The name of the FTS index that gave this result. */
   def index: String = internal.index

@@ -25,7 +25,7 @@ import scala.jdk.CollectionConverters._
   *
   * @since 1.0.0
   */
-case class SearchRowLocations private (private val internal: CoreSearchRowLocations) {
+case class SearchRowLocations(private val internal: CoreSearchRowLocations) {
 
   /** Gets all locations, for any field and term. */
   def getAll: Seq[SearchRowLocation] = {
@@ -64,7 +64,7 @@ case class SearchRowLocations private (private val internal: CoreSearchRowLocati
   *
   * @since 1.0.0
   */
-case class SearchRowLocation private (private val internal: CoreSearchRowLocation) {
+case class SearchRowLocation (private val internal: CoreSearchRowLocation) {
   def field: String = internal.field
 
   def term: String = internal.term

@@ -200,3 +200,7 @@ case class ReplaceOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object ReplaceOptions {
+  private[scala] val Default: ReplaceOptions = ReplaceOptions()
+}

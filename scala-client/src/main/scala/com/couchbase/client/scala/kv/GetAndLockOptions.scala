@@ -91,3 +91,7 @@ case class GetAndLockOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object GetAndLockOptions {
+  private[scala] val Default: GetAndLockOptions = GetAndLockOptions()
+}

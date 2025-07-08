@@ -122,6 +122,17 @@ pipeline {
             }
         }
 
+        stage('Build Scala 3 (OpenJDK 17)') {
+            agent { label "sdkqe" }
+            when {
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
+            }
+            steps {
+                buildScala(defaultBuildJvm(), "3", REFSPEC)
+            }
+        }
+
         // Test against mock - this skips a lot of tests, and is intended for quick validation
         stage('Validation testing (mock, Oracle JDK 8)') {
             agent { label "sdkqe" }

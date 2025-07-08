@@ -73,3 +73,7 @@ case class UnlockOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object UnlockOptions {
+  private[scala] val Default: UnlockOptions = UnlockOptions()
+}

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 /** Metrics and status of a given FTS request. */
-case class SearchMetrics private (private val internal: CoreSearchMetrics) {
+case class SearchMetrics (private val internal: CoreSearchMetrics) {
 
   /** How long a request took executing on the server side. */
   def took: Duration = Duration(internal.took.toNanos, TimeUnit.NANOSECONDS)

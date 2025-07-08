@@ -115,3 +115,7 @@ case class LookupInOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object LookupInOptions {
+  private[scala] val Default: LookupInOptions = LookupInOptions()
+}

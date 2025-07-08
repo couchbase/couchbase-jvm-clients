@@ -90,3 +90,7 @@ case class GetAndTouchOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object GetAndTouchOptions {
+  private[scala] val Default: GetAndTouchOptions = GetAndTouchOptions()
+}

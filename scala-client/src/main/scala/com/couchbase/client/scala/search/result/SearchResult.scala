@@ -18,7 +18,6 @@ package com.couchbase.client.scala.search.result
 
 import com.couchbase.client.core.api.search.result.{CoreReactiveSearchResult, CoreSearchResult}
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
-import reactor.core.scala.publisher.{SFlux, SMono}
 
 import scala.jdk.CollectionConverters._
 
@@ -27,7 +26,7 @@ import scala.jdk.CollectionConverters._
   * @author Graham Pople
   * @since 1.0.0
   */
-case class SearchResult private (private val internal: CoreSearchResult) {
+case class SearchResult(private val internal: CoreSearchResult) {
 
   /** All returned rows.  All rows are buffered from the FTS service first.
     *
@@ -41,16 +40,4 @@ case class SearchResult private (private val internal: CoreSearchResult) {
   /** Any search facets returned. */
   def facets: Map[String, SearchFacetResult] =
     internal.facets.asScala.map(k => k._1 -> convert(k._2)).toMap
-}
-
-/** The results of an FTS query, as returned by the reactive API. */
-case class ReactiveSearchResult private (private val internal: CoreReactiveSearchResult) {
-  def rows: SFlux[SearchRow] = SFlux(internal.rows).map(row => SearchRow(row))
-
-  /** Any additional information related to the FTS query. */
-  def metaData: SMono[SearchMetaData] = SMono(internal.metaData).map(md => SearchMetaData(md))
-
-  /** Any search facets returned. */
-  def facets: SMono[Map[String, SearchFacetResult]] =
-    SMono(internal.facets).map(_.asScala).map(v => v.map(k => k._1 -> convert(k._2)).toMap)
 }

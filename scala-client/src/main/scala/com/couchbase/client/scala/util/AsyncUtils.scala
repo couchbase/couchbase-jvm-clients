@@ -29,7 +29,9 @@ private[scala] object AsyncUtils {
   // All operations should be bounded by core or the server
   private val DefaultTimeout = Duration.Inf
 
-  def block[A](in: Future[A], timeout: Duration = DefaultTimeout): Try[A] = {
+  def block[A](in: Future[A]): Try[A] = block(in, DefaultTimeout)
+
+  def block[A](in: Future[A], timeout: Duration): Try[A] = {
     Try(Await.result(in, timeout))
   }
 }

@@ -40,7 +40,6 @@ class PingSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     bucketName = ClusterAwareIntegrationTest.config().bucketname()
     bucket = cluster.bucket(bucketName)
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
@@ -50,7 +49,7 @@ class PingSpec extends ScalaIntegrationTest {
 
   @Test
   def ping(): Unit = {
-    val pr: PingResult = bucket.ping().get
+    val pr: PingResult = cluster.ping().get
     assert(!pr.endpoints().isEmpty)
     val psh = pr.endpoints().asScala(ServiceType.KV).get(0)
     assertEquals(PingState.OK, psh.state)

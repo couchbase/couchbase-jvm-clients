@@ -95,3 +95,7 @@ case class TransactionOptions(
     copy(attemptContextFactory = Some(attemptContextFactory))
   }
 }
+
+object TransactionOptions {
+  private[scala] val Default: TransactionOptions = TransactionOptions()
+}

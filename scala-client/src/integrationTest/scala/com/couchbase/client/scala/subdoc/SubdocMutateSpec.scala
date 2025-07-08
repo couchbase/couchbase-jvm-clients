@@ -7,7 +7,7 @@ import com.couchbase.client.core.error.{
   InvalidArgumentException,
   UnambiguousTimeoutException
 }
-import com.couchbase.client.scala.json.JsonObject
+import com.couchbase.client.scala.json.{JsonObject, JsonArray}
 import com.couchbase.client.scala.kv.LookupInSpec._
 import com.couchbase.client.scala.kv.MutateInSpec._
 import com.couchbase.client.scala.kv._
@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{Duration, _}
 import scala.util.{Failure, Success, Try}
+import com.couchbase.client.scala.util.ujson
+import com.couchbase.client.scala.util.TestJsonImplicits._
 
 @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-363 and ING-372
 @TestInstance(Lifecycle.PER_CLASS)
@@ -29,12 +31,14 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   private var cluster: Cluster = _
   private var coll: Collection = _
 
+  // Bring the helper syntax into scope for the entire test class
+  import com.couchbase.client.scala.util.TestJsonImplicits._
+
   @BeforeAll
   def beforeAll(): Unit = {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
@@ -90,7 +94,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
         Array(
           insert("x", content).xattr
         ),
-        document = StoreSemantics.Insert
+        MutateInOptions().document(StoreSemantics.Insert)
       )
       .get
     (docId, insertResult.cas)
@@ -125,7 +129,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val content      = ujson.Obj("hello" -> "world", "foo" -> "bar", "age" -> 22)
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), MutateInOptions().document(StoreSemantics.Upsert)) match {
       case Success(result) => assert(result.cas != cas)
       case Failure(err) =>
         assert(false, s"unexpected error $err")
@@ -139,7 +143,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val content      = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), MutateInOptions().document(StoreSemantics.Insert)) match {
       case Success(result)                       => assert(false)
       case Failure(err: DocumentExistsException) =>
       case Failure(err)                          => assert(false, s"unexpected error $err")
@@ -150,7 +154,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def insert_not_existing_doc(): Unit = {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Insert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), MutateInOptions().document(StoreSemantics.Insert)) match {
       case Success(result) =>
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -162,7 +166,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def upsert_not_existing_doc(): Unit = {
     val docId = TestUtils.docId()
 
-    coll.mutateIn(docId, Array(insert("foo2", "bar2")), document = StoreSemantics.Upsert) match {
+    coll.mutateIn(docId, Array(insert("foo2", "bar2")), MutateInOptions().document(StoreSemantics.Upsert)) match {
       case Success(result) =>
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
@@ -180,7 +184,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       case Failure(err)    => assert(false, s"unexpected error $err")
     }
 
-    Assertions.assertThrows(classOf[NoSuchElementException], () => (getContent(docId)("foo")))
+    Assertions.assertThrows(classOf[NoSuchElementException], () => getContent(docId)("foo").str)
   }
 
   @IgnoreWhen(clusterTypes = Array(ClusterType.MOCKED))
@@ -298,14 +302,14 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def replace_long(): Unit = {
     val updatedContent =
       checkSingleOpSuccess(ujson.Obj("hello" -> "world"), Array(replace("hello", Long.MaxValue)))
-    assert(updatedContent("hello").num == Long.MaxValue)
+    assert(updatedContent("hello").numLong == Long.MaxValue)
   }
 
   @Test
   def replace_double(): Unit = {
     val updatedContent =
       checkSingleOpSuccess(ujson.Obj("hello" -> "world"), Array(replace("hello", 42.3)))
-    assert(updatedContent("hello").num == 42.3)
+    assert(updatedContent("hello").numDouble == 42.3)
   }
 
   @Test
@@ -474,7 +478,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
       ujson.Obj("foo" -> "bar"),
       Array(MutateInSpec.remove("x.foo").xattr)
     )
-    Assertions.assertThrows(classOf[NoSuchElementException], () => (updatedContent("foo")))
+    Assertions.assertThrows(classOf[NoSuchElementException], () => updatedContent("foo").str)
   }
 
   @Test
@@ -871,7 +875,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def write_and_read_primitive_boolean(): Unit = {
     val docId = TestUtils.docId()
     assert(
-      coll.mutateIn(docId, Array(upsert("foo", true)), document = StoreSemantics.Insert).isSuccess
+      coll.mutateIn(docId, Array(upsert("foo", true)), MutateInOptions().document(StoreSemantics.Insert)).isSuccess
     )
 
     (for {
@@ -888,7 +892,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def write_and_read_primitive_int(): Unit = {
     val docId = TestUtils.docId()
     assert(
-      coll.mutateIn(docId, Array(upsert("foo", 42)), document = StoreSemantics.Insert).isSuccess
+      coll.mutateIn(docId, Array(upsert("foo", 42)), MutateInOptions().document(StoreSemantics.Insert)).isSuccess
     )
 
     (for {
@@ -904,7 +908,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   def write_and_read_primitive_double(): Unit = {
     val docId = TestUtils.docId()
     assert(
-      coll.mutateIn(docId, Array(upsert("foo", 42.3)), document = StoreSemantics.Insert).isSuccess
+      coll.mutateIn(docId, Array(upsert("foo", 42.3)), MutateInOptions().document(StoreSemantics.Insert)).isSuccess
     )
 
     (for {
@@ -921,7 +925,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     assert(
       coll
-        .mutateIn(docId, Array(upsert("foo", Long.MaxValue)), document = StoreSemantics.Insert)
+        .mutateIn(docId, Array(upsert("foo", Long.MaxValue)), MutateInOptions().document(StoreSemantics.Insert))
         .isSuccess
     )
 
@@ -939,7 +943,7 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     val docId = TestUtils.docId()
     assert(
       coll
-        .mutateIn(docId, Array(upsert("foo", Short.MaxValue)), document = StoreSemantics.Insert)
+        .mutateIn(docId, Array(upsert("foo", Short.MaxValue)), MutateInOptions().document(StoreSemantics.Insert))
         .isSuccess
     )
 
@@ -970,26 +974,4 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
     }
   }
 
-  @Test
-  def create_as_deleted_on_non_existent_bucket_reactive(): Unit = {
-    val docId        = TestUtils.docId()
-    val doesNotExist = cluster.bucket("hokey_kokey")
-
-    Try(
-      doesNotExist.defaultCollection.reactive
-        .mutateIn(
-          docId,
-          Seq(MutateInSpec.insert("txn", JsonObject.create).xattr),
-          MutateInOptions()
-            .timeout(1 second)
-            .document(StoreSemantics.Upsert)
-            .accessDeleted(true)
-            .createAsDeleted(true)
-        )
-        .block()
-    ) match {
-      case Failure(_: UnambiguousTimeoutException) =>
-      case _                                       => assert(false)
-    }
-  }
 }

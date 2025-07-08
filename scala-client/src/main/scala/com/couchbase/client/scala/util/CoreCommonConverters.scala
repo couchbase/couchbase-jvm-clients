@@ -40,19 +40,16 @@ import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.query.{
   QueryMetaData,
   QueryMetrics,
   QueryResult,
   QueryStatus,
-  QueryWarning,
-  ReactiveQueryResult
+  QueryWarning
 }
 import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchRowLocations}
 import com.couchbase.client.scala.util.DurationConversions._
 import reactor.core.publisher.{Flux, Mono}
-import reactor.core.scala.publisher.{SFlux, SMono}
 import reactor.util.annotation.Nullable
 
 import java.util.function.Supplier
@@ -175,16 +172,7 @@ private[scala] object CoreCommonConverters {
       convert(in.metaData)
     )
   }
-
-  def convert(in: CoreReactiveQueryResult): ReactiveQueryResult = {
-    ReactiveQueryResult(
-      FutureConversions.javaFluxToScalaFlux(in.rows),
-      FutureConversions
-        .javaMonoToScalaMono(in.metaData)
-        .map(md => convert(md))
-    )
-  }
-
+  
   def convert(in: CoreQueryMetaData): QueryMetaData = {
     QueryMetaData(
       in.requestId,
@@ -236,20 +224,6 @@ private[scala] object CoreCommonConverters {
     }
   }
 
-  def convert(in: CoreSearchIndex): SearchIndex = {
-    SearchIndex(
-      in.name,
-      in.sourceName,
-      Option(in.uuid),
-      Option(in.`type`),
-      Option(convert(in.params.asScala.toMap)),
-      Option(in.sourceUuid),
-      Option(convert(Option(in.sourceParams).map(_.asScala).getOrElse(Map()).toMap)),
-      Option(in.sourceType),
-      Option(convert(in.planParams.asScala.toMap))
-    )
-  }
-
   def convert(in: Map[String, Any]): ujson.Obj = {
     def convertInternal(in: Any): Option[ujson.Value] = {
       in match {
@@ -282,11 +256,7 @@ private[scala] object CoreCommonConverters {
 
     out
   }
-
-  def convert(in: SearchIndex): CoreSearchIndex = {
-    CoreSearchIndex.fromJson(in.toJson)
-  }
-
+  
   def convert[T](in: => CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
     // Argument validation can cause this to throw immediately
     try {
@@ -295,15 +265,7 @@ private[scala] object CoreCommonConverters {
       case err: Throwable => Future.failed(err)
     }
   }
-
-  def convert[T](in: Mono[T]): SMono[T] = {
-    FutureConversions.javaMonoToScalaMono(in)
-  }
-
-  def convert[T](in: Flux[T]): SFlux[T] = {
-    FutureConversions.javaFluxToScalaFlux(in)
-  }
-
+  
   def convert(in: Durability): CoreDurability = {
     in match {
       case Durability.Disabled => CoreDurability.NONE

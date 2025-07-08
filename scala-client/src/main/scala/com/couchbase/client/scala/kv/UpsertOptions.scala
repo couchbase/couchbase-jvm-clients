@@ -187,3 +187,7 @@ case class UpsertOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object UpsertOptions {
+  private[scala] val Default: UpsertOptions = UpsertOptions()
+}

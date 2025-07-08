@@ -168,6 +168,10 @@ case class ScanOptions(
   }
 }
 
+object ScanOptions {
+  private[scala] val Default: ScanOptions = ScanOptions()
+}
+
 /** A KV range scan operation will return a stream of these.
   *
   * @define SupportedTypes this can be of any type for which an implicit
@@ -175,7 +179,7 @@ case class ScanOptions(
   *                        of types that are supported 'out of the box' is available at
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
-case class ScanResult private (private val internal: CoreRangeScanItem, transcoder: Transcoder) {
+case class ScanResult (private val internal: CoreRangeScanItem, transcoder: Transcoder) {
 
   /** The unique identifier of the document. */
   def id: String = internal.key

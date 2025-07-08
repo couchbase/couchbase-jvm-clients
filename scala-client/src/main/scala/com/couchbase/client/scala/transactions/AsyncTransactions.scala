@@ -20,7 +20,7 @@ import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transactions.config.TransactionOptions
 import com.couchbase.client.scala.transactions.internal.ErrorUtil
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.SMono
+import reactor.core.publisher.Mono
 
 import scala.concurrent.Future
 
@@ -53,36 +53,18 @@ class AsyncTransactions private[scala] (
     */
   def run(
       transactionLogic: (AsyncTransactionAttemptContext) => Future[Unit],
-      options: TransactionOptions
+      options: TransactionOptions = TransactionOptions.Default
   ): Future[TransactionResult] = {
-    run(transactionLogic, Some(options))
-  }
+    val opts = options.toCore
 
-  /**
-    * A convenience overload of [[AsyncTransactions.run()]] that provides default options.
-    */
-  def run(
-      transactionLogic: (AsyncTransactionAttemptContext) => Future[Unit]
-  ): Future[TransactionResult] = {
-    run(transactionLogic, None)
-  }
+    val monoResult: Mono[TransactionResult] = internal
+      .run(ctx => {
+        val lambdaFuture = transactionLogic(new AsyncTransactionAttemptContext(ctx, env))
+        FutureConversions.scalaFutureToJavaMono(lambdaFuture)
+      }, opts)
+      .map[TransactionResult](result => TransactionResult(result))
+      .onErrorResume((err: Throwable) => ErrorUtil.convertTransactionFailedInternal[TransactionResult](err))
 
-  private def run(
-      transactionLogic: (AsyncTransactionAttemptContext) => Future[Unit],
-      options: Option[TransactionOptions] = None
-  ): Future[TransactionResult] = {
-    val opts = options.map(v => v.toCore).orNull
-
-    FutureConversions
-      .javaMonoToScalaMono(
-        internal
-          .run(ctx => {
-            val lambdaResult = transactionLogic(new AsyncTransactionAttemptContext(ctx, env))
-            SMono.fromFuture(lambdaResult)(env.ec).asJava
-          }, opts)
-      )
-      .map(TransactionResult)
-      .onErrorResume(ErrorUtil.convertTransactionFailedInternal)
-      .toFuture
+    FutureConversions.javaMonoToScalaFuture(monoResult)
   }
 }

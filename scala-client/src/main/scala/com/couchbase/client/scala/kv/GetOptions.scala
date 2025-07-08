@@ -121,4 +121,5 @@ case class GetOptions(
 
 object GetOptions {
   private val EmptyProject = Seq.empty[String]
+  private[scala] val Default: GetOptions = GetOptions()
 }

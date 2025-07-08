@@ -223,3 +223,7 @@ case class MutateInOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object MutateInOptions {
+  private[scala] val Default: MutateInOptions = MutateInOptions()
+}

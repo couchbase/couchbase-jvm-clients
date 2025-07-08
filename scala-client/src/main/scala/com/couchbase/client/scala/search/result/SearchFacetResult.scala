@@ -77,7 +77,7 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class DateRangeSearchFacetResult private (
+  case class DateRangeSearchFacetResult (
       protected val internal: CoreDateRangeSearchFacetResult
   ) extends SearchFacetResult {
 
@@ -90,7 +90,7 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class NumericRangeSearchFacetResult private (
+  case class NumericRangeSearchFacetResult (
       protected val internal: CoreNumericRangeSearchFacetResult
   ) extends SearchFacetResult {
 
@@ -114,7 +114,7 @@ object SearchFacetResult {
     *
     * @since 1.0.0
     */
-  case class TermSearchFacetResult private (protected val internal: CoreTermSearchFacetResult)
+  case class TermSearchFacetResult (protected val internal: CoreTermSearchFacetResult)
       extends SearchFacetResult {
 
     /** The term ranges results. */

@@ -17,6 +17,7 @@
     <name>Couchbase Scala SDK Implicits</name>
     <description>The official Couchbase Scala SDK (Implicits)</description>
 
+    <!-- Dependencies shared by all Scala profiles -->
     <dependencies>
         <!-- External, Required Dependencies -->
         <dependency>
@@ -26,90 +27,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!--There's a discussion here https://www.scala-lang.org/old/node/6737.html on whether
-        scala-library should be provided scope, and the feeling seems to be no, to detect
-        incompatibilities with the app's version-->
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>${scala.compat.library.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-lang.modules</groupId>
-            <artifactId>scala-collection-compat_${scala.compat.version}</artifactId>
-            <version>${scala.collection-compat.version}</version>
-        </dependency>
-
-        <!--Jsoniter offers very fast conversion of case classes to/from Array[Byte]-->
-        <dependency>
-            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
-            <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
-            <version>${scala.jsoniter-scala.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
-            <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
-            <version>${scala.jsoniter-scala.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!--Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support-->
-        <dependency>
-            <groupId>com.jsoniter</groupId>
-            <artifactId>jsoniter</artifactId>
-            <version>${scala.jsoniter.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <!--Dependencies that are optional.  If app has them in classpath and uses them, then we support them.-->
-
-        <dependency>
-            <groupId>org.json4s</groupId>
-            <artifactId>json4s-native_${scala.compat.version}</artifactId>
-            <version>${scala.json4s.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.json4s</groupId>
-            <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
-            <version>${scala.json4s.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.typelevel</groupId>
-            <artifactId>jawn-ast_${scala.compat.version}</artifactId>
-            <version>${scala.jawn.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>com.lihaoyi</groupId>
-            <artifactId>upickle_${scala.compat.version}</artifactId>
-            <version>${scala.upickle.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-generic_${scala.compat.version}</artifactId>
-            <version>${scala.circe.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>io.circe</groupId>
-            <artifactId>circe-parser_${scala.compat.version}</artifactId>
-            <version>${scala.circe.version}</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.typesafe.play</groupId>
-            <artifactId>play-json_${scala.compat.version}</artifactId>
-            <version>${scala.play-json.version}</version>
-            <optional>true</optional>
-        </dependency>
-
         <!-- Test Dependencies -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
@@ -117,6 +34,118 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>scala-3</id>
+            <dependencies>
+                <dependency>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala3-library_3</artifactId>
+                    <version>${scala.scala3-library.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>com.lihaoyi</groupId>
+                    <artifactId>upickle_${scala.compat.version}</artifactId>
+                    <version>${scala.upickle.version}</version>
+                    <optional>true</optional>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>scala-2</id>
+            <!-- Unfortunately have to duplicate this activation from root pom.xml - does not get merged -->
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+
+                <!--There's a discussion here https://www.scala-lang.org/old/node/6737.html on whether
+                scala-library should be provided scope, and the feeling seems to be no, to detect
+                incompatibilities with the app's version-->
+                <dependency>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                    <version>${scala.compat.library.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.scala-lang.modules</groupId>
+                    <artifactId>scala-collection-compat_${scala.compat.version}</artifactId>
+                    <version>${scala.collection-compat.version}</version>
+                </dependency>
+
+                <!--Jsoniter offers very fast conversion of case classes to/from Array[Byte]-->
+                <dependency>
+                    <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+                    <artifactId>jsoniter-scala-core_${scala.compat.version}</artifactId>
+                    <version>${scala.jsoniter-scala.version}</version>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.github.plokhotnyuk.jsoniter-scala</groupId>
+                    <artifactId>jsoniter-scala-macros_${scala.compat.version}</artifactId>
+                    <version>${scala.jsoniter-scala.version}</version>
+                    <scope>provided</scope>
+                </dependency>
+
+                <!--Needed only for experimenting with replacing Jackson with jsoniter currently, though could expose support-->
+                <dependency>
+                    <groupId>com.jsoniter</groupId>
+                    <artifactId>jsoniter</artifactId>
+                    <version>${scala.jsoniter.version}</version>
+                    <optional>true</optional>
+                </dependency>
+
+                <!--Dependencies that are optional.  If app has them in classpath and uses them, then we support them.-->
+                <dependency>
+                    <groupId>org.json4s</groupId>
+                    <artifactId>json4s-native_${scala.compat.version}</artifactId>
+                    <version>${scala.json4s.version}</version>
+                    <optional>true</optional>
+                </dependency>
+
+                <dependency>
+                    <groupId>org.json4s</groupId>
+                    <artifactId>json4s-jackson_${scala.compat.version}</artifactId>
+                    <version>${scala.json4s.version}</version>
+                    <optional>true</optional>
+                </dependency>
+
+                <dependency>
+                    <groupId>org.typelevel</groupId>
+                    <artifactId>jawn-ast_${scala.compat.version}</artifactId>
+                    <version>${scala.jawn.version}</version>
+                    <optional>true</optional>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.lihaoyi</groupId>
+                    <artifactId>upickle_${scala.compat.version}</artifactId>
+                    <version>${scala.upickle.version}</version>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-generic_${scala.compat.version}</artifactId>
+                    <version>${scala.circe.version}</version>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>io.circe</groupId>
+                    <artifactId>circe-parser_${scala.compat.version}</artifactId>
+                    <version>${scala.circe.version}</version>
+                    <optional>true</optional>
+                </dependency>
+                <dependency>
+                    <groupId>com.typesafe.play</groupId>
+                    <artifactId>play-json_${scala.compat.version}</artifactId>
+                    <version>${scala.play-json.version}</version>
+                    <optional>true</optional>
+                </dependency>
+
+            </dependencies>
+        </profile>
+    </profiles>
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
@@ -184,6 +213,57 @@
             </plugin>
 
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <!-- Required for cross-building custom scala collections.
+                             See https://docs.scala-lang.org/overviews/core/custom-collections.html#appendix-cross-building-custom-collections -->
+                        <id>add-version-specific-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${scala.version-specific.src1}</source>
+                                <source>${scala.version-specific.src2}</source>
+                                <source>src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-integration-test-sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/integrationTest/scala</source>
+                                <source>${scala.version-specific.test-src}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-integration-test-resource-as-test-resource</id>
+                        <phase>generate-test-resources</phase>
+                        <goals>
+                            <goal>add-test-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>src/integrationTest/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>${maven-source-plugin.version}</version>
@@ -195,46 +275,6 @@
                                  mvn-scalafmt:format don't need to run an extra time -->
                             <goal>jar-no-fork</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.antipathy</groupId>
-                <!-- use mvn-scalafmt_2.13 for all scala.compat.version -->
-                <artifactId>mvn-scalafmt_2.13</artifactId>
-                <version>${mvn-scalafmt.version}</version>
-                <configuration>
-                    <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
-                    <!-- there are no tests for this project currently, disabling to remove a warning about no sourcess -->
-                    <skipTestSources>true</skipTestSources>
-                </configuration>
-                <executions>
-                    <execution>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>format</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!--Add src/main/java to source-->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>${build-helper-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>src/main/java</source>
-                            </sources>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

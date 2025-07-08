@@ -172,3 +172,7 @@ case class DecrementOptions(
     copy(expiryTime = Some(value))
   }
 }
+
+object DecrementOptions {
+  private[scala] val Default: DecrementOptions = DecrementOptions()
+}

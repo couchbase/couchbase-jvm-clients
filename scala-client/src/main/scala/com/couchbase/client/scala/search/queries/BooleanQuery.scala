@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
+import com.couchbase.client.core.api.search.queries.{CoreBooleanQuery, CoreConjunctionQuery, CoreDisjunctionQuery}
 
 /** A compound FTS query that allows various combinations of sub-queries.
   *
@@ -88,9 +88,9 @@ case class BooleanQuery(
 
   override private[scala] def toCore =
     new CoreBooleanQuery(
-      must.map(_.toCore).orNull,
-      mustNot.map(_.toCore).orNull,
-      should.map(_.toCore).orNull,
+      must.map(_.toCore.asInstanceOf[CoreConjunctionQuery]).orNull,
+      mustNot.map(_.toCore.asInstanceOf[CoreDisjunctionQuery]).orNull,
+      should.map(_.toCore.asInstanceOf[CoreDisjunctionQuery]).orNull,
       boost.map(_.asInstanceOf[java.lang.Double]).orNull
     )
 }

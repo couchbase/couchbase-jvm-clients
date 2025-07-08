@@ -225,5 +225,6 @@ case class TransactionQueryOptions(
 }
 
 object TransactionQueryOptions {
-  def apply() = new TransactionQueryOptions()
+  def apply(): TransactionQueryOptions = new TransactionQueryOptions()
+  private[scala] val Default: TransactionQueryOptions = TransactionQueryOptions()
 }

@@ -104,3 +104,7 @@ case class RemoveOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object RemoveOptions {
+  private[scala] val Default: RemoveOptions = RemoveOptions()
+}

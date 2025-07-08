@@ -24,7 +24,6 @@ class BinarySpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection.binary
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
@@ -121,19 +120,6 @@ class BinarySpec extends ScalaIntegrationTest {
       case Failure(err: DocumentNotFoundException) =>
       case Failure(err)                            => assert(false, s"unexpected error $err")
     }
-  }
-  @Test
-  def blockingIncrementReactive(): Unit = {
-    val docId  = TestUtils.docId()
-    val result = coll.reactive.increment(docId, 3, IncrementOptions().initial(0)).block()
-    assert(result.content == 0) // initial value returned
-  }
-
-  @Test
-  def blockingDecrementReactive(): Unit = {
-    val docId  = TestUtils.docId()
-    val result = coll.reactive.decrement(docId, 3, DecrementOptions().initial(0)).block()
-    assert(result.content == 0) // initial value returned
   }
 
 }

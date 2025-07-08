@@ -31,7 +31,7 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
       thread
     }
   })
-  private implicit val ec = ExecutionContext.fromExecutor(threadPool)
+  private implicit val ec: ExecutionContext = ExecutionContext.fromExecutor(threadPool)
 
   @BeforeAll
   def beforeAll(): Unit = {
@@ -39,7 +39,6 @@ class AsyncKeyValueSpec extends ScalaIntegrationTest {
     val bucket = cluster.bucket(config.bucketname)
     blocking = bucket.defaultCollection
     coll = blocking.async
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @Test

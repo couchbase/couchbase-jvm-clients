@@ -406,4 +406,5 @@ case class QueryOptions(
 
 object QueryOptions {
   def apply() = new QueryOptions()
+  private[scala] def Default = new QueryOptions()
 }

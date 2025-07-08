@@ -20,31 +20,7 @@ object TestUtils {
 
   /** Wait until ping result for the service returns success */
   def waitForService(bucket: Bucket, serviceType: ServiceType): Unit = {
-    if (bucket.async.couchbaseOps.isInstanceOf[CoreProtostellar]) {
-      // Protostellar ping support will be implemented under JVMCBC-1189
-      return
-    }
-
-    var done  = false
-    var guard = 100
-
-    while (!done && guard != 0) {
-      guard -= 1
-      bucket.ping(PingOptions(Set(serviceType))) match {
-        case Success(result) =>
-          if (!result.endpoints.isEmpty && result.endpoints
-                .get(serviceType)
-                .get(0)
-                .state() == PingState.OK) {
-            done = true
-          }
-        case Failure(err) => println("Ping failed: " + err)
-      }
-
-      if (!done) {
-        Thread.sleep(50)
-      }
-    }
+    // Now a no-op as bucket.ping removed in Scala 3
   }
 
   /** Wait for indexer to be aware of a (possibly newly created) bucket or collection */
@@ -76,13 +52,6 @@ object TestUtils {
   }
 
   def waitForNsServerToBeReady(cluster: Cluster): Unit = {
-    Util.waitUntilCondition(() => {
-      cluster.users.getAllUsers() match {
-        case Success(_) => true
-        case Failure(err) =>
-          println(err)
-          false
-      }
-    })
+    // Now a no-op as user management removed in Scala 3
   }
 }

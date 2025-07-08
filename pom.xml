@@ -43,9 +43,15 @@
         <!-- 3.3.1 is the final version of the 3.x family, with 4.0 introducing breaking changes -->
         <scala.upickle.version>3.3.1</scala.upickle.version>
         <scala.collection-compat.version>2.12.0</scala.collection-compat.version>
+        <scala.major>2</scala.major>
         <scala.compat.version>2.12</scala.compat.version>
         <scala.compat.library.version>2.12.20</scala.compat.library.version>
-        <scala.version-specific.src>src/main/scala-2.13-</scala.version-specific.src>
+        <scala.scala-maven-plugin.rules>-target:jvm-1.8</scala.scala-maven-plugin.rules>
+        <!-- Should be set to the latest available version of the Scala 3.3 LTS -->
+        <scala.scala3-library.version>3.3.6</scala.scala3-library.version>
+        <scala.version-specific.src1>src/main/scala-2</scala.version-specific.src1>
+        <scala.version-specific.src2>src/main/scala-2.13-</scala.version-specific.src2>
+        <scala.version-specific.test-src>src/integrationTest/scala-2</scala.version-specific.test-src>
 
         <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
@@ -53,7 +59,7 @@
         <build-helper-maven-plugin.version>3.2.0</build-helper-maven-plugin.version>
         <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
         <scala-maven-plugin.version>4.8.1</scala-maven-plugin.version>
-        <mvn-scalafmt.version>1.1.1684076452.9f83818</mvn-scalafmt.version>
+        <mvn-scalafmt.version>1.1.1713302731.c3d0074</mvn-scalafmt.version>
 
         <!-- When changing this, make sure to update these versions:
             tracing-opentelemetry-deps/pom.xml opentelemetry-grpc-1.6
@@ -97,6 +103,16 @@
             <dependency>
                 <groupId>com.couchbase.client</groupId>
                 <artifactId>scala-client_2.13</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>scala-implicits_3</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
+                <artifactId>scala-client_3</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -427,7 +443,9 @@
             <properties>
                 <scala.compat.version>2.13</scala.compat.version>
                 <scala.compat.library.version>2.13.16</scala.compat.library.version>
-                <scala.version-specific.src>src/main/scala-2.13+</scala.version-specific.src>
+                <scala.version-specific.src1>src/main/scala-2</scala.version-specific.src1>
+                <scala.version-specific.src2>src/main/scala-2.13</scala.version-specific.src2>
+                <scala.version-specific.test-src>src/main/scala-2</scala.version-specific.test-src>
             </properties>
         </profile>
         <profile>
@@ -500,6 +518,19 @@
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>scala-3</id>
+            <properties>
+                <scala.major>3</scala.major>
+                <scala.compat.version>3</scala.compat.version>
+                <scala.compat.library.version>3.3.6</scala.compat.library.version>
+                <scala.version-specific.src1>src/main/scala-3</scala.version-specific.src1>
+                <!-- Maven requires this duplicate to be present -->
+                <scala.version-specific.src2>src/main/scala-3</scala.version-specific.src2>
+                <scala.version-specific.test-src>src/integrationTest/scala-3</scala.version-specific.test-src>
+                <scala.scala-maven-plugin.rules></scala.scala-maven-plugin.rules>
+            </properties>
         </profile>
     </profiles>
 

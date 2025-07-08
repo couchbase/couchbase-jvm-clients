@@ -35,7 +35,7 @@ import scala.jdk.CollectionConverters._
   * @author Graham Pople
   * @since 1.0.0
   **/
-case class LookupInResult private (
+case class LookupInResult (
     private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
     transcoder: Transcoder

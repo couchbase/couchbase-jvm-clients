@@ -34,9 +34,7 @@ import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
 import com.couchbase.client.scala.util.DurationConversions._
 import com.couchbase.client.scala.util.FutureConversions
-import reactor.core.scala.publisher.SMono
-import reactor.core.scala.scheduler.ExecutionContextScheduler
-import reactor.core.scheduler.Scheduler
+import reactor.core.scheduler.{Scheduler, Schedulers}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration.{Duration, DurationInt}
@@ -81,9 +79,7 @@ object ClusterEnvironment {
       private[scala] val maxNumRequestsInRetry: Option[Int] = None,
       private[scala] val transcoder: Option[Transcoder] = None,
       private[scala] val propertyLoaders: Seq[PropertyLoader[
-        com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {
-          type SELF <: com.couchbase.client.core.env.CoreEnvironment.Builder[SELF]
-        }
+        JavaCoreEnvBuilder[_]
       ]] = Seq(),
       private[scala] val thresholdRequestTracerConfig: Option[ThresholdRequestTracerConfig] = None,
       private[scala] val loggingMeterConfig: Option[LoggingMeterConfig] = None,
@@ -231,9 +227,7 @@ object ClusterEnvironment {
       */
     def loaders(
         propertyLoaders: Seq[PropertyLoader[
-          com.couchbase.client.core.env.CoreEnvironment.Builder[SELF] forSome {
-            type SELF <: com.couchbase.client.core.env.CoreEnvironment.Builder[SELF]
-          }
+          JavaCoreEnvBuilder[_]
         ]]
     ): ClusterEnvironment.Builder = {
       copy(propertyLoaders = propertyLoaders)
@@ -354,7 +348,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   })
   private[scala] implicit val ec: ExecutionContextExecutor =
     ExecutionContext.fromExecutor(threadPool)
-  private[scala] val defaultScheduler = ExecutionContextScheduler(ec)
+  private[scala] val defaultScheduler = Schedulers.fromExecutorService(threadPool)
 
   private val coreBuilder = new CoreEnvironmentWrapper()
 
@@ -408,36 +402,11 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     *
     * @param timeout the timeout to wait maximum.
     */
-  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit =
-    shutdownReactive(timeout).block()
-
-  def shutdownReactive(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): SMono[Unit] = {
-    SMono.defer(() => {
-      if (owned) {
-        SMono.empty
-      } else {
-        shutdownInternal(timeout)
-      }
-    })
-  }
-
-  private[scala] def shutdownInternal(timeout: Duration): SMono[Unit] = {
-    SMono.defer(() => {
-      if (threadPool.isShutdown) {
-        SMono.empty
-      } else {
-        FutureConversions
-          .javaMonoToScalaMono(
-            coreEnv
-              .shutdownReactive(timeout)
-          )
-          .`then`(SMono.defer[Unit](() => {
-            threadPool.shutdownNow()
-            defaultScheduler.dispose()
-            SMono.empty
-          }))
-          .timeout(timeout)
-      }
-    })
+  def shutdown(timeout: Duration = coreEnv.timeoutConfig.disconnectTimeout): Unit = {
+    if (!threadPool.isShutdown) {
+      coreEnv.shutdown(timeout)
+      threadPool.shutdownNow()
+      defaultScheduler.dispose()
+    }
   }
 }

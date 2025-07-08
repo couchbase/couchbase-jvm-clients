@@ -51,16 +51,16 @@ want to build for different Scala versions, after the first `make` you can do th
 
 ```sh
 $ ./mvnw -Pscala-2.13 clean install
+$ ./mvnw -Pscala-3 clean install
 ```
 
 Notes:
-+ Couchbase provides, tests and supports builds for Scala 2.12 and 2.13.
-+ Default `scala.compat.`X properties are defined as properties in file [pom.xml]
-+ You can always go into one of the sub-directories like `core-io` to only build or test an
-individual project:
++ Couchbase provides, tests and supports builds for Scala 2.12, 2.13 and 3.3 LTS (which in turn supports apps built with Scala 3.3 through 3.7 inclusive).
++ The build is currently biased towards building Scala 2.12 by default, but this is likely to change in future.
++ You can build or test an individual project as so:
     ```shell script
     cd scala-client
-    ../mvnw -DskipTests clean install
+    ../mvnw -DskipTests clean install -pl scala-client -am
     ```
 + Use `-DskipTests` to skip testing.
 

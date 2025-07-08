@@ -301,3 +301,7 @@ case class SearchOptions(
     }
   }
 }
+
+object SearchOptions {
+  private[scala] val Default: SearchOptions = SearchOptions()
+}

@@ -14,6 +14,8 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll, RepeatedTest, Test, TestInsta
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import com.couchbase.client.scala.util.ujson
+import com.couchbase.client.scala.util.TestJsonImplicits._
 
 /** Helper class for generically testing expiry. */
 case class DocAndOperation(
@@ -40,7 +42,6 @@ class KeyValueExpirySpec extends ScalaIntegrationTest {
 
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll

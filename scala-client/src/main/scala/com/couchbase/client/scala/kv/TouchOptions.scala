@@ -75,3 +75,7 @@ case class TouchOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object TouchOptions {
+  private[scala] val Default: TouchOptions = TouchOptions()
+}

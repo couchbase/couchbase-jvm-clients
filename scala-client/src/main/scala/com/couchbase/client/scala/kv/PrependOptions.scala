@@ -104,3 +104,7 @@ case class PrependOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object PrependOptions {
+  private[scala] val Default: PrependOptions = PrependOptions()
+}

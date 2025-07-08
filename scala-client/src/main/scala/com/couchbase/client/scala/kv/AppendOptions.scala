@@ -103,3 +103,7 @@ case class AppendOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object AppendOptions {
+  private[scala] val Default: AppendOptions = AppendOptions()
+}

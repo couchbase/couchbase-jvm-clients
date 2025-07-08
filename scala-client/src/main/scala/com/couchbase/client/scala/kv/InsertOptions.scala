@@ -170,3 +170,7 @@ case class InsertOptions(
     copy(retryStrategy = Some(value))
   }
 }
+
+object InsertOptions {
+  private[scala] val Default: InsertOptions = InsertOptions()
+}

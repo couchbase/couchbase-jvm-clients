@@ -26,7 +26,6 @@ class ProjectionsSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
 
     val raw =
       """{

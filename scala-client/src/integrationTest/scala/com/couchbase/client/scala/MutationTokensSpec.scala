@@ -10,6 +10,8 @@ import org.junit.jupiter.api.{AfterAll, BeforeAll, Test, TestInstance}
 
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
+import com.couchbase.client.scala.util.TestJsonImplicits._
+import com.couchbase.client.scala.util.ujson
 
 @TestInstance(Lifecycle.PER_CLASS)
 class MutationTokensSpec extends ScalaIntegrationTest {
@@ -22,7 +24,6 @@ class MutationTokensSpec extends ScalaIntegrationTest {
     cluster = connectToCluster()
     val bucket = cluster.bucket(config.bucketname)
     coll = bucket.defaultCollection
-    bucket.waitUntilReady(WaitUntilReadyDefault)
   }
 
   @AfterAll
