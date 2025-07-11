@@ -477,7 +477,6 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
    *
    * @see #appTelemetryDisabled
    */
-  @Stability.Volatile
   public @Nullable URI appTelemetryEndpoint() {
     return appTelemetryEndpoint;
   }
@@ -485,7 +484,6 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
   /**
    * If true, the SDK should neither capture nor report application telemetry information.
    */
-  @Stability.Volatile
   public boolean appTelemetryDisabled() {
     return appTelemetryDisabled;
   }
@@ -1266,7 +1264,6 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
      * indicating where the SDK should report application telemetry, or null to let Couchbase Server decide.
      * @return this {@link Builder} for chaining purposes.
      */
-    @Stability.Volatile
     public SELF appTelemetryEndpoint(final @Nullable String appTelemetryEndpoint) {
       if (appTelemetryEndpoint == null) {
         this.appTelemetryEndpoint = null;
@@ -1290,7 +1287,6 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
      *
      * @return this {@link Builder} for chaining purposes.
      */
-    @Stability.Volatile
     public SELF disableAppTelemetry(boolean disable) {
       this.disableAppTelemetry = disable;
       return self();
