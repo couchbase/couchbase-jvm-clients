@@ -30,6 +30,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
+import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
@@ -152,16 +153,12 @@ public class CoreProtostellar implements CoreCouchbaseOps {
     return pool;
   }
 
-  private final Map<Core.ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
+  private final Map<ResponseMetricIdentifier, ValueRecorder> responseMetrics = new ConcurrentHashMap<>();
 
   @Stability.Internal
-  public ValueRecorder responseMetric(final Core.ResponseMetricIdentifier rmi) {
-    return responseMetrics.computeIfAbsent(rmi, key -> {
-      Map<String, String> tags = new HashMap<>(4);
-      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceTracingId());
-      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName());
-      return ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
-    });
+  public ValueRecorder responseMetric(final ResponseMetricIdentifier rmi) {
+    return responseMetrics.computeIfAbsent(rmi, key ->
+            ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, key.tags()));
   }
 
   @Override

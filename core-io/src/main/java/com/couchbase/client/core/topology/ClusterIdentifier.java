@@ -20,6 +20,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
+
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
@@ -57,6 +59,20 @@ public class ClusterIdentifier {
 
   public ClusterType clusterType() {
     return clusterType;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == null || getClass() != o.getClass()) return false;
+    ClusterIdentifier that = (ClusterIdentifier) o;
+    return Objects.equals(clusterUuid, that.clusterUuid)
+            && Objects.equals(clusterName, that.clusterName)
+            && Objects.equals(clusterType, that.clusterType);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(clusterUuid, clusterName, clusterType);
   }
 
   @Override

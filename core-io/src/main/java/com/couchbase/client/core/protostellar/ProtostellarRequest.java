@@ -21,7 +21,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
@@ -152,8 +154,16 @@ public class ProtostellarRequest<TGrpcRequest> {
 
     if (!(core.context().environment().meter() instanceof NoopMeter)) {
       long latency = logicalRequestLatency();
+      boolean isDefaultLoggingMeter = core.context().environment().meter() instanceof LoggingMeter;
       if (latency > 0) {
-        Core.ResponseMetricIdentifier rmi = new Core.ResponseMetricIdentifier(serviceType.id(), requestName);
+        ResponseMetricIdentifier rmi = new ResponseMetricIdentifier(serviceType.id(),
+                requestName,
+                // These are not currently supported for Protostellar
+                null, null, null,
+                null,
+                // This is not available on Protostellar
+                null,
+                isDefaultLoggingMeter);
         try {
           core.responseMetric(rmi).recordValue(latency);
         } catch (Exception e) {

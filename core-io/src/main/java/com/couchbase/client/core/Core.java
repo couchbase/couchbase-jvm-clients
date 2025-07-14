@@ -56,6 +56,7 @@ import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedE
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
+import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
@@ -75,7 +76,6 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.UnsupportedConfigMechanismException;
-import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.CoreCollectionManager;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -83,9 +83,6 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.query.QueryRequest;
-import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
@@ -118,11 +115,9 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -642,42 +637,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         exceptionSimpleName = err.getClass().getSimpleName().replace("Exception", "");
       }
     }
-    final String finalExceptionSimpleName = exceptionSimpleName;
     final ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(currentConfig);
 
-    return responseMetrics.computeIfAbsent(new ResponseMetricIdentifier(request, exceptionSimpleName, clusterIdent), key -> {
-      Map<String, String> tags = new HashMap<>(9);
-      tags.put(TracingIdentifiers.ATTR_SERVICE, key.serviceTracingId);
-      tags.put(TracingIdentifiers.ATTR_OPERATION, key.requestName);
-
-      // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
-      // assigning other labels.
-      if (!isDefaultLoggingMeter) {
-        // Crucial note for Micrometer:
-        // If we are ever going to output an attribute from a given JVM run then we must always
-        // output that attribute in this run.  Specifying null as an attribute value allows the OTel backend to strip it, and
-        // the Micrometer backend to provide a default value.
-        // See (internal to Couchbase) discussion here for full details:
-        // https://issues.couchbase.com/browse/CBSE-17070?focusedId=779820&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-779820
-        // If this rule is not followed, then Micrometer will silently discard some metrics.  Micrometer requires that
-        // every value output under a given metric has the same set of attributes.
-
-        tags.put(TracingIdentifiers.ATTR_NAME, key.bucketName);
-        tags.put(TracingIdentifiers.ATTR_SCOPE, key.scopeName);
-        tags.put(TracingIdentifiers.ATTR_COLLECTION, key.collectionName);
-
-        tags.put(TracingIdentifiers.ATTR_CLUSTER_UUID, key.clusterUuid);
-        tags.put(TracingIdentifiers.ATTR_CLUSTER_NAME, key.clusterName);
-
-        if (finalExceptionSimpleName != null) {
-          tags.put(TracingIdentifiers.ATTR_OUTCOME, finalExceptionSimpleName);
-        } else {
-          tags.put(TracingIdentifiers.ATTR_OUTCOME, "Success");
-        }
-      }
-
-      return coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, tags);
-    });
+    return responseMetrics.computeIfAbsent(ResponseMetricIdentifier.fromRequest(request, exceptionSimpleName, clusterIdent, isDefaultLoggingMeter),key ->
+            coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, key.tags()));
   }
 
   /**
@@ -1031,91 +994,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     @Nullable String bucketName
   ) {
     return WaitUntilReadyHelper.waitUntilReady(this, serviceTypes, timeout, desiredState, Optional.ofNullable(bucketName));
-  }
-
-  @Stability.Internal
-  public static class ResponseMetricIdentifier {
-
-    private final String serviceTracingId;
-    private final String requestName;
-    private final @Nullable String bucketName;
-    private final @Nullable String scopeName;
-    private final @Nullable String collectionName;
-    private final @Nullable String exceptionSimpleName;
-    private final @Nullable String clusterName;
-    private final @Nullable String clusterUuid;
-
-    ResponseMetricIdentifier(final Request<?> request, @Nullable String exceptionSimpleName, @Nullable ClusterIdentifier clusterIdent) {
-      this.exceptionSimpleName = exceptionSimpleName;
-      this.serviceTracingId = request.serviceTracingId();
-      this.requestName = request.name();
-      this.clusterName = clusterIdent == null ? null : clusterIdent.clusterName();
-      this.clusterUuid = clusterIdent == null ? null : clusterIdent.clusterUuid();
-      if (request instanceof KeyValueRequest) {
-        KeyValueRequest<?> kv = (KeyValueRequest<?>) request;
-        bucketName = request.bucket();
-        scopeName = kv.collectionIdentifier().scope().orElse(CollectionIdentifier.DEFAULT_SCOPE);
-        collectionName = kv.collectionIdentifier().collection().orElse(CollectionIdentifier.DEFAULT_SCOPE);
-      } else if (request instanceof QueryRequest) {
-        QueryRequest query = (QueryRequest) request;
-        bucketName = request.bucket();
-        scopeName = query.scope();
-        collectionName = null;
-      } else if (request instanceof ServerSearchRequest) {
-        ServerSearchRequest search = (ServerSearchRequest) request;
-        if (search.scope() != null) {
-          bucketName = search.scope().bucketName();
-          scopeName = search.scope().scopeName();
-        } else {
-          bucketName = null;
-          scopeName = null;
-        }
-        collectionName = null;
-      } else {
-        bucketName = null;
-        scopeName = null;
-        collectionName = null;
-      }
-    }
-
-    public ResponseMetricIdentifier(final String serviceTracingId, final String requestName) {
-      this.serviceTracingId = serviceTracingId;
-      this.requestName = requestName;
-      this.bucketName = null;
-      this.scopeName = null;
-      this.collectionName = null;
-      this.exceptionSimpleName = null;
-      this.clusterName = null;
-      this.clusterUuid = null;
-    }
-
-    public String serviceTracingId() {
-      return serviceTracingId;
-    }
-
-    public String requestName() {
-      return requestName;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) return true;
-      if (o == null || getClass() != o.getClass()) return false;
-      ResponseMetricIdentifier that = (ResponseMetricIdentifier) o;
-      return serviceTracingId.equals(that.serviceTracingId)
-        && Objects.equals(requestName, that.requestName)
-        && Objects.equals(bucketName, that.bucketName)
-        && Objects.equals(scopeName, that.scopeName)
-        && Objects.equals(collectionName, that.collectionName)
-        && Objects.equals(exceptionSimpleName, that.exceptionSimpleName)
-        && Objects.equals(clusterName, that.clusterName)
-        && Objects.equals(clusterUuid, that.clusterUuid);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(serviceTracingId, requestName, bucketName, scopeName, collectionName, exceptionSimpleName, clusterName, clusterUuid);
-    }
   }
 
   /**

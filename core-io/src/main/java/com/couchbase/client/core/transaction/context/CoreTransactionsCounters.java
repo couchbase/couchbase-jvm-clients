@@ -19,52 +19,21 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.metrics.LoggingMeter;
+import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.topology.ClusterIdentifier;
 import com.couchbase.client.core.topology.ClusterIdentifierUtil;
-import com.couchbase.client.core.util.CbCollections;
-import reactor.util.annotation.Nullable;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.couchbase.client.core.cnc.TracingIdentifiers.METER_TRANSACTION_ATTEMPTS;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.METER_TRANSACTION_TOTAL;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTIONS;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.*;
 
 @Stability.Internal
 public class CoreTransactionsCounters {
-    @Stability.Internal
-    public static class TransactionMetricIdentifier {
-
-        private final @Nullable String clusterName;
-        private final @Nullable String clusterUuid;
-
-        TransactionMetricIdentifier(@Nullable ClusterIdentifier clusterIdent) {
-            clusterName = clusterIdent == null ? null : clusterIdent.clusterName();
-            clusterUuid = clusterIdent == null ? null : clusterIdent.clusterUuid();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            TransactionMetricIdentifier that = (TransactionMetricIdentifier) o;
-            return Objects.equals(clusterName, that.clusterName)
-                    && Objects.equals(clusterUuid, that.clusterUuid);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(clusterName, clusterUuid);
-        }
-    }
-
-    private final Map<TransactionMetricIdentifier, Counter> transactionsMetrics = new ConcurrentHashMap<>();
-    private final Map<TransactionMetricIdentifier, Counter> attemptMetrics = new ConcurrentHashMap<>();
+    private final Map<ResponseMetricIdentifier, Counter> transactionsMetrics = new ConcurrentHashMap<>();
+    private final Map<ResponseMetricIdentifier, Counter> attemptMetrics = new ConcurrentHashMap<>();
     private final Core core;
     private final Meter meter;
 
@@ -81,19 +50,18 @@ public class CoreTransactionsCounters {
         return genericCounter(METER_TRANSACTION_TOTAL, transactionsMetrics);
     }
 
-    private Counter genericCounter(String name, Map<TransactionMetricIdentifier, Counter> metricsMap) {
+    private Counter genericCounter(String name, Map<ResponseMetricIdentifier, Counter> metricsMap) {
         ClusterConfig config = core.configurationProvider().config();
         ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(config);
-        return metricsMap.computeIfAbsent(new TransactionMetricIdentifier(clusterIdent), id -> {
-            HashMap<String, String> tags = new HashMap<>();
-            tags.put(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
-            if (id.clusterName != null) {
-                tags.put(TracingIdentifiers.ATTR_CLUSTER_NAME, id.clusterName);
-            }
-            if (id.clusterUuid != null) {
-                tags.put(TracingIdentifiers.ATTR_CLUSTER_UUID, id.clusterUuid);
-            }
-            return meter.counter(name, tags);
-        });
+        boolean isDefaultLoggingMeter = core.context().environment().meter() instanceof LoggingMeter;
+        ResponseMetricIdentifier rmi = new ResponseMetricIdentifier(SERVICE_TRANSACTIONS,
+                TRANSACTION_OP,
+                // Transactions are not associated with any one collection - they can span
+                null, null, null,
+                // Including the failure cause is not currently supported
+                null,
+                clusterIdent,
+                isDefaultLoggingMeter);
+        return metricsMap.computeIfAbsent(rmi, id -> meter.counter(name, id.tags()));
     }
 }
