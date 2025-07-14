@@ -49,7 +49,7 @@ import scala.util.{Failure, Success};
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
 class AsyncTransactionAttemptContext private[scala] (
-    private[scala] val internal: CoreTransactionAttemptContext,
+    private[client] val internal: CoreTransactionAttemptContext,
     private val environment: ClusterEnvironment
 ) {
   implicit val executionContext: ExecutionContext = environment.ec

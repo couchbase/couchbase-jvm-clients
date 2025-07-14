@@ -63,8 +63,8 @@ object TransactionBlocking {
     txn.run(connection, req, None, performanceMode, spans)
   }
 
-  private def getLogger(ctx: TransactionAttemptContext) = try {
-    ctx.internal.internal.logger
+  private def getLogger(ctx: TransactionAttemptContext) = {
+    ctx.logger()
   }
 }
 class TransactionBlocking(executor: Option[TransactionCommandExecutor])
@@ -99,7 +99,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         if (!performanceMode) logger.info("Reached end of all operations and lambda")
         Success()
       },
-      ptcb
+      ptcb.orNull
     )
     if (TransactionMarkerOwner.get.block.isPresent)
       throw new InternalPerformerFailure(

@@ -269,7 +269,7 @@ class ScalaPerformer extends CorePerformer {
     new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
     // [end:1.5.0]
     // [if:<1.5.0]
-    // ? null
+    //? null
     // [end]
   }
 

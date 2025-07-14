@@ -15,22 +15,14 @@
  */
 package com.couchbase.client.scala.transactions
 
-import com.couchbase.client.core.cnc.TracingIdentifiers.{
-  TRANSACTION_OP_INSERT,
-  TRANSACTION_OP_REMOVE,
-  TRANSACTION_OP_REPLACE
-}
+import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
+import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
-import com.couchbase.client.scala.transactions.config.{
-  TransactionGetOptions,
-  TransactionGetReplicaFromPreferredServerGroupOptions,
-  TransactionInsertOptions,
-  TransactionReplaceOptions
-}
+import com.couchbase.client.scala.transactions.config.{TransactionGetOptions, TransactionGetReplicaFromPreferredServerGroupOptions, TransactionInsertOptions, TransactionReplaceOptions}
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 import com.couchbase.client.scala.{Collection, Scope}
@@ -213,5 +205,9 @@ class TransactionAttemptContext private[scala] (
       options: TransactionQueryOptions
   ): Try[TransactionQueryResult] = {
     AsyncUtils.block(internal.query(if (scope == null) null else scope.async, statement, options))
+  }
+
+  private[client] def logger(): CoreTransactionLogger = {
+    internal.internal.logger()
   }
 }
