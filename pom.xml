@@ -210,10 +210,10 @@
         <module>columnar-java-client</module>
         <!-- Uncomment next lines to include the FIT performers.  They are not included by default as they require
         a) an externally built lib and b) JDK 17 -->
-         <module>core-fit-performer</module>
+<!--         <module>core-fit-performer</module>-->
 <!--         <module>java-fit-performer</module>-->
 <!--         <module>kotlin-fit-performer</module>-->
-         <module>scala-fit-performer</module>
+<!--         <module>scala-fit-performer</module>-->
 <!--         <module>columnar-fit-performer-shared</module>-->
 <!--         <module>columnar-java-fit-performer</module>-->
     </modules>
