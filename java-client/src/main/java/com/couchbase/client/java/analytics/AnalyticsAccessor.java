@@ -22,8 +22,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
-import com.couchbase.client.core.topology.ClusterType;
+import com.couchbase.client.core.topology.ClusterIdentifier;
 import com.couchbase.client.java.codec.JsonSerializer;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -85,17 +86,17 @@ public class AnalyticsAccessor {
 
     return core.waitForClusterTopology(timeout)
       .mapNotNull(clusterTopology -> {
-        ClusterType type = ClusterType.from(clusterTopology.id());
-        if (type.isCouchbaseServer()) {
-          return null; // success! complete the empty mono.
+        if (isEnterpriseAnalytics(clusterTopology.id())) {
+          throw new CouchbaseException(
+            "This SDK is for Couchbase Server (operational) clusters, but the remote cluster is an Enterprise Analytics cluster." +
+              " Please use the Enterprise Analytics SDK to access this cluster."
+          );
         }
-
-        String message = "This SDK is for Couchbase Server (operational) clusters, but the remote cluster type is '" + type + "'.";
-        if (type.name().startsWith("Enterprise Analytics")) {
-          message += " Please use the Enterprise Analytics SDK to access this cluster.";
-        }
-
-        throw new CouchbaseException(message);
+        return null; // success! complete the empty mono.
       });
+  }
+
+  private static boolean isEnterpriseAnalytics(@Nullable ClusterIdentifier clusterId) {
+    return clusterId != null && "analytics".equals(clusterId.product());
   }
 }

@@ -29,12 +29,12 @@ import static java.util.Objects.requireNonNull;
 public class ClusterIdentifier {
   private final String clusterUuid;
   private final String clusterName;
-  private final ClusterType clusterType;
+  private final String product;
 
-  ClusterIdentifier(String clusterUuid, String clusterName, ClusterType product) {
+  ClusterIdentifier(String clusterUuid, String clusterName, String product) {
     this.clusterUuid = requireNonNull(clusterUuid);
     this.clusterName = requireNonNull(clusterName);
-    this.clusterType = requireNonNull(product);
+    this.product = requireNonNull(product);
   }
 
   public static @Nullable ClusterIdentifier parse(ObjectNode config) {
@@ -44,9 +44,10 @@ public class ClusterIdentifier {
       return null;
     }
 
-    JsonNode prodName = config.path("prodName"); // field added in Couchbase Server 8.0.
-    ClusterType type = ClusterType.of(prodName.textValue());
-    return new ClusterIdentifier(clusterUuid.asText(), clusterName.asText(), type);
+    // Field "prod" added in Couchbase Server 8.0 (value = "server") / Enterprise Analytics 1.0 (value = "analytics").
+    // Assume anything that doesn't set it is an older version of Couchbase Server.
+    String prod = config.path("prod").asText("server");
+    return new ClusterIdentifier(clusterUuid.asText(), clusterName.asText(), prod);
   }
 
   public String clusterUuid() {
@@ -57,8 +58,8 @@ public class ClusterIdentifier {
     return clusterName;
   }
 
-  public ClusterType clusterType() {
-    return clusterType;
+  public String product() {
+    return product;
   }
 
   @Override
@@ -67,12 +68,12 @@ public class ClusterIdentifier {
     ClusterIdentifier that = (ClusterIdentifier) o;
     return Objects.equals(clusterUuid, that.clusterUuid)
             && Objects.equals(clusterName, that.clusterName)
-            && Objects.equals(clusterType, that.clusterType);
+            && Objects.equals(product, that.product);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(clusterUuid, clusterName, clusterType);
+    return Objects.hash(clusterUuid, clusterName, product);
   }
 
   @Override
@@ -80,7 +81,7 @@ public class ClusterIdentifier {
     return "ClusterIdent{" +
       "clusterUuid='" + clusterUuid + '\'' +
       ", clusterName='" + redactMeta(clusterName) + '\'' +
-      ", clusterType='" + clusterType + '\'' +
+      ", product='" + product + '\'' +
       '}';
   }
 }
