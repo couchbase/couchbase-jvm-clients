@@ -18,8 +18,7 @@ package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
 
-/**
-  * Allows configuring and customizing the compression configuration.
+/** Allows configuring and customizing the compression configuration.
   *
   * @param enabled  If compression is enabled or not.
   * @param minSize  The minimum size when compression should be performed.

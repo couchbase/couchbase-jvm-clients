@@ -24,7 +24,7 @@ import scala.util.{Try, Failure, Success}
 import com.couchbase.client.scala.{AsyncScope, ScopeBase}
 
 class Scope private[scala] (val async: AsyncScope, val bucketName: String) extends ScopeBase {
-  
+
   /** Performs a Full Text Search (FTS) query.
     *
     * This can be used to perform a traditional FTS query, and/or a vector search.

@@ -95,8 +95,7 @@ case class IoEnvironment(
     copy(nativeIoEnabled = Some(nativeIoEnabled))
   }
 
-  /**
-    * Overrides the number of threads used per event loop.
+  /** Overrides the number of threads used per event loop.
     *
     * If not manually overridden, a fair thread count is calculated.
     *

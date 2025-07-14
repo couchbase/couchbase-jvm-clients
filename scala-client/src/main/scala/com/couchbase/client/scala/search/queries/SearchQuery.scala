@@ -77,7 +77,8 @@ object SearchQuery {
   /** An FTS query that matches documents on a range of values. At least one bound is required, and the
     * inclusiveness of each bound can be configured.
     *
-    * At least one of min and max must be provided. */
+    * At least one of min and max must be provided.
+    */
   def termRange: TermRangeQuery = TermRangeQuery()
 
   /** An FTS query that matches documents on a range of values. At least one bound is required, and the

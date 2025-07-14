@@ -27,16 +27,14 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 import com.couchbase.client.scala.util.DurationConversions._
 
-
 /** Represents a Couchbase bucket resource.
   *
   * Applications should not create these manually, but instead use the functions in [[Cluster]].
-  *
   */
 class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
-    lazy val collections = new CollectionManager(async.collections)
+  lazy val collections = new CollectionManager(async.collections)
 
-    /** Reactive variant of this API (Reactor-based). */
+  /** Reactive variant of this API (Reactor-based). */
   lazy val reactive: ReactiveBucket = new ReactiveBucket(async)
 
   /** Manager for view design documents, exposed via the reactive layer. */
@@ -85,7 +83,6 @@ class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
     AsyncUtils.block(async.viewQuery(designDoc, viewName, timeout))
   }
 
-
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
     * Note that this operation performs active I/O against services and endpoints to assess their health. If you do
@@ -124,7 +121,10 @@ class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
     * @param timeout the maximum time to wait until readiness.
     * @param options options to customize the wait
     */
-  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default): Try[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default
+  ): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, options))
   }
-} 
+}

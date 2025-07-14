@@ -62,7 +62,7 @@ trait ClusterBase { this: Cluster =>
 
   /** Access an asynchronous version of this API. */
   val async = new AsyncCluster(environment, authenticator, connectionString)
-  
+
   lazy val transactions = new Transactions(
     new CoreTransactionsReactive(
       async.core,

@@ -46,14 +46,14 @@ import scala.jdk.CollectionConverters._
   * @define Same             This reactive programming version performs the same functionality and takes the same
   *                          parameters, but returns the same result object asynchronously in a Project Reactor `SMono`.
   *                          See the documentation for the matching method in [[Collection]].
-  * */
+  */
 class ReactiveCollection(async: AsyncCollection) {
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
   private val environment                              = async.environment
   private implicit val ec: ExecutionContext            = async.ec
   private[scala] val kvOps                             = async.kvOps
-  private[scala] lazy val collectionIdentifier =
+  private[scala] lazy val collectionIdentifier         =
     new CollectionIdentifier(bucketName, Some(scopeName).asJava, Some(name).asJava)
 
   /** Manage query indexes for this collection */
@@ -65,46 +65,53 @@ class ReactiveCollection(async: AsyncCollection) {
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
-    * $Same */
+    * $Same
+    */
   def insert[T](
       id: String,
       content: T,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.insertReactive(
-        makeCommonOptions(timeout),
-        id,
-        encoder(environment.transcoder, serializer, content),
-        convert(durability),
-        CoreExpiry.NONE
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.insertReactive(
+          makeCommonOptions(timeout),
+          id,
+          encoder(environment.transcoder, serializer, content),
+          convert(durability),
+          CoreExpiry.NONE
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Inserts a full document into this collection, if it does not exist already.
     *
-    * $Same */
+    * $Same
+    */
   def insert[T](
       id: String,
       content: T,
       options: InsertOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.insertReactive(
-        convert(options),
-        id,
-        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-        convert(options.durability),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime)
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.insertReactive(
+          convert(options),
+          id,
+          encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+          convert(options.durability),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime)
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
-    * $Same */
+    * $Same
+    */
   def replace[T](
       id: String,
       content: T,
@@ -112,131 +119,153 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.replaceReactive(
-        makeCommonOptions(timeout),
-        id,
-        encoder(environment.transcoder, serializer, content),
-        cas,
-        convert(durability),
-        CoreExpiry.NONE,
-        false
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.replaceReactive(
+          makeCommonOptions(timeout),
+          id,
+          encoder(environment.transcoder, serializer, content),
+          cas,
+          convert(durability),
+          CoreExpiry.NONE,
+          false
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
-    * $Same */
+    * $Same
+    */
   def replace[T](
       id: String,
       content: T,
       options: ReplaceOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.replaceReactive(
-        convert(options),
-        id,
-        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-        options.cas,
-        convert(options.durability),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-        options.preserveExpiry
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.replaceReactive(
+          convert(options),
+          id,
+          encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+          options.cas,
+          convert(options.durability),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+          options.preserveExpiry
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
     *
-    * $Same */
+    * $Same
+    */
   def upsert[T](
       id: String,
       content: T,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.upsertReactive(
-        makeCommonOptions(timeout),
-        id,
-        encoder(environment.transcoder, serializer, content),
-        convert(durability),
-        CoreExpiry.NONE,
-        false
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.upsertReactive(
+          makeCommonOptions(timeout),
+          id,
+          encoder(environment.transcoder, serializer, content),
+          convert(durability),
+          CoreExpiry.NONE,
+          false
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Upserts the contents of a full document in this collection.
     *
-    * $Same */
+    * $Same
+    */
   def upsert[T](
       id: String,
       content: T,
       options: UpsertOptions
   )(implicit serializer: JsonSerializer[T]): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.upsertReactive(
-        convert(options),
-        id,
-        encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
-        convert(options.durability),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-        options.preserveExpiry
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.upsertReactive(
+          convert(options),
+          id,
+          encoder(options.transcoder.getOrElse(environment.transcoder), serializer, content),
+          convert(options.durability),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+          options.preserveExpiry
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
     *
-    * $Same */
+    * $Same
+    */
   def remove(
       id: String,
       cas: Long = 0,
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.removeReactive(makeCommonOptions(timeout), id, cas, convert(durability)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.removeReactive(makeCommonOptions(timeout), id, cas, convert(durability)))
       .map(result => convert(result))
   }
 
   /** Removes a document from this collection, if it exists.
     *
-    * $Same */
+    * $Same
+    */
   def remove(
       id: String,
       options: RemoveOptions
   ): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.removeReactive(convert(options), id, options.cas, convert(options.durability)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.removeReactive(convert(options), id, options.cas, convert(options.durability)))
       .map(result => convert(result))
   }
 
   /** Fetches a full document from this collection.
     *
-    * $Same */
+    * $Same
+    */
   def get(
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getReactive(makeCommonOptions(timeout), id, AsyncCollectionBase.EmptyList, false))
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.getReactive(makeCommonOptions(timeout), id, AsyncCollectionBase.EmptyList, false)
+      )
       .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection.
     *
-    * $Same */
+    * $Same
+    */
   def get(
       id: String,
       options: GetOptions
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getReactive(convert(options), id, options.project.asJava, options.withExpiry))
+    CoreCommonConvertersScala2
+      .convert(kvOps.getReactive(convert(options), id, options.project.asJava, options.withExpiry))
       .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
-    * $Same */
+    * $Same
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
@@ -245,85 +274,98 @@ class ReactiveCollection(async: AsyncCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[MutateInResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.subdocMutateReactive(
-        makeCommonOptions(timeout),
-        id,
-        () => spec.map(v => v.convert).asJava,
-        convert(document),
-        cas,
-        convert(durability),
-        CoreExpiry.NONE,
-        false,
-        false,
-        false
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.subdocMutateReactive(
+          makeCommonOptions(timeout),
+          id,
+          () => spec.map(v => v.convert).asJava,
+          convert(document),
+          cas,
+          convert(durability),
+          CoreExpiry.NONE,
+          false,
+          false,
+          false
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** SubDocument mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
-    * $Same */
+    * $Same
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
       options: MutateInOptions
   ): SMono[MutateInResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.subdocMutateReactive(
-        convert(options),
-        id,
-        () => spec.map(v => v.convert).asJava,
-        convert(options.document),
-        options.cas,
-        convert(options.durability),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-        options.preserveExpiry,
-        options.accessDeleted,
-        options.createAsDeleted
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.subdocMutateReactive(
+          convert(options),
+          id,
+          () => spec.map(v => v.convert).asJava,
+          convert(options.document),
+          options.cas,
+          convert(options.durability),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+          options.preserveExpiry,
+          options.accessDeleted,
+          options.createAsDeleted
+        )
       )
-    ).map(result => convert(result))
+      .map(result => convert(result))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * $Same */
+    * $Same
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getAndLockReactive(makeCommonOptions(timeout), id, convert(lockTime)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.getAndLockReactive(makeCommonOptions(timeout), id, convert(lockTime)))
       .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * $Same */
+    * $Same
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
       options: GetAndLockOptions
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getAndLockReactive(convert(options), id, convert(lockTime)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.getAndLockReactive(convert(options), id, convert(lockTime)))
       .map(result => convert(result, environment, options.transcoder))
   }
 
   /** Unlock a locked document.
     *
-    * $Same */
+    * $Same
+    */
   def unlock(
       id: String,
       cas: Long,
       timeout: Duration = kvReadTimeout
   ): SMono[Unit] = {
-    CoreCommonConvertersScala2.convert(kvOps.unlockReactive(makeCommonOptions(timeout), id, cas)).map(_ => ())
+    CoreCommonConvertersScala2
+      .convert(kvOps.unlockReactive(makeCommonOptions(timeout), id, cas))
+      .map(_ => ())
   }
 
   /** Unlock a locked document.
     *
-    * $Same */
+    * $Same
+    */
   def unlock(
       id: String,
       cas: Long,
@@ -334,32 +376,37 @@ class ReactiveCollection(async: AsyncCollection) {
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getAndTouchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.getAndTouchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
       .map(result => convert(result, environment, None))
   }
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
       options: GetAndTouchOptions
   ): SMono[GetResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.getAndTouchReactive(convert(options), id, convertExpiry(expiry)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.getAndTouchReactive(convert(options), id, convertExpiry(expiry)))
       .map(result => convert(result, environment, options.transcoder))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * $Same */
+    * $Same
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -371,7 +418,8 @@ class ReactiveCollection(async: AsyncCollection) {
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * $Same */
+    * $Same
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -391,22 +439,25 @@ class ReactiveCollection(async: AsyncCollection) {
     * This overload provides only the most commonly used options.  If you need to configure something more
     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
     *
-    * $Same */
+    * $Same
+    */
   @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
       timeout: Duration = kvReadTimeout
   ): SMono[LookupInReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps
-        .subdocGetAnyReplicaReactive(
-          makeCommonOptions(timeout),
-          id,
-          LookupInSpec.map(spec).asJava,
-          CoreReadPreference.NO_PREFERENCE
-        )
-    ).map(result => convertLookupInReplica(result, environment))
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps
+          .subdocGetAnyReplicaReactive(
+            makeCommonOptions(timeout),
+            id,
+            LookupInSpec.map(spec).asJava,
+            CoreReadPreference.NO_PREFERENCE
+          )
+      )
+      .map(result => convertLookupInReplica(result, environment))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -420,21 +471,24 @@ class ReactiveCollection(async: AsyncCollection) {
     * This overload provides only the most commonly used options.  If you need to configure something more
     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
     *
-    * $Same */
+    * $Same
+    */
   @SinceCouchbase("7.6")
   def lookupInAnyReplica(
       id: String,
       spec: collection.Seq[LookupInSpec],
       options: LookupInAnyReplicaOptions
   ): SMono[LookupInReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.subdocGetAnyReplicaReactive(
-        convert(options),
-        id,
-        LookupInSpec.map(spec).asJava,
-        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.subdocGetAnyReplicaReactive(
+          convert(options),
+          id,
+          LookupInSpec.map(spec).asJava,
+          options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+        )
       )
-    ).map(result => convertLookupInReplica(result, environment))
+      .map(result => convertLookupInReplica(result, environment))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -448,22 +502,25 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * This variant will read and return all replicas of the document.
     *
-    * $Same */
+    * $Same
+    */
   @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
       timeout: Duration = kvReadTimeout
   ): SFlux[LookupInReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps
-        .subdocGetAllReplicasReactive(
-          makeCommonOptions(timeout),
-          id,
-          LookupInSpec.map(spec).asJava,
-          CoreReadPreference.NO_PREFERENCE
-        )
-    ).map(result => convertLookupInReplica(result, environment))
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps
+          .subdocGetAllReplicasReactive(
+            makeCommonOptions(timeout),
+            id,
+            LookupInSpec.map(spec).asJava,
+            CoreReadPreference.NO_PREFERENCE
+          )
+      )
+      .map(result => convertLookupInReplica(result, environment))
   }
 
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
@@ -477,122 +534,147 @@ class ReactiveCollection(async: AsyncCollection) {
     *
     * This variant will read and return all replicas of the document.
     *
-    * $Same */
+    * $Same
+    */
   @SinceCouchbase("7.6")
   def lookupInAllReplicas(
       id: String,
       spec: collection.Seq[LookupInSpec],
       options: LookupInAllReplicasOptions
   ): SFlux[LookupInReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.subdocGetAllReplicasReactive(
-        convert(options),
-        id,
-        LookupInSpec.map(spec).asJava,
-        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.subdocGetAllReplicasReactive(
+          convert(options),
+          id,
+          LookupInSpec.map(spec).asJava,
+          options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+        )
       )
-    ).map(result => convertLookupInReplica(result, environment))
+      .map(result => convertLookupInReplica(result, environment))
   }
 
   /** Retrieves any available version of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAnyReplica(
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[GetReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.getAnyReplicaReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
-    ).map(result => convertReplica(result, environment, None))
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps
+          .getAnyReplicaReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
+      )
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves any available version of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAnyReplica(
       id: String,
       options: GetAnyReplicaOptions
   ): SMono[GetReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.getAnyReplicaReactive(
-        convert(options),
-        id,
-        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.getAnyReplicaReactive(
+          convert(options),
+          id,
+          options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+        )
       )
-    ).map(result => convertReplica(result, environment, options.transcoder))
+      .map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Retrieves all available versions of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAllReplicas(
       id: String,
       timeout: Duration = kvReadTimeout
   ): SFlux[GetReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.getAllReplicasReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
-    ).map(result => convertReplica(result, environment, None))
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps
+          .getAllReplicasReactive(makeCommonOptions(timeout), id, CoreReadPreference.NO_PREFERENCE)
+      )
+      .map(result => convertReplica(result, environment, None))
   }
 
   /** Retrieves all available versions of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAllReplicas(
       id: String,
       options: GetAllReplicasOptions
   ): SFlux[GetReplicaResult] = {
-    CoreCommonConvertersScala2.convert(
-      kvOps.getAllReplicasReactive(
-        convert(options),
-        id,
-        options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.getAllReplicasReactive(
+          convert(options),
+          id,
+          options.readPreference.map(_.toCore).getOrElse(CoreReadPreference.NO_PREFERENCE)
+        )
       )
-    ).map(result => convertReplica(result, environment, options.transcoder))
+      .map(result => convertReplica(result, environment, options.transcoder))
   }
 
   /** Updates the expiry of the document with the given id.
     *
-    * $Same */
+    * $Same
+    */
   def touch(
       id: String,
       expiry: Duration,
       timeout: Duration = kvReadTimeout
   ): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.touchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.touchReactive(makeCommonOptions(timeout), id, convertExpiry(expiry)))
       .map(result => convert(result))
   }
 
   /** Updates the expiry of the document with the given id.
     *
-    * $Same */
+    * $Same
+    */
   def touch(
       id: String,
       expiry: Duration,
       options: TouchOptions
   ): SMono[MutationResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.touchReactive(convert(options), id, convertExpiry(expiry)))
+    CoreCommonConvertersScala2
+      .convert(kvOps.touchReactive(convert(options), id, convertExpiry(expiry)))
       .map(result => convert(result))
   }
 
   /** Checks if a document exists.
     *
-    * $Same */
+    * $Same
+    */
   def exists(
       id: String,
       timeout: Duration = kvReadTimeout
   ): SMono[ExistsResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.existsReactive(makeCommonOptions(timeout), id))
+    CoreCommonConvertersScala2
+      .convert(kvOps.existsReactive(makeCommonOptions(timeout), id))
       .map(result => convert(result))
   }
 
   /** Checks if a document exists.
     *
-    * $Same */
+    * $Same
+    */
   def exists(
       id: String,
       options: ExistsOptions
   ): SMono[ExistsResult] = {
-    CoreCommonConvertersScala2.convert(kvOps.existsReactive(convert(options), id))
+    CoreCommonConvertersScala2
+      .convert(kvOps.existsReactive(convert(options), id))
       .map(result => convert(result))
   }
 

@@ -23,7 +23,7 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 import scala.jdk.CollectionConverters._
 
 /** The results of an FTS query, as returned by the reactive API. */
-case class ReactiveSearchResult (private val internal: CoreReactiveSearchResult) {
+case class ReactiveSearchResult(private val internal: CoreReactiveSearchResult) {
   def rows: SFlux[SearchRow] = SFlux(internal.rows).map(row => SearchRow(row))
 
   /** Any additional information related to the FTS query. */

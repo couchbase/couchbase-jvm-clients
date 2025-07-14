@@ -30,7 +30,7 @@ object ExpiryUtil {
   ): CoreExpiry = {
     expiryTime match {
       case Some(et) => CoreExpiry.of(et)
-      case _ =>
+      case _        =>
         expiry match {
           case null        => CoreExpiry.NONE
           case x: Duration => CoreExpiry.of(x)

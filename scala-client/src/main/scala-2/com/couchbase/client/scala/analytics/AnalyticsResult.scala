@@ -76,12 +76,11 @@ case class ReactiveAnalyticsResult(
     *   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
     */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): SFlux[T] = {
-    rows.map(
-      row =>
-        deserializer.deserialize(row.data()) match {
-          case Success(v)   => v
-          case Failure(err) => throw err
-        }
+    rows.map(row =>
+      deserializer.deserialize(row.data()) match {
+        case Success(v)   => v
+        case Failure(err) => throw err
+      }
     )
   }
 }

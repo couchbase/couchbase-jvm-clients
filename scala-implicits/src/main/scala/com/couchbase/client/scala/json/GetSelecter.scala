@@ -151,7 +151,8 @@ private[scala] object GetSelecter {
     new InvalidArgumentException(s"Expected array for '$name' but found an object", null, null)
 
   /** The user has requested a path e.g. user.addresses[0].name.  Walk through the JSON returning whatever's at that
-    * path. */
+    * path.
+    */
   @tailrec
   private[scala] def eval(
       cursor: Either[JsonObjectSafe, JsonArraySafe],
@@ -183,7 +184,7 @@ private[scala] object GetSelecter {
                 obj.arr(name) match {
                   case Success(arr) =>
                     arr.get(idx) match {
-                      case Success(v) => Success(v)
+                      case Success(v)   => Success(v)
                       case Failure(err) =>
                         Failure(
                           new InvalidArgumentException(
@@ -216,7 +217,7 @@ private[scala] object GetSelecter {
                   case Success(a: JsonArraySafe)  => eval(Right(a), xs)
                   case Success(o: JsonObject)     => eval(Left(JsonObjectSafe(o)), xs)
                   case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
-                  case Success(v: Any) =>
+                  case Success(v: Any)            =>
                     Failure(
                       new InvalidArgumentException(
                         s"Needed object or array at $name, but found '${v}'",
@@ -252,7 +253,7 @@ private[scala] object GetSelecter {
                       case Success(a: JsonArraySafe)  => eval(Right(a), xs)
                       case Success(o: JsonObject)     => eval(Left(JsonObjectSafe(o)), xs)
                       case Success(a: JsonArray)      => eval(Right(JsonArraySafe(a)), xs)
-                      case Success(v: Any) =>
+                      case Success(v: Any)            =>
                         Failure(
                           new InvalidArgumentException(
                             s"Needed object or array at $name[$idx], but found '${v}'",

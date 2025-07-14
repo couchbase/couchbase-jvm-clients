@@ -27,11 +27,11 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class AsyncScope private[scala] (
-                                  private[scala] val scopeName: String,
-                                  val bucketName: String,
-                                  private[scala] val couchbaseOps: CoreCouchbaseOps,
-                                  private[scala] val environment: ClusterEnvironment
-                                ) extends AsyncScopeBase {
+    private[scala] val scopeName: String,
+    val bucketName: String,
+    private[scala] val couchbaseOps: CoreCouchbaseOps,
+    private[scala] val environment: ClusterEnvironment
+) extends AsyncScopeBase {
 
   /** Performs a Full Text Search (FTS) query.
     *

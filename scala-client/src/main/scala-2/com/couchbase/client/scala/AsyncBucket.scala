@@ -46,11 +46,11 @@ class AsyncBucket private[scala] (
     private[scala] val couchbaseOps: CoreCouchbaseOps,
     private[scala] val environment: ClusterEnvironment
 ) extends AsyncBucketBase {
-  val reactive                                     = new ReactiveBucket(this)
+  val reactive = new ReactiveBucket(this)
 
   lazy val viewIndexes = new AsyncViewIndexManager(reactive.viewIndexes)
 
-    lazy val collections = new AsyncCollectionManager(this)
+  lazy val collections = new AsyncCollectionManager(this)
 
   /** Performs a view query against the cluster.
     *
@@ -103,7 +103,6 @@ class AsyncBucket private[scala] (
   ): Future[ViewResult] = {
     viewQuery(designDoc, viewName, ViewOptions(timeout = Some(timeout)))
   }
-
 
   /** Performs application-level ping requests with custom options against services in the Couchbase cluster.
     *
@@ -161,7 +160,10 @@ class AsyncBucket private[scala] (
     * @param timeout the maximum time to wait until readiness.
     * @param options options to customize the wait
     */
-  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default): Future[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default
+  ): Future[Unit] = {
     couchbaseOps match {
       case core: Core =>
         FutureConversions
@@ -178,4 +180,4 @@ class AsyncBucket private[scala] (
       case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
-} 
+}

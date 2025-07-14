@@ -89,7 +89,9 @@ class AsyncBucketManager(couchbaseOps: CoreCouchbaseOps)(implicit val ec: Execut
     import scala.jdk.CollectionConverters._
 
     FutureConversions
-      .javaCFToScalaFutureMappingExceptions(coreBucketManager.getAllBuckets(makeCommonOptions(timeout, retryStrategy)))
+      .javaCFToScalaFutureMappingExceptions(
+        coreBucketManager.getAllBuckets(makeCommonOptions(timeout, retryStrategy))
+      )
       .map(response => response.asScala.toSeq.map(kv => BucketSettings.fromCore(kv._2)))
   }
 

@@ -73,8 +73,8 @@ private[scala] object Role {
   def parse(json: ujson.Obj): Role = {
     val role                       = json("role").str
     val bucketName: Option[String] = Try(json("bucket_name").str).toOption
-    val scopeName                  = Role.parseWildcardOptional(Try(json("scope_name").str).toOption)
-    val collectionName             = Role.parseWildcardOptional(Try(json("collection_name").str).toOption)
+    val scopeName      = Role.parseWildcardOptional(Try(json("scope_name").str).toOption)
+    val collectionName = Role.parseWildcardOptional(Try(json("collection_name").str).toOption)
 
     Role(role, bucketName, scopeName, collectionName)
   }

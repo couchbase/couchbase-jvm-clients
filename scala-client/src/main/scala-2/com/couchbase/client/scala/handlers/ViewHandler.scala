@@ -36,8 +36,7 @@ import com.couchbase.client.scala.view.DesignDocumentNamespace.Development
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-/**
-  * Handles requests and responses for view operations.
+/** Handles requests and responses for view operations.
   *
   * @author Graham Pople
   * @since 1.0.0

@@ -53,26 +53,23 @@ class AsyncCollectionManager(private val bucket: AsyncBucket)(
       .javaCFToScalaFutureMappingExceptions(
         coreCollectionManager.getAllScopes(makeCommonOptions(timeout, retryStrategy))
       )
-      .map(
-        v =>
-          v.scopes()
-            .asScala
-            .toSeq // Required for 2.13
-            .map(
-              scope =>
-                ScopeSpec(
+      .map(v =>
+        v.scopes()
+          .asScala
+          .toSeq // Required for 2.13
+          .map(scope =>
+            ScopeSpec(
+              scope.name,
+              scope.collections.asScala.map(coll =>
+                CollectionSpec(
+                  coll.name,
                   scope.name,
-                  scope.collections.asScala.map(
-                    coll =>
-                      CollectionSpec(
-                        coll.name,
-                        scope.name,
-                        Option(coll.maxExpiry).map(v => Duration(v.longValue, TimeUnit.SECONDS)),
-                        Option(coll.history)
-                      )
-                  )
+                  Option(coll.maxExpiry).map(v => Duration(v.longValue, TimeUnit.SECONDS)),
+                  Option(coll.history)
                 )
+              )
             )
+          )
       )
   }
 

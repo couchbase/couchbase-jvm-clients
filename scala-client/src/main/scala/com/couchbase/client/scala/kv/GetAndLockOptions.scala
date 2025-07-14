@@ -68,7 +68,6 @@ case class GetAndLockOptions(
     *
     * The transcoder provides control over how JSON is converted and stored on the Couchbase Server.
     *
-    *
     * If not specified it will default to to `transcoder()` in the
     * [[com.couchbase.client.scala.env.ClusterEnvironment]].
     *

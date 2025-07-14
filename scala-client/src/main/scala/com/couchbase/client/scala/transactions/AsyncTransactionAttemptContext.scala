@@ -41,8 +41,7 @@ import com.couchbase.client.scala.{AsyncCollection, AsyncScope}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success};
 
-/**
-  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
+/** Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
   *
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
@@ -50,13 +49,12 @@ import scala.util.{Failure, Success};
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
 class AsyncTransactionAttemptContext private[scala] (
-    private val internal: CoreTransactionAttemptContext,
+    private[scala] val internal: CoreTransactionAttemptContext,
     private val environment: ClusterEnvironment
 ) {
   implicit val executionContext: ExecutionContext = environment.ec
 
-  /**
-    * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
+  /** Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
     * <p>
     * If the document does not exist it will raise a [[com.couchbase.client.core.error.DocumentNotFoundException]].
     *
@@ -93,7 +91,8 @@ class AsyncTransactionAttemptContext private[scala] (
   def getReplicaFromPreferredServerGroup(
       collection: AsyncCollection,
       id: String,
-      options: TransactionGetReplicaFromPreferredServerGroupOptions = TransactionGetReplicaFromPreferredServerGroupOptions.Default
+      options: TransactionGetReplicaFromPreferredServerGroupOptions =
+        TransactionGetReplicaFromPreferredServerGroupOptions.Default
   ): Future[TransactionGetResult] =
     FutureConversions
       .javaMonoToScalaFuture(
@@ -101,8 +100,7 @@ class AsyncTransactionAttemptContext private[scala] (
       )
       .map(result => TransactionGetResult(result, options.transcoder))
 
-  /**
-    * Inserts a new document into the specified Couchbase <code>collection</code>.
+  /** Inserts a new document into the specified Couchbase <code>collection</code>.
     *
     * @param collection the Couchbase collection in which to insert the doc
     * @param id         the document's unique ID
@@ -122,7 +120,7 @@ class AsyncTransactionAttemptContext private[scala] (
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => Future.failed(exception)
-      case Success(encoded) =>
+      case Success(encoded)   =>
         closeSpan(
           span,
           FutureConversions
@@ -140,8 +138,7 @@ class AsyncTransactionAttemptContext private[scala] (
     }
   }
 
-  /**
-    * Mutates the specified <code>doc</code> with new content.
+  /** Mutates the specified <code>doc</code> with new content.
     *
     * @param doc     the doc to be mutated
     * @param content $SupportedTypes
@@ -149,14 +146,18 @@ class AsyncTransactionAttemptContext private[scala] (
     * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
     * object is modified.
     */
-  def replace[T](doc: TransactionGetResult, content: T, options: TransactionReplaceOptions = TransactionReplaceOptions.Default)(
+  def replace[T](
+      doc: TransactionGetResult,
+      content: T,
+      options: TransactionReplaceOptions = TransactionReplaceOptions.Default
+  )(
       implicit serializer: JsonSerializer[T]
   ): Future[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span())
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => Future.failed(exception)
-      case Success(encoded) =>
+      case Success(encoded)   =>
         closeSpan(
           span,
           FutureConversions
@@ -183,8 +184,7 @@ class AsyncTransactionAttemptContext private[scala] (
     future
   }
 
-  /**
-    * Removes the specified <code>doc</code>.
+  /** Removes the specified <code>doc</code>.
     * <p>
     *
     * @param doc - the doc to be removed
@@ -207,8 +207,7 @@ class AsyncTransactionAttemptContext private[scala] (
     out
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -223,8 +222,7 @@ class AsyncTransactionAttemptContext private[scala] (
     query(null, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -240,8 +238,7 @@ class AsyncTransactionAttemptContext private[scala] (
     query(null, statement, options)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -260,8 +257,7 @@ class AsyncTransactionAttemptContext private[scala] (
     query(scope, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>

@@ -21,14 +21,12 @@ import com.couchbase.client.scala.transactions.internal.ErrorUtil
 import com.couchbase.client.scala.util.FutureConversions
 import reactor.core.scala.publisher.SMono;
 
-/**
-  * An asynchronous version of [[Transactions]], allowing transactions to be created and run in an asynchronous
+/** An asynchronous version of [[Transactions]], allowing transactions to be created and run in an asynchronous
   * manner.
   */
 class ReactiveTransactions private[scala] (private val internal: CoreTransactionsReactive) {
 
-  /**
-    * Runs the supplied transactional logic until success or failure.
+  /** Runs the supplied transactional logic until success or failure.
     * <p>
     * This is the asynchronous version of [[Transactions.run()]], so to cover the differences:
     * <ul>
@@ -66,17 +64,23 @@ class ReactiveTransactions private[scala] (private val internal: CoreTransaction
     FutureConversions
       .javaMonoToScalaMono(
         internal
-          .run(ctx => {
-            val lambdaResult = transactionLogic(new ReactiveTransactionAttemptContext(ctx))
-            lambdaResult.asJava
-          }, opts)
+          .run(
+            ctx => {
+              val lambdaResult = transactionLogic(new ReactiveTransactionAttemptContext(ctx))
+              lambdaResult.asJava
+            },
+            opts
+          )
       )
       .map(TransactionResult)
-      .onErrorResume((err: Throwable) => FutureConversions.javaMonoToScalaMono(ErrorUtil.convertTransactionFailedInternal[TransactionResult](err)))
+      .onErrorResume((err: Throwable) =>
+        FutureConversions.javaMonoToScalaMono(
+          ErrorUtil.convertTransactionFailedInternal[TransactionResult](err)
+        )
+      )
   }
 
-  /**
-    * A convenience overload of [[ReactiveTransactions.run()]] that provides default options.
+  /** A convenience overload of [[ReactiveTransactions.run()]] that provides default options.
     */
   def run(
       transactionLogic: (ReactiveTransactionAttemptContext) => SMono[Unit]

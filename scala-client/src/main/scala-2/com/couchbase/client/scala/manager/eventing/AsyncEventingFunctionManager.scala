@@ -40,7 +40,7 @@ class AsyncEventingFunctionManager(
 ) {
   private[scala] val DefaultTimeout       = env.timeoutConfig.managementTimeout
   private[scala] val DefaultRetryStrategy = env.retryStrategy
-  private val internal                    = new AsyncEventingFunctionManagerShared(env, couchbaseOps, None)
+  private val internal = new AsyncEventingFunctionManagerShared(env, couchbaseOps, None)
 
   /** Upsert an eventing function into the admin scope ('*.*').
     *

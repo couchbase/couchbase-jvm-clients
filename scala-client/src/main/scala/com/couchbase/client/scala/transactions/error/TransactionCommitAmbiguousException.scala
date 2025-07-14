@@ -18,8 +18,7 @@ package com.couchbase.client.scala.transactions.error;
 
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
 
-/**
-  * The transaction expired at the point of trying to commit it.  It is ambiguous whether the transaction has committed
+/** The transaction expired at the point of trying to commit it.  It is ambiguous whether the transaction has committed
   * or not.
   *
   * This error is result of inevitable and unavoidable edge cases when working with unreliable networks.  For example,

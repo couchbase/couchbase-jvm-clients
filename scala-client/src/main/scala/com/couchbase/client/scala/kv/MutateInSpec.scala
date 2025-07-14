@@ -100,7 +100,7 @@ object MutateInSpec {
       implicit serializer: JsonSerializer[T]
   ): ArrayAppend = {
     if (values.size == 1) {
-      val value = values.head
+      val value       = values.head
       val expandMacro = value match {
         case v: MutateInMacro => true
         case _                => false

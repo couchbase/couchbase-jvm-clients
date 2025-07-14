@@ -44,13 +44,14 @@ case class SearchRequest(
   def vectorSearch(vectorSearch: VectorSearch): SearchRequest = {
     this.vectorSearch match {
       case Some(_) =>
-        copy(deferredError = Some(
-          new InvalidArgumentException(
-            "Cannot specify multiple VectorSearch objects.  Note that a single VectorSearch can take multiple VectorQuery objects, allowing multiple vector queries to be run.",
-            null,
-            null
+        copy(deferredError =
+          Some(
+            new InvalidArgumentException(
+              "Cannot specify multiple VectorSearch objects.  Note that a single VectorSearch can take multiple VectorQuery objects, allowing multiple vector queries to be run.",
+              null,
+              null
+            )
           )
-        )
         )
       case None =>
         copy(vectorSearch = Some(vectorSearch))
@@ -66,13 +67,14 @@ case class SearchRequest(
   def searchQuery(searchQuery: SearchQuery): SearchRequest = {
     this.searchQuery match {
       case Some(_) =>
-        copy(deferredError = Some(
-          new InvalidArgumentException(
-            "Cannot specify multiple SearchQuery objects.  Note that a BooleanQuery can be used to combine multiple SearchQuery objects.",
-            null,
-            null
+        copy(deferredError =
+          Some(
+            new InvalidArgumentException(
+              "Cannot specify multiple SearchQuery objects.  Note that a BooleanQuery can be used to combine multiple SearchQuery objects.",
+              null,
+              null
+            )
           )
-        )
         )
       case None =>
         copy(searchQuery = Some(searchQuery))
@@ -82,7 +84,7 @@ case class SearchRequest(
   private[scala] def toCore: Try[CoreSearchRequest] =
     deferredError match {
       case Some(err) => Failure(err)
-      case None =>
+      case None      =>
         Success(
           new CoreSearchRequest(
             searchQuery.map(_.toCore).orNull,

@@ -22,8 +22,7 @@ import com.couchbase.client.scala.util.Coordinate
 
 import scala.jdk.CollectionConverters._
 
-/**
-  * An FTS query that finds all matches inside a given search polygon.
+/** An FTS query that finds all matches inside a given search polygon.
   */
 @SinceCouchbase("6.5.1")
 case class GeoPolygonQuery(

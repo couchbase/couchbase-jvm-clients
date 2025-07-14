@@ -75,8 +75,8 @@ class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps
                 case ResponseStatus.SUCCESS =>
                   val parsed: Try[DesignDocument] = Try {
                     upickle.default.read[ujson.Obj](response.content)
-                  }.flatMap(
-                    json => ReactiveViewIndexManager.parseDesignDocument(designDocName, json)
+                  }.flatMap(json =>
+                    ReactiveViewIndexManager.parseDesignDocument(designDocName, json)
                   )
 
                   parsed match {
@@ -143,7 +143,7 @@ class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps
       val options = CoreCommonOptions.of(timeout, retryStrategy, null)
       pathForDesignDocument(indexData.name, namespace) match {
         case Success(path) =>
-          val body = toJson(indexData)
+          val body    = toJson(indexData)
           val request = httpClient
             .put(CoreHttpPath.path(path), options)
             .json(Mapper.encodeAsBytes(body))
@@ -183,7 +183,7 @@ class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps
             .flatMap(response => {
               response.status match {
                 case ResponseStatus.SUCCESS => SMono.just(())
-                case _ =>
+                case _                      =>
                   SMono.error(
                     new CouchbaseException(
                       "Failed to drop design document [" +
@@ -224,8 +224,8 @@ class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
     getDesignDocument(designDocName, DesignDocumentNamespace.Development, timeout, retryStrategy)
-      .map(
-        doc => upsertDesignDocument(doc, DesignDocumentNamespace.Production, timeout, retryStrategy)
+      .map(doc =>
+        upsertDesignDocument(doc, DesignDocumentNamespace.Production, timeout, retryStrategy)
       )
   }
 
@@ -301,7 +301,7 @@ object ReactiveViewIndexManager {
 
   private[scala] def parseDesignDocument(name: String, node: ujson.Obj): Try[DesignDocument] = {
     Try {
-      val views = node("views").obj
+      val views                           = node("views").obj
       val v: collection.Map[String, View] = views.map(n => {
         val viewName   = n._1
         val viewMap    = n._2.obj("map").str

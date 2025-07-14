@@ -67,6 +67,6 @@ case class PingOptions(
 }
 
 object PingOptions {
-  private[scala] val AllServiceTypes = Set.empty[ServiceType]
+  private[scala] val AllServiceTypes      = Set.empty[ServiceType]
   private[scala] val Default: PingOptions = PingOptions()
 }

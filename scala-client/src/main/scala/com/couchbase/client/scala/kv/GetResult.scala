@@ -85,7 +85,7 @@ case class GetResult(
         // Projection
         tag.unapply(obj) match {
           case Some(o) => Success(o)
-          case _ =>
+          case _       =>
             Failure(
               new IllegalArgumentException(
                 "Projection results can currently only be returned with " +

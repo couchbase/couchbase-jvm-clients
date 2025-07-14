@@ -65,11 +65,12 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
   private def coreTry: Try[Core] = {
     couchbaseOps match {
       case core: Core => Success(core)
-      case _ => Failure(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+      case _          => Failure(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
 
-  private val httpClient: Try[CoreHttpClient] = coreTry.map(core => new CoreHttpClient(core, RequestTarget.manager()))
+  private val httpClient: Try[CoreHttpClient] =
+    coreTry.map(core => new CoreHttpClient(core, RequestTarget.manager()))
 
   private def sendRequest(
       method: HttpMethod,
@@ -78,12 +79,15 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       retryStrategy: RetryStrategy
   ): Future[CoreHttpResponse] = {
     val attempt: Try[Future[CoreHttpResponse]] = for {
-      core   <- coreTry
-      client <- httpClient
+      core    <- coreTry
+      client  <- httpClient
       builder <- method match {
-        case HttpMethod.GET    => Success(client.get(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case HttpMethod.DELETE => Success(client.delete(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case _ => Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
+        case HttpMethod.GET =>
+          Success(client.get(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+        case HttpMethod.DELETE =>
+          Success(client.delete(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+        case _ =>
+          Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
       }
     } yield FutureConversions.javaCFToScalaFuture(builder.exec(core))
 
@@ -98,12 +102,15 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       retryStrategy: RetryStrategy
   ): Future[CoreHttpResponse] = {
     val attempt: Try[Future[CoreHttpResponse]] = for {
-      core   <- coreTry
-      client <- httpClient
+      core    <- coreTry
+      client  <- httpClient
       builder <- method match {
-        case HttpMethod.PUT  => Success(client.put(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case HttpMethod.POST => Success(client.post(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case _ => Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
+        case HttpMethod.PUT =>
+          Success(client.put(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+        case HttpMethod.POST =>
+          Success(client.post(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+        case _ =>
+          Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
       }
     } yield FutureConversions.javaCFToScalaFuture(builder.exec(core))
 
@@ -124,7 +131,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
         } else
           checkStatus(response, "get " + domain + " user [" + redactUser(username) + "]") match {
             case Failure(err) => Future.failed(err)
-            case _ =>
+            case _            =>
               val value = CouchbasePickler.read[UserAndMetadata](response.content)
               Future.successful(value)
           }
@@ -151,7 +158,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       .flatMap(response => {
         checkStatus(response, "get all users") match {
           case Failure(err) => Future.failed(err)
-          case _ =>
+          case _            =>
             val value = CouchbasePickler.read[Seq[UserAndMetadata]](response.content)
             Future.successful(value)
         }
@@ -232,7 +239,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
 
         checkStatus(response, "get all roles") match {
           case Failure(err) => Future.failed(err)
-          case _ =>
+          case _            =>
             val converted = AsyncUserManager.convertRoles(response.content())
             val values    = CouchbasePickler.read[Seq[RoleAndDescription]](converted)
             Future.successful(values)
@@ -252,7 +259,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
         } else {
           checkStatus(response, "get group [" + redactMeta(groupName) + "]") match {
             case Failure(err) => Future.failed(err)
-            case _ =>
+            case _            =>
               val value = CouchbasePickler.read[Group](response.content)
               Future.successful(value)
           }
@@ -268,7 +275,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       .flatMap(response => {
         checkStatus(response, "get all groups") match {
           case Failure(err) => Future.failed(err)
-          case _ =>
+          case _            =>
             val values = CouchbasePickler.read[Seq[Group]](response.content())
             Future.successful(values)
         }
@@ -325,4 +332,3 @@ object AsyncUserManager {
     }
   }
 }
-

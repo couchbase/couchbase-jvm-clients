@@ -216,7 +216,7 @@ object JsonArraySafe {
     * Note that the operation is not performed recursively.  That is, any JSON objects or arrays inside the nested JSON
     * will be in the form `JsonObject` and `JsonArray`, rather than their *Safe equivalents.  See [[fromJsonSafe()]]
     * for a version that does that.  This method is deprecated for this reason.
-
+    *
     * @return `Failure(IllegalArgumentException)` if the String contains invalid JSON, otherwise `Success
     *         (JsonArraySafe)`
     */

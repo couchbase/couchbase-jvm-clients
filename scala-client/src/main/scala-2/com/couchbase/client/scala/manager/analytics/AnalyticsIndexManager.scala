@@ -144,7 +144,8 @@ class AnalyticsIndexManager(
 
   /** Create an analytics link.  See the [[AnalyticsLink]] documentation for the types of links that can be created.
     *
-    * If a link with the same name already exists, a `LinkExistsException` will be raised. */
+    * If a link with the same name already exists, a `LinkExistsException` will be raised.
+    */
   def createLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
@@ -160,7 +161,8 @@ class AnalyticsIndexManager(
     * be blanked out (empty strings) for security reasons.  It may be necessarily to reconstruct the original
     * [[AnalyticsLink]] with this security information before calling this method.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def replaceLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
@@ -172,7 +174,8 @@ class AnalyticsIndexManager(
 
   /** Drops (deletes) an existing analytics link.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def dropLink(
       linkName: String,
       dataverse: String,

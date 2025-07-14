@@ -119,16 +119,15 @@ class EnvironmentSpec {
   @Test
   def closeUnownedEnvironment(): Unit = {
     val clusterTry: Try[Cluster] = ClusterEnvironment.builder
-    // Customize settings here
-    .build
-      .flatMap(
-        env =>
-          Cluster.connect(
-            "1.2.3.4",
-            ClusterOptions
-              .create("username", "password")
-              .environment(env)
-          )
+      // Customize settings here
+      .build
+      .flatMap(env =>
+        Cluster.connect(
+          "1.2.3.4",
+          ClusterOptions
+            .create("username", "password")
+            .environment(env)
+        )
       )
 
     clusterTry match {

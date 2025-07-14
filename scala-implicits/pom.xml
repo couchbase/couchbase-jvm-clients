@@ -264,6 +264,29 @@
             </plugin>
 
             <plugin>
+                <groupId>org.antipathy</groupId>
+                <!-- use mvn-scalafmt_2.13 for all scala profiles including 3 -->
+                <artifactId>mvn-scalafmt_2.13</artifactId>
+                <version>${mvn-scalafmt.version}</version>
+                <configuration>
+                    <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
+                    <sourceDirectories>
+                        <param>${project.basedir}/src/main/scala</param>
+                        <param>${project.basedir}/src/main/scala-2</param>
+                        <param>${project.basedir}/src/main/scala-3</param>
+                    </sourceDirectories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>${maven-source-plugin.version}</version>

@@ -17,8 +17,7 @@ package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.core.api.search.queries.CoreWildcardQuery
 
-/**
-  * An FTS query that allows for simple matching using wildcard characters (* and ?).
+/** An FTS query that allows for simple matching using wildcard characters (* and ?).
   *
   * @since 1.0.0
   */

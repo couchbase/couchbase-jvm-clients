@@ -45,6 +45,6 @@ case class WaitUntilReadyOptions(
 }
 
 object WaitUntilReadyOptions {
-  private[scala] val AllServiceTypes = Set.empty[ServiceType]
+  private[scala] val AllServiceTypes                = Set.empty[ServiceType]
   private[scala] val Default: WaitUntilReadyOptions = WaitUntilReadyOptions()
 }

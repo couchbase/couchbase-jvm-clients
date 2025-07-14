@@ -19,5 +19,4 @@ package com.couchbase.client.scala
   *
   * Applications should not create these manually, but instead use the functions in [[Cluster]].
   */
-class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
-} 
+class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {}

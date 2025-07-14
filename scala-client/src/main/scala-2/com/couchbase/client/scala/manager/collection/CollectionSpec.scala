@@ -17,8 +17,7 @@ package com.couchbase.client.scala.manager.collection
 
 import scala.concurrent.duration.Duration
 
-/**
-  * Represents a collection.
+/** Represents a collection.
   *
   * @param name the name of the collection.
   * @param scopeName the name of the scope the collection is on.

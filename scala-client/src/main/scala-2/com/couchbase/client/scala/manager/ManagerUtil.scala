@@ -80,13 +80,20 @@ object ManagerUtil {
     val idempotent = method == HttpMethod.GET
     sendRequest(
       core,
-      new GenericManagerRequest(timeout, core.context, retryStrategy, () => {
-        val content = Unpooled.copiedBuffer(body.build, UTF_8)
-        val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-        req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
-        req.headers.add("Content-Length", content.readableBytes)
-        req
-      }, idempotent, null)
+      new GenericManagerRequest(
+        timeout,
+        core.context,
+        retryStrategy,
+        () => {
+          val content = Unpooled.copiedBuffer(body.build, UTF_8)
+          val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
+          req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
+          req.headers.add("Content-Length", content.readableBytes)
+          req
+        },
+        idempotent,
+        null
+      )
     )
   }
 

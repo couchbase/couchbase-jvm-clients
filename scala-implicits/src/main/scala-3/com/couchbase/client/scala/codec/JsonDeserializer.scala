@@ -57,7 +57,7 @@ object JsonDeserializer {
     override def deserialize(bytes: Array[Byte]): Try[String] = {
       Try(JacksonTransformers.MAPPER.readValue(bytes, classOf[String])) match {
         case Success(value) => Success(value)
-        case Failure(err) => Failure(new DecodingFailureException(err))
+        case Failure(err)   => Failure(new DecodingFailureException(err))
       }
     }
   }

@@ -26,8 +26,7 @@ import com.couchbase.client.scala.util.DurationConversions
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 
-/**
-  * Provides all configurable parameters for a single Couchbase transaction.
+/** Provides all configurable parameters for a single Couchbase transaction.
   */
 case class TransactionOptions(
     private val durabilityLevel: Option[DurabilityLevel] = None,
@@ -48,8 +47,7 @@ case class TransactionOptions(
     )
   }
 
-  /**
-    * Overrides the default durability set, for this transaction.  The level will be used for all operations inside the transaction.
+  /** Overrides the default durability set, for this transaction.  The level will be used for all operations inside the transaction.
     *
     * @param durabilityLevel the durability level to set
     * @return this, for chaining
@@ -58,8 +56,7 @@ case class TransactionOptions(
     copy(durabilityLevel = Some(durabilityLevel))
   }
 
-  /**
-    * Specifies the RequestSpan that's a parent for this transaction.
+  /** Specifies the RequestSpan that's a parent for this transaction.
     * <p>
     * RequestSpan is a Couchbase Java SDK abstraction over an underlying tracing implementation such as OpenTelemetry
     * or OpenTracing.
@@ -70,8 +67,7 @@ case class TransactionOptions(
     copy(parentSpan = Some(parentSpan))
   }
 
-  /**
-    * Overrides the default timeout set, for this transaction.
+  /** Overrides the default timeout set, for this transaction.
     *
     * @return this, for chaining
     */
@@ -79,8 +75,7 @@ case class TransactionOptions(
     copy(timeout = Some(timeout))
   }
 
-  /**
-    * Allows setting a custom collection to use for any transactional metadata documents created by this transaction.
+  /** Allows setting a custom collection to use for any transactional metadata documents created by this transaction.
     * <p>
     * If not set, it will default to creating these documents in the default collection of the bucket that the first
     * mutated document in the transaction is on.

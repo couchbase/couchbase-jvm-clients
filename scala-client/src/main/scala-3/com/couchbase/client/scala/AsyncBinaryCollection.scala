@@ -38,7 +38,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
 
   private[scala] val environment                       = async.environment
   private[scala] val kvTimeout: Durability => Duration = async.kvTimeout
-  private[scala] val kvBinaryOps                       = async.couchbaseOps.kvBinaryOps(async.keyspace)
+  private[scala] val kvBinaryOps = async.couchbaseOps.kvBinaryOps(async.keyspace)
 
   /** Add bytes to the end of a Couchbase binary document.
     *
@@ -63,7 +63,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
   /** Add bytes to the beginning of a Couchbase binary document.
     *
     * $Same
-    * */
+    */
   def prepend(
       id: String,
       content: Array[Byte],
@@ -83,7 +83,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
   /** Increment a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def increment(
       id: String,
       delta: Long,
@@ -104,7 +104,7 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
   /** Decrement a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def decrement(
       id: String,
       delta: Long,

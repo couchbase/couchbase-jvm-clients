@@ -23,7 +23,11 @@ import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsParameters, AnalyticsResult}
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.manager.analytics.AnalyticsIndexManager
 import com.couchbase.client.scala.manager.bucket.BucketManager
@@ -59,26 +63,26 @@ class Cluster private[scala] (
 
   lazy val queryIndexes = new QueryIndexManager(async.queryIndexes)
 
-    /** The UserManager provides programmatic access to and creation of users and groups. */
-    lazy val users = new UserManager(async.users)
+  /** The UserManager provides programmatic access to and creation of users and groups. */
+  lazy val users = new UserManager(async.users)
 
-    /** The BucketManager provides access to creating and getting buckets. */
-    lazy val buckets = new BucketManager(async.buckets)
+  /** The BucketManager provides access to creating and getting buckets. */
+  lazy val buckets = new BucketManager(async.buckets)
 
-    lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
+  lazy val searchIndexes = new SearchIndexManager(async.searchIndexes)
 
-    lazy val analyticsIndexes =
-        new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
+  lazy val analyticsIndexes =
+    new AnalyticsIndexManager(async.analyticsIndexes, reactive.analyticsIndexes)
 
-    /** Allows managing eventing functions at the admin scope ("*.*") level.
-     *
-     * For managing eventing functions on a specific scope, see [[ScopedEventingFunctionManager]], accessed from
-     * [[Scope.eventingFunctions]].
-     */
-    @Stability.Uncommitted
-    lazy val eventingFunctions = new EventingFunctionManager(async.eventingFunctions)
+  /** Allows managing eventing functions at the admin scope ("*.*") level.
+    *
+    * For managing eventing functions on a specific scope, see [[ScopedEventingFunctionManager]], accessed from
+    * [[Scope.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  lazy val eventingFunctions = new EventingFunctionManager(async.eventingFunctions)
 
-    /** Access a reactive version of this API. */
+  /** Access a reactive version of this API. */
   lazy val reactive = new ReactiveCluster(async)
 
   /** Performs a N1QL query against the cluster.
@@ -120,7 +124,6 @@ class Cluster private[scala] (
     ).map(result => convert(result))
   }
 
-
   /** Performs a SQL++ query against the cluster.
     *
     * @param statement the SQL++ statement to execute
@@ -134,48 +137,48 @@ class Cluster private[scala] (
       .map(result => convert(result))
   }
 
-    /** Performs an Analytics query against the cluster.
-     *
-     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
-     * [[Cluster.async]] for an asynchronous version.
-     *
-     * @param statement the Analytics query to execute
-     * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
-     * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
-     *         `Failure`
-     */
-    def analyticsQuery(
-                              statement: String,
-                              options: AnalyticsOptions
-                      ): Try[AnalyticsResult] = {
-        AsyncUtils.block(async.analyticsQuery(statement, options))
-    }
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful, else a
+    *         `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions
+  ): Try[AnalyticsResult] = {
+    AsyncUtils.block(async.analyticsQuery(statement, options))
+  }
 
-    /** Performs an Analytics query against the cluster.
-     *
-     * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
-     * [[Cluster.async]] for an asynchronous version.
-     *
-     * This overload provides only the most commonly used options.  If you need to configure something more
-     * esoteric, use the overload that takes a [[com.couchbase.client.scala.analytics.AnalyticsOptions]] instead, which supports all available options.
-     *
-     * @param statement  the Analytics query to execute
-     * @param parameters provides named or positional parameters for queries parameterised that way.
-     * @param timeout    sets a maximum timeout for processing.
-     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-     *         else a `Failure`
-     */
-    def analyticsQuery(
-                              statement: String,
-                              parameters: AnalyticsParameters = AnalyticsParameters.None,
-                              timeout: Duration = _env.timeoutConfig.queryTimeout()
-                      ): Try[AnalyticsResult] = {
-        AsyncUtils.block(
-            async.analyticsQuery(statement, parameters, timeout)
-        )
-    }
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is blocking.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster.async]] for an asynchronous version.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes a [[com.couchbase.client.scala.analytics.AnalyticsOptions]] instead, which supports all available options.
+    *
+    * @param statement  the Analytics query to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout    sets a maximum timeout for processing.
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      parameters: AnalyticsParameters = AnalyticsParameters.None,
+      timeout: Duration = _env.timeoutConfig.queryTimeout()
+  ): Try[AnalyticsResult] = {
+    AsyncUtils.block(
+      async.analyticsQuery(statement, parameters, timeout)
+    )
+  }
 
-    /** Performs a Full Text Search (FTS) query.
+  /** Performs a Full Text Search (FTS) query.
     *
     * This can be used to perform a traditional FTS query, and/or a vector search.
     *
@@ -268,7 +271,7 @@ class Cluster private[scala] (
     AsyncUtils.block(async.searchQuery(indexName, query, timeout))
   }
 
-    /** Shutdown all cluster resources.
+  /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
     *

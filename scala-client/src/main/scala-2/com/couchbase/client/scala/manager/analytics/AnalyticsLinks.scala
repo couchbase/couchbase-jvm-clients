@@ -40,7 +40,7 @@ object AnalyticsLink {
         json("type").str match {
           case "couchbase" => CouchbasePickler.read[CouchbaseRemoteAnalyticsLink](json)
           case "s3"        => CouchbasePickler.read[S3ExternalAnalyticsLink](json)
-          case x           => throw new IllegalStateException(s"Cannot decode analytics link type $x")
+          case x => throw new IllegalStateException(s"Cannot decode analytics link type $x")
         }
       }
     )
@@ -56,16 +56,15 @@ object AnalyticsLink {
 
     override private[scala] def toMap: Try[Map[String, String]] = {
       encryption.toMap
-        .map(
-          v =>
-            v ++
-              Map(
-                "type"      -> "couchbase",
-                "dataverse" -> dataverse,
-                "name"      -> name,
-                "hostname"  -> hostname,
-                "type"      -> "couchbase"
-              )
+        .map(v =>
+          v ++
+            Map(
+              "type"      -> "couchbase",
+              "dataverse" -> dataverse,
+              "name"      -> name,
+              "hostname"  -> hostname,
+              "type"      -> "couchbase"
+            )
         )
     }
 

@@ -17,8 +17,7 @@ package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.core.api.search.queries.CorePrefixQuery
 
-/**
-  * An FTS query that allows for simple matching on a given prefix.
+/** An FTS query that allows for simple matching on a given prefix.
   *
   * @since 1.0.0
   */

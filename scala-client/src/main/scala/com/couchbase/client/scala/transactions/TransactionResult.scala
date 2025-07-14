@@ -21,35 +21,30 @@ import com.couchbase.client.core.transaction.CoreTransactionResult
 import java.time.Duration
 import scala.jdk.CollectionConverters._
 
-/**
-  * Provides some debugging and logging facilities for tracking what happened during a transaction.
+/** Provides some debugging and logging facilities for tracking what happened during a transaction.
   */
 case class TransactionResult private[scala] (private val internal: CoreTransactionResult) {
 
-  /**
-    * An in-memory log is built up during each transaction.  The application may want to write this to their own logs,
+  /** An in-memory log is built up during each transaction.  The application may want to write this to their own logs,
     * for example upon transaction failure.
     */
   def logs(): Iterable[TransactionLogEvent] = {
     internal.log().logs().asScala
   }
 
-  /**
-    * Returns the total time taken by a transaction.
+  /** Returns the total time taken by a transaction.
     */
   def timeTaken(): Duration = {
     internal.timeTaken()
   }
 
-  /**
-    * Returns the id of this transaction.
+  /** Returns the id of this transaction.
     */
   def transactionId(): String = {
     internal.transactionId()
   }
 
-  /**
-    * Returns whether all documents were successfully unstaged (committed).
+  /** Returns whether all documents were successfully unstaged (committed).
     *
     * This will only return true if the transaction reached the COMMIT point and then went on to reach
     * the COMPLETE point.

@@ -17,8 +17,7 @@ package com.couchbase.client.scala.transactions.error;
 
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 
-/**
-  * The transaction could not be fully completed in the configured timeout.
+/** The transaction could not be fully completed in the configured timeout.
   *
   * It is in an undefined state, but it unambiguously did not reach the commit point.  No actors will be able to see the
   * contents of this transaction.

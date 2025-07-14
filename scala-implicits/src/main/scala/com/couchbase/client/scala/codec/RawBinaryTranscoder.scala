@@ -25,7 +25,7 @@ class RawBinaryTranscoder extends TranscoderWithoutSerializer {
   override def encode[T](value: T): Try[EncodedValue] = {
     value match {
       case x: Array[Byte] => Success(EncodedValue(x, CodecFlags.BINARY_COMPAT_FLAGS))
-      case _ =>
+      case _              =>
         Failure(
           new IllegalArgumentException("Only Array[Byte] is supported for the RawBinaryTranscoder!")
         )

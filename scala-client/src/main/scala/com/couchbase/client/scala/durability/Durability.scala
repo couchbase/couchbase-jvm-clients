@@ -34,8 +34,8 @@ sealed trait Durability {
 
   private[scala] def toDurabilityLevel: Optional[CoreLevel] = {
     this match {
-      case Durability.Majority          => Optional.of(CoreLevel.MAJORITY)
-      case Durability.PersistToMajority => Optional.of(CoreLevel.PERSIST_TO_MAJORITY)
+      case Durability.Majority                   => Optional.of(CoreLevel.MAJORITY)
+      case Durability.PersistToMajority          => Optional.of(CoreLevel.PERSIST_TO_MAJORITY)
       case Durability.MajorityAndPersistToActive =>
         Optional.of(CoreLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
       case _ => Optional.empty()
@@ -46,7 +46,8 @@ sealed trait Durability {
 object Durability {
 
   /** The SDK will return as soon as the first single node has the mutation in memory (but not necessarily persisted
-    * to disk). */
+    * to disk).
+    */
   case object Disabled extends Durability
 
   /** The SDK will do a simple polling loop to wait for the mutation to be available on a number of replicas.

@@ -20,8 +20,7 @@ import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates
 /** A coordinate is a tuple of a latitude and a longitude. */
 object Coordinate {
 
-  /**
-    * Creates a new [[Coordinate]] with a longitude and a latitude.
+  /** Creates a new [[Coordinate]] with a longitude and a latitude.
     *
     * @param lon the longitude of the coordinate.
     * @param lat the latitude of the coordinate.
@@ -31,12 +30,10 @@ object Coordinate {
 }
 
 case class Coordinate(
-    /**
-      * The longitude of this coordinate.
+    /** The longitude of this coordinate.
       */
     lon: Double,
-    /**
-      * The latitude of this coordinate.
+    /** The latitude of this coordinate.
       */
     lat: Double
 ) {

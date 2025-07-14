@@ -23,8 +23,7 @@ import com.couchbase.client.scala.util.{CoreCommonConverters, RowTraversalUtil}
 import scala.jdk.CollectionConverters._
 import scala.util.Try
 
-/**
-  * The result of a N1QL query executed within a transaction, including rows and associated metadata.
+/** The result of a N1QL query executed within a transaction, including rows and associated metadata.
   * <p>
   * Queries executed inside a transaction are always blocking/non-streaming, to allow essential error handling logic to
   * reliably take place.
@@ -43,8 +42,7 @@ case class TransactionQueryResult private[scala] (private val internal: CoreQuer
     )
   }
 
-  /**
-    * Returns the [[QueryMetaData]] giving access to the additional metadata associated with this query.
+  /** Returns the [[QueryMetaData]] giving access to the additional metadata associated with this query.
     */
   def metaData(): QueryMetaData = {
     CoreCommonConverters.convert(internal.metaData())

@@ -15,10 +15,14 @@
  */
 package com.couchbase.client.scala
 
-
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.api.kv.{CoreExpiry, CoreReadPreference, CoreSubdocGetCommand, CoreSubdocGetResult}
+import com.couchbase.client.core.api.kv.{
+  CoreExpiry,
+  CoreReadPreference,
+  CoreSubdocGetCommand,
+  CoreSubdocGetResult
+}
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -53,15 +57,17 @@ import scala.util.{Failure, Success, Try}
 import scala.concurrent.Await
 
 class AsyncCollection(
-                       val name: String,
-                       val bucketName: String,
-                       val scopeName: String,
-                       val couchbaseOps: CoreCouchbaseOps,
-                       val environment: ClusterEnvironment
-                     ) extends AsyncCollectionBase {
+    val name: String,
+    val bucketName: String,
+    val scopeName: String,
+    val couchbaseOps: CoreCouchbaseOps,
+    val environment: ClusterEnvironment
+) extends AsyncCollectionBase {
+
   /** Inserts a full document into this collection, if it does not exist already.
     *
-    * $Same */
+    * $Same
+    */
   def insert[T](
       id: String,
       content: T,
@@ -80,7 +86,8 @@ class AsyncCollection(
 
   /** Replaces the contents of a full document in this collection, if it already exists.
     *
-    * $Same */
+    * $Same
+    */
   def replace[T](
       id: String,
       content: T,
@@ -101,7 +108,8 @@ class AsyncCollection(
 
   /** Upserts the contents of a full document in this collection.
     *
-    * $Same */
+    * $Same
+    */
   def upsert[T](
       id: String,
       content: T,
@@ -121,7 +129,8 @@ class AsyncCollection(
 
   /** Removes a document from this collection, if it exists.
     *
-    * $Same */
+    * $Same
+    */
   def remove(
       id: String,
       options: RemoveOptions = RemoveOptions.Default
@@ -132,7 +141,8 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection.
     *
-    * $Same */
+    * $Same
+    */
   def get(
       id: String,
       options: GetOptions = GetOptions.Default
@@ -144,7 +154,8 @@ class AsyncCollection(
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *
-    * $Same */
+    * $Same
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
@@ -168,7 +179,8 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously lock the document from writes.
     *
-    * $Same */
+    * $Same
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -180,7 +192,8 @@ class AsyncCollection(
 
   /** Unlock a locked document.
     *
-    * $Same */
+    * $Same
+    */
   def unlock(
       id: String,
       cas: Long,
@@ -191,7 +204,8 @@ class AsyncCollection(
 
   /** Fetches a full document from this collection, and simultaneously update the expiry value of the document.
     *
-    * $Same */
+    * $Same
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -204,7 +218,8 @@ class AsyncCollection(
   /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
     * retrieving the entire document.
     *
-    * $Same */
+    * $Same
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -225,7 +240,8 @@ class AsyncCollection(
 
   /** Checks if a document exists.
     *
-    * $Same */
+    * $Same
+    */
   def exists(
       id: String,
       options: ExistsOptions = ExistsOptions.Default
@@ -236,7 +252,8 @@ class AsyncCollection(
 
   /** Updates the expiry of the document with the given id.
     *
-    * $Same */
+    * $Same
+    */
   def touch(
       id: String,
       expiry: Duration,
@@ -254,9 +271,15 @@ class AsyncCollection(
     * we recommend using SQL++ (with a primary index on the collection) instead.
     */
   @SinceCouchbase("7.6")
-  def scan(scanType: ScanType, opts: ScanOptions = ScanOptions.Default): Future[Iterator[ScanResult]] = {
-    FutureConversions.javaCFToScalaFuture(scanRequest(scanType, opts).collectList()
-      .map[Iterator[ScanResult]](v => v.asScala.iterator)
-      .toFuture)
+  def scan(
+      scanType: ScanType,
+      opts: ScanOptions = ScanOptions.Default
+  ): Future[Iterator[ScanResult]] = {
+    FutureConversions.javaCFToScalaFuture(
+      scanRequest(scanType, opts)
+        .collectList()
+        .map[Iterator[ScanResult]](v => v.asScala.iterator)
+        .toFuture
+    )
   }
 }

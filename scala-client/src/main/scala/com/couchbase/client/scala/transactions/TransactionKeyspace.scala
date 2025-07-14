@@ -18,8 +18,7 @@ package com.couchbase.client.scala.transactions
 import com.couchbase.client.core.io.CollectionIdentifier
 import scala.compat.java8.OptionConverters._
 
-/**
-  * A keyspace represents a triple of bucket, scope and collection.
+/** A keyspace represents a triple of bucket, scope and collection.
   *
   * @param scope if empty, it specifies the default scope of the bucket.
   * @param collection if empty, it specifies the default collection of the scope.

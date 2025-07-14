@@ -15,13 +15,22 @@
  */
 package com.couchbase.client.scala.transactions
 
-import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
+import com.couchbase.client.core.cnc.TracingIdentifiers.{
+  TRANSACTION_OP_INSERT,
+  TRANSACTION_OP_REMOVE,
+  TRANSACTION_OP_REPLACE
+}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
-import com.couchbase.client.scala.transactions.config.{TransactionGetOptions, TransactionGetReplicaFromPreferredServerGroupOptions, TransactionInsertOptions, TransactionReplaceOptions}
+import com.couchbase.client.scala.transactions.config.{
+  TransactionGetOptions,
+  TransactionGetReplicaFromPreferredServerGroupOptions,
+  TransactionInsertOptions,
+  TransactionReplaceOptions
+}
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 import com.couchbase.client.scala.{Collection, Scope}
@@ -29,8 +38,7 @@ import com.couchbase.client.scala.{Collection, Scope}
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
+/** Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
   * <p>
   * These methods are blocking/synchronous.  See [[ReactiveTransactionAttemptContext]] for the asynchronous version.
   *
@@ -43,8 +51,7 @@ class TransactionAttemptContext private[scala] (
     private[client] val internal: AsyncTransactionAttemptContext
 ) {
 
-  /**
-    * Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.  If
+  /** Gets a document from the specified Couchbase <code>collection</code> matching the specified <code>id</code>.  If
     * the document is not found, a [[com.couchbase.client.core.error.DocumentNotFoundException]] is raised.
     *
     * @param collection the Couchbase collection the document exists on
@@ -78,13 +85,13 @@ class TransactionAttemptContext private[scala] (
   def getReplicaFromPreferredServerGroup(
       collection: Collection,
       id: String,
-      options: TransactionGetReplicaFromPreferredServerGroupOptions = TransactionGetReplicaFromPreferredServerGroupOptions.Default
+      options: TransactionGetReplicaFromPreferredServerGroupOptions =
+        TransactionGetReplicaFromPreferredServerGroupOptions.Default
   ): Try[TransactionGetResult] = {
     AsyncUtils.block(internal.getReplicaFromPreferredServerGroup(collection.async, id, options))
   }
 
-  /**
-    * Mutates the specified <code>doc</code> with new content.
+  /** Mutates the specified <code>doc</code> with new content.
     * <p>
     * The mutation is staged until the transaction is committed.  That is, any read of the document by any Couchbase
     * component will see the document's current value, rather than this staged or 'dirty' data.  If the attempt is
@@ -99,14 +106,17 @@ class TransactionAttemptContext private[scala] (
     * @return the doc, updated with its new CAS value.  For performance a copy is not created and the original doc
     * object is modified.
     */
-  def replace[T](doc: TransactionGetResult, content: T, options: TransactionReplaceOptions = TransactionReplaceOptions.Default)(
+  def replace[T](
+      doc: TransactionGetResult,
+      content: T,
+      options: TransactionReplaceOptions = TransactionReplaceOptions.Default
+  )(
       implicit serializer: JsonSerializer[T]
   ): Try[TransactionGetResult] = {
     AsyncUtils.block(internal.replace(doc, content, options))
   }
 
-  /**
-    * Inserts a new document into the specified Couchbase <code>collection</code>.
+  /** Inserts a new document into the specified Couchbase <code>collection</code>.
     * <p>
     * The insert is staged until the transaction is committed.  No other actor will be able to see this inserted
     * document until that point.
@@ -120,14 +130,18 @@ class TransactionAttemptContext private[scala] (
     * @param options    options controlling the operation
     * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResult</code>
     */
-  def insert[T](collection: Collection, id: String, content: T, options: TransactionInsertOptions = TransactionInsertOptions.Default)(
+  def insert[T](
+      collection: Collection,
+      id: String,
+      content: T,
+      options: TransactionInsertOptions = TransactionInsertOptions.Default
+  )(
       implicit serializer: JsonSerializer[T]
   ): Try[TransactionGetResult] = {
     AsyncUtils.block(internal.insert(collection.async, id, content, options))
   }
 
-  /**
-    * Removes the specified <code>doc</code>.
+  /** Removes the specified <code>doc</code>.
     * <p>
     * The remove is staged until the transaction is committed.  That is, the document will
     * continue to exist, and the rest of the Couchbase platform will continue to see it.
@@ -141,8 +155,7 @@ class TransactionAttemptContext private[scala] (
     AsyncUtils.block(internal.remove(doc))
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -154,8 +167,7 @@ class TransactionAttemptContext private[scala] (
     query(null, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -168,8 +180,7 @@ class TransactionAttemptContext private[scala] (
     query(null, statement, options)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -184,8 +195,7 @@ class TransactionAttemptContext private[scala] (
     query(scope, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>

@@ -27,7 +27,7 @@ class RawJsonTranscoder extends TranscoderWithoutSerializer {
   override def encode[T](value: T): Try[EncodedValue] = {
     value match {
       case x: Array[Byte] => Success(EncodedValue(x, CodecFlags.JSON_COMPAT_FLAGS))
-      case x: String =>
+      case x: String      =>
         Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.JSON_COMPAT_FLAGS))
       case _ =>
         Failure(

@@ -27,7 +27,11 @@ import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.AsyncCluster.extractClusterEnvironment
 import com.couchbase.client.scala.analytics._
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.handlers.AnalyticsHandler
 import com.couchbase.client.scala.manager.analytics.ReactiveAnalyticsIndexManager
@@ -105,12 +109,13 @@ class ReactiveCluster(val async: AsyncCluster) {
     *
     * @return a `Mono` containing a [[com.couchbase.client.scala.query.ReactiveQueryResult]] which includes a Flux giving streaming access to any
     *         returned rows
-    **/
+    */
   def query(
       statement: String,
       options: QueryOptions
   ): SMono[ReactiveQueryResult] = {
-    CoreCommonConvertersScala2.convert(async.queryOps.queryReactive(statement, options.toCore, null, null, null))
+    CoreCommonConvertersScala2
+      .convert(async.queryOps.queryReactive(statement, options.toCore, null, null, null))
       .map(result => CoreCommonConvertersScala2.convert(result))
   }
 
@@ -138,19 +143,21 @@ class ReactiveCluster(val async: AsyncCluster) {
       timeout: Duration = env.timeoutConfig.queryTimeout(),
       adhoc: Boolean = true
   ): SMono[ReactiveQueryResult] = {
-    CoreCommonConvertersScala2.convert(
-      async.queryOps.queryReactive(
-        statement,
-        QueryOptions()
-          .adhoc(adhoc)
-          .timeout(timeout)
-          .parameters(parameters)
-          .toCore,
-        null,
-        null,
-        null
+    CoreCommonConvertersScala2
+      .convert(
+        async.queryOps.queryReactive(
+          statement,
+          QueryOptions()
+            .adhoc(adhoc)
+            .timeout(timeout)
+            .parameters(parameters)
+            .toCore,
+          null,
+          null,
+          null
+        )
       )
-    ).map(result => CoreCommonConvertersScala2.convert(result))
+      .map(result => CoreCommonConvertersScala2.convert(result))
   }
 
   /** Performs an Analytics query against the cluster.
@@ -245,7 +252,8 @@ class ReactiveCluster(val async: AsyncCluster) {
     request.toCore match {
       case Failure(err) => SMono.raiseError(err)
       case Success(req) =>
-        CoreCommonConvertersScala2.convert(async.searchOps.searchReactive(indexName, req, options.toCore))
+        CoreCommonConvertersScala2
+          .convert(async.searchOps.searchReactive(indexName, req, options.toCore))
           .map(result => ReactiveSearchResult(result))
     }
   }
@@ -440,7 +448,7 @@ object ReactiveCluster {
       .map(ce => {
         implicit val ec: ExecutionContextExecutor = ce.ec
         val connStr                               = ConnectionString.create(connectionString)
-        val cluster = new ReactiveCluster(
+        val cluster                               = new ReactiveCluster(
           new AsyncCluster(ce, options.authenticator, connStr)
         )
         cluster.async.performGlobalConnect()

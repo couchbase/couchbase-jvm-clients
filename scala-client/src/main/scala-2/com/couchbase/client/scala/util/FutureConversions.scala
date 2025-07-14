@@ -38,11 +38,11 @@ private[client] object FutureConversions {
     future.toScala
   }
 
-    def scalaFutureToJavaCF[T](future: Future[T]): CompletionStage[T] = {
-        FutureConverters.toJava(future)
-    }
+  def scalaFutureToJavaCF[T](future: Future[T]): CompletionStage[T] = {
+    FutureConverters.toJava(future)
+  }
 
-    /** Performs logic similar to Java's AsyncUtil, mapping raw ExecutionExceptions into more useful ones.
+  /** Performs logic similar to Java's AsyncUtil, mapping raw ExecutionExceptions into more useful ones.
     */
   def javaCFToScalaFutureMappingExceptions[T](
       future: CompletableFuture[T]
@@ -116,8 +116,7 @@ private[client] object FutureConversions {
     } else javaMono
   }
 
-  /**
-    * Wraps a `Request` and returns it in a `SMono`.
+  /** Wraps a `Request` and returns it in a `SMono`.
     *
     * @param request               the request to wrap.
     * @param response              the full response to wrap, might not be the same as in the request.
@@ -132,7 +131,7 @@ private[client] object FutureConversions {
       propagateCancellation: Boolean
   ): SMono[T] = {
     val javaMono = JavaMono.fromFuture(response)
-    val mono = {
+    val mono     = {
       if (propagateCancellation) {
         SMono(javaMono).doFinally((st: SignalType) => {
           if (st == SignalType.CANCEL) request.cancel(CancellationReason.STOPPED_LISTENING)
@@ -146,7 +145,7 @@ private[client] object FutureConversions {
     })
   }
 
-    def scalaFutureToJavaMono[T](in: Future[T]): JavaMono[T] = {
-        JavaMono.fromCompletionStage(scalaFutureToJavaCF(in))
-    }
+  def scalaFutureToJavaMono[T](in: Future[T]): JavaMono[T] = {
+    JavaMono.fromCompletionStage(scalaFutureToJavaCF(in))
+  }
 }

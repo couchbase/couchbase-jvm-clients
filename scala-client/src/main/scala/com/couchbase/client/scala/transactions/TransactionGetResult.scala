@@ -26,8 +26,7 @@ import com.couchbase.client.scala.codec.{
 import scala.reflect.ClassTag
 import scala.util.Try
 
-/**
-  * Represents a value fetched from Couchbase, along with additional transactional metadata.
+/** Represents a value fetched from Couchbase, along with additional transactional metadata.
   *
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.JsonDeserializer` can be found: a list

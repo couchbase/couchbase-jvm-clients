@@ -18,14 +18,12 @@ package com.couchbase.client.scala.transactions.config
 import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.scala.codec.Transcoder
 
-/**
-  * Operations controlling a transactional replace.
+/** Operations controlling a transactional replace.
   */
 @Stability.Volatile
 case class TransactionReplaceOptions private (transcoder: Option[Transcoder] = None) {
 
-  /**
-    * Specify a custom [[Transcoder]] that is used to encode the content of the document.
+  /** Specify a custom [[Transcoder]] that is used to encode the content of the document.
     *
     * If not-specified, the [[com.couchbase.client.scala.env.ClusterEnvironment]]'s [[com.couchbase.client.scala.codec.JsonSerializer]]
     * (NOT transcoder) is used.

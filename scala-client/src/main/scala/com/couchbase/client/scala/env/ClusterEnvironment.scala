@@ -211,8 +211,7 @@ object ClusterEnvironment {
       copy(maxNumRequestsInRetry = Some(value))
     }
 
-    /**
-      * Allows to override the default transcoder to be used for all KV operations.
+    /** Allows to override the default transcoder to be used for all KV operations.
       *
       * @return this, for chaining purposes.
       */
@@ -233,8 +232,7 @@ object ClusterEnvironment {
       copy(propertyLoaders = propertyLoaders)
     }
 
-    /**
-      * Allows configuring the threshold request tracer.
+    /** Allows configuring the threshold request tracer.
       *
       * @return this, for chaining purposes.
       */
@@ -244,8 +242,7 @@ object ClusterEnvironment {
       copy(thresholdRequestTracerConfig = Some(config))
     }
 
-    /**
-      * Allows configuring the logging meter.
+    /** Allows configuring the logging meter.
       *
       * @return this, for chaining purposes.
       */
@@ -253,8 +250,7 @@ object ClusterEnvironment {
       copy(loggingMeterConfig = Some(config))
     }
 
-    /**
-      * Configurations transactions.
+    /** Configurations transactions.
       *
       * @return this, for chaining purposes.
       */
@@ -367,8 +363,8 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
   builder.meter.foreach(v => coreBuilder.meter(v))
   builder.maxNumRequestsInRetry.foreach(v => coreBuilder.maxNumRequestsInRetry(v))
   builder.propertyLoaders.foreach(v => coreBuilder.load(v))
-  builder.thresholdRequestTracerConfig.foreach(
-    v => coreBuilder.thresholdRequestTracerConfig(v.toCore)
+  builder.thresholdRequestTracerConfig.foreach(v =>
+    coreBuilder.thresholdRequestTracerConfig(v.toCore)
   )
   builder.loggingMeterConfig.foreach(v => coreBuilder.loggingMeterConfig(v.toCore))
   builder.transactionsConfig match {
@@ -391,8 +387,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     */
   def core: CoreEnvironment = coreEnv
 
-  /**
-    * Shuts this environment down.  If the application created this (i.e. rather than using one of the convenience
+  /** Shuts this environment down.  If the application created this (i.e. rather than using one of the convenience
     * `Cluster.create` methods, then it is responsible for calling shutdown on it.
     *
     * This will block until everything is shutdown, or the timeout is exceeded.

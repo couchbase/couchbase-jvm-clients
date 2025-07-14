@@ -40,8 +40,7 @@ import reactor.core.scala.publisher.SMono
 
 import scala.util.{Failure, Success};
 
-/**
-  * Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
+/** Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
   *
   * @define SupportedTypes this can be of any type for which an implicit
   *                        `com.couchbase.client.scala.codec.Conversions.JsonSerializer` can be found: a list
@@ -52,8 +51,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     private[client] val internal: CoreTransactionAttemptContext
 ) {
 
-  /**
-    * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
+  /** Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
     * <p>
     * If the document does not exist it will raise a [[com.couchbase.client.core.error.DocumentNotFoundException]].
     *
@@ -65,8 +63,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     get(collection, id, TransactionGetOptions.Default)
   }
 
-  /**
-    * Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
+  /** Gets a document with the specified <code>id</code> and from the specified Couchbase <code>collection</code>.
     * <p>
     * If the document does not exist it will raise a [[com.couchbase.client.core.error.DocumentNotFoundException]].
     *
@@ -135,8 +132,7 @@ class ReactiveTransactionAttemptContext private[scala] (
       )
       .map(result => TransactionGetResult(result, options.transcoder))
 
-  /**
-    * Inserts a new document into the specified Couchbase <code>collection</code>.
+  /** Inserts a new document into the specified Couchbase <code>collection</code>.
     *
     * @param collection the Couchbase collection in which to insert the doc
     * @param id         the document's unique ID
@@ -149,8 +145,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     insert(collection, id, content, TransactionInsertOptions.Default)
   }
 
-  /**
-    * Inserts a new document into the specified Couchbase <code>collection</code>.
+  /** Inserts a new document into the specified Couchbase <code>collection</code>.
     *
     * @param collection the Couchbase collection in which to insert the doc
     * @param id         the document's unique ID
@@ -170,7 +165,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
-      case Success(encoded) =>
+      case Success(encoded)   =>
         FutureConversions
           .javaMonoToScalaMono(
             internal.insert(
@@ -187,8 +182,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     }
   }
 
-  /**
-    * Mutates the specified <code>doc</code> with new content.
+  /** Mutates the specified <code>doc</code> with new content.
     *
     * @param doc     the doc to be mutated
     * @param content       $SupportedTypes
@@ -201,8 +195,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     replace(doc, content, TransactionReplaceOptions.Default)
   }
 
-  /**
-    * Mutates the specified <code>doc</code> with new content.
+  /** Mutates the specified <code>doc</code> with new content.
     *
     * @param doc     the doc to be mutated
     * @param content       $SupportedTypes
@@ -217,7 +210,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
-      case Success(encoded) =>
+      case Success(encoded)   =>
         FutureConversions
           .javaMonoToScalaMono(
             internal
@@ -229,8 +222,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     }
   }
 
-  /**
-    * Removes the specified <code>doc</code>.
+  /** Removes the specified <code>doc</code>.
     * <p>
     * @param doc - the doc to be removed
     */
@@ -244,8 +236,7 @@ class ReactiveTransactionAttemptContext private[scala] (
       .`then`()
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -260,8 +251,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     query(null, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -277,8 +267,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     query(null, statement, options)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>
@@ -297,8 +286,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     query(scope, statement, null)
   }
 
-  /**
-    * Runs a N1QL query and returns the result.
+  /** Runs a N1QL query and returns the result.
     * <p>
     * All rows are buffered in-memory.
     * <p>

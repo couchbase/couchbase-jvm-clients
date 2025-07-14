@@ -27,45 +27,44 @@ import com.couchbase.client.scala.util.AsyncUtils
 import scala.util.Try
 
 class Scope private[scala] (val async: AsyncScope, val bucketName: String) extends ScopeBase {
+
   /** Access a Reactive version of this API. */
   lazy val reactive: ReactiveScope = new ReactiveScope(async, bucketName)
 
-    /** Allows managing scoped FTS indexes. */
-    @SinceCouchbase("7.6")
-    lazy val searchIndexes = new ScopeSearchIndexManager(async.searchIndexes)
+  /** Allows managing scoped FTS indexes. */
+  @SinceCouchbase("7.6")
+  lazy val searchIndexes = new ScopeSearchIndexManager(async.searchIndexes)
 
+  /** Allows managing eventing functions on this scope.
+    *
+    * For managing eventing functions at the admin scope ("*.*") level, see [[EventingFunctionManager]], accessed from
+    * [[Cluster.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  @SinceCouchbase("7.1")
+  lazy val eventingFunctions = new ScopeEventingFunctionManager(async.eventingFunctions)
 
-    /** Allows managing eventing functions on this scope.
-     *
-     * For managing eventing functions at the admin scope ("*.*") level, see [[EventingFunctionManager]], accessed from
-     * [[Cluster.eventingFunctions]].
-     */
-    @Stability.Uncommitted
-    @SinceCouchbase("7.1")
-    lazy val eventingFunctions = new ScopeEventingFunctionManager(async.eventingFunctions)
-
-    /** Performs an Analytics query against the cluster.
-   *
-   * This is a blocking API.  See [[Scope.async]] for an Future-based async version of this API, and
-   * [[Scope.reactive]] for a reactive version.  The reactive version includes backpressure-aware row streaming.
-   *
-   * The reason to use this Scope-based variant over `Cluster.analyticsQuery` is that it will automatically provide
-   * the "query_context" parameter to the query service, allowing queries to be performed on collections
-   * without having to fully specify their bucket and scope names in the query statement.
-   *
-   * @param statement the Analytics query to execute
-   * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
-   *
-   * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-   *         else a `Failure`
-   */
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is a blocking API.  See [[Scope.async]] for an Future-based async version of this API, and
+    * [[Scope.reactive]] for a reactive version.  The reactive version includes backpressure-aware row streaming.
+    *
+    * The reason to use this Scope-based variant over `Cluster.analyticsQuery` is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be performed on collections
+    * without having to fully specify their bucket and scope names in the query statement.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    *
+    * @return a `Try` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
   def analyticsQuery(
-                      statement: String,
-                      options: AnalyticsOptions = AnalyticsOptions.Default
-                    ): Try[AnalyticsResult] = {
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions.Default
+  ): Try[AnalyticsResult] = {
     AsyncUtils.block(async.analyticsQuery(statement, options))
   }
-
 
   /** Performs a Full Text Search (FTS) query.
     *

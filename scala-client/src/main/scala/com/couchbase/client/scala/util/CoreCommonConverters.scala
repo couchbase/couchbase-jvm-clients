@@ -137,9 +137,8 @@ private[scala] object CoreCommonConverters {
       in.cas(),
       in.mutationToken()
         .asScala
-        .map(
-          mt =>
-            new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName)
+        .map(mt =>
+          new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName)
         )
     )
   }
@@ -151,9 +150,8 @@ private[scala] object CoreCommonConverters {
       in.cas(),
       in.mutationToken()
         .asScala
-        .map(
-          mt =>
-            new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName)
+        .map(mt =>
+          new MutationToken(mt.partitionID, mt.partitionUUID, mt.sequenceNumber, mt.bucketName)
         )
     )
   }
@@ -172,7 +170,7 @@ private[scala] object CoreCommonConverters {
       convert(in.metaData)
     )
   }
-  
+
   def convert(in: CoreQueryMetaData): QueryMetaData = {
     QueryMetaData(
       in.requestId,
@@ -217,8 +215,8 @@ private[scala] object CoreCommonConverters {
 
   def convert(in: CoreSearchFacetResult): SearchFacetResult = {
     in match {
-      case v: CoreTermSearchFacetResult      => SearchFacetResult.TermSearchFacetResult(v)
-      case v: CoreDateRangeSearchFacetResult => SearchFacetResult.DateRangeSearchFacetResult(v)
+      case v: CoreTermSearchFacetResult         => SearchFacetResult.TermSearchFacetResult(v)
+      case v: CoreDateRangeSearchFacetResult    => SearchFacetResult.DateRangeSearchFacetResult(v)
       case v: CoreNumericRangeSearchFacetResult =>
         SearchFacetResult.NumericRangeSearchFacetResult(v)
     }
@@ -235,12 +233,11 @@ private[scala] object CoreCommonConverters {
         case x: java.util.ArrayList[Any]             =>
           // For some reason ujson.Arr takes an ArrayBuffer
           val ab = new ArrayBuffer[ujson.Value]()
-          x.forEach(
-            v =>
-              convertInternal(v) match {
-                case Some(value) => ab += value
-                case _           =>
-              }
+          x.forEach(v =>
+            convertInternal(v) match {
+              case Some(value) => ab += value
+              case _           =>
+            }
           )
           Some(ujson.Arr(ab))
         case _ =>
@@ -256,7 +253,7 @@ private[scala] object CoreCommonConverters {
 
     out
   }
-  
+
   def convert[T](in: => CoreAsyncResponse[T])(implicit ec: ExecutionContext): Future[T] = {
     // Argument validation can cause this to throw immediately
     try {
@@ -265,10 +262,10 @@ private[scala] object CoreCommonConverters {
       case err: Throwable => Future.failed(err)
     }
   }
-  
+
   def convert(in: Durability): CoreDurability = {
     in match {
-      case Durability.Disabled => CoreDurability.NONE
+      case Durability.Disabled                               => CoreDurability.NONE
       case Durability.ClientVerified(replicateTo, persistTo) =>
         CoreDurability.of(
           persistTo match {
@@ -284,7 +281,7 @@ private[scala] object CoreCommonConverters {
             case com.couchbase.client.scala.durability.ReplicateTo.Three => ObserveReplicateTo.THREE
           }
         )
-      case Durability.Majority => CoreDurability.of(DurabilityLevel.MAJORITY)
+      case Durability.Majority                   => CoreDurability.of(DurabilityLevel.MAJORITY)
       case Durability.MajorityAndPersistToActive =>
         CoreDurability.of(DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE)
       case Durability.PersistToMajority => CoreDurability.of(DurabilityLevel.PERSIST_TO_MAJORITY)

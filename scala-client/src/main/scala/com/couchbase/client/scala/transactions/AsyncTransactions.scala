@@ -24,8 +24,7 @@ import reactor.core.publisher.Mono
 
 import scala.concurrent.Future
 
-/**
-  * An asynchronous version of [[Transactions]], allowing transactions to be created and run in an asynchronous
+/** An asynchronous version of [[Transactions]], allowing transactions to be created and run in an asynchronous
   * manner using [[scala.concurrent.Future]].
   */
 class AsyncTransactions private[scala] (
@@ -33,8 +32,7 @@ class AsyncTransactions private[scala] (
     private val env: ClusterEnvironment
 ) {
 
-  /**
-    * Runs the supplied transactional logic until success or failure.
+  /** Runs the supplied transactional logic until success or failure.
     * <p>
     * This is the asynchronous version of [[Transactions.run()]], so to cover the differences:
     * <ul>
@@ -58,12 +56,17 @@ class AsyncTransactions private[scala] (
     val opts = options.toCore
 
     val monoResult: Mono[TransactionResult] = internal
-      .run(ctx => {
-        val lambdaFuture = transactionLogic(new AsyncTransactionAttemptContext(ctx, env))
-        FutureConversions.scalaFutureToJavaMono(lambdaFuture)
-      }, opts)
+      .run(
+        ctx => {
+          val lambdaFuture = transactionLogic(new AsyncTransactionAttemptContext(ctx, env))
+          FutureConversions.scalaFutureToJavaMono(lambdaFuture)
+        },
+        opts
+      )
       .map[TransactionResult](result => TransactionResult(result))
-      .onErrorResume((err: Throwable) => ErrorUtil.convertTransactionFailedInternal[TransactionResult](err))
+      .onErrorResume((err: Throwable) =>
+        ErrorUtil.convertTransactionFailedInternal[TransactionResult](err)
+      )
 
     FutureConversions.javaMonoToScalaFuture(monoResult)
   }

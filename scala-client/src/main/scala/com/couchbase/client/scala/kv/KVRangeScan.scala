@@ -179,7 +179,7 @@ object ScanOptions {
   *                        of types that are supported 'out of the box' is available at
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   */
-case class ScanResult (private val internal: CoreRangeScanItem, transcoder: Transcoder) {
+case class ScanResult(private val internal: CoreRangeScanItem, transcoder: Transcoder) {
 
   /** The unique identifier of the document. */
   def id: String = internal.key
@@ -188,14 +188,16 @@ case class ScanResult (private val internal: CoreRangeScanItem, transcoder: Tran
   def idOnly: Boolean = internal.value.length == 0
 
   /** The document's CAS value at the time of the lookup.
-    * Will not be present if the scan was performed with `idsOnly` set. */
+    * Will not be present if the scan was performed with `idsOnly` set.
+    */
   def cas: Option[Long] = internal.cas() match {
     case 0 => None
     case _ => Some(internal.cas())
   }
 
   /** The document's expiration time, if it was fetched without the `idsOnly` flag set.  If that flag
-    * was not set, this will be None.  The time is the point in time when the document expires. */
+    * was not set, this will be None.  The time is the point in time when the document expires.
+    */
   def expiryTime: Option[Instant] = Option(internal.expiry())
 
   /** If the scan was initiated without the `idsOnly` flag set then this will contain the

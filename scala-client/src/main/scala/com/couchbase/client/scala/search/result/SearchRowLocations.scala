@@ -19,8 +19,7 @@ import com.couchbase.client.core.api.search.result.{CoreSearchRowLocation, CoreS
 
 import scala.jdk.CollectionConverters._
 
-/**
-  * Represents the locations of a search result row. Locations show
+/** Represents the locations of a search result row. Locations show
   * where a given term occurs inside of a given field.
   *
   * @since 1.0.0
@@ -64,7 +63,7 @@ case class SearchRowLocations(private val internal: CoreSearchRowLocations) {
   *
   * @since 1.0.0
   */
-case class SearchRowLocation (private val internal: CoreSearchRowLocation) {
+case class SearchRowLocation(private val internal: CoreSearchRowLocation) {
   def field: String = internal.field
 
   def term: String = internal.term

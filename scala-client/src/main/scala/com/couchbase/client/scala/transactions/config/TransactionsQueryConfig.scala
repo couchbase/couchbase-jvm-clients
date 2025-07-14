@@ -17,15 +17,13 @@ package com.couchbase.client.scala.transactions.config
 
 import com.couchbase.client.scala.query.QueryScanConsistency;
 
-/**
-  * Allows setting a default query configuration for all transactions.
+/** Allows setting a default query configuration for all transactions.
   */
 case class TransactionsQueryConfig private[scala] (
     private[scala] val scanConsistency: Option[QueryScanConsistency] = None
 ) {
 
-  /**
-    * Customizes the default consistency guarantees for all queries inside this transaction.
+  /** Customizes the default consistency guarantees for all queries inside this transaction.
     * <p>
     * Tuning the scan consistency allows to trade data "freshness" for latency and vice versa. By default
     * [[QueryScanConsistency.RequestPlus]] is used for any queries inside a transaction, which means that the

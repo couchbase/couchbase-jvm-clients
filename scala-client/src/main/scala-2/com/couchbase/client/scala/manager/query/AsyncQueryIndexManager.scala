@@ -102,23 +102,21 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
           }
         )
       )
-      .map(
-        result =>
-          result.asScala.map(
-            i =>
-              QueryIndex(
-                i.name,
-                Some(i.primary),
-                Option(i.`type`),
-                i.state,
-                i.keyspace,
-                i.indexKey.asScala.toSeq.map(v => v.textValue),
-                i.condition.asScala,
-                i.partition.asScala,
-                Option(i.bucketName),
-                i.scopeName.asScala
-              )
+      .map(result =>
+        result.asScala.map(i =>
+          QueryIndex(
+            i.name,
+            Some(i.primary),
+            Option(i.`type`),
+            i.state,
+            i.keyspace,
+            i.indexKey.asScala.toSeq.map(v => v.textValue),
+            i.condition.asScala,
+            i.partition.asScala,
+            Option(i.bucketName),
+            i.scopeName.asScala
           )
+        )
       )
   }
 

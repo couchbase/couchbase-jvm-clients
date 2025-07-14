@@ -28,7 +28,7 @@ import scala.util.Try
   *
   * @since 1.0.0
   */
-case class SearchRow (private val internal: CoreSearchRow) {
+case class SearchRow(private val internal: CoreSearchRow) {
 
   /** The name of the FTS index that gave this result. */
   def index: String = internal.index
@@ -49,7 +49,8 @@ case class SearchRow (private val internal: CoreSearchRow) {
   }
 
   /** The location of this hit, if it was requested with
-    * [[com.couchbase.client.scala.search.SearchOptions.includeLocations]]. */
+    * [[com.couchbase.client.scala.search.SearchOptions.includeLocations]].
+    */
   def locations: Option[SearchRowLocations] = {
     internal.locations.asScala.map(locations => SearchRowLocations(locations))
   }

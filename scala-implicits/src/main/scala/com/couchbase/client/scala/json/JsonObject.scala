@@ -71,7 +71,7 @@ import scala.jdk.CollectionConverters._
   * @define NotExist          if the field does not exist
   * @author Graham Pople
   * @since 1.0.0
-  **/
+  */
 case class JsonObject(private[scala] val content: java.util.HashMap[String, Any]) {
 
   /** Returns a [[GetSelecter]] providing `Dynamic` access to this object's fields. */

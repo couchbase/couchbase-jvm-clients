@@ -36,7 +36,7 @@ import scala.jdk.CollectionConverters._
 class AsyncSearchIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps)(
     implicit val ec: ExecutionContext
 ) {
-  private val internal = couchbaseOps.clusterSearchIndexManager()
+  private val internal                        = couchbaseOps.clusterSearchIndexManager()
   private[scala] val DefaultTimeout: Duration =
     couchbaseOps.asCore().context().environment().timeoutConfig().managementTimeout()
   private[scala] val DefaultRetryStrategy: RetryStrategy =

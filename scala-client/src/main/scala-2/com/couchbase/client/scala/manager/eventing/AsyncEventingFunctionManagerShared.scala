@@ -50,7 +50,7 @@ private[scala] class AsyncEventingFunctionManagerShared(
   private def coreManagerTry: Future[CoreEventingFunctionManager] = {
     couchbaseOps match {
       case core: Core => Future.successful(new CoreEventingFunctionManager(core, scope.orNull))
-      case _ =>
+      case _          =>
         Future.failed(
           CoreProtostellarUtil.unsupportedInProtostellar("eventing function management")
         )
@@ -63,17 +63,16 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.upsertFunction(
-              function.name,
-              AsyncEventingFunctionManagerShared.encodeFunction(function),
-              makeOptions(timeout, retryStrategy, parentSpan)
-            )
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.upsertFunction(
+            function.name,
+            AsyncEventingFunctionManagerShared.encodeFunction(function),
+            makeOptions(timeout, retryStrategy, parentSpan)
           )
-          .map(_ => ())
+        )
+        .map(_ => ())
     )
   }
 
@@ -83,19 +82,17 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[EventingFunction] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.getFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .flatMap(
-            v =>
-              AsyncEventingFunctionManagerShared.decodeFunction(v) match {
-                case Success(x)   => Future.successful(x)
-                case Failure(err) => Future.failed(err)
-              }
-          )
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.getFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .flatMap(v =>
+          AsyncEventingFunctionManagerShared.decodeFunction(v) match {
+            case Success(x)   => Future.successful(x)
+            case Failure(err) => Future.failed(err)
+          }
+        )
     )
   }
 
@@ -105,13 +102,12 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.dropFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .map(_ => ())
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.dropFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .map(_ => ())
     )
   }
 
@@ -129,13 +125,12 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.deployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .map(_ => ())
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.deployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .map(_ => ())
     )
   }
 
@@ -145,13 +140,12 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.undeployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .map(_ => ())
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.undeployFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .map(_ => ())
     )
   }
 
@@ -160,20 +154,18 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Seq[EventingFunction]] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager
-              .getAllFunctions(makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .flatMap(
-            v =>
-              AsyncEventingFunctionManagerShared.decodeFunctions(v) match {
-                case Success(x)   => Future.successful(x)
-                case Failure(err) => Future.failed(err)
-              }
-          )
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager
+            .getAllFunctions(makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .flatMap(v =>
+          AsyncEventingFunctionManagerShared.decodeFunctions(v) match {
+            case Success(x)   => Future.successful(x)
+            case Failure(err) => Future.failed(err)
+          }
+        )
     )
   }
 
@@ -183,13 +175,12 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.pauseFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .map(_ => ())
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.pauseFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .map(_ => ())
     )
   }
 
@@ -199,13 +190,12 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Unit] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager.resumeFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .map(_ => ())
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager.resumeFunction(name, makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .map(_ => ())
     )
   }
 
@@ -214,22 +204,20 @@ private[scala] class AsyncEventingFunctionManagerShared(
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[EventingStatus] = {
-    coreManagerTry.flatMap(
-      coreManager =>
-        FutureConversions
-          .javaCFToScalaFutureMappingExceptions(
-            coreManager
-              .functionsStatus(makeOptions(timeout, retryStrategy, parentSpan))
-          )
-          .flatMap(
-            bytes =>
-              JsonObjectSafe
-                .fromJsonSafe(new String(bytes, StandardCharsets.UTF_8))
-                .flatMap(json => AsyncEventingFunctionManagerShared.decodeStatus(json)) match {
-                case Success(x)   => Future.successful(x)
-                case Failure(err) => Future.failed(err)
-              }
-          )
+    coreManagerTry.flatMap(coreManager =>
+      FutureConversions
+        .javaCFToScalaFutureMappingExceptions(
+          coreManager
+            .functionsStatus(makeOptions(timeout, retryStrategy, parentSpan))
+        )
+        .flatMap(bytes =>
+          JsonObjectSafe
+            .fromJsonSafe(new String(bytes, StandardCharsets.UTF_8))
+            .flatMap(json => AsyncEventingFunctionManagerShared.decodeStatus(json)) match {
+            case Success(x)   => Future.successful(x)
+            case Failure(err) => Future.failed(err)
+          }
+        )
     )
   }
 }
@@ -331,38 +319,38 @@ private[scala] object AsyncEventingFunctionManagerShared {
         }
 
         efs.cppWorkerThreadCount.foreach(v => settings.put("cpp_worker_thread_count", v))
-        efs.dcpStreamBoundary.foreach(
-          v =>
-            settings.put("dcp_stream_boundary", v match {
+        efs.dcpStreamBoundary.foreach(v =>
+          settings.put(
+            "dcp_stream_boundary",
+            v match {
               case EventingFunctionDcpBoundary.Everything => "everything"
               case EventingFunctionDcpBoundary.FromNow    => "from_now"
-            })
+            }
+          )
         )
         efs.description.foreach(v => settings.put("description", v))
-        efs.logLevel.foreach(
-          v =>
-            settings.put(
-              "log_level",
-              v match {
-                case EventingFunctionLogLevel.Info    => "INFO"
-                case EventingFunctionLogLevel.Error   => "ERROR"
-                case EventingFunctionLogLevel.Warning => "WARN"
-                case EventingFunctionLogLevel.Debug   => "DEBUG"
-                case EventingFunctionLogLevel.Trace   => "TRACE"
-              }
-            )
+        efs.logLevel.foreach(v =>
+          settings.put(
+            "log_level",
+            v match {
+              case EventingFunctionLogLevel.Info    => "INFO"
+              case EventingFunctionLogLevel.Error   => "ERROR"
+              case EventingFunctionLogLevel.Warning => "WARN"
+              case EventingFunctionLogLevel.Debug   => "DEBUG"
+              case EventingFunctionLogLevel.Trace   => "TRACE"
+            }
+          )
         )
-        efs.languageCompatibility.foreach(
-          v =>
-            settings.put(
-              "language_compatibility",
-              v match {
-                case EventingFunctionLanguageCompatibility.Version_6_0_0 => "6.0.0"
-                case EventingFunctionLanguageCompatibility.Version_6_5_0 => "6.5.0"
-                case EventingFunctionLanguageCompatibility.Version_6_6_2 => "6.6.2"
-                case EventingFunctionLanguageCompatibility.Version_7_2_0 => "7.2.0"
-              }
-            )
+        efs.languageCompatibility.foreach(v =>
+          settings.put(
+            "language_compatibility",
+            v match {
+              case EventingFunctionLanguageCompatibility.Version_6_0_0 => "6.0.0"
+              case EventingFunctionLanguageCompatibility.Version_6_5_0 => "6.5.0"
+              case EventingFunctionLanguageCompatibility.Version_6_6_2 => "6.6.2"
+              case EventingFunctionLanguageCompatibility.Version_7_2_0 => "7.2.0"
+            }
+          )
         )
         efs.executionTimeout.foreach(v => settings.put("execution_timeout", v.toSeconds))
         efs.lcbTimeout.foreach(v => settings.put("lcb_timeout", v.toSeconds))
@@ -412,39 +400,38 @@ private[scala] object AsyncEventingFunctionManagerShared {
       .flatMap(numEventingNodes => {
         in.arr("apps")
           .flatMap(apps => {
-            val functions = apps.iterator.map {
-              case app: JsonObjectSafe =>
-                for {
-                  name   <- app.str("name")
-                  status <- app.str("composite_status")
-                  statusMapped <- status match {
-                    case "undeployed"  => Success(EventingFunctionStatus.Undeployed)
-                    case "deploying"   => Success(EventingFunctionStatus.Deploying)
-                    case "deployed"    => Success(EventingFunctionStatus.Deployed)
-                    case "undeploying" => Success(EventingFunctionStatus.Deploying)
-                    case "paused"      => Success(EventingFunctionStatus.Paused)
-                    case "pausing"     => Success(EventingFunctionStatus.Pausing)
-                    case _ =>
-                      Failure(new DecodingFailureException(s"Unknown composite_status $status"))
-                  }
-                  numBootstrappingNodes <- app.num("num_bootstrapping_nodes")
-                  numDeployedNodes      <- app.num("num_deployed_nodes")
-                  deploymentStatus <- app.bool("deployment_status") match {
-                    case Success(true) => Success(EventingFunctionDeploymentStatus.Deployed)
-                    case _             => Success(EventingFunctionDeploymentStatus.Undeployed)
-                  }
-                  processingStatus <- app.bool("processing_status") match {
-                    case Success(true) => Success(EventingFunctionProcessingStatus.Running)
-                    case _             => Success(EventingFunctionProcessingStatus.Paused)
-                  }
-                } yield EventingFunctionState(
-                  name,
-                  statusMapped,
-                  numBootstrappingNodes,
-                  numDeployedNodes,
-                  deploymentStatus,
-                  processingStatus
-                )
+            val functions = apps.iterator.map { case app: JsonObjectSafe =>
+              for {
+                name         <- app.str("name")
+                status       <- app.str("composite_status")
+                statusMapped <- status match {
+                  case "undeployed"  => Success(EventingFunctionStatus.Undeployed)
+                  case "deploying"   => Success(EventingFunctionStatus.Deploying)
+                  case "deployed"    => Success(EventingFunctionStatus.Deployed)
+                  case "undeploying" => Success(EventingFunctionStatus.Deploying)
+                  case "paused"      => Success(EventingFunctionStatus.Paused)
+                  case "pausing"     => Success(EventingFunctionStatus.Pausing)
+                  case _             =>
+                    Failure(new DecodingFailureException(s"Unknown composite_status $status"))
+                }
+                numBootstrappingNodes <- app.num("num_bootstrapping_nodes")
+                numDeployedNodes      <- app.num("num_deployed_nodes")
+                deploymentStatus      <- app.bool("deployment_status") match {
+                  case Success(true) => Success(EventingFunctionDeploymentStatus.Deployed)
+                  case _             => Success(EventingFunctionDeploymentStatus.Undeployed)
+                }
+                processingStatus <- app.bool("processing_status") match {
+                  case Success(true) => Success(EventingFunctionProcessingStatus.Running)
+                  case _             => Success(EventingFunctionProcessingStatus.Paused)
+                }
+              } yield EventingFunctionState(
+                name,
+                statusMapped,
+                numBootstrappingNodes,
+                numDeployedNodes,
+                deploymentStatus,
+                processingStatus
+              )
             }.toSeq
             FunctionalUtil.traverse(functions).map(v => EventingStatus(numEventingNodes, v))
           })
@@ -545,20 +532,19 @@ private[scala] object AsyncEventingFunctionManagerShared {
           val bucketBindings: Option[Seq[EventingFunctionBucketBinding]] =
             depcfg.arr("buckets") match {
               case Success(ja) =>
-                Some(ja.iterator.map {
-                  case v: JsonObjectSafe =>
-                    EventingFunctionBucketBinding(
-                      v.str("alias").get,
-                      EventingFunctionKeyspace(
-                        v.str("bucket_name").get,
-                        v.str("scope_name").toOption,
-                        v.str("collection_name").toOption
-                      ),
-                      v.str("access") match {
-                        case Success("rw") => EventingFunctionBucketAccess.ReadWrite
-                        case _             => EventingFunctionBucketAccess.ReadOnly
-                      }
-                    )
+                Some(ja.iterator.map { case v: JsonObjectSafe =>
+                  EventingFunctionBucketBinding(
+                    v.str("alias").get,
+                    EventingFunctionKeyspace(
+                      v.str("bucket_name").get,
+                      v.str("scope_name").toOption,
+                      v.str("collection_name").toOption
+                    ),
+                    v.str("access") match {
+                      case Success("rw") => EventingFunctionBucketAccess.ReadWrite
+                      case _             => EventingFunctionBucketAccess.ReadOnly
+                    }
+                  )
                 }.toSeq)
               case _ => None
             }
@@ -566,32 +552,30 @@ private[scala] object AsyncEventingFunctionManagerShared {
           val constantBindings: Option[Seq[EventingFunctionConstantBinding]] =
             depcfg.arr("constants") match {
               case Success(ja) =>
-                Some(ja.iterator.map {
-                  case v: JsonObjectSafe =>
-                    EventingFunctionConstantBinding(v.str("value").get, v.str("literal").get)
+                Some(ja.iterator.map { case v: JsonObjectSafe =>
+                  EventingFunctionConstantBinding(v.str("value").get, v.str("literal").get)
                 }.toSeq)
               case _ => None
             }
 
           val urlBindings: Option[Seq[EventingFunctionUrlBinding]] = depcfg.arr("curl") match {
             case Success(ja) =>
-              Some(ja.iterator.map {
-                case v: JsonObjectSafe =>
-                  EventingFunctionUrlBinding(
-                    v.str("hostname").get,
-                    v.str("alias").get,
-                    v.str("auth_type") match {
-                      case Success("basic") =>
-                        EventingFunctionUrlAuth.Basic(v.str("username").get, None)
-                      case Success("digest") =>
-                        EventingFunctionUrlAuth.Digest(v.str("username").get, None)
-                      case Success("bearer") =>
-                        EventingFunctionUrlAuth.Bearer(v.str("bearer_key").get)
-                      case _ => EventingFunctionUrlAuth.None
-                    },
-                    v.bool("allow_cookies").getOrElse(false),
-                    v.bool("validate_ssl_certificate").getOrElse(false)
-                  )
+              Some(ja.iterator.map { case v: JsonObjectSafe =>
+                EventingFunctionUrlBinding(
+                  v.str("hostname").get,
+                  v.str("alias").get,
+                  v.str("auth_type") match {
+                    case Success("basic") =>
+                      EventingFunctionUrlAuth.Basic(v.str("username").get, None)
+                    case Success("digest") =>
+                      EventingFunctionUrlAuth.Digest(v.str("username").get, None)
+                    case Success("bearer") =>
+                      EventingFunctionUrlAuth.Bearer(v.str("bearer_key").get)
+                    case _ => EventingFunctionUrlAuth.None
+                  },
+                  v.bool("allow_cookies").getOrElse(false),
+                  v.bool("validate_ssl_certificate").getOrElse(false)
+                )
               }.toSeq)
             case _ => None
           }
@@ -618,10 +602,9 @@ private[scala] object AsyncEventingFunctionManagerShared {
     val s = new String(encoded, StandardCharsets.UTF_8)
     JsonArraySafe.fromJsonSafe(s) match {
       case Success(j) =>
-        val x = j.iterator.map {
-          case v: JsonObjectSafe =>
-            val reencoded = v.toString
-            decodeFunction(reencoded.getBytes(StandardCharsets.UTF_8))
+        val x = j.iterator.map { case v: JsonObjectSafe =>
+          val reencoded = v.toString
+          decodeFunction(reencoded.getBytes(StandardCharsets.UTF_8))
         }.toSeq
         FunctionalUtil.traverse(x)
 

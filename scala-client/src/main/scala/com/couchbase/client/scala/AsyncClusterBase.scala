@@ -25,8 +25,15 @@ import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.query._
 import com.couchbase.client.scala.search.SearchOptions
@@ -73,12 +80,12 @@ trait AsyncClusterBase { this: AsyncCluster =>
     case _          => throw CoreProtostellarUtil.unsupportedCurrentlyInProtostellar()
   }
 
-  private[scala] val searchTimeout              = javaDurationToScala(env.timeoutConfig.searchTimeout())
-  private[scala] val analyticsTimeout           = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
-  private[scala] val retryStrategy              = env.retryStrategy
-  private[scala] val searchOps                  = couchbaseOps.searchOps(null)
-  private[scala] val queryOps = couchbaseOps.queryOps()
-  
+  private[scala] val searchTimeout    = javaDurationToScala(env.timeoutConfig.searchTimeout())
+  private[scala] val analyticsTimeout = javaDurationToScala(env.timeoutConfig.analyticsTimeout())
+  private[scala] val retryStrategy    = env.retryStrategy
+  private[scala] val searchOps        = couchbaseOps.searchOps(null)
+  private[scala] val queryOps         = couchbaseOps.queryOps()
+
   lazy val transactions = new AsyncTransactions(
     new CoreTransactionsReactive(
       core,
@@ -106,4 +113,3 @@ trait AsyncClusterBase { this: AsyncCluster =>
     }
   }
 }
-

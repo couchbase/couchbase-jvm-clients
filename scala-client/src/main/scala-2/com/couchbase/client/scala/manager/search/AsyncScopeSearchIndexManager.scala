@@ -24,7 +24,11 @@ import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 import com.couchbase.client.scala.util.DurationConversions._
-import com.couchbase.client.scala.util.{CoreCommonConverters, CoreCommonConvertersScala2, FutureConversions}
+import com.couchbase.client.scala.util.{
+  CoreCommonConverters,
+  CoreCommonConvertersScala2,
+  FutureConversions
+}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,7 +44,7 @@ class AsyncScopeSearchIndexManager private[scala] (
 )(
     implicit val ec: ExecutionContext
 ) {
-  private val internal = couchbaseOps.scopeSearchIndexManager(scope)
+  private val internal                        = couchbaseOps.scopeSearchIndexManager(scope)
   private[scala] val DefaultTimeout: Duration =
     couchbaseOps.asCore().context().environment().timeoutConfig().managementTimeout()
   private[scala] val DefaultRetryStrategy: RetryStrategy =
@@ -77,7 +81,10 @@ class AsyncScopeSearchIndexManager private[scala] (
     FutureConversions
       .javaCFToScalaFutureMappingExceptions(
         internal
-          .upsertIndex(CoreCommonConvertersScala2.convert(indexDefinition), CoreCommonOptions.of(timeout, retryStrategy, null))
+          .upsertIndex(
+            CoreCommonConvertersScala2.convert(indexDefinition),
+            CoreCommonOptions.of(timeout, retryStrategy, null)
+          )
       )
       .map(_ => ())
   }

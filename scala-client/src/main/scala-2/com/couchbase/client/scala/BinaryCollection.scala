@@ -72,7 +72,6 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
   /** A reactive version of this API. */
   lazy val reactive = new ReactiveBinaryCollection(async)
 
-
   /** Add bytes to the end of a Couchbase binary document.
     *
     * $OnlyBinary
@@ -89,7 +88,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def append(
       id: String,
       content: Array[Byte],
@@ -114,7 +113,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def append(
       id: String,
       content: Array[Byte],
@@ -142,7 +141,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def prepend(
       id: String,
       content: Array[Byte],
@@ -166,7 +165,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def prepend(
       id: String,
       content: Array[Byte],
@@ -195,7 +194,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def increment(
       id: String,
       delta: Long,
@@ -225,7 +224,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def increment(
       id: String,
       delta: Long,
@@ -258,7 +257,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def decrement(
       id: String,
       delta: Long,
@@ -288,7 +287,7 @@ class BinaryCollection(val async: AsyncBinaryCollection) {
     * @return on success, a `Success(CounterResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    * */
+    */
   def decrement(
       id: String,
       delta: Long,

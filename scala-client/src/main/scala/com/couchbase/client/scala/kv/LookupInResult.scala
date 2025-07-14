@@ -34,8 +34,8 @@ import scala.jdk.CollectionConverters._
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   * @author Graham Pople
   * @since 1.0.0
-  **/
-case class LookupInResult (
+  */
+case class LookupInResult(
     private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
     transcoder: Transcoder
@@ -104,7 +104,7 @@ private[scala] object LookupInResult {
       .flatMap(field => {
         field.error().asScala match {
           case Some(err) => Failure(err)
-          case _ =>
+          case _         =>
             field.`type` match {
               case SubdocCommandType.EXISTS =>
                 if (tag.runtimeClass.isAssignableFrom(classOf[Boolean])) {

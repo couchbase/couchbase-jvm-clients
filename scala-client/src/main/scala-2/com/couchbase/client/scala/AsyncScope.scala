@@ -34,48 +34,47 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class AsyncScope private[scala] (
-                                  private[scala] val scopeName: String,
-                                  val bucketName: String,
-                                  private[scala] val couchbaseOps: CoreCouchbaseOps,
-                                  private[scala] val environment: ClusterEnvironment
-                                ) extends AsyncScopeBase {
-    private val coreScope = new CoreBucketAndScope(bucketName, this.name)
+    private[scala] val scopeName: String,
+    val bucketName: String,
+    private[scala] val couchbaseOps: CoreCouchbaseOps,
+    private[scala] val environment: ClusterEnvironment
+) extends AsyncScopeBase {
+  private val coreScope = new CoreBucketAndScope(bucketName, this.name)
 
-
-    /** Allows managing scoped FTS indexes. */
-    @SinceCouchbase("7.6")
-    lazy val searchIndexes =
+  /** Allows managing scoped FTS indexes. */
+  @SinceCouchbase("7.6")
+  lazy val searchIndexes =
     new AsyncScopeSearchIndexManager(coreScope, couchbaseOps)
 
-    /** Allows managing eventing functions on this scope.
-     *
-     * For managing eventing functions at the admin scope ("*.*") level, see [[com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager]], accessed from
-     * [[AsyncCluster.eventingFunctions]].
-     */
-    @Stability.Uncommitted
-    @SinceCouchbase("7.1")
-    lazy val eventingFunctions =
+  /** Allows managing eventing functions on this scope.
+    *
+    * For managing eventing functions at the admin scope ("*.*") level, see [[com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager]], accessed from
+    * [[AsyncCluster.eventingFunctions]].
+    */
+  @Stability.Uncommitted
+  @SinceCouchbase("7.1")
+  lazy val eventingFunctions =
     new AsyncScopeEventingFunctionManager(environment, couchbaseOps, coreScope)
 
   /** Performs an Analytics query against the cluster.
-   *
-   * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
-   * [[Cluster]] for a blocking version.  The reactive version includes backpressure-aware row streaming.
-   *
-   * The reason to use this Scope-based variant over `AsyncCluster.analyticsQuery` is that it will automatically provide
-   * the "query_context" parameter to the query service, allowing queries to be performed on collections
-   * without having to fully specify their bucket and scope names in the query statement.
-   *
-   * @param statement the Analytics query to execute
-   * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
-   *
-   * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-   *         else a `Failure`
-   */
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.  The reactive version includes backpressure-aware row streaming.
+    *
+    * The reason to use this Scope-based variant over `AsyncCluster.analyticsQuery` is that it will automatically provide
+    * the "query_context" parameter to the query service, allowing queries to be performed on collections
+    * without having to fully specify their bucket and scope names in the query statement.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
   def analyticsQuery(
-                      statement: String,
-                      options: AnalyticsOptions = AnalyticsOptions.Default
-                    ): Future[AnalyticsResult] = {
+      statement: String,
+      options: AnalyticsOptions = AnalyticsOptions.Default
+  ): Future[AnalyticsResult] = {
     couchbaseOps match {
       case core: Core =>
         val hp               = HandlerBasicParams(core)
@@ -95,7 +94,6 @@ class AsyncScope private[scala] (
       case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
   }
-
 
   /** Performs a Full Text Search (FTS) query.
     *

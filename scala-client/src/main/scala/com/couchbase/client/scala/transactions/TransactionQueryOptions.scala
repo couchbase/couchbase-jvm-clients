@@ -77,7 +77,7 @@ case class TransactionQueryOptions(
           case _: JsonObjectSafe =>
           case _: JsonArray      =>
           case _: JsonArraySafe  =>
-          case _ =>
+          case _                 =>
             out = Some(
               new IllegalArgumentException(s"Value '${redactUser(value)}' is not a valid JSON type")
             )
@@ -225,6 +225,6 @@ case class TransactionQueryOptions(
 }
 
 object TransactionQueryOptions {
-  def apply(): TransactionQueryOptions = new TransactionQueryOptions()
+  def apply(): TransactionQueryOptions                = new TransactionQueryOptions()
   private[scala] val Default: TransactionQueryOptions = TransactionQueryOptions()
 }

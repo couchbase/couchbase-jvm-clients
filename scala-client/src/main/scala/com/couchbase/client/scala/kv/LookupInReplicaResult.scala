@@ -39,8 +39,8 @@ import scala.util.Try
   *                        [[https://docs.couchbase.com/scala-sdk/current/howtos/json.html these JSON docs]]
   * @author Graham Pople
   * @since 1.0.0
-  **/
-case class LookupInReplicaResult (
+  */
+case class LookupInReplicaResult(
     private val internal: CoreSubdocGetResult,
     expiryTime: Option[Instant],
     isReplica: Boolean

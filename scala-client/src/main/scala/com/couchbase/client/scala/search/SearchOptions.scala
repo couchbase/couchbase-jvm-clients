@@ -246,7 +246,7 @@ case class SearchOptions(
   }
 
   private[scala] def toCore: CoreSearchOptions = {
-    val x = this
+    val x      = this
     val common = CoreCommonOptions.ofOptional(
       timeout
         .map(v => com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava(v))

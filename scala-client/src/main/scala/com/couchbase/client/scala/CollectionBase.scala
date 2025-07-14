@@ -23,7 +23,12 @@ import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.durability.Durability
 import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.util.CoreCommonConverters.{convert, convertExpiry, encoder, makeCommonOptions}
+import com.couchbase.client.scala.util.CoreCommonConverters.{
+  convert,
+  convertExpiry,
+  encoder,
+  makeCommonOptions
+}
 import com.couchbase.client.scala.util.{AsyncUtils, ExpiryUtil, TimeoutUtil}
 
 import scala.compat.java8.OptionConverters._
@@ -34,8 +39,7 @@ import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
-/**
-  * Provides blocking, synchronous access to all collection APIs.  This is the main entry-point for key-value (KV)
+/** Provides blocking, synchronous access to all collection APIs.  This is the main entry-point for key-value (KV)
   * operations.
   *
   * If asynchronous access is needed, we recommend looking at the [[AsyncCollection]] which is built around
@@ -82,7 +86,7 @@ import scala.util.{Failure, Try}
   * @define ParentSpan     an optional parent 'span' for the request, allowing tracing requests through the full
   *                        distributed system
   * @define Options        configure options that affect this operation
-  **/
+  */
 trait CollectionBase { this: Collection =>
   private[scala] implicit val ec: ExecutionContext = async.ec
 
@@ -95,7 +99,7 @@ trait CollectionBase { this: Collection =>
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(async.environment)
   private[scala] val kvReadTimeout: Duration           = async.kvReadTimeout
   private[scala] val kvOps                             = async.kvOps
-  private[scala] lazy val collectionIdentifier =
+  private[scala] lazy val collectionIdentifier         =
     new CollectionIdentifier(bucketName, Some(scopeName).asJava, Some(name).asJava)
 
   private[scala] def block[T](in: Future[T]) =

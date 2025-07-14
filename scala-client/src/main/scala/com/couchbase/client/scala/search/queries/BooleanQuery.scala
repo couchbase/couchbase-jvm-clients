@@ -16,7 +16,11 @@
 
 package com.couchbase.client.scala.search.queries
 
-import com.couchbase.client.core.api.search.queries.{CoreBooleanQuery, CoreConjunctionQuery, CoreDisjunctionQuery}
+import com.couchbase.client.core.api.search.queries.{
+  CoreBooleanQuery,
+  CoreConjunctionQuery,
+  CoreDisjunctionQuery
+}
 
 /** A compound FTS query that allows various combinations of sub-queries.
   *

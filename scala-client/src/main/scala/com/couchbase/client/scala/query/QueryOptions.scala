@@ -114,7 +114,7 @@ case class QueryOptions(
           case _: JsonObjectSafe =>
           case _: JsonArray      =>
           case _: JsonArraySafe  =>
-          case _ =>
+          case _                 =>
             out = Some(
               new IllegalArgumentException(s"Value '${redactUser(value)}' is not a valid JSON type")
             )
@@ -405,6 +405,6 @@ case class QueryOptions(
 }
 
 object QueryOptions {
-  def apply() = new QueryOptions()
+  def apply()                = new QueryOptions()
   private[scala] def Default = new QueryOptions()
 }

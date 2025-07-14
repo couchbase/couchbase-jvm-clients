@@ -59,18 +59,18 @@ object Group {
     .bimap[Group](
       (g: Group) => {
         val obj = ujson.Obj(
-          "id" -> ujson.Str(g.name),
+          "id"          -> ujson.Str(g.name),
           "description" -> ujson.Str(g.description),
-          "roles" -> CouchbasePickler.writeJs(g.roles)
+          "roles"       -> CouchbasePickler.writeJs(g.roles)
         )
         g.ldapGroupReference.foreach(l => obj.update("ldap_group_ref", l))
         obj
       },
       (json: ujson.Obj) => {
-        val name          = Try(json("id").str).getOrElse("")
-        val description   = Try(json("description").str).getOrElse("")
-        val roles         = Try(CouchbasePickler.read[Seq[Role]](json("roles"))).getOrElse(Seq.empty)
-        val ldapGroupRef  = Try(json("ldap_group_ref").str).toOption
+        val name         = Try(json("id").str).getOrElse("")
+        val description  = Try(json("description").str).getOrElse("")
+        val roles        = Try(CouchbasePickler.read[Seq[Role]](json("roles"))).getOrElse(Seq.empty)
+        val ldapGroupRef = Try(json("ldap_group_ref").str).toOption
         Group(name, description, roles, ldapGroupRef)
       }
     )

@@ -315,8 +315,8 @@ case class CreateBucketSettings(
 
       override def conflictResolutionType(): CoreConflictResolutionType =
         x.conflictResolutionType match {
-          case Some(ConflictResolutionType.Timestamp) => CoreConflictResolutionType.TIMESTAMP
-          case Some(ConflictResolutionType.Custom)    => CoreConflictResolutionType.CUSTOM
+          case Some(ConflictResolutionType.Timestamp)      => CoreConflictResolutionType.TIMESTAMP
+          case Some(ConflictResolutionType.Custom)         => CoreConflictResolutionType.CUSTOM
           case Some(ConflictResolutionType.SequenceNumber) =>
             CoreConflictResolutionType.SEQUENCE_NUMBER
           case None => null
@@ -342,9 +342,9 @@ case class CreateBucketSettings(
 
       override def minimumDurabilityLevel(): DurabilityLevel =
         x.minimumDurabilityLevel.map {
-          case Durability.Disabled             => DurabilityLevel.NONE
-          case Durability.ClientVerified(_, _) => DurabilityLevel.NONE
-          case Durability.Majority             => DurabilityLevel.MAJORITY
+          case Durability.Disabled                   => DurabilityLevel.NONE
+          case Durability.ClientVerified(_, _)       => DurabilityLevel.NONE
+          case Durability.Majority                   => DurabilityLevel.MAJORITY
           case Durability.MajorityAndPersistToActive =>
             DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
           case Durability.PersistToMajority => DurabilityLevel.PERSIST_TO_MAJORITY
@@ -423,28 +423,28 @@ private[scala] object BucketSettings {
         case com.couchbase.client.core.config.BucketType.COUCHBASE => BucketType.Couchbase
         case com.couchbase.client.core.config.BucketType.EPHEMERAL => BucketType.Ephemeral
         case com.couchbase.client.core.config.BucketType.MEMCACHED => BucketType.Memcached
-        case _                                                     => throw new CouchbaseException(s"Unknown bucket type ${core.bucketType}")
+        case _ => throw new CouchbaseException(s"Unknown bucket type ${core.bucketType}")
       },
       core.evictionPolicy match {
         case CoreEvictionPolicyType.FULL              => EjectionMethod.FullEviction
         case CoreEvictionPolicyType.VALUE_ONLY        => EjectionMethod.ValueOnly
         case CoreEvictionPolicyType.NOT_RECENTLY_USED => EjectionMethod.NotRecentlyUsed
         case CoreEvictionPolicyType.NO_EVICTION       => EjectionMethod.NoEviction
-        case _                                        => throw new CouchbaseException(s"Unknown eviction type ${core.evictionPolicy}")
+        case _ => throw new CouchbaseException(s"Unknown eviction type ${core.evictionPolicy}")
       },
       Option(core.maxExpiry).map(v => TimeUnit.NANOSECONDS.toSeconds(v.toNanos).toInt),
       Option(core.compressionMode).map {
         case CoreCompressionMode.OFF     => CompressionMode.Off
         case CoreCompressionMode.PASSIVE => CompressionMode.Passive
         case CoreCompressionMode.ACTIVE  => CompressionMode.Active
-        case _                           => throw new CouchbaseException(s"Unknown compression type ${core.compressionMode}")
+        case _ => throw new CouchbaseException(s"Unknown compression type ${core.compressionMode}")
       },
       core.minimumDurabilityLevel match {
         case DurabilityLevel.NONE                           => Durability.Disabled
         case DurabilityLevel.MAJORITY                       => Durability.Majority
         case DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
         case DurabilityLevel.PERSIST_TO_MAJORITY            => Durability.PersistToMajority
-        case _ =>
+        case _                                              =>
           throw new CouchbaseException(s"Unknown durability type ${core.minimumDurabilityLevel}")
       },
       false,
@@ -452,7 +452,7 @@ private[scala] object BucketSettings {
       Option(core.storageBackend).filterNot(_.alias == "undefined").map {
         case CoreStorageBackend.COUCHSTORE => StorageBackend.Couchstore
         case CoreStorageBackend.MAGMA      => StorageBackend.Magma
-        case _                             => throw new CouchbaseException(s"Unknown storage type ${core.storageBackend}")
+        case _ => throw new CouchbaseException(s"Unknown storage type ${core.storageBackend}")
       },
       // Cannot just do Option(x) here due to java.lang.Boolean and scala.Boolean
       if (core.historyRetentionCollectionDefault != null)

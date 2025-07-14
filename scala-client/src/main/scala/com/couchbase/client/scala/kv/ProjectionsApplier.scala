@@ -28,9 +28,9 @@ private[scala] object ProjectionsApplier {
       case '"' =>
         val str = new String(content, CharsetUtil.UTF_8)
         Success(str.substring(1, str.size - 1))
-      case 't' => Success(true)
-      case 'f' => Success(false)
-      case 'n' => Success(null)
+      case 't'                                                       => Success(true)
+      case 'f'                                                       => Success(false)
+      case 'n'                                                       => Success(null)
       case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
         val str = new String(content, CharsetUtil.UTF_8)
         val out =
@@ -83,7 +83,7 @@ private[scala] object ProjectionsApplier {
             }
           case v: PathObjectOrField =>
             in match {
-              case Left(obj) => Success(obj.put(v.str, content))
+              case Left(obj)  => Success(obj.put(v.str, content))
               case Right(arr) => {
                 val toInsert = JsonObject.create
                 toInsert.put(v.str, content)

@@ -35,8 +35,8 @@ class AsyncAnalyticsIndexManager private[scala] (
 )(
     implicit val ec: ExecutionContext
 ) {
-  private val DefaultTimeout       = reactive.DefaultTimeout
-  private val DefaultRetryStrategy = reactive.DefaultRetryStrategy
+  private val DefaultTimeout                                   = reactive.DefaultTimeout
+  private val DefaultRetryStrategy                             = reactive.DefaultRetryStrategy
   private def linkManagerTry: Future[CoreAnalyticsLinkManager] = couchbaseOps match {
     case core: Core => Future.successful(new CoreAnalyticsLinkManager(core))
     case _          => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
@@ -149,7 +149,8 @@ class AsyncAnalyticsIndexManager private[scala] (
 
   /** Create an analytics link.  See the [[AnalyticsLink]] documentation for the types of links that can be created.
     *
-    * If a link with the same name already exists, a `LinkExistsException` will be raised. */
+    * If a link with the same name already exists, a `LinkExistsException` will be raised.
+    */
   def createLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
@@ -173,28 +174,29 @@ class AsyncAnalyticsIndexManager private[scala] (
     * be blanked out (empty strings) for security reasons.  It may be necessarily to reconstruct the original
     * [[AnalyticsLink]] with this security information before calling this method.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def replaceLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
       retryStrategy: RetryStrategy = DefaultRetryStrategy,
       parentSpan: Option[RequestSpan] = None
   ): Future[Void] = {
-    linkManagerTry.flatMap(
-      linkManager =>
-        link.toMap match {
-          case Success(v) =>
-            val jf =
-              linkManager.replaceLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
-            FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
-          case Failure(err) => Future.failed(err)
-        }
+    linkManagerTry.flatMap(linkManager =>
+      link.toMap match {
+        case Success(v) =>
+          val jf =
+            linkManager.replaceLink(v.asJava, makeCoreOptions(timeout, retryStrategy, parentSpan))
+          FutureConversions.javaCFToScalaFutureMappingExceptions(jf)
+        case Failure(err) => Future.failed(err)
+      }
     )
   }
 
   /** Drops (deletes) an existing analytics link.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def dropLink(
       linkName: String,
       dataverse: String,

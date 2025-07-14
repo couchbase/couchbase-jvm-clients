@@ -24,8 +24,7 @@ import com.couchbase.client.scala.util.DurationConversions.scalaDurationToJava
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
-/**
-  * Provides all configurable parameters for Couchbase transactions cleanup.
+/** Provides all configurable parameters for Couchbase transactions cleanup.
   */
 case class TransactionsCleanupConfig private[scala] (
     private val cleanupClientAttempts: Option[Boolean] = None,
@@ -34,8 +33,7 @@ case class TransactionsCleanupConfig private[scala] (
     private val cleanupSet: Option[Set[TransactionKeyspace]] = None
 ) {
 
-  /**
-    * Controls where a background thread is created to cleanup any transaction attempts made by this client.
+  /** Controls where a background thread is created to cleanup any transaction attempts made by this client.
     * <p>
     * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
     * transactions.
@@ -44,8 +42,7 @@ case class TransactionsCleanupConfig private[scala] (
     copy(cleanupClientAttempts = Some(cleanupClientAttempts))
   }
 
-  /**
-    * Controls where a background process is created to cleanup any 'lost' transaction attempts.
+  /** Controls where a background process is created to cleanup any 'lost' transaction attempts.
     * <p>
     * The default is true and users should generally not change this: cleanup is an essential part of Couchbase
     * transactions.
@@ -54,8 +51,7 @@ case class TransactionsCleanupConfig private[scala] (
     copy(cleanupLostAttempts = Some(cleanupLostAttempts))
   }
 
-  /**
-    * Part of the lost attempts background cleanup process.  Specifies the window during which the cleanup
+  /** Part of the lost attempts background cleanup process.  Specifies the window during which the cleanup
     * process is sure to discover all lost transactions.
     * <p>
     * The default setting of 60 seconds is tuned to balance how quickly such transactions are discovered, while
@@ -67,8 +63,7 @@ case class TransactionsCleanupConfig private[scala] (
     copy(cleanupWindow = Some(cleanupWindow))
   }
 
-  /**
-    * Adds collections to the set of metadata collections that will be cleaned up automatically.
+  /** Adds collections to the set of metadata collections that will be cleaned up automatically.
     * <p>
     * Collections will be added automatically to this 'cleanup set' as transactions are performed, so generally
     * an application will not need to change this.

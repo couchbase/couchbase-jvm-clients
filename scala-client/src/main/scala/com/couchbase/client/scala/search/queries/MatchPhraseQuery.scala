@@ -17,8 +17,7 @@ package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.core.api.search.queries.CoreMatchPhraseQuery
 
-/**
-  * An FTS query that matches several given terms (a "phrase"), applying further processing
+/** An FTS query that matches several given terms (a "phrase"), applying further processing
   * like analyzers to them.
   *
   * @param matchPhrase The input phrase to be matched against.

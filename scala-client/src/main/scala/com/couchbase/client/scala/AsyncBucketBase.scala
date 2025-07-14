@@ -33,7 +33,7 @@ import scala.jdk.CollectionConverters._
 trait AsyncBucketBase { this: AsyncBucket =>
 
   private[scala] implicit val ec: ExecutionContext = environment.ec
-  
+
   /** Opens and returns a Couchbase scope resource.
     *
     * @param scopeName the name of the scope
@@ -61,4 +61,4 @@ trait AsyncBucketBase { this: AsyncBucket =>
   def collection(collectionName: String): AsyncCollection = {
     scope(DefaultResources.DefaultScope).collection(collectionName)
   }
-} 
+}

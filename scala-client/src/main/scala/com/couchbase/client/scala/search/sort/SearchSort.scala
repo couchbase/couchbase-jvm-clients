@@ -33,8 +33,7 @@ sealed trait SearchSort {
   private[scala] def toCore: CoreSearchSort
 }
 
-/**
-  * Base class for all FTS sort options in querying.
+/** Base class for all FTS sort options in querying.
   *
   * @since 1.0.0
   */
@@ -87,19 +86,25 @@ object SearchSort {
     override protected def identifier = "field"
 
     override private[scala] def toCore =
-      new CoreSearchSortField(field, typ.map {
-        case FieldSortType.Auto   => CoreSearchFieldType.AUTO
-        case FieldSortType.String => CoreSearchFieldType.STRING
-        case FieldSortType.Number => CoreSearchFieldType.NUMBER
-        case FieldSortType.Date   => CoreSearchFieldType.DATE
-      }.orNull, mode.map {
-        case FieldSortMode.Default => CoreSearchFieldMode.DEFAULT
-        case FieldSortMode.Min     => CoreSearchFieldMode.MIN
-        case FieldSortMode.Max     => CoreSearchFieldMode.MAX
-      }.orNull, missing.map {
-        case FieldSortMissing.Last  => CoreSearchFieldMissing.LAST
-        case FieldSortMissing.First => CoreSearchFieldMissing.FIRST
-      }.orNull, descending.map(_.asInstanceOf[java.lang.Boolean]).orNull)
+      new CoreSearchSortField(
+        field,
+        typ.map {
+          case FieldSortType.Auto   => CoreSearchFieldType.AUTO
+          case FieldSortType.String => CoreSearchFieldType.STRING
+          case FieldSortType.Number => CoreSearchFieldType.NUMBER
+          case FieldSortType.Date   => CoreSearchFieldType.DATE
+        }.orNull,
+        mode.map {
+          case FieldSortMode.Default => CoreSearchFieldMode.DEFAULT
+          case FieldSortMode.Min     => CoreSearchFieldMode.MIN
+          case FieldSortMode.Max     => CoreSearchFieldMode.MAX
+        }.orNull,
+        missing.map {
+          case FieldSortMissing.Last  => CoreSearchFieldMissing.LAST
+          case FieldSortMissing.First => CoreSearchFieldMissing.FIRST
+        }.orNull,
+        descending.map(_.asInstanceOf[java.lang.Boolean]).orNull
+      )
   }
 
   /** Sort by a geo location distance.
@@ -134,19 +139,18 @@ object SearchSort {
         CoreGeoCoordinates.lon(location.head).lat(location(1)),
         field,
         unit
-          .map(
-            v =>
-              v.toLowerCase match {
-                case "inch" | "in" | "inches"             => CoreSearchGeoDistanceUnits.INCH
-                case "yards"                              => CoreSearchGeoDistanceUnits.YARDS
-                case "feet" | "ft"                        => CoreSearchGeoDistanceUnits.FEET
-                case "kilometers" | "km" | "kilometres"   => CoreSearchGeoDistanceUnits.KILOMETERS
-                case "nauticalmiles"                      => CoreSearchGeoDistanceUnits.NAUTICAL_MILES
-                case "millimeters" | "mm" | "millimetres" => CoreSearchGeoDistanceUnits.MILLIMETERS
-                case "centimeters" | "cm" | "centimetres" => CoreSearchGeoDistanceUnits.CENTIMETERS
-                case "miles" | "mi"                       => CoreSearchGeoDistanceUnits.MILES
-                case "meters" | "m" | "metres"            => CoreSearchGeoDistanceUnits.METERS
-              }
+          .map(v =>
+            v.toLowerCase match {
+              case "inch" | "in" | "inches"             => CoreSearchGeoDistanceUnits.INCH
+              case "yards"                              => CoreSearchGeoDistanceUnits.YARDS
+              case "feet" | "ft"                        => CoreSearchGeoDistanceUnits.FEET
+              case "kilometers" | "km" | "kilometres"   => CoreSearchGeoDistanceUnits.KILOMETERS
+              case "nauticalmiles"                      => CoreSearchGeoDistanceUnits.NAUTICAL_MILES
+              case "millimeters" | "mm" | "millimetres" => CoreSearchGeoDistanceUnits.MILLIMETERS
+              case "centimeters" | "cm" | "centimetres" => CoreSearchGeoDistanceUnits.CENTIMETERS
+              case "miles" | "mi"                       => CoreSearchGeoDistanceUnits.MILES
+              case "meters" | "m" | "metres"            => CoreSearchGeoDistanceUnits.METERS
+            }
           )
           .orNull,
         descending.map(_.asInstanceOf[java.lang.Boolean]).orNull

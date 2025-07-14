@@ -20,7 +20,7 @@ import com.couchbase.client.core.api.search.CoreSearchMetaData
 import scala.jdk.CollectionConverters._
 
 /** Additional information returned by the FTS service after any rows and errors. */
-case class SearchMetaData (private val internal: CoreSearchMetaData) {
+case class SearchMetaData(private val internal: CoreSearchMetaData) {
 
   /** Metrics related to the FTS request. */
   def metrics: SearchMetrics = SearchMetrics(internal.metrics)

@@ -75,24 +75,22 @@ class AsyncCollectionQueryIndexManager(
           }
         )
       )
-      .map(
-        result =>
-          // toSeq required for Scala 2.13
-          result.asScala.toSeq.map(
-            i =>
-              QueryIndex(
-                i.name,
-                Some(i.primary),
-                Option(i.`type`),
-                i.state,
-                i.keyspace,
-                i.indexKey.asScala.toSeq.map(v => v.textValue),
-                i.condition.asScala,
-                i.partition.asScala,
-                Option(i.bucketName),
-                i.scopeName.asScala
-              )
+      .map(result =>
+        // toSeq required for Scala 2.13
+        result.asScala.toSeq.map(i =>
+          QueryIndex(
+            i.name,
+            Some(i.primary),
+            Option(i.`type`),
+            i.state,
+            i.keyspace,
+            i.indexKey.asScala.toSeq.map(v => v.textValue),
+            i.condition.asScala,
+            i.partition.asScala,
+            Option(i.bucketName),
+            i.scopeName.asScala
           )
+        )
       )
   }
 

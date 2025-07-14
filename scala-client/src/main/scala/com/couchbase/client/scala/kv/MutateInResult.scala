@@ -36,7 +36,7 @@ import scala.util.{Failure, Try}
   * @define Index          the index of the [[MutateInSpec]] provided to the `mutateIn`
   * @author Graham Pople
   * @since 1.0.0
-  * */
+  */
 case class MutateInResult(
     id: String,
     private val content: CoreSubdocMutateResult,
@@ -57,7 +57,7 @@ case class MutateInResult(
       .flatMap(field => {
         field.error().asScala match {
           case Some(err) => Failure(err)
-          case _ =>
+          case _         =>
             deserializer.deserialize(field.value())
         }
       })

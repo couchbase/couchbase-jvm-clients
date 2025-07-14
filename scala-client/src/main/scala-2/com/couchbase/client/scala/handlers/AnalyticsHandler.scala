@@ -44,8 +44,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.jdk.CollectionConverters._
 
-/**
-  * Handles requests and responses for Analytics operations.
+/** Handles requests and responses for Analytics operations.
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -119,39 +118,36 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
 
     val ret: Future[AnalyticsResult] = FutureConversions
       .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-      .flatMap(
-        response =>
-          FutureConversions
-            .javaFluxToScalaFlux(response.rows())
-            .collectSeq()
-            .flatMap(
-              rows =>
-                FutureConversions
-                  .javaMonoToScalaMono(response.trailer())
-                  .map(trailer => {
-                    val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                      .map(
-                        warnings =>
-                          ErrorCodeAndMessage
-                            .fromJsonArray(warnings)
-                            .asScala
-                            .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
-                      )
-                      .getOrElse(Seq.empty)
+      .flatMap(response =>
+        FutureConversions
+          .javaFluxToScalaFlux(response.rows())
+          .collectSeq()
+          .flatMap(rows =>
+            FutureConversions
+              .javaMonoToScalaMono(response.trailer())
+              .map(trailer => {
+                val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
+                  .map(warnings =>
+                    ErrorCodeAndMessage
+                      .fromJsonArray(warnings)
+                      .asScala
+                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                  )
+                  .getOrElse(Seq.empty)
 
-                    AnalyticsResult(
-                      rows,
-                      AnalyticsMetaData(
-                        response.header().requestId(),
-                        response.header().clientContextId().orElse(""),
-                        response.header().signature.asScala,
-                        AnalyticsMetrics.fromBytes(trailer.metrics),
-                        warnings,
-                        AnalyticsStatus.from(trailer.status)
-                      )
-                    )
-                  })
-            )
+                AnalyticsResult(
+                  rows,
+                  AnalyticsMetaData(
+                    response.header().requestId(),
+                    response.header().clientContextId().orElse(""),
+                    response.header().signature.asScala,
+                    AnalyticsMetrics.fromBytes(trailer.metrics),
+                    warnings,
+                    AnalyticsStatus.from(trailer.status)
+                  )
+                )
+              })
+          )
       )
       .toFuture
 
@@ -173,12 +169,11 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
             .javaMonoToScalaMono(response.trailer())
             .map(trailer => {
               val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                .map(
-                  warnings =>
-                    ErrorCodeAndMessage
-                      .fromJsonArray(warnings)
-                      .asScala
-                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                .map(warnings =>
+                  ErrorCodeAndMessage
+                    .fromJsonArray(warnings)
+                    .asScala
+                    .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
                 )
                 .getOrElse(Seq.empty)
 

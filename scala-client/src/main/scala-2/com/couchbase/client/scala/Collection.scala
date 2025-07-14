@@ -16,11 +16,22 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.scala.codec.{JsonDeserializer, JsonSerializer}
-import com.couchbase.client.scala.datastructures.{CouchbaseBuffer, CouchbaseCollectionOptions, CouchbaseMap, CouchbaseQueue, CouchbaseSet}
+import com.couchbase.client.scala.datastructures.{
+  CouchbaseBuffer,
+  CouchbaseCollectionOptions,
+  CouchbaseMap,
+  CouchbaseQueue,
+  CouchbaseSet
+}
 import com.couchbase.client.scala.kv.GetReplicaResult
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.api.kv.{CoreExpiry, CoreReadPreference, CoreSubdocGetCommand, CoreSubdocGetResult}
+import com.couchbase.client.core.api.kv.{
+  CoreExpiry,
+  CoreReadPreference,
+  CoreSubdocGetCommand,
+  CoreSubdocGetResult
+}
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -37,7 +48,10 @@ import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.durability._
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.kv._
-import com.couchbase.client.scala.manager.query.{AsyncCollectionQueryIndexManager, CollectionQueryIndexManager}
+import com.couchbase.client.scala.manager.query.{
+  AsyncCollectionQueryIndexManager,
+  CollectionQueryIndexManager
+}
 import com.couchbase.client.scala.util.CoreCommonConverters._
 import com.couchbase.client.scala.util.{ExpiryUtil, FutureConversions, TimeoutUtil}
 import reactor.core.publisher.Flux
@@ -58,19 +72,18 @@ import scala.reflect.ClassTag
 import scala.util.Try
 
 class Collection(
-                  /** Provides access to an async version of this API. */
-                  val async: AsyncCollection,
-                  val bucketName: String
-                ) extends CollectionBase {
+    /** Provides access to an async version of this API. */
+    val async: AsyncCollection,
+    val bucketName: String
+) extends CollectionBase {
 
   /** Provides access to a reactive-programming version of this API. */
   val reactive = new ReactiveCollection(async)
 
+  /** Manage query indexes for this collection */
+  lazy val queryIndexes = new CollectionQueryIndexManager(async.queryIndexes)
 
-    /** Manage query indexes for this collection */
-    lazy val queryIndexes = new CollectionQueryIndexManager(async.queryIndexes)
-
-    /** Fetches a full document from this collection.
+  /** Fetches a full document from this collection.
     *
     * This overload provides only the most commonly used options.  If you need to configure something more
     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetOptions]] instead, which supports all available options.
@@ -81,7 +94,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def get(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -97,7 +110,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def get(
       id: String,
       options: GetOptions
@@ -118,7 +131,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
     *         $ErrorHandling
-    **/
+    */
   def insert[T](
       id: String,
       content: T,
@@ -145,7 +158,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
     *         $ErrorHandling
-    **/
+    */
   def insert[T](
       id: String,
       content: T,
@@ -176,7 +189,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def replace[T](
       id: String,
       content: T,
@@ -206,7 +219,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def replace[T](
       id: String,
       content: T,
@@ -297,7 +310,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def remove(
       id: String,
       cas: Long = 0,
@@ -316,7 +329,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def remove(
       id: String,
       options: RemoveOptions
@@ -345,7 +358,7 @@ class Collection(
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
@@ -383,7 +396,7 @@ class Collection(
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
@@ -420,7 +433,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -441,7 +454,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -463,7 +476,7 @@ class Collection(
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def unlock(
       id: String,
       cas: Long,
@@ -481,7 +494,7 @@ class Collection(
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def unlock(
       id: String,
       cas: Long,
@@ -498,7 +511,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -519,7 +532,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -545,7 +558,7 @@ class Collection(
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -567,7 +580,7 @@ class Collection(
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -575,204 +588,204 @@ class Collection(
   ): Try[LookupInResult] =
     block(async.lookupIn(id, spec, options))
 
-    /** Retrieves any available version of the document.
-     *
-     * The application should default to using `.get()` instead.  This method is intended for high-availability
-     * situations where, say, a `.get()` operation has failed, and the
-     * application wants to return any - even possibly stale - data as soon as possible.
-     *
-     * Under the hood this sends a request to all configured replicas for the document, including the active, and
-     * whichever returns first is returned.
-     *
-     * This overload provides only the most commonly used options.  If you need to configure something more
-     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAnyReplicaOptions]] instead, which supports all available options.
-     *
-     * @param id            $Id
-     * @param timeout       $Timeout
-     *
-     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
-     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
-     *         found. $ErrorHandling
-     **/
-    def getAnyReplica(
-                             id: String,
-                             timeout: Duration = kvReadTimeout
-                     ): Try[GetReplicaResult] =
-        block(async.getAnyReplica(id, timeout))
+  /** Retrieves any available version of the document.
+    *
+    * The application should default to using `.get()` instead.  This method is intended for high-availability
+    * situations where, say, a `.get()` operation has failed, and the
+    * application wants to return any - even possibly stale - data as soon as possible.
+    *
+    * Under the hood this sends a request to all configured replicas for the document, including the active, and
+    * whichever returns first is returned.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    */
+  def getAnyReplica(
+      id: String,
+      timeout: Duration = kvReadTimeout
+  ): Try[GetReplicaResult] =
+    block(async.getAnyReplica(id, timeout))
 
-    /** Retrieves any available version of the document.
-     *
-     * The application should default to using `.get()` instead.  This method is intended for high-availability
-     * situations where, say, a `.get()` operation has failed, and the
-     * application wants to return any - even possibly stale - data as soon as possible.
-     *
-     * Under the hood this sends a request to all configured replicas for the document, including the active, and
-     * whichever returns first is returned.
-     *
-     * @param id            $Id
-     * @param options       $Options
-     *
-     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
-     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
-     *         found. $ErrorHandling
-     **/
-    def getAnyReplica(
-                             id: String,
-                             options: GetAnyReplicaOptions
-                     ): Try[GetReplicaResult] = {
-        block(async.getAnyReplica(id, options))
-    }
+  /** Retrieves any available version of the document.
+    *
+    * The application should default to using `.get()` instead.  This method is intended for high-availability
+    * situations where, say, a `.get()` operation has failed, and the
+    * application wants to return any - even possibly stale - data as soon as possible.
+    *
+    * Under the hood this sends a request to all configured replicas for the document, including the active, and
+    * whichever returns first is returned.
+    *
+    * @param id            $Id
+    * @param options       $Options
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
+    *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    */
+  def getAnyReplica(
+      id: String,
+      options: GetAnyReplicaOptions
+  ): Try[GetReplicaResult] = {
+    block(async.getAnyReplica(id, options))
+  }
 
-    /** Retrieves all available versions of the document.
-     *
-     * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
-     * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
-     * application wants to attempt manual verification and resolution.
-     *
-     * The returned `Iterable` will block on each call to `next` until the next replica has responded.
-     *
-     * This overload provides only the most commonly used options.  If you need to configure something more
-     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAllReplicasOptions]] instead, which supports all available options.
-     *
-     * @param id            $Id
-     * @param timeout       $Timeout
-     *
-     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
-     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
-     *         found. $ErrorHandling
-     **/
-    def getAllReplicas(
-                              id: String,
-                              timeout: Duration = kvReadTimeout
-                      ): Iterable[GetReplicaResult] = {
-        val futures = async.getAllReplicas(id, timeout)
-        futures.map(f => Await.result(f, timeout))
-    }
+  /** Retrieves all available versions of the document.
+    *
+    * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
+    * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
+    * application wants to attempt manual verification and resolution.
+    *
+    * The returned `Iterable` will block on each call to `next` until the next replica has responded.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.GetAllReplicasOptions]] instead, which supports all available options.
+    *
+    * @param id            $Id
+    * @param timeout       $Timeout
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    */
+  def getAllReplicas(
+      id: String,
+      timeout: Duration = kvReadTimeout
+  ): Iterable[GetReplicaResult] = {
+    val futures = async.getAllReplicas(id, timeout)
+    futures.map(f => Await.result(f, timeout))
+  }
 
-    /** Retrieves all available versions of the document.
-     *
-     * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
-     * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
-     * application wants to attempt manual verification and resolution.
-     *
-     * The returned Iterable` will block on each call to `next` until the next replica has responded.
-     *
-     * @param id            $Id
-     * @param options       $Options
-     *
-     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
-     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
-     *         found. $ErrorHandling
-     **/
-    def getAllReplicas(
-                              id: String,
-                              options: GetAllReplicasOptions
-                      ): Iterable[GetReplicaResult] = {
-        val futures = async.getAllReplicas(id, options)
-        val to = if (options.timeout.isFinite) options.timeout else kvReadTimeout
-        futures.map(f => Await.result(f, to))
-    }
+  /** Retrieves all available versions of the document.
+    *
+    * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,
+    * including where a particular write has ambiguously failed (e.g. it may or may not have succeeded), and the
+    * application wants to attempt manual verification and resolution.
+    *
+    * The returned Iterable` will block on each call to `next` until the next replica has responded.
+    *
+    * @param id            $Id
+    * @param options       $Options
+    *
+    * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be
+    *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
+    *         found. $ErrorHandling
+    */
+  def getAllReplicas(
+      id: String,
+      options: GetAllReplicasOptions
+  ): Iterable[GetReplicaResult] = {
+    val futures = async.getAllReplicas(id, options)
+    val to      = if (options.timeout.isFinite) options.timeout else kvReadTimeout
+    futures.map(f => Await.result(f, to))
+  }
 
-    /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
-     * retrieving the entire document.
-     *
-     * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
-     * how to process the results.
-     *
-     * This overload provides only the most commonly used options.  If you need to configure something more
-     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAllReplicasOptions]] instead, which supports all available options.
-     *
-     * This variant will read and return all replicas of the document.
-     *
-     * @param id      $Id
-     * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
-     *                [[kv.LookupInSpec]] for more details.
-     * @param timeout $Timeout
-     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
-     **/
-    @SinceCouchbase("7.6")
-    def lookupInAllReplicas(
-                                   id: String,
-                                   spec: collection.Seq[LookupInSpec],
-                                   timeout: Duration = kvReadTimeout
-                           ): Try[Iterable[LookupInReplicaResult]] = {
-        val futures = async.lookupInAllReplicas(id, spec, timeout)
-        block(Future.sequence(futures)).map(_.toIterable)
-    }
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAllReplicasOptions]] instead, which supports all available options.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param timeout $Timeout
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+    */
+  @SinceCouchbase("7.6")
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Try[Iterable[LookupInReplicaResult]] = {
+    val futures = async.lookupInAllReplicas(id, spec, timeout)
+    block(Future.sequence(futures)).map(_.toIterable)
+  }
 
-    /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
-     * retrieving the entire document.
-     *
-     * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
-     * how to process the results.
-     *
-     * This variant will read and return all replicas of the document.
-     *
-     * @param id      $Id
-     * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
-     *                [[kv.LookupInSpec]] for more details.
-     * @param options $Options
-     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
-     **/
-    @SinceCouchbase("7.6")
-    def lookupInAllReplicas(
-                                   id: String,
-                                   spec: collection.Seq[LookupInSpec],
-                                   options: LookupInAllReplicasOptions
-                           ): Try[Iterable[LookupInReplicaResult]] = {
-        val futures = async.lookupInAllReplicas(id, spec, options)
-        block(Future.sequence(futures)).map(_.toIterable)
-    }
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read and return all replicas of the document.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param options $Options
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+    */
+  @SinceCouchbase("7.6")
+  def lookupInAllReplicas(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAllReplicasOptions
+  ): Try[Iterable[LookupInReplicaResult]] = {
+    val futures = async.lookupInAllReplicas(id, spec, options)
+    block(Future.sequence(futures)).map(_.toIterable)
+  }
 
-    /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
-     * retrieving the entire document.
-     *
-     * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
-     * how to process the results.
-     *
-     * This variant will read all replicas of the document, and return the first one found.
-     *
-     * This overload provides only the most commonly used options.  If you need to configure something more
-     * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
-     *
-     * @param id      $Id
-     * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
-     *                [[kv.LookupInSpec]] for more details.
-     * @param timeout $Timeout
-     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
-     **/
-    @SinceCouchbase("7.6")
-    def lookupInAnyReplica(
-                                  id: String,
-                                  spec: collection.Seq[LookupInSpec],
-                                  timeout: Duration = kvReadTimeout
-                          ): Try[LookupInReplicaResult] = {
-        block(async.lookupInAnyReplica(id, spec, timeout))
-    }
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * This overload provides only the most commonly used options.  If you need to configure something more
+    * esoteric, use the overload that takes an [[com.couchbase.client.scala.kv.LookupInAnyReplicaOptions]] instead, which supports all available options.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param timeout $Timeout
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+    */
+  @SinceCouchbase("7.6")
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      timeout: Duration = kvReadTimeout
+  ): Try[LookupInReplicaResult] = {
+    block(async.lookupInAnyReplica(id, spec, timeout))
+  }
 
-    /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
-     * retrieving the entire document.
-     *
-     * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
-     * how to process the results.
-     *
-     * This variant will read all replicas of the document, and return the first one found.
-     *
-     * @param id      $Id
-     * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
-     *                [[kv.LookupInSpec]] for more details.
-     * @param options $Options
-     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
-     **/
-    @SinceCouchbase("7.6")
-    def lookupInAnyReplica(
-                                  id: String,
-                                  spec: collection.Seq[LookupInSpec],
-                                  options: LookupInAnyReplicaOptions
-                          ): Try[LookupInReplicaResult] =
-        block(async.lookupInAnyReplica(id, spec, options))
+  /** SubDocument lookups allow retrieving parts of a JSON document directly, which may be more efficient than
+    * retrieving the entire document.
+    *
+    * Individual operations can succeed or fail without affecting the others.  See [[kv.LookupInReplicaResult]] for details on
+    * how to process the results.
+    *
+    * This variant will read all replicas of the document, and return the first one found.
+    *
+    * @param id      $Id
+    * @param spec    a sequence of `LookupInSpec` specifying what fields to fetch.  See
+    *                [[kv.LookupInSpec]] for more details.
+    * @param options $Options
+    * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.
+    */
+  @SinceCouchbase("7.6")
+  def lookupInAnyReplica(
+      id: String,
+      spec: collection.Seq[LookupInSpec],
+      options: LookupInAnyReplicaOptions
+  ): Try[LookupInReplicaResult] =
+    block(async.lookupInAnyReplica(id, spec, options))
 
-    /** Checks if a document exists.
+  /** Checks if a document exists.
     *
     * This doesn't fetch the document so if the application simply needs to know if the document exists, this is the
     * most efficient method.
@@ -786,7 +799,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def exists(
       id: String,
       timeout: Duration = kvReadTimeout
@@ -805,7 +818,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def exists(
       id: String,
       options: ExistsOptions
@@ -879,55 +892,54 @@ class Collection(
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseBuffer]] backed by this collection.
-   *
-   * @param id id of the document underyling the datastructure
-   * @param options options for controlling the behaviour of the datastructure
-   */
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
   def buffer[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
-    implicit decode: JsonDeserializer[T],
-    encode: JsonSerializer[T],
-    tag: ClassTag[T]
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: ClassTag[T]
   ): CouchbaseBuffer[T] = {
     new CouchbaseBuffer[T](id, this)
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseSet]] backed by this collection.
-   *
-   * @param id id of the document underyling the datastructure
-   * @param options options for controlling the behaviour of the datastructure
-   */
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
   def set[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
-    implicit decode: JsonDeserializer[T],
-    encode: JsonSerializer[T]
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T]
   ): CouchbaseSet[T] = {
     new CouchbaseSet[T](id, this)
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseMap]] backed by this collection.
-   *
-   * @param id id of the document underyling the datastructure
-   * @param options options for controlling the behaviour of the datastructure
-   */
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
   def map[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
-    implicit decode: JsonDeserializer[T],
-    encode: JsonSerializer[T],
-    tag: ClassTag[T]
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: ClassTag[T]
   ): CouchbaseMap[T] = {
     new CouchbaseMap[T](id, this)
   }
 
   /** Returns a [[com.couchbase.client.scala.datastructures.CouchbaseQueue]] backed by this collection.
-   *
-   * @param id id of the document underyling the datastructure
-   * @param options options for controlling the behaviour of the datastructure
-   */
+    *
+    * @param id id of the document underyling the datastructure
+    * @param options options for controlling the behaviour of the datastructure
+    */
   def queue[T](id: String, options: Option[CouchbaseCollectionOptions] = None)(
-    implicit decode: JsonDeserializer[T],
-    encode: JsonSerializer[T],
-    tag: ClassTag[T]
+      implicit decode: JsonDeserializer[T],
+      encode: JsonSerializer[T],
+      tag: ClassTag[T]
   ): CouchbaseQueue[T] = {
     new CouchbaseQueue[T](id, this)
   }
-
 
 }

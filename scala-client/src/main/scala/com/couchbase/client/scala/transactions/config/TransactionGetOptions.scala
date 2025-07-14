@@ -18,14 +18,12 @@ package com.couchbase.client.scala.transactions.config
 import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.scala.codec.Transcoder
 
-/**
-  * Operations controlling a transactional get.
+/** Operations controlling a transactional get.
   */
 @Stability.Volatile
 case class TransactionGetOptions private (transcoder: Option[Transcoder] = None) {
 
-  /**
-    * Specify a custom [[Transcoder]] that is used to decode the content of the result.
+  /** Specify a custom [[Transcoder]] that is used to decode the content of the result.
     *
     * If not-specified, the [[com.couchbase.client.scala.env.ClusterEnvironment]]'s [[com.couchbase.client.scala.codec.JsonSerializer]]
     * (NOT transcoder) is used.

@@ -19,8 +19,7 @@ import com.couchbase.client.core.api.search.result._
 
 import scala.jdk.CollectionConverters._
 
-/**
-  * Base interface for all facet results.
+/** Base interface for all facet results.
   *
   * @define name    the name of the [[com.couchbase.client.scala.search.facet.SearchFacet]] this result corresponds to.
   * @define field   the field the [[com.couchbase.client.scala.search.facet.SearchFacet]] was targeting.
@@ -56,8 +55,7 @@ sealed trait SearchFacetResult {
 
 object SearchFacetResult {
 
-  /**
-    * A range (or bucket) for a [[DateRangeSearchFacetResult]]. Counts the number of matches
+  /** A range (or bucket) for a [[DateRangeSearchFacetResult]]. Counts the number of matches
     * that fall into the named range (which can overlap with other user-defined ranges).
     *
     * @since 1.0.0
@@ -72,12 +70,11 @@ object SearchFacetResult {
     def count: Long = internal.count
   }
 
-  /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.DateRangeFacet]].
+  /** Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.DateRangeFacet]].
     *
     * @since 1.0.0
     */
-  case class DateRangeSearchFacetResult (
+  case class DateRangeSearchFacetResult(
       protected val internal: CoreDateRangeSearchFacetResult
   ) extends SearchFacetResult {
 
@@ -85,12 +82,11 @@ object SearchFacetResult {
     def dateRanges: Seq[DateRange] = internal.dateRanges.asScala.toSeq.map(v => DateRange(v))
   }
 
-  /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.NumericRangeFacet]].
+  /** Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.NumericRangeFacet]].
     *
     * @since 1.0.0
     */
-  case class NumericRangeSearchFacetResult (
+  case class NumericRangeSearchFacetResult(
       protected val internal: CoreNumericRangeSearchFacetResult
   ) extends SearchFacetResult {
 
@@ -109,20 +105,18 @@ object SearchFacetResult {
     def count: Long = internal.count
   }
 
-  /**
-    * Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.TermFacet]].
+  /** Represents the result for a [[com.couchbase.client.scala.search.facet.SearchFacet.TermFacet]].
     *
     * @since 1.0.0
     */
-  case class TermSearchFacetResult (protected val internal: CoreTermSearchFacetResult)
+  case class TermSearchFacetResult(protected val internal: CoreTermSearchFacetResult)
       extends SearchFacetResult {
 
     /** The term ranges results. */
     def terms: Seq[TermRange] = internal.terms.asScala.toSeq.map(v => TermRange(v))
   }
 
-  /**
-    * A range (or bucket) for a [[TermSearchFacetResult]].
+  /** A range (or bucket) for a [[TermSearchFacetResult]].
     * Counts the number of occurrences of a given term.
     *
     * @since 1.0.0

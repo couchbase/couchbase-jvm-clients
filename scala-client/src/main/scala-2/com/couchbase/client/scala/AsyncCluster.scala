@@ -17,17 +17,32 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.annotation.Stability
-import com.couchbase.client.core.diagnostics.{DiagnosticsResult, EndpointDiagnostics, HealthPinger, PingResult}
+import com.couchbase.client.core.diagnostics.{
+  DiagnosticsResult,
+  EndpointDiagnostics,
+  HealthPinger,
+  PingResult
+}
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
 import com.couchbase.client.scala.analytics.{AnalyticsOptions, AnalyticsParameters, AnalyticsResult}
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.handlers.AnalyticsHandler
-import com.couchbase.client.scala.manager.analytics.{AsyncAnalyticsIndexManager, ReactiveAnalyticsIndexManager}
+import com.couchbase.client.scala.manager.analytics.{
+  AsyncAnalyticsIndexManager,
+  ReactiveAnalyticsIndexManager
+}
 import com.couchbase.client.scala.manager.bucket.{AsyncBucketManager, ReactiveBucketManager}
 import com.couchbase.client.scala.manager.eventing.AsyncEventingFunctionManager
 import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
@@ -51,11 +66,11 @@ import java.util.stream.Collectors
 import scala.jdk.CollectionConverters._
 import scala.jdk.OptionConverters.RichOption
 
-class AsyncCluster (
-                     _env: => ClusterEnvironment,
-                     private[scala] val authenticator: Authenticator,
-                     private[scala] val connectionString: ConnectionString
-                            ) extends AsyncClusterBase {
+class AsyncCluster(
+    _env: => ClusterEnvironment,
+    private[scala] val authenticator: Authenticator,
+    private[scala] val connectionString: ConnectionString
+) extends AsyncClusterBase {
   private[scala] lazy val environment = _env
 
   private[scala] lazy val reactiveAnalyticsIndexManager = new ReactiveAnalyticsIndexManager(
@@ -68,17 +83,17 @@ class AsyncCluster (
 
   private[scala] lazy val reactiveBucketManager = new ReactiveBucketManager(couchbaseOps)
 
-    /** The AsyncBucketManager provides access to creating and getting buckets. */
-    lazy val buckets = new AsyncBucketManager(couchbaseOps)
+  /** The AsyncBucketManager provides access to creating and getting buckets. */
+  lazy val buckets = new AsyncBucketManager(couchbaseOps)
 
-    /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
-    lazy val users = new AsyncUserManager(couchbaseOps)
+  /** The AsyncUserManager provides programmatic access to and creation of users and groups. */
+  lazy val users = new AsyncUserManager(couchbaseOps)
 
-    lazy val queryIndexes = new AsyncQueryIndexManager(this)
-    lazy val searchIndexes = new AsyncSearchIndexManager(couchbaseOps)
+  lazy val queryIndexes  = new AsyncQueryIndexManager(this)
+  lazy val searchIndexes = new AsyncSearchIndexManager(couchbaseOps)
 
-    @Stability.Uncommitted
-    lazy val eventingFunctions = new AsyncEventingFunctionManager(env, couchbaseOps)
+  @Stability.Uncommitted
+  lazy val eventingFunctions = new AsyncEventingFunctionManager(env, couchbaseOps)
 
   /** Performs a N1QL query against the cluster.
     *
@@ -135,56 +150,56 @@ class AsyncCluster (
     ).map(result => convert(result))
   }
 
-    /** Performs an Analytics query against the cluster.
-     *
-     * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
-     * [[Cluster]] for a blocking version.
-     *
-     * @param statement the Analytics query to execute
-     * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
-     *
-     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-     *         else a `Failure`
-     */
-    def analyticsQuery(
-                              statement: String,
-                              options: AnalyticsOptions
-                      ): Future[AnalyticsResult] = {
-        couchbaseOps match {
-            case core: Core =>
-                val hp               = HandlerBasicParams(core)
-                val analyticsHandler = new AnalyticsHandler(hp)
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param statement the Analytics query to execute
+    * @param options   any query options - see [[com.couchbase.client.scala.analytics.AnalyticsOptions]] for documentation
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      options: AnalyticsOptions
+  ): Future[AnalyticsResult] = {
+    couchbaseOps match {
+      case core: Core =>
+        val hp               = HandlerBasicParams(core)
+        val analyticsHandler = new AnalyticsHandler(hp)
 
-                analyticsHandler.request(statement, options, core, environment, None, None) match {
-                    case Success(request) => analyticsHandler.queryAsync(request)
-                    case Failure(err)     => Future.failed(err)
-                }
-            case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
+        analyticsHandler.request(statement, options, core, environment, None, None) match {
+          case Success(request) => analyticsHandler.queryAsync(request)
+          case Failure(err)     => Future.failed(err)
         }
+      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
     }
+  }
 
-    /** Performs an Analytics query against the cluster.
-     *
-     * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
-     * [[Cluster]] for a blocking version.
-     *
-     * @param statement the Analytics query to execute
-     * @param parameters provides named or positional parameters for queries parameterised that way.
-     * @param timeout sets a maximum timeout for processing.
-     *
-     * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
-     *         else a `Failure`
-     */
-    def analyticsQuery(
-                              statement: String,
-                              parameters: AnalyticsParameters = AnalyticsParameters.None,
-                              timeout: Duration = env.timeoutConfig.queryTimeout()
-                      ): Future[AnalyticsResult] = {
-        val opts = AnalyticsOptions()
-                .timeout(timeout)
-                .parameters(parameters)
-        analyticsQuery(statement, opts)
-    }
+  /** Performs an Analytics query against the cluster.
+    *
+    * This is asynchronous.  See [[Cluster.reactive]] for a reactive streaming version of this API, and
+    * [[Cluster]] for a blocking version.
+    *
+    * @param statement the Analytics query to execute
+    * @param parameters provides named or positional parameters for queries parameterised that way.
+    * @param timeout sets a maximum timeout for processing.
+    *
+    * @return a `Future` containing a `Success(AnalyticsResult)` (which includes any returned rows) if successful,
+    *         else a `Failure`
+    */
+  def analyticsQuery(
+      statement: String,
+      parameters: AnalyticsParameters = AnalyticsParameters.None,
+      timeout: Duration = env.timeoutConfig.queryTimeout()
+  ): Future[AnalyticsResult] = {
+    val opts = AnalyticsOptions()
+      .timeout(timeout)
+      .parameters(parameters)
+    analyticsQuery(statement, opts)
+  }
 
   /** Performs a Full Text Search (FTS) search against the cluster, using default options.
     *
@@ -321,8 +336,8 @@ class AsyncCluster (
           new DiagnosticsResult(
             core.diagnostics.collect(
               Collectors
-                .groupingBy[EndpointDiagnostics, ServiceType](
-                  (v1: EndpointDiagnostics) => v1.`type`()
+                .groupingBy[EndpointDiagnostics, ServiceType]((v1: EndpointDiagnostics) =>
+                  v1.`type`()
                 )
             ),
             core.context().environment().userAgent().formattedShort(),
@@ -420,42 +435,40 @@ class AsyncCluster (
   }
 }
 
-
-
 /** Functions to allow creating an `AsyncCluster`, which represents a connection to a Couchbase cluster.
- *
- * @define DeferredErrors Note that during opening of resources, all errors will be deferred until the first
- *                        attempted operation.
- */
+  *
+  * @define DeferredErrors Note that during opening of resources, all errors will be deferred until the first
+  *                        attempted operation.
+  */
 object AsyncCluster {
 
   /** Connect to a Couchbase cluster with a username and a password as credentials.
-   *
-   * $DeferredErrors
-   *
-   * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param username         the name of a user with appropriate permissions on the cluster.
-   * @param password         the password of a user with appropriate permissions on the cluster.
-   *
-   * @return an [[AsyncCluster]] representing a connection to the cluster
-   */
+    *
+    * $DeferredErrors
+    *
+    * @param connectionString connection string used to locate the Couchbase cluster.
+    * @param username         the name of a user with appropriate permissions on the cluster.
+    * @param password         the password of a user with appropriate permissions on the cluster.
+    *
+    * @return an [[AsyncCluster]] representing a connection to the cluster
+    */
   def connect(
-               connectionString: String,
-               username: String,
-               password: String
-             ): Try[AsyncCluster] = {
+      connectionString: String,
+      username: String,
+      password: String
+  ): Try[AsyncCluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator(username, password)))
   }
 
   /** Connect to a Couchbase cluster with custom `Authenticator`.
-   *
-   * $DeferredErrors
-   *
-   * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param options custom options used when connecting to the cluster.
-   *
-   * @return an [[AsyncCluster]] representing a connection to the cluster
-   */
+    *
+    * $DeferredErrors
+    *
+    * @param connectionString connection string used to locate the Couchbase cluster.
+    * @param options custom options used when connecting to the cluster.
+    *
+    * @return an [[AsyncCluster]] representing a connection to the cluster
+    */
   def connect(connectionString: String, options: ClusterOptions): Try[AsyncCluster] = {
     extractClusterEnvironment(connectionString, options)
       .map(ce => {
@@ -467,25 +480,25 @@ object AsyncCluster {
   }
 
   /** Connect to a Couchbase cluster with a custom Set of [[com.couchbase.client.scala.env.SeedNode]].
-   *
-   * $DeferredErrors
-   *
-   * @param seedNodes known nodes from the Couchbase cluster to use for bootstrapping.
-   * @param options custom options used when connecting to the cluster.
-   *
-   * @return an [[AsyncCluster]] representing a connection to the cluster
-   */
+    *
+    * $DeferredErrors
+    *
+    * @param seedNodes known nodes from the Couchbase cluster to use for bootstrapping.
+    * @param options custom options used when connecting to the cluster.
+    *
+    * @return an [[AsyncCluster]] representing a connection to the cluster
+    */
   def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[AsyncCluster] = {
     connect(asConnectionString(seedNodes.map(_.toCore).asJava).original(), options)
   }
 
   private[client] def extractClusterEnvironment(
-                                                 connectionString: String,
-                                                 opts: ClusterOptions
-                                               ): Try[ClusterEnvironment] = {
+      connectionString: String,
+      opts: ClusterOptions
+  ): Try[ClusterEnvironment] = {
     val result = opts.environment match {
       case Some(env) => Success(env)
-      case _         => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
+      case _ => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
     }
 
     if (result.isFailure) result

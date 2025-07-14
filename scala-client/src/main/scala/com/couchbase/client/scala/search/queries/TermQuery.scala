@@ -17,8 +17,7 @@ package com.couchbase.client.scala.search.queries
 
 import com.couchbase.client.core.api.search.queries.CoreTermQuery
 
-/**
-  * An FTS query that matches terms (without further analysis). Usually for debugging purposes,
+/** An FTS query that matches terms (without further analysis). Usually for debugging purposes,
   * prefer using [[MatchQuery]].
   *
   * @param term the exact string that will be searched for in the index

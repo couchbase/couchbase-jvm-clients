@@ -80,7 +80,7 @@ class JsonObjectSpec {
 
   @Test
   def safe(): Unit = {
-    val raw     = """[
+    val raw = """[
                 | {
                 |  "appcode": "function OnUpdate(doc, meta) {}",
                 |  "depcfg": {

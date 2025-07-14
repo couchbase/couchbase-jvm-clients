@@ -47,7 +47,7 @@ case class QueryResult(private[scala] val rows: Seq[QueryChunkRow], metaData: Qu
     *
     * The return type is of `Iterator[Try[T]]` in case any row cannot be decoded.  See rowsAs` for a more
     * convenient interface that does not require handling individual row decode errors.
-    **/
+    */
   def rowsAs[T](implicit deserializer: JsonDeserializer[T]): Try[collection.Seq[T]] = {
     RowTraversalUtil.traverse(rows.iterator.map(row => {
       deserializer.deserialize(row.data())

@@ -69,7 +69,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   /** Add bytes to the beginning of a Couchbase binary document.
     *
     * $Same
-    * */
+    */
   def prepend(
       id: String,
       content: Array[Byte],
@@ -83,7 +83,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   /** Add bytes to the beginning of a Couchbase binary document.
     *
     * $Same
-    * */
+    */
   def prepend(
       id: String,
       content: Array[Byte],
@@ -95,7 +95,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   /** Increment a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def increment(
       id: String,
       delta: Long,
@@ -103,15 +103,13 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
-    SMono.defer(
-      () => SMono.fromFuture(async.increment(id, delta, initial, durability, timeout))
-    )
+    SMono.defer(() => SMono.fromFuture(async.increment(id, delta, initial, durability, timeout)))
   }
 
   /** Increment a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def increment(
       id: String,
       delta: Long,
@@ -123,7 +121,7 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
   /** Decrement a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def decrement(
       id: String,
       delta: Long,
@@ -131,15 +129,13 @@ class ReactiveBinaryCollection(private val async: AsyncBinaryCollection) {
       durability: Durability = Disabled,
       timeout: Duration = Duration.MinusInf
   ): SMono[CounterResult] = {
-    SMono.defer(
-      () => SMono.fromFuture(async.decrement(id, delta, initial, durability, timeout))
-    )
+    SMono.defer(() => SMono.fromFuture(async.decrement(id, delta, initial, durability, timeout)))
   }
 
   /** Decrement a Couchbase 'counter' document.
     *
     * $Same
-    * */
+    */
   def decrement(
       id: String,
       delta: Long,

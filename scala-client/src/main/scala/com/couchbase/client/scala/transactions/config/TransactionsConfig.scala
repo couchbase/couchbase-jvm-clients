@@ -32,8 +32,7 @@ import com.couchbase.client.scala.util.DurationConversions.{javaDurationToScala,
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 
-/**
-  * Provides all configurable parameters for Couchbase transactions.
+/** Provides all configurable parameters for Couchbase transactions.
   */
 case class TransactionsConfig(
     private val cleanupConfig: Option[TransactionsCleanupConfig] = None,
@@ -46,15 +45,13 @@ case class TransactionsConfig(
     private val queryConfig: Option[TransactionsQueryConfig] = None
 ) {
 
-  /**
-    * Configures transaction cleanup.
+  /** Configures transaction cleanup.
     */
   def cleanupConfig(config: TransactionsCleanupConfig): TransactionsConfig = {
     copy(cleanupConfig = Some(config))
   }
 
-  /**
-    * Sets the maximum time that transactions can run for.  The default is 15 seconds.
+  /** Sets the maximum time that transactions can run for.  The default is 15 seconds.
     * After this time, the transaction will abort.  Note that this could be mid-commit, in which case the cleanup process
     * will complete the transaction asynchronously at a later point.
     * <p>
@@ -67,8 +64,7 @@ case class TransactionsConfig(
     copy(timeout = Some(timeout))
   }
 
-  /**
-    * All transaction writes will be performed with this durability setting.
+  /** All transaction writes will be performed with this durability setting.
     * <p>
     * The default setting is DurabilityLevel.MAJORITY, meaning a transaction will pause on each write
     * until it is available in-memory on a majority of configured replicas.
@@ -79,8 +75,7 @@ case class TransactionsConfig(
     copy(durabilityLevel = Some(durabilityLevel))
   }
 
-  /**
-    * Allows setting a custom collection to use for any transactional metadata documents.
+  /** Allows setting a custom collection to use for any transactional metadata documents.
     * <p>
     * If not set, it will default to creating these documents in the default collection of the bucket that the first
     * mutated document in the transaction is on.
@@ -91,8 +86,7 @@ case class TransactionsConfig(
     copy(metadataCollection = Some(collection.toCollectionIdentifier))
   }
 
-  /**
-    * Sets the default query configuration for all transactions.
+  /** Sets the default query configuration for all transactions.
     *
     * @param queryConfig the query configuration to use
     * @return this, for chaining
@@ -123,12 +117,11 @@ case class TransactionsConfig(
       ActiveTransactionRecordIds.NUM_ATRS_DEFAULT,
       metadataCollection.asJava,
       queryConfig
-        .flatMap(
-          v =>
-            v.scanConsistency.map {
-              case QueryScanConsistency.NotBounded => CoreQueryScanConsistency.NOT_BOUNDED.toString
-              case _                               => CoreQueryScanConsistency.REQUEST_PLUS.toString
-            }
+        .flatMap(v =>
+          v.scanConsistency.map {
+            case QueryScanConsistency.NotBounded => CoreQueryScanConsistency.NOT_BOUNDED.toString
+            case _                               => CoreQueryScanConsistency.REQUEST_PLUS.toString
+          }
         )
         .asJava,
       TransactionsSupportedExtensionsUtil.Supported

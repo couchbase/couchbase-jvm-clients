@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala
 
-
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.diagnostics._
@@ -47,14 +46,14 @@ import scala.jdk.CollectionConverters._
 import scala.util.Try
 
 /** Represents a connection to a Couchbase cluster.
- *
- * These can be created through the functions in the companion object.
- */
-class Cluster private[scala](
-                              _env: => ClusterEnvironment,
-                              private[scala] val authenticator: Authenticator,
-                              private[scala] val connectionString: ConnectionString
-                            ) extends ClusterBase {
+  *
+  * These can be created through the functions in the companion object.
+  */
+class Cluster private[scala] (
+    _env: => ClusterEnvironment,
+    private[scala] val authenticator: Authenticator,
+    private[scala] val connectionString: ConnectionString
+) extends ClusterBase {
   private[scala] lazy val environment = _env
 
   /** Performs a SQL++ query against the cluster.
@@ -70,7 +69,7 @@ class Cluster private[scala](
       .map(result => convert(result))
   }
 
-    /** Performs a Full Text Search (FTS) query.
+  /** Performs a Full Text Search (FTS) query.
     *
     * This can be used to perform a traditional FTS query, and/or a vector search.
     *
@@ -93,7 +92,7 @@ class Cluster private[scala](
     AsyncUtils.block(async.search(indexName, request, options))
   }
 
-    /** Shutdown all cluster resources.
+  /** Shutdown all cluster resources.
     *
     * This should be called before application exit.
     *
@@ -110,7 +109,9 @@ class Cluster private[scala](
     *
     * @return a `DiagnosticsResult`
     */
-  def diagnostics(options: DiagnosticsOptions = DiagnosticsOptions.Default): Try[DiagnosticsResult] = {
+  def diagnostics(
+      options: DiagnosticsOptions = DiagnosticsOptions.Default
+  ): Try[DiagnosticsResult] = {
     AsyncUtils.block(async.diagnostics(options))
   }
 
@@ -136,41 +137,44 @@ class Cluster private[scala](
     * @param timeout the maximum time to wait until readiness.
     * @param options options to customize the wait
     */
-  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default): Try[Unit] = {
+  def waitUntilReady(
+      timeout: Duration,
+      options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default
+  ): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, options))
   }
 }
 
 /** Functions to allow creating a `Cluster`, which represents a connection to a Couchbase cluster.
- *
- * @define DeferredErrors Note that during opening of resources, all errors will be deferred until the first
- *                        attempted operation.
- */
+  *
+  * @define DeferredErrors Note that during opening of resources, all errors will be deferred until the first
+  *                        attempted operation.
+  */
 object Cluster {
 
   /** Connect to a Couchbase cluster with a username and a password as credentials.
-   *
-   * $DeferredErrors
-   *
-   * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param username         the name of a user with appropriate permissions on the cluster.
-   * @param password         the password of a user with appropriate permissions on the cluster.
-   *
-   * @return a [[Cluster]] representing a connection to the cluster
-   */
+    *
+    * $DeferredErrors
+    *
+    * @param connectionString connection string used to locate the Couchbase cluster.
+    * @param username         the name of a user with appropriate permissions on the cluster.
+    * @param password         the password of a user with appropriate permissions on the cluster.
+    *
+    * @return a [[Cluster]] representing a connection to the cluster
+    */
   def connect(connectionString: String, username: String, password: String): Try[Cluster] = {
     connect(connectionString, ClusterOptions(PasswordAuthenticator.create(username, password)))
   }
 
   /** Connect to a Couchbase cluster with custom `Authenticator`.
-   *
-   * $DeferredErrors
-   *
-   * @param connectionString connection string used to locate the Couchbase cluster.
-   * @param options custom options used when connecting to the cluster.
-   *
-   * @return a [[Cluster]] representing a connection to the cluster
-   */
+    *
+    * $DeferredErrors
+    *
+    * @param connectionString connection string used to locate the Couchbase cluster.
+    * @param options custom options used when connecting to the cluster.
+    *
+    * @return a [[Cluster]] representing a connection to the cluster
+    */
   def connect(connectionString: String, options: ClusterOptions): Try[Cluster] = {
     AsyncCluster
       .extractClusterEnvironment(connectionString, options)
@@ -182,4 +186,3 @@ object Cluster {
       })
   }
 }
-

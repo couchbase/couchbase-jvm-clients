@@ -125,11 +125,11 @@ class ReactiveAnalyticsIndexManager(
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
     val statement: Try[String] = for {
-      quoted1 <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
-      quoted2 <- quote(bucketName)
+      quoted1   <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
+      quoted2   <- quote(bucketName)
       statement <- {
         val statement = {
-          val out = "CREATE DATASET "
+          val out  = "CREATE DATASET "
           val next =
             if (ignoreIfExists) out + " IF NOT EXISTS "
             else out
@@ -190,10 +190,10 @@ class ReactiveAnalyticsIndexManager(
       retryStrategy: RetryStrategy = DefaultRetryStrategy
   ): SMono[Unit] = {
     val statement: Try[String] = for {
-      quoted1 <- quote(indexName)
-      quoted2 <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
+      quoted1   <- quote(indexName)
+      quoted2   <- quoteDataverse(dataverseName.getOrElse(DefaultDataverse), datasetName)
       statement <- {
-        val out = "CREATE INDEX " + quoted1
+        val out  = "CREATE INDEX " + quoted1
         val next =
           if (ignoreIfExists) out + " IF NOT EXISTS "
           else out
@@ -276,7 +276,7 @@ class ReactiveAnalyticsIndexManager(
 
         val errToRaise = err match {
           case Some(e) => e
-          case _ =>
+          case _       =>
             t match {
               case e: RuntimeException => e
               case _                   => new RuntimeException(t)
@@ -289,7 +289,8 @@ class ReactiveAnalyticsIndexManager(
 
   /** Create an analytics link.  See the [[AnalyticsLink]] documentation for the types of links that can be created.
     *
-    * If a link with the same name already exists, a `LinkExistsException` will be raised. */
+    * If a link with the same name already exists, a `LinkExistsException` will be raised.
+    */
   def createLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
@@ -305,7 +306,8 @@ class ReactiveAnalyticsIndexManager(
     * be blanked out (empty strings) for security reasons.  It may be necessarily to reconstruct the original
     * [[AnalyticsLink]] with this security information before calling this method.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def replaceLink(
       link: AnalyticsLink,
       timeout: Duration = DefaultTimeout,
@@ -317,7 +319,8 @@ class ReactiveAnalyticsIndexManager(
 
   /** Drops (deletes) an existing analytics link.
     *
-    * If no such link exists, a `LinkNotFoundException` will be raised. */
+    * If no such link exists, a `LinkNotFoundException` will be raised.
+    */
   def dropLink(
       linkName: String,
       dataverse: String,

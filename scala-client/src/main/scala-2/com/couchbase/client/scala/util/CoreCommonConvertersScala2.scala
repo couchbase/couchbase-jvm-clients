@@ -43,21 +43,23 @@ private[scala] object CoreCommonConvertersScala2 {
     FutureConversions.javaFluxToScalaFlux(in)
   }
 
-    def convert(in: SearchIndex): CoreSearchIndex = {
-        CoreSearchIndex.fromJson(in.toJson)
-    }
+  def convert(in: SearchIndex): CoreSearchIndex = {
+    CoreSearchIndex.fromJson(in.toJson)
+  }
 
-    def convert(in: CoreSearchIndex): SearchIndex = {
-        SearchIndex(
-            in.name,
-            in.sourceName,
-            Option(in.uuid),
-            Option(in.`type`),
-            Option(CoreCommonConverters.convert(in.params.asScala.toMap)),
-            Option(in.sourceUuid),
-            Option(CoreCommonConverters.convert(Option(in.sourceParams).map(_.asScala).getOrElse(Map()).toMap)),
-            Option(in.sourceType),
-            Option(CoreCommonConverters.convert(in.planParams.asScala.toMap))
-        )
-    }
+  def convert(in: CoreSearchIndex): SearchIndex = {
+    SearchIndex(
+      in.name,
+      in.sourceName,
+      Option(in.uuid),
+      Option(in.`type`),
+      Option(CoreCommonConverters.convert(in.params.asScala.toMap)),
+      Option(in.sourceUuid),
+      Option(
+        CoreCommonConverters.convert(Option(in.sourceParams).map(_.asScala).getOrElse(Map()).toMap)
+      ),
+      Option(in.sourceType),
+      Option(CoreCommonConverters.convert(in.planParams.asScala.toMap))
+    )
+  }
 }

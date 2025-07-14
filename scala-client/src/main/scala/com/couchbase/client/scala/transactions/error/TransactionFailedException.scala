@@ -21,8 +21,7 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionFaile
 
 import scala.jdk.CollectionConverters._
 
-/**
-  * The transaction failed to reach the Committed point.
+/** The transaction failed to reach the Committed point.
   *
   * No actors can see any changes made by this transaction.
   */
@@ -30,8 +29,7 @@ class TransactionFailedException private[scala] (
     private val internal: CoreTransactionFailedException
 ) extends CouchbaseException(internal.getMessage, internal.getCause, internal.context) {
 
-  /**
-    * An in-memory log is built up during each transaction.  The application may want to write this to their own logs,
+  /** An in-memory log is built up during each transaction.  The application may want to write this to their own logs,
     * for example upon transaction failure.
     */
   def logs(): Iterable[TransactionLogEvent] = {

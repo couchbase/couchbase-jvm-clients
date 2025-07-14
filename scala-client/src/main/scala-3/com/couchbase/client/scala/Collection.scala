@@ -25,10 +25,10 @@ import scala.util.{Try, Failure, Success}
 import com.couchbase.client.core.annotation.SinceCouchbase
 
 class Collection(
-                  /** Provides access to an async version of this API. */
-                  val async: AsyncCollection,
-                  val bucketName: String
-                ) extends CollectionBase {
+    /** Provides access to an async version of this API. */
+    val async: AsyncCollection,
+    val bucketName: String
+) extends CollectionBase {
 
   /** Fetches a full document from this collection.
     *
@@ -38,7 +38,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def get(
       id: String,
       options: GetOptions = GetOptions.Default
@@ -55,7 +55,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentAlreadyExistsException`, indicating the document already exists.
     *         $ErrorHandling
-    **/
+    */
   def insert[T](
       id: String,
       content: T,
@@ -81,7 +81,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def replace[T](
       id: String,
       content: T,
@@ -135,7 +135,7 @@ class Collection(
     * @return on success, a `Success(MutationResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def remove(
       id: String,
       options: RemoveOptions = RemoveOptions.Default
@@ -157,7 +157,7 @@ class Collection(
     * @return on success, a `Success(MutateInResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def mutateIn(
       id: String,
       spec: collection.Seq[MutateInSpec],
@@ -191,7 +191,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndLock(
       id: String,
       lockTime: Duration,
@@ -210,7 +210,7 @@ class Collection(
     * @return on success, a `Success(Unit)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def unlock(
       id: String,
       cas: Long,
@@ -227,7 +227,7 @@ class Collection(
     * @return on success, a Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def getAndTouch(
       id: String,
       expiry: Duration,
@@ -250,7 +250,7 @@ class Collection(
     * @return on success, a `Success(LookupInResult)`, else a `Failure(CouchbaseException)`.  This could be
     *         `com.couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found. $ErrorHandling
-    **/
+    */
   def lookupIn(
       id: String,
       spec: collection.Seq[LookupInSpec],
@@ -269,7 +269,7 @@ class Collection(
     * @return on success, a `Success(GetResult)`, else a `Failure(CouchbaseException)`.  This could be `com
     *         .couchbase.client.core.error.DocumentDoesNotExistException`, indicating the document could not be
     *         found.  $ErrorHandling
-    **/
+    */
   def exists(
       id: String,
       options: ExistsOptions = ExistsOptions.Default
@@ -303,7 +303,10 @@ class Collection(
     * we recommend using SQL++ (with a primary index on the collection) instead.
     */
   @SinceCouchbase("7.6")
-  def scan(scanType: ScanType, opts: ScanOptions = ScanOptions.Default): Try[Iterator[ScanResult]] = {
+  def scan(
+      scanType: ScanType,
+      opts: ScanOptions = ScanOptions.Default
+  ): Try[Iterator[ScanResult]] = {
     block(async.scan(scanType, opts))
   }
 }

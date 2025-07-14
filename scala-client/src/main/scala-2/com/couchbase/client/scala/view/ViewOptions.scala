@@ -261,9 +261,8 @@ case class ViewOptions(
       "endkey"         -> endKey,
       "startkey"       -> startKey,
       "stale"          -> scanConsistency.map(_.encoded)
-    ).foreach {
-      case (key, valueOpt) =>
-        valueOpt.foreach(sb ++= key += '=' ++= _.toString += '&')
+    ).foreach { case (key, valueOpt) =>
+      valueOpt.foreach(sb ++= key += '=' ++= _.toString += '&')
     }
     sb.toString.stripSuffix("&")
   }

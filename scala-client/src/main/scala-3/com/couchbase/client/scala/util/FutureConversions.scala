@@ -15,7 +15,12 @@
  */
 package com.couchbase.client.scala.util
 
-import java.util.concurrent.{CompletableFuture, CompletionException, CompletionStage, ExecutionException}
+import java.util.concurrent.{
+  CompletableFuture,
+  CompletionException,
+  CompletionStage,
+  ExecutionException
+}
 import java.util.function.Consumer
 import com.couchbase.client.core.msg.{CancellationReason, Request, Response}
 import reactor.core.publisher.{SignalType, Flux as JavaFlux, Mono as JavaMono}

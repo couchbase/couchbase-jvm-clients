@@ -30,5 +30,4 @@ class AsyncBucket private[scala] (
     val name: String,
     private[scala] val couchbaseOps: CoreCouchbaseOps,
     private[scala] val environment: ClusterEnvironment
-) extends AsyncBucketBase {
-} 
+) extends AsyncBucketBase {}

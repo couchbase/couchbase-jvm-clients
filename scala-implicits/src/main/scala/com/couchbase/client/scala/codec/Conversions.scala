@@ -54,7 +54,8 @@ object Conversions {
   val JsonFlags: Int = CodecFlags.JSON_COMPAT_FLAGS
 
   /** Indicates that a document is simply a String (e.g. it should not be treated as JSON even if that string is
-    * """{"hello":"world"}"""). */
+    * """{"hello":"world"}""").
+    */
   val StringFlags: Int = CodecFlags.STRING_COMPAT_FLAGS
 
   /** Indicates that a document is simply an Array[Byte] (e.g. it should not be treated as JSON). */

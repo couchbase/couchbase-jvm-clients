@@ -25,8 +25,7 @@ import scala.concurrent.duration.Duration
 
 class ReactiveUserManager(private val async: AsyncUserManager)(implicit val ec: ExecutionContext) {
   private[scala] val defaultManagerTimeout = async.defaultManagerTimeout
-  private[scala] val defaultRetryStrategy = async.defaultRetryStrategy
-
+  private[scala] val defaultRetryStrategy  = async.defaultRetryStrategy
 
   def getUser(
       username: String,

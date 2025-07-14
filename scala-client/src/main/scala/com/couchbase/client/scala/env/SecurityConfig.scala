@@ -48,8 +48,8 @@ case class SecurityConfig(
     trustCertificate.foreach(v => builder.trustCertificate(v))
     ciphers.foreach(v => builder.ciphers(v.asJava))
     trustKeyStore.foreach(v => builder.trustStore(v))
-    trustStoreFile.foreach(
-      v => builder.trustStore(v.path, v.password, Optional.ofNullable(v.storeType.orNull))
+    trustStoreFile.foreach(v =>
+      builder.trustStore(v.path, v.password, Optional.ofNullable(v.storeType.orNull))
     )
     builder
   }

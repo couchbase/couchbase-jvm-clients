@@ -20,8 +20,7 @@ import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory
 import com.couchbase.client.scala.Collection
 
-/**
-  * Allows configuring a single-query-transaction.
+/** Allows configuring a single-query-transaction.
   */
 case class SingleQueryTransactionOptions(
     private val durabilityLevel: Option[DurabilityLevel] = None,
@@ -29,8 +28,7 @@ case class SingleQueryTransactionOptions(
     private val metadataCollection: Option[CollectionIdentifier] = None
 ) {
 
-  /**
-    * Overrides the default durability level set, for this transaction.
+  /** Overrides the default durability level set, for this transaction.
     *
     * @param durabilityLevel the durability level to set
     * @return this, for chaining
@@ -39,8 +37,7 @@ case class SingleQueryTransactionOptions(
     copy(durabilityLevel = Some(durabilityLevel))
   }
 
-  /**
-    * Allows setting a custom collection to use for any transactional metadata documents created by this transaction.
+  /** Allows setting a custom collection to use for any transactional metadata documents created by this transaction.
     * <p>
     * If not set, it will default to creating these documents in the default collection of the bucket that the first
     * mutated document in the transaction is on.
@@ -49,8 +46,7 @@ case class SingleQueryTransactionOptions(
     copy(metadataCollection = Some(collection.collectionIdentifier))
   }
 
-  /**
-    * For internal testing.  Applications should not require this.
+  /** For internal testing.  Applications should not require this.
     */
   private[client] def testFactory(
       attemptContextFactory: TransactionAttemptContextFactory

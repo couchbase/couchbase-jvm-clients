@@ -34,8 +34,7 @@ import com.couchbase.client.scala.util.Validate
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Handles requests and responses for KV get-from-replica operations.
+/** Handles requests and responses for KV get-from-replica operations.
   *
   * @author Graham Pople
   * @since 1.0.0
@@ -63,18 +62,17 @@ private[scala] class GetFromReplicaHandler(hp: HandlerParams) {
           val numReplicas = config.numberOfReplicas()
 
           val replicaRequests: Seq[ReplicaGetRequest] = Range(0, numReplicas)
-            .map(
-              replicaIndex =>
-                new ReplicaGetRequest(
-                  id,
-                  timeout,
-                  hp.core.context(),
-                  hp.collectionIdentifier,
-                  retryStrategy,
-                  (replicaIndex + 1).shortValue(),
-                  hp.tracer
-                    .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parentSpan.orNull)
-                )
+            .map(replicaIndex =>
+              new ReplicaGetRequest(
+                id,
+                timeout,
+                hp.core.context(),
+                hp.collectionIdentifier,
+                retryStrategy,
+                (replicaIndex + 1).shortValue(),
+                hp.tracer
+                  .requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parentSpan.orNull)
+              )
             )
 
           val activeRequest =

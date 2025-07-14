@@ -92,10 +92,18 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
       statement: String,
       options: QueryOptions = QueryOptions()
   ): SMono[ReactiveQueryResult] = {
-    CoreCommonConvertersScala2.convert(
-      async.queryOps
-        .queryReactive(statement, options.toCore, CoreQueryContext.of(bucketName, name), null, null)
-    ).map(result => CoreCommonConvertersScala2.convert(result))
+    CoreCommonConvertersScala2
+      .convert(
+        async.queryOps
+          .queryReactive(
+            statement,
+            options.toCore,
+            CoreQueryContext.of(bucketName, name),
+            null,
+            null
+          )
+      )
+      .map(result => CoreCommonConvertersScala2.convert(result))
   }
 
   /** Performs an Analytics query against the cluster.
@@ -176,7 +184,8 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
     request.toCore match {
       case Failure(err) => SMono.raiseError(err)
       case Success(req) =>
-        CoreCommonConvertersScala2.convert(async.searchOps.searchReactive(indexName, req, options.toCore))
+        CoreCommonConvertersScala2
+          .convert(async.searchOps.searchReactive(indexName, req, options.toCore))
           .map(result => ReactiveSearchResult(result))
     }
   }

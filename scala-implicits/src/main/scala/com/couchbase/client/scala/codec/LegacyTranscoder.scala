@@ -26,7 +26,7 @@ class LegacyTranscoder() extends TranscoderWithSerializer {
   override def encode[T](value: T, serializer: JsonSerializer[T]): Try[EncodedValue] = {
     value match {
       case x: Array[Byte] => Success(EncodedValue(x, CodecFlags.BINARY_COMPAT_FLAGS))
-      case x: String =>
+      case x: String      =>
         Success(EncodedValue(x.getBytes(StandardCharsets.UTF_8), CodecFlags.STRING_COMPAT_FLAGS))
       case _ =>
         serializer

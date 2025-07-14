@@ -17,7 +17,12 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.api.kv.{CoreExpiry, CoreReadPreference, CoreSubdocGetCommand, CoreSubdocGetResult}
+import com.couchbase.client.core.api.kv.{
+  CoreExpiry,
+  CoreReadPreference,
+  CoreSubdocGetCommand,
+  CoreSubdocGetResult
+}
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.{RequestSpan, RequestTracer}
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -74,7 +79,7 @@ private[scala] case class HandlerBasicParams(core: Core) {
   * @since 1.0.0
   * @define Same             This asynchronous version performs the same functionality and takes the same parameters,
   *                          but returns the same result object asynchronously in a `Future`.
-  * */
+  */
 trait AsyncCollectionBase { this: AsyncCollection =>
 
   private[scala] implicit val ec: ExecutionContext = environment.ec
@@ -83,7 +88,7 @@ trait AsyncCollectionBase { this: AsyncCollection =>
 
   private[scala] val kvTimeout: Durability => Duration = TimeoutUtil.kvTimeout(environment)
   private[scala] val kvReadTimeout: Duration           = environment.timeoutConfig.kvTimeout()
-  private[scala] val collectionIdentifier =
+  private[scala] val collectionIdentifier              =
     new CollectionIdentifier(bucketName, Optional.of(scopeName), Optional.of(name))
   private[scala] val keyspace = CoreKeyspace.from(collectionIdentifier)
   private[scala] val kvOps    = couchbaseOps.kvOps(keyspace)
@@ -146,7 +151,7 @@ trait AsyncCollectionBase { this: AsyncCollection =>
       Future.successful(LookupInResult(modified, expTime, transcoder))
     })
   }
-  
+
   private[scala] def scanRequest(
       scanType: ScanType,
       opts: ScanOptions
@@ -206,7 +211,8 @@ trait AsyncCollectionBase { this: AsyncCollection =>
         }
     }
 
-    Flux.from(kvOps.scanRequestReactive(rangeScan, options))
+    Flux
+      .from(kvOps.scanRequestReactive(rangeScan, options))
       .map(item => ScanResult(item, opts.transcoder.getOrElse(environment.transcoder)))
   }
 }

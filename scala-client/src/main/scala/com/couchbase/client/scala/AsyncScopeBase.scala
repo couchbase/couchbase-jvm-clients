@@ -50,7 +50,7 @@ trait AsyncScopeBase { this: AsyncScope =>
 
   private[scala] implicit val ec: ExecutionContext = environment.ec
   private[scala] val queryOps                      = couchbaseOps.queryOps()
-  private[scala] val searchOps =
+  private[scala] val searchOps                     =
     couchbaseOps.searchOps(new CoreBucketAndScope(bucketName, name))
 
   /** The name of this scope. */

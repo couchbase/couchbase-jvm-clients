@@ -15,12 +15,14 @@
  */
 package com.couchbase.client.scala
 
-
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 
 import scala.concurrent.Future
@@ -30,13 +32,25 @@ import com.couchbase.client.scala.util.DurationConversions.*
 
 import scala.jdk.CollectionConverters.*
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.diagnostics.{DiagnosticsResult, EndpointDiagnostics, HealthPinger, PingResult}
+import com.couchbase.client.core.diagnostics.{
+  DiagnosticsResult,
+  EndpointDiagnostics,
+  HealthPinger,
+  PingResult
+}
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.util.ConnectionString
-import com.couchbase.client.core.util.ConnectionStringUtil.{asConnectionString, checkConnectionString}
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.core.util.ConnectionStringUtil.{
+  asConnectionString,
+  checkConnectionString
+}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
 import com.couchbase.client.scala.search.SearchOptions
@@ -55,13 +69,12 @@ import java.util.{Optional, UUID}
 import java.util.stream.Collectors
 import scala.jdk.CollectionConverters.*
 
-class AsyncCluster private[scala](
-                                   private[scala] _env: => ClusterEnvironment,
-                                   private[scala] val authenticator: Authenticator,
-                                   private[scala] val connectionString: ConnectionString
-                                 ) extends AsyncClusterBase {
+class AsyncCluster private[scala] (
+    private[scala] _env: => ClusterEnvironment,
+    private[scala] val authenticator: Authenticator,
+    private[scala] val connectionString: ConnectionString
+) extends AsyncClusterBase {
   private[scala] lazy val environment = _env
-
 
   /** Performs a N1QL query against the cluster.
     *
@@ -71,7 +84,10 @@ class AsyncCluster private[scala](
     * @return a `Future` containing a `Success(QueryResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
-  def query(statement: String, options: QueryOptions = QueryOptions.Default): Future[QueryResult] = {
+  def query(
+      statement: String,
+      options: QueryOptions = QueryOptions.Default
+  ): Future[QueryResult] = {
     convert(queryOps.queryAsync(statement, options.toCore, null, null, null))
       .map(result => convert(result))
   }
@@ -119,15 +135,17 @@ class AsyncCluster private[scala](
     *
     * @return a `DiagnosticsResult`
     */
-  def diagnostics(options: DiagnosticsOptions = DiagnosticsOptions.Default): Future[DiagnosticsResult] = {
+  def diagnostics(
+      options: DiagnosticsOptions = DiagnosticsOptions.Default
+  ): Future[DiagnosticsResult] = {
     couchbaseOps match {
       case core: Core =>
         Future(
           new DiagnosticsResult(
             core.diagnostics.collect(
               Collectors
-                .groupingBy[EndpointDiagnostics, ServiceType](
-                  (v1: EndpointDiagnostics) => v1.`type`()
+                .groupingBy[EndpointDiagnostics, ServiceType]((v1: EndpointDiagnostics) =>
+                  v1.`type`()
                 )
             ),
             core.context().environment().userAgent().formattedShort(),
@@ -168,7 +186,6 @@ class AsyncCluster private[scala](
     }
   }
 
-
   /** Waits until the desired `ClusterState` is reached.
     *
     * This method will wait until either the cluster state is "online", or the timeout is reached. Since the SDK is
@@ -178,28 +195,31 @@ class AsyncCluster private[scala](
     * @param timeout the maximum time to wait until readiness.
     * @param options options to customize the wait
     */
-  def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default): Future[Unit] = {
-      FutureConversions
-              .javaCFToScalaFuture(
-                  couchbaseOps.waitUntilReady(
-                      if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
-                      timeout,
-                      options.desiredState,
-                      null
-                  )
-              )
-              .map(_ => ())
+  def waitUntilReady(
+      timeout: Duration,
+      options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default
+  ): Future[Unit] = {
+    FutureConversions
+      .javaCFToScalaFuture(
+        couchbaseOps.waitUntilReady(
+          if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+          timeout,
+          options.desiredState,
+          null
+        )
+      )
+      .map(_ => ())
   }
 }
 
 object AsyncCluster {
   private[client] def extractClusterEnvironment(
-                                                 connectionString: String,
-                                                 opts: ClusterOptions
-                                               ): Try[ClusterEnvironment] = {
+      connectionString: String,
+      opts: ClusterOptions
+  ): Try[ClusterEnvironment] = {
     val result = opts.environment match {
       case Some(env) => Success(env)
-      case _         => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
+      case _ => ClusterEnvironment.Builder(owned = true).connectionString(connectionString).build
     }
 
     if (result.isFailure) result
