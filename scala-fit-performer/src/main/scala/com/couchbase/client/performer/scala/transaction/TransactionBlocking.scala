@@ -20,13 +20,23 @@ import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner
 import com.couchbase.client.performer.core.commands.{BatchExecutor, TransactionCommandExecutor}
-import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
+import com.couchbase.client.performer.scala.Content.{
+  ContentByteArray,
+  ContentJson,
+  ContentNull,
+  ContentString
+}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertContent
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.transaction.TransactionShared.ExpectSuccess
 import com.couchbase.client.performer.scala.util.{ClusterConnection, OptionsUtil, ResultValidation}
 import com.couchbase.client.protocol.shared.API
-import com.couchbase.client.protocol.transactions.{ExpectedResult, TransactionCommand, TransactionCreateRequest, TransactionStreamPerformerToDriver}
+import com.couchbase.client.protocol.transactions.{
+  ExpectedResult,
+  TransactionCommand,
+  TransactionCreateRequest,
+  TransactionStreamPerformerToDriver
+}
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.json._
@@ -40,8 +50,7 @@ import scala.util.Success
 
 object TransactionBlocking {
 
-  /**
-    * Starts a transaction that will run until completion.
+  /** Starts a transaction that will run until completion.
     */
   def run(
       connection: ClusterConnection,
@@ -61,8 +70,7 @@ object TransactionBlocking {
 class TransactionBlocking(executor: Option[TransactionCommandExecutor])
     extends TransactionShared(executor) {
 
-  /**
-    * Starts a two-way transaction.
+  /** Starts a two-way transaction.
     */
   override def runInternal(
       connection: ClusterConnection,
@@ -75,7 +83,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
     if (req.getApi != API.DEFAULT)
       throw new InternalPerformerFailure(new IllegalStateException("Unexpected API"))
     val ptcb = OptionsUtil.makeTransactionOptions(connection, req, spans)
-    val out = connection.cluster.transactions.run(
+    val out  = connection.cluster.transactions.run(
       (ctx: TransactionAttemptContext) => {
         if (testFailure.get != null) {
           logger.info("Test failure is set at start of new attempt, fast failing transaction")
@@ -117,8 +125,8 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
     }
 
     if (op.hasInsert) {
-      val request    = op.getInsert
-      val content    = readContent(
+      val request = op.getInsert
+      val content = readContent(
         if (request.hasContentJson) Some(request.getContentJson) else None,
         if (request.hasContent) Some(request.getContent) else None
       )
@@ -142,33 +150,37 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           content match {
             case ContentString(value) =>
               options match {
-                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case Some(opts) =>
+                  ctx.insert(collection, request.getDocId.getDocId, value, opts).get
                 case None => ctx.insert(collection, request.getDocId.getDocId, value).get
               }
             case ContentJson(value) =>
               options match {
-                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case Some(opts) =>
+                  ctx.insert(collection, request.getDocId.getDocId, value, opts).get
                 case None => ctx.insert(collection, request.getDocId.getDocId, value).get
               }
             case ContentByteArray(value) =>
               options match {
-                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case Some(opts) =>
+                  ctx.insert(collection, request.getDocId.getDocId, value, opts).get
                 case None => ctx.insert(collection, request.getDocId.getDocId, value).get
               }
             case ContentNull(value) =>
               options match {
-                case Some(opts) => ctx.insert(collection, request.getDocId.getDocId, value, opts).get
+                case Some(opts) =>
+                  ctx.insert(collection, request.getDocId.getDocId, value, opts).get
                 case None => ctx.insert(collection, request.getDocId.getDocId, value).get
               }
           }
           // [end]
           // [if:<1.9.0]
-          //? content match {
-          //?   case ContentString(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentJson(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentByteArray(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentNull(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //? }
+          // ? content match {
+          // ?   case ContentString(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          // ?   case ContentJson(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          // ?   case ContentByteArray(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          // ?   case ContentNull(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
+          // ? }
           // [end]
         }
       )
@@ -183,12 +195,12 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getLocation)
-          val docId = executor.get.getDocId(request.getLocation)
+          val docId      = executor.get.getDocId(request.getLocation)
           content match {
-            case ContentString(value) => ctx.insert(collection, docId, value).get
-            case ContentJson(value) => ctx.insert(collection, docId, value).get
+            case ContentString(value)    => ctx.insert(collection, docId, value).get
+            case ContentJson(value)      => ctx.insert(collection, docId, value).get
             case ContentByteArray(value) => ctx.insert(collection, docId, value).get
-            case ContentNull(value) => ctx.insert(collection, docId, value).get
+            case ContentNull(value)      => ctx.insert(collection, docId, value).get
           }
         }
       )
@@ -212,22 +224,22 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
               case ContentString(value) =>
                 options match {
                   case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
-                  case None => ctx.replace(stashedGet.get, value).get
+                  case None       => ctx.replace(stashedGet.get, value).get
                 }
               case ContentJson(value) =>
                 options match {
                   case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
-                  case None => ctx.replace(stashedGet.get, value).get
+                  case None       => ctx.replace(stashedGet.get, value).get
                 }
               case ContentByteArray(value) =>
                 options match {
                   case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
-                  case None => ctx.replace(stashedGet.get, value).get
+                  case None       => ctx.replace(stashedGet.get, value).get
                 }
               case ContentNull(value) =>
                 options match {
                   case Some(opts) => ctx.replace(stashedGet.get, value, opts).get
-                  case None => ctx.replace(stashedGet.get, value).get
+                  case None       => ctx.replace(stashedGet.get, value).get
                 }
             }
           } else if (request.hasUseStashedSlot) {
@@ -238,22 +250,26 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             content match {
               case ContentString(value) =>
                 options match {
-                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case Some(opts) =>
+                    ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
                   case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
                 }
               case ContentJson(value) =>
                 options match {
-                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case Some(opts) =>
+                    ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
                   case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
                 }
               case ContentByteArray(value) =>
                 options match {
-                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case Some(opts) =>
+                    ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
                   case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
                 }
               case ContentNull(value) =>
                 options match {
-                  case Some(opts) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
+                  case Some(opts) =>
+                    ctx.replace(stashedGetMap(request.getUseStashedSlot), value, opts).get
                   case None => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
                 }
             }
@@ -270,61 +286,61 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
               case ContentString(value) =>
                 options match {
                   case Some(opts) => ctx.replace(r, value, opts).get
-                  case None => ctx.replace(r, value).get
+                  case None       => ctx.replace(r, value).get
                 }
               case ContentJson(value) =>
                 options match {
                   case Some(opts) => ctx.replace(r, value, opts).get
-                  case None => ctx.replace(r, value).get
+                  case None       => ctx.replace(r, value).get
                 }
               case ContentByteArray(value) =>
                 options match {
                   case Some(opts) => ctx.replace(r, value, opts).get
-                  case None => ctx.replace(r, value).get
+                  case None       => ctx.replace(r, value).get
                 }
               case ContentNull(value) =>
                 options match {
                   case Some(opts) => ctx.replace(r, value, opts).get
-                  case None => ctx.replace(r, value).get
+                  case None       => ctx.replace(r, value).get
                 }
             }
           }
           // [end]
           // [if:<1.9.0]
-          //? if (request.getUseStashedResult) {
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentJson(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentByteArray(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentNull(value) => ctx.replace(stashedGet.get, value).get
-          //?   }
-          //? } else if (request.hasUseStashedSlot) {
-          //?   if (!stashedGetMap.contains(request.getUseStashedSlot))
-          //?     throw new IllegalStateException(
-          //?       "Do not have a stashed get in slot " + request.getUseStashedSlot
-          //?     )
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?   }
-          //? } else {
-          //?   val collection = connection.collection(request.getDocId)
-          //?   logger.info(
-          //?     "{} Performing replace operation on docId {} to new content on collection {}",
-          //?     dbg,
-          //?     request.getDocId.getDocId,
-          //?     request.getDocId.getCollectionName
-          //?   )
-          //?   val r = ctx.get(collection, request.getDocId.getDocId).get
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(r, value).get
-          //?     case ContentJson(value) => ctx.replace(r, value).get
-          //?     case ContentByteArray(value) => ctx.replace(r, value).get
-          //?     case ContentNull(value) => ctx.replace(r, value).get
-          //?   }
-          //? }
+          // ? if (request.getUseStashedResult) {
+          // ?   content match {
+          // ?     case ContentString(value) => ctx.replace(stashedGet.get, value).get
+          // ?     case ContentJson(value) => ctx.replace(stashedGet.get, value).get
+          // ?     case ContentByteArray(value) => ctx.replace(stashedGet.get, value).get
+          // ?     case ContentNull(value) => ctx.replace(stashedGet.get, value).get
+          // ?   }
+          // ? } else if (request.hasUseStashedSlot) {
+          // ?   if (!stashedGetMap.contains(request.getUseStashedSlot))
+          // ?     throw new IllegalStateException(
+          // ?       "Do not have a stashed get in slot " + request.getUseStashedSlot
+          // ?     )
+          // ?   content match {
+          // ?     case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          // ?     case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          // ?     case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          // ?     case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+          // ?   }
+          // ? } else {
+          // ?   val collection = connection.collection(request.getDocId)
+          // ?   logger.info(
+          // ?     "{} Performing replace operation on docId {} to new content on collection {}",
+          // ?     dbg,
+          // ?     request.getDocId.getDocId,
+          // ?     request.getDocId.getCollectionName
+          // ?   )
+          // ?   val r = ctx.get(collection, request.getDocId.getDocId).get
+          // ?   content match {
+          // ?     case ContentString(value) => ctx.replace(r, value).get
+          // ?     case ContentJson(value) => ctx.replace(r, value).get
+          // ?     case ContentByteArray(value) => ctx.replace(r, value).get
+          // ?     case ContentNull(value) => ctx.replace(r, value).get
+          // ?   }
+          // ? }
           // [end]
 
         }
@@ -345,20 +361,24 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
                 "Do not have a stashed get in slot " + request.getUseStashedSlot
               )
             content match {
-              case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-              case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-              case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-              case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentString(value) =>
+                ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentJson(value) =>
+                ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentByteArray(value) =>
+                ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
+              case ContentNull(value) =>
+                ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
             }
           } else {
             val collection = connection.collection(request.getLocation)
-            val r =
+            val r          =
               ctx.get(collection, executor.get.getDocId(request.getLocation)).get
             content match {
-              case ContentString(value) => ctx.replace(r, value).get
-              case ContentJson(value) => ctx.replace(r, value).get
+              case ContentString(value)    => ctx.replace(r, value).get
+              case ContentJson(value)      => ctx.replace(r, value).get
               case ContentByteArray(value) => ctx.replace(r, value).get
-              case ContentNull(value) => ctx.replace(r, value).get
+              case ContentNull(value)      => ctx.replace(r, value).get
             }
           }
 
@@ -407,14 +427,15 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             ctx.remove(stashedGetMap(request.getUseStashedSlot)).get
           } else {
             val collection = connection.collection(request.getLocation)
-            val r =
+            val r          =
               ctx.get(collection, executor.get.getDocId(request.getLocation)).get
             ctx.remove(r).get
           }
 
         }
       )
-    } else if (op.hasCommit) {} else if (op.hasRollback) {
+    } else if (op.hasCommit) {}
+    else if (op.hasRollback) {
       throw new RuntimeException("Driver has requested app-rollback")
     } else if (op.hasGet) {
       val request    = op.getGet
@@ -435,15 +456,16 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           )
           // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionGetOptions(request)
-          val out = options match {
+          val out     = options match {
             case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts).get
-            case None => ctx.get(collection, request.getDocId.getDocId).get
+            case None       => ctx.get(collection, request.getDocId.getDocId).get
           }
           // [end]
           // [if:<1.9.0]
-          //? val out = ctx.get(collection, request.getDocId.getDocId).get
+          // ? val out = ctx.get(collection, request.getDocId.getDocId).get
           // [end]
-          val contentAsValidation = if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
+          val contentAsValidation =
+            if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
           handleGetResult(request, out, connection, contentAsValidation)
 
         }
@@ -461,12 +483,13 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionGetOptions(request)
           options match {
-            case Some(opts) => ctx.get(collection, executor.get.getDocId(request.getLocation), opts).get
+            case Some(opts) =>
+              ctx.get(collection, executor.get.getDocId(request.getLocation), opts).get
             case None => ctx.get(collection, executor.get.getDocId(request.getLocation)).get
           }
           // [end]
           // [if:<1.9.0]
-          //? ctx.get(collection, executor.get.getDocId(request.getLocation)).get
+          // ? ctx.get(collection, executor.get.getDocId(request.getLocation)).get
           // [end]
         }
       )
@@ -490,19 +513,20 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           )
           // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionGetOptions(request)
-          val out = options match {
+          val out     = options match {
             case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts)
-            case None => ctx.get(collection, request.getDocId.getDocId)
+            case None       => ctx.get(collection, request.getDocId.getDocId)
           }
           // [end]
           // [if:<1.9.0]
-          //? val out = ctx.get(collection, request.getDocId.getDocId)
+          // ? val out = ctx.get(collection, request.getDocId.getDocId)
           // [end]
-          val contentAsValidation = if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
+          val contentAsValidation =
+            if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
           handleGetOptionalResult(request, req, out, connection, contentAsValidation)
         }
       )
-    // [start:1.8.0]
+      // [start:1.8.0]
     } else if (op.hasGetFromPreferredServerGroup) {
       val request = op.getGetFromPreferredServerGroup
       performOperation(
@@ -514,19 +538,24 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         () => {
           val collection = connection.collection(request.getDocId)
           // [if:1.9.0]
-          val options = TransactionOptionsUtil.transactionGetReplicaFromPreferredServerGroupOptions(request)
+          val options =
+            TransactionOptionsUtil.transactionGetReplicaFromPreferredServerGroupOptions(request)
           val result = options match {
-            case Some(opts) => ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId, opts).get
-            case None => ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+            case Some(opts) =>
+              ctx
+                .getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId, opts)
+                .get
+            case None =>
+              ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
           }
           // [end]
           // [if:<1.9.0]
-          //? val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          // ? val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
           // [end]
           handleGetReplicaFromPreferredServerGroupResult(request, result, connection)
-      }
-    )
-    // [end:1.8.0]
+        }
+      )
+      // [end:1.8.0]
     } else if (op.hasWaitOnLatch) {
       val request   = op.getWaitOnLatch
       val latchName = request.getLatchName
@@ -570,7 +599,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           )
       )
     } else if (op.hasInsertRegularKv) {
-      val request = op.getInsertRegularKv
+      val request    = op.getInsertRegularKv
       val collection =
         connection.collection(request.getDocId)
       performOperation(
@@ -587,7 +616,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         }
       )
     } else if (op.hasReplaceRegularKv) {
-      val request = op.getReplaceRegularKv
+      val request    = op.getReplaceRegularKv
       val collection =
         connection.collection(request.getDocId)
       performOperation(
@@ -604,7 +633,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         }
       )
     } else if (op.hasRemoveRegularKv) {
-      val request = op.getRemoveRegularKv
+      val request    = op.getRemoveRegularKv
       val collection =
         connection.collection(request.getDocId)
       performOperation(

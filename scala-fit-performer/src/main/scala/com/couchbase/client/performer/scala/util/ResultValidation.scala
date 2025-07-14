@@ -90,12 +90,10 @@ object ResultValidation {
   def validateQueryResult(request: CommandQuery, qr: ReactiveQueryResult): SMono[Unit] =
     qr.rowsAs[json.JsonObject]
       .collectSeq()
-      .flatMap(
-        (rows) =>
-          qr.metaData.doOnNext(
-            (metaData: QueryMetaData) =>
-              validateQueryResult(request, rows, metaData.metrics.get.mutationCount)
-          )
+      .flatMap((rows) =>
+        qr.metaData.doOnNext((metaData: QueryMetaData) =>
+          validateQueryResult(request, rows, metaData.metrics.get.mutationCount)
+        )
       )
       .`then`()
 

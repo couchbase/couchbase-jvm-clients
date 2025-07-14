@@ -22,16 +22,16 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-class ClusterConnection(req: ClusterConnectionCreateRequest,
-                        getCluster: () => ClusterConnection) {
-  private val logger = LoggerFactory.getLogger(classOf[ClusterConnection])
+class ClusterConnection(req: ClusterConnectionCreateRequest, getCluster: () => ClusterConnection) {
+  private val logger   = LoggerFactory.getLogger(classOf[ClusterConnection])
   private val hostname = req.getClusterHostname
   logger.info("Attempting connection to cluster " + hostname)
 
   val (cluster, env) = OptionsUtil.convertClusterConfig(req, getCluster) match {
     case Some(env) =>
       val built = env.build.get
-      val opts = ClusterOptions.create(req.getClusterUsername, req.getClusterPassword).environment(built)
+      val opts  =
+        ClusterOptions.create(req.getClusterUsername, req.getClusterPassword).environment(built)
       (Cluster.connect(hostname, opts).get, Some(built))
     case _ => (Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get, None)
   }
@@ -41,7 +41,7 @@ class ClusterConnection(req: ClusterConnectionCreateRequest,
   // using the same collection every time, so for performance don't use a map here
   // Have to store both these as very old versions of the SDK don't put bucketName and scopeName on Collection
   private var lastCollectionGrpc: com.couchbase.client.protocol.shared.Collection = _
-  private var lastCollection: Collection = _
+  private var lastCollection: Collection                                          = _
 
   def collection(loc: DocLocation): Collection = {
     val coll = {
@@ -55,22 +55,25 @@ class ClusterConnection(req: ClusterConnectionCreateRequest,
   }
 
   def collection(docId: DocId): Collection = {
-      collection(com.couchbase.client.protocol.shared.Collection.newBuilder
-              .setBucketName(docId.getBucketName)
-              .setScopeName(docId.getScopeName)
-              .setCollectionName(docId.getCollectionName)
-              .build)
+    collection(
+      com.couchbase.client.protocol.shared.Collection.newBuilder
+        .setBucketName(docId.getBucketName)
+        .setScopeName(docId.getScopeName)
+        .setCollectionName(docId.getCollectionName)
+        .build
+    )
   }
 
   def collection(coll: com.couchbase.client.protocol.shared.Collection): Collection = {
     if (lastCollectionGrpc == coll) {
       lastCollection
-    }
-    else {
-      val bucket = bucketCache.getOrElseUpdate(coll.getBucketName, {
-        logger.info(s"Opening new bucket ${coll.getBucketName}")
-        cluster.bucket(coll.getBucketName)
-      })
+    } else {
+      val bucket = bucketCache.getOrElseUpdate(
+        coll.getBucketName, {
+          logger.info(s"Opening new bucket ${coll.getBucketName}")
+          cluster.bucket(coll.getBucketName)
+        }
+      )
       val out = bucket.scope(coll.getScopeName).collection(coll.getCollectionName)
       lastCollectionGrpc = coll
       lastCollection = out

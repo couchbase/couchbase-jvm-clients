@@ -5,7 +5,12 @@ import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertException, setSuccess}
 import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaFluxStreamer, ScalaIteratorStreamer}
+import com.couchbase.client.performer.scala.util.{
+  ClusterConnection,
+  ContentAsUtil,
+  ScalaFluxStreamer,
+  ScalaIteratorStreamer
+}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.kv.lookupin
 import com.couchbase.client.protocol.sdk.{CollectionLevelCommand, Command}
@@ -374,8 +379,12 @@ object LookupInHelper {
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
-          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
-          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP =>
+            out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x =>
+            throw new UnsupportedOperationException(
+              s"Scala SDK does not support read preference ${x}"
+            )
         }
       }
       // [end:1.8.0]
@@ -400,8 +409,12 @@ object LookupInHelper {
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
-          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
-          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP =>
+            out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x =>
+            throw new UnsupportedOperationException(
+              s"Scala SDK does not support read preference ${x}"
+            )
         }
       }
       // [end:1.8.0]
@@ -423,7 +436,7 @@ object LookupInHelper {
 
         val existsResult = Try(result.exists(i)) match {
           case Success(value) => value
-          case Failure(err) =>
+          case Failure(err)   =>
             throw new IllegalStateException(
               "Scala SDK lookupInResults.exists(i) should never throw as it's not permitted by the signature (no Try)",
               err
@@ -481,11 +494,11 @@ object LookupInHelper {
     // Cannot assertIsSerializable here due to JVMCBC-1458
     val specResults = specs.zipWithIndex
       .map(x => {
-        val spec = x._1
-        val i    = x._2
+        val spec         = x._1
+        val i            = x._2
         val existsResult = Try(result.exists(i)) match {
           case Success(value) => value
-          case Failure(err) =>
+          case Failure(err)   =>
             throw new IllegalStateException(
               "Scala SDK lookupInResults.exists(i) should never throw as it's not permitted by the signature (no Try)",
               err

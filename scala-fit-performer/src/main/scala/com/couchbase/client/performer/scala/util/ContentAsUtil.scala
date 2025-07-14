@@ -21,22 +21,20 @@ object ContentAsUtil {
     if (contentAs.hasAsString) {
       asString().map(value => ContentTypes.newBuilder.setContentAsString(value).build)
     } else if (contentAs.hasAsByteArray) {
-      asByteArray().map(
-        value => ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
+      asByteArray().map(value =>
+        ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
       )
     } else if (contentAs.hasAsJsonObject) {
-      asJsonObject().map(
-        value =>
-          ContentTypes.newBuilder
-            .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
-            .build
+      asJsonObject().map(value =>
+        ContentTypes.newBuilder
+          .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
+          .build
       )
     } else if (contentAs.hasAsJsonArray) {
-      asJsonArray().map(
-        value =>
-          ContentTypes.newBuilder
-            .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
-            .build
+      asJsonArray().map(value =>
+        ContentTypes.newBuilder
+          .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
+          .build
       )
     } else if (contentAs.hasAsBoolean) {
       asBoolean().map(value => ContentTypes.newBuilder.setContentAsBool(value).build)
@@ -61,51 +59,46 @@ object ContentAsUtil {
       asFloatingPoint: () => Try[Seq[Double]]
   ): Try[Seq[ContentTypes]] = {
     if (contentAs.hasAsString) {
-      asString().map(
-        values => values.map(value => ContentTypes.newBuilder.setContentAsString(value).build)
+      asString().map(values =>
+        values.map(value => ContentTypes.newBuilder.setContentAsString(value).build)
       )
     } else if (contentAs.hasAsByteArray) {
-      asByteArray().map(
-        values =>
-          values.map(
-            value => ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
-          )
+      asByteArray().map(values =>
+        values.map(value =>
+          ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
+        )
       )
     } else if (contentAs.hasAsJsonObject) {
-      asJsonObject().map(
-        values =>
-          values.map(
-            value =>
-              ContentTypes.newBuilder
-                .setContentAsBytes(
-                  ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
-                )
-                .build
-          )
+      asJsonObject().map(values =>
+        values.map(value =>
+          ContentTypes.newBuilder
+            .setContentAsBytes(
+              ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+            )
+            .build
+        )
       )
     } else if (contentAs.hasAsJsonArray) {
-      asJsonArray().map(
-        values =>
-          values.map(
-            value =>
-              ContentTypes.newBuilder
-                .setContentAsBytes(
-                  ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
-                )
-                .build
-          )
+      asJsonArray().map(values =>
+        values.map(value =>
+          ContentTypes.newBuilder
+            .setContentAsBytes(
+              ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+            )
+            .build
+        )
       )
     } else if (contentAs.hasAsBoolean) {
-      asBoolean().map(
-        values => values.map(value => ContentTypes.newBuilder.setContentAsBool(value).build)
+      asBoolean().map(values =>
+        values.map(value => ContentTypes.newBuilder.setContentAsBool(value).build)
       )
     } else if (contentAs.hasAsInteger) {
-      asInteger().map(
-        values => values.map(value => ContentTypes.newBuilder.setContentAsInt64(value).build)
+      asInteger().map(values =>
+        values.map(value => ContentTypes.newBuilder.setContentAsInt64(value).build)
       )
     } else if (contentAs.hasAsFloatingPoint) {
-      asFloatingPoint().map(
-        values => values.map(value => ContentTypes.newBuilder.setContentAsDouble(value).build)
+      asFloatingPoint().map(values =>
+        values.map(value => ContentTypes.newBuilder.setContentAsDouble(value).build)
       )
     } else
       throw new UnsupportedOperationException(
@@ -113,7 +106,8 @@ object ContentAsUtil {
       )
   }
 
-    def convert(content: ContentTypes): Array[Byte] = if (content.hasContentAsBytes) content.getContentAsBytes.toByteArray
-    else if (content.hasContentAsString) content.getContentAsString.getBytes
-    else throw new UnsupportedOperationException("Cannot convert " + content)
+  def convert(content: ContentTypes): Array[Byte] = if (content.hasContentAsBytes)
+    content.getContentAsBytes.toByteArray
+  else if (content.hasContentAsString) content.getContentAsString.getBytes
+  else throw new UnsupportedOperationException("Cannot convert " + content)
 }

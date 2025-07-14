@@ -19,8 +19,18 @@ package com.couchbase.client.performer.scala.kv
 
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
-import com.couchbase.client.performer.scala.Content.{ContentByteArray, ContentJson, ContentNull, ContentString}
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertContent, convertDurability, convertExpiry, setSuccess}
+import com.couchbase.client.performer.scala.Content.{
+  ContentByteArray,
+  ContentJson,
+  ContentNull,
+  ContentString
+}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
+  convertContent,
+  convertDurability,
+  convertExpiry,
+  setSuccess
+}
 import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
 import com.couchbase.client.performer.scala.{Content, ScalaSdkCommandExecutor}
@@ -197,7 +207,7 @@ object MutateInHelper {
         val s       = v.getArrayPrepend
         val path    = s.getPath
         val content = s.getContentList.asScala
-        var spec = isContentOrMacro(s.getContent(0)) match {
+        var spec    = isContentOrMacro(s.getContent(0)) match {
           case IsContentOrMacro.IsMacro(_) => arrayPrepend(path, mapContent[MutateInMacro](content))
           case IsContentOrMacro.IsContent(ContentString(_)) =>
             arrayPrepend(path, mapContent[String](content))
@@ -215,7 +225,7 @@ object MutateInHelper {
         val s       = v.getArrayInsert
         val path    = s.getPath
         val content = s.getContentList.asScala
-        var spec = isContentOrMacro(s.getContent(0)) match {
+        var spec    = isContentOrMacro(s.getContent(0)) match {
           case IsContentOrMacro.IsMacro(_) => arrayInsert(path, mapContent[MutateInMacro](content))
           case IsContentOrMacro.IsContent(ContentString(_)) =>
             arrayInsert(path, mapContent[String](content))

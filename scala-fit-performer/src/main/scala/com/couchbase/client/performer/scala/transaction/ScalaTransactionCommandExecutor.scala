@@ -38,8 +38,7 @@ class ScalaTransactionCommandExecutor(
     val initiated                   = TimeUtil.getTimeNow
     val startNanos                  = System.nanoTime
     if (request.getApi eq API.DEFAULT)
-      response =
-        TransactionBlocking.run(connection, request, Some(this), performanceMode, spans)
+      response = TransactionBlocking.run(connection, request, Some(this), performanceMode, spans)
     else throw new UnsupportedOperationException
     val elapsedNanos = System.nanoTime - startNanos
     com.couchbase.client.protocol.run.Result.newBuilder

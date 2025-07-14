@@ -71,7 +71,7 @@ object BucketManagerHelper {
         case Failure(e)              => throw e
       }
     } else if (bm.hasGetAllBuckets) {
-      val req = bm.getGetAllBuckets
+      val req      = bm.getGetAllBuckets
       val response = cluster.buckets.getAllBuckets(
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
           scala.concurrent.duration
@@ -84,7 +84,7 @@ object BucketManagerHelper {
         case Failure(e)       => throw e
       }
     } else if (bm.hasCreateBucket) {
-      val req = bm.getCreateBucket
+      val req      = bm.getCreateBucket
       val response = cluster.buckets.create(
         createBucketSettings(req.getSettings.getSettings, Some(req.getSettings)),
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -98,7 +98,7 @@ object BucketManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasDropBucket) {
-      val req = bm.getDropBucket
+      val req      = bm.getDropBucket
       val response = cluster.buckets.dropBucket(
         req.getBucketName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -112,7 +112,7 @@ object BucketManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasFlushBucket) {
-      val req = bm.getFlushBucket
+      val req      = bm.getFlushBucket
       val response = cluster.buckets.flushBucket(
         req.getBucketName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -126,7 +126,7 @@ object BucketManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasUpdateBucket) {
-      val req = bm.getUpdateBucket
+      val req      = bm.getUpdateBucket
       val response = cluster.buckets.updateBucket(
         createBucketSettings(req.getSettings, None),
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -167,7 +167,7 @@ object BucketManagerHelper {
         result.build()
       })
     } else if (bm.hasGetAllBuckets) {
-      val req = bm.getGetAllBuckets
+      val req      = bm.getGetAllBuckets
       val response = cluster.buckets.getAllBuckets(
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
           scala.concurrent.duration
@@ -177,7 +177,7 @@ object BucketManagerHelper {
 
       response.collectSeq.map(buckets => populateResult(result, buckets).build)
     } else if (bm.hasCreateBucket) {
-      val req = bm.getCreateBucket
+      val req      = bm.getCreateBucket
       val response = cluster.buckets.create(
         createBucketSettings(req.getSettings.getSettings, Some(req.getSettings)),
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -191,7 +191,7 @@ object BucketManagerHelper {
         result.build
       })
     } else if (bm.hasDropBucket) {
-      val req = bm.getDropBucket
+      val req      = bm.getDropBucket
       val response = cluster.buckets.dropBucket(
         req.getBucketName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -205,7 +205,7 @@ object BucketManagerHelper {
         result.build
       })
     } else if (bm.hasFlushBucket) {
-      val req = bm.getFlushBucket
+      val req      = bm.getFlushBucket
       val response = cluster.buckets.flushBucket(
         req.getBucketName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -219,7 +219,7 @@ object BucketManagerHelper {
         result.build
       })
     } else if (bm.hasUpdateBucket) {
-      val req = bm.getUpdateBucket
+      val req      = bm.getUpdateBucket
       val response = cluster.buckets.updateBucket(
         createBucketSettings(req.getSettings, None),
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -284,9 +284,13 @@ object BucketManagerHelper {
         StorageBackend.Magma
       case _ => throw new UnsupportedOperationException("Unknown storage backend")
     })
-    if (bs.hasHistoryRetentionCollectionDefault) cs = cs.historyRetentionCollectionDefault(bs.getHistoryRetentionCollectionDefault)
+    if (bs.hasHistoryRetentionCollectionDefault)
+      cs = cs.historyRetentionCollectionDefault(bs.getHistoryRetentionCollectionDefault)
     if (bs.hasHistoryRetentionBytes) cs = cs.historyRetentionBytes(bs.getHistoryRetentionBytes)
-    if (bs.hasHistoryRetentionSeconds) cs = cs.historyRetentionDuration(scala.concurrent.duration.Duration(bs.getHistoryRetentionSeconds, TimeUnit.SECONDS))
+    if (bs.hasHistoryRetentionSeconds)
+      cs = cs.historyRetentionDuration(
+        scala.concurrent.duration.Duration(bs.getHistoryRetentionSeconds, TimeUnit.SECONDS)
+      )
     cbs match {
       case Some(value) =>
         if (value.hasConflictResolutionType)
@@ -386,15 +390,17 @@ object BucketManagerHelper {
     }
 
     response.minimumDurabilityLevel match {
-      case Disabled             => builder.setMinimumDurabilityLevel(Durability.NONE)
-      case ClientVerified(_, _) => builder.setMinimumDurabilityLevel(Durability.NONE)
-      case Majority             => builder.setMinimumDurabilityLevel(Durability.MAJORITY)
+      case Disabled                   => builder.setMinimumDurabilityLevel(Durability.NONE)
+      case ClientVerified(_, _)       => builder.setMinimumDurabilityLevel(Durability.NONE)
+      case Majority                   => builder.setMinimumDurabilityLevel(Durability.MAJORITY)
       case MajorityAndPersistToActive =>
         builder.setMinimumDurabilityLevel(Durability.MAJORITY_AND_PERSIST_TO_ACTIVE)
       case PersistToMajority => builder.setMinimumDurabilityLevel(Durability.PERSIST_TO_MAJORITY)
     }
 
-    response.historyRetentionCollectionDefault.foreach(v => builder.setHistoryRetentionCollectionDefault(v))
+    response.historyRetentionCollectionDefault.foreach(v =>
+      builder.setHistoryRetentionCollectionDefault(v)
+    )
     response.historyRetentionBytes.foreach(v => builder.setHistoryRetentionBytes(v))
     response.historyRetentionDuration.foreach(v => builder.setHistoryRetentionSeconds(v.toSeconds))
     // [if:1.8.2]
@@ -402,8 +408,10 @@ object BucketManagerHelper {
     // [end]
 
     response.storageBackend match {
-      case Some(StorageBackend.Magma) => builder.setStorageBackend(bucketmanager.StorageBackend.MAGMA)
-      case Some(StorageBackend.Couchstore) => builder.setStorageBackend(bucketmanager.StorageBackend.COUCHSTORE)
+      case Some(StorageBackend.Magma) =>
+        builder.setStorageBackend(bucketmanager.StorageBackend.MAGMA)
+      case Some(StorageBackend.Couchstore) =>
+        builder.setStorageBackend(bucketmanager.StorageBackend.COUCHSTORE)
       case _ =>
     }
 

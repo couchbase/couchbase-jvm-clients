@@ -18,7 +18,12 @@ package com.couchbase.client.performer.scala.transaction
 
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
 import com.couchbase.client.protocol.transactions._
-import com.couchbase.client.scala.transactions.config.{TransactionGetOptions, TransactionGetReplicaFromPreferredServerGroupOptions, TransactionInsertOptions, TransactionReplaceOptions}
+import com.couchbase.client.scala.transactions.config.{
+  TransactionGetOptions,
+  TransactionGetReplicaFromPreferredServerGroupOptions,
+  TransactionInsertOptions,
+  TransactionReplaceOptions
+}
 
 object TransactionOptionsUtil {
 
@@ -112,7 +117,9 @@ object TransactionOptionsUtil {
     }
   }
 
-  def transactionGetReplicaFromPreferredServerGroupOptions(request: CommandGetReplicaFromPreferredServerGroup): Option[TransactionGetReplicaFromPreferredServerGroupOptions] = {
+  def transactionGetReplicaFromPreferredServerGroupOptions(
+      request: CommandGetReplicaFromPreferredServerGroup
+  ): Option[TransactionGetReplicaFromPreferredServerGroupOptions] = {
     if (request.hasOptions) {
       val opts = request.getOptions
       if (opts.hasTranscoder) {

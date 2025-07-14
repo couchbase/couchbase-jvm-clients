@@ -72,6 +72,27 @@
                 </configuration>
             </plugin>
 
+            <plugin>
+                <groupId>org.antipathy</groupId>
+                <!-- use mvn-scalafmt_2.13 for all scala profiles including 3 -->
+                <artifactId>mvn-scalafmt_2.13</artifactId>
+                <version>${mvn-scalafmt.version}</version>
+                <configuration>
+                    <configLocation>${project.basedir}/../.scalafmt.conf</configLocation>
+                    <sourceDirectories>
+                        <param>${project.basedir}/src/main/scala</param>
+                    </sourceDirectories>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!--  Produces a fatjar  -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

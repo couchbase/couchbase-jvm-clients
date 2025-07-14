@@ -260,17 +260,17 @@ object OptionsUtil {
       getCluster: () => ClusterConnection,
       clusterEnvironment: ClusterEnvironment.Builder
   ): ClusterEnvironment.Builder = {
-    val tc      = request.getClusterConfig.getTransactionsConfig
-    var builder = TransactionsConfig()
-    val factory = HooksUtil.configureHooks(tc.getHookList.asScala, getCluster)
+    val tc             = request.getClusterConfig.getTransactionsConfig
+    var builder        = TransactionsConfig()
+    val factory        = HooksUtil.configureHooks(tc.getHookList.asScala, getCluster)
     val cleanerFactory = new CleanerMockFactory(
       HooksUtil.configureCleanupHooks(tc.getHookList.asScala, getCluster)
     )
     builder = builder.testFactory(factory, cleanerFactory)
     if (tc.hasDurability) {
       val durabilityLevel: DurabilityLevel = tc.getDurability match {
-        case Durability.NONE     => DurabilityLevel.NONE
-        case Durability.MAJORITY => DurabilityLevel.MAJORITY
+        case Durability.NONE                           => DurabilityLevel.NONE
+        case Durability.MAJORITY                       => DurabilityLevel.MAJORITY
         case Durability.MAJORITY_AND_PERSIST_TO_ACTIVE =>
           DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
         case Durability.PERSIST_TO_MAJORITY => DurabilityLevel.PERSIST_TO_MAJORITY
@@ -293,13 +293,12 @@ object OptionsUtil {
       if (cleanupConfig.getCleanupCollectionCount > 0)
         cleanupBuilder = cleanupBuilder.collections(
           cleanupConfig.getCleanupCollectionList.asScala
-            .map(
-              v =>
-                TransactionKeyspace(
-                  v.getBucketName,
-                  Some(v.getScopeName),
-                  Some(v.getCollectionName)
-                )
+            .map(v =>
+              TransactionKeyspace(
+                v.getBucketName,
+                Some(v.getScopeName),
+                Some(v.getCollectionName)
+              )
             )
             .toSet
         )
@@ -330,8 +329,8 @@ object OptionsUtil {
       ptcb = TransactionOptions()
       if (to.hasDurability) {
         ptcb = ptcb.durabilityLevel(to.getDurability match {
-          case Durability.NONE     => DurabilityLevel.NONE
-          case Durability.MAJORITY => DurabilityLevel.MAJORITY
+          case Durability.NONE                           => DurabilityLevel.NONE
+          case Durability.MAJORITY                       => DurabilityLevel.MAJORITY
           case Durability.MAJORITY_AND_PERSIST_TO_ACTIVE =>
             DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE
           case Durability.PERSIST_TO_MAJORITY => DurabilityLevel.PERSIST_TO_MAJORITY

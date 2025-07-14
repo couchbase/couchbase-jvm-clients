@@ -151,8 +151,8 @@ object SearchHelper {
                 if (ss.hasDesc) Some(ss.getDesc) else None,
                 if (ss.hasUnit()) {
                   Some(ss.getUnit() match {
-                    case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_METERS => "meters"
-                    case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_MILES  => "miles"
+                    case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_METERS      => "meters"
+                    case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_MILES       => "miles"
                     case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_CENTIMETERS =>
                       "centimeters"
                     case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_MILLIMETERS =>
@@ -163,7 +163,7 @@ object SearchHelper {
                     case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_FEET       => "feet"
                     case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_YARDS      => "yards"
                     case SearchGeoDistanceUnits.SEARCH_GEO_DISTANCE_UNITS_INCHES     => "inches"
-                    case _                                                           => throw new UnsupportedOperationException();
+                    case _ => throw new UnsupportedOperationException();
                   })
                 } else None
               )
@@ -175,8 +175,8 @@ object SearchHelper {
     if (o.getFacetsCount > 0) {
       val facets: Map[String, SearchFacet] = o.getFacetsMap.asScala
         .map(x => {
-          val k = x._1
-          val v = x._2
+          val k                  = x._1
+          val v                  = x._2
           val facet: SearchFacet = if (v.hasTerm) {
             val f = v.getTerm
             TermFacet(f.getField, if (f.hasSize) Some(f.getSize) else None)
@@ -185,14 +185,13 @@ object SearchHelper {
             NumericRangeFacet(
               f.getField,
               f.getNumericRangesList.asScala
-                .map(
-                  nr =>
-                    NumericRange(
-                      nr.getName,
-                      if (nr.hasMin) Some(nr.getMin) else None,
-                      if (nr.hasMax) Some(nr.getMax)
-                      else None
-                    )
+                .map(nr =>
+                  NumericRange(
+                    nr.getName,
+                    if (nr.hasMin) Some(nr.getMin) else None,
+                    if (nr.hasMax) Some(nr.getMax)
+                    else None
+                  )
                 ),
               if (f.hasSize) Some(f.getSize) else None
             )
@@ -201,14 +200,13 @@ object SearchHelper {
             DateRangeFacet(
               f.getField,
               f.getDateRangesList.asScala
-                .map(
-                  nr =>
-                    DateRange
-                      .create(
-                        nr.getName,
-                        convertTimestamp(nr.hasStart, nr.getStart),
-                        convertTimestamp(nr.hasEnd, nr.getEnd)
-                      )
+                .map(nr =>
+                  DateRange
+                    .create(
+                      nr.getName,
+                      convertTimestamp(nr.hasStart, nr.getStart),
+                      convertTimestamp(nr.hasEnd, nr.getEnd)
+                    )
                 ),
               if (f.hasSize) Some(f.getSize) else None
             )
@@ -222,7 +220,7 @@ object SearchHelper {
       // [if:1.4.5]
       opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
       // [else]
-      //? throw new UnsupportedOperationException()
+      // ? throw new UnsupportedOperationException()
       // [end]
     }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
@@ -339,7 +337,7 @@ object SearchHelper {
         out
 
       case com.couchbase.client.protocol.sdk.search.SearchQuery.QueryCase.GEO_DISTANCE =>
-        val qr = q.getGeoDistance
+        val qr  = q.getGeoDistance
         var out =
           SearchQuery.geoDistance(qr.getLocation.getLon, qr.getLocation.getLat, qr.getDistance)
         if (qr.hasField) out = out.field(qr.getField)
@@ -347,7 +345,7 @@ object SearchHelper {
         out
 
       case com.couchbase.client.protocol.sdk.search.SearchQuery.QueryCase.GEO_BOUNDING_BOX =>
-        val qr = q.getGeoBoundingBox
+        val qr  = q.getGeoBoundingBox
         var out = SearchQuery.geoBoundingBox(
           qr.getTopLeft.getLon,
           qr.getTopLeft.getLat,
@@ -436,7 +434,7 @@ object SearchHelper {
     val result  = Result.newBuilder
     result.setInitiated(getTimeNow)
     val start = System.nanoTime
-    val r = options match {
+    val r     = options match {
       case Some(opts) => cluster.searchQuery(command.getIndexName, query, opts).get
       case _          => cluster.searchQuery(command.getIndexName, query).get
     }
@@ -461,7 +459,7 @@ object SearchHelper {
     val result  = Result.newBuilder
     result.setInitiated(getTimeNow)
     val start = System.nanoTime
-    val r = options match {
+    val r     = options match {
       case Some(opts) => cluster.search(search.getIndexName, request, opts).get
       case _          => cluster.search(search.getIndexName, request).get
     }
@@ -485,7 +483,7 @@ object SearchHelper {
     val result  = Result.newBuilder
     result.setInitiated(getTimeNow)
     val start = System.nanoTime
-    val r = options match {
+    val r     = options match {
       case Some(opts) => scope.search(search.getIndexName, request, opts).get
       case _          => scope.search(search.getIndexName, request).get
     }
@@ -532,14 +530,16 @@ object SearchHelper {
   ): com.couchbase.client.scala.search.vector.VectorQuery = {
     // [if:1.6.2]
     var out = if (vq.hasBase64VectorQuery) {
-      com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, vq.getBase64VectorQuery)
+      com.couchbase.client.scala.search.vector
+        .VectorQuery(vq.getVectorFieldName, vq.getBase64VectorQuery)
     } else {
-      val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+      val query: Array[Float] =
+        vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
       com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     }
     // [else]
-    //? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
-    //? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    // ? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+    // ? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     // [end]
     if (vq.hasOptions) {
       val opts = vq.getOptions
@@ -726,7 +726,7 @@ object SearchHelper {
       val req = command.getGetAllIndexes
 
       result.setInitiated(getTimeNow)
-      val start = System.nanoTime
+      val start   = System.nanoTime
       val indexes = cluster.searchIndexes
         .getAllIndexes(
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -757,7 +757,7 @@ object SearchHelper {
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
       // [else]
-      //? throw new UnsupportedOperationException()
+      // ? throw new UnsupportedOperationException()
       // [end]
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
@@ -948,7 +948,7 @@ object SearchHelper {
       val req = command.getGetAllIndexes
 
       result.setInitiated(getTimeNow)
-      val start = System.nanoTime
+      val start   = System.nanoTime
       val indexes = scope.searchIndexes
         .getAllIndexes(
           if (req.hasOptions && req.getOptions.hasTimeoutMsecs)

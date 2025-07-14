@@ -16,7 +16,11 @@
 // [skip:<1.5.0]
 package com.couchbase.client.performer.scala.transaction
 
-import com.couchbase.client.core.cnc.events.transaction.{IllegalDocumentStateEvent, TransactionEvent, TransactionLogEvent}
+import com.couchbase.client.core.cnc.events.transaction.{
+  IllegalDocumentStateEvent,
+  TransactionEvent,
+  TransactionLogEvent
+}
 import com.couchbase.client.core.cnc.{EventSubscription, RequestSpan}
 import com.couchbase.client.core.error.transaction.TransactionOperationFailedException
 import com.couchbase.client.core.error.{DocumentExistsException, DocumentNotFoundException}
@@ -26,7 +30,10 @@ import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
 import com.couchbase.client.performer.scala.Content
-import com.couchbase.client.protocol.shared.{Content => ProtocolContent, ContentAsPerformerValidation}
+import com.couchbase.client.protocol.shared.{
+  Content => ProtocolContent,
+  ContentAsPerformerValidation
+}
 import com.couchbase.client.performer.scala.util.ResultValidation.{anythingAllowed, dbg}
 import com.couchbase.client.protocol.shared.Latch
 import com.couchbase.client.protocol.transactions._
@@ -45,7 +52,7 @@ import scala.jdk.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 object TransactionShared {
-  val ExpectSuccess = ExpectedResult.newBuilder.setSuccess(true).build
+  val ExpectSuccess                = ExpectedResult.newBuilder.setSuccess(true).build
   private val MinimalSuccessResult =
     com.couchbase.client.protocol.transactions.TransactionResult.newBuilder
       .setException(TransactionException.NO_EXCEPTION_THROWN)
@@ -94,11 +101,10 @@ abstract class TransactionShared(
   final protected val stashedGet    = new AtomicReference[TransactionGetResult]
   final protected val stashedGetMap = collection.mutable.Map.empty[Integer, TransactionGetResult]
 
-  /**
-    * There are a handful of cases where a InternalDriverFailure won't be propagated through into the final
+  /** There are a handful of cases where a InternalDriverFailure won't be propagated through into the final
     * TransactionFailed, e.g. if it happens while the transaction is expired.  So stash it here.
     */
-  final protected val testFailure = new AtomicReference[RuntimeException]
+  final protected val testFailure                            = new AtomicReference[RuntimeException]
   protected def dump(ctxLogger: CoreTransactionLogger): Unit = {
     logger.warn("Dumping logs so far for debugging:")
     ctxLogger.logs.forEach((l: TransactionLogEvent) => logger.info("    " + l.toString))
@@ -165,8 +171,7 @@ abstract class TransactionShared(
     })
   }
 
-  /**
-    * transactionEvents is being populated asynchronously, need to wait for the expected events to arrive.
+  /** transactionEvents is being populated asynchronously, need to wait for the expected events to arrive.
     */
   def assertExpectedEvents(
       req: TransactionCreateRequest,
@@ -236,22 +241,30 @@ abstract class TransactionShared(
       )
 
       if (cas.getExpectSuccess != content.isSuccess) {
-        throw new TestFailure(new RuntimeException(s"ContentAs result $content did not equal expected result ${cas.getExpectSuccess}"))
+        throw new TestFailure(
+          new RuntimeException(
+            s"ContentAs result $content did not equal expected result ${cas.getExpectSuccess}"
+          )
+        )
       }
 
       if (cas.hasExpectedContentBytes) {
         val bytes = ContentAsUtil.convert(content.get)
         if (!java.util.Arrays.equals(cas.getExpectedContentBytes.toByteArray, bytes)) {
-          throw new TestFailure(new RuntimeException(s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${cas.getExpectedContentBytes}"))
+          throw new TestFailure(
+            new RuntimeException(
+              s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${cas.getExpectedContentBytes}"
+            )
+          )
         }
       }
     }
 
     if (request.getExpectedContentJson.nonEmpty) {
       val expected = JsonObject.fromJson(request.getExpectedContentJson)
-      val actual = getResult.contentAs[JsonObject].get
+      val actual   = getResult.contentAs[JsonObject].get
       if (expected != actual) {
-        //logger.warn("Expected content {}, got content {}", expected.toString, actual.toString)
+        // logger.warn("Expected content {}, got content {}", expected.toString, actual.toString)
         throw new TestFailure(new IllegalStateException("Did not get expected content"))
       }
     }
@@ -259,39 +272,51 @@ abstract class TransactionShared(
       logger.warn("Ignoring request to check doc status")
   }
 
-    protected def handleGetReplicaFromPreferredServerGroupResult(
-                                         request: CommandGetReplicaFromPreferredServerGroup,
-                                         result: TransactionGetResult,
-                                         cc: ClusterConnection
-                                 ): Unit = {
-        stashedGet.set(result)
-        if (request.hasStashInSlot) {
-            stashedGetMap.put(request.getStashInSlot, result)
-            logger.info("Stashed {} in slot {}", result.id, request.getStashInSlot)
-        }
-        if (request.hasContentAsValidation) {
-          val contentAs = request.getContentAsValidation
-            val content = ContentAsUtil.contentType(
-                contentAs.getContentAs,
-                () => result.contentAs[Array[Byte]],
-                () => result.contentAs[String],
-                () => result.contentAs[JsonObject],
-                () => result.contentAs[JsonArray],
-                () => result.contentAs[Boolean],
-                () => result.contentAs[Int],
-                () => result.contentAs[Double]
-            )
-
-            if (contentAs.getExpectSuccess != content.isSuccess) throw new TestFailure(new RuntimeException("ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess))
-
-            if (contentAs.hasExpectedContentBytes) {
-                val bytes: Array[Byte] = ContentAsUtil.convert(content.get)
-                if (!java.util.Arrays.equals(contentAs.getExpectedContentBytes.toByteArray, bytes)) throw new TestFailure(new RuntimeException("Content bytes " + java.util.Arrays.toString(bytes) + " did not equal expected bytes " + contentAs.getExpectedContentBytes))
-            }
-        }
+  protected def handleGetReplicaFromPreferredServerGroupResult(
+      request: CommandGetReplicaFromPreferredServerGroup,
+      result: TransactionGetResult,
+      cc: ClusterConnection
+  ): Unit = {
+    stashedGet.set(result)
+    if (request.hasStashInSlot) {
+      stashedGetMap.put(request.getStashInSlot, result)
+      logger.info("Stashed {} in slot {}", result.id, request.getStashInSlot)
     }
+    if (request.hasContentAsValidation) {
+      val contentAs = request.getContentAsValidation
+      val content   = ContentAsUtil.contentType(
+        contentAs.getContentAs,
+        () => result.contentAs[Array[Byte]],
+        () => result.contentAs[String],
+        () => result.contentAs[JsonObject],
+        () => result.contentAs[JsonArray],
+        () => result.contentAs[Boolean],
+        () => result.contentAs[Int],
+        () => result.contentAs[Double]
+      )
 
-    protected def handleWaitOnLatch(
+      if (contentAs.getExpectSuccess != content.isSuccess)
+        throw new TestFailure(
+          new RuntimeException(
+            "ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess
+          )
+        )
+
+      if (contentAs.hasExpectedContentBytes) {
+        val bytes: Array[Byte] = ContentAsUtil.convert(content.get)
+        if (!java.util.Arrays.equals(contentAs.getExpectedContentBytes.toByteArray, bytes))
+          throw new TestFailure(
+            new RuntimeException(
+              "Content bytes " + java.util.Arrays.toString(
+                bytes
+              ) + " did not equal expected bytes " + contentAs.getExpectedContentBytes
+            )
+          )
+      }
+    }
+  }
+
+  protected def handleWaitOnLatch(
       request: CommandWaitOnLatch,
       txnLogger: CoreTransactionLogger
   ): Unit = {
@@ -326,7 +351,10 @@ abstract class TransactionShared(
     )
   }
 
-  protected def readContent(contentJson: Option[String], content: Option[ProtocolContent]): Content = {
+  protected def readContent(
+      contentJson: Option[String],
+      content: Option[ProtocolContent]
+  ): Content = {
     (contentJson, content) match {
       case (Some(_), Some(_)) =>
         throw new RuntimeException("Bug - must specify exactly one type of content")
@@ -352,10 +380,12 @@ abstract class TransactionShared(
       logger: Supplier[CoreTransactionLogger],
       expectedResults: Seq[ExpectedResult]
   ): Unit = {
-    if (!hasResult(expectedResults, TransactionShared.ExpectSuccess) && !anythingAllowed(
-          expectedResults
-        )) {
-      val l = logger.get
+    if (
+      !hasResult(expectedResults, TransactionShared.ExpectSuccess) && !anythingAllowed(
+        expectedResults
+      )
+    ) {
+      val l   = logger.get
       val fmt = String.format(
         "Operation '%s' succeeded but was expecting %s.  Logs: %s",
         opDebug,
@@ -381,76 +411,79 @@ abstract class TransactionShared(
     if (err.isInstanceOf[TestFailure] || err.isInstanceOf[InternalPerformerFailure]) {
       // Make absolutely certain the test fails
       testFailure.set(err)
-    } else if (anythingAllowed(expectedResults)) {
-    } else err match {
-      case e: TransactionOperationFailedException =>
-        val tofRaisedFromSDK = ErrorWrapper.newBuilder
-          .setAutoRollbackAttempt(e.autoRollbackAttempt)
-          .setRetryTransaction(e.retryTransaction)
-          .setToRaise(ResultsUtil.mapToRaise(e.toRaise))
-        val causeFromTOF = ResultsUtil.mapCause(e.getCause)
-        var ok = false
-        for (er <- expectedResults) {
-          if (er.hasError) {
-            val anExpectedError = er.getError
-            // Note we no longer compare error classes
-            if (anExpectedError.getAutoRollbackAttempt == tofRaisedFromSDK.getAutoRollbackAttempt && anExpectedError.getRetryTransaction == tofRaisedFromSDK.getRetryTransaction && (anExpectedError.getToRaise eq tofRaisedFromSDK.getToRaise)) {
-              val c = anExpectedError.getCause
-              if (c.getDoNotCheck || (c.hasException && c.getException == causeFromTOF)) ok = true
+    } else if (anythingAllowed(expectedResults)) {}
+    else
+      err match {
+        case e: TransactionOperationFailedException =>
+          val tofRaisedFromSDK = ErrorWrapper.newBuilder
+            .setAutoRollbackAttempt(e.autoRollbackAttempt)
+            .setRetryTransaction(e.retryTransaction)
+            .setToRaise(ResultsUtil.mapToRaise(e.toRaise))
+          val causeFromTOF = ResultsUtil.mapCause(e.getCause)
+          var ok           = false
+          for (er <- expectedResults) {
+            if (er.hasError) {
+              val anExpectedError = er.getError
+              // Note we no longer compare error classes
+              if (
+                anExpectedError.getAutoRollbackAttempt == tofRaisedFromSDK.getAutoRollbackAttempt && anExpectedError.getRetryTransaction == tofRaisedFromSDK.getRetryTransaction && (anExpectedError.getToRaise eq tofRaisedFromSDK.getToRaise)
+              ) {
+                val c = anExpectedError.getCause
+                if (c.getDoNotCheck || (c.hasException && c.getException == causeFromTOF)) ok = true
+              }
             }
           }
-        }
-        if (!ok) {
-          val fmt = String.format(
-            "Operation '%s' failed unexpectedly, was expecting %s but got %s: %s",
-            opDebug,
-            dbg(expectedResults),
-            tofRaisedFromSDK,
-            err.getMessage
-          )
-          logger.warn(fmt)
-          dump.run()
-          val error = new TestFailure(fmt, err)
-          // Make absolutely certain the test fails
-          testFailure.set(error)
-          throw error
-        } else
-          logger.info(
-            "Operation '{}' failed with {} as expected: {}",
-            opDebug,
-            tofRaisedFromSDK.build,
-            err.getMessage
-          )
-      case _ =>
-        var ok = false
-        for (er <- expectedResults) {
-          if (er.hasException) {
-            val raisedFromSDK = ResultsUtil.mapCause(err)
-            val expected = er.getException
+          if (!ok) {
+            val fmt = String.format(
+              "Operation '%s' failed unexpectedly, was expecting %s but got %s: %s",
+              opDebug,
+              dbg(expectedResults),
+              tofRaisedFromSDK,
+              err.getMessage
+            )
+            logger.warn(fmt)
+            dump.run()
+            val error = new TestFailure(fmt, err)
+            // Make absolutely certain the test fails
+            testFailure.set(error)
+            throw error
+          } else
+            logger.info(
+              "Operation '{}' failed with {} as expected: {}",
+              opDebug,
+              tofRaisedFromSDK.build,
+              err.getMessage
+            )
+        case _ =>
+          var ok = false
+          for (er <- expectedResults) {
+            if (er.hasException) {
+              val raisedFromSDK = ResultsUtil.mapCause(err)
+              val expected      = er.getException
 
-            if ((expected ne ExternalException.Unknown) && raisedFromSDK == expected) {
-              ok = true
+              if ((expected ne ExternalException.Unknown) && raisedFromSDK == expected) {
+                ok = true
+              }
             }
           }
-        }
-        if (!ok) {
-          val msg = String.format(
-            "Operation '%s' failed unexpectedly, was expecting %s but got %s: %s",
-            opDebug,
-            dbg(expectedResults),
-            err,
-            err.getMessage
-          )
-          logger.warn(msg)
-          dump.run()
-          val error = new InternalPerformerFailure(
-            new IllegalStateException(msg)
-          )
-          // Make absolutely certain the test fails
-          testFailure.set(error)
-          throw error
-        }
-    }
+          if (!ok) {
+            val msg = String.format(
+              "Operation '%s' failed unexpectedly, was expecting %s but got %s: %s",
+              opDebug,
+              dbg(expectedResults),
+              err,
+              err.getMessage
+            )
+            logger.warn(msg)
+            dump.run()
+            val error = new InternalPerformerFailure(
+              new IllegalStateException(msg)
+            )
+            // Make absolutely certain the test fails
+            testFailure.set(error)
+            throw error
+          }
+      }
     if (doNotPropagateError) {
       val msg = "Not propagating the error, as requested by test"
       logger.info(msg)

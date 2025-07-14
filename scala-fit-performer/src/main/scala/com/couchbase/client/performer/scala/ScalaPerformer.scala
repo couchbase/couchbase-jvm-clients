@@ -17,10 +17,17 @@ package com.couchbase.client.performer.scala
 
 // [if:1.5.0]
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent
-import com.couchbase.client.performer.scala.transaction.{ScalaTransactionCommandExecutor, TransactionBlocking, TransactionMarshaller}
+import com.couchbase.client.performer.scala.transaction.{
+  ScalaTransactionCommandExecutor,
+  TransactionBlocking,
+  TransactionMarshaller
+}
 import com.couchbase.client.core.transaction.cleanup.{ClientRecord, TransactionsCleaner}
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord
-import com.couchbase.client.core.transaction.config.{CoreMergedTransactionConfig, CoreTransactionsConfig}
+import com.couchbase.client.core.transaction.config.{
+  CoreMergedTransactionConfig,
+  CoreTransactionsConfig
+}
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.performer.scala.util.HooksUtil
@@ -99,16 +106,15 @@ class ScalaPerformer extends CorePerformer {
 
     // [if:1.7.2]
     response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
-    val supported = Supported
+    val supported       = Supported
     val protocolVersion = supported.protocolMajor() + "." + supported.protocolMinor()
     response.setTransactionsProtocolVersion(protocolVersion)
     val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
-    val sdkVersion = if (sdkVersionRaw == null) {
+    val sdkVersion    = if (sdkVersionRaw == null) {
       // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
       logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
       "1.5.0"
-    }
-    else {
+    } else {
       sdkVersionRaw
     }
     response.setLibraryVersion(sdkVersion)
@@ -127,7 +133,10 @@ class ScalaPerformer extends CorePerformer {
           case _: IllegalArgumentException =>
 
             // FIT and Java have used slightly different names for this
-            if (ext.name == "EXT_CUSTOM_METADATA") response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION)
+            if (ext.name == "EXT_CUSTOM_METADATA")
+              response.addTransactionImplementationsCaps(
+                com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION
+              )
             else logger.warn("Could not find FIT extension for " + ext.name)
         }
       })
@@ -176,7 +185,8 @@ class ScalaPerformer extends CorePerformer {
       responseObserver: StreamObserver[ClusterConnectionCreateResponse]
   ): Unit = {
     try {
-      val connection = new ClusterConnection(request, () => clusterConnections(request.getClusterConnectionId))
+      val connection =
+        new ClusterConnection(request, () => clusterConnections(request.getClusterConnectionId))
       clusterConnections.put(request.getClusterConnectionId, connection)
       ClusterConnectionCreateRequest.getDefaultInstance.newBuilderForType
       logger.info(
@@ -224,10 +234,10 @@ class ScalaPerformer extends CorePerformer {
       responseObserver: StreamObserver[DisconnectConnectionsResponse]
   ): Unit = {
     try {
-    clusterConnections.foreach(cc => cc._2.cluster.disconnect())
-    clusterConnections.clear()
-    responseObserver.onNext(DisconnectConnectionsResponse.newBuilder.build)
-    responseObserver.onCompleted()
+      clusterConnections.foreach(cc => cc._2.cluster.disconnect())
+      clusterConnections.clear()
+      responseObserver.onNext(DisconnectConnectionsResponse.newBuilder.build)
+      responseObserver.onCompleted()
     } catch {
       case err: Throwable =>
         logger.error("Operation failed during disconnectConnections due to {}", err.getMessage)
@@ -254,27 +264,38 @@ class ScalaPerformer extends CorePerformer {
       workloads: Workloads,
       counters: Counters
   ): TransactionCommandExecutor = {
-      // [start:1.5.0]
-      val connection: ClusterConnection = getClusterConnection(workloads.getClusterConnectionId)
-      new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
-      // [end:1.5.0]
-      // [if:<1.5.0]
-      //? null
-      // [end]
+    // [start:1.5.0]
+    val connection: ClusterConnection = getClusterConnection(workloads.getClusterConnectionId)
+    new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
+    // [end:1.5.0]
+    // [if:<1.5.0]
+    // ? null
+    // [end]
   }
 
-  def getClusterConnection(clusterConnectionId: String): ClusterConnection = clusterConnections(clusterConnectionId)
+  def getClusterConnection(clusterConnectionId: String): ClusterConnection = clusterConnections(
+    clusterConnectionId
+  )
 
-  private def collectionIdentifierFor(doc: DocId) = new CollectionIdentifier(doc.getBucketName, Optional.of(doc.getScopeName), Optional.of(doc.getCollectionName))
+  private def collectionIdentifierFor(doc: DocId) = new CollectionIdentifier(
+    doc.getBucketName,
+    Optional.of(doc.getScopeName),
+    Optional.of(doc.getCollectionName)
+  )
 
   override def echo(request: EchoRequest, responseObserver: StreamObserver[EchoResponse]): Unit = {
-    logger.info("================ %s : %s ================ ".format(request.getTestName, request.getMessage))
+    logger.info(
+      "================ %s : %s ================ ".format(request.getTestName, request.getMessage)
+    )
     responseObserver.onNext(EchoResponse.newBuilder.build)
     responseObserver.onCompleted()
   }
 
   // [start:1.5.0]
-  override def transactionCreate(request: TransactionCreateRequest, responseObserver: StreamObserver[com.couchbase.client.protocol.transactions.TransactionResult]): Unit = {
+  override def transactionCreate(
+      request: TransactionCreateRequest,
+      responseObserver: StreamObserver[com.couchbase.client.protocol.transactions.TransactionResult]
+  ): Unit = {
     try {
       val connection: ClusterConnection = getClusterConnection(request.getClusterConnectionId)
       logger.info("Starting transaction on cluster connection {}", request.getClusterConnectionId)
@@ -289,38 +310,59 @@ class ScalaPerformer extends CorePerformer {
     }
   }
 
-  override def transactionStream(toTest: StreamObserver[TransactionStreamPerformerToDriver]): StreamObserver[TransactionStreamDriverToPerformer] = {
+  override def transactionStream(
+      toTest: StreamObserver[TransactionStreamPerformerToDriver]
+  ): StreamObserver[TransactionStreamDriverToPerformer] = {
     val marshaller = new TransactionMarshaller(clusterConnections, Map.empty)
     marshaller.run(toTest)
   }
 
-  override def transactionCleanup(request: TransactionCleanupRequest, responseObserver: StreamObserver[TransactionCleanupAttempt]): Unit = {
+  override def transactionCleanup(
+      request: TransactionCleanupRequest,
+      responseObserver: StreamObserver[TransactionCleanupAttempt]
+  ): Unit = {
     try {
       logger.info("Starting transaction cleanup attempt")
       // Only the KV timeout is used from this
-      val config = TransactionsConfig()
-      val connection = getClusterConnection(request.getClusterConnectionId)
-      val collection = collectionIdentifierFor(request.getAtr)
-      val cleanupHooks = HooksUtil.configureCleanupHooks(request.getHookList.asScala, () => connection)
+      val config       = TransactionsConfig()
+      val connection   = getClusterConnection(request.getClusterConnectionId)
+      val collection   = collectionIdentifierFor(request.getAtr)
+      val cleanupHooks =
+        HooksUtil.configureCleanupHooks(request.getHookList.asScala, () => connection)
       // [if:1.7.2]
-      val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks, TransactionsSupportedExtensionsUtil.Supported)
+      val cleaner = new TransactionsCleaner(
+        connection.cluster.async.core,
+        cleanupHooks,
+        TransactionsSupportedExtensionsUtil.Supported
+      )
       // [end]
       // [if:<1.7.2]
-      //?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      // ?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
       // [end]
-      val l = new CoreTransactionLogger(null, "")
-      val merged = new CoreMergedTransactionConfig(config.toCore)
+      val l        = new CoreTransactionLogger(null, "")
+      val merged   = new CoreMergedTransactionConfig(config.toCore)
       val atrEntry = ActiveTransactionRecord
-        .findEntryForTransaction(connection.cluster.async.core, collection, request.getAtr.getDocId, request.getAttemptId, merged, null, l)
+        .findEntryForTransaction(
+          connection.cluster.async.core,
+          collection,
+          request.getAtr.getDocId,
+          request.getAttemptId,
+          merged,
+          null,
+          l
+        )
         .block
         .asScala
       val response: TransactionCleanupAttempt = atrEntry match {
         case Some(value) =>
-          val result = cleaner.cleanupATREntry(collection, request.getAtrId, request.getAttemptId, value, false).block
+          val result = cleaner
+            .cleanupATREntry(collection, request.getAtrId, request.getAttemptId, value, false)
+            .block
           ResultsUtil.mapCleanupAttempt(result, atrEntry)
         case None =>
           // Can happen if 2+ cleanups are being executed concurrently
-          TransactionCleanupAttempt.newBuilder.setSuccess(false)
+          TransactionCleanupAttempt.newBuilder
+            .setSuccess(false)
             .setAtr(request.getAtr)
             .setAttemptId(request.getAttemptId)
             .addLogs("Failed at performer to get ATR entry before running cleanupATREntry")
@@ -337,17 +379,26 @@ class ScalaPerformer extends CorePerformer {
     }
   }
 
-  override def clientRecordProcess(request: ClientRecordProcessRequest, responseObserver: StreamObserver[ClientRecordProcessResponse]): Unit = {
+  override def clientRecordProcess(
+      request: ClientRecordProcessRequest,
+      responseObserver: StreamObserver[ClientRecordProcessResponse]
+  ): Unit = {
     try {
       logger.info("Starting client record process attempt")
-      val config: CoreTransactionsConfig = TransactionsConfig().toCore
-      val connection: ClusterConnection = getClusterConnection(request.getClusterConnectionId)
-      val collection: CollectionIdentifier = new CollectionIdentifier(request.getBucketName, Optional.of(request.getScopeName), Optional.of(request.getCollectionName))
-      val cr: ClientRecord = HooksUtil.configureClientRecordHooks(request.getHookList.asScala, connection)
+      val config: CoreTransactionsConfig   = TransactionsConfig().toCore
+      val connection: ClusterConnection    = getClusterConnection(request.getClusterConnectionId)
+      val collection: CollectionIdentifier = new CollectionIdentifier(
+        request.getBucketName,
+        Optional.of(request.getScopeName),
+        Optional.of(request.getCollectionName)
+      )
+      val cr: ClientRecord =
+        HooksUtil.configureClientRecordHooks(request.getHookList.asScala, connection)
       val response: ClientRecordProcessResponse.Builder = ClientRecordProcessResponse.newBuilder
       try {
         val result = cr.processClient(request.getClientUuid, collection, config, null).block
-        response.setSuccess(true)
+        response
+          .setSuccess(true)
           .setNumActiveClients(result.numActiveClients)
           .setIndexOfThisClient(result.indexOfThisClient)
           .addAllExpiredClientIds(result.expiredClientIds)
@@ -373,21 +424,29 @@ class ScalaPerformer extends CorePerformer {
     }
   }
 
-  override def cleanupSetFetch(request: CleanupSetFetchRequest, responseObserver: StreamObserver[CleanupSetFetchResponse]): Unit = {
+  override def cleanupSetFetch(
+      request: CleanupSetFetchRequest,
+      responseObserver: StreamObserver[CleanupSetFetchResponse]
+  ): Unit = {
     try {
       val connection: ClusterConnection = getClusterConnection(request.getClusterConnectionId)
-      val cleanupSet = connection.cluster.async.core
-        .transactionsCleanup
-        .cleanupSet
-        .asScala
-        .map(cs => Collection.newBuilder
-          .setBucketName(cs.bucket)
-          .setScopeName(cs.scope.orElse(CollectionIdentifier.DEFAULT_SCOPE))
-          .setCollectionName(cs.collection.orElse(CollectionIdentifier.DEFAULT_COLLECTION)).build)
+      val cleanupSet = connection.cluster.async.core.transactionsCleanup.cleanupSet.asScala
+        .map(cs =>
+          Collection.newBuilder
+            .setBucketName(cs.bucket)
+            .setScopeName(cs.scope.orElse(CollectionIdentifier.DEFAULT_SCOPE))
+            .setCollectionName(cs.collection.orElse(CollectionIdentifier.DEFAULT_COLLECTION))
+            .build
+        )
         .asJava
-      responseObserver.onNext(CleanupSetFetchResponse.newBuilder
-        .setCleanupSet(CleanupSet.newBuilder
-          .addAllCleanupSet(cleanupSet)).build)
+      responseObserver.onNext(
+        CleanupSetFetchResponse.newBuilder
+          .setCleanupSet(
+            CleanupSet.newBuilder
+              .addAllCleanupSet(cleanupSet)
+          )
+          .build
+      )
       responseObserver.onCompleted()
     } catch {
       case err: Throwable =>

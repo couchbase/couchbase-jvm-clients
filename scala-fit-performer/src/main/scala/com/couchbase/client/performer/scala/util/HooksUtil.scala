@@ -17,11 +17,28 @@
 package com.couchbase.client.performer.scala.util
 
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
-import com.couchbase.client.core.error.transaction.internal.{TestFailAmbiguousException, TestFailHardException, TestFailOtherException, TestFailTransientException}
-import com.couchbase.client.core.error.{CasMismatchException, DocumentExistsException, DocumentNotFoundException, ValueTooLargeException}
-import com.couchbase.client.core.transaction.cleanup.{CleanerHooks, ClientRecord, ClientRecordFactoryMock}
+import com.couchbase.client.core.error.transaction.internal.{
+  TestFailAmbiguousException,
+  TestFailHardException,
+  TestFailOtherException,
+  TestFailTransientException
+}
+import com.couchbase.client.core.error.{
+  CasMismatchException,
+  DocumentExistsException,
+  DocumentNotFoundException,
+  ValueTooLargeException
+}
+import com.couchbase.client.core.transaction.cleanup.{
+  CleanerHooks,
+  ClientRecord,
+  ClientRecordFactoryMock
+}
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory
-import com.couchbase.client.core.transaction.util.{CoreTransactionAttemptContextHooks, TestTransactionAttemptContextFactory}
+import com.couchbase.client.core.transaction.util.{
+  CoreTransactionAttemptContextHooks,
+  TestTransactionAttemptContextFactory
+}
 import com.couchbase.client.core.transaction.{CoreTransactionAttemptContext, ExpiryUtil}
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.protocol.hooks.transactions.{Hook, HookAction, HookCondition, HookPoint}
@@ -36,8 +53,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.{BiFunction, Function, Supplier}
 import javax.annotation.Nullable
 
-/**
-  * Utility routines related to configuring transaction hooks.
+/** Utility routines related to configuring transaction hooks.
   */
 object HooksUtil {
   private val Logger = LoggerFactory.getLogger(this.getClass)
@@ -48,9 +64,8 @@ object HooksUtil {
       hook: Hook,
       getCluster: () => ClusterConnection,
       param: String
-  ): Mono[Any] = configureHookRaw(ctx, callCount, hook, getCluster, param).map(
-    (v) => v.asInstanceOf[Integer]
-  )
+  ): Mono[Any] =
+    configureHookRaw(ctx, callCount, hook, getCluster, param).map((v) => v.asInstanceOf[Integer])
 
   // The slightly awkward Mono<Object> is because we occasionally need the result as a String.
   private def configureHookRaw(
@@ -101,7 +116,7 @@ object HooksUtil {
             val bucketName     = splits(0)
             val collectionName = splits(1)
             val docId          = splits(2)
-            val coll =
+            val coll           =
               clusterConn().cluster.bucket(bucketName).collection(collectionName)
             val content = hook.getHookActionParam2
             if (hook.getHookAction eq HookAction.MUTATE_DOC) {
@@ -120,9 +135,7 @@ object HooksUtil {
             } else
               coll.reactive
                 .remove(docId)
-                .doOnSubscribe(
-                  (v) => Logger.info("Executing hook to remove doc {}", docId)
-                )
+                .doOnSubscribe((v) => Logger.info("Executing hook to remove doc {}", docId))
                 .asJava()
                 .`then`(Mono.just(0))
           } catch {
@@ -156,7 +169,7 @@ object HooksUtil {
           Mono.defer(() => {
             val desiredCallNumber = hook.getHookConditionParam1
             val callNumber        = callCount.getCount(hook.getHookPoint)
-            val r: Mono[Any] = if (callNumber == desiredCallNumber) action else Mono.just(1)
+            val r: Mono[Any]      = if (callNumber == desiredCallNumber) action else Mono.just(1)
             r
           })
 
@@ -175,7 +188,7 @@ object HooksUtil {
           Mono.defer(() => {
             val desiredCallNumber = hook.getHookConditionParam1
             val callNumber        = callCount.getCount(hook.getHookPoint)
-            val r: Mono[Any] = if (callNumber >= desiredCallNumber) {
+            val r: Mono[Any]      = if (callNumber >= desiredCallNumber) {
               Logger.info(
                 "Executing the hook since the condition for ON_CALL_GE  is met: call count={} desired={}",
                 callNumber,
@@ -208,21 +221,21 @@ object HooksUtil {
             val desiredCallNumber = hook.getHookConditionParam1
             val desiredParam      = hook.getHookConditionParam2
             val callNumber        = callCount.getCount(hook.getHookPoint, param)
-            val r: Mono[Any] =
+            val r: Mono[Any]      =
               if (callNumber == desiredCallNumber && param == desiredParam) action else Mono.just(1)
             r
           })
 
         case HookCondition.WHILE_NOT_EXPIRED =>
           Mono.defer(() => {
-            val hasExpired = ExpiryUtil.hasExpired(ctx, "hook-check", Optional.empty[String])
+            val hasExpired   = ExpiryUtil.hasExpired(ctx, "hook-check", Optional.empty[String])
             val r: Mono[Any] = if (hasExpired) Mono.just(1) else action
             r
           })
 
         case HookCondition.WHILE_EXPIRED =>
           Mono.defer(() => {
-            val hasExpired = ExpiryUtil.hasExpired(ctx, "hook-check", Optional.empty[String])
+            val hasExpired   = ExpiryUtil.hasExpired(ctx, "hook-check", Optional.empty[String])
             val r: Mono[Any] = if (hasExpired) action else Mono.just(1)
             r
           })
@@ -255,8 +268,7 @@ object HooksUtil {
     }
   }
 
-  /**
-    * This is to support backwards compatibility with older transaction libraries that do not have newer hooks.
+  /** This is to support backwards compatibility with older transaction libraries that do not have newer hooks.
     */
   private def setHookIfExists(
       mock: CoreTransactionAttemptContextHooks,
@@ -294,7 +306,7 @@ object HooksUtil {
     new Function[CoreTransactionAttemptContext, Mono[Integer]] {
       override def apply(t: CoreTransactionAttemptContext): Mono[Integer] = {
         val out = function.apply(t)
-          out.thenReturn(0)
+        out.thenReturn(0)
       }
     }
   }
@@ -303,7 +315,7 @@ object HooksUtil {
     new Function[String, Mono[Integer]] {
       override def apply(t: String): Mono[Integer] = {
         val out = function.apply(t)
-          out.thenReturn(0)
+        out.thenReturn(0)
       }
     }
   }
@@ -318,10 +330,9 @@ object HooksUtil {
     if (!hooks.isEmpty) {
       val mock = new CoreTransactionAttemptContextHooks
       for (i <- 0 until hooks.size) {
-        val hook = hooks(i)
-        val confHook = scalaFunctoJava(
-          (ctx: CoreTransactionAttemptContext) =>
-            configureHook(ctx, callCount, hook, clusterConn, null)
+        val hook     = hooks(i)
+        val confHook = scalaFunctoJava((ctx: CoreTransactionAttemptContext) =>
+          configureHook(ctx, callCount, hook, clusterConn, null)
         )
         hook.getHookPoint match {
           case HookPoint.BEFORE_ATR_COMMIT =>
@@ -338,46 +349,46 @@ object HooksUtil {
             mock.afterAtrCommit = confHook
 
           case HookPoint.BEFORE_DOC_COMMITTED =>
-            mock.beforeDocCommitted = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeDocCommitted =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_DOC_ROLLED_BACK =>
-            mock.beforeDocRolledBack = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeDocRolledBack =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_DOC_COMMITTED_BEFORE_SAVING_CAS =>
-            mock.afterDocCommittedBeforeSavingCAS = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterDocCommittedBeforeSavingCAS =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_DOC_COMMITTED =>
-            mock.afterDocCommitted = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterDocCommitted =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_DOC_REMOVED =>
-            mock.beforeDocRemoved = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeDocRemoved =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_DOC_REMOVED_PRE_RETRY =>
-            mock.afterDocRemovedPreRetry = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterDocRemovedPreRetry =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_DOC_REMOVED_POST_RETRY =>
-            mock.afterDocRemovedPostRetry = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterDocRemovedPostRetry =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_DOCS_REMOVED =>
             mock.afterDocsRemoved = confHook
@@ -395,52 +406,52 @@ object HooksUtil {
             mock.beforeAtrRolledBack = confHook
 
           case HookPoint.AFTER_GET_COMPLETE =>
-            mock.afterGetComplete = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterGetComplete =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_ROLLBACK_DELETE_INSERTED =>
-            mock.beforeRollbackDeleteInserted = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeRollbackDeleteInserted =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_STAGED_REPLACE_COMPLETE =>
-            mock.afterStagedReplaceComplete = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterStagedReplaceComplete =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_STAGED_REMOVE_COMPLETE =>
-            mock.afterStagedRemoveComplete = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterStagedRemoveComplete =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_STAGED_INSERT =>
-            mock.beforeStagedInsert = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeStagedInsert =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_STAGED_REMOVE =>
-            mock.beforeStagedRemove = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeStagedRemove =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_STAGED_REPLACE =>
-            mock.beforeStagedReplace = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeStagedReplace =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_STAGED_INSERT_COMPLETE =>
-            mock.afterStagedInsertComplete = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterStagedInsertComplete =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_ATR_ABORTED =>
             mock.beforeAtrAborted = confHook
@@ -452,34 +463,33 @@ object HooksUtil {
             mock.afterAtrRolledBack = confHook
 
           case HookPoint.AFTER_ROLLBACK_REPLACE_OR_REMOVE =>
-            mock.afterRollbackReplaceOrRemove = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterRollbackReplaceOrRemove =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_ROLLBACK_DELETE_INSERTED =>
-            mock.afterRollbackDeleteInserted = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterRollbackDeleteInserted =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_CHECK_ATR_ENTRY_FOR_BLOCKING_DOC =>
-            mock.beforeCheckATREntryForBlockingDoc = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeCheckATREntryForBlockingDoc =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_DOC_GET =>
-            mock.beforeDocGet = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
-                configureHook(ctx, callCount, hook, clusterConn, id)
+            mock.beforeDocGet = scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
+              configureHook(ctx, callCount, hook, clusterConn, id)
             )
 
           case HookPoint.BEFORE_GET_DOC_IN_EXISTS_DURING_STAGED_INSERT =>
-            mock.beforeGetDocInExistsDuringStagedInsert = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeGetDocInExistsDuringStagedInsert =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.HAS_EXPIRED =>
             mock.hasExpiredClientSideHook =
@@ -498,7 +508,8 @@ object HooksUtil {
                         // Cannot perform EQUALS_BOTH if docId not present
                         out = false
                       } else {
-                        out = stage == hook.getHookConditionParam3 && docId.get == hook.getHookConditionParam2
+                        out =
+                          stage == hook.getHookConditionParam3 && docId.get == hook.getHookConditionParam2
                       }
 
                     case HookCondition.EQUALS =>
@@ -526,28 +537,27 @@ object HooksUtil {
             }
 
           case HookPoint.BEFORE_QUERY =>
-            mock.beforeQuery = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, query: String) =>
+            mock.beforeQuery =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, query: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, query)
-            )
+              )
 
           case HookPoint.AFTER_QUERY =>
-            mock.afterQuery = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, query: String) =>
-                configureHook(ctx, callCount, hook, clusterConn, query)
+            mock.afterQuery = scalaFunctoJava((ctx: CoreTransactionAttemptContext, query: String) =>
+              configureHook(ctx, callCount, hook, clusterConn, query)
             )
 
           case HookPoint.BEFORE_REMOVE_STAGED_INSERT =>
-            mock.beforeRemoveStagedInsert = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.beforeRemoveStagedInsert =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.AFTER_REMOVE_STAGED_INSERT =>
-            mock.afterRemoveStagedInsert = scalaFunctoJava(
-              (ctx: CoreTransactionAttemptContext, id: String) =>
+            mock.afterRemoveStagedInsert =
+              scalaFunctoJava((ctx: CoreTransactionAttemptContext, id: String) =>
                 configureHook(ctx, callCount, hook, clusterConn, id)
-            )
+              )
 
           case HookPoint.BEFORE_DOC_CHANGED_DURING_COMMIT =>
             setHookIfExists(
@@ -604,29 +614,24 @@ object HooksUtil {
       val hook = hooks(i)
       hook.getHookPoint match {
         case HookPoint.CLEANUP_BEFORE_COMMIT_DOC =>
-          mock.beforeCommitDoc = scalaFunctoJava2(
-            (id: String) => configureHook(null, callCount, hook, clusterConn, id)
-          )
+          mock.beforeCommitDoc =
+            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC_STAGED_FOR_REMOVAL =>
-          mock.beforeRemoveDocStagedForRemoval = scalaFunctoJava2(
-            (id: String) => configureHook(null, callCount, hook, clusterConn, id)
-          )
+          mock.beforeRemoveDocStagedForRemoval =
+            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
 
         case HookPoint.CLEANUP_BEFORE_DOC_GET =>
-          mock.beforeDocGet = scalaFunctoJava2(
-            (id: String) => configureHook(null, callCount, hook, clusterConn, id)
-          )
+          mock.beforeDocGet =
+            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC =>
-          mock.beforeRemoveDoc = scalaFunctoJava2(
-            (id: String) => configureHook(null, callCount, hook, clusterConn, id)
-          )
+          mock.beforeRemoveDoc =
+            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC_LINKS =>
-          mock.beforeRemoveLinks = scalaFunctoJava2(
-            (id: String) => configureHook(null, callCount, hook, clusterConn, id)
-          )
+          mock.beforeRemoveLinks =
+            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
 
         case HookPoint.CLEANUP_BEFORE_ATR_REMOVE =>
           mock.beforeAtrRemove = new Supplier[Mono[Integer]] {

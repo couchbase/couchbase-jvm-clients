@@ -67,7 +67,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) content match {
+      val r     = if (options == null) content match {
         case ContentString(value) => collection.insert(docId, value).block()
         case ContentJson(value)   => collection.insert(docId, value).block()
       }
@@ -86,7 +86,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r =
+      val r     =
         if (options == null) collection.get(docId).block()
         else collection.get(docId, options).block()
       result.setElapsedNanos(System.nanoTime - start)
@@ -99,7 +99,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val options    = createOptions(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r =
+      val r     =
         if (options == null) collection.remove(docId).block()
         else collection.remove(docId, options).block()
       result.setElapsedNanos(System.nanoTime - start)
@@ -113,7 +113,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) content match {
+      val r     = if (options == null) content match {
         case ContentString(value) => collection.replace(docId, value).block()
         case ContentJson(value)   => collection.replace(docId, value).block()
       }
@@ -133,7 +133,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val content    = convertContent(request.getContent)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val r = if (options == null) content match {
+      val r     = if (options == null) content match {
         case ContentString(value) => collection.upsert(docId, value).block()
         case ContentJson(value)   => collection.upsert(docId, value).block()
       }
@@ -145,7 +145,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-    // [start:1.5.0]
+      // [start:1.5.0]
     } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection).reactive
@@ -153,7 +153,7 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       val scanType   = convertScanType(request)
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
-      val flux =
+      val flux  =
         if (options == null) collection.scan(scanType)
         else collection.scan(scanType, options)
       result.setElapsedNanos(System.nanoTime - start)
@@ -174,76 +174,85 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
               .setStreamId(streamer.streamId)
           )
       )
-    // [end:1.5.0]
+      // [end:1.5.0]
     } else if (op.hasClusterCommand) {
-        val clc = op.getClusterCommand
-        val cluster = connection.cluster.reactive
+      val clc     = op.getClusterCommand
+      val cluster = connection.cluster.reactive
 
-        if (clc.hasWaitUntilReady) {
-            val request = clc.getWaitUntilReady
-            logger.info("Calling waitUntilReady with timeout " + request.getTimeoutMillis + " milliseconds.")
-            val timeout = request.getTimeoutMillis.milliseconds
+      if (clc.hasWaitUntilReady) {
+        val request = clc.getWaitUntilReady
+        logger.info(
+          "Calling waitUntilReady with timeout " + request.getTimeoutMillis + " milliseconds."
+        )
+        val timeout = request.getTimeoutMillis.milliseconds
 
-            var response: SMono[Unit] = null
+        var response: SMono[Unit] = null
 
-            if (request.hasOptions) {
-                val options = waitUntilReadyOptions(request)
-                response = cluster.waitUntilReady(timeout, options)
-            } else {
-                response = cluster.waitUntilReady(timeout)
-            }
-
-            response.doOnSuccess(_ => {
-                setSuccess(result)
-                result.build()
-            }).block()
+        if (request.hasOptions) {
+          val options = waitUntilReadyOptions(request)
+          response = cluster.waitUntilReady(timeout, options)
+        } else {
+          response = cluster.waitUntilReady(timeout)
         }
-        // [start:1.4.11]
-        else if (clc.hasBucketManager) {
-            return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
-        }
-        // [end:1.4.11]
+
+        response
+          .doOnSuccess(_ => {
+            setSuccess(result)
+            result.build()
+          })
+          .block()
+      }
+      // [start:1.4.11]
+      else if (clc.hasBucketManager) {
+        return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
+      }
+      // [end:1.4.11]
     } else if (op.hasBucketCommand) {
-        val blc = op.getBucketCommand
-        val bucket = connection.cluster.reactive.bucket(blc.getBucketName)
+      val blc    = op.getBucketCommand
+      val bucket = connection.cluster.reactive.bucket(blc.getBucketName)
 
-        if (blc.hasWaitUntilReady) {
-            val request = blc.getWaitUntilReady
-            logger.info("Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis + " milliseconds.")
-            val timeout = request.getTimeoutMillis.milliseconds
+      if (blc.hasWaitUntilReady) {
+        val request = blc.getWaitUntilReady
+        logger.info(
+          "Calling waitUntilReady on bucket " + bucket + " with timeout " + request.getTimeoutMillis + " milliseconds."
+        )
+        val timeout = request.getTimeoutMillis.milliseconds
 
-            var response: SMono[Unit] = null
+        var response: SMono[Unit] = null
 
-            if (request.hasOptions) {
-                val options = waitUntilReadyOptions(request)
-                response = bucket.waitUntilReady(timeout, options)
-            } else {
-                response = bucket.waitUntilReady(timeout)
-            }
-
-            response.`then`[Result](SMono.fromCallable[Result](() => {
-                setSuccess(result)
-                result.build()
-            })).block()
+        if (request.hasOptions) {
+          val options = waitUntilReadyOptions(request)
+          response = bucket.waitUntilReady(timeout, options)
+        } else {
+          response = bucket.waitUntilReady(timeout)
         }
-    }
-    else if (op.hasCollectionCommand) {
-        val clc = op.getCollectionCommand
-        val collection = if (clc.hasCollection) {
-            val coll = clc.getCollection
-            Some(connection.cluster
-                    .bucket(coll.getBucketName)
-                    .scope(coll.getScopeName)
-                    .collection(coll.getCollectionName))
-        }
-        else None
 
-        if (clc.hasLookupIn || clc.hasLookupInAllReplicas || clc.hasLookupInAnyReplica) {
-            result = LookupInHelper.handleLookupInReactive(perRun, connection, op, (loc) => getDocId(loc)).block()
-        }
-        else throw new UnsupportedOperationException()
-    }
-    else throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
+        response
+          .`then`[Result](SMono.fromCallable[Result](() => {
+            setSuccess(result)
+            result.build()
+          }))
+          .block()
+      }
+    } else if (op.hasCollectionCommand) {
+      val clc        = op.getCollectionCommand
+      val collection = if (clc.hasCollection) {
+        val coll = clc.getCollection
+        Some(
+          connection.cluster
+            .bucket(coll.getBucketName)
+            .scope(coll.getScopeName)
+            .collection(coll.getCollectionName)
+        )
+      } else None
+
+      if (clc.hasLookupIn || clc.hasLookupInAllReplicas || clc.hasLookupInAnyReplica) {
+        result = LookupInHelper
+          .handleLookupInReactive(perRun, connection, op, (loc) => getDocId(loc))
+          .block()
+      } else throw new UnsupportedOperationException()
+    } else
+      throw new UnsupportedOperationException(new IllegalArgumentException("Unknown operation"))
 
     result.build
   }

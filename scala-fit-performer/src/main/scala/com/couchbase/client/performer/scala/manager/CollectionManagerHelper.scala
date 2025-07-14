@@ -61,7 +61,7 @@ object CollectionManagerHelper {
         case Failure(e)      => throw e
       }
     } else if (bm.hasCreateScope) {
-      val req = bm.getCreateScope
+      val req      = bm.getCreateScope
       val response = bucket.collections.createScope(
         req.getName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -75,7 +75,7 @@ object CollectionManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasDropScope) {
-      val req = bm.getDropScope
+      val req      = bm.getDropScope
       val response = bucket.collections.dropScope(
         req.getName,
         if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -89,7 +89,7 @@ object CollectionManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasCreateCollection) {
-      val req = bm.getCreateCollection
+      val req      = bm.getCreateCollection
       val response = if (req.hasOptions) {
         bucket.collections.createCollection(
           req.getScopeName,
@@ -114,7 +114,7 @@ object CollectionManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasDropCollection) {
-      val req = bm.getDropCollection
+      val req      = bm.getDropCollection
       val response = if (req.hasOptions) {
         bucket.collections.dropCollection(
           req.getScopeName,
@@ -137,7 +137,7 @@ object CollectionManagerHelper {
         case Failure(e) => throw e
       }
     } else if (bm.hasUpdateCollection) {
-      val req = bm.getUpdateCollection
+      val req      = bm.getUpdateCollection
       val response = if (req.hasOptions) {
         bucket.collections.updateCollection(
           req.getScopeName,

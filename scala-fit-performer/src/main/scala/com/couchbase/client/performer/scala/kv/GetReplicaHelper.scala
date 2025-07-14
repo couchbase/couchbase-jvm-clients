@@ -19,9 +19,18 @@ package com.couchbase.client.performer.scala.kv
 
 import com.couchbase.client.performer.core.perf.PerRun
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertException, convertTranscoder, setSuccess}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
+  convertException,
+  convertTranscoder,
+  setSuccess
+}
 import com.couchbase.client.performer.scala.util.SerializableValidation.assertIsSerializable
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil, ScalaFluxStreamer, ScalaIteratorStreamer}
+import com.couchbase.client.performer.scala.util.{
+  ClusterConnection,
+  ContentAsUtil,
+  ScalaFluxStreamer,
+  ScalaIteratorStreamer
+}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.{CollectionLevelCommand, Command}
 import com.couchbase.client.protocol.shared.{ContentAs, DocLocation}
@@ -255,8 +264,12 @@ object GetReplicaHelper {
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
-          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
-          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP =>
+            out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x =>
+            throw new UnsupportedOperationException(
+              s"Scala SDK does not support read preference ${x}"
+            )
         }
       }
       // [end:1.8.0]
@@ -278,8 +291,12 @@ object GetReplicaHelper {
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
-          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP => out = out.readPreference(ReadPreference.PreferredServerGroup)
-          case x => throw new UnsupportedOperationException(s"Scala SDK does not support read preference ${x}")
+          case com.couchbase.client.protocol.shared.ReadPreference.SELECTED_SERVER_GROUP =>
+            out = out.readPreference(ReadPreference.PreferredServerGroup)
+          case x =>
+            throw new UnsupportedOperationException(
+              s"Scala SDK does not support read preference ${x}"
+            )
         }
       }
       // [end:1.8.0]

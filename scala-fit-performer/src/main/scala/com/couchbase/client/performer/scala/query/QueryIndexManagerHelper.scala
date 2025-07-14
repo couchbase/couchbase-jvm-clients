@@ -18,7 +18,10 @@ package com.couchbase.client.performer.scala.query
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.setSuccess
-import com.couchbase.client.performer.scala.util.OptionsUtil.{DefaultManagementTimeout, DefaultRetryStrategy}
+import com.couchbase.client.performer.scala.util.OptionsUtil.{
+  DefaultManagementTimeout,
+  DefaultRetryStrategy
+}
 import com.couchbase.client.scala.manager.query.{QueryIndex, QueryIndexType}
 import com.couchbase.client.scala.{Cluster, Collection}
 
@@ -51,10 +54,10 @@ object QueryIndexManagerHelper {
     handleQueryIndexManagerShared(Right(collection), op)
     // [end:1.4.3]
     // [start:<1.4.3]
-/*
+    /*
         throw new UnsupportedOperationException("Cannot handle ClusterQueryIndexManager");
     // [end:<1.4.3]
-*/
+     */
   }
 
   private def handleQueryIndexManagerShared(
@@ -179,7 +182,7 @@ object QueryIndexManagerHelper {
     } else if (op.hasGetAllIndexes) {
       val req = op.getGetAllIndexes
       result.setInitiated(getTimeNow)
-      val start = System.nanoTime
+      val start   = System.nanoTime
       val indexes = either match {
         case Left((cluster, bucketName)) =>
           cluster.queryIndexes
@@ -210,10 +213,10 @@ object QueryIndexManagerHelper {
             .get
         // [end:1.4.4]
         // [start:<1.4.4]
-/*
+        /*
           throw new UnsupportedOperationException("QueryIndexManager")
           // [end:<1.4.4]
-*/
+         */
       }
       result.setSdk(
         com.couchbase.client.protocol.sdk.Result.newBuilder

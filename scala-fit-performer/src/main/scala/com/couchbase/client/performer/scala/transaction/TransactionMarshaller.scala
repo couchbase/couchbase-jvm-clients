@@ -20,7 +20,11 @@ import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.util.ClusterConnection
 import com.couchbase.client.protocol.shared.API
-import com.couchbase.client.protocol.transactions.{TransactionCreated, TransactionStreamDriverToPerformer, TransactionStreamPerformerToDriver}
+import com.couchbase.client.protocol.transactions.{
+  TransactionCreated,
+  TransactionStreamDriverToPerformer,
+  TransactionStreamPerformerToDriver
+}
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 
@@ -30,10 +34,10 @@ class TransactionMarshaller(
     private val clusterConnections: collection.Map[String, ClusterConnection],
     private val spans: collection.Map[String, RequestSpan]
 ) {
-  final private val thread                                                 = new AtomicReference[Thread]
-  final private val logger                                                 = LoggerFactory.getLogger(classOf[TransactionMarshaller])
+  final private val thread = new AtomicReference[Thread]
+  final private val logger = LoggerFactory.getLogger(classOf[TransactionMarshaller])
   private var fromTest: StreamObserver[TransactionStreamDriverToPerformer] = null
-  private var twoWay: TransactionShared                              = null
+  private var twoWay: TransactionShared                                    = null
   @volatile private var readyToStart                                       = false
 
   private def shutdown(): Unit = {
@@ -57,7 +61,7 @@ class TransactionMarshaller(
         if (next.hasCreate) {
           val req = next.getCreate
           val bp  = req.getName + ": "
-          val t = new Thread(() => {
+          val t   = new Thread(() => {
             if (req.getApi eq API.DEFAULT) twoWay = new TransactionBlocking(null)
             else throw new UnsupportedOperationException("Only default API currently supported")
             twoWay.create(req)
@@ -67,13 +71,14 @@ class TransactionMarshaller(
                 .build
             )
             logger.info("{}Created, waiting until told to start", bp)
-            while (!readyToStart) try Thread.sleep(50)
-            catch {
-              case e: InterruptedException =>
-                e.printStackTrace()
-            }
+            while (!readyToStart)
+              try Thread.sleep(50)
+              catch {
+                case e: InterruptedException =>
+                  e.printStackTrace()
+              }
             logger.info("{}Starting", bp)
-            val cc = clusterConnections(req.getClusterConnectionId)
+            val cc     = clusterConnections(req.getClusterConnectionId)
             val result = twoWay.run(cc, req, Some(toTest), false, spans)
             logger.info("Transaction has finished, completing stream and ending thread")
             toTest.onNext(

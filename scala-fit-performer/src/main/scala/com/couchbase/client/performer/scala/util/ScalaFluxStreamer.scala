@@ -98,12 +98,11 @@ class ScalaFluxStreamer[T](
     logger.info("Waiting for flux streamer {}", streamId)
 
     while (!done.get) {
-        try {
-            Thread.sleep(10)
-        }
-        catch {
-            case e: InterruptedException => throw new RuntimeException(e)
-        }
+      try {
+        Thread.sleep(10)
+      } catch {
+        case e: InterruptedException => throw new RuntimeException(e)
+      }
     }
 
     logger.info("Flux streamer {} has ended", streamId)

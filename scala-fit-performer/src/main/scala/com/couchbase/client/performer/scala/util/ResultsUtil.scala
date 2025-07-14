@@ -128,9 +128,9 @@ object ResultsUtil {
         case _: ServiceNotAvailableException => ExternalException.ServiceNotAvailableException
         case _: ConcurrentOperationsDetectedOnSameDocumentException =>
           ExternalException.ConcurrentOperationsDetectedOnSameDocument
-        case _: CommitNotPermittedException        => ExternalException.CommitNotPermitted
-        case _: RollbackNotPermittedException      => ExternalException.RollbackNotPermitted
-        case _: TransactionAlreadyAbortedException => ExternalException.TransactionAlreadyAborted
+        case _: CommitNotPermittedException          => ExternalException.CommitNotPermitted
+        case _: RollbackNotPermittedException        => ExternalException.RollbackNotPermitted
+        case _: TransactionAlreadyAbortedException   => ExternalException.TransactionAlreadyAborted
         case _: TransactionAlreadyCommittedException =>
           ExternalException.TransactionAlreadyCommitted
         case _: UnambiguousTimeoutException    => ExternalException.UnambiguousTimeoutException
