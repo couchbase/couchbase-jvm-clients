@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.env
 
-import java.util.concurrent.{Executors, ThreadFactory}
+import java.util.concurrent.{Executors, ThreadFactory, TimeUnit}
 import com.couchbase.client.core
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.annotation.Stability.{Uncommitted, Volatile}
@@ -401,6 +401,7 @@ class ClusterEnvironment(private[scala] val builder: ClusterEnvironment.Builder)
     if (!threadPool.isShutdown) {
       coreEnv.shutdown(timeout)
       threadPool.shutdownNow()
+      threadPool.awaitTermination(timeout.toMillis, TimeUnit.MILLISECONDS)
       defaultScheduler.dispose()
     }
   }
