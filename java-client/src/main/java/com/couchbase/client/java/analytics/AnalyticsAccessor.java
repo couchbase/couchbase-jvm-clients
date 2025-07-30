@@ -19,16 +19,14 @@ package com.couchbase.client.java.analytics;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.msg.analytics.AnalyticsResponse;
-import com.couchbase.client.core.topology.ClusterIdentifier;
 import com.couchbase.client.java.codec.JsonSerializer;
-import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+
+import static com.couchbase.client.core.classic.analytics.AnalyticsHelper.requireCouchbaseServer;
 
 /**
  * Internal helper to map the results from the analytics requests.
@@ -37,18 +35,6 @@ import java.util.concurrent.CompletableFuture;
  */
 @Stability.Internal
 public class AnalyticsAccessor {
-
-  private static volatile boolean skipClusterTypeCheck = false;
-
-  /**
-   * Call this method once when your app starts up to disable the check that
-   * prevents the operational SDK from being used with an Enterprise Analytics cluster.
-   * <p>
-   * This is super-extra-unsupported internal API.
-   */
-  public static void skipClusterTypeCheck() {
-    skipClusterTypeCheck = true;
-  }
 
   public static CompletableFuture<AnalyticsResult> analyticsQueryAsync(final Core core,
                                                                        final AnalyticsRequest request,
@@ -77,26 +63,5 @@ public class AnalyticsAccessor {
           .doOnNext(ignored -> request.context().logicallyComplete())
           .doOnError(err -> request.context().logicallyComplete(err));
       }));
-  }
-
-  private static Mono<Void> requireCouchbaseServer(Core core, Duration timeout) {
-    if (skipClusterTypeCheck) {
-      return Mono.empty();
-    }
-
-    return core.waitForClusterTopology(timeout)
-      .mapNotNull(clusterTopology -> {
-        if (isEnterpriseAnalytics(clusterTopology.id())) {
-          throw new CouchbaseException(
-            "This SDK is for Couchbase Server (operational) clusters, but the remote cluster is an Enterprise Analytics cluster." +
-              " Please use the Enterprise Analytics SDK to access this cluster."
-          );
-        }
-        return null; // success! complete the empty mono.
-      });
-  }
-
-  private static boolean isEnterpriseAnalytics(@Nullable ClusterIdentifier clusterId) {
-    return clusterId != null && "analytics".equals(clusterId.product());
   }
 }

@@ -17,6 +17,7 @@
 package com.couchbase.client.kotlin.analytics.internal
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.classic.analytics.AnalyticsHelper
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.reactive.asFlow
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 
 internal class AnalyticsExecutor(
     private val core: Core,
@@ -114,6 +116,8 @@ internal class AnalyticsExecutor(
             request.context().clientContext(common.clientContext)
 
             try {
+                AnalyticsHelper.requireCouchbaseServer(core, timeout).awaitSingleOrNull()
+
                 core.send(request)
 
                 val response = request.response().await()
