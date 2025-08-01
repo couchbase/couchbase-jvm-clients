@@ -164,6 +164,8 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_ATR_COMMIT;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP;
+import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI;
 import static com.couchbase.client.core.config.BucketCapabilities.SUBDOC_REVIVE_DOCUMENT;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.Builder.createError;
 import static com.couchbase.client.core.error.transaction.TransactionOperationFailedException.FinalErrorToRaise;
@@ -755,7 +757,10 @@ public class CoreTransactionAttemptContext {
     static class BoundExceeded extends RuntimeException {
     }
 
-    public Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgo(List<CoreTransactionGetMultiSpec> specs, SpanWrapper pspan, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {
+    public Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgo(List<CoreTransactionGetMultiSpec> specs, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {
+        SpanWrapper pspan = SpanWrapperUtil.createOp(this, tracer(), null, null,
+                replicasFromPreferredServerGroup ? TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP : TRANSACTION_OP_GET_MULTI
+                , attemptSpan);
 
         if (replicasFromPreferredServerGroup) {
             if (core.environment().preferredServerGroup() == null) {
@@ -769,9 +774,10 @@ public class CoreTransactionAttemptContext {
                         return Mono.error(new FeatureNotAvailableException("getMulti cannot be used in a transaction after any SQL++ commands have been executed.  If possible then move the getMulti to before any SQL++ commands."));
                     } else {
                         return unlock(lockToken, "getMulti")
-                                .then(getMultiAlgoInternal(specs, pspan, options, replicasFromPreferredServerGroup));
+                                .then(getMultiAlgoInternal(specs, span, options, replicasFromPreferredServerGroup));
                     }
-                }));
+                }))
+                .doFinally(ignore -> pspan.finish());
     }
 
     private Mono<List<CoreTransactionOptionalGetMultiResult>> getMultiAlgoInternal(List<CoreTransactionGetMultiSpec> specs, SpanWrapper pspan, CoreGetMultiOptions options, boolean replicasFromPreferredServerGroup) {

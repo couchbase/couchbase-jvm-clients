@@ -110,11 +110,8 @@ public class TransactionAttemptContext internal constructor(
         mode: TransactionGetMultiMode?,
         replicasFromPreferredServerGroup: Boolean,
     ): TransactionGetMultiResult {
-        val tracingId = if (replicasFromPreferredServerGroup) TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP else TRANSACTION_OP_GET_MULTI
-        val span: RequestSpan = CbTracing.newSpan(internal.core().context(), tracingId, internal.span())
-
         val internalSpecs = specs.mapIndexed { index, spec -> CoreTransactionGetMultiSpec(spec.collection.collectionId, spec.documentId, index) }
-        val coreResults = internal.getMultiAlgo(internalSpecs, SpanWrapper(span), CoreGetMultiOptions(mode?.toCore()), replicasFromPreferredServerGroup).awaitSingle()
+        val coreResults = internal.getMultiAlgo(internalSpecs, CoreGetMultiOptions(mode?.toCore()), replicasFromPreferredServerGroup).awaitSingle()
         return TransactionGetMultiResult(specs, coreResults, defaultJsonSerializer)
     }
 

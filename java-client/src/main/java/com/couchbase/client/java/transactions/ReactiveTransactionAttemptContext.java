@@ -170,13 +170,9 @@ public class ReactiveTransactionAttemptContext {
     @Stability.Uncommitted
     public Mono<TransactionGetMultiResult> getMulti(List<TransactionGetMultiSpec> specs, TransactionGetMultiOptions options) {
         notNull(options, "options");
-        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_GET_MULTI, internal.span());
-
         return reactor.publishOnUserScheduler(
-            internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), new SpanWrapper(span), options.build(), false)
-                .map(result -> TransactionGetMultiUtil.convert(result, specs, serializer()))
-                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(span::end));
+            internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), options.build(), false)
+                .map(result -> TransactionGetMultiUtil.convert(result, specs, serializer())));
     }
 
     /**
@@ -195,13 +191,9 @@ public class ReactiveTransactionAttemptContext {
     @Stability.Uncommitted
     public Mono<TransactionGetMultiReplicasFromPreferredServerGroupResult> getMultiReplicasFromPreferredServerGroup(List<TransactionGetMultiReplicasFromPreferredServerGroupSpec> specs, TransactionGetMultiReplicasFromPreferredServerGroupOptions options) {
         notNull(options, "options");
-        RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP, internal.span());
-
         return reactor.publishOnUserScheduler(
-            internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), new SpanWrapper(span), options.build(), true)
-                .map(result -> TransactionGetMultiUtil.convertReplica(result, specs, serializer()))
-                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(span::end));
+            internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), options.build(), true)
+                .map(result -> TransactionGetMultiUtil.convertReplica(result, specs, serializer())));
     }
 
     /**
