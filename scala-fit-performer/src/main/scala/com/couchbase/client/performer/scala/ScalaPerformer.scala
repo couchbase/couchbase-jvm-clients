@@ -299,7 +299,9 @@ class ScalaPerformer extends CorePerformer {
     try {
       val connection: ClusterConnection = getClusterConnection(request.getClusterConnectionId)
       logger.info("Starting transaction on cluster connection {}", request.getClusterConnectionId)
-      val response = TransactionBlocking.run(connection, request, None, false, Map.empty)
+      val counters = new Counters()
+      val e = new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
+      val response = TransactionBlocking.run(connection, request, Some(e), false, Map.empty)
       responseObserver.onNext(response)
       responseObserver.onCompleted()
     } catch {

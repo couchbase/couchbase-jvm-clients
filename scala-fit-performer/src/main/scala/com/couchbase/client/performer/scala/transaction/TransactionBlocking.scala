@@ -26,7 +26,11 @@ import com.couchbase.client.performer.scala.Content.{
   ContentNull,
   ContentString
 }
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertContent
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
+  convertContent,
+  convertTranscoder
+}
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.transaction.TransactionShared.ExpectSuccess
 import com.couchbase.client.performer.scala.util.{ClusterConnection, OptionsUtil, ResultValidation}
@@ -42,6 +46,9 @@ import com.couchbase.client.scala.codec.Conversions._
 import com.couchbase.client.scala.json._
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.transactions.TransactionAttemptContext
+// [if:3.9.0]
+import com.couchbase.client.scala.transactions.getmulti
+// [end]
 import io.grpc.stub.StreamObserver
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -684,6 +691,72 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           ResultValidation.validateQueryResult(request, qr.get)
         }
       )
+    // [if:3.9.0]
+    } else if (op.hasGetMulti) {
+      val request = op.getGetMulti
+      if (!request.getGetMultiReplicasFromPreferredServerGroup) {
+        val specs = request.getSpecsList.asScala.map { spec =>
+          val collection = connection.collection(spec.getLocation)
+          val docId      = executor.get.getDocId(spec.getLocation)
+          val created    = getmulti.TransactionGetMultiSpec.get(collection, docId)
+          if (spec.hasTranscoder) {
+            created.transcoder(ScalaSdkCommandExecutor.convertTranscoder(spec.getTranscoder))
+          } else {
+            created
+          }
+        }.toSeq
+
+        performOperation(
+          dbg + "getMulti",
+          ctx,
+          Seq.empty,
+          op.getDoNotPropagateError,
+          performanceMode,
+          () => {
+            val results = if (request.hasOptions) {
+              val options = GetMultiHelper.convertToGetMulti(request.getOptions)
+              ctx.getMulti(specs, options).get
+            } else {
+              ctx.getMulti(specs).get
+            }
+            GetMultiHelper.handleGetMultiResult(request, results)
+          }
+        )
+      } else {
+        val specs = request.getSpecsList.asScala.map { spec =>
+          val collection = connection.collection(spec.getLocation)
+          val docId      = executor.get.getDocId(spec.getLocation)
+          val created    =
+            getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec.get(collection, docId)
+          if (spec.hasTranscoder) {
+            created.transcoder(ScalaSdkCommandExecutor.convertTranscoder(spec.getTranscoder))
+          } else {
+            created
+          }
+        }.toSeq
+
+        performOperation(
+          dbg + "getMultiReplicasFromPreferredServerGroup",
+          ctx,
+          Seq.empty,
+          op.getDoNotPropagateError,
+          performanceMode,
+          () => {
+            val results = if (request.hasOptions) {
+              val options = GetMultiHelper.convertToGetMultiReplicas(request.getOptions)
+              ctx.getMultiReplicasFromPreferredServerGroup(specs, options).get
+            } else {
+              ctx.getMultiReplicasFromPreferredServerGroup(specs).get
+            }
+            GetMultiHelper.handleGetMultiFromPreferredServerGroupResult(
+              request,
+              results,
+              TransactionBlocking.getLogger(ctx)
+            )
+          }
+        )
+      }
+      // [end]
     } else if (op.hasTestFail) {
       val msg   = "Should not reach here"
       val error = new InternalPerformerFailure(new IllegalStateException(msg))
