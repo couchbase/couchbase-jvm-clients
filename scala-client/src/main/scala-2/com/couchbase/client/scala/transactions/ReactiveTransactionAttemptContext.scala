@@ -37,6 +37,15 @@ import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.{ReactiveCollection, ReactiveScope}
 import reactor.core.scala.publisher.SMono
+import com.couchbase.client.scala.transactions.getmulti.{
+  TransactionGetMultiSpec,
+  TransactionGetMultiOptions,
+  TransactionGetMultiResult,
+  TransactionGetMultiReplicasFromPreferredServerGroupSpec,
+  TransactionGetMultiReplicasFromPreferredServerGroupOptions,
+  TransactionGetMultiReplicasFromPreferredServerGroupResult,
+  TransactionGetMultiUtil
+}
 
 import scala.util.{Failure, Success};
 
@@ -131,6 +140,38 @@ class ReactiveTransactionAttemptContext private[scala] (
         internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id)
       )
       .map(result => TransactionGetResult(result, options.transcoder))
+
+  /** Fetches multiple documents in a single operation.
+    *
+    * In addition, it will heuristically aim to detect read skew anomalies, and avoid them if possible.  Read skew detection and avoidance is not guaranteed.
+    *
+    * @param specs the documents to fetch.
+    * @return a result containing the fetched documents.
+    */
+  def getMulti(
+      specs: Seq[TransactionGetMultiSpec],
+      options: TransactionGetMultiOptions = TransactionGetMultiOptions()
+  ): SMono[TransactionGetMultiResult] = {
+    val coreSpecs = TransactionGetMultiUtil.convert(specs)
+    FutureConversions
+      .javaMonoToScalaMono(internal.getMultiAlgo(coreSpecs, options.toCore, false))
+      .map(res => TransactionGetMultiUtil.convert(res, specs))
+  }
+
+  /** Similar to [[getMulti]], but fetches the documents from replicas in the preferred server group.
+    *
+    * Note that the nature of replicas is that they are eventually consistent with the active, and so the effectiveness of read skew detection may be impacted.
+    */
+  def getMultiReplicasFromPreferredServerGroup(
+      specs: Seq[TransactionGetMultiReplicasFromPreferredServerGroupSpec],
+      options: TransactionGetMultiReplicasFromPreferredServerGroupOptions =
+        TransactionGetMultiReplicasFromPreferredServerGroupOptions()
+  ): SMono[TransactionGetMultiReplicasFromPreferredServerGroupResult] = {
+    val coreSpecs = TransactionGetMultiUtil.convertReplica(specs)
+    FutureConversions
+      .javaMonoToScalaMono(internal.getMultiAlgo(coreSpecs, options.toCore, true))
+      .map(res => TransactionGetMultiUtil.convertReplica(res, specs))
+  }
 
   /** Inserts a new document into the specified Couchbase <code>collection</code>.
     *

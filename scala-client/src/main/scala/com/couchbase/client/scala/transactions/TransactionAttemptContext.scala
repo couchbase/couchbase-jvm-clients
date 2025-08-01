@@ -15,14 +15,27 @@
  */
 package com.couchbase.client.scala.transactions
 
-import com.couchbase.client.core.cnc.TracingIdentifiers.{TRANSACTION_OP_INSERT, TRANSACTION_OP_REMOVE, TRANSACTION_OP_REPLACE}
 import com.couchbase.client.core.cnc.{CbTracing, RequestSpan, TracingIdentifiers}
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.core.transaction.support.SpanWrapper
 import com.couchbase.client.scala.codec.JsonSerializer
-import com.couchbase.client.scala.transactions.config.{TransactionGetOptions, TransactionGetReplicaFromPreferredServerGroupOptions, TransactionInsertOptions, TransactionReplaceOptions}
+import com.couchbase.client.scala.transactions.getmulti.{
+  TransactionGetMultiSpec,
+  TransactionGetMultiOptions,
+  TransactionGetMultiResult,
+  TransactionGetMultiReplicasFromPreferredServerGroupSpec,
+  TransactionGetMultiReplicasFromPreferredServerGroupOptions,
+  TransactionGetMultiReplicasFromPreferredServerGroupResult,
+  TransactionGetMultiUtil
+}
+import com.couchbase.client.scala.transactions.config.{
+  TransactionGetOptions,
+  TransactionGetReplicaFromPreferredServerGroupOptions,
+  TransactionInsertOptions,
+  TransactionReplaceOptions
+}
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.{AsyncUtils, FutureConversions}
 import com.couchbase.client.scala.{Collection, Scope}
@@ -81,6 +94,32 @@ class TransactionAttemptContext private[scala] (
         TransactionGetReplicaFromPreferredServerGroupOptions.Default
   ): Try[TransactionGetResult] = {
     AsyncUtils.block(internal.getReplicaFromPreferredServerGroup(collection.async, id, options))
+  }
+
+  /** Fetches multiple documents in a single operation.
+    *
+    * In addition, it will heuristically aim to detect read skew anomalies, and avoid them if possible.  Read skew detection and avoidance is not guaranteed.
+    *
+    * @param specs the documents to fetch.
+    * @return a result containing the fetched documents.
+    */
+  def getMulti(
+      specs: Seq[TransactionGetMultiSpec],
+      options: TransactionGetMultiOptions = TransactionGetMultiOptions.Default
+  ): Try[TransactionGetMultiResult] = {
+    AsyncUtils.block(internal.getMulti(specs, options))
+  }
+
+  /** Similar to [[getMulti]], but fetches the documents from replicas in the preferred server group.
+    *
+    * Note that the nature of replicas is that they are eventually consistent with the active, and so the effectiveness of read skew detection may be impacted.
+    */
+  def getMultiReplicasFromPreferredServerGroup(
+      specs: Seq[TransactionGetMultiReplicasFromPreferredServerGroupSpec],
+      options: TransactionGetMultiReplicasFromPreferredServerGroupOptions =
+        TransactionGetMultiReplicasFromPreferredServerGroupOptions.Default
+  ): Try[TransactionGetMultiReplicasFromPreferredServerGroupResult] = {
+    AsyncUtils.block(internal.getMultiReplicasFromPreferredServerGroup(specs, options))
   }
 
   /** Mutates the specified <code>doc</code> with new content.

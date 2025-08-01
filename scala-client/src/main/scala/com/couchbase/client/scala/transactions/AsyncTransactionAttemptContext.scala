@@ -34,6 +34,15 @@ import com.couchbase.client.scala.transactions.config.{
   TransactionInsertOptions,
   TransactionReplaceOptions
 }
+import com.couchbase.client.scala.transactions.getmulti.{
+  TransactionGetMultiOptions,
+  TransactionGetMultiReplicasFromPreferredServerGroupOptions,
+  TransactionGetMultiReplicasFromPreferredServerGroupResult,
+  TransactionGetMultiReplicasFromPreferredServerGroupSpec,
+  TransactionGetMultiResult,
+  TransactionGetMultiSpec,
+  TransactionGetMultiUtil
+}
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
 import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.{AsyncCollection, AsyncScope}
@@ -99,6 +108,42 @@ class AsyncTransactionAttemptContext private[scala] (
         internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id)
       )
       .map(result => TransactionGetResult(result, options.transcoder))
+
+  /** Fetches multiple documents in a single operation.
+    *
+    * In addition, it will heuristically aim to detect read skew anomalies, and avoid them if possible.  Read skew detection and avoidance is not guaranteed.
+    *
+    * @param specs the documents to fetch.
+    * @return a result containing the fetched documents.
+    */
+  def getMulti(
+      specs: Seq[TransactionGetMultiSpec],
+      options: TransactionGetMultiOptions = TransactionGetMultiOptions.Default
+  ): Future[TransactionGetMultiResult] = {
+    val coreSpecs = TransactionGetMultiUtil.convert(specs)
+    FutureConversions
+      .javaMonoToScalaFuture(
+        internal.getMultiAlgo(coreSpecs, options.toCore, false)
+      )
+      .map(res => TransactionGetMultiUtil.convert(res, specs))
+  }
+
+  /** Similar to [[getMulti]], but fetches the documents from replicas in the preferred server group.
+    *
+    * Note that the nature of replicas is that they are eventually consistent with the active, and so the effectiveness of read skew detection may be impacted.
+    */
+  def getMultiReplicasFromPreferredServerGroup(
+      specs: Seq[TransactionGetMultiReplicasFromPreferredServerGroupSpec],
+      options: TransactionGetMultiReplicasFromPreferredServerGroupOptions =
+        TransactionGetMultiReplicasFromPreferredServerGroupOptions.Default
+  ): Future[TransactionGetMultiReplicasFromPreferredServerGroupResult] = {
+    val coreSpecs = TransactionGetMultiUtil.convertReplica(specs)
+    FutureConversions
+      .javaMonoToScalaFuture(
+        internal.getMultiAlgo(coreSpecs, options.toCore, true)
+      )
+      .map(res => TransactionGetMultiUtil.convertReplica(res, specs))
+  }
 
   /** Inserts a new document into the specified Couchbase <code>collection</code>.
     *
