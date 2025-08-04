@@ -337,7 +337,7 @@ class ScalaPerformer extends CorePerformer {
       )
       // [end]
       // [if:<1.7.2]
-      // ?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      //?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
       // [end]
       val l        = new CoreTransactionLogger(null, "")
       val merged   = new CoreMergedTransactionConfig(config.toCore)

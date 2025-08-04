@@ -220,7 +220,7 @@ object SearchHelper {
       // [if:1.4.5]
       opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
       // [else]
-      // ? throw new UnsupportedOperationException()
+      //? throw new UnsupportedOperationException()
       // [end]
     }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
@@ -538,8 +538,8 @@ object SearchHelper {
       com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     }
     // [else]
-    // ? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
-    // ? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
+    //? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
+    //? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     // [end]
     if (vq.hasOptions) {
       val opts = vq.getOptions
@@ -757,7 +757,7 @@ object SearchHelper {
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
       // [else]
-      // ? throw new UnsupportedOperationException()
+      //? throw new UnsupportedOperationException()
       // [end]
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
