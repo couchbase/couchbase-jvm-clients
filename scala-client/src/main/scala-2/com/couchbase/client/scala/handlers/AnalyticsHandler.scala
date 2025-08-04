@@ -18,6 +18,7 @@ package com.couchbase.client.scala.handlers
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
+import com.couchbase.client.core.classic.analytics.AnalyticsHelper
 import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
@@ -114,41 +115,44 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
   def queryAsync(
       request: AnalyticsRequest
   )(implicit ec: ExecutionContext): Future[AnalyticsResult] = {
-    hp.core.send(request)
-
     val ret: Future[AnalyticsResult] = FutureConversions
-      .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
-      .flatMap(response =>
+      .javaMonoToScalaMono(AnalyticsHelper.requireCouchbaseServer(hp.core, request.timeout()))
+      .`then`({
+        hp.core.send(request)
         FutureConversions
-          .javaFluxToScalaFlux(response.rows())
-          .collectSeq()
-          .flatMap(rows =>
+          .javaCFToScalaMono(request, request.response(), propagateCancellation = true)
+          .flatMap(response =>
             FutureConversions
-              .javaMonoToScalaMono(response.trailer())
-              .map(trailer => {
-                val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                  .map(warnings =>
-                    ErrorCodeAndMessage
-                      .fromJsonArray(warnings)
-                      .asScala
-                      .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
-                  )
-                  .getOrElse(Seq.empty)
+              .javaFluxToScalaFlux(response.rows())
+              .collectSeq()
+              .flatMap(rows =>
+                FutureConversions
+                  .javaMonoToScalaMono(response.trailer())
+                  .map(trailer => {
+                    val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
+                      .map(warnings =>
+                        ErrorCodeAndMessage
+                          .fromJsonArray(warnings)
+                          .asScala
+                          .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                      )
+                      .getOrElse(Seq.empty)
 
-                AnalyticsResult(
-                  rows,
-                  AnalyticsMetaData(
-                    response.header().requestId(),
-                    response.header().clientContextId().orElse(""),
-                    response.header().signature.asScala,
-                    AnalyticsMetrics.fromBytes(trailer.metrics),
-                    warnings,
-                    AnalyticsStatus.from(trailer.status)
-                  )
-                )
-              })
+                    AnalyticsResult(
+                      rows,
+                      AnalyticsMetaData(
+                        response.header().requestId(),
+                        response.header().clientContextId().orElse(""),
+                        response.header().signature.asScala,
+                        AnalyticsMetrics.fromBytes(trailer.metrics),
+                        warnings,
+                        AnalyticsStatus.from(trailer.status)
+                      )
+                    )
+                  })
+              )
           )
-      )
+      })
       .toFuture
 
     ret onComplete {
@@ -160,41 +164,44 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
 
   def queryReactive(request: AnalyticsRequest): SMono[ReactiveAnalyticsResult] = {
     SMono.defer(() => {
-      hp.core.send(request)
-
       FutureConversions
-        .javaCFToScalaMono(request, request.response(), false)
-        .map(response => {
-          val meta: SMono[AnalyticsMetaData] = FutureConversions
-            .javaMonoToScalaMono(response.trailer())
-            .map(trailer => {
-              val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
-                .map(warnings =>
-                  ErrorCodeAndMessage
-                    .fromJsonArray(warnings)
-                    .asScala
-                    .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
-                )
-                .getOrElse(Seq.empty)
+        .javaMonoToScalaMono(AnalyticsHelper.requireCouchbaseServer(hp.core, request.timeout()))
+        .`then`({
+          hp.core.send(request)
+          FutureConversions
+            .javaCFToScalaMono(request, request.response(), false)
+            .map(response => {
+              val meta: SMono[AnalyticsMetaData] = FutureConversions
+                .javaMonoToScalaMono(response.trailer())
+                .map(trailer => {
+                  val warnings: collection.Seq[AnalyticsWarning] = trailer.warnings.asScala
+                    .map(warnings =>
+                      ErrorCodeAndMessage
+                        .fromJsonArray(warnings)
+                        .asScala
+                        .map(codeAndMessage => AnalyticsWarning(codeAndMessage))
+                    )
+                    .getOrElse(Seq.empty)
 
-              AnalyticsMetaData(
-                response.header().requestId(),
-                response.header().clientContextId().orElse(""),
-                response.header().signature.asScala,
-                AnalyticsMetrics.fromBytes(trailer.metrics()),
-                warnings,
-                AnalyticsStatus.from(trailer.status)
+                  AnalyticsMetaData(
+                    response.header().requestId(),
+                    response.header().clientContextId().orElse(""),
+                    response.header().signature.asScala,
+                    AnalyticsMetrics.fromBytes(trailer.metrics()),
+                    warnings,
+                    AnalyticsStatus.from(trailer.status)
+                  )
+                })
+                .doOnNext(_ => request.context.logicallyComplete)
+                .doOnError(err => request.context().logicallyComplete(err))
+
+              val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
+
+              ReactiveAnalyticsResult(
+                rows,
+                meta
               )
             })
-            .doOnNext(_ => request.context.logicallyComplete)
-            .doOnError(err => request.context().logicallyComplete(err))
-
-          val rows = FutureConversions.javaFluxToScalaFlux(response.rows())
-
-          ReactiveAnalyticsResult(
-            rows,
-            meta
-          )
         })
     })
   }
