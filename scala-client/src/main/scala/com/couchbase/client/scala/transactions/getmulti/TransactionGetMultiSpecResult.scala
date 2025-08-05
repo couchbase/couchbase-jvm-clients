@@ -18,7 +18,7 @@ package com.couchbase.client.scala.transactions.getmulti
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.scala.transactions.TransactionGetResult
 
-private[transactions] case class TransactionGetMultiSpecResult private (
+private[transactions] case class TransactionGetMultiSpecResult private[transactions] (
     spec: TransactionGetMultiSpec,
     internal: Option[TransactionGetResult]
 ) {
