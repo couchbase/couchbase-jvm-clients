@@ -38,7 +38,9 @@ import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExt
 import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil.Supported
 // [end]
 // [if:<1.7.2]
+// format: off
 //? import com.couchbase.client.core.transaction.forwards.{Extension, Supported}
+// format: on
 // [end]
 // [end]
 
@@ -144,6 +146,7 @@ class ScalaPerformer extends CorePerformer {
 
     // [if:1.5.0]
     // [if:<1.7.2]
+    // format: off
 //?    response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
 //?    val supported = new Supported
 //?    val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
@@ -176,6 +179,7 @@ class ScalaPerformer extends CorePerformer {
 //?            else logger.warn("Could not find FIT extension for " + ext.name)
 //?        }
 //?      })
+    // format: on
     // [end]
     // [end]
   }
@@ -269,7 +273,9 @@ class ScalaPerformer extends CorePerformer {
     new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
     // [end:1.5.0]
     // [if:<1.5.0]
+    // format: off
     //? null
+    // format: on
     // [end]
   }
 
@@ -300,7 +306,7 @@ class ScalaPerformer extends CorePerformer {
       val connection: ClusterConnection = getClusterConnection(request.getClusterConnectionId)
       logger.info("Starting transaction on cluster connection {}", request.getClusterConnectionId)
       val counters = new Counters()
-      val e = new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
+      val e        = new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
       val response = TransactionBlocking.run(connection, request, Some(e), false, Map.empty)
       responseObserver.onNext(response)
       responseObserver.onCompleted()
@@ -339,7 +345,9 @@ class ScalaPerformer extends CorePerformer {
       )
       // [end]
       // [if:<1.7.2]
-      //?val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      // format: off
+      //? val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
+      // format: on
       // [end]
       val l        = new CoreTransactionLogger(null, "")
       val merged   = new CoreMergedTransactionConfig(config.toCore)
