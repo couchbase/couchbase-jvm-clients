@@ -110,7 +110,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
       ptcb.orNull
       // [end]
       // [if:<3.9.0]
+      // format: off
       //? Option(ptcb.orNull)
+      // format: on
       // [end]
     )
     if (TransactionMarkerOwner.get.block.isPresent)
@@ -187,12 +189,14 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? content match {
           //?   case ContentString(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
           //?   case ContentJson(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
           //?   case ContentByteArray(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
           //?   case ContentNull(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
           //? }
+          // format: on
           // [end]
         }
       )
@@ -319,6 +323,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? if (request.getUseStashedResult) {
           //?   content match {
           //?     case ContentString(value) => ctx.replace(stashedGet.get, value).get
@@ -353,6 +358,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           //?     case ContentNull(value) => ctx.replace(r, value).get
           //?   }
           //? }
+          // format: on
           // [end]
 
         }
@@ -474,7 +480,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? val out = ctx.get(collection, request.getDocId.getDocId).get
+          // format: on
           // [end]
           val contentAsValidation =
             if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
@@ -501,7 +509,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? ctx.get(collection, executor.get.getDocId(request.getLocation)).get
+          // format: on
           // [end]
         }
       )
@@ -531,7 +541,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? val out = ctx.get(collection, request.getDocId.getDocId)
+          // format: on
           // [end]
           val contentAsValidation =
             if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
@@ -562,7 +574,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
           // [end]
           // [if:<1.9.0]
+          // format: off
           //? val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
+          // format: on
           // [end]
           handleGetReplicaFromPreferredServerGroupResult(request, result, connection)
         }
@@ -691,7 +705,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           ResultValidation.validateQueryResult(request, qr.get)
         }
       )
-    // [if:3.9.0]
+      // [if:3.9.0]
     } else if (op.hasGetMulti) {
       val request = op.getGetMulti
       if (!request.getGetMultiReplicasFromPreferredServerGroup) {
