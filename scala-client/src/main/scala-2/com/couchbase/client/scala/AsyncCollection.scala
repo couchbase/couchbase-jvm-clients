@@ -500,7 +500,8 @@ class AsyncCollection(
 
     import scala.jdk.CollectionConverters._
 
-    val results = scala.concurrent.Await.result(futureList, options.timeout)
+    val awaitTimeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val results      = scala.concurrent.Await.result(futureList, awaitTimeout)
     results.asScala.toSeq.map(res =>
       Future.successful(convertReplica(res, environment, options.transcoder))
     )
@@ -600,7 +601,8 @@ class AsyncCollection(
 
     import scala.jdk.CollectionConverters._
 
-    val results = scala.concurrent.Await.result(futureList, options.timeout)
+    val awaitTimeout = if (options.timeout == Duration.MinusInf) kvReadTimeout else options.timeout
+    val results      = scala.concurrent.Await.result(futureList, awaitTimeout)
     results.asScala.toSeq.map(res => Future.successful(convertLookupInReplica(res, environment)))
   }
 
