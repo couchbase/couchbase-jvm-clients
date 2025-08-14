@@ -532,6 +532,35 @@
                             </execution>
                         </executions>
                     </plugin>
+
+                    <!-- scala-maven-plugin does not support scaladocs together with Scala 3:
+                         https://github.com/davidB/scala-maven-plugin/issues/862
+                         so we attach an empty javadocs to satisfy Maven Central.
+
+                         The Scala 2 builds continue to provide scaladocs as usual.
+                         -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven-javadoc-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <sourcepath>${project.basedir}/src/main/java</sourcepath>
+                                    <sourceFileIncludes>com/couchbase/client/scala/internal/**/*.java</sourceFileIncludes>
+                                    <show>private</show>
+                                    <source>8</source>
+                                    <doclint>none</doclint>
+                                    <quiet>true</quiet>
+                                    <stylesheetfile>${project.basedir}/../config/javadoc/style.css</stylesheetfile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>

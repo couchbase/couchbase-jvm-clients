@@ -58,7 +58,7 @@
         <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
         <build-helper-maven-plugin.version>3.2.0</build-helper-maven-plugin.version>
         <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
-        <scala-maven-plugin.version>4.8.1</scala-maven-plugin.version>
+        <scala-maven-plugin.version>4.9.5</scala-maven-plugin.version>
         <mvn-scalafmt.version>1.1.1713302731.c3d0074</mvn-scalafmt.version>
 
         <!-- When changing this, make sure to update these versions:
