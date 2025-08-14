@@ -7,9 +7,9 @@
 
 [![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
 
-[![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://search.maven.org/artifact/com.couchbase.client/java-client)
-[![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://search.maven.org/artifact/com.couchbase.client/scala-client_2.12)
-[![kotlin-client](https://img.shields.io/maven-central/v/com.couchbase.client/kotlin-client?color=brightgreen&label=kotlin-client)](https://search.maven.org/artifact/com.couchbase.client/kotlin-client)
+[![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://central.sonatype.com/artifact/com.couchbase.client/java-client)
+[![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://central.sonatype.com/artifact/com.couchbase.client/scala-client_2.12)
+[![kotlin-client](https://img.shields.io/maven-central/v/com.couchbase.client/kotlin-client?color=brightgreen&label=kotlin-client)](https://central.sonatype.com/artifact/com.couchbase.client/kotlin-client)
 
 This repository contains the third generation of the Couchbase SDKs on the JVM ("SDK 3").
 
@@ -36,7 +36,7 @@ and [Kotlin](https://docs.couchbase.com/kotlin-sdk/current/hello-world/overview.
 These include getting started guides.
 
 ## Building
-Stable releases are published on [maven central](https://search.maven.org/search?q=com.couchbase.client).
+Stable releases are published on [Maven Central](https://central.sonatype.com/namespace/com.couchbase.client).
 
 You can always also just build it from source, using any JDK 17+:
 
@@ -82,14 +82,32 @@ They are not included in the build by default as they require a) JDK 17 and b) t
 To use a performer, uncomment the lines in the top-level pom.xml after 'Uncomment next lines to include the FIT performers', and reload the Maven config.
 Then run one of the performers in an IDE.
 
-### Branches & Release Trains
+### Branches & Tags
 
-Since this monorepo houses different versions of different artifacts, release train names have been chosen
-to identify a collection of releases that belong to the same train.
+Since version 3.9.0, this repository uses a mono-versioning strategy.
+Each component in the monorepo is released with the same version number.
 
-These trains are named after historic computers for your delight.
+Releases are tagged by version number.
+For example, version 3.9.0 is tagged as `3.9.0`.
 
-Tags in each branch are named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
+The `master` branch is where development for the next minor release happens.
+
+Maintenance branches are named `<major>.<minor>.x`.
+For example, the maintenance branch for minor version 3.9 is named `3.9.x`.
+
+Instead of committing directly to a maintenance branch, first commit to `master` and then cherry-pick to the maintenance branch if possible.
+
+#### Prior to version 3.9.0
+
+Component versions before 3.9.0 were tagged as `<component>-<version>`.
+For example, to check out the code for version 3.6.0 of the Java client, use tag `java-client-3.6.0`.
+
+Before mono-versioning, this repository used release train code names
+to identify a collection of related release versions.
+
+These trains were named after historic computers for your delight.
+
+Tags in each branch were named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
 each service release. See the tag information for specifics of what's in there.
 
  - [Titan](https://en.wikipedia.org/wiki/Titan_(supercomputer))
