@@ -22,5 +22,7 @@ cd core-io ; ./shade-check.sh ; cd ..
 cd tracing-opentelemetry ; ./shade-check.sh ; cd ..
 
 ./mvnw --batch-mode deploy -Dgpg.signer=bc -Dsurefire.rerunFailingTestsCount=1 --activate-profiles ${MAVEN_PROFILE}
-./mvnw --batch-mode clean deploy -Dgpg.signer=bc -Dmaven.test.skip=true --activate-profiles ${MAVEN_PROFILE},scala-2.13 --projects scala-implicits,scala-client
+
+# scala-3 doesn't build the target/site/scaladocs directory that we want to upload to S3, so don't deploy it last.
 ./mvnw --batch-mode clean deploy -Dgpg.signer=bc -Dmaven.test.skip=true --activate-profiles ${MAVEN_PROFILE},scala-3 --projects scala-implicits,scala-client
+./mvnw --batch-mode clean deploy -Dgpg.signer=bc -Dmaven.test.skip=true --activate-profiles ${MAVEN_PROFILE},scala-2.13 --projects scala-implicits,scala-client
