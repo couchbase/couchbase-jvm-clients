@@ -40,6 +40,11 @@
             </dependency>
             <dependency>
                 <groupId>com.couchbase.client</groupId>
+                <artifactId>scala-client_3</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.couchbase.client</groupId>
                 <artifactId>kotlin-client</artifactId>
                 <version>${revision}</version>
             </dependency>
