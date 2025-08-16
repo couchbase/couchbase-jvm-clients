@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
@@ -301,33 +300,9 @@ public class FeatureNegotiatingHandler extends ChannelDuplexHandler {
       agent = agent.substring(0, 200);
     }
     result.put("a", agent);
-
-    String channelId = "0x" + ctx.channel().id().asShortText();
-    long convertedChannelId;
-    try {
-      convertedChannelId = channelId.equals("0xembedded") ? 1L : Long.decode(channelId);
-    } catch (NumberFormatException ex) {
-      // This is just a safeguard in place should the netty channel ID
-      // format ever change and trigger a failure of decoding the channel ID into a long
-      convertedChannelId = new Random().nextInt();
-    }
-    String paddedChannelId = paddedHex(convertedChannelId);
-    String fullId = paddedHex(endpointContext.id()) + "/" + paddedChannelId;
-    result.put("i", fullId);
-
-    ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).set(fullId);
+    result.put("i", ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get());
 
     return ctx.alloc().buffer().writeBytes(Mapper.encodeAsBytes(result));
-  }
-
-  /**
-   * Pad the long input into a string encoded hex value.
-   *
-   * @param input the number to format.
-   * @return the padded long hex value.
-   */
-  private static String paddedHex(long input) {
-    return String.format("%016X", input);
   }
 
   /**

@@ -182,7 +182,7 @@ class FeatureNegotiatingHandlerTest extends AbstractKeyValueEmbeddedChannelTest 
 
     assertEquals(handler, channel.pipeline().get(FeatureNegotiatingHandler.class));
     channel.connect(new InetSocketAddress("1.2.3.4", 1234));
-
+    channel.attr(ChannelAttributes.CHANNEL_ID_KEY).set("0000000000000001/0000000000000001");
     channel.pipeline().fireChannelActive();
     channel.runPendingTasks();
     ByteBuf writtenRequest = channel.readOutbound();

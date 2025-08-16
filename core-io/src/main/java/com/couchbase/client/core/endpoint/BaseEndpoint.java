@@ -79,6 +79,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -275,6 +276,32 @@ public abstract class BaseEndpoint implements Endpoint {
   }
 
   /**
+   * Pad the long input into a string encoded hex value.
+   *
+   * @param input the number to format.
+   * @return the padded long hex value.
+   */
+  private static String paddedHex(long input) {
+    return String.format("%016X", input);
+  }
+
+  private static String getChannelId(Channel channel, EndpointContext endpointContext) {
+    String channelId = "0x" + channel.id().asShortText();
+
+    long convertedChannelId;
+    try {
+      convertedChannelId = channelId.equals("0xembedded") ? 1L : Long.decode(channelId);
+    } catch (NumberFormatException ex) {
+      // This is just a safeguard in place should the netty channel ID
+      // format ever change and trigger a failure of decoding the channel ID into a long
+      convertedChannelId = new Random().nextInt();
+    }
+
+    String paddedChannelId = paddedHex(convertedChannelId);
+    return paddedHex(endpointContext.id()) + "/" + paddedChannelId;
+  }
+
+  /**
    * This method performs the actual connecting logic.
    *
    * <p>It is called reconnect since it works both in the case where an initial attempt is made
@@ -319,6 +346,7 @@ public abstract class BaseEndpoint implements Endpoint {
             @Override
             protected void initChannel(final Channel ch) {
               ChannelPipeline pipeline = ch.pipeline();
+              ch.attr(ChannelAttributes.CHANNEL_ID_KEY).set(getChannelId(ch, endpointContext));
 
               SecurityConfig config = env.securityConfig();
               if (config.tlsEnabled()) {
