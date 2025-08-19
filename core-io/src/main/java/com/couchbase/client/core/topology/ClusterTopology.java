@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.topology;
 
+import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.NetworkResolution;
 import org.jspecify.annotations.Nullable;
@@ -120,6 +121,7 @@ public class ClusterTopology {
     throw new NoSuchElementException("Bucket topology is absent.");
   }
 
+  @SinceCouchbase("7.6.4")
   @Nullable public ClusterIdentifier id() {
     return clusterIdent;
   }

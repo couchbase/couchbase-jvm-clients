@@ -38,6 +38,7 @@ public class ClusterIdentifier {
   }
 
   public static @Nullable ClusterIdentifier parse(ObjectNode config) {
+    // Cluster UUID and name were added in Couchbase Server 7.6.4.
     JsonNode clusterUuid = config.path("clusterUUID");
     JsonNode clusterName = config.path("clusterName");
     if (clusterUuid.isMissingNode() || clusterName.isMissingNode()) {
