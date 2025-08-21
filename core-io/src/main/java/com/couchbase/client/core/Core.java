@@ -285,7 +285,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     if (environment.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
       throw new InvalidArgumentException("TLS enabled but the Authenticator does not support TLS!", null, null);
     } else if (!environment.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
-      throw new InvalidArgumentException("TLS not enabled but the Authenticator does only support TLS!", null, null);
+      throw new InvalidArgumentException("TLS not enabled but the Authenticator requires TLS!", null, null);
     }
 
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
