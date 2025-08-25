@@ -17,6 +17,7 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.env.NetworkResolution;
 import org.jspecify.annotations.Nullable;
 
@@ -36,6 +37,7 @@ public class ClusterTopologyWithBucket extends ClusterTopology {
   private final BucketTopology bucket;
 
   ClusterTopologyWithBucket(
+    ObjectNode json,
     TopologyRevision revision,
     List<HostAndServicePorts> nodes,
     Set<ClusterCapability> capabilities,
@@ -44,7 +46,7 @@ public class ClusterTopologyWithBucket extends ClusterTopology {
     BucketTopology bucket,
     @Nullable ClusterIdentifier clusterIdent
   ) {
-    super(revision, nodes, capabilities, network, portSelector, clusterIdent);
+    super(json, revision, nodes, capabilities, network, portSelector, clusterIdent);
     this.bucket = requireNonNull(bucket);
   }
 

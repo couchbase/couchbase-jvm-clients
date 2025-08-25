@@ -18,6 +18,7 @@ package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.env.NetworkResolution;
 import org.jspecify.annotations.Nullable;
 
@@ -38,8 +39,10 @@ public class ClusterTopology {
   private final Set<ClusterCapability> capabilities;
   private final List<HostAndServicePorts> nodes;
   private final @Nullable ClusterIdentifier clusterIdent;
+  private final ObjectNode json;
 
   public static ClusterTopology of(
+    ObjectNode json,
     TopologyRevision revision,
     @Nullable ClusterIdentifier clusterIdent,
     List<HostAndServicePorts> nodes,
@@ -50,6 +53,7 @@ public class ClusterTopology {
   ) {
     if (bucket != null) {
       return new ClusterTopologyWithBucket(
+        json,
         revision,
         nodes,
         capabilities,
@@ -61,6 +65,7 @@ public class ClusterTopology {
     }
 
     return new ClusterTopology(
+      json,
       revision,
       nodes,
       capabilities,
@@ -71,6 +76,7 @@ public class ClusterTopology {
   }
 
   protected ClusterTopology(
+    ObjectNode json,
     TopologyRevision revision,
     List<HostAndServicePorts> nodes,
     Set<ClusterCapability> capabilities,
@@ -82,12 +88,17 @@ public class ClusterTopology {
       throw new IllegalArgumentException("Must resolve 'auto' network before creating config.");
     }
 
+    this.json = requireNonNull(json);
     this.revision = requireNonNull(revision);
     this.nodes = listCopyOf(nodes);
     this.capabilities = unmodifiableSet(newEnumSet(ClusterCapability.class, capabilities));
     this.network = requireNonNull(network);
     this.tls = requireNonNull(portSelector) == PortSelector.TLS;
     this.clusterIdent = clusterIdent;
+  }
+
+  public ObjectNode json() {
+    return json;
   }
 
   public TopologyRevision revision() {
