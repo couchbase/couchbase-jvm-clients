@@ -64,6 +64,10 @@ class ClusterTopologyParser {
       throw new IllegalArgumentException("Invalid originHost. Expected a hostname, IPv4 address, or IPv6 address (without square brackets), but got: " + originHost);
     }
 
+    if (clusterConfig.isEmpty()) {
+      throw new CouchbaseException("Cluster topology JSON is an empty node. Server returned invalid topology, or maybe this was a doomed attempt to re-parse a synthetic topology.");
+    }
+
     ArrayNode nodesExt = (ArrayNode) clusterConfig.get("nodesExt");
     if (nodesExt == null) {
       throw new CouchbaseException("Couchbase Server version is too old for this SDK; missing 'nodesExt' field.");
@@ -132,6 +136,7 @@ class ClusterTopologyParser {
     ClusterIdentifier clusterIdent = ClusterIdentifier.parse(clusterConfig);
 
     return ClusterTopology.of(
+      clusterConfig,
       TopologyRevision.parse(clusterConfig),
       clusterIdent,
       resolvedNodes,

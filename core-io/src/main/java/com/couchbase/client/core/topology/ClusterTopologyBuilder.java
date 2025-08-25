@@ -17,6 +17,7 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -54,6 +55,7 @@ public final class ClusterTopologyBuilder {
 
   private ClusterTopology buildWithOrWithoutBucket(@Nullable BucketTopology bucket) {
     return ClusterTopology.of(
+      JsonNodeFactory.instance.objectNode(),
       revision,
       new ClusterIdentifier(clusterUuid, clusterName, product),
       nodes,
