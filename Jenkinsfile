@@ -387,6 +387,54 @@ pipeline {
             }
         }
 
+        stage('Platform testing (Graviton3, mocks, openjdk 17)') {
+            agent { label 'qe-grav3-amzn2' }
+            when {
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
+                    dir('couchbase-jvm-clients') {
+                        doCheckout(REFSPEC)
+                        // Advice from builds team: cbdyncluster cannot be contacted from graviton agent, so testing
+                        // against mocks only for now
+                        script { testAgainstMock(defaultBuildJvm(), openjdk17()) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Platform testing (Graviton4, mocks, openjdk 17)') {
+            agent { label 'qe-grav4-amzn2' }
+            when {
+                beforeAgent true
+                expression { notTriggeredByGerrit() }
+            }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
+                    dir('couchbase-jvm-clients') {
+                        doCheckout(REFSPEC)
+                        // Advice from builds team: cbdyncluster cannot be contacted from graviton agent, so testing
+                        // against mocks only for now
+                        script { testAgainstMock(defaultBuildJvm(), openjdk17()) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
 // Temporarily disabling until JVMCBC-1227 is resolved
 //         stage('Platform testing (Alpine, mock, openjdk 11)') {
 //             agent { label 'alpine' }
