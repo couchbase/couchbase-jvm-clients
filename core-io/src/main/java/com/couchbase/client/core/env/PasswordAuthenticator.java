@@ -92,7 +92,11 @@ public class PasswordAuthenticator implements Authenticator {
    * One way to keep the supplier's value up to date is to schedule a recurring task
    * that reads new credentials from an external source and stores them
    * in the volatile field.
+   *
+   * @deprecated This method is difficult to use safely, because it's easy to accidentally
+   * do blocking IO inside the supplier. Please use {@link DelegatingAuthenticator} instead.
    */
+  @Deprecated
   public static PasswordAuthenticator.Builder builder(Supplier<UsernameAndPassword> supplier) {
     return new Builder(supplier);
   }
@@ -262,7 +266,7 @@ public class PasswordAuthenticator implements Authenticator {
      * @param username A supplier that returns the username to use.
      * @return this builder for chaining purposes.
      * @deprecated This method does not support returning username and password as an atomic unit.
-     * Please use {@link PasswordAuthenticator#builder(Supplier)} instead.
+     * Please use {@link DelegatingAuthenticator} instead.
      */
     @Deprecated
     public Builder username(final Supplier<String> username) {
@@ -304,7 +308,7 @@ public class PasswordAuthenticator implements Authenticator {
      * @param password the password to alongside for the username provided.
      * @return this builder for chaining purposes.
      * @deprecated This method does not support returning username and password as an atomic unit.
-     * Please use {@link PasswordAuthenticator#builder(Supplier)} instead.
+     * Please use {@link DelegatingAuthenticator} instead.
      */
     @Deprecated
     public Builder password(final Supplier<String> password) {

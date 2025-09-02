@@ -26,10 +26,14 @@ import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
 /**
- * The {@link Authenticator} encapsulates authentication strategies.
+ * An authentication strategy.
+ * <p>
+ * <b>Note:</b> The methods of this interface are part of the SDK's internal API, and may change at any time.
+ * Implementing this interface yourself is not recommended. Please use one of the provided implementations.
  *
- * <p>Please only use the implementations of this class, since the actual interfaces are unstable, internal
- * and may change at any time!</p>
+ * @see PasswordAuthenticator
+ * @see CertificateAuthenticator
+ * @see DelegatingAuthenticator
  *
  * @since 2.0.0
  */
