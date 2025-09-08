@@ -104,10 +104,8 @@ object GetMultiHelper {
           )
 
           if (expectedContent.getExpectSuccess != actualContent.isSuccess) {
-            throw new TestFailure(
-              new RuntimeException(
-                s"ContentAs result $actualContent did not equal expected result ${expectedContent.getExpectSuccess}"
-              )
+            throw new TestFailureRaiseFailedPrecondition(
+              s"ContentAs result $actualContent did not equal expected result ${expectedContent.getExpectSuccess}"
             )
           }
 
@@ -116,10 +114,8 @@ object GetMultiHelper {
             if (
               !java.util.Arrays.equals(expectedContent.getExpectedContentBytes.toByteArray, bytes)
             ) {
-              throw new TestFailure(
-                new RuntimeException(
-                  s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${expectedContent.getExpectedContentBytes}"
-                )
+              throw new TestFailureRaiseFailedPrecondition(
+                s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${expectedContent.getExpectedContentBytes}"
               )
             }
           }
@@ -164,10 +160,8 @@ object GetMultiHelper {
           )
 
           if (expectedContent.getExpectSuccess != actualContent.isSuccess) {
-            throw new TestFailure(
-              new RuntimeException(
-                s"ContentAs result $actualContent did not equal expected result ${expectedContent.getExpectSuccess}"
-              )
+            throw new TestFailureRaiseFailedPrecondition(
+              s"ContentAs result $actualContent did not equal expected result ${expectedContent.getExpectSuccess}"
             )
           }
 
@@ -176,10 +170,8 @@ object GetMultiHelper {
             if (
               !java.util.Arrays.equals(expectedContent.getExpectedContentBytes.toByteArray, bytes)
             ) {
-              throw new TestFailure(
-                new RuntimeException(
-                  s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${expectedContent.getExpectedContentBytes}"
-                )
+              throw new TestFailureRaiseFailedPrecondition(
+                s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${expectedContent.getExpectedContentBytes}"
               )
             }
           }

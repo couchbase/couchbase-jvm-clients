@@ -241,20 +241,16 @@ abstract class TransactionShared(
       )
 
       if (cas.getExpectSuccess != content.isSuccess) {
-        throw new TestFailure(
-          new RuntimeException(
-            s"ContentAs result $content did not equal expected result ${cas.getExpectSuccess}"
-          )
+        throw new TestFailureRaiseFailedPrecondition(
+          s"ContentAs result $content did not equal expected result ${cas.getExpectSuccess}"
         )
       }
 
       if (cas.hasExpectedContentBytes) {
         val bytes = ContentAsUtil.convert(content.get)
         if (!java.util.Arrays.equals(cas.getExpectedContentBytes.toByteArray, bytes)) {
-          throw new TestFailure(
-            new RuntimeException(
-              s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${cas.getExpectedContentBytes}"
-            )
+          throw new TestFailureRaiseFailedPrecondition(
+            s"Content bytes ${java.util.Arrays.toString(bytes)} did not equal expected bytes ${cas.getExpectedContentBytes}"
           )
         }
       }
@@ -296,21 +292,17 @@ abstract class TransactionShared(
       )
 
       if (contentAs.getExpectSuccess != content.isSuccess)
-        throw new TestFailure(
-          new RuntimeException(
-            "ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess
-          )
+        throw new com.couchbase.client.performer.scala.transaction.TestFailureRaiseFailedPrecondition(
+          "ContentAs result " + content + " did not equal expected result " + contentAs.getExpectSuccess
         )
 
       if (contentAs.hasExpectedContentBytes) {
         val bytes: Array[Byte] = ContentAsUtil.convert(content.get)
         if (!java.util.Arrays.equals(contentAs.getExpectedContentBytes.toByteArray, bytes))
-          throw new TestFailure(
-            new RuntimeException(
-              "Content bytes " + java.util.Arrays.toString(
-                bytes
-              ) + " did not equal expected bytes " + contentAs.getExpectedContentBytes
-            )
+          throw new com.couchbase.client.performer.scala.transaction.TestFailureRaiseFailedPrecondition(
+            "Content bytes " + java.util.Arrays.toString(
+              bytes
+            ) + " did not equal expected bytes " + contentAs.getExpectedContentBytes
           )
       }
     }
