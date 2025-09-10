@@ -159,6 +159,20 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     return POLLER_INTERVAL;
   }
 
+  private void incrementFailedRefreshes(String name) {
+    AtomicInteger counter = numFailedRefreshes.get(name);
+    if (counter != null) {
+      counter.incrementAndGet();
+    }
+  }
+
+  private void clearFailedRefreshes(String name) {
+    AtomicInteger counter = numFailedRefreshes.get(name);
+    if (counter != null) {
+      counter.set(0);
+    }
+  }
+
   /**
    * Helper method to make sure the config poll interval is set to a fixed bound every time.
    *
@@ -201,7 +215,8 @@ public class KeyValueBucketRefresher implements BucketRefresher {
 
     if (allowed) {
       List<NodeInfo> nodes = filterEligibleNodes(name);
-      if (numFailedRefreshes.get(name).get() >= nodes.size()) {
+      AtomicInteger counter = numFailedRefreshes.get(name);
+      if (counter != null && counter.get() >= nodes.size()) {
         provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
         numFailedRefreshes.get(name).set(0);
       }
@@ -274,7 +289,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         .wrap(request, request.response(), true)
         .filter(response -> {
           if (!response.status().success()) {
-            numFailedRefreshes.get(name).incrementAndGet();
+            incrementFailedRefreshes(name);
             eventBus.publish(new BucketConfigRefreshFailedEvent(
               core.context(),
               BucketConfigRefreshFailedEvent.RefresherType.KV,
@@ -287,9 +302,9 @@ public class KeyValueBucketRefresher implements BucketRefresher {
         .map(response ->
           new ProposedBucketConfigContext(name, new String(response.content(), UTF_8), nodeInfo.hostname())
         )
-        .doOnSuccess(r -> numFailedRefreshes.get(name).set(0))
+        .doOnSuccess(r -> clearFailedRefreshes(name))
         .onErrorResume(t -> {
-          numFailedRefreshes.get(name).incrementAndGet();
+          incrementFailedRefreshes(name);
           eventBus.publish(new BucketConfigRefreshFailedEvent(
             core.context(),
             BucketConfigRefreshFailedEvent.RefresherType.KV,
