@@ -158,11 +158,8 @@ public class CertificateAuthenticator implements Authenticator {
 
   @Override
   public String toString() {
-    return "CertificateAuthenticator{" +
-      "key=" + key +
-      ", keyCertChain=" + keyCertChain +
-      ", keyManagerFactory=" + keyManagerFactory +
-      '}';
+    // Intentionally omit sensitive info like private key.
+    return "CertificateAuthenticator";
   }
 
 }
