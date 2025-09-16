@@ -16,26 +16,18 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.grpc.CallCredentials;
-import com.couchbase.client.core.deps.io.grpc.Metadata;
-import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslHelper;
-import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static com.couchbase.client.core.io.netty.kv.sasl.SaslHelper.platformHasSaslPlain;
 import static com.couchbase.client.core.util.CbCollections.setCopyOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
@@ -142,8 +134,8 @@ public class PasswordAuthenticator implements Authenticator {
     cachedHttpAuthHeader = builder.dynamicCredentials ? null : encodeAuthHttpHeader(this.usernameAndPassword.get());
   }
 
-  // Visible for testing
-  String getAuthHeaderValue() {
+  @Override
+  public String getAuthHeaderValue() {
     return cachedHttpAuthHeader != null
       ? cachedHttpAuthHeader
       : encodeAuthHttpHeader(this.usernameAndPassword.get());
@@ -168,36 +160,6 @@ public class PasswordAuthenticator implements Authenticator {
       credentials.password(),
       forceSaslPlain ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
     ));
-  }
-
-  @Override
-  public void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
-    request.headers().add(
-      HttpHeaderNames.AUTHORIZATION,
-      getAuthHeaderValue()
-    );
-  }
-
-  @Override
-  public CallCredentials protostellarCallCredentials() {
-    return new CallCredentials() {
-      @Override
-      public void applyRequestMetadata(RequestInfo requestInfo, Executor executor, MetadataApplier applier) {
-        executor.execute(() -> {
-          try {
-            Metadata headers = new Metadata();
-            headers.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), getAuthHeaderValue());
-            applier.apply(headers);
-          } catch (Throwable e) {
-            applier.fail(Status.UNAUTHENTICATED.withCause(e));
-          }
-        });
-      }
-
-      @Override
-      public void thisUsesUnstableApi() {
-      }
-    };
   }
 
   @Override

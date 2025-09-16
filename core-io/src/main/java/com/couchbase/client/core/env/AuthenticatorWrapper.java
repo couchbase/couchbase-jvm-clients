@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
@@ -43,8 +42,8 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   }
 
   @Override
-  public @Nullable CallCredentials protostellarCallCredentials() {
-    return wrapped().protostellarCallCredentials();
+  public @Nullable String getAuthHeaderValue() {
+    return wrapped().getAuthHeaderValue();
   }
 
   @Override

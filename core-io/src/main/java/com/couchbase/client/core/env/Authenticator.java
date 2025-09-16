@@ -17,8 +17,8 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -56,11 +56,21 @@ public interface Authenticator {
    * @param request the http request.
    */
   @Stability.Internal
-  default void authHttpRequest(final ServiceType serviceType, final HttpRequest request) { }
+  default void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
+    String authHeaderValue = getAuthHeaderValue();
+    if (authHeaderValue != null) {
+      request.headers().add(HttpHeaderNames.AUTHORIZATION, authHeaderValue);
+    }
+  }
 
-  @Nullable
+  /**
+   * Returns the value of the Authorization header to apply to HTTP requests,
+   * or null if no header should be applied.
+   */
   @Stability.Internal
-  CallCredentials protostellarCallCredentials();
+  default @Nullable String getAuthHeaderValue() {
+    return null;
+  }
 
   /**
    * The authenticator gets the chance to attach the client certificate to the ssl context if needed.

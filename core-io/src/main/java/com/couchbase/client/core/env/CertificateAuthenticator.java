@@ -16,12 +16,8 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.grpc.CallCredentials;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import reactor.util.annotation.Nullable;
 
 import javax.net.ssl.KeyManagerFactory;
 import java.io.InputStream;
@@ -132,14 +128,6 @@ public class CertificateAuthenticator implements Authenticator {
       throw InvalidArgumentException.fromMessage("Either a key certificate or a key manager factory" +
         " can be provided, but not both!");
     }
-  }
-
-  @Override
-  @Nullable
-  @Stability.Internal
-  public CallCredentials protostellarCallCredentials() {
-    // To be added under JVMCBC-1195
-    throw new FeatureNotAvailableException("CertificateAuthenticator is not supported with couchbase2");
   }
 
   @Override

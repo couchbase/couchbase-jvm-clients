@@ -38,7 +38,6 @@ import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.grpc.netty.GrpcSslContexts;
 import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
-import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContext;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
@@ -73,9 +72,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
+import static com.couchbase.client.core.deps.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -121,7 +123,7 @@ public class ProtostellarEndpoint {
     ConnectivityState now = this.managedChannel.getState(false);
     notifyOnChannelStateChange(now);
 
-    CallCredentials creds = ctx.authenticator().protostellarCallCredentials();
+    CallCredentials creds = callCredentials(() -> ctx.authenticator().getAuthHeaderValue());
 
     // JVMCBC-1187: Temporary code to provide some insight on GRPC internals, will likely be removed pre-GA.
     ClientStreamTracer.Factory factory = new ClientStreamTracer.Factory() {
@@ -201,6 +203,27 @@ public class ProtostellarEndpoint {
     collectionAdminStub = CollectionAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
     bucketAdminStub = BucketAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
     searchAdminStub = SearchAdminServiceGrpc.newFutureStub(managedChannel).withCallCredentials(creds);
+  }
+
+  private static CallCredentials callCredentials(Supplier<String> authHeaderValue) {
+    return new CallCredentials() {
+      @Override
+      public void applyRequestMetadata(RequestInfo requestInfo, Executor executor, MetadataApplier applier) {
+        executor.execute(() -> {
+          try {
+            Metadata headers = new Metadata();
+            String value = authHeaderValue.get();
+            if (value == null) {
+              throw new FeatureNotAvailableException("This Authenticator is not compatible with couchbase2");
+            }
+            headers.put(Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER), value);
+            applier.apply(headers);
+          } catch (Throwable e) {
+            applier.fail(Status.UNAUTHENTICATED.withCause(e));
+          }
+        });
+      }
+    };
   }
 
   private ManagedChannel channel(ProtostellarContext ctx) {
