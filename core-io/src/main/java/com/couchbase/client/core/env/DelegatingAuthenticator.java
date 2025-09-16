@@ -49,7 +49,7 @@ public class DelegatingAuthenticator extends AuthenticatorWrapper {
     setDelegate(delegate);
   }
 
-  Authenticator wrapped() {
+  protected Authenticator wrapped() {
     return delegate;
   }
 

@@ -16,15 +16,9 @@
 
 package com.couchbase.columnar.client.java.internal;
 
-import com.couchbase.client.core.deps.io.grpc.CallCredentials;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
-import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.env.AuthenticatorWrapper;
 import org.jetbrains.annotations.ApiStatus;
-import org.jspecify.annotations.Nullable;
 
 import java.util.function.Supplier;
 
@@ -35,7 +29,7 @@ import static java.util.Objects.requireNonNull;
  * given supplier.
  */
 @ApiStatus.Internal
-public class DynamicAuthenticator implements Authenticator {
+public class DynamicAuthenticator extends AuthenticatorWrapper {
   private final Supplier<Authenticator> supplier;
 
   public DynamicAuthenticator(Supplier<Authenticator> supplier) {
@@ -43,32 +37,7 @@ public class DynamicAuthenticator implements Authenticator {
   }
 
   @Override
-  public void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) {
-    supplier.get().authKeyValueConnection(endpointContext, pipeline);
-  }
-
-  @Override
-  public void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
-    supplier.get().authHttpRequest(serviceType, request);
-  }
-
-  @Override
-  public @Nullable CallCredentials protostellarCallCredentials() {
-    return supplier.get().protostellarCallCredentials();
-  }
-
-  @Override
-  public void applyTlsProperties(final SslContextBuilder sslContextBuilder) {
-    supplier.get().applyTlsProperties(sslContextBuilder);
-  }
-
-  @Override
-  public boolean supportsTls() {
-    return supplier.get().supportsTls();
-  }
-
-  @Override
-  public boolean supportsNonTls() {
-    return supplier.get().supportsNonTls();
+  protected Authenticator wrapped() {
+    return supplier.get();
   }
 }

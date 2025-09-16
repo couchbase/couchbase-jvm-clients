@@ -15,40 +15,11 @@
  */
 package com.couchbase.client.scala.env
 
-import com.couchbase.client.core.deps.io.grpc.CallCredentials
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest
-import com.couchbase.client.core.endpoint.EndpointContext
-import com.couchbase.client.core.env.Authenticator
-import com.couchbase.client.core.service.ServiceType
+import com.couchbase.client.core.env.{Authenticator, AuthenticatorWrapper}
 
-case class PasswordAuthenticator(username: String, password: String) extends Authenticator {
+case class PasswordAuthenticator(username: String, password: String) extends AuthenticatorWrapper {
 
   private val inner = com.couchbase.client.core.env.PasswordAuthenticator.create(username, password)
 
-  /** Allows the authenticator to add KV handlers during connection bootstrap to perform
-    * authentication.
-    *
-    * @param endpointContext the endpoint context.
-    * @param pipeline        the pipeline when the endpoint is constructed.
-    */
-  override def authKeyValueConnection(
-      endpointContext: EndpointContext,
-      pipeline: ChannelPipeline
-  ): Unit = {
-    inner.authKeyValueConnection(endpointContext, pipeline)
-  }
-
-  /** Allows to add authentication credentials to the http request for the given service.
-    *
-    * @param serviceType the service for this request.
-    * @param request     the http request.
-    */
-  override def authHttpRequest(serviceType: ServiceType, request: HttpRequest): Unit = {
-    inner.authHttpRequest(serviceType, request)
-  }
-
-  override def protostellarCallCredentials(): CallCredentials = {
-    inner.protostellarCallCredentials()
-  }
+  override protected def wrapped(): Authenticator = inner
 }

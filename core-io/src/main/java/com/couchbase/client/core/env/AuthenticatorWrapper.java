@@ -28,9 +28,9 @@ import org.jspecify.annotations.Nullable;
 
 @NullMarked
 @Stability.Internal
-abstract class AuthenticatorWrapper implements Authenticator {
+public abstract class AuthenticatorWrapper implements Authenticator {
 
-  abstract Authenticator wrapped();
+  protected abstract Authenticator wrapped();
 
   @Override
   public void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) {
