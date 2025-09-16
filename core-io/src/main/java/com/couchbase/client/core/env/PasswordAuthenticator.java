@@ -51,12 +51,15 @@ import static java.util.Objects.requireNonNull;
 public class PasswordAuthenticator implements Authenticator {
 
   private static final Set<SaslMechanism> DEFAULT_SASL_MECHANISMS =
-    EnumSet.of(SaslMechanism.SCRAM_SHA512, SaslMechanism.SCRAM_SHA256, SaslMechanism.SCRAM_SHA1);
-
+    unmodifiableSet(EnumSet.of(
+      SaslMechanism.SCRAM_SHA512,
+      SaslMechanism.SCRAM_SHA256,
+      SaslMechanism.SCRAM_SHA1
+    ));
 
   private final Supplier<UsernameAndPassword> usernameAndPassword;
   private final Set<SaslMechanism> allowedSaslMechanisms;
-  @Nullable private final String cachedHttpAuthHeader;
+  private final @Nullable String cachedHttpAuthHeader;
 
   /**
    * Creates a new {@link Builder} which allows to customize this authenticator.
@@ -429,5 +432,13 @@ public class PasswordAuthenticator implements Authenticator {
         password.get()
       );
     }
+  }
+
+  @Override
+  public String toString() {
+    // Omit sensitive information like password or auth header.
+    return "PasswordAuthenticator{" +
+      "allowedSaslMechanisms=" + allowedSaslMechanisms +
+      '}';
   }
 }
