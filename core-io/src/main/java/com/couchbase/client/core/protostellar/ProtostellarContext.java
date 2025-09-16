@@ -42,9 +42,7 @@ public final class ProtostellarContext extends AbstractContext {
     this.authenticator = requireNonNull(authenticator);
     this.coreResources = requireNonNull(coreResources);
 
-    if (env.securityConfig().tlsEnabled() && !authenticator.supportsTls()) {
-      throw InvalidArgumentException.fromMessage("TLS enabled but the Authenticator does not support TLS!");
-    } else if (!env.securityConfig().tlsEnabled() && !authenticator.supportsNonTls()) {
+    if (authenticator.requiresTls() && !env.securityConfig().tlsEnabled()) {
       throw InvalidArgumentException.fromMessage("TLS not enabled but the Authenticator requires TLS!");
     }
   }

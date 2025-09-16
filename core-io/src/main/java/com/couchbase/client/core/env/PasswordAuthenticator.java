@@ -200,6 +200,11 @@ public class PasswordAuthenticator implements Authenticator {
     };
   }
 
+  @Override
+  public boolean requiresTls() {
+    return false;
+  }
+
   /**
    * Provides customization to the {@link PasswordAuthenticator}.
    */

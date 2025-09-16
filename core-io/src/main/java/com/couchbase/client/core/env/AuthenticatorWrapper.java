@@ -53,12 +53,7 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   }
 
   @Override
-  public boolean supportsTls() {
-    return wrapped().supportsTls();
-  }
-
-  @Override
-  public boolean supportsNonTls() {
-    return wrapped().supportsNonTls();
+  public boolean requiresTls() {
+    return wrapped().requiresTls();
   }
 }

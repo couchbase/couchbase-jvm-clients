@@ -70,16 +70,9 @@ public interface Authenticator {
   @Stability.Internal
   default void applyTlsProperties(final SslContextBuilder sslContextBuilder) { }
 
-  /**
-   * If this authenticator supports encrypted connections.
-   */
   @Stability.Internal
-  default boolean supportsTls() { return true; }
-
-  /**
-   * If this authenticator supports non-encrypted connections.
-   */
-  @Stability.Internal
-  default boolean supportsNonTls() { return true; }
+  default boolean requiresTls() {
+    return true;
+  }
 
 }

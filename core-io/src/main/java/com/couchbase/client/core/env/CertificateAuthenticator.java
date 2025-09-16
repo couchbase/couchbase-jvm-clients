@@ -152,11 +152,6 @@ public class CertificateAuthenticator implements Authenticator {
   }
 
   @Override
-  public boolean supportsNonTls() {
-    return false;
-  }
-
-  @Override
   public String toString() {
     // Intentionally omit sensitive info like private key.
     return "CertificateAuthenticator";
