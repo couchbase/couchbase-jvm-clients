@@ -16,6 +16,15 @@
 
 package com.couchbase.client.core.env;
 
+import org.jspecify.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Map;
+
+import static java.util.Collections.unmodifiableMap;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
+
 /**
  * Describes the support SASL authentication mechanisms.
  */
@@ -24,13 +33,20 @@ public enum SaslMechanism {
   PLAIN("PLAIN", 1),
   SCRAM_SHA1("SCRAM-SHA1", 2),
   SCRAM_SHA256("SCRAM-SHA256", 2),
-  SCRAM_SHA512("SCRAM-SHA512", 2);
+  SCRAM_SHA512("SCRAM-SHA512", 2),
+  OAUTHBEARER("OAUTHBEARER", 1),
+  ;
 
   private final String mech;
   private final int roundtrips;
 
+  private static final Map<String, SaslMechanism> lookupTable = unmodifiableMap(
+    Arrays.stream(SaslMechanism.values())
+      .collect(toMap(it -> it.mech, it -> it))
+  );
+
   SaslMechanism(String mech, int roundtrips) {
-    this.mech = mech;
+    this.mech = requireNonNull(mech);
     this.roundtrips = roundtrips;
   }
 
@@ -54,17 +70,7 @@ public enum SaslMechanism {
    * @param mech the mechanism to convert.
    * @return null if not found, otherwise the enum representation.
    */
-  public static SaslMechanism from(final String mech) {
-    if (mech.equalsIgnoreCase("PLAIN")) {
-      return PLAIN;
-    } else if (mech.equalsIgnoreCase("SCRAM-SHA1")) {
-      return SCRAM_SHA1;
-    } else if (mech.equalsIgnoreCase("SCRAM-SHA256")) {
-      return SCRAM_SHA256;
-    } else if (mech.equalsIgnoreCase("SCRAM-SHA512")) {
-      return SCRAM_SHA512;
-    }
-
-    return null;
+  public static @Nullable SaslMechanism from(final String mech) {
+    return lookupTable.get(mech);
   }
 }

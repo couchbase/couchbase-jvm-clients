@@ -16,11 +16,15 @@
 
 package com.couchbase.client.core.io.netty.kv.sasl;
 
+import com.couchbase.client.core.env.SaslMechanism;
+
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,10 +49,17 @@ public class CouchbaseSaslClientFactory implements SaslClientFactory {
 
     SaslClient client = SCRAM_FACTORY
       .createSaslClient(mechanisms, authorizationId, protocol, serverName, props, cbh);
-    if (client == null) {
-      client = Sasl.createSaslClient(mechanisms, authorizationId, protocol, serverName, props, cbh);
+
+    if (client != null) {
+      return client;
     }
-    return client;
+
+    List<String> mechanismList = Arrays.asList(mechanisms);
+    if (mechanismList.contains(SaslMechanism.OAUTHBEARER.mech())) {
+      return new OauthBearerSaslClient(cbh);
+    }
+
+    return Sasl.createSaslClient(mechanisms, authorizationId, protocol, serverName, props, cbh);
   }
 
   /**

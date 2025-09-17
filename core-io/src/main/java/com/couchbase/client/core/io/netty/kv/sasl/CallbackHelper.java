@@ -1,0 +1,73 @@
+/*
+ * Copyright 2025 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.core.io.netty.kv.sasl;
+
+import com.couchbase.client.core.annotation.Stability;
+
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.PasswordCallback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.SaslException;
+import java.io.IOException;
+import java.util.Arrays;
+
+@Stability.Internal
+class CallbackHelper {
+  private CallbackHelper() {
+    throw new AssertionError("not instantiable");
+  }
+
+  static String getUsername(CallbackHandler callbackHandler) throws SaslException {
+    final NameCallback nameCallback = new NameCallback("Username");
+    try {
+      callbackHandler.handle(new Callback[]{nameCallback});
+    } catch (IOException | UnsupportedCallbackException e) {
+      throw new SaslException("Missing callback fetch username", e);
+    }
+
+    final String name = nameCallback.getName();
+    if (name == null || name.isEmpty()) {
+      throw new SaslException("Missing username");
+    }
+    return name;
+  }
+
+  static String getPassword(CallbackHandler callbackHandler) throws SaslException {
+    final PasswordCallback passwordCallback = new PasswordCallback("Password", false);
+    try {
+      try {
+        callbackHandler.handle(new Callback[]{passwordCallback});
+      } catch (IOException | UnsupportedCallbackException e) {
+        throw new SaslException("Missing callback fetch password", e);
+      }
+
+      final char[] pw = passwordCallback.getPassword();
+      if (pw == null) {
+        throw new SaslException("Password can't be null");
+      }
+
+      String result = new String(pw);
+      Arrays.fill(pw, ' ');
+      return result;
+
+    } finally {
+      passwordCallback.clearPassword();
+    }
+  }
+}

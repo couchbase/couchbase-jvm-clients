@@ -22,14 +22,9 @@ import com.couchbase.client.core.util.Bytes;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
-import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.MessageDigest;
@@ -206,18 +201,7 @@ class ScramSaslClient implements SaslClient  {
   }
 
   private String getUserName() throws SaslException {
-    final NameCallback nameCallback = new NameCallback("Username");
-    try {
-      callbacks.handle(new Callback[] { nameCallback });
-    } catch (IOException | UnsupportedCallbackException e) {
-      throw new SaslException("Missing callback fetch username", e);
-    }
-
-    final String name = nameCallback.getName();
-    if (name == null || name.isEmpty()) {
-      throw new SaslException("Missing username");
-    }
-    return name;
+    return CallbackHelper.getUsername(callbacks);
   }
 
   /**
@@ -301,21 +285,8 @@ class ScramSaslClient implements SaslClient  {
   }
 
   private void generateSaltedPassword() throws SaslException {
-    final PasswordCallback passwordCallback = new PasswordCallback("Password", false);
-    try {
-      callbacks.handle(new Callback[]{passwordCallback});
-    } catch (IOException | UnsupportedCallbackException e) {
-      throw new SaslException("Missing callback fetch password", e);
-    }
-
-    final char[] pw = passwordCallback.getPassword();
-    if (pw == null) {
-      throw new SaslException("Password can't be null");
-    }
-
-    String password = new String(pw);
+    String password = CallbackHelper.getPassword(callbacks);
     saltedPassword = pbkdf2(password, salt, iterationCount);
-    passwordCallback.clearPassword();
   }
 
   /**

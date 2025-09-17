@@ -32,6 +32,7 @@ import reactor.util.annotation.Nullable;
  * Implementing this interface yourself is not recommended. Please use one of the provided implementations.
  *
  * @see PasswordAuthenticator
+ * @see JwtAuthenticator
  * @see CertificateAuthenticator
  * @see DelegatingAuthenticator
  *
