@@ -23,7 +23,7 @@ jobs:
           - server: '7.6.5'
             nodes: 3
             java-distribution: 'temurin'
-            java-version: '25'
+            java-version: '21'
 
           - server: 'community-7.6.2'
             nodes: 3
