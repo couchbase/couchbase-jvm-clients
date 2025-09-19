@@ -76,8 +76,10 @@ jobs:
         run: |
           if [[ "${{ matrix.server }}" == *community* ]]; then
             echo 'COUCHBASE_SERVICES=[kv, n1ql, index, fts]' >> $GITHUB_ENV
+            echo 'COUCHBASE_HAS_TLS=false' >> $GITHUB_ENV
           else
             echo 'COUCHBASE_SERVICES=[kv, n1ql, index, fts, cbas, eventing]' >> $GITHUB_ENV
+            echo 'COUCHBASE_HAS_TLS=true' >> $GITHUB_ENV
           fi
 
       - name: Start Couchbase Server
@@ -92,7 +94,7 @@ jobs:
                 services: ${{ env.COUCHBASE_SERVICES }}
             docker:
               kv-memory: 2048
-              use-dino-certs: true
+              use-dino-certs: ${{ env.COUCHBASE_HAS_TLS }}
 
       - name: Configure tests
         run: |
