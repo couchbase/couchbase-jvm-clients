@@ -317,6 +317,10 @@ public class Cluster implements Closeable {
     return reactiveCluster;
   }
 
+  public void setAuthenticator(Authenticator newAuthenticator) {
+    asyncCluster.setAuthenticator(newAuthenticator);
+  }
+
   /**
    * Provides access to the underlying {@link Core}.
    *

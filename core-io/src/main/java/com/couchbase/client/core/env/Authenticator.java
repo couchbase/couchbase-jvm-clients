@@ -34,7 +34,6 @@ import reactor.util.annotation.Nullable;
  * @see PasswordAuthenticator
  * @see JwtAuthenticator
  * @see CertificateAuthenticator
- * @see DelegatingAuthenticator
  *
  * @since 2.0.0
  */

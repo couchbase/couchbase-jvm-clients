@@ -35,6 +35,7 @@ import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.DelegatingAuthenticator;
 import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -137,7 +138,7 @@ public class AsyncCluster {
 
   private final CoreCouchbaseOps couchbaseOps;
 
-  private final Authenticator authenticator;
+  private final DelegatingAuthenticator authenticator;
 
   /**
    * Stores already opened buckets for reuse.
@@ -244,13 +245,13 @@ public class AsyncCluster {
    */
   AsyncCluster(
     final OwnedOrExternal<ClusterEnvironment> environment,
-    final Authenticator authenticator,
+    final Authenticator initialAuthenticator,
     final ConnectionString connectionString
   ) {
     this.environment = environment;
     this.connectionString = connectionString;
-    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), authenticator, connectionString);
-    this.authenticator = authenticator;
+    this.authenticator = DelegatingAuthenticator.create(initialAuthenticator);
+    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), this.authenticator, connectionString);
     this.queryOps = couchbaseOps.queryOps();
     this.searchOps = couchbaseOps.searchOps(null);
 
@@ -266,6 +267,10 @@ public class AsyncCluster {
       environment().eventBus(),
       disconnected
     ));
+  }
+
+  public void setAuthenticator(Authenticator newAuthenticator) {
+    authenticator.setDelegate(newAuthenticator);
   }
 
   /**

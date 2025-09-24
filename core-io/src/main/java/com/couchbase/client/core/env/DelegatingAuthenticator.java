@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import org.jspecify.annotations.NullMarked;
 
 import static java.util.Objects.requireNonNull;
@@ -29,6 +30,7 @@ import static java.util.Objects.requireNonNull;
  * @see #create(Authenticator)
  */
 @NullMarked
+@Stability.Internal
 public class DelegatingAuthenticator extends AuthenticatorWrapper {
   private volatile Authenticator delegate;
 
