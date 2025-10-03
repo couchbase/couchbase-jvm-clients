@@ -48,6 +48,10 @@ public class IoConfig {
   public static final boolean DEFAULT_TCP_KEEPALIVE_ENABLED = true;
   public static final Duration DEFAULT_TCP_KEEPALIVE_TIME = Duration.ofSeconds(60);
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
+
+  @Stability.Volatile
+  public static final boolean DEFAULT_CONFIG_NOTIFICATIONS = true;
+
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
   public static final int DEFAULT_NUM_KV_CONNECTIONS = 1;
   public static final int DEFAULT_MAX_HTTP_CONNECTIONS = AbstractPooledEndpointServiceConfig.DEFAULT_MAX_ENDPOINTS;
@@ -63,6 +67,7 @@ public class IoConfig {
 
   private final boolean mutationTokensEnabled;
   private final Duration configPollInterval;
+  private final boolean configNotifications;
   private final CircuitBreakerConfig kvCircuitBreakerConfig;
   private final CircuitBreakerConfig queryCircuitBreakerConfig;
   private final CircuitBreakerConfig viewCircuitBreakerConfig;
@@ -93,6 +98,7 @@ public class IoConfig {
     configPollInterval = Optional
       .ofNullable(builder.configPollInterval)
       .orElse(DEFAULT_CONFIG_POLL_INTERVAL);
+    configNotifications = builder.configNotifications;
     kvCircuitBreakerConfig = builder.kvCircuitBreakerConfig.build();
     queryCircuitBreakerConfig = builder.queryCircuitBreakerConfig.build();
     viewCircuitBreakerConfig = builder.viewCircuitBreakerConfig.build();
@@ -377,6 +383,11 @@ public class IoConfig {
     return configPollInterval;
   }
 
+  @Stability.Volatile
+  public boolean configNotifications() {
+    return configNotifications;
+  }
+
   /**
    * Lists the services on which traffic should be captured.
    *
@@ -481,6 +492,7 @@ public class IoConfig {
 
     private boolean mutationTokensEnabled = DEFAULT_MUTATION_TOKENS_ENABLED;
     private Duration configPollInterval;
+    private boolean configNotifications = DEFAULT_CONFIG_NOTIFICATIONS;
     private CircuitBreakerConfig.Builder kvCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder queryCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
     private CircuitBreakerConfig.Builder viewCircuitBreakerConfig = CircuitBreakerConfig.builder().enabled(false);
@@ -573,6 +585,24 @@ public class IoConfig {
 
     public Builder configPollInterval(Duration configPollInterval) {
       this.configPollInterval = configPollInterval;
+      return this;
+    }
+
+    /**
+     * Call this with a value of false to disable server-initiated
+     * cluster topology change notifications.
+     * <p>
+     * This setting is independent of {@link #configPollInterval(Duration)},
+     * which controls the interval of client-initiated topology change detection.
+     * <p>
+     * Please leave this setting at the default unless advised by
+     * Couchbase Technical Support.
+     * <p>
+     * Defaults to true.
+     */
+    @Stability.Volatile
+    public Builder configNotifications(boolean enabled) {
+      this.configNotifications = enabled;
       return this;
     }
 
