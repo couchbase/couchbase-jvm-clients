@@ -308,7 +308,14 @@ class AsyncCluster(
   def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Future[Unit] = {
     FutureConversions
       .javaMonoToScalaFuture(couchbaseOps.shutdown(timeout))
-      .map(_ => if (env.owned) env.shutdown(timeout))
+      .flatMap(_ =>
+        if (env.owned) {
+          // Explicitly put this on the global threadpool, otherwise it will execute on the
+          // threadpool we are shutting down due to the implicit `ec` in scope.
+          Future(env.shutdown(timeout))(scala.concurrent.ExecutionContext.global)
+        } else
+          Future.successful(())
+      )
   }
 
   /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the

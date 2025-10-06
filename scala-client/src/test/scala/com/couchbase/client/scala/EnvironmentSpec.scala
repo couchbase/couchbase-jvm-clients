@@ -2,7 +2,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.env.WanDevelopmentProfile
 import com.couchbase.client.scala.env._
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.{RepeatedTest, Test}
 
 import scala.concurrent.duration.{Duration, _}
 import scala.util.{Success, Try}
@@ -144,7 +144,8 @@ class EnvironmentSpec {
     }
   }
 
-  @Test
+  // Repeated as this has been an intermittent failure in the past
+  @RepeatedTest(10)
   def closeOwnedEnvironment(): Unit = {
     val clusterTry: Try[Cluster] = Cluster.connect("1.2.3.4", "username", "password")
 
