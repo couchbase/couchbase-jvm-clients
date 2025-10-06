@@ -110,25 +110,18 @@ public class JwtAuthenticator implements Authenticator {
   private final Jwt jwt;
   private final String encodedJwt;
   private final String authHeaderValue;
-  private final String username;
 
   private JwtAuthenticator(String encodedJwt) {
     this.encodedJwt = encodedJwt.trim();
     this.authHeaderValue = "Bearer " + this.encodedJwt;
     this.jwt = Jwt.parse(this.encodedJwt);
-
-    String fieldName = "sub";
-    this.username = jwt.payload.path(fieldName).textValue();
-    if (this.username == null) {
-      throw new IllegalArgumentException("Missing '" + fieldName + "' in JWT payload");
-    }
   }
 
   @Override
   public void authKeyValueConnection(EndpointContext ctx, ChannelPipeline pipeline) {
     pipeline.addLast(new SaslAuthenticationHandler(
       ctx,
-      username,
+      null, // username not required
       encodedJwt,
       supportedMechanisms
     ));

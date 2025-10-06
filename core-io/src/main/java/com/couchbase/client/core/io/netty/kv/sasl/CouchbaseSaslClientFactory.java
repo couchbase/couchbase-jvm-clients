@@ -56,7 +56,7 @@ public class CouchbaseSaslClientFactory implements SaslClientFactory {
 
     List<String> mechanismList = Arrays.asList(mechanisms);
     if (mechanismList.contains(SaslMechanism.OAUTHBEARER.mech())) {
-      return new OauthBearerSaslClient(cbh);
+      return new OauthBearerSaslClient(authorizationId, cbh);
     }
 
     return Sasl.createSaslClient(mechanisms, authorizationId, protocol, serverName, props, cbh);

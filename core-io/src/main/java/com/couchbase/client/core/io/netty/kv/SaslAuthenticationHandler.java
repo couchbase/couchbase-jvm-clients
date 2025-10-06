@@ -38,6 +38,7 @@ import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
+import org.jspecify.annotations.Nullable;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -102,7 +103,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    * Holds the timeout for the full feature negotiation phase.
    */
   private final Duration timeout;
-  private final String username;
+  private final @Nullable String username;
   private final String password;
   private final Set<SaslMechanism> allowedMechanisms;
   private final EndpointContext endpointContext;
@@ -129,7 +130,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
    */
   private int roundtripsToGo;
 
-  public SaslAuthenticationHandler(final EndpointContext endpointContext, final String username,
+  public SaslAuthenticationHandler(final EndpointContext endpointContext, final @Nullable String username,
                                    final String password, final Set<SaslMechanism> allowedSaslMechanisms) {
     this.endpointContext = endpointContext;
     this.username = username;

@@ -17,23 +17,23 @@
 package com.couchbase.client.core.io.netty.kv.sasl;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 
-import static com.couchbase.client.core.io.netty.kv.sasl.CallbackHelper.getPassword;
-import static com.couchbase.client.core.io.netty.kv.sasl.CallbackHelper.getUsername;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Base class for mechanisms that have a single step: the initial response.
  */
 @Stability.Internal
+@NullMarked
 abstract class InitialResponseSaslClient implements SaslClient {
   private final CallbackHandler callbackHandler;
-  private final String authorizationId;
+  protected final @Nullable String authorizationId;
 
   private boolean complete;
 
@@ -41,7 +41,7 @@ abstract class InitialResponseSaslClient implements SaslClient {
     @Nullable String authorizationId,
     CallbackHandler callbackHandler
   ) {
-    this.authorizationId = authorizationId == null ? "" : authorizationId;
+    this.authorizationId = authorizationId;
     this.callbackHandler = requireNonNull(callbackHandler);
   }
 
@@ -57,16 +57,10 @@ abstract class InitialResponseSaslClient implements SaslClient {
     }
 
     complete = true;
-    String username = getUsername(callbackHandler);
-    String password = getPassword(callbackHandler);
-    return getInitialResponse(authorizationId, username, password);
+    return getInitialResponse(callbackHandler);
   }
 
-  abstract byte[] getInitialResponse(
-    String authorizationId,
-    String username,
-    String password
-  );
+  abstract byte[] getInitialResponse(CallbackHandler callbackHandler) throws SaslException;
 
   @Override
   public boolean isComplete() {
@@ -86,7 +80,7 @@ abstract class InitialResponseSaslClient implements SaslClient {
   }
 
   @Override
-  public Object getNegotiatedProperty(String propName) {
+  public @Nullable Object getNegotiatedProperty(String propName) {
     requireComplete("getNegotiatedProperty");
     return null;
   }

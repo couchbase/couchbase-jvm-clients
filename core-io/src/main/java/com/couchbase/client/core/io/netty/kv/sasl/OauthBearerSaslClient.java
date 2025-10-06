@@ -18,15 +18,23 @@ package com.couchbase.client.core.io.netty.kv.sasl;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.SaslMechanism;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.sasl.SaslException;
 
+import static com.couchbase.client.core.io.netty.kv.sasl.CallbackHelper.getPassword;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Stability.Internal
+@NullMarked
 public class OauthBearerSaslClient extends InitialResponseSaslClient {
-  public OauthBearerSaslClient(CallbackHandler callbackHandler) {
-    super(null, callbackHandler);
+  public OauthBearerSaslClient(
+    @Nullable String authorizationId,
+    CallbackHandler callbackHandler
+  ) {
+    super(authorizationId, callbackHandler);
   }
 
   @Override
@@ -35,11 +43,9 @@ public class OauthBearerSaslClient extends InitialResponseSaslClient {
   }
 
   @Override
-  protected byte[] getInitialResponse(
-    String authorizationId,
-    String username,
-    String password
-  ) {
-    return ("n,a=" + username + ",\1auth=Bearer " + password + "\1\1").getBytes(UTF_8);
+  protected byte[] getInitialResponse(CallbackHandler callbackHandler) throws SaslException {
+    String authorizationComponent = authorizationId == null ? "" : "a=" + authorizationId;
+    String token = getPassword(callbackHandler);
+    return ("n," + authorizationComponent + ",\1auth=Bearer " + token + "\1\1").getBytes(UTF_8);
   }
 }
