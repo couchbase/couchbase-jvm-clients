@@ -121,7 +121,10 @@ public class Cluster internal constructor(
     initialAuthenticator: Authenticator,
     connectionString: ConnectionString,
 ) {
-    private val delegatingAuthenticator: DelegatingAuthenticator = DelegatingAuthenticator.create(initialAuthenticator)
+    private val delegatingAuthenticator: DelegatingAuthenticator = DelegatingAuthenticator.create(
+        env.securityConfig().tlsEnabled(),
+        initialAuthenticator,
+    )
 
     private val couchbaseOps = CoreCouchbaseOps.create(env, delegatingAuthenticator, connectionString)
     private val searchOps = couchbaseOps.searchOps(null)

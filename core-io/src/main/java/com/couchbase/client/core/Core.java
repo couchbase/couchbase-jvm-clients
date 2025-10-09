@@ -282,10 +282,6 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     final Authenticator authenticator,
     final ConnectionString connectionString
   ) {
-    if (authenticator.requiresTls() && !environment.securityConfig().tlsEnabled()) {
-      throw new InvalidArgumentException("TLS not enabled but the Authenticator requires TLS!", null, null);
-    }
-
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
     sanityCheckPorts(connectionString);
 

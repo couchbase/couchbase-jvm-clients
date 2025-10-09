@@ -27,27 +27,34 @@ import static java.util.Objects.requireNonNull;
  * The other authenticator can be swapped at runtime
  * to support credential rotation.
  *
- * @see #create(Authenticator)
+ * @see #create(boolean, Authenticator)
  */
 @NullMarked
 @Stability.Internal
 public class DelegatingAuthenticator extends AuthenticatorWrapper {
   private volatile Authenticator delegate;
+  private final boolean tls;
 
   /**
    * Returns a new authenticator that delegates to the given authenticator.
    * <p>
    * The delegate may be updated later by calling {@link #setDelegate(Authenticator)}.
+   *
+   * @param tls true if the connection is secured by TLS, otherwise false.
    */
-  public static DelegatingAuthenticator create(Authenticator delegate) {
-    return new DelegatingAuthenticator(delegate);
+  public static DelegatingAuthenticator create(boolean tls, Authenticator delegate) {
+    return new DelegatingAuthenticator(tls, delegate);
   }
 
   public void setDelegate(Authenticator delegate) {
+    if (delegate.requiresTls() && !tls) {
+      throw new IllegalArgumentException("The specified authenticator requires TLS, but TLS is not enabled.");
+    }
     this.delegate = requireNonNull(delegate);
   }
 
-  DelegatingAuthenticator(Authenticator delegate) {
+  DelegatingAuthenticator(boolean tls, Authenticator delegate) {
+    this.tls = tls;
     setDelegate(delegate);
   }
 

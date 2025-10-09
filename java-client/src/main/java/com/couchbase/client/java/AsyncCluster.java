@@ -250,7 +250,7 @@ public class AsyncCluster {
   ) {
     this.environment = environment;
     this.connectionString = connectionString;
-    this.authenticator = DelegatingAuthenticator.create(initialAuthenticator);
+    this.authenticator = DelegatingAuthenticator.create(environment.get().securityConfig().tlsEnabled(), initialAuthenticator);
     this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), this.authenticator, connectionString);
     this.queryOps = couchbaseOps.queryOps();
     this.searchOps = couchbaseOps.searchOps(null);

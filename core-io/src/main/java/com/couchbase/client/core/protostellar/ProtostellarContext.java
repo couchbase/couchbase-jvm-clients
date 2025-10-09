@@ -21,7 +21,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.CoreIdGenerator;
 
 import java.util.Map;
@@ -41,10 +40,6 @@ public final class ProtostellarContext extends AbstractContext {
     this.env = requireNonNull(env);
     this.authenticator = requireNonNull(authenticator);
     this.coreResources = requireNonNull(coreResources);
-
-    if (authenticator.requiresTls() && !env.securityConfig().tlsEnabled()) {
-      throw InvalidArgumentException.fromMessage("TLS not enabled but the Authenticator requires TLS!");
-    }
   }
 
   public long id() {
