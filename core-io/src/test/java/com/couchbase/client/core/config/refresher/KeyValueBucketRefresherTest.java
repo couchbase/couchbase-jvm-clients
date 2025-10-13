@@ -18,10 +18,10 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.SimpleEventBus;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -39,8 +39,6 @@ import reactor.core.publisher.Flux;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.couchbase.client.core.topology.TopologyTestUtils.nodeInfo;
-import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,7 +82,8 @@ public class KeyValueBucketRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
-    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
+    when(provider.topologyPollingTriggers(any()))
+      .thenReturn(Flux.interval(Duration.ofMillis(10)).map(it -> TopologyPollingTrigger.TIMER));
 
     ClusterTopologyWithBucket config = new ClusterTopologyBuilder()
       .addNode("foo", node -> node.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))

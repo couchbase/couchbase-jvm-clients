@@ -20,9 +20,12 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.topology.TopologyRevision;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Set;
 
 /**
@@ -170,17 +173,35 @@ public interface ConfigurationProvider {
   /**
    * Signals to the config provider that the server sent a notification
    * that the cluster topology or bucket config changed.
+   *
+   * @param bucketName null if the signal is for the global topology
+   * @param availableRevision null if the server did not tell us the new revision
    */
-  void signalConfigChanged();
+  void signalNewTopologyAvailable(
+    @Nullable String bucketName,
+    @Nullable TopologyRevision availableRevision
+  );
 
   /**
-   * Returns a feed that emits {@value TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION}
-   * whenever someone calls {@link #signalConfigChanged()}.
+   * Returns a feed of polling triggers, a combination of timer ticks and server notifications.
    */
-  Flux<Long> configChangeNotifications();
+  Flux<TopologyPollingTrigger> topologyPollingTriggers(Duration timerInterval);
+
+  enum TopologyPollingTrigger {
+    TIMER,
+    SERVER_NOTIFICATION,
+  }
 
   /**
-   * The value emitted by the {@link #configChangeNotifications()} feed.
+   * Returns and removes the latest unprocessed topology revision change notification
+   * for the specified context (bucket/global), or null if there are no
+   * unprocessed notifications for the specified context.
+   * <p>
+   * Might return the greatest possible topology revision if the server told us
+   * our topology was obsolete but didn't tell us the latest revision.
+   *
+   * @param bucketName null means global
    */
-  long TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION = -1L;
+  @Nullable
+  TopologyRevision removeTopologyRevisionChangeNotification(@Nullable String bucketName);
 }

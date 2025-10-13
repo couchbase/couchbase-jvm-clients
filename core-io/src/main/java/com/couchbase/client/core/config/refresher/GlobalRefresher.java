@@ -23,13 +23,17 @@ import com.couchbase.client.core.cnc.events.config.IndividualGlobalConfigRefresh
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigVersion;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger;
 import com.couchbase.client.core.config.GlobalConfig;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.TopologyRevision;
 import com.couchbase.client.core.util.NanoTimestamp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -42,7 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.config.DefaultConfigurationProvider.TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.MAX_PARALLEL_FETCH;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.POLLER_INTERVAL;
 import static com.couchbase.client.core.config.refresher.KeyValueBucketRefresher.clampConfigRequestTimeout;
@@ -56,6 +59,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * needed.
  */
 public class GlobalRefresher {
+  private final Logger log = LoggerFactory.getLogger(GlobalRefresher.class);
 
   /**
    * Holds the parent configuration provider.
@@ -116,28 +120,49 @@ public class GlobalRefresher {
     configPollInterval = core.context().environment().ioConfig().configPollInterval();
     configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
-    pollRegistration = Flux.merge(
-        Flux.interval(pollerInterval(), core.context().environment().scheduler()),
-        provider.configChangeNotifications()
-      )
-      // Proposing a new config should be quick, but just in case it gets held up we do
-      // not want to terminate the refresher and just drop the ticks and keep going.
-      .onBackpressureDrop()
-      // If the refresher is not started yet, drop all intervals
-      .filter(v -> started)
-      // Since the POLLER_INTERVAL is smaller than the config poll interval, make sure
-      // we only emit poll events if enough time has elapsed -- or if the server told us
-      // there's a new config.
-      .filter(v -> v == TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION || lastPoll.hasElapsed(configPollInterval))
-      .flatMap(ign -> {
+    pollRegistration = provider.topologyPollingTriggers(pollerInterval())
+      .filter(trigger -> started)
+      .concatMap(trigger -> {
+        if (trigger == TopologyPollingTrigger.TIMER) {
+          // It's a polling tick! Ticks can be more frequent than the configured polling interval, or might occur right after a triggered update, so maybe skip this tick.
+          if (!lastPoll.hasElapsed(configPollInterval)) {
+            log.trace("Ignoring tick because last poll for global topology was {} ago, which is less than config poll interval {}", lastPoll.elapsed(), configPollInterval);
+            return Mono.empty();
+
+          } else {
+            log.debug("Polling for global topology because polling interval has elapsed.");
+          }
+
+        } else if (trigger == TopologyPollingTrigger.SERVER_NOTIFICATION) {
+          TopologyRevision availableRevision = provider.removeTopologyRevisionChangeNotification(null);
+          TopologyRevision currentRevision = provider.config().globalTopologyRevision();
+
+          if (availableRevision == null) {
+            log.trace("Ignoring redundant global topology change notification.");
+            return Mono.empty();
+          }
+
+          if (availableRevision.newerThan(currentRevision)) {
+            log.debug("Fetching updated global topology; available revision {} is newer than current ({}).", availableRevision, currentRevision);
+
+          } else {
+            log.debug("Skipping global topology revision {} because it's not newer than current ({}).", availableRevision, currentRevision);
+            return Mono.empty();
+          }
+
+        } else {
+          return Mono.error(new RuntimeException("Unexpected topology poll trigger: " + trigger));
+        }
+
         List<PortInfo> nodes = filterEligibleNodes();
         if (numFailedRefreshes.get() >= nodes.size()) {
           provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
           numFailedRefreshes.set(0);
         }
-        return attemptUpdateGlobalConfig(Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH));
+        return attemptUpdateGlobalConfig(Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
+          .doOnNext(provider::proposeGlobalConfig);
       })
-      .subscribe(provider::proposeGlobalConfig);
+      .subscribe();
   }
 
   /**

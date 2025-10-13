@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.TopologyRevision;
 import reactor.util.annotation.Nullable;
 
 import java.util.Collection;
@@ -75,6 +76,16 @@ public class ClusterConfig {
   public @Nullable ClusterTopology globalTopology() {
     GlobalConfig g = globalConfig();
     return g == null ? null : g.asClusterTopology();
+  }
+
+  public TopologyRevision globalTopologyRevision() {
+    ClusterTopology t = globalTopology();
+    return t == null ? TopologyRevision.ZERO : t.revision();
+  }
+
+  public TopologyRevision bucketTopologyRevision(String bucketName) {
+    ClusterTopology t = bucketTopology(bucketName);
+    return t == null ? TopologyRevision.ZERO : t.revision();
   }
 
   public BucketConfig bucketConfig(final String bucketName) {

@@ -20,6 +20,7 @@ import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigRefreshFailure;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -73,13 +74,19 @@ class GlobalRefresherTest {
     env.shutdown();
   }
 
+  static ConfigurationProvider mockConfigurationProvider(ClusterConfig clusterConfig) {
+    ConfigurationProvider provider = mock(ConfigurationProvider.class);
+    when(provider.config()).thenReturn(clusterConfig);
+    when(provider.topologyPollingTriggers(any())).
+      thenReturn(Flux.interval(FAST_CONFIG_POLL_INTERVAL).map(it -> TopologyPollingTrigger.TIMER));
+    return provider;
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   void respectsPollInterval() {
-    ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(provider.config()).thenReturn(clusterConfig);
-    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
+    ConfigurationProvider provider = mockConfigurationProvider(clusterConfig);
     ClusterTopology config = new ClusterTopologyBuilder()
       .addNode("foo", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
       .addNode("bar", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
@@ -124,10 +131,8 @@ class GlobalRefresherTest {
   @Test
   @SuppressWarnings("unchecked")
   void triggersEventIfAllNodesFailedToRefresh() {
-    ConfigurationProvider provider = mock(ConfigurationProvider.class);
     ClusterConfig clusterConfig = new ClusterConfig();
-    when(provider.config()).thenReturn(clusterConfig);
-    when(provider.configChangeNotifications()).thenReturn(Flux.empty());
+    ConfigurationProvider provider = mockConfigurationProvider(clusterConfig);
     ClusterTopology config = new ClusterTopologyBuilder()
       .addNode("foo", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
       .addNode("bar", it -> it.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))

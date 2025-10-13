@@ -417,7 +417,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     if (errorUnknown && errorCode != null && errorCode.attributes().contains(FETCH_CONFIG)) {
       log.warn("Refreshing cluster config in response to error code {} ; details={}", statusCode, errorCode);
-      endpointContext.core().configurationProvider().signalConfigChanged();
+      endpointContext.core().configurationProvider().signalNewTopologyAvailable(bucketName.orElse(null), null);
     }
 
     if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {

@@ -22,14 +22,35 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdapter;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.topology.TopologyRevision;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static java.util.Objects.requireNonNull;
 
 public class ServerPushHandler extends ChannelInboundHandlerAdapter {
+  private static final Logger log = LoggerFactory.getLogger(ServerPushHandler.class);
+
   private final EndpointContext endpointContext;
 
   public ServerPushHandler(EndpointContext endpointContext) {
     this.endpointContext = requireNonNull(endpointContext);
+  }
+
+  private static @Nullable TopologyRevision parseTopologyRevision(ByteBuf packet) {
+    ByteBuf extras = MemcacheProtocol.extras(packet).orElse(EMPTY_BUFFER);
+    switch (extras.readableBytes()) {
+      case 4:
+        return new TopologyRevision(0, extras.readUnsignedInt());
+      case 16:
+        return new TopologyRevision(extras.readLong(), extras.readLong());
+      default:
+        log.debug("Unexpected CLUSTERMAP_CHANGE_NOTIFICATION extras length: {}", extras.readableBytes());
+        return null;
+    }
   }
 
   @Override
@@ -42,7 +63,10 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
           MemcacheProtocol.ServerPushOpcode opcode = MemcacheProtocol.ServerPushOpcode.of(opcodeByte);
 
           if (opcode == MemcacheProtocol.ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
-            this.endpointContext.core().configurationProvider().signalConfigChanged();
+            String bucketOrNullIfGlobal = emptyToNull(MemcacheProtocol.keyAsString(buf));
+            TopologyRevision newRevision = parseTopologyRevision(buf);
+
+            this.endpointContext.core().configurationProvider().signalNewTopologyAvailable(bucketOrNullIfGlobal, newRevision);
             return;
           }
 

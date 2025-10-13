@@ -32,7 +32,10 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CarrierBucketConfigRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.TopologyRevision;
 import com.couchbase.client.core.util.NanoTimestamp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -48,7 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.config.ConfigurationProvider.TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION;
+import static com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger.SERVER_NOTIFICATION;
+import static com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger.TIMER;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -65,6 +69,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 @Stability.Internal
 public class KeyValueBucketRefresher implements BucketRefresher {
+  private static final Logger log = LoggerFactory.getLogger(KeyValueBucketRefresher.class);
 
   /**
    * The interval at which the poller fires.
@@ -135,19 +140,45 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.configPollInterval = core.context().environment().ioConfig().configPollInterval();
     this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
-    pollRegistration = Flux.merge(
-        Flux.interval(pollerInterval(), core.context().environment().scheduler()),
-        provider.configChangeNotifications()
-      )
-      // Proposing a new config should be quick, but just in case it gets held up we do
-      // not want to terminate the refresher and just drop the ticks and keep going.
-      .onBackpressureDrop()
+    pollRegistration = provider.topologyPollingTriggers(pollerInterval())
       .filter(v -> !registrations.isEmpty())
-      .flatMap(tick -> Flux
-        .fromIterable(registrations.keySet())
-        .flatMap(bucketName -> maybeUpdateBucket(bucketName, tick == TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION))
+      .concatMap(signal -> {
+          if (signal == TIMER) {
+            return Flux
+              .fromIterable(registrations.keySet())
+              .flatMap(bucketName -> maybeUpdateBucket(bucketName, false))
+              .doOnNext(provider::proposeBucketConfig);
+
+          } else if (signal == SERVER_NOTIFICATION) {
+            return Flux
+              .fromIterable(registrations.keySet())
+              .flatMap(bucketName -> {
+                TopologyRevision availableRevision = provider.removeTopologyRevisionChangeNotification(bucketName);
+                TopologyRevision currentRevision = provider.config().bucketTopologyRevision(bucketName);
+
+                if (availableRevision == null) {
+                  log.trace("Ignoring redundant bucket '{}' topology change notification.", bucketName);
+                  return Mono.empty();
+                }
+
+                if (availableRevision.newerThan(currentRevision)) {
+                  log.debug("Fetching updated bucket '{}' topology; available revision {} is newer than current ({}).", bucketName, availableRevision, currentRevision);
+
+                } else {
+                  log.debug("Skipping bucket '{}' topology revision {} because it's not newer than current ({}).", bucketName, availableRevision, currentRevision);
+                  return Mono.empty();
+                }
+
+                return maybeUpdateBucket(bucketName, true);
+              })
+              .doOnNext(provider::proposeBucketConfig);
+
+          } else {
+            return Mono.error(new RuntimeException("Unexpected topology poll trigger: " + signal));
+          }
+        }
       )
-      .subscribe(provider::proposeBucketConfig);
+      .subscribe();
   }
 
   /**
@@ -209,23 +240,33 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @return a {@link Mono} either with a new config or nothing to ignore.
    */
   private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name, boolean triggeredByConfigChangeNotification) {
-    NanoTimestamp last = registrations.get(name);
-    boolean overInterval = last != null && last.hasElapsed(configPollInterval);
-    boolean allowed = triggeredByConfigChangeNotification || tainted.contains(name) || overInterval;
+    NanoTimestamp last = registrations.getOrDefault(name, NanoTimestamp.never());
+    boolean overInterval = last.hasElapsed(configPollInterval);
+    boolean topologyInTransition = tainted.contains(name);
+    boolean allowed = triggeredByConfigChangeNotification || topologyInTransition || overInterval;
 
-    if (allowed) {
-      List<NodeInfo> nodes = filterEligibleNodes(name);
-      AtomicInteger counter = numFailedRefreshes.get(name);
-      if (counter != null && counter.get() >= nodes.size()) {
-        provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
-        numFailedRefreshes.get(name).set(0);
-      }
-      return fetchConfigPerNode(name, Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
-        .next()
-        .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()));
-    } else {
+    if (!allowed) {
       return Mono.empty();
     }
+
+    if (!triggeredByConfigChangeNotification) {
+      if (topologyInTransition) {
+        log.debug("Polling for topology for bucket '{}' because current topology is in transition.", name);
+
+      } else {
+        log.debug("Polling for topology for bucket '{}' because polling interval has elapsed.", name);
+      }
+    }
+
+    List<NodeInfo> nodes = filterEligibleNodes(name);
+    AtomicInteger counter = numFailedRefreshes.get(name);
+    if (counter != null && counter.get() >= nodes.size()) {
+      provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+      numFailedRefreshes.get(name).set(0);
+    }
+    return fetchConfigPerNode(name, Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
+      .next()
+      .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()));
   }
 
   /**

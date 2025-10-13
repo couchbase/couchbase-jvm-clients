@@ -68,6 +68,7 @@ import com.couchbase.client.core.topology.NetworkSelector;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.topology.PortSelector;
 import com.couchbase.client.core.topology.TopologyParser;
+import com.couchbase.client.core.topology.TopologyRevision;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.NanoTimestamp;
@@ -79,6 +80,7 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 import reactor.util.retry.Retry;
@@ -100,6 +102,7 @@ import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.Reactor.ignoreIfDone;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
@@ -185,7 +188,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
 
   private volatile NanoTimestamp lastDnsSrvLookup = NanoTimestamp.never();
 
-  private final Sinks.Many<Long> configPollTrigger = Sinks.many().multicast().directBestEffort();
+  private final Sinks.Many<TopologyPollingTrigger> topologyPollingTriggers = Sinks.many().multicast().onBackpressureBuffer(1);
+  private final TopologyChangeNotificationBuffer topologyChangeNotificationBuffer = new TopologyChangeNotificationBuffer();
 
   /**
    * Creates a new configuration provider.
@@ -812,14 +816,46 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     }
   }
 
+  private static final TopologyRevision NEWER_THAN_WHAT_WE_HAVE = new TopologyRevision(Long.MAX_VALUE, Long.MAX_VALUE) {
+    @Override
+    public String toString() {
+      return "?.?";
+    }
+  };
+
   @Override
-  public synchronized void signalConfigChanged() {
-    configPollTrigger.tryEmitNext(TRIGGERED_BY_CONFIG_CHANGE_NOTIFICATION);
+  public void signalNewTopologyAvailable(
+    @Nullable String bucketName,
+    @Nullable TopologyRevision availableRevision
+  ) {
+
+    if (availableRevision == null) {
+      availableRevision = NEWER_THAN_WHAT_WE_HAVE;
+    }
+
+    if (topologyChangeNotificationBuffer.putIfNewer(nullToEmpty(bucketName), availableRevision)) {
+      // synchronized to prevent tryEmitNext from returning EmitResult.FAIL_NON_SERIALIZED
+      synchronized (this) {
+        topologyPollingTriggers.tryEmitNext(TopologyPollingTrigger.SERVER_NOTIFICATION);
+      }
+    }
   }
 
   @Override
-  public Flux<Long> configChangeNotifications() {
-    return configPollTrigger.asFlux();
+  public Flux<TopologyPollingTrigger> topologyPollingTriggers(Duration timerInterval) {
+    Scheduler scheduler = core.context().environment().scheduler();
+
+    return Flux.merge(
+      Flux.interval(timerInterval, core.context().environment().scheduler())
+        .onBackpressureDrop() // otherwise the `interval` operator signals an error
+        .map(it -> TopologyPollingTrigger.TIMER),
+
+      topologyPollingTriggers.asFlux().publishOn(scheduler)
+    );
+  }
+
+  public @Nullable TopologyRevision removeTopologyRevisionChangeNotification(@Nullable String bucketName) {
+    return topologyChangeNotificationBuffer.remove(bucketName);
   }
 
   /**

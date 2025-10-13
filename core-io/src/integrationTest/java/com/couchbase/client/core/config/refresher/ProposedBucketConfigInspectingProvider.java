@@ -8,10 +8,12 @@ import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.topology.TopologyRevision;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -133,11 +135,16 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public void signalConfigChanged() {
+  public void signalNewTopologyAvailable(@Nullable String bucketName, @Nullable TopologyRevision availableRevision) {
   }
 
   @Override
-  public Flux<Long> configChangeNotifications() {
-    return Flux.empty();
+  public @Nullable TopologyRevision removeTopologyRevisionChangeNotification(@Nullable String bucketName) {
+    return null;
+  }
+
+  @Override
+  public Flux<TopologyPollingTrigger> topologyPollingTriggers(Duration timerInterval) {
+    return delegate.topologyPollingTriggers(timerInterval);
   }
 }

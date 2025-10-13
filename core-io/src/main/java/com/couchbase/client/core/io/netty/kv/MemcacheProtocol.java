@@ -365,6 +365,12 @@ public enum MemcacheProtocol {
     }
   }
 
+  public static String keyAsString(final ByteBuf message) {
+    return key(message)
+      .map(it -> it.toString(UTF_8))
+      .orElse("");
+  }
+
   public static Optional<ByteBuf> key(final ByteBuf message) {
     int keyLength = keyLength(message);
     if (keyLength > 0) {
