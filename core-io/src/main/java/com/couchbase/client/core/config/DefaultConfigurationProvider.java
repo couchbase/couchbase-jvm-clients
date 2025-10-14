@@ -97,6 +97,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
+import static com.couchbase.client.core.Reactor.ignoreIfDone;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.ConnectionStringUtil.fromDnsSrvOrThrowIfTlsRequired;
@@ -230,7 +231,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           env.eventBus()
         );
         topologyParser = createTopologyParser(core.environment(), seedNodes);
-        setSeedNodes(seedNodes).orThrow();
+        ignoreIfDone(setSeedNodes(seedNodes)).orThrow();
         log.info("Resolved seed nodes: {}", redactSystem(seedNodes));
       })
       .subscribeOn(Schedulers.boundedElastic()) // DNS SRV lookup blocks
