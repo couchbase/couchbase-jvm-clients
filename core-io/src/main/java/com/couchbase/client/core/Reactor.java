@@ -285,7 +285,8 @@ public class Reactor {
     });
   }
 
-  private static Sinks.EmitResult ignoreIfDone(Sinks.EmitResult result) {
+  @Stability.Internal
+  public static Sinks.EmitResult ignoreIfDone(Sinks.EmitResult result) {
     return result == FAIL_TERMINATED || result == FAIL_CANCELLED
       ? OK
       : result;
