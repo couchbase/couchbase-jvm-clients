@@ -191,6 +191,41 @@ pipeline {
             }
         }
 
+        stage('Platform testing (ARM Ubuntu 24, mock, openjdk 17)') {
+            agent { label 'qe-ubuntu24-arm64' }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
+                    dir('couchbase-jvm-clients') {
+                        doCheckout(REFSPEC)
+                        script { testAgainstMock(defaultBuildJvm(), openjdk17()) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Platform testing (AMD Ubuntu 24, mock, openjdk 17)') {
+            agent { label 'qe-ubuntu24-amd64' }
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    cleanupWorkspace()
+                    dir('couchbase-jvm-clients') {
+                        doCheckout(REFSPEC)
+                        script { testAgainstMock(defaultBuildJvm(), openjdk17()) }
+                    }
+                }
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/surefire-reports/*.xml'
+                }
+            }
+        }
 
         stage('Platform testing (ARM Ubuntu 22, mock, openjdk 17)') {
                     agent { label 'qe-ubuntu22-arm64' }
