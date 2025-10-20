@@ -106,14 +106,14 @@ pipeline {
 
     stages {
         stage('Build Scala 2.13 (OpenJDK 17)') {
-            agent { label "sdkqe" }
+            agent { label "qe-ubuntu24-amd64" }
             steps {
                 buildScala(defaultBuildJvm(), "2.13", REFSPEC)
             }
         }
 
         stage('Build Scala 3 (OpenJDK 17)') {
-            agent { label "sdkqe" }
+            agent { label "qe-ubuntu24-amd64" }
             steps {
                 buildScala(defaultBuildJvm(), "3", REFSPEC)
             }
