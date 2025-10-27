@@ -17,7 +17,6 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import org.jspecify.annotations.Nullable;
@@ -50,9 +49,6 @@ public interface BucketTopology {
   /**
    * Returns the subset of cluster nodes that are ready to service
    * requests for this bucket.
-   * <p>
-   * This method is a candidate for eventual removal, since it's used only by
-   * unit tests and the code that converts a BucketTopology to a legacy {@link BucketConfig}.
    */
   @Stability.Internal
   List<HostAndServicePorts> nodes();

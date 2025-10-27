@@ -96,6 +96,7 @@ import com.couchbase.client.core.topology.ClusterIdentifier;
 import com.couchbase.client.core.topology.ClusterIdentifierUtil;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.HostAndServicePorts;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.context.CoreTransactionsContext;
@@ -104,8 +105,8 @@ import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -135,6 +136,8 @@ import static com.couchbase.client.core.util.ConnectionStringUtil.asConnectionSt
 import static com.couchbase.client.core.util.ConnectionStringUtil.sanityCheckPorts;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * The main entry point into the core layer.
@@ -824,17 +827,34 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   }
 
   /**
+   * Returns the given topology's nodes, but with the KV service removed from nodes that aren't hosting the bucket.
+   * <p>
+   * This prevents the SDK from creating doomed KV endpoints that can never connect because
+   * "select bucket" returns an error when the node isn't hosting the bucket.
+   */
+  private static List<HostAndServicePorts> nodesWithoutIrrelevantKvServices(ClusterTopologyWithBucket topology) {
+    Set<NodeIdentifier> nodeIdsServicingBucket =
+      topology.bucket().nodes().stream()
+        .map(HostAndServicePorts::id)
+        .collect(toSet());
+
+    return topology.nodes().stream()
+      .map(node -> nodeIdsServicingBucket.contains(node.id()) ? node : node.without(ServiceType.KV))
+      .collect(toList());
+  }
+
+  /**
    * @param bucketName pass non-null if using the topology to configure bucket-scoped services.
-   *
-   * @implNote Maybe in the future we can inspect the ClusterTopology to see if it has a BucketTopology,
-   * and get the bucket name from there. However, let's make it explicit for now; this leaves the door open
-   * to using a ClusterTopologyWithBucket to configure global services (by passing a null bucket name).
    */
   private Mono<Void> reconfigureGlobalOrBucket(
     ClusterTopology topology,
     @Nullable String bucketName
   ) {
-    return Flux.fromIterable(topology.nodes())
+    List<HostAndServicePorts> nodes = bucketName == null
+      ? topology.nodes()
+      : nodesWithoutIrrelevantKvServices(topology.requireBucket());
+
+    return Flux.fromIterable(nodes)
       .flatMap(ni -> {
         Flux<Void> serviceRemoveFlux = Flux
           .fromArray(ServiceType.values())
