@@ -317,8 +317,8 @@ public class Cluster implements Closeable {
     return reactiveCluster;
   }
 
-  public void setAuthenticator(Authenticator newAuthenticator) {
-    asyncCluster.setAuthenticator(newAuthenticator);
+  public void authenticator(Authenticator newAuthenticator) {
+    asyncCluster.authenticator(newAuthenticator);
   }
 
   /**

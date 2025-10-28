@@ -89,7 +89,7 @@ public class PasswordAuthenticator implements Authenticator {
    * in the volatile field.
    *
    * @deprecated This method is difficult to use safely, because it's easy to accidentally
-   * do blocking IO inside the supplier. Please use {@code cluster.setAuthenticator(newAuthenticator)} instead.
+   * do blocking IO inside the supplier. Please use {@code cluster.authenticator(newAuthenticator)} instead.
    */
   @Deprecated
   public static PasswordAuthenticator.Builder builder(Supplier<UsernameAndPassword> supplier) {
@@ -236,7 +236,7 @@ public class PasswordAuthenticator implements Authenticator {
      * @param username A supplier that returns the username to use.
      * @return this builder for chaining purposes.
      * @deprecated This method does not support returning username and password as an atomic unit.
-     * Please use {@code cluster.setAuthenticator(newAuthenticator)} instead.
+     * Please use {@code cluster.authenticator(newAuthenticator)} instead.
      */
     @Deprecated
     public Builder username(final Supplier<String> username) {
@@ -278,7 +278,7 @@ public class PasswordAuthenticator implements Authenticator {
      * @param password the password to alongside for the username provided.
      * @return this builder for chaining purposes.
      * @deprecated This method does not support returning username and password as an atomic unit.
-     * Please use {@code cluster.setAuthenticator(newAuthenticator)} instead.
+     * Please use {@code cluster.authenticator(newAuthenticator)} instead.
      */
     @Deprecated
     public Builder password(final Supplier<String> password) {

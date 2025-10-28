@@ -269,7 +269,7 @@ public class AsyncCluster {
     ));
   }
 
-  public void setAuthenticator(Authenticator newAuthenticator) {
+  public void authenticator(Authenticator newAuthenticator) {
     authenticator.setDelegate(newAuthenticator);
   }
 

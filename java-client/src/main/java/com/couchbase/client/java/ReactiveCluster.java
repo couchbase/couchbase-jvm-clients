@@ -188,8 +188,8 @@ public class ReactiveCluster {
     this.reactor = asyncCluster.environment();
   }
 
-  public void setAuthenticator(Authenticator newAuthenticator) {
-    asyncCluster.setAuthenticator(newAuthenticator);
+  public void authenticator(Authenticator newAuthenticator) {
+    asyncCluster.authenticator(newAuthenticator);
   }
 
   /**
