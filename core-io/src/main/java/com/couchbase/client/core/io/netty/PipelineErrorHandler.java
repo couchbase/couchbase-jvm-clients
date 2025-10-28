@@ -78,7 +78,7 @@ public class PipelineErrorHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelInactive(ChannelHandlerContext ctx) {
     endpoint.notifyChannelInactive();
-    ctx.fireChannelActive();
+    ctx.fireChannelInactive();
   }
 
   /**
