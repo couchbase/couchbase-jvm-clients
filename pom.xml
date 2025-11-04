@@ -19,7 +19,7 @@
         <assertj.version>3.23.1</assertj.version>
         <log4j-slf4j-impl.version>2.20.0</log4j-slf4j-impl.version>
 
-        <jackson.version>2.19.2</jackson.version>
+        <jackson.version>2.19.4</jackson.version>
         <reactor.version>3.6.9</reactor.version>
         <reactive-streams.version>1.0.4</reactive-streams.version>
         <blockhound.version>1.0.10.RELEASE</blockhound.version>
