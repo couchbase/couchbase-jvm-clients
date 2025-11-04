@@ -25,6 +25,13 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- For parsing PEM-encoded client certificate private key -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-debug-lts8on</artifactId>
+            <version>2.73.9</version>
+        </dependency>
+
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>

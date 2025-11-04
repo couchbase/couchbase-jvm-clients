@@ -101,6 +101,8 @@ public class Capabilities {
         out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH);
         // [end]
 
+        out.add(Caps.SUPPORTS_AUTHENTICATOR);
+
         return out;
     }
 }

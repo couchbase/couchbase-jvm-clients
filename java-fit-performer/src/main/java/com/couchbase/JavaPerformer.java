@@ -16,6 +16,10 @@
 package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CertificateAuthenticator;
+import com.couchbase.client.core.env.PasswordAuthenticator;
+import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.logging.RedactionLevel;
@@ -57,6 +61,7 @@ import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ResultsUtil;
 import com.couchbase.utils.HooksUtil;
 // [end]
+import com.couchbase.client.performer.core.util.PemUtil;
 import com.couchbase.client.performer.core.util.VersionUtil;
 import com.couchbase.client.protocol.observability.SpanCreateRequest;
 import com.couchbase.client.protocol.observability.SpanCreateResponse;
@@ -81,7 +86,6 @@ import com.couchbase.client.protocol.shared.EchoResponse;
 import com.couchbase.utils.Capabilities;
 import com.couchbase.utils.ClusterConnection;
 import com.couchbase.utils.OptionsUtil;
-import com.couchbase.utils.UserSchedulerUtil;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.Status;
@@ -94,6 +98,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -206,6 +211,33 @@ public class JavaPerformer extends CorePerformer {
         response.setPerformerUserAgent("java-sdk");
     }
 
+    private Authenticator getSdkAuthenticator(ClusterConnectionCreateRequest request) {
+        if (!request.hasAuthenticator()) {
+            return PasswordAuthenticator.create(
+                request.getClusterUsername(),
+                request.getClusterPassword()
+            );
+        }
+
+        var fitAuth = request.getAuthenticator();
+        if (fitAuth.hasPasswordAuth()) {
+            var fitUsernameAndPassword = fitAuth.getPasswordAuth();
+            return PasswordAuthenticator.create(
+                fitUsernameAndPassword.getUsername(),
+                fitUsernameAndPassword.getPassword()
+            );
+        }
+
+        if (fitAuth.hasCertificateAuth()) {
+            var fitClientCert = fitAuth.getCertificateAuth();
+            var privateKey = PemUtil.parseRsaPrivateCrtKey(fitClientCert.getKey());
+            var certChain = SecurityConfig.decodeCertificates(List.of(fitClientCert.getCert()));
+            return CertificateAuthenticator.fromKey(privateKey, null, certChain);
+        }
+
+        throw new UnsupportedOperationException("Unrecognized authenticator: " + fitAuth);
+    }
+
     @Override
     public void clusterConnectionCreate(ClusterConnectionCreateRequest request,
                                         StreamObserver<ClusterConnectionCreateResponse> responseObserver) {
@@ -231,6 +263,8 @@ public class JavaPerformer extends CorePerformer {
                 });
             });
 
+            Authenticator authenticator = getSdkAuthenticator(request);
+
             // [if:3.2.6]
             // 3.2.6 added an easy way for SDK users to configure the SDK without having to take ownership of
             // ClusterEnvironment management.  It also allows passing parameters in the connection string, which
@@ -238,8 +272,7 @@ public class JavaPerformer extends CorePerformer {
             var clusterEnvironment = OptionsUtil.convertClusterConfigToConsumer(request, getCluster, onClusterConnectionClose);
 
             var connection = new ClusterConnection(request.getClusterHostname(),
-                    request.getClusterUsername(),
-                    request.getClusterPassword(),
+                    authenticator,
                     clusterEnvironment,
                     onClusterConnectionClose);
             // [end]
@@ -249,8 +282,7 @@ public class JavaPerformer extends CorePerformer {
             //? var clusterEnvironment = OptionsUtil.convertClusterConfig(request, getCluster, onClusterConnectionClose);
 
             //? var connection = new ClusterConnection(request.getClusterHostname(),
-            //?         request.getClusterUsername(),
-            //?         request.getClusterPassword(),
+            //?         authenticator,
             //?         clusterEnvironment,
             //?         onClusterConnectionClose);
             // [end]
@@ -261,7 +293,7 @@ public class JavaPerformer extends CorePerformer {
 
             // Fine to have a default and a per-test connection open, any more suggests a leak
             logger.info("Dumping {} cluster connections for resource leak troubleshooting:", clusterConnections.size());
-            clusterConnections.forEach((key, value) -> logger.info("Cluster connection {} {}", key, value.username));
+            clusterConnections.forEach((key, value) -> logger.info("Cluster connection {} {}", key, value.authenticator));
 
             responseObserver.onNext(ClusterConnectionCreateResponse.newBuilder()
                     .setClusterConnectionCount(clusterConnections.size())
@@ -291,8 +323,8 @@ public class JavaPerformer extends CorePerformer {
         try {
             ClusterConnection connection = getClusterConnection(request.getClusterConnectionId());
 
-            logger.info("Starting transaction on cluster connection {} created for user {}",
-                    request.getClusterConnectionId(), connection.username);
+            logger.info("Starting transaction on cluster connection {} created with authenticator {}",
+                    request.getClusterConnectionId(), connection.authenticator);
 
             TransactionResult response;
             var counters = new Counters();
@@ -478,9 +510,9 @@ public class JavaPerformer extends CorePerformer {
         try {
             var connection = getClusterConnection(request.getClusterConnectionId());
 
-            logger.info("Performing single query transaction on cluster connection {} (user {})",
+            logger.info("Performing single query transaction on cluster connection {} (authenticator {})",
                     request.getClusterConnectionId(),
-                    connection.username);
+                    connection.authenticator);
 
             TransactionSingleQueryResponse ret = SingleQueryTransactionExecutor.execute(request, connection, spans);
 

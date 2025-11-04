@@ -17,6 +17,7 @@ package com.couchbase.utils;
 
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ClusterOptions;
@@ -35,20 +36,19 @@ import java.util.function.Consumer;
 public class ClusterConnection {
     private final Cluster cluster;
     @Nullable private final ClusterEnvironment environmentOwnedByCaller;
-    public final String username;
+    public final Authenticator authenticator;
     // Commands to run when this ClusterConnection is being closed.  Allows closing other related resources that have
     // the same lifetime.
     private final List<Runnable> onClusterConnectionClose;
 
     public ClusterConnection(String hostname,
-                             String username,
-                             String password,
+                             Authenticator authenticator,
                              @Nullable ClusterEnvironment.Builder config,
                              ArrayList<Runnable> onClusterConnectionClose)  {
-        this.username = username;
-        this.onClusterConnectionClose = onClusterConnectionClose;
+      this.authenticator = authenticator;
+      this.onClusterConnectionClose = onClusterConnectionClose;
 
-        var co = ClusterOptions.clusterOptions(username, password);
+        var co = ClusterOptions.clusterOptions(authenticator);
         if (config != null) {
             this.environmentOwnedByCaller = config.build();
             co.environment(this.environmentOwnedByCaller);
@@ -62,14 +62,13 @@ public class ClusterConnection {
 
     // [if:3.2.6]
     public ClusterConnection(String hostname,
-                             String username,
-                             String password,
+                             Authenticator authenticator,
                              @Nullable Consumer<ClusterEnvironment.Builder> config,
                              ArrayList<Runnable> onClusterConnectionClose)  {
-        this.username = username;
+        this.authenticator = authenticator;
         this.onClusterConnectionClose = onClusterConnectionClose;
 
-        var co = ClusterOptions.clusterOptions(username, password)
+        var co = ClusterOptions.clusterOptions(authenticator)
                 .environment(env -> {
                     if (config != null) {
                         config.accept(env);
