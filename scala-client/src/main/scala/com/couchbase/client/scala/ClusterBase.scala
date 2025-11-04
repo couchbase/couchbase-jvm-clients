@@ -82,4 +82,13 @@ trait ClusterBase { this: Cluster =>
     new Bucket(async.bucket(bucketName))
   }
 
+  /** Sets a new authenticator, that will be used for any future connections created to Couchbase services.
+   *
+   * Note that existing connections will not be terminated.
+   *
+   * This method is thread-safe.
+   */
+  def authenticator(authenticator: Authenticator): Try[Unit] = {
+    async.authenticator(authenticator)
+  }
 }

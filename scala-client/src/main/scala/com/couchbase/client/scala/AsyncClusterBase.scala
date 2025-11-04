@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.diagnostics._
-import com.couchbase.client.core.env.Authenticator
+import com.couchbase.client.core.env.{Authenticator, DelegatingAuthenticator}
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.service.ServiceType
 import com.couchbase.client.core.transaction.CoreTransactionsReactive
@@ -67,12 +67,14 @@ import scala.util.{Failure, Success, Try}
   */
 trait AsyncClusterBase { this: AsyncCluster =>
   private[scala] implicit lazy val ec: ExecutionContext = environment.ec
+  private[scala] val delegatingAuthenticator            =
+    DelegatingAuthenticator.create(environment.coreEnv.securityConfig().tlsEnabled(), authenticator)
 
   /** The environment used to create this cluster */
   val env: ClusterEnvironment = environment
 
   private[scala] val couchbaseOps =
-    CoreCouchbaseOps.create(environment.coreEnv, authenticator, connectionString)
+    CoreCouchbaseOps.create(environment.coreEnv, delegatingAuthenticator, connectionString)
 
   // Only used by tests now
   private[couchbase] def core: Core = couchbaseOps match {
@@ -104,6 +106,16 @@ trait AsyncClusterBase { this: AsyncCluster =>
       case _          =>
     }
     new AsyncBucket(bucketName, couchbaseOps, environment)
+  }
+
+  /** Sets a new authenticator, that will be used for any future connections created to Couchbase services.
+    *
+    * Note that existing connections will not be terminated.
+    *
+    * This method is thread-safe.
+    */
+  def authenticator(authenticator: Authenticator): Try[Unit] = {
+    Try(delegatingAuthenticator.setDelegate(authenticator))
   }
 
   private[scala] def performGlobalConnect(): Unit = {
