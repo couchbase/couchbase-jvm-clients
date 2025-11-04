@@ -18,7 +18,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- When bumping this, it may be necessary to bump the grpc-netty dependency in protostellar/pom.xml also -->
-        <netty.version>4.1.127.Final</netty.version>
+        <netty.version>4.1.128.Final</netty.version>
         <jackson.version>2.19.4</jackson.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
