@@ -20,7 +20,6 @@ import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.util.CbCollections;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.NativeImageHelper;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
@@ -37,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
 
 /**
@@ -281,7 +281,7 @@ public class DefaultEventBus implements EventBus {
         overflowInfo.clear();
         return Mono.empty();
       })
-      .then(Flux.interval(Duration.ofMillis(10), scheduler).takeUntil(i -> !runningThread.isAlive()).then())
+      .then(safeInterval(Duration.ofMillis(10), scheduler).takeUntil(i -> !runningThread.isAlive()).then())
       .timeout(timeout, scheduler);
   }
 

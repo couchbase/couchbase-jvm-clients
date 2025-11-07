@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 
+import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.cnc.events.transaction.TransactionEvent.DEFAULT_CATEGORY;
 
 /**
@@ -127,7 +128,7 @@ public class CoreTransactionsCleanup {
         LOGGER_REGULAR.debug("Starting background cleanup thread to find transactions from this client");
 
         // Periodically check and drain the cleanupQueue
-        Flux.interval(Duration.ofMillis(100), core.context().environment().transactionsSchedulers().schedulerCleanup())
+        safeInterval(Duration.ofMillis(100), core.context().environment().transactionsSchedulers().schedulerCleanup())
 
                 .flatMap(v -> {
                     if (stop) {

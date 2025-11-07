@@ -11,6 +11,18 @@
     <property name="fileExtensions" value="java,scala"/>
   </module>
 
+  <module name="RegexpMultiline">
+    <!-- Match static imports and qualified references. -->
+    <property name="format" value="Flux\s*\.\s*interval"/>
+    <property name="message" value="Please use Reactor.safeInterval() instead of Flux.interval()"/>
+  </module>
+
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CHECKSTYLE:OFF ([\w\|]+)"/>
+    <property name="onCommentFormat" value="CHECKSTYLE:ON ([\w\|]+)"/>
+    <property name="checkFormat" value="$1"/>
+  </module>
+
   <module name="TreeWalker">
     <module name="IllegalImport">
       <!-- Prevent unintentional dependency on unbundled Jackson -->

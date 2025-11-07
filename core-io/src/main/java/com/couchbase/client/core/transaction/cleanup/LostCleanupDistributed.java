@@ -64,6 +64,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.Reactor.safeInterval;
+import static com.couchbase.client.core.Reactor.unsafeInterval;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION;
 import static com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -358,7 +360,7 @@ public class LostCleanupDistributed {
     }
 
     private void periodicallyCheckCleanupSet() {
-        cleanupThreadLauncher = Flux.interval(Duration.ZERO, Duration.ofSeconds(1), core.context().environment().transactionsSchedulers().schedulerCleanup())
+        cleanupThreadLauncher = safeInterval(Duration.ZERO, Duration.ofSeconds(1), core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .concatMap(v -> Flux.fromIterable(cleanupSet))
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
                 .concatMap(this::createThreadForCollectionIfNeeded)
@@ -439,7 +441,7 @@ public class LostCleanupDistributed {
                     // handling the first ATR takes 0.3 seconds, the next should execute 0.7 seconds later.
                     // Similar if the first ATR takes > 1 second, the next should execute instantly.
                     return Flux.zip(Flux.fromIterable(atrsHandledByThisClient),
-                                    Flux.interval(Duration.ofNanos(checkAtrEveryNNanos)))
+                                    unsafeInterval(Duration.ofNanos(checkAtrEveryNNanos), core.context().environment().scheduler()))
                             .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
 
                         // Where the ATR cleanup magic happens

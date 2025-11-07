@@ -100,6 +100,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.Reactor.ignoreIfDone;
+import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbStrings.nullToEmpty;
@@ -846,8 +847,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     Scheduler scheduler = core.context().environment().scheduler();
 
     return Flux.merge(
-      Flux.interval(timerInterval, core.context().environment().scheduler())
-        .onBackpressureDrop() // otherwise the `interval` operator signals an error
+      safeInterval(timerInterval, core.context().environment().scheduler())
         .map(it -> TopologyPollingTrigger.TIMER),
 
       topologyPollingTriggers.asFlux().publishOn(scheduler)

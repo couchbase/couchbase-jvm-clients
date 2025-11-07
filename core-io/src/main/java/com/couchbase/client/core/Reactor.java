@@ -30,6 +30,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Operators;
 import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 
 import java.time.Duration;
@@ -290,5 +292,40 @@ public class Reactor {
     return result == FAIL_TERMINATED || result == FAIL_CANCELLED
       ? OK
       : result;
+  }
+
+  /**
+   * Alias for {@link Flux#interval(Duration, Scheduler)} that doesn't trigger a Checkstyle error.
+   * <p>
+   * This operation is "unsafe" because if there is backpressure it emits the dreaded OverflowException: "interval doesn't support small downstream requests that replenish slower than the ticks".
+   */
+  @Stability.Internal
+  public static Flux<Long> unsafeInterval(Duration d, Scheduler scheduler) {
+    // CHECKSTYLE:OFF RegexpMultiline - Allow Flux.interval
+    return Flux.interval(d, scheduler);
+    // CHECKSTYLE:ON RegexpMultiline
+  }
+
+  /**
+   * Like {@link Flux#interval(Duration, Scheduler)}, but drops signals (instead of exploding) when there is insufficient demand.
+   * <p>
+   * Avoids the dreaded OverflowException: "interval doesn't support small downstream requests that replenish slower than the ticks".
+   */
+  @Stability.Internal
+  public static Flux<Long> safeInterval(Duration period, Scheduler scheduler) {
+    return safeInterval(period, period, scheduler);
+  }
+
+  /**
+   * Like {@link Flux#interval(Duration, Duration, Scheduler)}, but drops signals (instead of exploding) when there is insufficient demand.
+   * <p>
+   * Avoids the dreaded OverflowException: "interval doesn't support small downstream requests that replenish slower than the ticks".
+   */
+  @Stability.Internal
+  public static Flux<Long> safeInterval(Duration delay, Duration period, Scheduler scheduler) {
+    // CHECKSTYLE:OFF RegexpMultiline - Allow Flux.interval
+    return Flux.interval(delay, period, scheduler)
+      .onBackpressureDrop();
+    // CHECKSTYLE:ON RegexpMultiline
   }
 }

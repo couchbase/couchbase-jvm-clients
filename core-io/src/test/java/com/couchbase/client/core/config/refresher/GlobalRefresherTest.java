@@ -34,11 +34,12 @@ import com.couchbase.client.core.util.NanoTimestamp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
@@ -78,7 +79,7 @@ class GlobalRefresherTest {
     ConfigurationProvider provider = mock(ConfigurationProvider.class);
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.topologyPollingTriggers(any())).
-      thenReturn(Flux.interval(FAST_CONFIG_POLL_INTERVAL).map(it -> TopologyPollingTrigger.TIMER));
+      thenReturn(safeInterval(FAST_CONFIG_POLL_INTERVAL, Schedulers.parallel()).map(it -> TopologyPollingTrigger.TIMER));
     return provider;
   }
 

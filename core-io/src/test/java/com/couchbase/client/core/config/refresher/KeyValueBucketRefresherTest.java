@@ -34,11 +34,12 @@ import com.couchbase.client.core.util.Bytes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,7 +84,7 @@ public class KeyValueBucketRefresherTest {
     ClusterConfig clusterConfig = new ClusterConfig();
     when(provider.config()).thenReturn(clusterConfig);
     when(provider.topologyPollingTriggers(any()))
-      .thenReturn(Flux.interval(Duration.ofMillis(10)).map(it -> TopologyPollingTrigger.TIMER));
+      .thenReturn(safeInterval(Duration.ofMillis(10), Schedulers.parallel()).map(it -> TopologyPollingTrigger.TIMER));
 
     ClusterTopologyWithBucket config = new ClusterTopologyBuilder()
       .addNode("foo", node -> node.ports(mapOf(ServiceType.KV, 11210, ServiceType.MANAGER, 8091)))
