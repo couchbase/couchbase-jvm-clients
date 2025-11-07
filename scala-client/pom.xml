@@ -322,7 +322,6 @@
                 <dependency>
                     <groupId>com.fasterxml.jackson.module</groupId>
                     <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
-                    <version>${jackson.version}</version>
                     <optional>true</optional>
                 </dependency>
 
@@ -381,20 +380,7 @@
 
                 <dependency>
                     <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                    <version>${jackson.version}</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-annotations</artifactId>
-                    <version>${jackson.version}</version>
-                    <scope>test</scope>
-                </dependency>
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
-                    <version>${jackson.version}</version>
                     <scope>test</scope>
                 </dependency>
 
@@ -440,27 +426,12 @@
                     <version>${scala.circe.version}</version>
                     <scope>test</scope>
                 </dependency>
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                    <version>${jackson.version}</version>
-                    <scope>test</scope>
-                </dependency>
-
-                <dependency>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-annotations</artifactId>
-                    <version>${jackson.version}</version>
-                    <scope>test</scope>
-                </dependency>
 
                 <dependency>
                     <groupId>com.fasterxml.jackson.core</groupId>
                     <artifactId>jackson-databind</artifactId>
-                    <version>${jackson.version}</version>
                     <scope>test</scope>
                 </dependency>
-
 
                 <dependency>
                     <groupId>org.json4s</groupId>
@@ -479,7 +450,6 @@
                 <dependency>
                     <groupId>com.fasterxml.jackson.module</groupId>
                     <artifactId>jackson-module-scala_${scala.compat.version}</artifactId>
-                    <version>${jackson.version}</version>
                     <scope>test</scope>
                 </dependency>
             </dependencies>
