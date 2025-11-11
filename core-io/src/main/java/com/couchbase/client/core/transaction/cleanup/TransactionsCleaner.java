@@ -32,6 +32,7 @@ import com.couchbase.client.core.transaction.components.ActiveTransactionRecordU
 import com.couchbase.client.core.transaction.components.DocRecord;
 import com.couchbase.client.core.transaction.components.DocumentGetter;
 import com.couchbase.client.core.transaction.components.DurabilityLevelUtil;
+import com.couchbase.client.core.transaction.components.TransactionLinks;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibilityStage;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
@@ -145,18 +146,19 @@ public class TransactionsCleaner {
                                   CleanupRequest req,
                                   SpanWrapper pspan) {
         return doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
-            CbPreconditions.check(doc.links() != null);
-            CbPreconditions.check(doc.links().isDocumentInTransaction());
-            CbPreconditions.check(doc.links().stagedContentJsonOrBinary().isPresent());
+            TransactionLinks links = doc.links();
+            CbPreconditions.check(links != null);
+            CbPreconditions.check(links.isDocumentInTransaction());
+            CbPreconditions.check(links.stagedContentJsonOrBinary().isPresent());
 
-            byte[] content = doc.links().stagedContentJsonOrBinary().get();
+            byte[] content = links.stagedContentJsonOrBinary().get();
 
             return hooks.beforeCommitDoc.apply(doc.id()) // Testing hook
 
                     .then(Mono.defer(() -> {
                         if (lir.tombstone()) {
-                            return TransactionKVHandler.insert(core, collection, doc.id(), content, doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
-                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan);
+                            return TransactionKVHandler.insert(core, collection, doc.id(), content, links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
+                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan, links.stagedExpiry().orElse(null));
                         } else {
                             List<SubdocMutateRequest.Command> commands = Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 0),
@@ -165,8 +167,8 @@ public class TransactionsCleaner {
                             );
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
-                                    lir.tombstone(), false, doc.cas(), doc.links().stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
-                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
+                                    lir.tombstone(), false, doc.cas(), links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
+                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan, links.stagedExpiry().orElse(null),
                                     commands);
                         }
                     }))

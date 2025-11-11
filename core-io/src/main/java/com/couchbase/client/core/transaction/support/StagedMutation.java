@@ -16,6 +16,7 @@
 package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.transaction.components.DocumentMetadata;
@@ -39,6 +40,7 @@ public class StagedMutation {
     // What the document's user flags will be set to post-transaction.
     public final int stagedUserFlags;
     public final StagedMutationType type;
+    public final @Nullable CoreExpiry expiry;
 
     public StagedMutation(String operationId,
                           String id,
@@ -49,7 +51,8 @@ public class StagedMutation {
                           int currentUserFlags,
                           byte[] content,
                           int stagedUserFlags,
-                          StagedMutationType type) {
+                          StagedMutationType type,
+                          @Nullable CoreExpiry expiry) {
         this.operationId = operationId;
         this.id = id;
         this.collection = collection;
@@ -60,6 +63,7 @@ public class StagedMutation {
         this.content = content;
         this.stagedUserFlags = stagedUserFlags;
         this.type = type;
+        this.expiry = expiry;
     }
 
     @Override

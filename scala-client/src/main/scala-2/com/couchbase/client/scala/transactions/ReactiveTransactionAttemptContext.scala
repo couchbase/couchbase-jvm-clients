@@ -213,6 +213,7 @@ class ReactiveTransactionAttemptContext private[scala] (
               id,
               encoded.encoded,
               encoded.flags,
+              null,
               new SpanWrapper(span)
             )
           )
@@ -253,7 +254,7 @@ class ReactiveTransactionAttemptContext private[scala] (
         FutureConversions
           .javaMonoToScalaMono(
             internal
-              .replace(doc.internal, encoded.encoded, encoded.flags, new SpanWrapper(span))
+              .replace(doc.internal, encoded.encoded, encoded.flags, null, new SpanWrapper(span))
           )
           .map(result => TransactionGetResult(result, options.transcoder))
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))

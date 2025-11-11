@@ -17,6 +17,7 @@
 package com.couchbase.client.core.transaction.components;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 
@@ -48,6 +49,7 @@ public class TransactionLinks {
     private final Optional<ForwardCompatibility> forwardCompatibility;
     private final Optional<String> stagedOperationId;
     private final Optional<Integer> stagedUserFlags;
+    private final Optional<CoreExpiry> stagedExpiry;
 
     /**
      * This is not part of the transactional metadata.  It's here for legacy reasons and could be refactoring into
@@ -72,7 +74,8 @@ public class TransactionLinks {
             Optional<String> crc32OfStaging,
             Optional<ForwardCompatibility> forwardCompatibility,
             Optional<String> stagedOperationId,
-            Optional<Integer> stagedUserFlags) {
+            Optional<Integer> stagedUserFlags,
+            Optional<CoreExpiry> stagedExpiry) {
         this.stagedContentJson = Objects.requireNonNull(stagedContentJson);
         this.stagedContentBinary = Objects.requireNonNull(stagedContentBinary);
         this.atrId = Objects.requireNonNull(atrId);
@@ -90,6 +93,7 @@ public class TransactionLinks {
         this.forwardCompatibility = Objects.requireNonNull(forwardCompatibility);
         this.stagedOperationId = Objects.requireNonNull(stagedOperationId);
         this.stagedUserFlags = stagedUserFlags;
+        this.stagedExpiry = Objects.requireNonNull(stagedExpiry);
     }
 
     /**
@@ -192,6 +196,10 @@ public class TransactionLinks {
         return stagedUserFlags;
     }
 
+    public Optional<CoreExpiry> stagedExpiry() {
+        return stagedExpiry;
+    }
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("TransactionLinks{");
@@ -217,6 +225,8 @@ public class TransactionLinks {
         sb.append(revidPreTxn.orElse("none"));
         sb.append(',');
         sb.append(exptimePreTxn.orElse(-1L));
+        sb.append(',');
+        sb.append(stagedExpiry.map(CoreExpiry::toString).orElse("-"));
         sb.append("}}");
         return sb.toString();
     }

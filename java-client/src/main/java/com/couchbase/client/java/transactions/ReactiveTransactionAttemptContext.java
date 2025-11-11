@@ -220,7 +220,7 @@ public class ReactiveTransactionAttemptContext {
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
 
         return reactor.publishOnUserScheduler(
-            internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+            internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())
@@ -257,7 +257,7 @@ public class ReactiveTransactionAttemptContext {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
         return reactor.publishOnUserScheduler(
-            internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), new SpanWrapper(span))
+            internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())
