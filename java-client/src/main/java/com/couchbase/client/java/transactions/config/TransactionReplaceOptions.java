@@ -17,8 +17,14 @@ package com.couchbase.client.java.transactions.config;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.java.codec.Transcoder;
+
+import java.time.Duration;
+import java.time.Instant;
 import reactor.util.annotation.Nullable;
+
+import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Operations controlling a transactional replace.
@@ -26,6 +32,7 @@ import reactor.util.annotation.Nullable;
 @Stability.Volatile
 public class TransactionReplaceOptions {
     private @Nullable Transcoder transcoder;
+    private @Nullable CoreExpiry expiry;
 
     private TransactionReplaceOptions() {
     }
@@ -52,6 +59,28 @@ public class TransactionReplaceOptions {
         return this;
     }
 
+    /**
+     * Sets an expiry for the document. By default the document will never expire.
+     *
+     * @param expiry the duration after which the document will expire (zero duration means never expire).
+     * @return this options class for chaining purposes.
+     */
+    public TransactionReplaceOptions expiry(Duration expiry) {
+        this.expiry = CoreExpiry.of(notNull(expiry, "expiry"));
+        return this;
+    }
+
+    /**
+     * Sets the expiry for the document. By default the document will never expire.
+     *
+     * @param expiry the point in time when the document will expire (epoch second zero means never expire).
+     * @return this options class for chaining purposes.
+     */
+    public TransactionReplaceOptions expiry(Instant expiry) {
+        this.expiry = CoreExpiry.of(notNull(expiry, "expiry"));
+        return this;
+    }
+
     @Stability.Internal
     public TransactionReplaceOptions.Built build() {
         return new TransactionReplaceOptions.Built();
@@ -64,6 +93,10 @@ public class TransactionReplaceOptions {
 
         public Transcoder transcoder() {
             return transcoder;
+        }
+
+        public CoreExpiry expiry() {
+            return expiry;
         }
     }
 }

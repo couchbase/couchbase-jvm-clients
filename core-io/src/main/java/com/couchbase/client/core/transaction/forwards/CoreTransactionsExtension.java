@@ -55,6 +55,7 @@ public enum CoreTransactionsExtension {
     EXT_PARALLEL_UNSTAGING("PU"),
     EXT_REPLICA_FROM_PREFERRED_GROUP("RP"),
     EXT_GET_MULTI("GM"),
+    EXT_TTL("TTL"),
     ;
 
     private final String value;
