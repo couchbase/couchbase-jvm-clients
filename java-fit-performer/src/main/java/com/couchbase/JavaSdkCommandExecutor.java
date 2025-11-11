@@ -74,6 +74,8 @@ import com.couchbase.utils.ContentAsUtil;
 import com.google.protobuf.ByteString;
 // [if:3.4.5]
 import com.couchbase.search.SearchHelper;
+
+import static com.couchbase.JavaPerformer.toSdkAuthenticator;
 import static com.couchbase.search.SearchHelper.handleSearchQueryBlocking;
 // [end]
 // [if:3.6.0]
@@ -561,6 +563,14 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     // [if:3.6.0]
     if (clc.hasSearchV2()) {
       return handleSearchBlocking(connection.cluster(), null, spans, clc.getSearchV2(), op);
+    }
+    // [end]
+
+    // [if:3.10.0]
+    if (clc.hasAuthenticator()) {
+      var newAuthenticator = toSdkAuthenticator(clc.getAuthenticator());
+      connection.cluster().authenticator(newAuthenticator);
+      setSuccess(result);
     }
     // [end]
 

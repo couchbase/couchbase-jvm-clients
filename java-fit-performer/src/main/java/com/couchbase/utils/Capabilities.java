@@ -103,6 +103,10 @@ public class Capabilities {
 
         out.add(Caps.SUPPORTS_AUTHENTICATOR);
 
+        // [if:3.10.0]
+        out.add(Caps.SDK_SET_AUTHENTICATOR);
+        // [end]
+
         return out;
     }
 }

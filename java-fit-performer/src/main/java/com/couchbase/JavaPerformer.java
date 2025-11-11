@@ -219,23 +219,26 @@ public class JavaPerformer extends CorePerformer {
             );
         }
 
-        var fitAuth = request.getAuthenticator();
-        if (fitAuth.hasPasswordAuth()) {
-            var fitUsernameAndPassword = fitAuth.getPasswordAuth();
-            return PasswordAuthenticator.create(
+        return toSdkAuthenticator(request.getAuthenticator());
+    }
+    
+    public static Authenticator toSdkAuthenticator(com.couchbase.client.protocol.shared.Authenticator fitAuth) {
+      if (fitAuth.hasPasswordAuth()) {
+        var fitUsernameAndPassword = fitAuth.getPasswordAuth();
+        return PasswordAuthenticator.create(
                 fitUsernameAndPassword.getUsername(),
                 fitUsernameAndPassword.getPassword()
-            );
-        }
+        );
+      }
 
-        if (fitAuth.hasCertificateAuth()) {
-            var fitClientCert = fitAuth.getCertificateAuth();
-            var privateKey = PemUtil.parseRsaPrivateCrtKey(fitClientCert.getKey());
-            var certChain = SecurityConfig.decodeCertificates(List.of(fitClientCert.getCert()));
-            return CertificateAuthenticator.fromKey(privateKey, null, certChain);
-        }
+      if (fitAuth.hasCertificateAuth()) {
+        var fitClientCert = fitAuth.getCertificateAuth();
+        var privateKey = PemUtil.parseRsaPrivateCrtKey(fitClientCert.getKey());
+        var certChain = SecurityConfig.decodeCertificates(List.of(fitClientCert.getCert()));
+        return CertificateAuthenticator.fromKey(privateKey, null, certChain);
+      }
 
-        throw new UnsupportedOperationException("Unrecognized authenticator: " + fitAuth);
+      throw new UnsupportedOperationException("Unrecognized authenticator: " + fitAuth);
     }
 
     @Override

@@ -23,6 +23,8 @@ import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.MutationResult;
 import com.couchbase.client.protocol.sdk.Command;
 import com.couchbase.utils.ContentAsUtil;
+
+import static com.couchbase.JavaPerformer.toSdkAuthenticator;
 import static com.couchbase.JavaSdkCommandExecutor.*;
 import static com.couchbase.client.protocol.streams.Type.STREAM_KV_GET_ALL_REPLICAS;
 // [if:3.2.1]
@@ -676,6 +678,17 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
 
       return returnQueryResult(request, withSchedulerCheck(queryResult), result, start);
     }
+
+    // [if:3.10.0]
+    if (clc.hasAuthenticator()) {
+      return Mono.fromCallable(() -> {
+        var newAuthenticator = toSdkAuthenticator(clc.getAuthenticator());
+        connection.cluster().authenticator(newAuthenticator);
+        setSuccess(result);
+        return result.build();
+      });
+    }
+    // [end]
 
     return Mono.error(new UnsupportedOperationException("Unknown command " + op));
   }
