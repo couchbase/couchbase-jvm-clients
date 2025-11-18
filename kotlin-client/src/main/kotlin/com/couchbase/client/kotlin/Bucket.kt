@@ -76,6 +76,7 @@ public class Bucket internal constructor(
 
     private val scopeCache = ConcurrentHashMap<String, Scope>()
 
+    @Suppress("DeprecatedCallableAddReplaceWith")
     @Deprecated(level = WARNING, message = viewsDeprecationMessage)
     public val viewIndexes: ViewIndexManager
         get() = ViewIndexManager(this)
@@ -251,6 +252,6 @@ public class Bucket internal constructor(
             ?: BucketConfigUtil.waitForBucketConfig(core, name, timeout.toJavaDuration()).asFlow().single()
 }
 
-private const val viewsDeprecationMessage = "Views are deprecated in Couchbase Server 7.0+. " +
-        "Views support in Couchbase Server will be removed in a future release, " +
-        "but only after the core functionality of the View engine is covered by other services."
+private const val viewsDeprecationMessage = "Views are deprecated in Couchbase Server 7.0+, and will be removed from a future server version." +
+        " Views are not compatible with the Magma storage engine." +
+        " Instead of views, use indexes and queries using the Index Service (GSI) and the Query Service (SQL++)."

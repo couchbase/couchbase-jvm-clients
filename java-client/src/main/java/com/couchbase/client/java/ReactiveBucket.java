@@ -96,6 +96,10 @@ public class ReactiveBucket {
     return new ReactiveCollectionManager(environment(), asyncBucket.collections());
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public ReactiveViewIndexManager viewIndexes() {
     return new ReactiveViewIndexManager(environment(), asyncBucket.viewIndexes());
   }
@@ -155,10 +159,18 @@ public class ReactiveBucket {
     return defaultScope().collection(collectionName);
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public Mono<ReactiveViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     return Mono.defer(() -> {
       notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name()));

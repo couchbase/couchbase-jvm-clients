@@ -118,6 +118,10 @@ public class AsyncBucket {
     return new AsyncCollectionManager(couchbaseOps.collectionManager(name), cluster);
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public AsyncViewIndexManager viewIndexes() {
     return new AsyncViewIndexManager(core(), name, cluster);
   }
@@ -177,10 +181,18 @@ public class AsyncBucket {
     return defaultScope().collection(collectionName);
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public CompletableFuture<ViewResult> viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     notNull(options, "ViewOptions", () -> new ReducedViewErrorContext(designDoc, viewName, name));
     ViewOptions.Built opts = options.build();
