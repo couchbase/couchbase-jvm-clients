@@ -105,6 +105,7 @@ public class Capabilities {
 
         // [if:3.10.0]
         out.add(Caps.SDK_SET_AUTHENTICATOR);
+        out.add(Caps.SDK_JWT);
         // [end]
 
         return out;

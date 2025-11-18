@@ -18,6 +18,9 @@ package com.couchbase;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CertificateAuthenticator;
+// [if:3.10.0]
+import com.couchbase.client.core.env.JwtAuthenticator;
+// [end]
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -237,6 +240,13 @@ public class JavaPerformer extends CorePerformer {
         var certChain = SecurityConfig.decodeCertificates(List.of(fitClientCert.getCert()));
         return CertificateAuthenticator.fromKey(privateKey, null, certChain);
       }
+
+      // [if:3.10.0]
+      if (fitAuth.hasJwtAuth()) {
+        var fitJwtAuth = fitAuth.getJwtAuth();
+        return JwtAuthenticator.create(fitJwtAuth.getJwt());
+      }
+      // [end]
 
       throw new UnsupportedOperationException("Unrecognized authenticator: " + fitAuth);
     }
