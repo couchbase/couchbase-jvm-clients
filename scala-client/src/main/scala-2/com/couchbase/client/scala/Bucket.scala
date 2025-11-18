@@ -38,6 +38,10 @@ class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
   lazy val reactive: ReactiveBucket = new ReactiveBucket(async)
 
   /** Manager for view design documents, exposed via the reactive layer. */
+  @deprecated(
+    "Views are deprecated in Couchbase Server 7.0+, and will be removed from a future server version. Views are not compatible with the Magma storage engine. Instead of views, use indexes and queries using the Index Service (GSI) and the Query Service (SQL++).",
+    since = "3.10.1"
+  )
   lazy val viewIndexes = new ViewIndexManager(reactive.viewIndexes)
 
   /** Performs a view query against the cluster.
@@ -52,6 +56,10 @@ class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
     * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
+  @deprecated(
+    "Views are deprecated in Couchbase Server 7.0+, and will be removed from a future server version. Views are not compatible with the Magma storage engine. Instead of views, use indexes and queries using the Index Service (GSI) and the Query Service (SQL++).",
+    since = "3.10.1"
+  )
   def viewQuery(
       designDoc: String,
       viewName: String,
@@ -75,6 +83,10 @@ class Bucket private[scala] (val async: AsyncBucket) extends BucketBase {
     * @return a `Try` containing a `Success(ViewResult)` (which includes any returned rows) if successful, else a
     *         `Failure`
     */
+  @deprecated(
+    "Views are deprecated in Couchbase Server 7.0+, and will be removed from a future server version. Views are not compatible with the Magma storage engine. Instead of views, use indexes and queries using the Index Service (GSI) and the Query Service (SQL++).",
+    since = "3.10.1"
+  )
   def viewQuery(
       designDoc: String,
       viewName: String,

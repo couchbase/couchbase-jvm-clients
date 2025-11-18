@@ -101,6 +101,10 @@ public class Bucket {
     return new CollectionManager(asyncBucket.collections());
   }
 
+  /**
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
+   */
+  @Deprecated
   public ViewIndexManager viewIndexes() {
     return new ViewIndexManager(asyncBucket.viewIndexes());
   }
@@ -172,7 +176,11 @@ public class Bucket {
    * @throws ViewNotFoundException if the view or design document is not found on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   * @deprecated Views are deprecated in Couchbase Server 7.0+, and will be removed from a future server version.
+   * Views are not compatible with the Magma storage engine.
+   * Instead of views, use indexes and queries using the Index Service (GSI) and the Query Service (SQL++).
    */
+  @Deprecated
   public ViewResult viewQuery(final String designDoc, final String viewName) {
     return viewQuery(designDoc, viewName, DEFAULT_VIEW_OPTIONS);
   }
@@ -187,7 +195,9 @@ public class Bucket {
    * @throws ViewNotFoundException if the view or design document is not found on the server.
    * @throws TimeoutException if the operation times out before getting a result.
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   * @deprecated See the deprecation notice on {@link Bucket#viewQuery(String, String)}
    */
+  @Deprecated
   public ViewResult viewQuery(final String designDoc, final String viewName, final ViewOptions options) {
     return block(asyncBucket.viewQuery(designDoc, viewName, options));
   }
