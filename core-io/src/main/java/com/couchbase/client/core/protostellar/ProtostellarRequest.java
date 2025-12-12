@@ -15,15 +15,14 @@
  */
 package com.couchbase.client.core.protostellar;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.cnc.metrics.LoggingMeter;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
@@ -143,7 +142,8 @@ public class ProtostellarRequest<TGrpcRequest> {
 
     if (span != null) {
       if (!CbTracing.isInternalSpan(span)) {
-        span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
+        TracingDecorator tip = core.context().coreResources().tracingDecorator();
+        tip.provideAttr(TracingAttribute.RETRIES, span, retryAttempts());
         if (err != null) {
           span.recordException(err);
           span.status(RequestSpan.StatusCode.ERROR);
@@ -154,7 +154,7 @@ public class ProtostellarRequest<TGrpcRequest> {
 
     if (!(core.context().environment().meter() instanceof NoopMeter)) {
       long latency = logicalRequestLatency();
-      boolean isDefaultLoggingMeter = core.context().environment().meter() instanceof LoggingMeter;
+      boolean isDefaultLoggingMeter = core.context().coreResources().meter().isDefaultLoggingMeter();
       if (latency > 0) {
         ResponseMetricIdentifier rmi = new ResponseMetricIdentifier(serviceType.id(),
                 requestName,

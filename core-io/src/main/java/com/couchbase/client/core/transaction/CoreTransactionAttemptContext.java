@@ -31,8 +31,10 @@ import com.couchbase.client.core.classic.query.ClassicCoreQueryResult;
 import com.couchbase.client.core.classic.query.ClassicCoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.cnc.events.transaction.IllegalDocumentStateEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
@@ -1225,9 +1227,9 @@ public class CoreTransactionAttemptContext {
      * @return the doc, updated with its new CAS value and ID, and converted to a <code>TransactionGetResultInternal</code>
      */
     public Mono<CoreTransactionGetResult> insert(CollectionIdentifier collection, String id, byte[] content, int flagsToStage, SpanWrapper pspan) {
-
-        return doKVOperation("insert " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_INSERT, collection, id,
-                (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, flagsToStage, span, lockToken));
+        return Mono.fromRunnable(() -> SpanWrapperUtil.addOperationAttribute(tracer(), pspan, TracingIdentifiers.TRANSACTION_OP_INSERT))
+            .then(doKVOperation("insert " + DebugUtil.docId(collection, id), pspan, CoreTransactionAttemptContextHooks.HOOK_INSERT, collection, id,
+                (operationId, span, lockToken) -> insertInternal(operationId, collection, id, content, flagsToStage, span, lockToken)));
     }
 
     /**
@@ -1460,8 +1462,9 @@ public class CoreTransactionAttemptContext {
      * object is modified.
      */
     public Mono<CoreTransactionGetResult> replace(CoreTransactionGetResult doc, byte[] content, int flags, SpanWrapper pspan) {
-        return doKVOperation("replace " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
-                (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, flags, span, lockToken));
+        return Mono.fromRunnable(() -> SpanWrapperUtil.addOperationAttribute(tracer(), pspan, TracingIdentifiers.TRANSACTION_OP_REPLACE))
+            .then(doKVOperation("replace " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REPLACE, doc.collection(), doc.id(),
+                (operationId, span, lockToken) -> replaceInternalLocked(operationId, doc, content, flags, span, lockToken)));
     }
 
     /**
@@ -1493,7 +1496,7 @@ public class CoreTransactionAttemptContext {
             String operationId = UUID.randomUUID().toString();
             // If two operations on the same doc are done concurrently it can be unclear, so include a partial of the operation id
             String lockDebug = lockDebugOrig + " - " + operationId.substring(0, TransactionLogEvent.CHARS_TO_LOG);
-            SpanWrapperUtil.setAttributes(span, this, docCollection, docId);
+            SpanWrapperUtil.setAttributes(span, core.coreResources().requestTracerAndDecorator(), this, docCollection, docId);
             // We don't attach the opid to the span, it's too low cardinality to be useful
 
             return lockAndIncKVOps(lockDebug)
@@ -1550,12 +1553,15 @@ public class CoreTransactionAttemptContext {
     /**
      * Doesn't need everything from doKVOperation, as queryWrapper already centralises a lot of logic
      */
-    public <T> Mono<T> doQueryOperation(String lockDebugIn, String statement, @Nullable SpanWrapper pspan, TriFunction<Integer, AtomicReference<ReactiveLock.Waiter>, SpanWrapper, Mono<T>> op) {
+    public <T> Mono<T> doQueryOperation(String lockDebugIn, String statement, @Nullable final CoreQueryOptions opts,
+                                        @Nullable SpanWrapper pspan, TriFunction<Integer, AtomicReference<ReactiveLock.Waiter>, SpanWrapper, Mono<T>> op) {
         return Mono.defer(() -> {
             int sidx = queryStatementIdx.getAndIncrement();
             String lockDebug = lockDebugIn + " q" + sidx;
-            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_QUERY, pspan)
-                    .attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+            SpanWrapper span = SpanWrapperUtil.createOp(this, tracer(), null, null, TracingIdentifiers.TRANSACTION_OP_QUERY, pspan);
+
+            boolean parametersUsed = opts != null && (opts.positionalParameters() != null || opts.namedParameters() != null);
+            tip().provideQueryStatementIfSafe(TracingAttribute.STATEMENT, span.span(), statement, parametersUsed);
 
             return createMonoBridge(lockDebug, Mono.defer(() -> {
                 AtomicReference<ReactiveLock.Waiter> lt = new AtomicReference<>();
@@ -1951,9 +1957,12 @@ public class CoreTransactionAttemptContext {
         return Math.max(Math.min(remainingMillis, config.expirationTime().toMillis()), 0);
     }
 
-    private RequestTracer tracer() {
-        // Will go to the ThresholdRequestTracer by default.  In future, may want our own default tracer.
-        return core.context().coreResources().requestTracer();
+    private RequestTracerAndDecorator tracer() {
+        return core.context().coreResources().requestTracerAndDecorator();
+    }
+
+    private TracingDecorator tip() {
+        return core.context().coreResources().tracingDecorator();
     }
 
     private byte[] serialize(Object in) {
@@ -2615,10 +2624,11 @@ public class CoreTransactionAttemptContext {
      * @param doc - the doc to be removed
      */
     public Mono<Void> remove(CoreTransactionGetResult doc, SpanWrapper pspan) {
-        return doKVOperation("remove " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REMOVE, doc.collection(), doc.id(),
+        return Mono.fromRunnable(() -> SpanWrapperUtil.addOperationAttribute(tracer(), pspan, TracingIdentifiers.TRANSACTION_OP_REMOVE))
+            .then(doKVOperation("remove " + DebugUtil.docId(doc), pspan, CoreTransactionAttemptContextHooks.HOOK_REMOVE, doc.collection(), doc.id(),
                 (operationId, span, lockToken) -> removeInternalLocked(operationId, doc, span, lockToken)
                         // This triggers onNext
-                        .thenReturn(1)).then();
+                        .thenReturn(1))).then();
     }
 
     private Mono<Void> removeInternalLocked(String operationId, CoreTransactionGetResult doc, SpanWrapper span, ReactiveLock.Waiter lockToken) {
@@ -4988,10 +4998,11 @@ public class CoreTransactionAttemptContext {
                                                      final boolean tximplicit) {
         return doQueryOperation("query blocking",
                 statement,
+                options,
                 attemptSpan,
                 (sidx, lockToken, span) -> {
                     if (tximplicit) {
-                        span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+                        tip().provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
                     }
                     return queryWrapperBlockingLocked(sidx, qc, statement, options, CoreTransactionAttemptContextHooks.HOOK_QUERY, false, true, null, null, span, tximplicit, lockToken, true);
                 });

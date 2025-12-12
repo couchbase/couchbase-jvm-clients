@@ -19,7 +19,9 @@ package com.couchbase.client.core.msg.analytics;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -113,13 +115,14 @@ public class AnalyticsRequest
     this.httpPath = httpPathsByVersion.get(apiVersion);
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_ANALYTICS);
-      span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_ANALYTICS);
+      tip.provideAttr(TracingAttribute.STATEMENT, span, statement);
       if (bucket != null) {
-        span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
+        tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucket);
       }
       if (scope != null) {
-        span.attribute(TracingIdentifiers.ATTR_SCOPE, scope);
+        tip.provideAttr(TracingAttribute.SCOPE_NAME, span, scope);
       }
     }
   }

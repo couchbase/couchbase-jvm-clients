@@ -19,7 +19,9 @@ package com.couchbase.client.core.transaction;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.transaction.cleanup.CoreTransactionsCleanup;
 import com.couchbase.client.core.transaction.components.CoreTransactionRequest;
@@ -60,9 +62,10 @@ public class CoreTransactionContext {
         RequestTracer tracer = coreContext.coreResources().requestTracer();
         SpanWrapper pspan = config.parentSpan().map(sp -> new SpanWrapper(sp)).orElse(null);
         this.transactionSpan = SpanWrapper.create(tracer, TracingIdentifiers.TRANSACTION_OP, pspan);
-        SpanWrapperUtil.setAttributes(this.transactionSpan, null, null, null)
-                .attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.TRANSACTION_OP)
-                .attribute(TracingIdentifiers.ATTR_TRANSACTION_ID, transactionId);
+        RequestTracerAndDecorator tip = coreContext.coreResources().requestTracerAndDecorator();
+        SpanWrapperUtil.setAttributes(this.transactionSpan, tip, null, null, null);
+        tip.decorator.provideLowCardinalityAttr(TracingAttribute.OPERATION, this.transactionSpan.span(), TracingIdentifiers.TRANSACTION_OP);
+        tip.decorator.provideAttr(TracingAttribute.TRANSACTION_ID, this.transactionSpan.span(), transactionId);
 
         req = new CoreTransactionRequest(config.expirationTime(), coreContext, transactionSpan.span());
 

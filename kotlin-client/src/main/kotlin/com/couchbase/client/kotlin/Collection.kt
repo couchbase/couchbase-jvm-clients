@@ -119,8 +119,9 @@ public class Collection internal constructor(
     public val queryIndexes: CollectionQueryIndexManager = CollectionQueryIndexManager(
         CoreCollectionQueryIndexManager(
             couchbaseOps.queryOps(),
-            env.requestTracer(),
+            couchbaseOps.coreResources().requestTracer(),
             CoreKeyspace.from(collectionId),
+            couchbaseOps.coreResources().tracingDecorator(),
         )
     )
 

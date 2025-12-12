@@ -154,7 +154,8 @@ class QueryMessageHandlerBackpressureTest {
       null,
       null,
       null,
-      null
+      null,
+      false
     );
     request.context().lastDispatchedToNode(dummyNodeId);
     channel.writeAndFlush(request);

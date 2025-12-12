@@ -47,6 +47,10 @@ import com.couchbase.client.java.transactions.config.TransactionsConfig;
 // [end]
 import com.couchbase.client.metrics.opentelemetry.OpenTelemetryMeter;
 import com.couchbase.client.protocol.observability.Attribute;
+// [if:3.11.0]
+import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
+// [end]
+import com.couchbase.client.protocol.observability.SemanticConvention;
 import com.couchbase.client.protocol.sdk.circuit_breaker.ServiceConfig;
 import com.couchbase.client.protocol.shared.ClusterConfig;
 import com.couchbase.client.protocol.shared.ClusterConnectionCreateRequest;
@@ -551,6 +555,22 @@ public class OptionsUtil {
             clusterEnvironment.orphanReporterConfig(builder);
         }
 
+        // [end]
+
+        // [if:3.11.0]
+        if (oc.getObservabilitySemanticConventionOptInCount() > 0) {
+            var list = new ArrayList<ObservabilitySemanticConvention>();
+            oc.getObservabilitySemanticConventionOptInList().forEach(v -> {
+                if (v == SemanticConvention.DATABASE) {
+                    list.add(ObservabilitySemanticConvention.DATABASE);
+                } else if (v == SemanticConvention.DATABASE_DUP) {
+                    list.add(ObservabilitySemanticConvention.DATABASE_DUP);
+                } else {
+                    throw new InternalPerformerFailure(new RuntimeException("Unknown semantic convention " + v));
+                }
+            });
+            clusterEnvironment.observabilitySemanticConventions(list);
+        }
         // [end]
     }
 

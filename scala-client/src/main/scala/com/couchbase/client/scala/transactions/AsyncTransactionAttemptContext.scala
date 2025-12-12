@@ -162,7 +162,6 @@ class AsyncTransactionAttemptContext private[scala] (
       implicit serializer: JsonSerializer[T]
   ): Future[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => Future.failed(exception)
       case Success(encoded)   =>
@@ -199,7 +198,6 @@ class AsyncTransactionAttemptContext private[scala] (
       implicit serializer: JsonSerializer[T]
   ): Future[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => Future.failed(exception)
       case Success(encoded)   =>
@@ -236,7 +234,6 @@ class AsyncTransactionAttemptContext private[scala] (
     */
   def remove(doc: TransactionGetResult): Future[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE)
     val out = FutureConversions
       .javaMonoToScalaFuture(internal.remove(doc.internal, new SpanWrapper(span)))
       .map(_ => ())

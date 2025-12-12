@@ -37,7 +37,6 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.apptelemetry.AppTelemetry;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
@@ -55,8 +54,11 @@ import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogInvalidStateIdentifiedEvent;
 import com.couchbase.client.core.cnc.events.core.WatchdogRunFailedEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionsStartedEvent;
-import com.couchbase.client.core.cnc.metrics.LoggingMeter;
+import com.couchbase.client.core.cnc.metrics.AbstractMeter;
 import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
+import com.couchbase.client.core.cnc.metrics.ValueRecorderName;
+import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.DefaultConfigurationProvider;
@@ -312,9 +314,14 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
     this.connectionString = requireNonNull(connectionString);
     boolean ignoresAttributes = CbTracing.isInternalTracer(environment.requestTracer());
+    List<ObservabilitySemanticConvention> usedObservabilitySemanticConventions = environment.observabilitySemanticConventions();
+    if (usedObservabilitySemanticConventions.isEmpty()) {
+      usedObservabilitySemanticConventions = ObservabilitySemanticConvention.loadAndParseOpenTelemetryEnvVar();
+    }
+    TracingDecorator tip = new TracingDecorator(usedObservabilitySemanticConventions);
     RequestTracer requestTracerDecoratedIfRequired = ignoresAttributes
       ? environment.requestTracer()
-      : new RequestTracerDecorator(environment.requestTracer(), () -> {
+      : new RequestTracerDecorator(environment.requestTracer(), tip, () -> {
       if (currentConfig == null) {
         return null;
       }
@@ -323,12 +330,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       }
       return currentConfig.globalConfig().clusterIdent();
     });
-    this.coreResources = new CoreResources() {
-      @Override
-      public RequestTracer requestTracer() {
-        return requestTracerDecoratedIfRequired;
-      }
-    };
+    AbstractMeter abstractMeter = new AbstractMeter(environment.meter(), usedObservabilitySemanticConventions);
+    this.coreResources = new CoreResources(requestTracerDecoratedIfRequired, tip, abstractMeter);
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
@@ -374,7 +377,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     );
 
     this.transactionsCleanup = new CoreTransactionsCleanup(this, environment.transactionsConfig());
-    this.transactionsContext = new CoreTransactionsContext(this, environment.meter());
+    this.transactionsContext = new CoreTransactionsContext(this);
     context().environment().eventBus().publish(new TransactionsStartedEvent(environment.transactionsConfig().cleanupConfig().runLostAttemptsCleanupThread(),
             environment.transactionsConfig().cleanupConfig().runRegularAttemptsCleanupThread()));
   }
@@ -645,7 +648,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   @Stability.Internal
   public ValueRecorder responseMetric(final Request<?> request, @Nullable Throwable err) {
-    boolean isDefaultLoggingMeter = coreContext.environment().meter() instanceof LoggingMeter;
+    boolean isDefaultLoggingMeter = coreContext.coreResources().meter().isDefaultLoggingMeter();
     String exceptionSimpleName = null;
     if (!isDefaultLoggingMeter) {
       if (err instanceof CompletionException) {
@@ -656,8 +659,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     }
     final ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(currentConfig);
 
-    return responseMetrics.computeIfAbsent(ResponseMetricIdentifier.fromRequest(request, exceptionSimpleName, clusterIdent, isDefaultLoggingMeter),key ->
-            coreContext.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, key.tags()));
+    return responseMetrics.computeIfAbsent(ResponseMetricIdentifier.fromRequest(request, exceptionSimpleName, clusterIdent, isDefaultLoggingMeter), key ->
+            coreContext.coreResources().meter().valueRecorder(ValueRecorderName.OPERATIONS, key));
   }
 
   /**

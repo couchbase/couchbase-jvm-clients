@@ -29,8 +29,10 @@ import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.request.PreparedStatementRetriedEvent;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.config.ClusterCapabilities;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
@@ -203,9 +205,13 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
         .requestTracer()
         .requestSpan(TracingIdentifiers.SPAN_REQUEST_QUERY, options.commonOptions().parentSpan().orElse(null));
 
+    ArrayNode positionalParameters = options.positionalParameters();
+    ObjectNode namedParameters = options.namedParameters();
+    boolean parametersUsed = (positionalParameters != null && !positionalParameters.isEmpty())
+        || (namedParameters != null && !namedParameters.isEmpty());
     QueryRequest request = new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
         queryBytes, options.readonly(), options.clientContextId(), span,
-        queryContext == null ? null : queryContext.bucket(), queryContext == null ? null : queryContext.scope(), target);
+        queryContext == null ? null : queryContext.bucket(), queryContext == null ? null : queryContext.scope(), target, parametersUsed);
     request.context().clientContext(options.commonOptions().clientContext());
     return request;
   }
@@ -221,10 +227,13 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     CoreTransactionsReactive tri = configureTransactions(core, opts);
-    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), null,
-            null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null))
-        .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
-        .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+    TracingDecorator tip = core.coreResources().tracingDecorator();
+    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), null,
+            null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null));
+    tip.provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
+
+    boolean parametersUsed = opts.positionalParameters() != null || opts.namedParameters() != null;
+    tip.provideQueryStatementIfSafe(TracingAttribute.STATEMENT, span.span(), statement, parametersUsed);
 
     // Don't want to pass down asTransaction, because we ultimately call back into CoreQueryOps and will end up in a recursive loop.
     CoreQueryOptionsTransactions shadowed = new CoreQueryOptionsTransactions(opts);
@@ -255,10 +264,13 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     }
 
     CoreTransactionsReactive tri = configureTransactions(core, opts);
-    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracer(), null,
-            null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null))
-        .attribute(TracingIdentifiers.ATTR_STATEMENT, statement)
-        .attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+    SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), null,
+            null, TracingIdentifiers.SPAN_REQUEST_QUERY, opts.commonOptions().parentSpan().map(SpanWrapper::new).orElse(null));
+
+    core.coreResources().tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
+
+    boolean parametersUsed = opts.positionalParameters() != null || opts.namedParameters() != null;
+    core.coreResources().tracingDecorator().provideQueryStatementIfSafe(TracingAttribute.STATEMENT, span.span(), statement, parametersUsed);
 
     // Don't want to pass down asTransaction, because we ultimately call back into CoreQueryOps and will end up in a recursive loop.
     CoreQueryOptionsTransactions shadowed = new CoreQueryOptionsTransactions(opts);

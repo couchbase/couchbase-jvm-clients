@@ -27,7 +27,7 @@ public interface ValueRecorder {
   /**
    * Records a specific value.
    *
-   * @param value the value to record.
+   * @param value the value to record, in nanoseconds.
    */
   void recordValue(long value);
 }

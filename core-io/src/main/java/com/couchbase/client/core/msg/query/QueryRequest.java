@@ -21,7 +21,9 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -65,12 +67,12 @@ public class QueryRequest
   private final String bucket;
   private final String scope;
   private final NodeIdentifier target;
-
+  private final boolean parametersUsed;
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
                       final String contextId, final RequestSpan span, final String bucket, final String scope,
-                      final NodeIdentifier target) {
+                      final NodeIdentifier target, final boolean parametersUsed) {
     super(timeout, ctx, retryStrategy, span);
     this.query = query;
     this.statement = statement;
@@ -80,15 +82,17 @@ public class QueryRequest
     this.bucket = bucket;
     this.scope = scope;
     this.target = target;
+    this.parametersUsed = parametersUsed;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_QUERY);
-      span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_QUERY);
+      tip.provideQueryStatementIfSafe(TracingAttribute.STATEMENT, span, statement, parametersUsed);
       if (bucket != null) {
-        span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
+        tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucket);
       }
       if (scope != null) {
-        span.attribute(TracingIdentifiers.ATTR_SCOPE, scope);
+        tip.provideAttr(TracingAttribute.SCOPE_NAME, span, scope);
       }
     }
   }
@@ -240,7 +244,8 @@ public class QueryRequest
         newSpan,
         bucket(),
         scope(),
-        target()
+        target(),
+        parametersUsed
     );
   }
 

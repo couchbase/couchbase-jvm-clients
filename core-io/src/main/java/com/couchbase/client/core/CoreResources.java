@@ -18,6 +18,11 @@ package com.couchbase.client.core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.metrics.AbstractMeter;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Resources that are owned by a {@link CoreCouchbaseOps}.  (E.g. either a {@link Core} or {@link CoreProtostellar}.
@@ -28,6 +33,32 @@ import com.couchbase.client.core.cnc.RequestTracer;
  * Consider preferring adding new resources here rather than into the *Environment objects.
  */
 @Stability.Internal
-public interface CoreResources {
-  RequestTracer requestTracer();
+public class CoreResources {
+  private final RequestTracer tracer;
+  private final TracingDecorator td;
+  private final RequestTracerAndDecorator tracerAndDecorator;
+  private final AbstractMeter meter;
+
+  public CoreResources(RequestTracer tracer, TracingDecorator td, AbstractMeter meter) {
+    this.tracer = requireNonNull(tracer);
+    this.td = requireNonNull(td);
+    this.tracerAndDecorator = new RequestTracerAndDecorator(tracer, td);
+    this.meter = requireNonNull(meter);
+  }
+
+  public RequestTracer requestTracer() {
+    return tracer;
+  }
+
+  public TracingDecorator tracingDecorator() {
+    return td;
+  }
+
+  public RequestTracerAndDecorator requestTracerAndDecorator() {
+    return tracerAndDecorator;
+  }
+
+  public AbstractMeter meter() {
+    return meter;
+  }
 }

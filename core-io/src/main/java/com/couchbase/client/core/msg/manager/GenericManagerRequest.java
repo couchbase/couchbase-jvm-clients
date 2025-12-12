@@ -19,7 +19,9 @@ package com.couchbase.client.core.msg.manager;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -56,10 +58,11 @@ public class GenericManagerRequest extends BaseManagerRequest<GenericManagerResp
     this.idempotent = idempotent;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_MGMT);
 
       FullHttpRequest request = requestSupplier.get();
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, request.method().toString() + " " + request.uri());
+      tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, request.method().toString() + " " + request.uri());
     }
   }
 

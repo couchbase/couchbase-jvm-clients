@@ -26,8 +26,6 @@ import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.topology.ClusterIdentifier;
 import org.jspecify.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Stability.Internal
@@ -115,40 +113,35 @@ public class ResponseMetricIdentifier {
         return Objects.hash(serviceTracingId, requestName, bucketName, scopeName, collectionName, exceptionSimpleName, clusterIdent);
     }
 
-    public Map<String, String> tags() {
-        // N.b. remember the pattern is that ResponseMetricIdentifier is created many times (on every request),
-        // while this method will only be called if we don't already have a corresponding ResponseMetricIdentifier
-        // entry in the map.  E.g. it would be a false optimisation to move this tags() logic into the ctor.
-        Map<String, String> tags = new HashMap<>(9);
-        tags.put(TracingIdentifiers.ATTR_SERVICE, serviceTracingId);
-        tags.put(TracingIdentifiers.ATTR_OPERATION, requestName);
+    public String service() {
+        return serviceTracingId;
+    }
 
-        // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
-        // assigning other labels.
-        if (!isDefaultLoggingMeter) {
-            // Crucial note for Micrometer:
-            // If we are ever going to output an attribute from a given JVM run then we must always
-            // output that attribute in this run.  Specifying null as an attribute value allows the OTel backend to strip it, and
-            // the Micrometer backend to provide a default value.
-            // See (internal to Couchbase) discussion here for full details:
-            // https://issues.couchbase.com/browse/CBSE-17070?focusedId=779820&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-779820
-            // If this rule is not followed, then Micrometer will silently discard some metrics.  Micrometer requires that
-            // every value output under a given metric has the same set of attributes.
+    public String operation() {
+        return requestName;
+    }
 
-            tags.put(TracingIdentifiers.ATTR_NAME, bucketName);
-            tags.put(TracingIdentifiers.ATTR_SCOPE, scopeName);
-            tags.put(TracingIdentifiers.ATTR_COLLECTION, collectionName);
+    public @Nullable String bucketName() {
+        return bucketName;
+    }
 
-            tags.put(TracingIdentifiers.ATTR_CLUSTER_UUID, clusterIdent == null ? null : clusterIdent.clusterUuid());
-            tags.put(TracingIdentifiers.ATTR_CLUSTER_NAME, clusterIdent == null ? null : clusterIdent.clusterName());
+    public @Nullable String scopeName() {
+        return scopeName;
+    }
 
-            if (exceptionSimpleName != null) {
-                tags.put(TracingIdentifiers.ATTR_OUTCOME, exceptionSimpleName);
-            } else {
-                tags.put(TracingIdentifiers.ATTR_OUTCOME, "Success");
-            }
-        }
+    public @Nullable String collectionName() {
+        return collectionName;
+    }
 
-        return tags;
+    public @Nullable String exceptionSimpleName() {
+        return exceptionSimpleName;
+    }
+
+    public @Nullable ClusterIdentifier clusterIdent() {
+        return clusterIdent;
+    }
+
+    public boolean isDefaultLoggingMeter() {
+        return isDefaultLoggingMeter;
     }
 }

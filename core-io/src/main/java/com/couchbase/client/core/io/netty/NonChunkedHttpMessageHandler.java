@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -167,11 +168,15 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
           currentDispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
 
           if (!CbTracing.isInternalTracer(tracer)) {
+            TracingDecorator tip = endpointContext.coreResources().tracingDecorator();
             setCommonDispatchSpanAttributes(
+              tip,
               currentDispatchSpan,
               ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
               ioContext.localHostname(),
               ioContext.localPort(),
+              currentRequest.context().lastDispatchedToNode().canonical().host(),
+              endpoint.remotePort(),
               endpoint.remoteHostname(),
               endpoint.remotePort(),
               currentRequest.operationId()

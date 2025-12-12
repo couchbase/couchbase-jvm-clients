@@ -17,6 +17,8 @@
 package com.couchbase.client.tracing.observation;
 
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImpl;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImplV0;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -117,8 +119,9 @@ class ObservationTracingIntegrationTest extends ClusterAwareIntegrationTest {
                 .hasTag("db.system", "couchbase");
             });
           log.info("Span <dispatch_to_server> found");
+          TracingDecoratorImpl impl = new TracingDecoratorImplV0();
           MeterRegistryAssert.assertThat(meterRegistry)
-            .hasMeterWithNameAndTags(TracingIdentifiers.METER_OPERATIONS, KeyValues.of(KeyValue.of("db.system", "couchbase")));
+            .hasMeterWithNameAndTags(impl.meterOperations(), KeyValues.of(KeyValue.of("db.system", "couchbase")));
           log.info("Timer found");
         });
       };

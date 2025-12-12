@@ -21,7 +21,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -82,7 +83,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     return new Builder(options, coreContext, target, method, path);
   }
 
-  private CoreHttpRequest(Builder builder, RequestSpan span, Duration timeout, RetryStrategy retry, @Nullable String name) {
+  private CoreHttpRequest(Builder builder, RequestSpan span, Duration timeout, RetryStrategy retry, @Nullable String name, TracingDecorator tip) {
     super(timeout, builder.coreContext, retry, span);
 
     this.target = builder.target;
@@ -96,8 +97,8 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.name = name;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, target.serviceType().id());
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, builder.method + " " + builder.path.format());
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, target.serviceType().id());
+      tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, builder.method + " " + builder.path.format());
     }
   }
 
@@ -211,7 +212,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     private HttpHeaders headers = EmptyHttpHeaders.INSTANCE;
     private String spanName; // nullable
     @Nullable private Consumer<RequestSpan> attributeSetter;
-    private Map<String, Object> spanAttributes; // nullable
+    private Map<TracingAttribute, Object> spanAttributes; // nullable
     private Boolean idempotent; // nullable
     private boolean bypassExceptionTranslation;
 
@@ -247,7 +248,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
       return trace(spanName);
     }
 
-    public Builder traceAttr(String attributeName, Object attributeValue) {
+    public Builder traceAttr(TracingAttribute attributeName, Object attributeValue) {
       if (this.spanAttributes == null) {
         this.spanAttributes = new HashMap<>();
       }
@@ -256,15 +257,15 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     }
 
     public Builder traceBucket(String bucketName) {
-      return traceAttr(TracingIdentifiers.ATTR_NAME, bucketName);
+      return traceAttr(TracingAttribute.BUCKET_NAME, bucketName);
     }
 
     public Builder traceScope(String scopeName) {
-      return traceAttr(TracingIdentifiers.ATTR_SCOPE, scopeName);
+      return traceAttr(TracingAttribute.SCOPE_NAME, scopeName);
     }
 
     public Builder traceCollection(String collectionName) {
-      return traceAttr(TracingIdentifiers.ATTR_COLLECTION, collectionName);
+      return traceAttr(TracingAttribute.COLLECTION_NAME, collectionName);
     }
 
     public Builder header(CharSequence name, Object value) {
@@ -320,13 +321,14 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     }
 
     public CoreHttpRequest build() {
+      TracingDecorator tip = coreContext.coreResources().tracingDecorator();
       RequestSpan span = spanName == null ? null : coreContext.coreResources().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
 
       if (span != null && !CbTracing.isInternalSpan(span)) {
         if (target.bucketName() != null) {
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NAME, target.bucketName());
+          tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, target.bucketName());
         }
-        CbTracing.setAttributes(span, spanAttributes);
+        CbTracing.setAttributes(tip, span, spanAttributes);
         if (attributeSetter != null) {
           attributeSetter.accept(span);
         }
@@ -337,7 +339,8 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
           span,
           resolveTimeout(coreContext, target.serviceType(), options.timeout()),
           options.retryStrategy().orElse(null),
-          spanName
+          spanName,
+          tip
       );
     }
 

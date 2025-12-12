@@ -28,6 +28,7 @@ import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
@@ -181,7 +182,9 @@ public class ProtostellarCoreQueryOps implements CoreQueryOps {
 
     Duration timeout = opts.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().queryTimeout());
     RequestSpan span = createSpan(core, TracingIdentifiers.SPAN_REQUEST_QUERY, CoreDurability.NONE, opts.commonOptions().parentSpan().orElse(null));
-    span.attribute(TracingIdentifiers.ATTR_STATEMENT, statement);
+
+    boolean parametersUsed = opts.positionalParameters() != null || opts.namedParameters() != null;
+    core.coreResources().tracingDecorator().provideQueryStatementIfSafe(TracingAttribute.STATEMENT, span, statement, parametersUsed);
 
     return new ProtostellarRequest<>(request.build(),
       core,

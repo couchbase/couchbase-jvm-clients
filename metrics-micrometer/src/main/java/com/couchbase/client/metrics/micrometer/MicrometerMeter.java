@@ -19,6 +19,7 @@ package com.couchbase.client.metrics.micrometer;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.cnc.metrics.MeterConventions;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.error.MeterException;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -91,7 +92,9 @@ public class MicrometerMeter implements Meter {
     Map<String, String> out = new HashMap<>();
     // Micrometer cannot support the same metric having different tagsets (https://github.com/micrometer-metrics/micrometer/issues/877), so we replace any nulls with empty strings.
     tags.forEach((k, v) -> {
-      out.put(k, v == null ? "" : v);
+      if (!MeterConventions.isTagReserved(k)) {
+        out.put(k, v == null ? "" : v);
+      }
     });
     return out;
   }

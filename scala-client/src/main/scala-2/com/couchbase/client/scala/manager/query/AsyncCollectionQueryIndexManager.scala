@@ -47,7 +47,8 @@ class AsyncCollectionQueryIndexManager(
   private[scala] val internal = new CoreCollectionQueryIndexManager(
     collection.couchbaseOps.queryOps(),
     collection.core.coreResources.requestTracer,
-    keyspace
+    keyspace,
+    collection.core.coreResources.tracingDecorator()
   )
   private[scala] val DefaultTimeout: Duration =
     collection.couchbaseOps.environment.timeoutConfig.managementTimeout

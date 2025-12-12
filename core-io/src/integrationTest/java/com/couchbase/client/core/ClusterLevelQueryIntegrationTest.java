@@ -67,7 +67,8 @@ class ClusterLevelQueryIntegrationTest extends CoreIntegrationTest {
       null,
       null,
       null,
-      null
+      null,
+      false
     );
     core.send(request);
 

@@ -19,7 +19,9 @@ package com.couchbase.client.core.msg.view;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
@@ -72,9 +74,10 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     this.keysJson = requireNonNull(keysJson);
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_VIEWS);
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, "/" + design + "/" + view);
-      span.attribute(TracingIdentifiers.ATTR_NAME, bucket);
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_VIEWS);
+      tip.provideAttr(TracingAttribute.OPERATION, span, "/" + design + "/" + view);
+      tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucket);
     }
   }
 

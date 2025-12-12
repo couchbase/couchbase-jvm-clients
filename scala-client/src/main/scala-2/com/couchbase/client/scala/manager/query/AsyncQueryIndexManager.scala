@@ -53,10 +53,7 @@ import scala.jdk.CollectionConverters._
 class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
     implicit val ec: ExecutionContext
 ) {
-  private[scala] val internal = new CoreQueryIndexManager(
-    cluster.couchbaseOps.queryOps(),
-    cluster.core.coreResources.requestTracer
-  )
+  private[scala] val internal = new CoreQueryIndexManager(cluster.couchbaseOps.queryOps(), cluster.core.coreResources.requestTracerAndDecorator)
 
   private[scala] val DefaultTimeout =
     cluster.couchbaseOps.environment.timeoutConfig.managementTimeout

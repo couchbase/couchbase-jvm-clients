@@ -26,11 +26,13 @@ import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.cnc.Context;
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.core.ShutdownCompletedEvent;
 import com.couchbase.client.core.cnc.events.core.ShutdownInitiatedEvent;
+import com.couchbase.client.core.cnc.metrics.AbstractMeter;
 import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
+import com.couchbase.client.core.cnc.metrics.ValueRecorderName;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
@@ -60,7 +62,6 @@ import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -91,7 +92,9 @@ public class CoreProtostellar implements CoreCouchbaseOps {
       initialAuthenticator
     );
 
-    CoreResources coreResources = () -> env.requestTracer();
+    TracingDecorator tip = new TracingDecorator(env.observabilitySemanticConventions());
+    AbstractMeter abstractMeter = new AbstractMeter(env.meter(), env.observabilitySemanticConventions());
+    CoreResources coreResources = new CoreResources(env.requestTracer(), tip, abstractMeter);
     this.ctx = new ProtostellarContext(env, authenticator, coreResources);
     notNull(connectionString, "connectionString");
 
@@ -165,7 +168,7 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Stability.Internal
   public ValueRecorder responseMetric(final ResponseMetricIdentifier rmi) {
     return responseMetrics.computeIfAbsent(rmi, key ->
-            ctx.environment().meter().valueRecorder(TracingIdentifiers.METER_OPERATIONS, key.tags()));
+            coreResources().meter().valueRecorder(ValueRecorderName.OPERATIONS, key));
   }
 
   @Override

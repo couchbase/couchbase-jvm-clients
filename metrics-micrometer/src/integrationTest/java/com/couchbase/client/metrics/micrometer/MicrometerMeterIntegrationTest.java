@@ -17,6 +17,8 @@
 package com.couchbase.client.metrics.micrometer;
 
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImpl;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImplV0;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -80,11 +82,12 @@ class MicrometerMeterIntegrationTest extends ClusterAwareIntegrationTest {
 
     final AtomicBoolean summaryGood = new AtomicBoolean(false);
 
+    TracingDecoratorImpl impl = new TracingDecoratorImplV0();
     waitUntilCondition(() -> {
       for (io.micrometer.core.instrument.Meter meter : meterRegistry.getMeters()) {
         if (meter instanceof DistributionSummary) {
           boolean sg = ((DistributionSummary) meter).count() >= numRequests
-            && meter.getId().getName().equals(TracingIdentifiers.METER_OPERATIONS);
+            && meter.getId().getName().equals(impl.meterOperations());
           if (sg) {
             summaryGood.set(true);
           }

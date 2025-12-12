@@ -19,10 +19,11 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.topology.ClusterIdentifier;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.function.Supplier;
@@ -36,20 +37,22 @@ import static java.util.Objects.requireNonNull;
 public class RequestTracerDecorator implements RequestTracer {
   private final RequestTracer wrapped;
   private final Supplier<ClusterIdentifier> clusterIdentSupplier;
+  private final TracingDecorator tip;
 
-  public RequestTracerDecorator(RequestTracer wrapped, Supplier<ClusterIdentifier> clusterIdentSupplier) {
+  public RequestTracerDecorator(RequestTracer wrapped, TracingDecorator tip, Supplier<ClusterIdentifier> clusterIdentSupplier) {
     this.wrapped = requireNonNull(wrapped);
     this.clusterIdentSupplier = clusterIdentSupplier;
+    this.tip = requireNonNull(tip);
   }
 
   @Override
   public RequestSpan requestSpan(String name, RequestSpan parent) {
     RequestSpan span = wrapped.requestSpan(name, parent);
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SYSTEM, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
+    tip.provideLowCardinalityAttr(TracingAttribute.SYSTEM, span, TracingIdentifiers.ATTR_SYSTEM_COUCHBASE);
     ClusterIdentifier clusterIdent = clusterIdentSupplier.get();
     if (clusterIdent != null) {
-      span.attribute(TracingIdentifiers.ATTR_CLUSTER_NAME, clusterIdent.clusterName());
-      span.attribute(TracingIdentifiers.ATTR_CLUSTER_UUID, clusterIdent.clusterUuid());
+      tip.provideAttr(TracingAttribute.CLUSTER_NAME, span, clusterIdent.clusterName());
+      tip.provideAttr(TracingAttribute.CLUSTER_UUID, span, clusterIdent.clusterUuid());
     }
     return span;
   }

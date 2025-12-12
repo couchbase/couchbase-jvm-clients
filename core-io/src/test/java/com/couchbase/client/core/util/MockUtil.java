@@ -20,11 +20,15 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
+import com.couchbase.client.core.cnc.metrics.AbstractMeter;
+import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 
+import java.util.ArrayList;
 import java.util.function.Function;
 
 import static org.mockito.Mockito.mock;
@@ -86,12 +90,10 @@ public class MockUtil {
     CoreEnvironment env,
     Function<Core, CoreContext> coreContextFactory
   ) {
-    CoreResources coreResources = new CoreResources() {
-      @Override
-      public RequestTracer requestTracer() {
-        return NoopRequestTracer.INSTANCE;
-      }
-    };
+    TracingDecorator tracingDecorator = new TracingDecorator(new ArrayList<>());
+    RequestTracer noopTracer = NoopRequestTracer.INSTANCE;
+    AbstractMeter meter = new AbstractMeter(NoopMeter.INSTANCE, new ArrayList<>());
+    CoreResources coreResources = new CoreResources(noopTracer, tracingDecorator, meter);
 
     Core core = mock(Core.class);
     when(core.coreResources()).thenReturn(coreResources);

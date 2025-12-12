@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
@@ -58,9 +59,10 @@ public class AsyncCollectionQueryIndexManager {
   public AsyncCollectionQueryIndexManager(
     final CoreQueryOps queryOps,
     final RequestTracer requestTracer,
-    final CoreKeyspace collection
+    final CoreKeyspace collection,
+    final TracingDecorator tracingDecorator
   ) {
-    this.internal = new CoreCollectionQueryIndexManager(queryOps, requestTracer, collection);
+    this.internal = new CoreCollectionQueryIndexManager(queryOps, requestTracer, collection, tracingDecorator);
   }
 
   /**

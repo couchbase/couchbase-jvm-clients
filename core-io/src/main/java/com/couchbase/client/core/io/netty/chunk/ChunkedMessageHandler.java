@@ -20,6 +20,7 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
@@ -35,7 +36,6 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
@@ -169,11 +169,15 @@ public abstract class ChunkedMessageHandler
         currentDispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, currentRequest.requestSpan());
 
         if (!CbTracing.isInternalTracer(tracer)) {
+          TracingDecorator tip = endpointContext.coreResources().tracingDecorator();
           setCommonDispatchSpanAttributes(
+            tip,
             currentDispatchSpan,
             ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
             ioContext.localHostname(),
             ioContext.localPort(),
+            currentRequest.context().lastDispatchedToNode().canonical().host(),
+            endpoint.remotePort(),
             endpoint.remoteHostname(),
             endpoint.remotePort(),
             currentRequest.operationId()

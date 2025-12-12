@@ -31,8 +31,10 @@ import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.IndexExistsException;
@@ -73,10 +75,10 @@ import static java.util.stream.Collectors.toList;
 
 @Stability.Internal
 public class CoreQueryIndexManager {
-  private final RequestTracer requestTracer;
+  private final RequestTracerAndDecorator requestTracer;
   private final CoreQueryOps queryOps;
 
-  public CoreQueryIndexManager(CoreQueryOps queryOps, RequestTracer requestTracer) {
+  public CoreQueryIndexManager(CoreQueryOps queryOps, RequestTracerAndDecorator requestTracer) {
     this.requestTracer = requireNonNull(requestTracer);
     this.queryOps = requireNonNull(queryOps);
   }
@@ -305,7 +307,7 @@ public class CoreQueryIndexManager {
 
     Set<String> indexNameSet = new HashSet<>(indexNames);
 
-    RequestSpan parent = requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, options.commonOptions().parentSpan().orElse(null));
+    RequestSpan parent = requestTracer.requestTracer.requestSpan(TracingIdentifiers.SPAN_REQUEST_MQ_WATCH_INDEXES, options.commonOptions().parentSpan().orElse(null));
     setupSpan(bucketName, parent);
 
     return Mono.fromFuture(() -> failIfIndexesOffline(bucketName, indexNameSet, options.watchPrimary(), parent, options.scopeAndCollection()))
@@ -318,11 +320,12 @@ public class CoreQueryIndexManager {
             .whenComplete((r, t) -> parent.end());
   }
 
-  private static void setupSpan(@Nullable String bucketName, RequestSpan parent) {
+  private void setupSpan(@Nullable String bucketName, RequestSpan parent) {
+    TracingDecorator tip = requestTracer.decorator;
     if (bucketName != null) {
-      parent.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
+      tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, parent, bucketName);
     }
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+      tip.provideManagerOrActualService(parent, TracingIdentifiers.SERVICE_QUERY);
   }
 
   private CompletableFuture<Void> failIfIndexesOffline(final String bucketName, final Set<String> indexNames,
@@ -365,7 +368,7 @@ public class CoreQueryIndexManager {
   private CompletableFuture<CoreQueryResult> exec(CoreQueryType queryType, CharSequence statement,
                                                   CoreCommonOptions options, String spanName, @Nullable String bucketName,
                                                   ObjectNode parameters) {
-    RequestSpan parent = requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
+    RequestSpan parent = requestTracer.requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
 
     CoreCommonOptions common = CoreCommonOptions.ofOptional(options.timeout(), options.retryStrategy(), Optional.of(parent));
 

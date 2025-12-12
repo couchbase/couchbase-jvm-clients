@@ -21,6 +21,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.error.AuthenticationFailureException;
@@ -706,7 +708,11 @@ public class AsyncAnalyticsIndexManager {
   private CompletableFuture<AnalyticsResult> exec(final String statement,
                                                   final CommonOptions<?>.BuiltCommonOptions options,
                                                   final String spanName) {
-    RequestSpan parent = core.coreResources().requestTracer().requestSpan(spanName, options.parentSpan().orElse(null));
+    RequestTracerAndDecorator tracerAndTip = core.coreResources().requestTracerAndDecorator();
+    RequestSpan parent = tracerAndTip.requestTracer.requestSpan(spanName, options.parentSpan().orElse(null));
+    if (!CbTracing.isInternalSpan(parent)) {
+      tracerAndTip.decorator.provideAttr(TracingAttribute.STATEMENT, parent, statement);
+    }
 
     final AnalyticsOptions analyticsOptions = toAnalyticsOptions(options).parentSpan(parent);
 

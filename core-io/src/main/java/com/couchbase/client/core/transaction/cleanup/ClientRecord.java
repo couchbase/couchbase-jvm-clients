@@ -18,8 +18,10 @@ package com.couchbase.client.core.transaction.cleanup;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.JsonProcessingException;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -32,7 +34,6 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
@@ -254,8 +255,12 @@ public class ClientRecord {
                 ));
     }
 
-    private RequestTracer tracer() {
-        return core.context().coreResources().requestTracer();
+    private RequestTracerAndDecorator tracer() {
+        return core.context().coreResources().requestTracerAndDecorator();
+    }
+
+    private TracingDecorator tracingDecorator() {
+        return core.context().coreResources().tracingDecorator();
     }
 
     /*
@@ -267,8 +272,8 @@ public class ClientRecord {
                                                    CoreTransactionsConfig config,
                                                    @Nullable SpanWrapper pspan) {
         return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, TracingIdentifiers.TRANSACTION_CLEANUP_CLIENT, pspan)
-                    .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_CLIENT_ID, clientUuid);
+            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, TracingIdentifiers.TRANSACTION_CLEANUP_CLIENT, pspan);
+            tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_CLIENT_ID, span.span(), clientUuid);
 
             String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
 

@@ -28,8 +28,8 @@ import com.couchbase.client.core.cnc.Meter;
 public class CoreTransactionsContext {
   private final CoreTransactionsCounters counters;
 
-  public CoreTransactionsContext(Core core, Meter meter) {
-    this.counters = new CoreTransactionsCounters(core, meter);
+  public CoreTransactionsContext(Core core) {
+    this.counters = new CoreTransactionsCounters(core);
   }
 
   public CoreTransactionsCounters counters() {

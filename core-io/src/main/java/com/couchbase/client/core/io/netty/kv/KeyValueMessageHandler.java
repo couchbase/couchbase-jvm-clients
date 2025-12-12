@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
@@ -83,7 +84,6 @@ import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFF
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
-import static com.couchbase.client.core.io.netty.TracingUtils.setNumericOperationId;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
@@ -308,15 +308,18 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
           if (!isInternalTracer) {
             setCommonDispatchSpanAttributes(
+              request.context().coreResources().tracingDecorator(),
               dispatchSpan,
               ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
               ioContext.localHostname(),
               ioContext.localPort(),
+              request.context().lastDispatchedToNode().canonical().host(),
+              endpoint.remotePort(),
               endpoint.remoteHostname(),
               endpoint.remotePort(),
               null
             );
-            setNumericOperationId(dispatchSpan, request.opaque());
+            request.context().coreResources().tracingDecorator().provideAttr(TracingAttribute.OPERATION_ID, dispatchSpan, request.opaque());
             setCommonKVSpanAttributes(dispatchSpan, request);
           }
 
@@ -478,7 +481,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     RequestSpan dispatchSpan = writtenRequestDispatchSpans.remove(opaque);
     if (dispatchSpan != null) {
       if (!isInternalTracer) {
-        TracingUtils.setServerDurationAttribute(dispatchSpan, serverTime);
+        TracingUtils.setServerDurationAttribute(request.context().coreResources().tracingDecorator(), dispatchSpan, serverTime);
       }
       dispatchSpan.end();
     }

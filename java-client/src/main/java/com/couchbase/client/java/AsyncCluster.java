@@ -324,7 +324,7 @@ public class AsyncCluster {
    * Provides access to the N1QL index management services.
    */
   public AsyncQueryIndexManager queryIndexes() {
-    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().coreResources().requestTracer(), this);
+    return new AsyncQueryIndexManager(couchbaseOps().queryOps(), couchbaseOps().coreResources().requestTracerAndDecorator(), this);
   }
 
   /**

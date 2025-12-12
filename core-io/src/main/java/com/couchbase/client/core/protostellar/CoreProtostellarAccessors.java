@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.google.common.util.concurrent.FutureCallback;
 import com.couchbase.client.core.deps.com.google.common.util.concurrent.Futures;
 import com.couchbase.client.core.deps.com.google.common.util.concurrent.ListenableFuture;
@@ -322,7 +323,8 @@ public class CoreProtostellarAccessors {
     if (!CbTracing.isInternalTracer(tracer)) {
       dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.span());
       HostAndPort remote = endpoint.hostAndPort();
-      TracingUtils.setCommonDispatchSpanAttributes(dispatchSpan, null, null, 0, remote.host(), remote.port(), null);
+      TracingDecorator tip = core.context().coreResources().tracingDecorator();
+      TracingUtils.setCommonDispatchSpanAttributes(tip, dispatchSpan, null, null, 0, remote.host(), remote.port(), remote.host(), remote.port(), null);
     } else {
       dispatchSpan = null;
     }

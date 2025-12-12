@@ -26,7 +26,7 @@ import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.classic.query.ClassicCoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
 import com.couchbase.client.core.error.transaction.RetryTransactionException;
 import com.couchbase.client.core.error.transaction.TransactionOperationFailedException;
@@ -295,9 +295,9 @@ public class CoreTransactionsReactive {
             AtomicReference<ClassicCoreReactiveQueryResult> qr = new AtomicReference<>();
 
             Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return ctx.doQueryOperation("single query streaming", statement, parentSpan.map(SpanWrapper::new).orElse(null),
+                return ctx.doQueryOperation("single query streaming", statement, queryOptions, parentSpan.map(SpanWrapper::new).orElse(null),
                                 (sidx, lockToken, span) -> {
-                                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_SINGLE_QUERY, true);
+                                    core.coreResources().tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
                                     return ctx.queryWrapperLocked(0,
                                                     queryContext,
                                                     statement,

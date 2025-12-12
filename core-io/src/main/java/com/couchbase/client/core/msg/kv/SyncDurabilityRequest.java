@@ -17,7 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 
 import java.util.Optional;
 
@@ -37,17 +38,17 @@ public interface SyncDurabilityRequest {
    * @param level the level to potentially apply.
    * @param span the span on which it should be applied on.
    */
-  default void applyLevelOnSpan(final Optional<DurabilityLevel> level, final RequestSpan span) {
+  default void applyLevelOnSpan(final Optional<DurabilityLevel> level, final RequestSpan span, final TracingDecorator tip) {
     if (level.isPresent() && span != null) {
       switch (level.get()) {
         case MAJORITY:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "majority");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "majority");
           break;
         case MAJORITY_AND_PERSIST_TO_ACTIVE:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "majority_and_persist_active");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "majority_and_persist_active");
           break;
         case PERSIST_TO_MAJORITY:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "persist_majority");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "persist_majority");
           break;
       }
     }

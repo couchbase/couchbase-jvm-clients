@@ -20,7 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -102,8 +104,9 @@ public class CoreEventingFunctionManager {
   }
 
   private void setSpanAttributes(RequestSpan span) {
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NAME, scope == null ? "*" : scope.bucketName());
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SCOPE, scope == null ? "*" : scope.scopeName());
+    TracingDecorator tip = core.coreResources().tracingDecorator();
+    tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, scope == null ? "*" : scope.bucketName());
+    tip.provideAttr(TracingAttribute.SCOPE_NAME, span, scope == null ? "*" : scope.scopeName());
   }
 
   public CompletableFuture<Void> upsertFunction(final String name, byte[] function, final CoreCommonOptions options) {

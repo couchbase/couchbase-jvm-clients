@@ -20,14 +20,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.search.queries.CoreGeoCoordinates;
 import com.couchbase.client.core.api.search.queries.CoreGeoPoint;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
 import com.couchbase.client.core.deps.io.grpc.Deadline;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.protostellar.kv.v1.DurabilityLevel;
 import com.couchbase.client.protostellar.search.v1.LatLng;
 import reactor.core.publisher.Mono;
@@ -189,15 +189,16 @@ public class CoreProtostellarUtil {
     RequestSpan span = core.context().coreResources().requestTracer().requestSpan(spanName, parent);
 
     if (!durability.isNone() && !durability.isLegacy()) {
+      TracingDecorator tip = core.context().coreResources().tracingDecorator();
       switch (durability.levelIfSynchronous().get()) {
         case MAJORITY:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "majority");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "majority");
           break;
         case MAJORITY_AND_PERSIST_TO_ACTIVE:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "majority_and_persist_active");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "majority_and_persist_active");
           break;
         case PERSIST_TO_MAJORITY:
-          span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, "persist_majority");
+          tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, "persist_majority");
           break;
       }
     }

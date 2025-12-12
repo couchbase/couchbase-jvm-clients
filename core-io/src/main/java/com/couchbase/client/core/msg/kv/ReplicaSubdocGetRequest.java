@@ -18,8 +18,11 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
 
@@ -45,8 +48,9 @@ public class ReplicaSubdocGetRequest extends SubdocGetRequest {
                           final byte flags, final List<SubdocGetRequest.Command> commands, final short replica, final RequestSpan span) {
     super(timeout, ctx, collectionIdentifier, retryStrategy, key, flags, commands, span);
     this.replica = replica;
-    if (span != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN_REPLICA);
+    if (span != null && !CbTracing.isInternalSpan(span)) {
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideAttr(TracingAttribute.OPERATION, span, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN_REPLICA);
     }
   }
 

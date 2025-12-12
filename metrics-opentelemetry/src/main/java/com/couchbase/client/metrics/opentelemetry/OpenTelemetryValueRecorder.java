@@ -24,14 +24,26 @@ public class OpenTelemetryValueRecorder implements ValueRecorder {
 
   private final DoubleHistogram valueRecorder;
   private final Attributes attributes;
+  private final boolean secondsMode;
+  private static final double NANOS_TO_SECONDS = 1_000_000_000.0;
 
   public OpenTelemetryValueRecorder(final DoubleHistogram valueRecorder, final Attributes attributes) {
+    this(valueRecorder, attributes, false);
+  }
+
+  public OpenTelemetryValueRecorder(final DoubleHistogram valueRecorder, final Attributes attributes, final boolean secondsMode) {
     this.valueRecorder = valueRecorder;
     this.attributes = attributes;
+    this.secondsMode = secondsMode;
   }
 
   @Override
   public void recordValue(final long value) {
+    if (secondsMode) {
+      double finalValue = value / NANOS_TO_SECONDS;
+      valueRecorder.record(finalValue, attributes);
+      return;
+    }
     valueRecorder.record(value, attributes);
   }
 }

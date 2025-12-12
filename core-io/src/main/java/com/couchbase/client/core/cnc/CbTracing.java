@@ -23,6 +23,8 @@ import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdRequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 
 import java.util.Map;
 
@@ -81,19 +83,19 @@ public class CbTracing {
    * @param span (nullable)
    * @param attributes (nullable)
    */
-  public static void setAttributes(RequestSpan span, Map<String, ?> attributes) {
+  public static void setAttributes(TracingDecorator tip, RequestSpan span, Map<TracingAttribute, ?> attributes) {
     if (span == null || attributes == null) {
       return;
     }
     attributes.forEach((k, v) -> {
       if (v instanceof String) {
-        span.attribute(k, (String) v);
+        tip.provideAttr(k, span, (String) v);
       } else if (v instanceof Integer || v instanceof Long) {
-        span.attribute(k, ((Number) v).longValue());
+        tip.provideAttr(k, span, ((Number) v).longValue());
       } else if (v instanceof Boolean) {
-        span.attribute(k, (Boolean) v);
+        tip.provideAttr(k, span, (Boolean) v);
       } else {
-        span.attribute(k, String.valueOf(v));
+        tip.provideAttr(k, span, String.valueOf(v));
       }
     });
   }

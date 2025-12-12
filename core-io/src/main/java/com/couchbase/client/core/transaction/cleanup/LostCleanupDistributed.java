@@ -17,12 +17,14 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupEndRunEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartRunEvent;
 import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
@@ -202,8 +204,12 @@ public class LostCleanupDistributed {
         return out;
     }
 
-    private RequestTracer tracer() {
-        return core.context().coreResources().requestTracer();
+    private RequestTracerAndDecorator tracer() {
+        return core.context().coreResources().requestTracerAndDecorator();
+    }
+
+    private TracingDecorator tip() {
+        return core.context().coreResources().tracingDecorator();
     }
 
     /**
@@ -261,8 +267,8 @@ public class LostCleanupDistributed {
 
                     stats.expired = expired;
 
-                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_ATR_ENTRIES_COUNT, stats.numEntries);
-                    span.attribute(TracingIdentifiers.ATTR_TRANSACTION_ATR_ENTRIES_EXPIRED, stats.expired.size());
+                    tip().provideAttr(TracingAttribute.TRANSACTION_ATR_ENTRIES_COUNT, span.span(), stats.numEntries);
+                    tip().provideAttr(TracingAttribute.TRANSACTION_ATR_ENTRIES_EXPIRED, span.span(), stats.expired.size());
 
                     return Flux.fromIterable(expired)
                             .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup());
@@ -388,9 +394,12 @@ public class LostCleanupDistributed {
 
         // Every X seconds (X = config.cleanupWindow), start off by reading & updating the client record
         // processClient can propagate errors
-        return Mono.fromRunnable(() -> span.set(SpanWrapperUtil.createOp(null, tracer(), collection, null, TracingIdentifiers.TRANSACTION_CLEANUP_WINDOW, null)
-                          .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_CLIENT_ID, clientUuid)
-                          .attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_WINDOW, config.cleanupConfig().cleanupWindow().toMillis())))
+        return Mono.fromRunnable(() -> {
+            SpanWrapper created = SpanWrapperUtil.createOp(null, tracer(), collection, null, TracingIdentifiers.TRANSACTION_CLEANUP_WINDOW, null);
+            tip().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_CLIENT_ID, created.span(), clientUuid);
+            tip().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_WINDOW, created.span(), config.cleanupConfig().cleanupWindow().toMillis());
+            span.set(created);
+        })
 
                 .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
 
@@ -406,9 +415,9 @@ public class LostCleanupDistributed {
                             clientDetails.numActiveClients(),
                             config.numAtrs());
 
-                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_ATRS, atrsHandledByThisClient.size());
-                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_ACTIVE, clientDetails.numActiveClients());
-                    span.get().attribute(TracingIdentifiers.ATTR_TRANSACTION_CLEANUP_NUM_EXPIRED, clientDetails.numExpiredClients());
+                    tip().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_NUM_ATRS, span.get().span(), atrsHandledByThisClient.size());
+                    tip().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_NUM_ACTIVE, span.get().span(), clientDetails.numActiveClients());
+                    tip().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_NUM_EXPIRED, span.get().span(), clientDetails.numExpiredClients());
 
                     long checkAtrEveryNNanos = Math.max(1, actualCleanupWindow.toNanos() / atrsHandledByThisClient.size());
 

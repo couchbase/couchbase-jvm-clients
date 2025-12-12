@@ -20,12 +20,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.Meter;
 import com.couchbase.client.core.cnc.ValueRecorder;
+import com.couchbase.client.core.cnc.metrics.MeterConventions;
 import com.couchbase.client.core.cnc.metrics.NameAndTags;
 import com.couchbase.client.core.env.VersionAndGitHash;
 import com.couchbase.client.core.error.MeterException;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.DoubleHistogram;
+import io.opentelemetry.api.metrics.DoubleHistogramBuilder;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.MeterProvider;
 
@@ -82,12 +84,18 @@ public class OpenTelemetryMeter implements Meter {
     try {
       Map<String, String> tags = filterTags(tagsOriginal);
       return valueRecorders.computeIfAbsent(new NameAndTags(name, tags), key -> {
-        DoubleHistogram vc =  otMeter.histogramBuilder(name).build();
+        DoubleHistogramBuilder histogramBuilder = otMeter.histogramBuilder(name);
+        String units = tagsOriginal.get(MeterConventions.METRIC_TAG_UNITS);
+        boolean secondsMode = units != null && units.equals(MeterConventions.METRIC_TAG_UNIT_SECONDS);
+        if (secondsMode) {
+          histogramBuilder.setUnit(units);
+        }
+        DoubleHistogram vc = histogramBuilder.build();
         AttributesBuilder builder = io.opentelemetry.api.common.Attributes.builder();
         for (Map.Entry<String, String> tag : tags.entrySet()) {
           builder.put(tag.getKey(), tag.getValue());
         }
-        return new OpenTelemetryValueRecorder(vc, builder.build());
+        return new OpenTelemetryValueRecorder(vc, builder.build(), secondsMode);
       });
     } catch (Exception ex) {
       throw new MeterException("Failed to create/access ValueRecorder", ex);
@@ -98,7 +106,7 @@ public class OpenTelemetryMeter implements Meter {
     Map<String, String> out = new HashMap<>();
     // OpenTelemetry can support the same metric having different tagsets, so we trim the nulls out.
     tags.forEach((k, v) -> {
-      if (v != null) {
+      if (v != null && !MeterConventions.isTagReserved(k)) {
         out.put(k, v);
       }
     });

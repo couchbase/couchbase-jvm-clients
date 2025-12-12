@@ -20,7 +20,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
@@ -101,7 +103,8 @@ public class CoreBucketManager {
     String bucketName = getBucketName(settings);
 
     RequestSpan span = CbTracing.newSpan(core.context(), TracingIdentifiers.SPAN_REQUEST_MB_UPDATE_BUCKET, options.parentSpan().orElse(null));
-    span.attribute(TracingIdentifiers.ATTR_NAME, bucketName);
+    TracingDecorator tip = core.context().coreResources().tracingDecorator();
+    tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucketName);
     CoreCommonOptions getAllBucketOptions = options.withParentSpan(span);
 
     return Mono

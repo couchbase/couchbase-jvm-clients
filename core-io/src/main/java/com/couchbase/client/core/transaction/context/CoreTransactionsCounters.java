@@ -17,9 +17,8 @@ package com.couchbase.client.core.transaction.context;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.Counter;
-import com.couchbase.client.core.cnc.Meter;
-import com.couchbase.client.core.cnc.metrics.LoggingMeter;
+import com.couchbase.client.core.cnc.metrics.CounterName;
+import com.couchbase.client.core.cnc.metrics.WrappedCounter;
 import com.couchbase.client.core.cnc.metrics.ResponseMetricIdentifier;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.topology.ClusterIdentifier;
@@ -32,28 +31,26 @@ import static com.couchbase.client.core.cnc.TracingIdentifiers.*;
 
 @Stability.Internal
 public class CoreTransactionsCounters {
-    private final Map<ResponseMetricIdentifier, Counter> transactionsMetrics = new ConcurrentHashMap<>();
-    private final Map<ResponseMetricIdentifier, Counter> attemptMetrics = new ConcurrentHashMap<>();
+    private final Map<ResponseMetricIdentifier, WrappedCounter> transactionsMetrics = new ConcurrentHashMap<>();
+    private final Map<ResponseMetricIdentifier, WrappedCounter> attemptMetrics = new ConcurrentHashMap<>();
     private final Core core;
-    private final Meter meter;
 
-    public CoreTransactionsCounters(Core core, Meter meter) {
+    public CoreTransactionsCounters(Core core) {
         this.core = core;
-        this.meter = meter;
     }
 
-    public Counter attempts() {
-        return genericCounter(METER_TRANSACTION_ATTEMPTS, attemptMetrics);
+    public WrappedCounter attempts() {
+        return genericCounter(CounterName.TRANSACTIONS_ATTEMPT_COUNTER, attemptMetrics);
     }
 
-    public Counter transactions() {
-        return genericCounter(METER_TRANSACTION_TOTAL, transactionsMetrics);
+    public WrappedCounter transactions() {
+        return genericCounter(CounterName.TRANSACTIONS_COUNTER, transactionsMetrics);
     }
 
-    private Counter genericCounter(String name, Map<ResponseMetricIdentifier, Counter> metricsMap) {
+    private WrappedCounter genericCounter(CounterName name, Map<ResponseMetricIdentifier, WrappedCounter> metricsMap) {
         ClusterConfig config = core.configurationProvider().config();
         ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(config);
-        boolean isDefaultLoggingMeter = core.context().environment().meter() instanceof LoggingMeter;
+        boolean isDefaultLoggingMeter = core.coreResources().meter().isDefaultLoggingMeter();
         ResponseMetricIdentifier rmi = new ResponseMetricIdentifier(SERVICE_TRANSACTIONS,
                 TRANSACTION_OP,
                 // Transactions are not associated with any one collection - they can span
@@ -62,6 +59,6 @@ public class CoreTransactionsCounters {
                 null,
                 clusterIdent,
                 isDefaultLoggingMeter);
-        return metricsMap.computeIfAbsent(rmi, id -> meter.counter(name, id.tags()));
+        return metricsMap.computeIfAbsent(rmi, id -> core.coreResources().meter().counter(name, id));
     }
 }

@@ -19,8 +19,11 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
+import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -31,12 +34,6 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
-import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.error.context.SubDocumentErrorContext;
-import com.couchbase.client.core.error.subdoc.DocumentAlreadyAliveException;
-import com.couchbase.client.core.error.subdoc.DocumentNotJsonException;
-import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
-import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -219,9 +216,10 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     this.syncReplicationType = syncReplicationType;
     this.createAsDeleted = createAsDeleted;
 
-    if (span != null) {
-      span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
-      applyLevelOnSpan(syncReplicationType, span);
+    if (span != null && !CbTracing.isInternalSpan(span)) {
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN);
+      applyLevelOnSpan(syncReplicationType, span, tip);
     }
   }
 

@@ -16,15 +16,12 @@
 package com.couchbase.client.core.transaction.support;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import reactor.util.annotation.Nullable;
 
-import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_OPERATION;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ATTEMPT_ID;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_TRANSACTION_ID;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.SERVICE_TRANSACTIONS;
 
 @Stability.Internal
@@ -33,36 +30,46 @@ public class SpanWrapperUtil {
     }
 
     public static SpanWrapper createOp(@Nullable CoreTransactionAttemptContext ctx,
-                                       RequestTracer tracer,
+                                       RequestTracerAndDecorator tracer,
                                        @Nullable CollectionIdentifier collection,
                                        @Nullable String id,
                                        String op,
                                        @Nullable SpanWrapper attemptSpan) {
-        SpanWrapper out = SpanWrapper.create(tracer, op, attemptSpan);
+        SpanWrapper out = SpanWrapper.create(tracer.requestTracer, op, attemptSpan);
         if (!out.isInternal()) {
-            out.attribute(ATTR_OPERATION, op);
-            return setAttributes(out, ctx, collection, id);
+            tracer.decorator.provideLowCardinalityAttr(TracingAttribute.OPERATION, out.span(), op);
+            return setAttributes(out, tracer, ctx, collection, id);
         }
         return out;
     }
 
+    public static SpanWrapper addOperationAttribute(RequestTracerAndDecorator tracer,
+                                                    SpanWrapper span,
+                                                    String op) {
+        if (!span.isInternal()) {
+            tracer.decorator.provideLowCardinalityAttr(TracingAttribute.OPERATION, span.span(), op);
+        }
+        return span;
+    }
+
     public static SpanWrapper setAttributes(SpanWrapper out,
+                                            RequestTracerAndDecorator tracer,
                                             @Nullable CoreTransactionAttemptContext ctx,
                                             @Nullable CollectionIdentifier collection,
                                             @Nullable String id) {
         if (!out.isInternal()) {
-            out.attribute(TracingIdentifiers.ATTR_SERVICE, SERVICE_TRANSACTIONS);
+            tracer.decorator.provideLowCardinalityAttr(TracingAttribute.SERVICE, out.span(), SERVICE_TRANSACTIONS);
             if (ctx != null) {
-                out.attribute(ATTR_TRANSACTION_ID, ctx.transactionId())
-                        .attribute(ATTR_TRANSACTION_ATTEMPT_ID, ctx.attemptId());
+                tracer.decorator.provideAttr(TracingAttribute.TRANSACTION_ID, out.span(), ctx.transactionId());
+                tracer.decorator.provideAttr(TracingAttribute.TRANSACTION_ATTEMPT_ID, out.span(), ctx.attemptId());
             }
             if (collection != null) {
-                out.attribute(TracingIdentifiers.ATTR_NAME, collection.bucket())
-                        .attribute(TracingIdentifiers.ATTR_SCOPE, collection.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE))
-                        .attribute(TracingIdentifiers.ATTR_COLLECTION, collection.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+                tracer.decorator.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, out.span(), collection.bucket());
+                tracer.decorator.provideAttr(TracingAttribute.SCOPE_NAME, out.span(), collection.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
+                tracer.decorator.provideAttr(TracingAttribute.COLLECTION_NAME, out.span(), collection.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
             }
             if (id != null) {
-                out.attribute(TracingIdentifiers.ATTR_DOCUMENT_ID, id);
+                tracer.decorator.provideAttr(TracingAttribute.DOCUMENT_ID, out.span(), id);
             }
         }
         return out;

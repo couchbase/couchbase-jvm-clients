@@ -55,7 +55,7 @@ public class QueryAccessor {
     notNullOrEmpty(statement, "Statement", () -> new ReducedQueryErrorContext(statement));
 
     return new QueryRequest(timeout, core.context(), retryStrategy, core.context().authenticator(), statement,
-        queryBytes, readonly, clientContextId, parentSpan, null, null, target);
+        queryBytes, readonly, clientContextId, parentSpan, null, null, target, false);
   }
 
   public static RuntimeException convertCoreQueryError(Throwable err) {

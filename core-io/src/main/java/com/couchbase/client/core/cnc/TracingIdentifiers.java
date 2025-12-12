@@ -229,65 +229,8 @@ public class TracingIdentifiers {
   public static final String SPAN_REQUEST_ME_UNDEPLOY = "manager_eventing_undeploy_function";
   public static final String SPAN_REQUEST_ME_STATUS = "manager_eventing_functions_status";
 
-  public static final String ATTR_SYSTEM = "db.system";
-
-  public static final String ATTR_NAME = "db.name";
-
-  public static final String ATTR_STATEMENT = "db.statement";
-
-  public static final String ATTR_OPERATION = "db.operation";
-
   public static final String ATTR_SYSTEM_COUCHBASE = "couchbase";
 
-  public static final String ATTR_NET_TRANSPORT = "net.transport";
-
-  public static final String ATTR_NET_TRANSPORT_TCP = "IP.TCP";
-
-  public static final String ATTR_LOCAL_ID = "db.couchbase.local_id";
-
-  public static final String ATTR_LOCAL_HOSTNAME = "net.host.name";
-
-  public static final String ATTR_LOCAL_PORT = "net.host.port";
-
-  public static final String ATTR_REMOTE_HOSTNAME = "net.peer.name";
-
-  public static final String ATTR_REMOTE_PORT = "net.peer.port";
-
-  public static final String ATTR_OPERATION_ID = "db.couchbase.operation_id";
-
-  public static final String ATTR_SERVER_DURATION = "db.couchbase.server_duration";
-
-  public static final String ATTR_SERVICE = "db.couchbase.service";
-
-  public static final String ATTR_COLLECTION = "db.couchbase.collection";
-
-  public static final String ATTR_SCOPE = "db.couchbase.scope";
-
-  public static final String ATTR_DOCUMENT_ID = "db.couchbase.document_id";
-  public static final String ATTR_CLUSTER_UUID = "db.couchbase.cluster_uuid";
-  public static final String ATTR_CLUSTER_NAME = "db.couchbase.cluster_name";
-
-  public static final String ATTR_TRANSACTION_ID = "db.couchbase.transaction.id";
-  public static final String ATTR_TRANSACTION_ATTEMPT_ID = "db.couchbase.transaction.attempt_id";
-  public static final String ATTR_TRANSACTION_STATE = "db.couchbase.transaction.state";
-  public static final String ATTR_TRANSACTION_AGE = "db.couchbase.transaction.age_ms";
-  public static final String ATTR_TRANSACTION_SINGLE_QUERY = "db.couchbase.transaction.single_query";
-  public static final String ATTR_TRANSACTION_CLEANUP_CLIENT_ID = "db.couchbase.transactions.cleanup.client_id";
-  public static final String ATTR_TRANSACTION_CLEANUP_WINDOW = "db.couchbase.transactions.cleanup.window_ms";
-  public static final String ATTR_TRANSACTION_CLEANUP_NUM_ATRS = "db.couchbase.transactions.cleanup.client_atrs";
-  public static final String ATTR_TRANSACTION_CLEANUP_NUM_ACTIVE = "db.couchbase.transactions.cleanup.clients_active";
-  public static final String ATTR_TRANSACTION_CLEANUP_NUM_EXPIRED = "db.couchbase.transactions.cleanup.clients_expired";
-  public static final String ATTR_TRANSACTION_ATR_ENTRIES_COUNT = "db.couchbase.transactions.atr.entries_count";
-  public static final String ATTR_TRANSACTION_ATR_ENTRIES_EXPIRED = "db.couchbase.transactions.atr.entries_expired";
-
-  public static final String METER_OPERATIONS = "db.couchbase.operations";
-  public static final String METER_TRANSACTION_TOTAL = "db.couchbase.transactions.total";
-  public static final String METER_TRANSACTION_ATTEMPTS = "db.couchbase.transactions.attempts";
-
-  public static final String ATTR_DURABILITY = "db.couchbase.durability";
-
-  public static final String ATTR_RETRIES = "db.couchbase.retries";
-  public static final String ATTR_OUTCOME = "outcome";
   public static final String TRANSACTION_OP = "transaction";
   public static final String TRANSACTION_OP_ATTEMPT = "transaction_attempt";
   public static final String TRANSACTION_OP_REPLACE = "transaction_replace";
@@ -312,5 +255,4 @@ public class TracingIdentifiers {
   public static final String TRANSACTION_CLEANUP_ATR = "transaction_cleanup_atr";
   public static final String TRANSACTION_CLEANUP = "transaction_cleanup";
   public static final String TRANSACTION_CLEANUP_CLIENT = "transaction_cleanup_client";
-
 }

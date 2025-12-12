@@ -19,6 +19,8 @@ package com.couchbase.client.tracing.observation;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImpl;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImplV0;
 import com.couchbase.client.core.error.TracerException;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
@@ -84,7 +86,8 @@ public class ObservationRequestTracer implements RequestTracer {
       // We're making the parent observation current, so that any user / framework
       // intermediate spans won't be treated as current.
       return parentObservation.scoped(() -> {
-        Observation observation = Observation.createNotStarted(TracingIdentifiers.METER_OPERATIONS, () -> senderContext, observationRegistry)
+        TracingDecoratorImpl impl = new TracingDecoratorImplV0();
+        Observation observation = Observation.createNotStarted(impl.meterOperations(), () -> senderContext, observationRegistry)
           .contextualName(operationName);
         return ObservationRequestSpan.wrap(observation.start());
       });

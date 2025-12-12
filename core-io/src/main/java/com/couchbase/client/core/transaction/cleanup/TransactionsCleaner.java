@@ -19,12 +19,13 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
-import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordEntry;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecordUtil;
@@ -367,8 +368,8 @@ public class TransactionsCleaner {
                 });
     }
 
-    private RequestTracer tracer() {
-        return core.context().coreResources().requestTracer();
+    private RequestTracerAndDecorator tracer() {
+        return core.context().coreResources().requestTracerAndDecorator();
     }
 
 
@@ -394,14 +395,15 @@ public class TransactionsCleaner {
     public Mono<TransactionCleanupAttemptEvent> performCleanup(CleanupRequest req,
                                                                boolean isRegularCleanup,
                                                                @Nullable SpanWrapper pspan) {
-        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), req.atrCollection(), req.atrId(), TracingIdentifiers.TRANSACTION_CLEANUP, pspan)
-                .attribute(TracingIdentifiers.ATTR_TRANSACTION_ATTEMPT_ID, req.attemptId())
-                .attribute(TracingIdentifiers.ATTR_TRANSACTION_AGE, req.ageMillis())
-                .attribute(TracingIdentifiers.ATTR_TRANSACTION_STATE, req.state());
+        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), req.atrCollection(), req.atrId(), TracingIdentifiers.TRANSACTION_CLEANUP, pspan);
+        TracingDecorator tip = core.context().coreResources().tracingDecorator();
+        tip.provideAttr(TracingAttribute.TRANSACTION_ATTEMPT_ID, span.span(), req.attemptId());
+        tip.provideAttr(TracingAttribute.TRANSACTION_AGE, span.span(), req.ageMillis());
+        tip.provideAttr(TracingAttribute.TRANSACTION_STATE, span.span(), req.state().name());
 
-        req.durabilityLevel().ifPresent(v -> {
-            span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY, DurabilityLevelUtil.convertDurabilityLevel(v));
-        });
+        req.durabilityLevel().ifPresent(v ->
+            tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span.span(), DurabilityLevelUtil.convertDurabilityLevel(v))
+        );
 
         return Mono.defer(() -> {
             CollectionIdentifier atrCollection = req.atrCollection();

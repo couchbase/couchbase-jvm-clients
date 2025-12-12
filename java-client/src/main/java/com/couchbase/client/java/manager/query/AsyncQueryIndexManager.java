@@ -18,7 +18,7 @@ package com.couchbase.client.java.manager.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryOps;
-import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
@@ -61,7 +61,7 @@ public class AsyncQueryIndexManager {
   @Stability.Internal
   public AsyncQueryIndexManager(
     final CoreQueryOps queryOps,
-    final RequestTracer requestTracer,
+    final RequestTracerAndDecorator requestTracer,
     final AsyncCluster cluster
   ) {
     this.internal = new CoreQueryIndexManager(queryOps, requestTracer);

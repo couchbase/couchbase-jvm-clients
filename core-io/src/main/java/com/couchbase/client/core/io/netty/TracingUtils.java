@@ -18,7 +18,8 @@ package com.couchbase.client.core.io.netty;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -41,35 +42,20 @@ public class TracingUtils {
    * @param localId the local socket ID.
    * @param localHost the local hostname or ip.
    * @param localPort the local port.
-   * @param remoteHost the remote hostname or ip.
-   * @param remotePort the remote port.
+   * @param remoteCanonicalHost the canonical remote hostname or ip.
+   * @param remoteCanonicalPort the canonical remote port.
+   * @param remoteActualHost the actual remote hostname or ip.
+   * @param remoteActualPort the actual remote port.
    * @param operationId the unique operation ID - can be null (then ignored).
    */
-  public static void setCommonDispatchSpanAttributes(final RequestSpan span, @Nullable final String localId,
+  public static void setCommonDispatchSpanAttributes(final TracingDecorator tip,
+                                                     final RequestSpan span, @Nullable final String localId,
                                                      @Nullable final String localHost, final int localPort,
-                                                     @Nullable final String remoteHost, final int remotePort,
+                                                     @Nullable final String remoteCanonicalHost, final int remoteCanonicalPort,
+                                                     @Nullable final String remoteActualHost, final int remoteActualPort,
                                                      @Nullable final String operationId) {
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_NET_TRANSPORT, TracingIdentifiers.ATTR_NET_TRANSPORT_TCP);
-
-    if (localId != null) {
-      span.attribute(TracingIdentifiers.ATTR_LOCAL_ID, localId);
-    }
-
-    if (localHost != null) {
-      span.attribute(TracingIdentifiers.ATTR_LOCAL_HOSTNAME, localHost);
-    }
-    if (localPort != 0) {
-      span.attribute(TracingIdentifiers.ATTR_LOCAL_PORT, localPort);
-    }
-    if (remoteHost != null) {
-      span.attribute(TracingIdentifiers.ATTR_REMOTE_HOSTNAME, remoteHost);
-    }
-    if (remotePort != 0) {
-      span.attribute(TracingIdentifiers.ATTR_REMOTE_PORT, remotePort);
-    }
-    if (operationId != null) {
-      span.attribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
-    }
+    tip.provideCommonDispatchSpanAttributes(span, localId, localHost, localPort, remoteCanonicalHost, remoteCanonicalPort,
+            remoteActualHost, remoteActualPort, operationId);
   }
 
   /**
@@ -77,29 +63,19 @@ public class TracingUtils {
    */
   public static void setCommonKVSpanAttributes(final RequestSpan span, final KeyValueRequest<Response> request) {
     CollectionIdentifier collectionIdentifier = request.collectionIdentifier();
+    TracingDecorator tip = request.context().coreResources().tracingDecorator();
     if (collectionIdentifier != null) {
-      span.attribute(TracingIdentifiers.ATTR_NAME, collectionIdentifier.bucket());
-      span.attribute(TracingIdentifiers.ATTR_SCOPE, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
-      span.attribute(TracingIdentifiers.ATTR_COLLECTION, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
+      tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, collectionIdentifier.bucket());
+      tip.provideAttr(TracingAttribute.SCOPE_NAME, span, collectionIdentifier.scope().orElse(CollectionIdentifier.DEFAULT_SCOPE));
+      tip.provideAttr(TracingAttribute.COLLECTION_NAME, span, collectionIdentifier.collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION));
     }
-    span.attribute(TracingIdentifiers.ATTR_DOCUMENT_ID, new String(request.key()));
+    tip.provideAttr(TracingAttribute.DOCUMENT_ID, span, new String(request.key()));
     if (request instanceof SyncDurabilityRequest) {
       SyncDurabilityRequest syncDurabilityRequest = (SyncDurabilityRequest) request;
       if (syncDurabilityRequest.durabilityLevel() != null) {
-        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_DURABILITY,
-                syncDurabilityRequest.durabilityLevel().map(Enum::name).orElse(DurabilityLevel.NONE.name()));
+        tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span, syncDurabilityRequest.durabilityLevel().map(Enum::name).orElse(DurabilityLevel.NONE.name()));
       }
     }
-  }
-
-  /**
-   * Sets the operation ID as a numeric value.
-   *
-   * @param span the span where it should be set.
-   * @param operationId the numeric operation id.
-   */
-  public static void setNumericOperationId(final RequestSpan span, final long operationId) {
-    span.attribute(TracingIdentifiers.ATTR_OPERATION_ID, operationId);
   }
 
   /**
@@ -108,9 +84,9 @@ public class TracingUtils {
    * @param span the span where it should be set.
    * @param serverDuration the actual duration.
    */
-  public static void setServerDurationAttribute(final RequestSpan span, final long serverDuration) {
+  public static void setServerDurationAttribute(final TracingDecorator tip, final RequestSpan span, final long serverDuration) {
     if (serverDuration > 0) {
-      span.attribute(TracingIdentifiers.ATTR_SERVER_DURATION, serverDuration);
+      tip.provideAttr(TracingAttribute.SERVER_DURATION, span, serverDuration);
     }
   }
 

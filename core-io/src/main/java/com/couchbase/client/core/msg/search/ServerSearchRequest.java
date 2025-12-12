@@ -20,7 +20,9 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
@@ -59,8 +61,9 @@ public class ServerSearchRequest extends BaseRequest<SearchResponse>
         this.scope = scope;
 
         if (span != null && !CbTracing.isInternalSpan(span)) {
-            span.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_SEARCH);
-            span.attribute(TracingIdentifiers.ATTR_OPERATION, indexName);
+          TracingDecorator tip = ctx.coreResources().tracingDecorator();
+          tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_SEARCH);
+          tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, indexName);
         }
     }
 

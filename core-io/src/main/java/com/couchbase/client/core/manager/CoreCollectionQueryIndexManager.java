@@ -38,7 +38,9 @@ import com.couchbase.client.core.api.query.CoreQueryScanConsistency;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
@@ -84,13 +86,16 @@ import static java.util.stream.Collectors.toSet;
 public class CoreCollectionQueryIndexManager {
   private final CoreQueryOps queryOps;
   private final RequestTracer requestTracer;
+  private final TracingDecorator tip;
 
   private final CoreKeyspace collection;
   private final CoreQueryContext queryContext;
 
-  public CoreCollectionQueryIndexManager(CoreQueryOps queryOps, RequestTracer requestTracer, CoreKeyspace collection) {
+  public CoreCollectionQueryIndexManager(CoreQueryOps queryOps, RequestTracer requestTracer, CoreKeyspace collection,
+                                         TracingDecorator tip) {
     this.queryOps = requireNonNull(queryOps);
     this.requestTracer = requireNonNull(requestTracer);
+    this.tip = requireNonNull(tip);
     this.collection = requireNonNull(collection);
     this.queryContext = CoreQueryContext.of(collection.bucket(), collection.scope());
   }
@@ -272,10 +277,10 @@ public class CoreCollectionQueryIndexManager {
   }
 
   private void setupSpan(RequestSpan parent) {
-    parent.attribute(TracingIdentifiers.ATTR_NAME, collection.bucket());
-    parent.attribute(TracingIdentifiers.ATTR_SCOPE, collection.scope());
-    parent.attribute(TracingIdentifiers.ATTR_COLLECTION, collection.collection());
-    parent.lowCardinalityAttribute(TracingIdentifiers.ATTR_SERVICE, TracingIdentifiers.SERVICE_MGMT);
+    tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, parent, collection.bucket());
+    tip.provideAttr(TracingAttribute.SCOPE_NAME, parent, collection.scope());
+    tip.provideAttr(TracingAttribute.COLLECTION_NAME, parent, collection.collection());
+    tip.provideManagerOrActualService(parent, TracingIdentifiers.SERVICE_QUERY);
   }
 
   public static String formatIndexFields(Collection<String> fields) {

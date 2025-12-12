@@ -145,7 +145,8 @@ public class AsyncCollection {
     this.asyncBinaryCollection = new AsyncBinaryCollection(keyspace, couchbaseOps, cluster);
 
     this.kvOps = couchbaseOps.kvOps(keyspace);
-    this.queryIndexManager = new AsyncCollectionQueryIndexManager(couchbaseOps.queryOps(), couchbaseOps.coreResources().requestTracer(), keyspace);
+    this.queryIndexManager = new AsyncCollectionQueryIndexManager(couchbaseOps.queryOps(), couchbaseOps.coreResources().requestTracer(),
+            keyspace, couchbaseOps.coreResources().tracingDecorator());
   }
 
   /**

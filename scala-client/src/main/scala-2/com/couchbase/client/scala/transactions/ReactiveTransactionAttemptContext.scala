@@ -203,7 +203,6 @@ class ReactiveTransactionAttemptContext private[scala] (
       implicit serializer: JsonSerializer[T]
   ): SMono[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
       case Success(encoded)   =>
@@ -248,7 +247,6 @@ class ReactiveTransactionAttemptContext private[scala] (
       implicit serializer: JsonSerializer[T]
   ): SMono[TransactionGetResult] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE)
     encode(content, span, serializer, options.transcoder, internal.core.context) match {
       case Failure(exception) => SMono.raiseError(exception)
       case Success(encoded)   =>
@@ -269,7 +267,6 @@ class ReactiveTransactionAttemptContext private[scala] (
     */
   def remove(doc: TransactionGetResult): SMono[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
-    span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE)
     FutureConversions
       .javaMonoToScalaMono(internal.remove(doc.internal, new SpanWrapper(span)))
       .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))

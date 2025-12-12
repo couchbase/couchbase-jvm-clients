@@ -21,8 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.retry.RetryReason;
@@ -230,7 +229,7 @@ public class RequestContext extends CoreContext {
     RequestSpan span = request.requestSpan();
     if (span != null) {
       if (!CbTracing.isInternalSpan(span)) {
-        span.attribute(TracingIdentifiers.ATTR_RETRIES, retryAttempts());
+        coreResources().tracingDecorator().provideAttr(TracingAttribute.RETRIES, span, retryAttempts());
         if (err != null) {
           span.recordException(err);
           span.status(RequestSpan.StatusCode.ERROR);
@@ -239,7 +238,7 @@ public class RequestContext extends CoreContext {
       span.end();
     }
 
-    if (!(environment().meter() instanceof NoopMeter)) {
+    if (!(core().coreResources().meter().isNoopMeter())) {
       long latency = logicalRequestLatency();
       if (latency > 0) {
         try {

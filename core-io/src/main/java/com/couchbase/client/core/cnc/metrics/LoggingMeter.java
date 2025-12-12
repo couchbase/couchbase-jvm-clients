@@ -19,18 +19,24 @@ package com.couchbase.client.core.cnc.metrics;
 import com.couchbase.client.core.cnc.Counter;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.Meter;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.cnc.events.metrics.LatencyMetricsAggregatedEvent;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImpl;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImplV0;
+import com.couchbase.client.core.cnc.tracing.TracingDecoratorImplV1;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
 import com.couchbase.client.core.env.LoggingMeterConfig;
 import com.couchbase.client.core.error.MeterException;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +55,20 @@ public class LoggingMeter implements Meter {
   private final AtomicBoolean running = new AtomicBoolean(false);
 
   private final ConcurrentMap<NameAndTags, AggregatingValueRecorder> valueRecorders = new ConcurrentHashMap<>();
+  private static final TracingDecoratorImpl TIP_V0 = new TracingDecoratorImplV0();
+  private static final TracingDecoratorImpl TIP_V1 = new TracingDecoratorImplV1();
+  private static final Set<String> OPERATION_METRIC_NAMES = new HashSet<>(Arrays.asList(
+      TIP_V1.meterOperations(),
+      TIP_V0.meterOperations()
+  ));
+  private static final String[] SERVICE_TAG_KEYS = {
+    TIP_V1.requireAttributeName(TracingAttribute.SERVICE),
+    TIP_V0.requireAttributeName(TracingAttribute.SERVICE)
+  };
+  private static final String[] OPERATION_TAG_KEYS = {
+    TIP_V1.requireAttributeName(TracingAttribute.OPERATION),
+    TIP_V0.requireAttributeName(TracingAttribute.OPERATION)
+  };
 
   private final long emitIntervalMs;
   private final LoggingMeterConfig config;
@@ -152,8 +172,10 @@ public class LoggingMeter implements Meter {
       boolean wroteRow = false;
 
       Map<String, Map<String, Object>> operations = new HashMap<>();
+      // If both V0 and V1 metrics are present then whichever is second in the map will overwrite the first - this keeps
+      // the code simpler.  Both metrics should contain the same values.
       for (Map.Entry<NameAndTags, AggregatingValueRecorder> entry : valueRecorders.entrySet()) {
-        if (!entry.getKey().name().equals(TracingIdentifiers.METER_OPERATIONS)) {
+        if (!OPERATION_METRIC_NAMES.contains(entry.getKey().name())) {
           continue;
         }
 
@@ -164,8 +186,11 @@ public class LoggingMeter implements Meter {
         }
         wroteRow = true;
 
-        String service = avr.tags().get(TracingIdentifiers.ATTR_SERVICE);
-        String operation = avr.tags().get(TracingIdentifiers.ATTR_OPERATION);
+        String service = firstNonNullTag(avr.tags(), SERVICE_TAG_KEYS);
+        String operation = firstNonNullTag(avr.tags(), OPERATION_TAG_KEYS);
+        if (service == null || operation == null) {
+          continue;
+        }
 
         Map<String, Object> serviceMap = operations.computeIfAbsent(service, k -> new HashMap<>());
         Map<String, Object> operationMap = (Map<String, Object>) serviceMap.computeIfAbsent(operation, k -> new HashMap<>());
@@ -190,5 +215,13 @@ public class LoggingMeter implements Meter {
     }
   }
 
-
+  private static String firstNonNullTag(final Map<String, String> tags, final String[] keys) {
+    for (String key : keys) {
+      String value = tags.get(key);
+      if (value != null) {
+        return value;
+      }
+    }
+    return null;
+  }
 }

@@ -31,6 +31,7 @@ import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeout
 import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
+import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -73,6 +74,7 @@ import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
+import static com.couchbase.client.core.util.CbCollections.listCopyOf;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -134,6 +136,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
   private final @Nullable String preferredServerGroup;
   private final @Nullable URI appTelemetryEndpoint;
   private final boolean appTelemetryDisabled;
+  private final List<ObservabilitySemanticConvention> observabilitySemanticConventions;
 
   public static CoreEnvironment create() {
     return builder().build();
@@ -189,6 +192,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     this.transactionsConfig = builder.transactionsConfig != null
             ? builder.transactionsConfig
             : CoreTransactionsConfig.createDefault(CoreTransactionsSupportedExtensions.ALL);
+    this.observabilitySemanticConventions = builder.observabilitySemanticConventions;
 
     if (eventBus.isOwned()) {
       eventBus.get().start().block();
@@ -412,6 +416,15 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     return requestTracer.get();
   }
 
+  @Stability.Internal
+  public List<ObservabilitySemanticConvention> observabilitySemanticConventions() {
+    return observabilitySemanticConventions;
+  }
+
+  /**
+   * @deprecated as the caller almost certainly wants the method on {@link com.couchbase.client.core.CoreResources}
+   * instead, which will handle the user's ObservabilitySemanticConvention request.
+   */
   @Stability.Volatile
   public Meter meter() {
     return meter.get();
@@ -672,6 +685,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     private String preferredServerGroup = null;
     private URI appTelemetryEndpoint = null;
     private boolean disableAppTelemetry = DEFAULT_DISABLE_APP_TELEMETRY;
+    protected List<ObservabilitySemanticConvention> observabilitySemanticConventions = new ArrayList<>();
 
     private final Set<String> appliedProfiles = new LinkedHashSet<>();
 
@@ -761,6 +775,28 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
      */
     public SELF loggerConfig(final Consumer<LoggerConfig.Builder> builderConsumer) {
       notNull(builderConsumer, "BuilderConsumer").accept(this.loggerConfig);
+      return self();
+    }
+
+    /**
+     * Customize the spans and metrics output by the SDK so that they follow one (or more) of the
+     * OpenTelemetry standards.  See {@link ObservabilitySemanticConvention} for more on this.
+     * <p>
+     * The interface takes a List, to be forward-looking to future OpenTelemetry revisions.
+     * Currently, only a single (or no) ObservabilitySemanticConvention should be provided.
+     * <p>
+     * If this method is not called, then the environment variable "OTEL_SEMCONV_STABILITY_OPT_IN"
+     * will be checked, and used if present.  This is a standard OpenTelemetry convention that
+     * is a comma-separated list.  The SDK will understand "database" and "database/dup" values,
+     * mapping those to the appropriate ObservabilitySemanticConvention(s).
+     * <p>
+     * If this method is not called, and OTEL_SEMCONV_STABILITY_OPT_IN is not present, then the
+     * SDK will default to the older OpenTelemetry standard, for backwards compatibility.
+     *
+     * @return this {@link Builder} for chaining purposes.
+     */
+    public SELF observabilitySemanticConventions(final List<ObservabilitySemanticConvention> conventions) {
+      this.observabilitySemanticConventions = listCopyOf(notNull(conventions, "Conventions"));
       return self();
     }
 

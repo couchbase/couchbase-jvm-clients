@@ -22,7 +22,6 @@ import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
@@ -46,8 +45,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI;
-import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_INSERT;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REMOVE;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_REPLACE;
@@ -220,7 +217,6 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetResult> insert(ReactiveCollection collection, String id, Object content, TransactionInsertOptions options) {
         TransactionInsertOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span());
-        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_INSERT);
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
 
         return reactor.publishOnUserScheduler(
@@ -259,7 +255,6 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetResult> replace(TransactionGetResult doc, Object content, TransactionReplaceOptions options) {
         TransactionReplaceOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
-        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REPLACE);
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
         return reactor.publishOnUserScheduler(
             internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), new SpanWrapper(span))
@@ -276,7 +271,6 @@ public class ReactiveTransactionAttemptContext {
      */
     public Mono<Void> remove(TransactionGetResult doc) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
-        span.lowCardinalityAttribute(TracingIdentifiers.ATTR_OPERATION, TRANSACTION_OP_REMOVE);
         return reactor.publishOnUserScheduler(
             internal.remove(doc.internal(), new SpanWrapper(span))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
