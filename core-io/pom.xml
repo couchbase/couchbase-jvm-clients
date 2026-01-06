@@ -248,6 +248,7 @@
                         <Import-Package>
                             javax.security.cert,
                             javax.naming,
+                            javax.net.ssl,
                             javax.security.sasl,
                             javax.security.auth.*,
                             javax.crypto,
