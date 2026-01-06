@@ -6,8 +6,8 @@ concurrency:
 on:
   push:
     branches:
-      - master
-      - 3.9.x
+      - 'master'
+      - '3.[0-9]+.x'
     paths-ignore:
       - '.gitignore'
       - '.editorconfig'
