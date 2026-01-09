@@ -16,13 +16,13 @@ package com.couchbase.client.scala
  * limitations under the License.
  */
 
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.env.{ClusterEnvironment, SecurityConfig}
 import com.couchbase.client.scala.json.JsonObject
 import com.couchbase.client.scala.kv.UpsertOptions
 import com.couchbase.client.scala.util.ScalaIntegrationTest
 import com.couchbase.client.test.{Capabilities, ClusterType, IgnoreWhen}
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import org.junit.jupiter.api.Assertions.{assertEquals, assertThrows, fail}
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.junit.jupiter.api.{Test, TestInstance}
