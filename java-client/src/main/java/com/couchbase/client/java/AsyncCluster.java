@@ -35,7 +35,6 @@ import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.env.DelegatingAuthenticator;
 import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -137,8 +136,6 @@ public class AsyncCluster {
   private final OwnedOrExternal<ClusterEnvironment> environment;
 
   private final CoreCouchbaseOps couchbaseOps;
-
-  private final DelegatingAuthenticator authenticator;
 
   /**
    * Stores already opened buckets for reuse.
@@ -250,8 +247,7 @@ public class AsyncCluster {
   ) {
     this.environment = environment;
     this.connectionString = connectionString;
-    this.authenticator = DelegatingAuthenticator.create(environment.get().securityConfig().tlsEnabled(), initialAuthenticator);
-    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), this.authenticator, connectionString);
+    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), initialAuthenticator, connectionString);
     this.queryOps = couchbaseOps.queryOps();
     this.searchOps = couchbaseOps.searchOps(null);
 
@@ -270,7 +266,7 @@ public class AsyncCluster {
   }
 
   public void authenticator(Authenticator newAuthenticator) {
-    authenticator.setDelegate(newAuthenticator);
+    couchbaseOps.authenticator(newAuthenticator);
   }
 
   /**
@@ -419,7 +415,7 @@ public class AsyncCluster {
       .coreResources()
       .requestTracer()
       .requestSpan(TracingIdentifiers.SPAN_REQUEST_ANALYTICS, opts.parentSpan().orElse(null));
-    AnalyticsRequest request = new AnalyticsRequest(timeout, core().context(), retryStrategy, authenticator,
+    AnalyticsRequest request = new AnalyticsRequest(timeout, core().context(), retryStrategy, couchbaseOps.authenticator(),
       queryBytes, opts.priority(), opts.readonly(), clientContextId, statement, span, null, null
     );
     request.context().clientContext(opts.clientContext());

@@ -70,6 +70,10 @@ public interface CoreCouchbaseOps {
 
   CoreResources coreResources();
 
+  Authenticator authenticator();
+
+  void authenticator(Authenticator newAuthenticator);
+
   CompletableFuture<Void> waitUntilReady(
       Set<ServiceType> serviceTypes,
       Duration timeout,

@@ -23,6 +23,7 @@ import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.HandshakeBarrier;
+import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolDecodeHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocolVerificationHandler;
@@ -108,6 +109,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       bucketname.ifPresent(s -> pipeline.addLast(new SelectBucketHandler(ctx, s)));
       pipeline.addLast(new HandshakeBarrier());
       pipeline.addLast(new KeyValueMessageHandler(endpoint, ctx, bucketname));
+      pipeline.addLast(new AuthenticationRefreshHandler(ctx));
     }
 
     /**

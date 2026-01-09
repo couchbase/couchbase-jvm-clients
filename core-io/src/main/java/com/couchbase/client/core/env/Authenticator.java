@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
@@ -85,4 +86,10 @@ public interface Authenticator {
     return true;
   }
 
+  /**
+   * Returns parameters for single-step SASL authentication refresh requests, or null if unsupported.
+   */
+  default @Nullable SingleStepSaslAuthParameters getSingleStepSaslAuthParameters() {
+    return null;
+  }
 }

@@ -67,14 +67,12 @@ import scala.util.{Failure, Success, Try}
   */
 trait AsyncClusterBase { this: AsyncCluster =>
   private[scala] implicit lazy val ec: ExecutionContext = environment.ec
-  private[scala] val delegatingAuthenticator            =
-    DelegatingAuthenticator.create(environment.coreEnv.securityConfig().tlsEnabled(), authenticator)
 
   /** The environment used to create this cluster */
   val env: ClusterEnvironment = environment
 
   private[scala] val couchbaseOps =
-    CoreCouchbaseOps.create(environment.coreEnv, delegatingAuthenticator, connectionString)
+    CoreCouchbaseOps.create(environment.coreEnv, initialAuthenticator, connectionString)
 
   // Only used by tests now
   private[couchbase] def core: Core = couchbaseOps match {
@@ -115,7 +113,7 @@ trait AsyncClusterBase { this: AsyncCluster =>
     * This method is thread-safe.
     */
   def authenticator(authenticator: Authenticator): Try[Unit] = {
-    Try(delegatingAuthenticator.setDelegate(authenticator))
+    Try(couchbaseOps.authenticator(authenticator))
   }
 
   private[scala] def performGlobalConnect(): Unit = {

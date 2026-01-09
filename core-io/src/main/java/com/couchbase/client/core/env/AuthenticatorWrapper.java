@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.service.ServiceType;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -54,5 +55,10 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   @Override
   public boolean requiresTls() {
     return wrapped().requiresTls();
+  }
+
+  @Override
+  public @Nullable SingleStepSaslAuthParameters getSingleStepSaslAuthParameters() {
+    return wrapped().getSingleStepSaslAuthParameters();
   }
 }

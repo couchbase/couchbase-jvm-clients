@@ -36,6 +36,7 @@ import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.endpoint.ProtostellarPool;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.DelegatingAuthenticator;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
@@ -78,12 +79,18 @@ public class CoreProtostellar implements CoreCouchbaseOps {
 
   private final ProtostellarPool pool;
   private final ProtostellarContext ctx;
+  private final DelegatingAuthenticator authenticator;
 
   public CoreProtostellar(
     final CoreEnvironment env,
-    final Authenticator authenticator,
+    final Authenticator initialAuthenticator,
     final ConnectionString connectionString
   ) {
+    this.authenticator = DelegatingAuthenticator.create(
+      env.securityConfig().tlsEnabled(),
+      initialAuthenticator
+    );
+
     CoreResources coreResources = () -> env.requestTracer();
     this.ctx = new ProtostellarContext(env, authenticator, coreResources);
     notNull(connectionString, "connectionString");
@@ -209,6 +216,16 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreResources coreResources() {
     return context().coreResources();
+  }
+
+  @Override
+  public Authenticator authenticator() {
+    return authenticator;
+  }
+
+  @Override
+  public void authenticator(Authenticator newAuthenticator) {
+    this.authenticator.setDelegate(newAuthenticator);
   }
 
   @Override

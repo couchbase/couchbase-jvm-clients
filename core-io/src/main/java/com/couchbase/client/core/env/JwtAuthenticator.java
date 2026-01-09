@@ -23,6 +23,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.OauthBearerSaslClient;
+import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.json.Mapper;
 import org.jspecify.annotations.NullMarked;
 
@@ -111,11 +112,13 @@ public class JwtAuthenticator implements Authenticator {
   private final Jwt jwt;
   private final String encodedJwt;
   private final String authHeaderValue;
+  private final SingleStepSaslAuthParameters saslAuthParameters;
 
-  private JwtAuthenticator(String encodedJwt) {
-    this.encodedJwt = encodedJwt.trim();
+  private JwtAuthenticator(String untrimmedEncodedJwt) {
+    this.encodedJwt = untrimmedEncodedJwt.trim();
     this.authHeaderValue = "Bearer " + this.encodedJwt;
     this.jwt = Jwt.parse(this.encodedJwt);
+    this.saslAuthParameters = SingleStepSaslAuthParameters.oauthbearer(null, this.encodedJwt);
   }
 
   @Override
@@ -127,6 +130,11 @@ public class JwtAuthenticator implements Authenticator {
       encodedJwt,
       supportedMechanisms
     ));
+  }
+
+  @Override
+  public SingleStepSaslAuthParameters getSingleStepSaslAuthParameters() {
+    return saslAuthParameters;
   }
 
   @Override

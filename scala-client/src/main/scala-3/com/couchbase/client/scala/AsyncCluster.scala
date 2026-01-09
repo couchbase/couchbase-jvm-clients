@@ -71,7 +71,7 @@ import scala.jdk.CollectionConverters.*
 
 class AsyncCluster private[scala] (
     private[scala] _env: => ClusterEnvironment,
-    private[scala] val authenticator: Authenticator,
+    private[scala] val initialAuthenticator: Authenticator,
     private[scala] val connectionString: ConnectionString
 ) extends AsyncClusterBase {
   private[scala] lazy val environment = _env

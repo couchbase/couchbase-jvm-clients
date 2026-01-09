@@ -67,6 +67,7 @@ import com.couchbase.client.core.diagnostics.WaitUntilReadyHelper;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.DelegatingAuthenticator;
 import com.couchbase.client.core.env.RequestTracerDecorator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
@@ -105,6 +106,7 @@ import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.SynchronousEventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -232,6 +234,19 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   private final EventBus eventBus;
 
+  private final DelegatingAuthenticator authenticator;
+
+  /**
+   * Just something to publish instead of null.
+   */
+  public enum AuthenticationRefreshTrigger {INSTANCE}
+
+  /*
+   * Broadcasts a signal whenever the user specifies a new JWT authenticator,
+   * so KV connections can reauthenticate if necessary.
+   */
+  public final SynchronousEventBus<AuthenticationRefreshTrigger> authenticationRefreshTriggers = new SynchronousEventBus<>();
+
   /**
    * Holds a reference to the timer used for timeout registration.
    */
@@ -282,13 +297,18 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   protected Core(
     final CoreEnvironment environment,
-    final Authenticator authenticator,
+    final Authenticator initialAuthenticator,
     final ConnectionString connectionString
   ) {
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
     sanityCheckPorts(connectionString);
 
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
+
+    this.authenticator = DelegatingAuthenticator.create(
+      environment.securityConfig().tlsEnabled(),
+      initialAuthenticator
+    );
 
     this.connectionString = requireNonNull(connectionString);
     boolean ignoresAttributes = CbTracing.isInternalTracer(environment.requestTracer());
@@ -995,6 +1015,19 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Override
   public CoreResources coreResources() {
     return coreResources;
+  }
+
+  @Override
+  public Authenticator authenticator() {
+    return authenticator;
+  }
+
+  @Override
+  public void authenticator(Authenticator newAuthenticator) {
+    this.authenticator.setDelegate(newAuthenticator);
+    if (newAuthenticator.getSingleStepSaslAuthParameters() != null) {
+      authenticationRefreshTriggers.publish(AuthenticationRefreshTrigger.INSTANCE);
+    }
   }
 
   @Stability.Internal

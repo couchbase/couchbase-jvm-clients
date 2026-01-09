@@ -27,7 +27,6 @@ import com.couchbase.client.core.diagnostics.HealthPinger
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
-import com.couchbase.client.core.env.DelegatingAuthenticator
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.service.ServiceType
@@ -121,18 +120,13 @@ public class Cluster internal constructor(
     initialAuthenticator: Authenticator,
     connectionString: ConnectionString,
 ) {
-    private val delegatingAuthenticator: DelegatingAuthenticator = DelegatingAuthenticator.create(
-        env.securityConfig().tlsEnabled(),
-        initialAuthenticator,
-    )
-
-    private val couchbaseOps = CoreCouchbaseOps.create(env, delegatingAuthenticator, connectionString)
+    private val couchbaseOps = CoreCouchbaseOps.create(env, initialAuthenticator, connectionString)
     private val searchOps = couchbaseOps.searchOps(null)
 
     public var authenticator: Authenticator
         @Deprecated("Property 'authenticator' is write-only.", level = DeprecationLevel.ERROR)
         get() = throw UnsupportedOperationException()
-        set(value) { this.delegatingAuthenticator.setDelegate(value) }
+        set(value) { couchbaseOps.authenticator(value) }
 
     internal val core: Core
         get() = couchbaseOps.asCore()
