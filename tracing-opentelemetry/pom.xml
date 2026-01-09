@@ -30,20 +30,23 @@
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-api</artifactId>
-            <version>${opentelemetry.version}</version>
+            <!-- Version controlled by the OpenTelemetry BOM -->
         </dependency>
 
+        <!-- Helper library for writing instrumentation -->
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-instrumentation-api</artifactId>
-            <version>${opentelemetry.version}</version>
+            <!-- This is not part of the OpenTelemetry BOM, and is ahead of the current main OpenTelemetry version (1.57.0 at time of writing) -->
+            <version>2.23.0</version>
         </dependency>
 
+        <!-- Semantic conventions for instrumentation authors (standard attribute names etc.) -->
         <dependency>
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-instrumentation-api-semconv</artifactId>
-            <!-- Older versions of Maven (certainly 3.6.3) cannot support "${opentelemetry.version}-alpha" -->
-            <version>1.31.0-alpha</version>
+            <!-- This is not part of the OpenTelemetry BOM, and lags behind the current main OpenTelemetry version (1.57.0 at time of writing) -->
+            <version>1.33.6-alpha</version>
         </dependency>
 
         <dependency>
