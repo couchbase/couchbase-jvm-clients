@@ -17,7 +17,7 @@
 
         <junit.version>5.11.2</junit.version>
         <assertj.version>3.23.1</assertj.version>
-        <log4j-slf4j-impl.version>2.20.0</log4j-slf4j-impl.version>
+        <log4j-slf4j-impl.version>2.25.3</log4j-slf4j-impl.version>
 
         <jackson.version>2.20.1</jackson.version>
         <reactor.version>3.6.9</reactor.version>
