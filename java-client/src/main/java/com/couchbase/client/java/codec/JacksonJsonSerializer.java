@@ -35,7 +35,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A serializer backed by a user-provided Jackson {@code ObjectMapper}.
+ * A serializer backed by a user-provided Jackson 2 {@code ObjectMapper}.
  * <p>
  * In order to use this class you must add Jackson to your class path.
  * <p>
@@ -52,7 +52,7 @@ import static java.util.Objects.requireNonNull;
  * mapper.registerModule(new JsonValueModule());
  *
  * ClusterEnvironment env = ClusterEnvironment.builder()
- *     .jsonSerializer(new JacksonJsonSerializer(mapper))
+ *     .jsonSerializer(JacksonJsonSerializer.create(mapper))
  *     .build();
  * </pre>
  * <p>
@@ -66,7 +66,7 @@ import static java.util.Objects.requireNonNull;
  *
  * ClusterEnvironment env = ClusterEnvironment.builder()
  *     .cryptoManager(cryptoManager)
- *     .jsonSerializer(new JacksonJsonSerializer(mapper))
+ *     .jsonSerializer(JacksonJsonSerializer.create(mapper))
  *     .build();
  * </pre>
  *

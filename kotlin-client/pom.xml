@@ -90,6 +90,18 @@
             <artifactId>jackson-datatype-jdk8</artifactId>
         </dependency>
 
+        <!-- Optional, used by Jackson3JsonSerializer -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.module</groupId>
+            <artifactId>jackson-module-kotlin</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Optional, used by KotlinxSerializationJsonSerializer -->
         <dependency>
             <groupId>org.jetbrains.kotlinx</groupId>

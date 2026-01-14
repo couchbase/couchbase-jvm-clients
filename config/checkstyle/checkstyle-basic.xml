@@ -26,7 +26,7 @@
   <module name="TreeWalker">
     <module name="IllegalImport">
       <!-- Prevent unintentional dependency on unbundled Jackson -->
-      <property name="illegalPkgs" value="com.fasterxml.jackson"/>
+      <property name="illegalPkgs" value="com.fasterxml.jackson,tools.jackson"/>
 
 <!--        Warns that using certain classes from jctools (namely in org.jctools.queues)
             is not native image compatible -->

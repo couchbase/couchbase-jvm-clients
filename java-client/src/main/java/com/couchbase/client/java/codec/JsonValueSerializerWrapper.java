@@ -21,6 +21,8 @@ import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.json.JacksonTransformers;
 import com.couchbase.client.java.json.JsonValue;
 
+import java.lang.reflect.Type;
+
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -50,19 +52,26 @@ public class JsonValueSerializerWrapper implements JsonSerializer {
 
   @Override
   public <T> T deserialize(Class<T> target, byte[] input) {
-    if (JsonValue.class.isAssignableFrom(target)) {
-      try {
-        return JacksonTransformers.MAPPER.readValue(input, target);
-      } catch (Exception e) {
-        throw new DecodingFailureException("Deserialization of content into target " + target
-            + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
-      }
-    }
-    return wrapped.deserialize(target, input);
+    return JsonValue.class.isAssignableFrom(target)
+      ? deserializeJsonValue(target, input)
+      : wrapped.deserialize(target, input);
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T> T deserialize(TypeRef<T> target, byte[] input) {
-    return wrapped.deserialize(target, input);
+    Type t = target.type();
+    return t instanceof Class && JsonValue.class.isAssignableFrom((Class<?>) t)
+      ? deserializeJsonValue((Class<T>) t, input)
+      : wrapped.deserialize(target, input);
+  }
+
+  private <T> T deserializeJsonValue(Class<T> target, byte[] input) {
+    try {
+      return JacksonTransformers.MAPPER.readValue(input, target);
+    } catch (Exception e) {
+      throw new DecodingFailureException("Deserialization of content into target " + target
+        + " failed; encoded = " + redactUser(new String(input, UTF_8)), e);
+    }
   }
 }
