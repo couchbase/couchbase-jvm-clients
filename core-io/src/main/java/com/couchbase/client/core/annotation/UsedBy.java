@@ -34,6 +34,7 @@ public @interface UsedBy {
 
   enum Project {
     SPRING_DATA_COUCHBASE,
-    QUARKUS_COUCHBASE
+    QUARKUS_COUCHBASE,
+    JDBC_DRIVER // https://github.com/couchbaselabs/couchbase-jdbc-driver
   }
 }

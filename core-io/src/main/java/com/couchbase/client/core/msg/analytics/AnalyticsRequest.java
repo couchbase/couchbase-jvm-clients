@@ -17,10 +17,12 @@
 package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.UsedBy;
+import com.couchbase.client.core.annotation.UsedBy.Project;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -36,6 +38,7 @@ import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -59,8 +62,6 @@ public class AnalyticsRequest
     "/api/v1/request"
   );
 
-  private static final HttpMethod httpMethod = HttpMethod.POST;
-
   private final byte[] query;
   private final int priority;
   private final boolean idempotent;
@@ -69,6 +70,7 @@ public class AnalyticsRequest
   private final String bucket;
   private final String scope;
   private final String httpPath;
+  private final HttpMethod httpMethod;
 
   private final Authenticator authenticator;
 
@@ -78,14 +80,130 @@ public class AnalyticsRequest
    */
   private final boolean translateExceptions;
 
-  public AnalyticsRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                          final Authenticator authenticator, final byte[] query, final int priority,
-                          final boolean idempotent, final String contextId, final String statement,
-                          final RequestSpan span, final String bucket, final String scope) {
-    this(timeout, ctx, retryStrategy, authenticator, query, priority, idempotent, contextId, statement, span, bucket,
-      scope, true, 0);
+  /**
+   * "Canonical" constructor that just sets all the properties.
+   */
+  private AnalyticsRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final Authenticator authenticator,
+    final RequestSpan span,
+    final byte[] query,
+    final int priority,
+    final boolean idempotent,
+    final String contextId,
+    final String statement,
+    final String bucket,
+    final String scope,
+    final String httpPath,
+    final HttpMethod httpMethod,
+    final boolean translateExceptions
+  ) {
+    super(timeout, ctx, retryStrategy, span);
+
+    this.query = query;
+    this.priority = priority;
+    this.idempotent = idempotent;
+    this.contextId = contextId;
+    this.statement = statement;
+    this.bucket = bucket;
+    this.scope = scope;
+    this.httpPath = httpPath;
+    this.httpMethod = httpMethod;
+    this.authenticator = authenticator;
+    this.translateExceptions = translateExceptions;
+
+    if (span != null && !CbTracing.isInternalSpan(span)) {
+      TracingDecorator tip = ctx.coreResources().tracingDecorator();
+      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_ANALYTICS);
+      tip.provideAttr(TracingAttribute.STATEMENT, span, statement);
+      if (bucket != null) {
+        tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucket);
+      }
+      if (scope != null) {
+        tip.provideAttr(TracingAttribute.SCOPE_NAME, span, scope);
+      }
+    }
   }
 
+  /**
+   * Constructor for JDBC driver so it can specify the HTTP path and method.
+   */
+  @UsedBy(Project.JDBC_DRIVER)
+  public AnalyticsRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final Authenticator authenticator,
+    final byte @Nullable [] query,
+    final int priority,
+    final boolean idempotent,
+    final String contextId,
+    final String statement,
+    final RequestSpan span,
+    final String bucket,
+    final String scope,
+    final String httpPath,
+    final HttpMethod httpMethod
+  ) {
+    this(
+      timeout,
+      ctx,
+      retryStrategy,
+      authenticator,
+      span,
+      query,
+      priority,
+      idempotent,
+      contextId,
+      statement,
+      bucket,
+      scope,
+      httpPath,
+      httpMethod,
+      true
+    );
+  }
+
+  /**
+   * Constructor for Operational SDK (legacy Analytics).
+   */
+  public AnalyticsRequest(
+    final Duration timeout,
+    final CoreContext ctx,
+    final RetryStrategy retryStrategy,
+    final Authenticator authenticator,
+    final byte[] query,
+    final int priority,
+    final boolean idempotent,
+    final String contextId,
+    final String statement,
+    final RequestSpan span,
+    final String bucket,
+    final String scope
+  ) {
+    this(
+      timeout,
+      ctx,
+      retryStrategy,
+      authenticator,
+      query,
+      priority,
+      idempotent,
+      contextId,
+      statement,
+      span,
+      bucket,
+      scope,
+      true,
+      0
+    );
+  }
+
+  /**
+   * Constructor for Columnar SDK so it can specify API version and disable exception translation.
+   */
   public AnalyticsRequest(
     final Duration timeout,
     final CoreContext ctx,
@@ -102,29 +220,23 @@ public class AnalyticsRequest
     final boolean translateExceptions,
     final int apiVersion
   ) {
-    super(timeout, ctx, retryStrategy, span);
-    this.query = query;
-    this.authenticator = authenticator;
-    this.priority = priority;
-    this.idempotent = idempotent;
-    this.contextId = contextId;
-    this.statement = statement;
-    this.bucket = bucket;
-    this.scope = scope;
-    this.translateExceptions = translateExceptions;
-    this.httpPath = httpPathsByVersion.get(apiVersion);
-
-    if (span != null && !CbTracing.isInternalSpan(span)) {
-      TracingDecorator tip = ctx.coreResources().tracingDecorator();
-      tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_ANALYTICS);
-      tip.provideAttr(TracingAttribute.STATEMENT, span, statement);
-      if (bucket != null) {
-        tip.provideLowCardinalityAttr(TracingAttribute.BUCKET_NAME, span, bucket);
-      }
-      if (scope != null) {
-        tip.provideAttr(TracingAttribute.SCOPE_NAME, span, scope);
-      }
-    }
+    this(
+      timeout,
+      ctx,
+      retryStrategy,
+      authenticator,
+      span,
+      query,
+      priority,
+      idempotent,
+      contextId,
+      statement,
+      bucket,
+      scope,
+      httpPathsByVersion.get(apiVersion),
+      HttpMethod.POST,
+      translateExceptions
+    );
   }
 
   /**
