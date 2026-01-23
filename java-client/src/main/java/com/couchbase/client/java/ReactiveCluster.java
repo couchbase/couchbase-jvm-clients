@@ -188,6 +188,9 @@ public class ReactiveCluster {
     this.reactor = asyncCluster.environment();
   }
 
+  /**
+   * @see Cluster#authenticator(Authenticator)
+   */
   public void authenticator(Authenticator newAuthenticator) {
     asyncCluster.authenticator(newAuthenticator);
   }

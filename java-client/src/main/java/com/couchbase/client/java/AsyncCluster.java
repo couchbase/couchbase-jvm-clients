@@ -265,6 +265,9 @@ public class AsyncCluster {
     ));
   }
 
+  /**
+   * @see Cluster#authenticator(Authenticator)
+   */
   public void authenticator(Authenticator newAuthenticator) {
     couchbaseOps.authenticator(newAuthenticator);
   }

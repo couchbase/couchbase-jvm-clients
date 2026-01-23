@@ -69,6 +69,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.couchbase.client.core.Core.requireSameClass;
 import static com.couchbase.client.core.api.CoreCouchbaseOps.checkConnectionStringScheme;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -228,6 +229,8 @@ public class CoreProtostellar implements CoreCouchbaseOps {
 
   @Override
   public void authenticator(Authenticator newAuthenticator) {
+    requireSameClass(authenticator.wrapped(), newAuthenticator);
+
     this.authenticator.setDelegate(newAuthenticator);
   }
 

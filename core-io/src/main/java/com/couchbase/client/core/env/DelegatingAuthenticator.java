@@ -58,7 +58,7 @@ public class DelegatingAuthenticator extends AuthenticatorWrapper {
     setDelegate(delegate);
   }
 
-  protected Authenticator wrapped() {
+  public Authenticator wrapped() {
     return delegate;
   }
 

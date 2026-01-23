@@ -24,10 +24,12 @@ import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.DiagnosticsResult;
 import com.couchbase.client.core.diagnostics.PingResult;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.JwtAuthenticator;
 import com.couchbase.client.core.env.OwnedOrExternal;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.util.ConnectionString;
@@ -317,6 +319,26 @@ public class Cluster implements Closeable {
     return reactiveCluster;
   }
 
+  /**
+   * Sets the authenticator used by the client.
+   * <p>
+   * Use this method to update a client certificate or JSON Web Token (JWT)
+   * before it expires.
+   * <p>
+   * The new authenticator must be of the same class as the existing authenticator.
+   * <p>
+   * If the new authenticator is a {@link JwtAuthenticator}, the new credential is
+   * immediately applied to all existing server connections.
+   * <p>
+   * <b>CAVEAT:</b> For all other types of authenticators, the new credential takes effect
+   * at an unspecified time in the future. Existing connections might continue
+   * to use the old credential indefinitely, while newly created connections
+   * are authenticated with the new credential. Consequently, changing to a credential
+   * with different privileges is strongly discouraged.
+   *
+   * @param newAuthenticator The authenticator bearing the updated user credential.
+   * @throws InvalidArgumentException If the given authenticator is a different type than the existing authenticator.
+   */
   public void authenticator(Authenticator newAuthenticator) {
     asyncCluster.authenticator(newAuthenticator);
   }

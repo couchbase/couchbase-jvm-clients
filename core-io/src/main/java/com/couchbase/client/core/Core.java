@@ -1027,9 +1027,21 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   @Override
   public void authenticator(Authenticator newAuthenticator) {
+    requireSameClass(authenticator.wrapped(), newAuthenticator);
+
     this.authenticator.setDelegate(newAuthenticator);
     if (newAuthenticator.getSingleStepSaslAuthParameters() != null) {
       authenticationRefreshTriggers.publish(AuthenticationRefreshTrigger.INSTANCE);
+    }
+  }
+
+  static void requireSameClass(Authenticator currentAuth, Authenticator newAuth) {
+    Class<?> currentClass = currentAuth.getClass();
+    Class<?> newClass = newAuth.getClass();
+    if (!newClass.equals(currentClass)) {
+      throw InvalidArgumentException.fromMessage (
+        "Switching authenticator types is not supported; cannot switch from " + currentClass + " to " + newClass
+      );
     }
   }
 

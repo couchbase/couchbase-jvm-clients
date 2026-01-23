@@ -27,6 +27,7 @@ import com.couchbase.client.core.diagnostics.HealthPinger
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.env.CertificateAuthenticator
 import com.couchbase.client.core.env.ConnectionStringPropertyLoader
+import com.couchbase.client.core.env.JwtAuthenticator
 import com.couchbase.client.core.env.PasswordAuthenticator
 import com.couchbase.client.core.error.UnambiguousTimeoutException
 import com.couchbase.client.core.service.ServiceType
@@ -123,6 +124,26 @@ public class Cluster internal constructor(
     private val couchbaseOps = CoreCouchbaseOps.create(env, initialAuthenticator, connectionString)
     private val searchOps = couchbaseOps.searchOps(null)
 
+    /**
+     * Sets the authenticator used by the client.
+     *
+     * Use this method to update a client certificate or JSON Web Token (JWT)
+     * before it expires.
+     *
+     * The new authenticator must be of the same class as the existing authenticator.
+     *
+     * If the new authenticator is a [JwtAuthenticator], the new credential is
+     * immediately applied to all existing server connections.
+     *
+     * **CAVEAT:** For all other types of authenticators, the new credential takes effect
+     * at an unspecified time in the future. Existing connections might continue
+     * to use the old credential indefinitely, while newly created connections
+     * are authenticated with the new credential. Consequently, changing to a credential
+     * with different privileges is strongly discouraged.
+     *
+     * @throws com.couchbase.client.core.error.InvalidArgumentException
+     * If the given authenticator is a different type than the existing authenticator.
+     */
     public var authenticator: Authenticator
         @Deprecated("Property 'authenticator' is write-only.", level = DeprecationLevel.ERROR)
         get() = throw UnsupportedOperationException()
