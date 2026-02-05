@@ -19,6 +19,7 @@ package com.couchbase.client.kotlin.env.dsl
 import com.couchbase.client.core.cnc.EventBus
 import com.couchbase.client.core.cnc.Meter
 import com.couchbase.client.core.cnc.RequestTracer
+import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention
 import com.couchbase.client.core.encryption.CryptoManager
 import com.couchbase.client.core.env.CoreEnvironment
 import com.couchbase.client.core.env.CoreEnvironment.DEFAULT_DISABLE_APP_TELEMETRY
@@ -192,6 +193,12 @@ public class ClusterEnvironmentDslBuilder {
     @VolatileCouchbaseApi
     public var disableAppTelemetry: Boolean
             by observable(DEFAULT_DISABLE_APP_TELEMETRY) { _, _, it -> wrapped.disableAppTelemetry(it) }
+
+    /**
+     * @see CoreEnvironment.Builder.observabilitySemanticConventions
+     */
+    public var observabilitySemanticConventions: List<ObservabilitySemanticConvention>
+            by observable(listOf()) { _, _, it -> wrapped.observabilitySemanticConventions(it) }
 
     internal fun toCore() = wrapped
 }
