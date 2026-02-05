@@ -18,6 +18,7 @@
       <excludes>
         <!-- don't want optional dependencies -->
         <exclude>com.fasterxml.jackson.core:*</exclude>
+        <exclude>tools.jackson.core:*</exclude>
 
         <!-- Couchbase artifacts are added later by release workflow script -->
         <exclude>com.couchbase.client:*</exclude>
