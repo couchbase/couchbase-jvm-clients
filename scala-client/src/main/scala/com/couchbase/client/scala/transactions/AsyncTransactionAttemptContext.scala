@@ -235,7 +235,7 @@ class AsyncTransactionAttemptContext private[scala] (
     */
   def remove(doc: TransactionGetResult): Future[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
-    val out = FutureConversions
+    val out  = FutureConversions
       .javaMonoToScalaFuture(internal.remove(doc.internal, new SpanWrapper(span)))
       .map(_ => ())
 
