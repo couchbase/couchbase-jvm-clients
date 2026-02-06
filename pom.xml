@@ -30,7 +30,7 @@
 
         <!-- This project has been sunset and 0.8.0 is the final version -->
         <scala.reactor-core-extensions.version>0.8.0</scala.reactor-core-extensions.version>
-        <scala.circe.version>0.14.10</scala.circe.version>
+        <scala.circe.version>0.14.15</scala.circe.version>
         <!-- Next version 2.10.0 dropped support for Java 8 -->
         <scala.play-json.version>2.9.4</scala.play-json.version>
         <!-- "The v2.13.5.2 release is the last version that supports JDK 8+" -->
@@ -41,13 +41,13 @@
         <scala.jawn.version>1.6.0</scala.jawn.version>
         <!-- 3.3.1 is the final version of the 3.x family, with 4.0 introducing breaking changes -->
         <scala.upickle.version>3.3.1</scala.upickle.version>
-        <scala.collection-compat.version>2.12.0</scala.collection-compat.version>
+        <scala.collection-compat.version>2.14.0</scala.collection-compat.version>
         <scala.major>2</scala.major>
         <scala.compat.version>2.12</scala.compat.version>
-        <scala.compat.library.version>2.12.20</scala.compat.library.version>
+        <scala.compat.library.version>2.12.21</scala.compat.library.version>
         <scala.scala-maven-plugin.rules>-target:jvm-1.8</scala.scala-maven-plugin.rules>
         <!-- Should be set to the latest available version of the Scala 3.3 LTS -->
-        <scala.scala3-library.version>3.3.6</scala.scala3-library.version>
+        <scala.scala3-library.version>3.3.7</scala.scala3-library.version>
         <scala.version-specific.src1>src/main/scala-2</scala.version-specific.src1>
         <scala.version-specific.src2>src/main/scala-2.13-</scala.version-specific.src2>
         <scala.version-specific.test-src>src/integrationTest/scala-2</scala.version-specific.test-src>
@@ -457,7 +457,7 @@
             <id>scala-2.13</id>
             <properties>
                 <scala.compat.version>2.13</scala.compat.version>
-                <scala.compat.library.version>2.13.16</scala.compat.library.version>
+                <scala.compat.library.version>2.13.18</scala.compat.library.version>
                 <scala.version-specific.src1>src/main/scala-2</scala.version-specific.src1>
                 <scala.version-specific.src2>src/main/scala-2.13</scala.version-specific.src2>
                 <scala.version-specific.test-src>src/main/scala-2</scala.version-specific.test-src>
