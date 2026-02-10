@@ -17,7 +17,6 @@
 package com.couchbase.client.core.transaction;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +32,6 @@ import com.couchbase.client.core.transaction.util.DebugUtil;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -175,8 +173,7 @@ public class CoreTransactionGetResult {
                                                      String atrBucketName,
                                                      String atrScopeName,
                                                      String atrCollectionName,
-                                                     long cas,
-                                                     Optional<CoreExpiry> expiry) {
+                                                     long cas) {
         TransactionLinks links = new TransactionLinks(
                 CodecFlags.extractCommonFormatFlags(flagsToStage) == CodecFlags.CommonFlags.JSON.ordinal() ? Optional.of(content) : Optional.empty(),
                 CodecFlags.extractCommonFormatFlags(flagsToStage) == CodecFlags.CommonFlags.BINARY.ordinal() ? Optional.of(content) : Optional.empty(),
@@ -195,8 +192,7 @@ public class CoreTransactionGetResult {
                 Optional.empty(),
                 // The staged operationId is only used after reading the document so is unimportant here
                 Optional.empty(),
-                Optional.of(flagsToStage),
-                expiry
+                Optional.of(flagsToStage)
         );
 
         return new CoreTransactionGetResult(id,
@@ -231,8 +227,7 @@ public class CoreTransactionGetResult {
                 doc.links.crc32OfStaging(),
                 doc.links.forwardCompatibility(),
                 doc.links.stagedOperationId(),
-                doc.links.stagedUserFlags(),
-                doc.links.stagedExpiry()
+                doc.links().stagedUserFlags()
         );
 
         return new CoreTransactionGetResult(doc.id,
@@ -264,7 +259,6 @@ public class CoreTransactionGetResult {
         Optional<String> crc32OfStaging = Optional.empty();
         Optional<ForwardCompatibility> forwardCompatibility = Optional.empty();
         Optional<Integer> stagedUserFlags = Optional.empty();
-        Optional<CoreExpiry> stagedExpiry = Optional.empty();
 
         // Read from xattrs.txn.restore
         Optional<String> casPreTxn = Optional.empty();
@@ -359,11 +353,6 @@ public class CoreTransactionGetResult {
             if (aux.has("uf")) {
                 stagedUserFlags = Optional.of(aux.get("uf").intValue());
             }
-            JsonNode docExpiryNode = aux.get("docexpiry");
-            if (docExpiryNode != null) {
-                long raw = docExpiryNode.longValue();
-                stagedExpiry = Optional.of(CoreExpiry.of(Instant.ofEpochSecond(raw)));
-            }
         }
 
         byte[] bodyContent;
@@ -393,8 +382,7 @@ public class CoreTransactionGetResult {
                 crc32OfStaging,
                 forwardCompatibility,
                 operationId,
-                stagedUserFlags,
-                stagedExpiry);
+                stagedUserFlags);
 
         DocumentMetadata md = new DocumentMetadata(
                 casFromDocument,

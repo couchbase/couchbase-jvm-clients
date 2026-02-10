@@ -63,8 +63,6 @@ public class TransactionsSupportedExtensionsUtil {
         CoreTransactionsExtension.EXT_REPLICA_FROM_PREFERRED_GROUP,
 
         /* @since 3.8.0 */
-        CoreTransactionsExtension.EXT_GET_MULTI,
-
-        CoreTransactionsExtension.EXT_TTL
+        CoreTransactionsExtension.EXT_GET_MULTI
     );
 }

@@ -178,7 +178,7 @@ public class TransactionAttemptContext internal constructor(
         val span: RequestSpan = CbTracing.newSpan(internal.core().context(), TracingIdentifiers.TRANSACTION_OP_REPLACE, internal.span())
 
         val encoded = serialize(content, type, jsonSerializer)
-        val core = internal.replace(doc.internal, encoded.bytes, encoded.flags, null, SpanWrapper(span)).awaitSingle()
+        val core = internal.replace(doc.internal, encoded.bytes, encoded.flags, SpanWrapper(span)).awaitSingle()
         return TransactionGetResult(core, defaultJsonSerializer)
     }
 
@@ -218,7 +218,7 @@ public class TransactionAttemptContext internal constructor(
         val span: RequestSpan = CbTracing.newSpan(internal.core().context(), TracingIdentifiers.TRANSACTION_OP_INSERT, internal.span())
 
         val encoded = serialize(content, type, jsonSerializer)
-        val core = internal.insert(collection.collectionId, id, encoded.bytes, encoded.flags, null, SpanWrapper(span)).awaitSingle()
+        val core = internal.insert(collection.collectionId, id, encoded.bytes, encoded.flags, SpanWrapper(span)).awaitSingle()
         return TransactionGetResult(core, defaultJsonSerializer)
     }
 

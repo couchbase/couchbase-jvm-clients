@@ -19,12 +19,9 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
-import com.couchbase.client.core.classic.ClassicExpiryHelper;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
@@ -75,15 +72,14 @@ public class TransactionKVHandler {
                                               final Duration timeout,
                                               final Optional<DurabilityLevel> durabilityLevel,
                                               final Map<String, Object> clientContext,
-                                              final SpanWrapper pspan,
-                                              final @Nullable CoreExpiry expiry) {
+                                              final SpanWrapper pspan) {
         return Mono.defer(() -> {
             long start = System.nanoTime();
             SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
 
             InsertRequest request = new InsertRequest(id,
                     transcodedContent,
-                    expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
+                    0,
                     flags,
                     timeout,
                     core.context(),
@@ -245,8 +241,8 @@ public class TransactionKVHandler {
                 durabilityLevel,
                 clientContext,
                 span,
-                null,
-                commands);
+                commands,
+                null);
     }
 
     public static Mono<SubdocMutateResponse> mutateIn(final Core core,
@@ -263,20 +259,23 @@ public class TransactionKVHandler {
                                                       final Optional<DurabilityLevel> durabilityLevel,
                                                       final Map<String, Object> clientContext,
                                                       final SpanWrapper pspan,
-                                                      @Nullable CoreExpiry expiry,
-                                                      final List<SubdocMutateRequest.Command> commands) {
+                                                      final List<SubdocMutateRequest.Command> commands,
+                                                      CoreTransactionLogger logger) {
         return Mono.defer(() -> {
             SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
             long start = System.nanoTime();
-            CompletableFuture<BucketConfig> bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, collectionIdentifier.bucket(), timeout).toFuture();
+
+            final boolean requiresBucketConfig = createAsDeleted || reviveDocument;
+            CompletableFuture<BucketConfig> bucketConfigFuture;
+
+            if (requiresBucketConfig) {
+                bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, collectionIdentifier.bucket(), timeout).toFuture();
+            } else {
+                // Nothing will be using the bucket config so just provide null
+                bucketConfigFuture = CompletableFuture.completedFuture(null);
+            }
 
             CompletableFuture<SubdocMutateResponse> future = bucketConfigFuture.thenCompose(bucketConfig -> {
-                // Preserve expiry is only supported on 7.0+; use presence of collections capability as the indicator.
-                boolean supportsPreserveExpiry = bucketConfig.bucketCapabilities().contains(BucketCapabilities.COLLECTIONS);
-                // Sub-doc does not allow sending both preserveExpiry and an expiry, at least with StoreSemantics.Replace.
-                // Also cannot send preserveExpiry with StoreSemantics.Insert.
-                boolean sendPreserveExpiry = supportsPreserveExpiry && expiry == null && !insertDocument;
-
                 SubdocMutateRequest request = new SubdocMutateRequest(timeout,
                         core.context(),
                         collectionIdentifier,
@@ -289,8 +288,8 @@ public class TransactionKVHandler {
                         accessDeleted,
                         createAsDeleted,
                         commands,
-                        expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
-                        sendPreserveExpiry,
+                        0,
+                        false, // Preserve expiry only supported on 7.0+
                         cas,
                         userFlags,
                         durabilityLevel,

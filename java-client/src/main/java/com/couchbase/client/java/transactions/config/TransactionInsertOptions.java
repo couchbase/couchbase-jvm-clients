@@ -17,13 +17,8 @@ package com.couchbase.client.java.transactions.config;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.java.codec.Transcoder;
-import java.time.Duration;
-import java.time.Instant;
 import reactor.util.annotation.Nullable;
-
-import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Operations controlling a transactional insert.
@@ -31,7 +26,6 @@ import static com.couchbase.client.core.util.Validators.notNull;
 @Stability.Volatile
 public class TransactionInsertOptions {
     private @Nullable Transcoder transcoder;
-    private @Nullable CoreExpiry expiry;
 
     private TransactionInsertOptions() {
     }
@@ -58,28 +52,6 @@ public class TransactionInsertOptions {
         return this;
     }
 
-    /**
-     * Sets the expiry for the document. By default the document will never expire.
-     *
-     * @param expiry the duration after which the document will expire (zero duration means never expire).
-     * @return this options class for chaining purposes.
-     */
-    public TransactionInsertOptions expiry(Duration expiry) {
-        this.expiry = CoreExpiry.of(notNull(expiry, "expiry"));
-        return this;
-    }
-
-    /**
-     * Sets the expiry for the document. By default the document will never expire.
-     *
-     * @param expiry the point in time when the document will expire (epoch second zero means never expire).
-     * @return this options class for chaining purposes.
-     */
-    public TransactionInsertOptions expiry(Instant expiry) {
-        this.expiry = CoreExpiry.of(notNull(expiry, "expiry"));
-        return this;
-    }
-
     @Stability.Internal
     public TransactionInsertOptions.Built build() {
         return new TransactionInsertOptions.Built();
@@ -92,10 +64,6 @@ public class TransactionInsertOptions {
 
         public @Nullable Transcoder transcoder() {
             return transcoder;
-        }
-
-        public CoreExpiry expiry() {
-            return expiry;
         }
     }
 }

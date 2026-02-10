@@ -32,9 +32,6 @@ import com.couchbase.client.protocol.transactions.Replace;
 import com.couchbase.client.protocol.transactions.Insert;
 import com.couchbase.client.protocol.transactions.Get;
 
-import java.time.Duration;
-import java.time.Instant;
-
 public class TransactionOptionsUtil {
     private TransactionOptionsUtil() { }
 
@@ -47,19 +44,6 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
-            if (opts.hasExpiry()) {
-                if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else if (opts.getExpiry().hasRelativeSecs()) {
-                    options = options.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                }
-                else {
-                    throw new RuntimeException("Invalid expiry: " + opts.getExpiry());
-                }
-            }
-            // [end]
         }
         return options;
     }
@@ -72,19 +56,6 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
-            if (opts.hasExpiry()) {
-                if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else if (opts.getExpiry().hasRelativeSecs()) {
-                    options = options.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                }
-                else {
-                    throw new RuntimeException("Invalid expiry: " + opts.getExpiry());
-                }
-            }
-            // [end]
         }
         return options;
     }
@@ -97,19 +68,6 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
-            if (opts.hasExpiry()) {
-                if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else if (opts.getExpiry().hasRelativeSecs()) {
-                    options = options.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                }
-                else {
-                    throw new RuntimeException("Invalid expiry: " + opts.getExpiry());
-                }
-            }
-            // [end]
         }
         return options;
     }
@@ -122,19 +80,6 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
-            if (opts.hasExpiry()) {
-                if (opts.getExpiry().hasAbsoluteEpochSecs()) {
-                    options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
-                }
-                else if (opts.getExpiry().hasRelativeSecs()) {
-                    options = options.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                }
-                else {
-                    throw new RuntimeException("Invalid expiry: " + opts.getExpiry());
-                }
-            }
-            // [end]
         }
         return options;
     }
