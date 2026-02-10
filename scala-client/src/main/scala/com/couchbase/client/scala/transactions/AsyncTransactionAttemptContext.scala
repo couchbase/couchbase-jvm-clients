@@ -174,7 +174,6 @@ class AsyncTransactionAttemptContext private[scala] (
                 id,
                 encoded.encoded,
                 encoded.flags,
-                null,
                 new SpanWrapper(span)
               )
             )
@@ -207,7 +206,7 @@ class AsyncTransactionAttemptContext private[scala] (
           FutureConversions
             .javaMonoToScalaFuture(
               internal
-                .replace(doc.internal, encoded.encoded, encoded.flags, null, new SpanWrapper(span))
+                .replace(doc.internal, encoded.encoded, encoded.flags, new SpanWrapper(span))
             )
             .map(result => TransactionGetResult(result, options.transcoder))
         )
