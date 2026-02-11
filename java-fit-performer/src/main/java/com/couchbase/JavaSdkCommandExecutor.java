@@ -309,7 +309,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasExists()) {
       var request = clc.getExists();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       ExistsResult exists;
       if (options == null) exists = collection.exists(docId);
       else exists = collection.exists(docId, options);
@@ -320,7 +320,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasMutateIn()) {
       var request = clc.getMutateIn();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       var requestList = request.getSpecList().stream().map(JavaSdkCommandExecutor::convertMutateInSpec).toList();
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
@@ -338,7 +338,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasIncrement()) {
         var request = blc.getIncrement();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         CounterResult cr;
@@ -352,7 +352,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasDecrement()) {
         var request = blc.getDecrement();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         CounterResult cr;
@@ -366,7 +366,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasAppend()) {
         var request = blc.getAppend();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         MutationResult mr;
@@ -380,7 +380,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasPrepend()) {
         var request = blc.getPrepend();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         MutationResult mr;
@@ -395,7 +395,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAllReplicas()) {
       var request = clc.getGetAllReplicas();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Stream<GetReplicaResult> results;
@@ -415,7 +415,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAnyReplica()) {
       var request = clc.getGetAnyReplica();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       GetReplicaResult mr;
@@ -1275,85 +1275,84 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
         else return null;
     }
 
-    public static @Nullable ExistsOptions createOptions(com.couchbase.client.protocol.sdk.kv.Exists request) {
+    public static @Nullable ExistsOptions createOptions(com.couchbase.client.protocol.sdk.kv.Exists request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = ExistsOptions.existsOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    public static @Nullable IncrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Increment request) {
+    public static @Nullable IncrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Increment request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = IncrementOptions.incrementOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasDelta()) out.delta(opts.getDelta());
             if (opts.hasInitial()) out.initial(opts.getInitial());
-
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
             }
-
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
 
             return out;
         }
         else return null;
     }
 
-    public static @Nullable DecrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Decrement request) {
+    public static @Nullable DecrementOptions createOptions(com.couchbase.client.protocol.sdk.kv.Decrement request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = DecrementOptions.decrementOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasDelta()) out.delta(opts.getDelta());
             if (opts.hasInitial()) out.initial(opts.getInitial());
-
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
                 else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
             }
-
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
 
             return out;
         }
         else return null;
     }
 
-    public static @Nullable AppendOptions createOptions(com.couchbase.client.protocol.sdk.kv.Append request) {
+    public static @Nullable AppendOptions createOptions(com.couchbase.client.protocol.sdk.kv.Append request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = AppendOptions.appendOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasCas()) out.cas(opts.getCas());
-
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
 
             return out;
         }
         else return null;
     }
 
-    public static @Nullable PrependOptions createOptions(com.couchbase.client.protocol.sdk.kv.Prepend request) {
+    public static @Nullable PrependOptions createOptions(com.couchbase.client.protocol.sdk.kv.Prepend request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = PrependOptions.prependOptions();
             if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
             if (opts.hasCas()) out.cas(opts.getCas());
-
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
 
             return out;
         }
         else return null;
     }
 
-    public static @Nullable GetAllReplicasOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAllReplicas request) {
+    public static @Nullable GetAllReplicasOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAllReplicas request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = GetAllReplicasOptions.getAllReplicasOptions();
@@ -1364,12 +1363,13 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               out.readPreference(convertReadPreference(opts.getReadPreference()));
             }
             // [end]
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
 
-    public static @Nullable GetAnyReplicaOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAnyReplica request) {
+    public static @Nullable GetAnyReplicaOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAnyReplica request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = GetAnyReplicaOptions.getAnyReplicaOptions();
@@ -1380,11 +1380,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
               out.readPreference(convertReadPreference(opts.getReadPreference()));
             }
             // [end]
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             return out;
         }
         else return null;
     }
-    public static @Nullable MutateInOptions createOptions(com.couchbase.client.protocol.sdk.collection.mutatein.MutateIn request) {
+    public static @Nullable MutateInOptions createOptions(com.couchbase.client.protocol.sdk.collection.mutatein.MutateIn request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
             var out = MutateInOptions.mutateInOptions();
@@ -1418,6 +1419,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                     case UNRECOGNIZED -> throw new UnsupportedOperationException("Unrecognised store semantics option value: " + opts.getStoreSemantics());
                 }
             }
+            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
 
             return out;
         }

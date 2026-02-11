@@ -353,7 +353,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasMutateIn()) {
       var request = clc.getMutateIn();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       Mono<MutateInResult> mr;
       if (options == null) {
         mr = collection.mutateIn(docId, request.getSpecList().stream().map(v -> convertMutateInSpec(v)).toList());
@@ -373,7 +373,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAllReplicas()) {
       var request = clc.getGetAllReplicas();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Flux<GetReplicaResult> results;
@@ -397,7 +397,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAnyReplica()) {
       var request = clc.getGetAnyReplica();
       var docId = getDocId(request.getLocation());
-      var options = createOptions(request);
+      var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Mono<GetReplicaResult> gr;
@@ -424,7 +424,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasIncrement()) {
         var request = blc.getIncrement();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         Mono<CounterResult> cr;
@@ -447,7 +447,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasDecrement()) {
         var request = blc.getDecrement();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         Mono<CounterResult> cr;
@@ -470,7 +470,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasAppend()) {
         var request = blc.getAppend();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         Mono<MutationResult> mr;
@@ -493,7 +493,7 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       if (blc.hasPrepend()) {
         var request = blc.getPrepend();
         var docId = getDocId(request.getLocation());
-        var options = createOptions(request);
+        var options = createOptions(request, spans);
         result.setInitiated(getTimeNow());
         long start = System.nanoTime();
         Mono<MutationResult> mr;
