@@ -16,9 +16,8 @@
 
 package com.couchbase.client.java;
 
-import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
-import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(isProtostellar = true) // Specific to non-Protostellar
 class KeyValueManyEndpointsTest extends JavaIntegrationTest {
@@ -74,17 +74,26 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG})
   @Test
   void onlyOpensOneGcccpPerNode() {
-    int bucket = 0;
-    int global = 0;
-    for (EndpointDiagnostics ed : cluster.diagnostics().endpoints().get(ServiceType.KV)) {
-      if (ed.namespace().isPresent()) {
-        bucket++;
-      } else {
-        global++;
-      }
-    }
+    long kvNodeCount = topology(cluster).nodes().stream()
+      .filter(it -> it.has(ServiceType.KV))
+      .count();
 
-    assertEquals(CONNS_TO_OPEN, bucket / global);
+    assertTrue(kvNodeCount > 0);
+
+    long gcccpEndpointCount = cluster.diagnostics().endpoints().get(ServiceType.KV)
+      .stream()
+      .filter(it -> !it.namespace().isPresent()) // no bucket!
+      .count();
+
+    assertEquals(
+      kvNodeCount,
+      gcccpEndpointCount
+    );
   }
 
+  private static ClusterTopology topology(Cluster cluster) {
+    return cluster.core()
+      .waitForClusterTopology(Duration.ZERO) // should already be present due to waitUntilReady
+      .block();
+  }
 }
