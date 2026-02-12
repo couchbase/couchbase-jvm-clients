@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java;
 
+import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,20 +76,22 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
   @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG})
   @Test
   void onlyOpensOneGcccpPerNode() {
-    long kvNodeCount = topology(cluster).nodes().stream()
+    ClusterTopology topology = topology(cluster);
+    long kvNodeCount = topology.nodes().stream()
       .filter(it -> it.has(ServiceType.KV))
       .count();
 
     assertTrue(kvNodeCount > 0);
 
-    long gcccpEndpointCount = cluster.diagnostics().endpoints().get(ServiceType.KV)
-      .stream()
+    List<EndpointDiagnostics> kvEndpointDiagnostics = cluster.diagnostics().endpoints().get(ServiceType.KV);
+    long gcccpEndpointCount = kvEndpointDiagnostics.stream()
       .filter(it -> !it.namespace().isPresent()) // no bucket!
       .count();
 
     assertEquals(
       kvNodeCount,
-      gcccpEndpointCount
+      gcccpEndpointCount,
+      "Cluster nodes: " + topology.nodes() + " ;;; KV endpoint diagnostics: " + kvEndpointDiagnostics
     );
   }
 
