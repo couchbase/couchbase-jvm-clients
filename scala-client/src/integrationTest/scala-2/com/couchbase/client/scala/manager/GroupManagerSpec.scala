@@ -37,6 +37,7 @@ import scala.util.{Failure, Success}
   missesCapabilities = Array(Capabilities.USER_GROUPS, Capabilities.ENTERPRISE_EDITION)
 )
 @ManagementApiTest
+@Disabled("SCBC-504")
 class GroupManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _

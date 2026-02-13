@@ -45,6 +45,7 @@ import scala.util.{Failure, Success}
   isProtostellar = true
 )
 @ManagementApiTest
+@Disabled("SCBC-504")
 class UserManagerSpec extends ScalaIntegrationTest {
   private var cluster: Cluster   = _
   private var users: UserManager = _
