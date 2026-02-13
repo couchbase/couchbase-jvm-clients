@@ -24,6 +24,7 @@ import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -75,6 +76,7 @@ class KeyValueManyEndpointsTest extends JavaIntegrationTest {
    */
   @IgnoreWhen(missesCapabilities = {Capabilities.GLOBAL_CONFIG})
   @Test
+  @Disabled("Fails intermittently on GHA. Tracking as JVMCBC-1713")
   void onlyOpensOneGcccpPerNode() {
     ClusterTopology topology = topology(cluster);
     long kvNodeCount = topology.nodes().stream()
