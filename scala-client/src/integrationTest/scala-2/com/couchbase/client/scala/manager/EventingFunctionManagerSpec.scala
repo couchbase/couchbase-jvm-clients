@@ -54,6 +54,7 @@ import org.opentest4j.AssertionFailedError
 
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.function.BooleanSupplier
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Try}
 
@@ -135,7 +136,7 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def setAndGetAlLSettings(): Unit = {
+  def setAndGetAllSettings(): Unit = {
     val funcName = UUID.randomUUID.toString
 
     val settings = EventingFunctionSettings(
@@ -216,10 +217,18 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
     assert(read.settings.get.appLogDir == settings.appLogDir)
     assert(read.settings.get.appLogMaxSize == settings.appLogMaxSize)
     assert(read.settings.get.appLogMaxFiles == settings.appLogMaxFiles)
-    assert(functions.getAllFunctions().get.exists(f => f.name == funcName))
+    waitUntil(() => functions.getAllFunctions().get.exists(f => f.name == funcName))
 
     functions.dropFunction(funcName)
-    assert(!functions.getAllFunctions().get.exists(f => f.name == funcName))
+    waitUntil(() => !functions.getAllFunctions().get.exists(f => f.name == funcName))
+  }
+
+  private def waitUntil(condition: BooleanSupplier): Unit = {
+    waitUntilCondition(
+      condition,
+      java.time.Duration.ofMinutes(1), // timeout
+      java.time.Duration.ofMillis(500) // delay between attempts
+    )
   }
 
   @Test
