@@ -240,6 +240,7 @@ public class TransactionKVHandler {
                 reviveDocument,
                 accessDeleted,
                 createAsDeleted,
+                true,
                 cas,
                 userFlags,
                 durabilityLevel,
@@ -258,6 +259,7 @@ public class TransactionKVHandler {
                                                       final boolean reviveDocument,
                                                       final boolean accessDeleted,
                                                       final boolean createAsDeleted,
+                                                      final boolean allowedToSendPreserveExpiry,
                                                       long cas,
                                                       int userFlags,
                                                       final Optional<DurabilityLevel> durabilityLevel,
@@ -275,7 +277,7 @@ public class TransactionKVHandler {
                 boolean supportsPreserveExpiry = bucketConfig.bucketCapabilities().contains(BucketCapabilities.COLLECTIONS);
                 // Sub-doc does not allow sending both preserveExpiry and an expiry, at least with StoreSemantics.Replace.
                 // Also cannot send preserveExpiry with StoreSemantics.Insert.
-                boolean sendPreserveExpiry = supportsPreserveExpiry && expiry == null && !insertDocument;
+                boolean sendPreserveExpiry = allowedToSendPreserveExpiry && supportsPreserveExpiry && expiry == null && !insertDocument;
 
                 SubdocMutateRequest request = new SubdocMutateRequest(timeout,
                         core.context(),

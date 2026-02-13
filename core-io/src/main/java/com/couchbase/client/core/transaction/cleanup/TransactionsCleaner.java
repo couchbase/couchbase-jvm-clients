@@ -167,7 +167,7 @@ public class TransactionsCleaner {
                             );
                             return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
                                     false, false, false,
-                                    lir.tombstone(), false, doc.cas(), links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
+                                    lir.tombstone(), false, true, doc.cas(), links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
                                     req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan, links.stagedExpiry().orElse(null),
                                     commands);
                         }

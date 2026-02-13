@@ -2584,7 +2584,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeStagedInsert.apply(this, id)) // testing hook
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), !cas.isPresent(),
-                                    false, false, true, true, cas.orElse(0L), flagsOfContentToStage, durabilityLevel(), OptionsUtil.createClientContext("createStagedInsert"), span,
+                                    false, false, true, true, false, cas.orElse(0L), flagsOfContentToStage, durabilityLevel(), OptionsUtil.createClientContext("createStagedInsert"), span, null,
                             specList))
 
                     .publishOn(scheduler())
@@ -3255,7 +3255,7 @@ public class CoreTransactionAttemptContext {
                     .then(Mono.defer(() -> {
                         if (insertMode) {
                             if (staged.supportsReplaceBodyWithXattr()) {
-                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, true, true, false,
+                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, true, true, false, false,
                                         cas, staged.stagedUserFlags, durabilityLevel(), OptionsUtil.createClientContext("commitDocInsert"), span, staged.expiry, Arrays.asList(
                                                 staged.isStagedBinary()
                                                         ? new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_BINARY, null, false, true, false, true, 0)
@@ -3279,7 +3279,7 @@ public class CoreTransactionAttemptContext {
                             }
                         } else {
                             if (staged.supportsReplaceBodyWithXattr()) {
-                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, false, false, false,
+                                return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(), false, false, false, false, false, true,
                                                 cas, staged.stagedUserFlags, durabilityLevel(), OptionsUtil.createClientContext("commitDoc"), span, staged.expiry, Arrays.asList(
                                                         staged.isStagedBinary()
                                                                 ? new SubdocMutateRequest.Command(SubdocCommandType.REPLACE_BODY_WITH_XATTR, TransactionFields.STAGED_DATA_BINARY, null, false, true, false, true, 0)
@@ -3294,7 +3294,7 @@ public class CoreTransactionAttemptContext {
                             }
                             else {
                                 return TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                                                false, false, false, false, false, cas, staged.stagedUserFlags, durabilityLevel(),
+                                                false, false, false, false, false, true, cas, staged.stagedUserFlags, durabilityLevel(),
                                                 OptionsUtil.createClientContext("commitDoc"), span, staged.expiry,
                                                 Arrays.asList(
                                                         // Upsert this field to better handle illegal doc mutation.  E.g. run shadowDocSameTxnKVInsert without this,
@@ -4266,7 +4266,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeRollbackDeleteInserted.apply(this, id))
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, true, false, cas, 0, durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span,
+                            false, false, false, true, false, false, cas, 0, durabilityLevel(), OptionsUtil.createClientContext("rollbackStagedInsert"), span, null,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
@@ -4353,7 +4353,7 @@ public class CoreTransactionAttemptContext {
                     .then(hooks.beforeRemoveStagedInsert.apply(this, id))
 
                     .then(TransactionKVHandler.mutateIn(core, collection, id, kvTimeoutMutating(),
-                            false, false, false, true, false, doc.cas(), doc.userFlags(), durabilityLevel(), OptionsUtil.createClientContext("removeStagedInsert"), span,
+                            false, false, false, true, false, false, doc.cas(), doc.userFlags(), durabilityLevel(), OptionsUtil.createClientContext("removeStagedInsert"), span, null,
                             Arrays.asList(
                                     new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "txn", null, false, true, false, 0)
                             )))
