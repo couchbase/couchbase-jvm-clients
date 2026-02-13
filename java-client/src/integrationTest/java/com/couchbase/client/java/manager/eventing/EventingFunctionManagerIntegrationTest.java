@@ -40,13 +40,14 @@ import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(clusterTypes = {ClusterType.MOCKED, ClusterType.CAPELLA},
         missesCapabilities = {Capabilities.COLLECTIONS, Capabilities.EVENTING},
@@ -138,10 +139,18 @@ public class EventingFunctionManagerIntegrationTest extends JavaIntegrationTest 
 
     EventingFunction read = functions.getFunction(funcName);
     assertEquals("function OnUpdate(doc, meta) {}", read.code());
-    assertTrue(functions.getAllFunctions().stream().anyMatch(f -> f.name().equals(funcName)));
+    waitUntil(() -> functions.getAllFunctions().stream().anyMatch(f -> f.name().equals(funcName)));
 
     functions.dropFunction(funcName);
-    assertTrue(functions.getAllFunctions().stream().noneMatch(f -> f.name().equals(funcName)));
+    waitUntil(() -> functions.getAllFunctions().stream().noneMatch(f -> f.name().equals(funcName)));
+  }
+
+  private void waitUntil(BooleanSupplier condition) {
+    waitUntilCondition(
+      condition,
+      Duration.ofMinutes(1), // timeout
+      Duration.ofMillis(500) // delay between attempts
+    );
   }
 
   @Test
