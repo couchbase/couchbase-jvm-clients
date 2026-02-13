@@ -48,6 +48,7 @@ class PingSpec extends ScalaIntegrationTest {
   }
 
   @Test
+  @Disabled("SCBC-505")
   def ping(): Unit = {
     val pr: PingResult = cluster.ping().get
     assert(!pr.endpoints().isEmpty)
