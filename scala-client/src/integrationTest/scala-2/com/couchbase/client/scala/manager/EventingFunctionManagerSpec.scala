@@ -129,10 +129,10 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
     assert(read.metadataKeyspace.collection.contains(metaCollection.name))
     assert(read.sourceKeyspace.collection.contains(sourceCollection.name))
     assert("function OnUpdate(doc, meta) {}" == read.code)
-    assert(functions.getAllFunctions().get.exists(f => f.name == funcName))
+    waitUntilPresentInAllFunctions(funcName)
 
     functions.dropFunction(funcName)
-    assert(!functions.getAllFunctions().get.exists(f => f.name == funcName))
+    waitUntilAbsentFromAllFunctions(funcName)
   }
 
   @Test
@@ -217,9 +217,17 @@ class EventingFunctionManagerSpec extends ScalaIntegrationTest {
     assert(read.settings.get.appLogDir == settings.appLogDir)
     assert(read.settings.get.appLogMaxSize == settings.appLogMaxSize)
     assert(read.settings.get.appLogMaxFiles == settings.appLogMaxFiles)
-    waitUntil(() => functions.getAllFunctions().get.exists(f => f.name == funcName))
+    waitUntilPresentInAllFunctions(funcName)
 
     functions.dropFunction(funcName)
+    waitUntilAbsentFromAllFunctions(funcName)
+  }
+
+  private def waitUntilPresentInAllFunctions(funcName: String): Unit = {
+    waitUntil(() => functions.getAllFunctions().get.exists(f => f.name == funcName))
+  }
+
+  private def waitUntilAbsentFromAllFunctions(funcName: String): Unit = {
     waitUntil(() => !functions.getAllFunctions().get.exists(f => f.name == funcName))
   }
 
