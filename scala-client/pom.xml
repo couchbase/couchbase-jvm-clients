@@ -16,6 +16,10 @@
     <name>Couchbase Scala SDK</name>
     <description>The official Couchbase Scala SDK</description>
 
+    <properties>
+        <maven.javadoc.skip>false</maven.javadoc.skip>
+    </properties>
+
     <dependencies>
         <!-- External, Required Dependencies -->
         <dependency>
@@ -467,6 +471,9 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <skip>${maven.javadoc.skip}</skip>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
