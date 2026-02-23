@@ -1250,7 +1250,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1269,7 +1269,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1288,7 +1288,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1307,7 +1307,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1326,7 +1326,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1345,7 +1345,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1364,7 +1364,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1383,7 +1383,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1402,7 +1402,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1421,7 +1421,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1440,7 +1440,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
@@ -1459,7 +1459,7 @@ public class SearchHelper {
     var o = request.getOptions();
 
     if (o.hasTimeoutMsecs()) {
-      out.timeout(Duration.ofMinutes(o.getTimeoutMsecs()));
+      out.timeout(Duration.ofMillis(o.getTimeoutMsecs()));
     }
     if (o.hasParentSpanId()) {
       out.parentSpan(spans.get(o.getParentSpanId()));
