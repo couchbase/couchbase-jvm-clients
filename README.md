@@ -31,7 +31,7 @@ This repository contains the following projects:
 Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
 
 Documentation is available for [Java](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html), 
-[Scala](https://docs.couchbase.com/scala-sdk/current/start-using-sdk.html)
+[Scala](https://docs.couchbase.com/scala-sdk/current/hello-world/start-using-sdk.html)
 and [Kotlin](https://docs.couchbase.com/kotlin-sdk/current/hello-world/overview.html).  
 These include getting started guides.
 
