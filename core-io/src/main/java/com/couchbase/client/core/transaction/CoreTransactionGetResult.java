@@ -362,6 +362,7 @@ public class CoreTransactionGetResult {
             JsonNode docExpiryNode = aux.get("docexpiry");
             if (docExpiryNode != null) {
                 long raw = docExpiryNode.longValue();
+                // The docexpiry field always contains an absolute expiry.
                 stagedExpiry = Optional.of(CoreExpiry.of(Instant.ofEpochSecond(raw)));
             }
         }

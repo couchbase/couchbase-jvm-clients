@@ -53,6 +53,7 @@ import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.error.transaction.ActiveTransactionRecordEntryNotFoundException;
@@ -167,6 +168,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
+import static com.couchbase.client.core.api.kv.CoreExpiry.LATEST_VALID_EXPIRY_INSTANT;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_ATR_COMMIT;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP;
 import static com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI;
@@ -2231,7 +2233,23 @@ public class CoreTransactionAttemptContext {
         ObjectNode aux = Mapper.createObjectNode();
         aux.put("uf", userFlagsToStage);
         if (expiry != null) {
-            aux.put("docexpiry", ClassicExpiryHelper.encode(expiry));
+            expiry.when(
+                    absolute  -> {
+                        aux.put("docexpiry", absolute.getEpochSecond());
+                        logger().info(attemptId, "For operation {} specifying docexpiry of {}", operationId, expiry);
+                    },
+                    relative -> {
+                        long epochSecond = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()) + relative.getSeconds();
+                        if (epochSecond > LATEST_VALID_EXPIRY_INSTANT.getEpochSecond()) {
+                            throw InvalidArgumentException.fromMessage(
+                                    "Requested expiry duration " + relative + " is too long; the final expiry time must be <= " + LATEST_VALID_EXPIRY_INSTANT
+                            );
+                        }
+                        aux.put("docexpiry", epochSecond);
+                        logger().info(attemptId, "For operation {} specifying docexpiry of {} from {} ", operationId, epochSecond, relative);
+                    }, () -> {
+                        // no-op
+                    });
         }
 
         ObjectNode ret = Mapper.createObjectNode();
