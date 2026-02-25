@@ -25,5 +25,5 @@ WORKDIR /app
 # Default level; override with docker run -e LOG_LEVEL=DEBUG
 ENV LOG_LEVEL=INFO
 
-COPY --from=0 /app/couchbase-jvm-clients/kotlin-fit-performer/target/fit-performer-kotlin-1.0-SNAPSHOT-jar-with-dependencies.jar .
-ENTRYPOINT ["java", "-jar", "fit-performer-kotlin-1.0-SNAPSHOT-jar-with-dependencies.jar"]
+COPY --from=0 /app/couchbase-jvm-clients/kotlin-fit-performer/target/kotlin-fit-performer-1.0-SNAPSHOT-jar-with-dependencies.jar .
+ENTRYPOINT ["java", "-jar", "kotlin-fit-performer-1.0-SNAPSHOT-jar-with-dependencies.jar"]

@@ -13,7 +13,7 @@
     <artifactId>columnar-fit-performer-shared</artifactId>
     <!-- This version never changes as this is not an externally published tool -->
     <version>1.0</version>
-    <name>Couchbase Core FIT Performer for Columnar SDK</name>
+    <name>FIT Performer (Columnar Core)</name>
 
     <dependencies>
         <!-- This must be built externally -->
