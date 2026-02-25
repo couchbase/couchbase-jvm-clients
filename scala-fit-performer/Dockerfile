@@ -25,5 +25,5 @@ WORKDIR /app
 # Default level; override with docker run -e LOG_LEVEL=DEBUG
 ENV LOG_LEVEL=INFO
 
-COPY --from=0 /app/couchbase-jvm-clients/scala-fit-performer/target/fit-performer-scala-1.0-SNAPSHOT-jar-with-dependencies.jar .
-ENTRYPOINT ["java", "-jar", "fit-performer-scala-1.0-SNAPSHOT-jar-with-dependencies.jar"]
+COPY --from=0 /app/couchbase-jvm-clients/scala-fit-performer/target/scala-fit-performer-1.0-SNAPSHOT-jar-with-dependencies.jar .
+ENTRYPOINT ["java", "-jar", "scala-fit-performer-1.0-SNAPSHOT-jar-with-dependencies.jar"]

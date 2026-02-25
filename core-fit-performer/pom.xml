@@ -13,7 +13,7 @@
     <artifactId>fit-performer-core</artifactId>
     <!-- This version never changes as this is not an externally published tool -->
     <version>1.0-SNAPSHOT</version>
-    <name>Couchbase Core FIT Performer</name>
+    <name>FIT Performer (Core)</name>
 
     <dependencies>
         <!-- This must be built externally -->
