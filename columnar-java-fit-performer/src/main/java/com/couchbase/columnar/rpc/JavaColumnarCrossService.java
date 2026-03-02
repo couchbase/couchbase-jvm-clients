@@ -147,11 +147,16 @@ public class JavaColumnarCrossService extends ColumnarCrossServiceGrpc.ColumnarC
 
   @Override
   public void closeQueryResult(CloseQueryResultRequest request, StreamObserver<EmptyResultOrFailureResponse> responseObserver) {
-    super.closeQueryResult(request, responseObserver);
+    noop(responseObserver);
   }
 
   @Override
   public void closeAllQueryResults(CloseAllQueryResultsRequest request, StreamObserver<EmptyResultOrFailureResponse> responseObserver) {
-    super.closeAllQueryResults(request, responseObserver);
+    noop(responseObserver);
+  }
+
+  private static void noop(StreamObserver<EmptyResultOrFailureResponse> responseObserver) {
+    responseObserver.onNext(ResultUtil.success(startTiming()));
+    responseObserver.onCompleted();
   }
 }
