@@ -1,1 +1,10 @@
+**/Dockerfile*
+**/*.dockerignore
+**/.idea
 **/target
+
+# These files should really live in `target/generated-sources`, but oh well.
+# Ignore them so we can cache the layer that installs the fit-grpc module.
+transactions-fit-performer/gRPC/jvm/src
+
+# Not ignoring .git -- the build script wants to know the current commit hash.
