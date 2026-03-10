@@ -65,6 +65,7 @@ public class TransactionsSupportedExtensionsUtil {
         /* @since 3.8.0 */
         CoreTransactionsExtension.EXT_GET_MULTI,
 
+        /* @since 3.12.0 */
         CoreTransactionsExtension.EXT_TTL
     );
 }

@@ -47,7 +47,7 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
+            // [if:3.12.0]
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
                     options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
@@ -72,7 +72,7 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
+            // [if:3.12.0]
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
                     options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
@@ -97,7 +97,7 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
+            // [if:3.12.0]
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
                     options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
@@ -122,7 +122,7 @@ public class TransactionOptionsUtil {
             if (opts.hasTranscoder()) {
                 options = options.transcoder(JavaSdkCommandExecutor.convertTranscoder(opts.getTranscoder()));
             }
-            // [if:3.10.0]
+            // [if:3.12.0]
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasAbsoluteEpochSecs()) {
                     options = options.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
