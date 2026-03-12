@@ -20,8 +20,6 @@ import com.couchbase.client.core.api.query.CoreQueryResult
 import com.couchbase.client.core.cnc.CbTracing
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.cnc.TracingIdentifiers
-import com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI
-import com.couchbase.client.core.cnc.TracingIdentifiers.TRANSACTION_OP_GET_MULTI_REPLICAS_FROM_PREFERRED_SERVER_GROUP
 import com.couchbase.client.core.error.CasMismatchException
 import com.couchbase.client.core.error.DocumentExistsException
 import com.couchbase.client.core.error.DocumentNotFoundException
@@ -38,7 +36,6 @@ import com.couchbase.client.kotlin.codec.Content
 import com.couchbase.client.kotlin.codec.JsonSerializer
 import com.couchbase.client.kotlin.codec.TypeRef
 import com.couchbase.client.kotlin.codec.typeRef
-import com.couchbase.client.kotlin.internal.await
 import com.couchbase.client.kotlin.query.QueryMetadata
 import com.couchbase.client.kotlin.query.QueryParameters
 import com.couchbase.client.kotlin.query.QueryProfile
@@ -46,7 +43,8 @@ import com.couchbase.client.kotlin.query.QueryResult
 import com.couchbase.client.kotlin.query.QueryRow
 import com.couchbase.client.kotlin.query.QueryScanConsistency
 import com.couchbase.client.kotlin.query.internal.CoreQueryOptions
-import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -54,6 +52,8 @@ public class TransactionAttemptContext internal constructor(
     private val internal: CoreTransactionAttemptContext,
     private val defaultJsonSerializer: JsonSerializer,
 ) {
+    private val blockingIoDispatcher = internal.core().environment().transactionsSchedulers().blockingExecutor().asCoroutineDispatcher()
+
     /**
      * Gets a document from the specified Couchbase [collection] matching the specified [id].
      *
@@ -62,9 +62,9 @@ public class TransactionAttemptContext internal constructor(
      * @return a [TransactionGetResult] containing the document
      * @throws DocumentNotFoundException if the document does not exist
      */
-    public suspend fun get(collection: Collection, id: String): TransactionGetResult {
-        val core = internal.get(collection.collectionId, id).awaitSingle()
-        return TransactionGetResult(core, defaultJsonSerializer)
+    public suspend fun get(collection: Collection, id: String): TransactionGetResult = withContext(blockingIoDispatcher) {
+        val core = internal.get(collection.collectionId, id)
+        TransactionGetResult(core, defaultJsonSerializer)
     }
 
     /**
@@ -109,10 +109,10 @@ public class TransactionAttemptContext internal constructor(
         specs: List<TransactionDocumentSpec>,
         mode: TransactionGetMultiMode?,
         replicasFromPreferredServerGroup: Boolean,
-    ): TransactionGetMultiResult {
+    ): TransactionGetMultiResult = withContext(blockingIoDispatcher) {
         val internalSpecs = specs.mapIndexed { index, spec -> CoreTransactionGetMultiSpec(spec.collection.collectionId, spec.documentId, index) }
-        val coreResults = internal.getMultiAlgo(internalSpecs, CoreGetMultiOptions(mode?.toCore()), replicasFromPreferredServerGroup).awaitSingle()
-        return TransactionGetMultiResult(specs, coreResults, defaultJsonSerializer)
+        val coreResults = internal.getMultiAlgo(internalSpecs, CoreGetMultiOptions(mode?.toCore()), replicasFromPreferredServerGroup)
+        TransactionGetMultiResult(specs, coreResults, defaultJsonSerializer)
     }
 
     /**
@@ -137,9 +137,9 @@ public class TransactionAttemptContext internal constructor(
      *
      * @sample com.couchbase.client.kotlin.samples.configurePreferredServerGroup
      */
-    public suspend fun getReplicaFromPreferredServerGroup(collection: Collection, id: String): TransactionGetResult {
-        val core = internal.getReplicaFromPreferredServerGroup(collection.collectionId, id).awaitSingle()
-        return TransactionGetResult(core, defaultJsonSerializer)
+    public suspend fun getReplicaFromPreferredServerGroup(collection: Collection, id: String): TransactionGetResult = withContext(blockingIoDispatcher) {
+        val core = internal.getReplicaFromPreferredServerGroup(collection.collectionId, id)
+        TransactionGetResult(core, defaultJsonSerializer)
     }
 
     /**
@@ -174,12 +174,12 @@ public class TransactionAttemptContext internal constructor(
         content: T,
         type: TypeRef<T>,
         jsonSerializer: JsonSerializer?,
-    ): TransactionGetResult {
+    ): TransactionGetResult = withContext(blockingIoDispatcher) {
         val span: RequestSpan = CbTracing.newSpan(internal.core().context(), TracingIdentifiers.TRANSACTION_OP_REPLACE, internal.span())
 
         val encoded = serialize(content, type, jsonSerializer)
-        val core = internal.replace(doc.internal, encoded.bytes, encoded.flags, null, SpanWrapper(span)).awaitSingle()
-        return TransactionGetResult(core, defaultJsonSerializer)
+        val core = internal.replace(doc.internal, encoded.bytes, encoded.flags, null, SpanWrapper(span))
+        TransactionGetResult(core, defaultJsonSerializer)
     }
 
     /**
@@ -214,12 +214,12 @@ public class TransactionAttemptContext internal constructor(
         content: T,
         type: TypeRef<T>,
         jsonSerializer: JsonSerializer?,
-    ): TransactionGetResult {
+    ): TransactionGetResult = withContext(blockingIoDispatcher) {
         val span: RequestSpan = CbTracing.newSpan(internal.core().context(), TracingIdentifiers.TRANSACTION_OP_INSERT, internal.span())
 
         val encoded = serialize(content, type, jsonSerializer)
-        val core = internal.insert(collection.collectionId, id, encoded.bytes, encoded.flags, null, SpanWrapper(span)).awaitSingle()
-        return TransactionGetResult(core, defaultJsonSerializer)
+        val core = internal.insert(collection.collectionId, id, encoded.bytes, encoded.flags, null, SpanWrapper(span))
+        TransactionGetResult(core, defaultJsonSerializer)
     }
 
     /**
@@ -236,10 +236,10 @@ public class TransactionAttemptContext internal constructor(
      *
      * @param doc the document to remove
      */
-    public suspend fun remove(doc: TransactionGetResult) {
+    public suspend fun remove(doc: TransactionGetResult): Unit = withContext(blockingIoDispatcher) {
         val span: RequestSpan = CbTracing.newSpan(internal.core().context(), TracingIdentifiers.TRANSACTION_OP_REMOVE, internal.span())
 
-        internal.remove(doc.internal, SpanWrapper(span)).await()
+        internal.remove(doc.internal, SpanWrapper(span))
     }
 
     /**
@@ -313,7 +313,7 @@ public class TransactionAttemptContext internal constructor(
 
         clientContextId: String? = UUID.randomUUID().toString(),
         raw: Map<String, Any?> = emptyMap(),
-    ): QueryResult {
+    ): QueryResult = withContext(blockingIoDispatcher) {
         require(consistency !is QueryScanConsistency.ConsistentWith) {
             "Query in transaction does not support `QueryScanConsistency.ConsistentWith`."
         }
@@ -351,7 +351,7 @@ public class TransactionAttemptContext internal constructor(
             scope?.queryContext,
             coreQueryOpts,
             false,
-        ).awaitSingle()
+        )
 
         val rows = coreQueryResult.rows()
             .map { QueryRow(it.data(), actualSerializer) }
@@ -359,7 +359,7 @@ public class TransactionAttemptContext internal constructor(
 
         val metadata = QueryMetadata(coreQueryResult.metaData())
 
-        return QueryResult(rows, metadata)
+        QueryResult(rows, metadata)
     }
 
     private fun <T> serialize(

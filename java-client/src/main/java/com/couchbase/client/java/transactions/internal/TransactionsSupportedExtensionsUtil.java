@@ -29,6 +29,7 @@ public class TransactionsSupportedExtensionsUtil {
         CoreTransactionsExtension.EXT_BINARY_METADATA,
         CoreTransactionsExtension.EXT_CUSTOM_METADATA_COLLECTION,
         CoreTransactionsExtension.EXT_QUERY,
+        CoreTransactionsExtension.EXT_SINGLE_QUERY,
         CoreTransactionsExtension.EXT_STORE_DURABILITY,
         CoreTransactionsExtension.BF_CBD_3838,
         CoreTransactionsExtension.BF_CBD_3787,

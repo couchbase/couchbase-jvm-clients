@@ -21,10 +21,8 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.transaction.ForwardCompatibilityFailureException;
 import com.couchbase.client.core.error.transaction.internal.ForwardCompatibilityRequiresRetryException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -160,39 +158,41 @@ public class ForwardCompatibility {
      * Throws ForwardCompatibilityRequiresRetry if the 'thing' (transaction or cleanup attempt) should be retried
      * Throws ForwardCompatibilityFailure else if the 'thing' should fast-fail
      */
-    public static Mono<Void> check(Core core,
-                                   ForwardCompatibilityStage fc,
-                                   Optional<ForwardCompatibility> forwardCompatibility,
-                                   @Nullable CoreTransactionLogger logger,
-                                   CoreTransactionsSupportedExtensions supported) {
-        return Mono.defer(() -> {
-            if (forwardCompatibility.isPresent()) {
-                ForwardCompatibility map = forwardCompatibility.get();
+    public static void check(Core core,
+                             ForwardCompatibilityStage fc,
+                             Optional<ForwardCompatibility> forwardCompatibility,
+                             @Nullable CoreTransactionLogger logger,
+                             CoreTransactionsSupportedExtensions supported) {
+        if (!forwardCompatibility.isPresent()) {
+            // Must be dealing with protocol 1
+            return;
+        }
 
-                ForwardCompatBehaviourFull behaviour = map.check(fc, supported);
+        ForwardCompatibility map = forwardCompatibility.get();
 
-                if (behaviour.behaviour == ForwardCompatBehaviour.CONTINUE) {
-                    return Mono.empty();
-                } else {
-                    RuntimeException toThrow = (behaviour.behaviour == ForwardCompatBehaviour.RETRY_TRANSACTION) ? RETRY : NO_RETRY;
+        ForwardCompatBehaviourFull behaviour = map.check(fc, supported);
 
-                    if (logger != null) {
-                        logger.warn("", "forward-compatibility rejection at point '{}'/'{}', map is {}, supported is {}",
-                                fc.name(), fc.value(), map.raw, supported);
-                    }
+        if (behaviour.behaviour == ForwardCompatBehaviour.CONTINUE) {
+            return;
+        }
 
-                    if (behaviour.retryAfterMillis.isPresent()) {
-                        return Mono.delay(Duration.ofMillis(behaviour.retryAfterMillis.get()), core.context().environment().transactionsSchedulers().schedulerBlocking())
-                                .then(Mono.error(toThrow));
-                    } else {
-                        return Mono.error(toThrow);
-                    }
-                }
-            } else {
-                // Must be dealing with protocol 1
-                return Mono.empty();
+        RuntimeException toThrow = (behaviour.behaviour == ForwardCompatBehaviour.RETRY_TRANSACTION) ? RETRY : NO_RETRY;
+
+        if (logger != null) {
+            logger.warn("", "forward-compatibility rejection at point '{}'/'{}', map is {}, supported is {}",
+                    fc.name(), fc.value(), map.raw, supported);
+        }
+
+        if (behaviour.retryAfterMillis.isPresent()) {
+            try {
+                Thread.sleep(behaviour.retryAfterMillis.get());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(e);
             }
-        });
+        }
+
+        throw toThrow;
     }
 
     @Override

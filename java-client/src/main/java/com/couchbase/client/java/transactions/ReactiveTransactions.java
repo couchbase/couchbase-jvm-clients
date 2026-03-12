@@ -20,12 +20,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.util.ReactorOps;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
-import com.couchbase.client.core.transaction.CoreTransactionContext;
-import com.couchbase.client.core.transaction.CoreTransactionsReactive;
-import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
-import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
-import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
-import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
+import com.couchbase.client.core.transaction.CoreTransactionResult;
+import com.couchbase.client.core.transaction.CoreTransactions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
@@ -34,9 +30,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -46,7 +39,8 @@ import java.util.function.Function;
  * The main method to run transactions is {@link ReactiveTransactions#run}.
  */
 public class ReactiveTransactions {
-    private final CoreTransactionsReactive internal;
+    private final CoreTransactions internal;
+    private final Core core;
     private final JsonSerializer serializer;
     private final ReactorOps reactor;
 
@@ -54,7 +48,8 @@ public class ReactiveTransactions {
     public ReactiveTransactions(Core core, JsonSerializer serializer) {
         Objects.requireNonNull(core);
 
-        this.internal = new CoreTransactionsReactive(core, core.context().environment().transactionsConfig());
+        this.internal = new CoreTransactions(core, core.context().environment().transactionsConfig());
+        this.core = core;
         this.serializer = Objects.requireNonNull(serializer);
         this.reactor = core.environment();
     }
@@ -83,11 +78,15 @@ public class ReactiveTransactions {
      */
     public Mono<TransactionResult> run(Function<ReactiveTransactionAttemptContext, Mono<?>> transactionLogic,
                                                @Nullable TransactionOptions options) {
-        return reactor.publishOnUserScheduler(
-            internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(reactor, ctx, serializer)), options == null ? null : options.build())
-                .onErrorResume(ErrorUtil::convertTransactionFailedInternal)
-                .map(TransactionResult::new)
-        );
+        // Threading model: (re)uses one Thread per transaction on the transactionsSchedulers, then the individual operations
+        // will also (re)use one Thread as they execute.
+
+        return reactor.publishOnUserScheduler(Mono.fromCallable(() -> {
+                CoreTransactionResult res = internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(reactor, ctx, serializer)).block(), options == null ? null : options.build());
+                return new TransactionResult(res);
+            })
+            .onErrorMap(ErrorUtil::convertTransactionFailedInternalBlocking)
+            .subscribeOn(core.context().environment().transactionsSchedulers().schedulerBlocking()));
     }
 
     /**
@@ -95,41 +94,5 @@ public class ReactiveTransactions {
      */
     public Mono<TransactionResult> run(Function<ReactiveTransactionAttemptContext, Mono<?>> transactionLogic) {
         return run(transactionLogic, null);
-    }
-
-    TransactionResult runBlocking(Consumer<TransactionAttemptContext> transactionLogic, @Nullable CoreTransactionOptions perConfig) {
-        return Mono.defer(() -> {
-            CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(internal.config(), Optional.ofNullable(perConfig));
-            CoreTransactionContext overall =
-                    new CoreTransactionContext(internal.core().context(),
-                            UUID.randomUUID().toString(),
-                            merged,
-                            internal.core().transactionsCleanup());
-            // overall.LOGGER.info(configDebug(config, perConfig, cleanup.clusterData().cluster().core()));
-
-            Mono<CoreTransactionAttemptContext> createAttempt = Mono.defer(() -> {
-                String attemptId = UUID.randomUUID().toString();
-                return Mono.just(internal.createAttemptContext(overall, merged, attemptId));
-            });
-
-            Function<CoreTransactionAttemptContext, Mono<Void>> newTransactionLogic = (ctx) -> Mono.defer(() -> {
-                TransactionAttemptContext ctxBlocking = new TransactionAttemptContext(ctx, serializer);
-                return Mono.fromRunnable(() -> {
-                            TransactionMarkerOwner.set(new TransactionMarker(ctx));
-                            try {
-                                transactionLogic.accept(ctxBlocking);
-                            }
-                            finally {
-                                TransactionMarkerOwner.clear();
-                            }
-                        })
-                        .subscribeOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
-                        .then();
-            });
-
-            return internal.executeTransaction(createAttempt, merged, overall, newTransactionLogic, false)
-                    .onErrorResume(ErrorUtil::convertTransactionFailedInternal);
-        }).map(TransactionResult::new)
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking()).block();
     }
 }

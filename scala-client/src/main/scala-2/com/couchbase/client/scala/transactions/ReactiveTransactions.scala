@@ -74,9 +74,7 @@ class ReactiveTransactions private[scala] (private val internal: CoreTransaction
       )
       .map(TransactionResult)
       .onErrorResume((err: Throwable) =>
-        FutureConversions.javaMonoToScalaMono(
-          ErrorUtil.convertTransactionFailedInternal[TransactionResult](err)
-        )
+        SMono.error[TransactionResult](ErrorUtil.convertTransactionFailedInternal(err))
       )
   }
 

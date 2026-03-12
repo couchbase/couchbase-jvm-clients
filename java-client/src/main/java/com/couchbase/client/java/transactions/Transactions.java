@@ -18,13 +18,15 @@ package com.couchbase.client.java.transactions;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
 import com.couchbase.client.core.transaction.CoreTransactionResult;
+import com.couchbase.client.core.transaction.CoreTransactions;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
 import reactor.util.annotation.Nullable;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -33,11 +35,13 @@ import java.util.function.Consumer;
  * The main methods to run transactions are {@link Transactions#run} and {@link Transactions#reactive}.
  */
 public class Transactions {
-    private final ReactiveTransactions reactive;
+    private final CoreTransactions internal;
+    private final JsonSerializer serializer;
 
     @Stability.Internal
     public Transactions(Core core, JsonSerializer serializer) {
-        this.reactive = new ReactiveTransactions(core, serializer);
+        this.internal = new CoreTransactions(core, core.context().environment().transactionsConfig());
+        this.serializer = Objects.requireNonNull(serializer);
     }
 
     /**
@@ -65,7 +69,17 @@ public class Transactions {
      *                           after multiple retries.  The exception contains further details of the error
      */
     public TransactionResult run(Consumer<TransactionAttemptContext> transactionLogic, @Nullable TransactionOptions options) {
-        return reactive.runBlocking(transactionLogic, options == null ? null : options.build());
+        try {
+            CoreTransactionResult res = internal.run(ctx -> {
+                TransactionAttemptContext ctxBlocking = new TransactionAttemptContext(ctx, serializer);
+                transactionLogic.accept(ctxBlocking);
+                return null;
+            }, options == null ? null : options.build());
+            return new TransactionResult(res);
+        }
+        catch (RuntimeException err) {
+            throw ErrorUtil.convertTransactionFailedInternalBlocking(err);
+        }
     }
 
     /**

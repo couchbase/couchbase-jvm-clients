@@ -23,7 +23,7 @@ import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_COLLECTION
 import com.couchbase.client.core.io.CollectionIdentifier.DEFAULT_SCOPE
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
-import com.couchbase.client.core.transaction.CoreTransactionsReactive
+import com.couchbase.client.core.transaction.CoreTransactions
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory
 import com.couchbase.client.kotlin.Keyspace
@@ -32,8 +32,9 @@ import com.couchbase.client.kotlin.env.env
 import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.manager.bucket.levelIfSynchronous
-import kotlinx.coroutines.reactive.awaitSingle
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.withContext
 import java.util.Optional
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
@@ -44,7 +45,8 @@ import kotlin.time.toJavaDuration
  * @see run
  */
 public class Transactions internal constructor(internal val core: Core) {
-    private val internal = CoreTransactionsReactive(core, core.env.transactionsConfig())
+    private val internal = CoreTransactions(core, core.env.transactionsConfig())
+    private val blockingIoDispatcher = internal.core().environment().transactionsSchedulers().blockingExecutor().asCoroutineDispatcher()
 
     /**
      * Runs supplied transactional logic until success or failure.
@@ -99,7 +101,7 @@ public class Transactions internal constructor(internal val core: Core) {
         metadataCollection: Keyspace? = null,
         attemptContextFactory: TransactionAttemptContextFactory?,
         transactionLogic: suspend TransactionAttemptContext.() -> V,
-    ): TransactionResult<V> {
+    ): TransactionResult<V> = withContext(blockingIoDispatcher) {
 
         checkTransactionDurability(durability)
 
@@ -120,9 +122,9 @@ public class Transactions internal constructor(internal val core: Core) {
         }
 
         try {
-            val coreResult = internal.run(function, perConfig).awaitSingle()
+            val coreResult = internal.run(function, perConfig)
             @Suppress("UNCHECKED_CAST")
-            return TransactionResult(value as V, coreResult)
+            TransactionResult(value as V, coreResult)
         } catch (t: CoreTransactionFailedException) {
             throw TransactionFailedException.convertTransactionFailedInternal(t)
         }

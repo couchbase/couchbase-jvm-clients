@@ -44,11 +44,10 @@ import com.couchbase.client.scala.transactions.getmulti.{
   TransactionGetMultiUtil
 }
 import com.couchbase.client.scala.transactions.internal.EncodingUtil.encode
-import com.couchbase.client.scala.util.FutureConversions
 import com.couchbase.client.scala.{AsyncCollection, AsyncScope}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success};
+import scala.util.{Failure, Success}
 
 /** Provides methods to allow an application's transaction logic to read, mutate, insert and delete documents.
   *
@@ -77,8 +76,7 @@ class AsyncTransactionAttemptContext private[scala] (
       id: String,
       options: TransactionGetOptions = TransactionGetOptions.Default
   ): Future[TransactionGetResult] = {
-    FutureConversions
-      .javaMonoToScalaFuture(internal.get(collection.collectionIdentifier, id))
+    Future(internal.get(collection.collectionIdentifier, id))
       .map(result => TransactionGetResult(result, options.transcoder))
   }
 
@@ -103,10 +101,7 @@ class AsyncTransactionAttemptContext private[scala] (
       options: TransactionGetReplicaFromPreferredServerGroupOptions =
         TransactionGetReplicaFromPreferredServerGroupOptions.Default
   ): Future[TransactionGetResult] =
-    FutureConversions
-      .javaMonoToScalaFuture(
-        internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id)
-      )
+    Future(internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id))
       .map(result => TransactionGetResult(result, options.transcoder))
 
   /** Fetches multiple documents in a single operation.
@@ -121,10 +116,7 @@ class AsyncTransactionAttemptContext private[scala] (
       options: TransactionGetMultiOptions = TransactionGetMultiOptions.Default
   ): Future[TransactionGetMultiResult] = {
     val coreSpecs = TransactionGetMultiUtil.convert(specs)
-    FutureConversions
-      .javaMonoToScalaFuture(
-        internal.getMultiAlgo(coreSpecs, options.toCore, false)
-      )
+    Future(internal.getMultiAlgo(coreSpecs, options.toCore, false))
       .map(res => TransactionGetMultiUtil.convert(res, specs))
   }
 
@@ -138,10 +130,7 @@ class AsyncTransactionAttemptContext private[scala] (
         TransactionGetMultiReplicasFromPreferredServerGroupOptions.Default
   ): Future[TransactionGetMultiReplicasFromPreferredServerGroupResult] = {
     val coreSpecs = TransactionGetMultiUtil.convertReplica(specs)
-    FutureConversions
-      .javaMonoToScalaFuture(
-        internal.getMultiAlgo(coreSpecs, options.toCore, true)
-      )
+    Future(internal.getMultiAlgo(coreSpecs, options.toCore, true))
       .map(res => TransactionGetMultiUtil.convertReplica(res, specs))
   }
 
@@ -167,17 +156,16 @@ class AsyncTransactionAttemptContext private[scala] (
       case Success(encoded)   =>
         closeSpan(
           span,
-          FutureConversions
-            .javaMonoToScalaFuture(
-              internal.insert(
-                collection.collectionIdentifier,
-                id,
-                encoded.encoded,
-                encoded.flags,
-                null,
-                new SpanWrapper(span)
-              )
+          Future(
+            internal.insert(
+              collection.collectionIdentifier,
+              id,
+              encoded.encoded,
+              encoded.flags,
+              null,
+              new SpanWrapper(span)
             )
+          )
             .map(result => TransactionGetResult(result, options.transcoder))
         )
     }
@@ -204,11 +192,10 @@ class AsyncTransactionAttemptContext private[scala] (
       case Success(encoded)   =>
         closeSpan(
           span,
-          FutureConversions
-            .javaMonoToScalaFuture(
-              internal
-                .replace(doc.internal, encoded.encoded, encoded.flags, null, new SpanWrapper(span))
-            )
+          Future(
+            internal
+              .replace(doc.internal, encoded.encoded, encoded.flags, null, new SpanWrapper(span))
+          )
             .map(result => TransactionGetResult(result, options.transcoder))
         )
     }
@@ -235,8 +222,7 @@ class AsyncTransactionAttemptContext private[scala] (
     */
   def remove(doc: TransactionGetResult): Future[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
-    val out  = FutureConversions
-      .javaMonoToScalaFuture(internal.remove(doc.internal, new SpanWrapper(span)))
+    val out  = Future(internal.remove(doc.internal, new SpanWrapper(span)))
       .map(_ => ())
 
     out.onComplete {
@@ -318,15 +304,14 @@ class AsyncTransactionAttemptContext private[scala] (
       options: TransactionQueryOptions
   ): Future[TransactionQueryResult] = {
     val opts: CoreQueryOptions = Option(options).map(v => v.toCore).orNull
-    FutureConversions
-      .javaMonoToScalaFuture(
-        internal.queryBlocking(
-          statement,
-          if (scope == null) null else CoreQueryContext.of(scope.bucketName, scope.name),
-          opts,
-          false
-        )
+    Future(
+      internal.queryBlocking(
+        statement,
+        if (scope == null) null else CoreQueryContext.of(scope.bucketName, scope.name),
+        opts,
+        false
       )
+    )
       .map(TransactionQueryResult.apply)
   }
 }

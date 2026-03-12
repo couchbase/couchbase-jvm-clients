@@ -16,8 +16,14 @@
 package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.NonNull;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Mainly to aid debugging, transactions use their own pool of schedulers.  Though the underlying KV and query operations
@@ -25,34 +31,39 @@ import reactor.core.scheduler.Schedulers;
  */
 @Stability.Internal
 public class CoreTransactionsSchedulers {
-    // Same as BoundedElasticScheduler.DEFAULT_TTL_SECONDS, which is private
-    private final static int DEFAULT_TTL_SECONDS = 60;
+    private final static String BLOCKING_SYNC_THREAD_PREFIX = "cb-txnb";
 
-    private final Scheduler schedulerCleanup = createScheduler(100, "cb-txn-cleanup");
-
-    // The scheduler we run the lambda on.  In blocking mode, this will use up one thread per transaction.
-    // Applications performing large numbers of concurrent transactions should therefore prefer the reactive API.
+    // The scheduler/executor used as-needed for transactional operations, which is an uncapped caching thread pool.
     //
-    // The other key benefit to this scheduler is we run anything in 'user space' (e.g. including when passing back
+    // A key benefit to this scheduler is we run anything in 'user space' (e.g. including when passing back
     // control the lambda in reactive API) on this scheduler, rather than on a limited SDK one.  This lets the
     // user accidentally block, without deadlocking the SDK.
-    private final Scheduler schedulerBlocking = createScheduler(100_000, "cb-txn");
-
-    private Scheduler createScheduler(int threadCap, String name) {
-        // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
-        return Schedulers.newBoundedElastic(threadCap, Integer.MAX_VALUE, name, DEFAULT_TTL_SECONDS, true);
-    }
-
-    public Scheduler schedulerCleanup() {
-        return schedulerCleanup;
-    }
+    private final ExecutorService blockingExecutor = Executors.newCachedThreadPool(new BlockingSyncThreadFactory());
+    private final Scheduler schedulerBlocking = Schedulers.fromExecutor(blockingExecutor);
 
     public Scheduler schedulerBlocking() {
         return schedulerBlocking;
     }
 
+    public ExecutorService blockingExecutor() {
+        return blockingExecutor;
+    }
+
     public void shutdown() {
-        schedulerCleanup.dispose();
         schedulerBlocking.dispose();
+        blockingExecutor.shutdown();
+    }
+
+    private static final class BlockingSyncThreadFactory implements ThreadFactory {
+        private final AtomicInteger counter = new AtomicInteger();
+
+        @Override
+        public Thread newThread(@NonNull Runnable r) {
+            Thread t = new Thread(r);
+            t.setName(BLOCKING_SYNC_THREAD_PREFIX + "-" + counter.incrementAndGet());
+            // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
+            t.setDaemon(true);
+            return t;
+        }
     }
 }

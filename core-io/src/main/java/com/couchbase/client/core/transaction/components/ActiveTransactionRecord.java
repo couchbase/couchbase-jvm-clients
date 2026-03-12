@@ -25,6 +25,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.transaction.forwards.ForwardCompatibility;
 import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
+import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
@@ -38,7 +39,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -77,77 +77,64 @@ public class ActiveTransactionRecord {
 
     // Called from FIT, and needs to be compatible with all SDK versions - do not change this method signature.
     public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
-                                                                                     CollectionIdentifier atrCollection,
-                                                                                     String atrId,
-                                                                                     String attemptId,
-                                                                                     CoreMergedTransactionConfig config,
-                                                                                     @Nullable SpanWrapper pspan,
-                                                                                     @Nullable CoreTransactionLogger logger) {
-      return findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null, null);
+                                                                                       CollectionIdentifier atrCollection,
+                                                                                       String atrId,
+                                                                                       String attemptId,
+                                                                                       CoreMergedTransactionConfig config,
+                                                                                       @Nullable SpanWrapper pspan,
+                                                                                       @Nullable CoreTransactionLogger logger) {
+        return Mono.fromCallable(() -> findEntryForTransaction(core, atrCollection, atrId, attemptId, config, pspan, logger, null, null));
     }
 
-    public static Mono<Optional<ActiveTransactionRecordEntry>> findEntryForTransaction(Core core,
-                                                                                      CollectionIdentifier atrCollection,
-                                                                                      String atrId,
-                                                                                      String attemptId,
-                                                                                      CoreMergedTransactionConfig config,
-                                                                                      @Nullable SpanWrapper pspan,
-                                                                                      @Nullable CoreTransactionLogger logger,
-                                                                                      @Nullable MeteringUnits.MeteringUnitsBuilder units,
-                                                                                      @Nullable Duration timeout) {
+    public static Optional<ActiveTransactionRecordEntry> findEntryForTransaction(Core core,
+                                                                                 CollectionIdentifier atrCollection,
+                                                                                 String atrId,
+                                                                                 String attemptId,
+                                                                                 CoreMergedTransactionConfig config,
+                                                                                 @Nullable SpanWrapper pspan,
+                                                                                 @Nullable CoreTransactionLogger logger,
+                                                                                 @Nullable MeteringUnits.MeteringUnitsBuilder units,
+                                                                                 @Nullable Duration timeout) {
 
-        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout == null ? kvTimeoutNonMutating(core) : timeout,
-                        false, createClientContext("ATR::findEntryForTransaction"), pspan,
-                        false,
-                        Arrays.asList(
-                                new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS + "." + attemptId, true, 0),
-                                new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)
-                        ))
+        try {
+            CoreSubdocGetResult d = TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout == null ? kvTimeoutNonMutating(core) : timeout,
+                    false, createClientContext("ATR::findEntryForTransaction"), pspan,
+                    false,
+                    Arrays.asList(
+                            new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS + "." + attemptId, true, 0),
+                            new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)
+                    ));
 
-                .map(d -> {
-                    if (units != null) {
-                      units.add(d.meta());
-                    }
+            if (units != null) {
+                units.add(d.meta());
+            }
 
-                    if (!d.field(0).status().success()) {
-                        return Optional.empty();
-                    } else {
-                        try {
-                            JsonNode atr = MAPPER.readValue(d.field(0).value(), JsonNode.class);
-                            JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
-                            ParsedHLC parsedHLC = new ParsedHLC(hlc);
+            if (!d.field(0).status().success()) {
+                return Optional.empty();
+            }
 
-                            ActiveTransactionRecordEntry entry = createFrom(atrCollection.bucket(),
-                                    atrId,
-                                    atr,
-                                    attemptId,
-                                    parsedHLC.nowInNanos());
-                            return Optional.of(entry);
-                        }
-                        catch (Throwable err) {
-                            // CBSE-10352
-                            if (logger != null) {
-                                logger.info("", "Hit error while decoding ATR {}.{}.{}.{} {} {}",
-                                        atrCollection.bucket(), atrCollection.scope(), atrCollection.collection(), atrId, attemptId, DebugUtil.dbg(err));
-                                logger.warn("Attempt to dump raw JSON of ATR entry:");
-                                try {
-                                    byte[] raw = d.field(0).value();
-                                    String asStr = new String(raw, StandardCharsets.UTF_8);
-                                    logger.info("", "Raw JSON: {}", asStr);
-                                    byte[] rawHLC = d.field(1).value();
-                                    String asStrHLC = new String(rawHLC, StandardCharsets.UTF_8);
-                                    logger.info("", "Raw JSON HLC: {}", asStrHLC);
-                                }
-                                catch (Throwable e) {
-                                    logger.info("", "Error while trying to read raw JSON: {}", DebugUtil.dbg(e));
-                                }
-                            }
-                            // This implementation cannot proceed in the face of a corrupted ATR doc, so fast-fail the
-                            // transaction
-                            throw new RuntimeException(err);
-                        }
-                    }
-                });
+            JsonNode atr = MAPPER.readValue(d.field(0).value(), JsonNode.class);
+            JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
+            ParsedHLC parsedHLC = new ParsedHLC(hlc);
+
+            ActiveTransactionRecordEntry entry = createFrom(atrCollection.bucket(),
+                    atrId,
+                    atr,
+                    attemptId,
+                    parsedHLC.nowInNanos());
+            return Optional.of(entry);
+        } catch (DocumentNotFoundException err) {
+            return Optional.empty();
+        } catch (Throwable err) {
+            // CBSE-10352
+            if (logger != null) {
+                logger.info("", "Hit error while decoding ATR {}.{}.{}.{} {} {}",
+                        atrCollection.bucket(), atrCollection.scope(), atrCollection.collection(), atrId, attemptId, DebugUtil.dbg(err));
+            }
+            // This implementation cannot proceed in the face of a corrupted ATR doc, so fast-fail the
+            // transaction
+            throw new RuntimeException(err);
+        }
     }
 
     public static ActiveTransactionRecordEntry createFrom(String atrBucket,
@@ -224,17 +211,18 @@ public class ActiveTransactionRecord {
      *
      * Note that MB-35388 only provides one-second granularity.
      */
-    public static Mono<Optional<ActiveTransactionRecords>> getAtr(Core core,
-                                                                  CollectionIdentifier atrCollection,
-                                                                  String atrId,
-                                                                  Duration timeout,
-                                                                  @Nullable SpanWrapper pspan) {
-        return TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout, false,  createClientContext("ATR::getAtr"), pspan,
-        false,
-        Arrays.asList(
-                new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS, true, 0),
-                new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)
-        ))
+    public static Optional<ActiveTransactionRecords> getAtr(Core core,
+                                                             CollectionIdentifier atrCollection,
+                                                             String atrId,
+                                                             Duration timeout,
+                                                             @Nullable SpanWrapper pspan) {
+        try {
+            CoreSubdocGetResult d = TransactionKVHandler.lookupIn(core, atrCollection, atrId, timeout, false,  createClientContext("ATR::getAtr"), pspan,
+                    false,
+                    Arrays.asList(
+                            new SubdocGetRequest.Command(SubdocCommandType.GET, ATR_FIELD_ATTEMPTS, true, 0),
+                            new SubdocGetRequest.Command(SubdocCommandType.GET, "$vbucket.HLC", true, 1)
+                    ));
 
 
             // Possible results here:
@@ -245,29 +233,23 @@ public class ActiveTransactionRecord {
             // Note that this code is only performed in protocol 2 which has a hard dependency on 6.6, so MB-35388
             // is certainly available.  And there is now a hard dependency on higher versions of java-client than 3.0.3.
             // So this code should always be safe.
-            .map(d -> {
-                try {
-                    JsonNode attempts = MAPPER.readValue(d.field(0).value(), JsonNode.class);
-                    JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
-                    ParsedHLC parsedHLC = new ParsedHLC(hlc);
+            JsonNode attempts = MAPPER.readValue(d.field(0).value(), JsonNode.class);
+            JsonNode hlc = MAPPER.readValue(d.field(1).value(), JsonNode.class);
+            ParsedHLC parsedHLC = new ParsedHLC(hlc);
 
-                    return Optional.of(mapToAtr(atrCollection, atrId, attempts, parsedHLC.nowInNanos(), parsedHLC.mode()));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            })
-
-            .onErrorResume(err -> {
-                // Don't capture RequestCancelledException here: it indicates using java-client < 3.0.3 on a pre-6.6 server, leading to
-                // memcached continuously disconnecting.
-                // Don't capture XattrUnknownVirtualAttributeException either, indicating we're on a pre-6.6 server..
-                // Both the server and java-client versions are better tested at an earlier point.
-                if (err instanceof DocumentNotFoundException) {
-                    return Mono.just(Optional.empty());
-                } else {
-                    return Mono.error(err);
-                }
-            });
+            return Optional.of(mapToAtr(atrCollection, atrId, attempts, parsedHLC.nowInNanos(), parsedHLC.mode()));
+        }
+        // Don't capture RequestCancelledException here: it indicates using java-client < 3.0.3 on a pre-6.6 server, leading to
+        // memcached continuously disconnecting.
+        // Don't capture XattrUnknownVirtualAttributeException either, indicating we're on a pre-6.6 server..
+        // Both the server and java-client versions are better tested at an earlier point.
+        catch (DocumentNotFoundException err) {
+            return Optional.empty();
+        }
+        catch (IOException e) {
+            // Hard fail here if the ATR has somehow become corrupted.  Not safe to proceed.
+            throw new RuntimeException(e);
+        }
     }
 
     private static ActiveTransactionRecords mapToAtr(CollectionIdentifier atrCollection, String atrId, JsonNode attempts, long cas, CasMode casMode) {

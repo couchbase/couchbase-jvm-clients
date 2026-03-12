@@ -410,7 +410,7 @@ class ScalaPerformer extends CorePerformer {
         HooksUtil.configureClientRecordHooks(request.getHookList.asScala, connection)
       val response: ClientRecordProcessResponse.Builder = ClientRecordProcessResponse.newBuilder
       try {
-        val result = cr.processClient(request.getClientUuid, collection, config, null).block
+        val result = cr.processClient(request.getClientUuid, collection, config, null)
         response
           .setSuccess(true)
           .setNumActiveClients(result.numActiveClients)

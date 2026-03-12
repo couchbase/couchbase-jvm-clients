@@ -29,6 +29,7 @@ import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.java.transactions.error.TransactionCommitAmbiguousException;
 import com.couchbase.client.java.transactions.error.TransactionExpiredException;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
+import com.couchbase.client.java.transactions.internal.ErrorUtil;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -59,18 +60,6 @@ public class QueryAccessor {
   }
 
   public static RuntimeException convertCoreQueryError(Throwable err) {
-    if (err instanceof CoreTransactionCommitAmbiguousException) {
-      return new TransactionCommitAmbiguousException((CoreTransactionCommitAmbiguousException) err);
-    } else if (err instanceof CoreTransactionExpiredException) {
-      return new TransactionExpiredException((CoreTransactionExpiredException) err);
-    } else if (err instanceof CoreTransactionFailedException) {
-      return new TransactionFailedException((CoreTransactionFailedException) err);
-    }
-
-    if (err instanceof RuntimeException) {
-      return (RuntimeException) err;
-    }
-
-    return new RuntimeException(err);
+    return ErrorUtil.convertTransactionFailedInternalBlocking(err);
   }
 }

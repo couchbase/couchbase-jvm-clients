@@ -17,7 +17,6 @@ package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreKeyspace;
-import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
@@ -26,26 +25,23 @@ import com.couchbase.client.core.classic.ClassicExpiryHelper;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.error.DocumentNotFoundException;
-import com.couchbase.client.core.error.DocumentUnretrievableException;
-import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.InsertResponse;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
 import com.couchbase.client.core.msg.kv.RemoveResponse;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
+import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.kv.ReplicaHelper;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
-import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.util.BucketConfigUtil;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -53,6 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
+import java.util.concurrent.ExecutionException;
 
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
 import static com.couchbase.client.core.msg.kv.SubdocGetRequest.convertCommandsToCore;
@@ -67,7 +65,7 @@ public class TransactionKVHandler {
     private TransactionKVHandler() {
     }
 
-    public static Mono<InsertResponse> insert(final Core core,
+    public static InsertResponse insert(final Core core,
                                               CollectionIdentifier collectionIdentifier,
                                               final String id,
                                               final byte[] transcodedContent,
@@ -77,37 +75,42 @@ public class TransactionKVHandler {
                                               final Map<String, Object> clientContext,
                                               final SpanWrapper pspan,
                                               final @Nullable CoreExpiry expiry) {
-        return Mono.defer(() -> {
-            long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
+        long start = System.nanoTime();
+        SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_INSERT, pspan);
+        InsertRequest request = new InsertRequest(id,
+                transcodedContent,
+                expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
+                flags,
+                timeout,
+                core.context(),
+                collectionIdentifier,
+                BestEffortRetryStrategy.INSTANCE,
+                durabilityLevel,
+                span.span());
+        request.context()
+                .clientContext(clientContext)
+                .encodeLatency(System.nanoTime() - start);
 
-            InsertRequest request = new InsertRequest(id,
-                    transcodedContent,
-                    expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
-                    flags,
-                    timeout,
-                    core.context(),
-                    collectionIdentifier,
-                    BestEffortRetryStrategy.INSTANCE,
-                    durabilityLevel,
-                    span.span());
-            request.context()
-                    .clientContext(clientContext)
-                    .encodeLatency(System.nanoTime() - start);
-
-            core.send(request);
-            return Mono.fromFuture(request
-                    .response()
-                    .thenApply(response -> {
-                        if (response.status().success()) {
-                            return response;
-                        }
-                        throw response.errorIfNeeded(request);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
-        });
+        core.send(request);
+        try {
+            // See comments elsewhere in this file for why we do not timeout-bound the .get() here
+            InsertResponse response = request.response().get();
+            if (response.status().success()) {
+                request.context().logicallyComplete();
+                return response;
+            }
+            throw response.errorIfNeeded(request);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw handleBlockingException(span, request, e);
+        } catch (ExecutionException e) {
+            throw handleBlockingException(span, request, e);
+        } finally {
+            span.finish();
+        }
     }
 
-    public static Mono<RemoveResponse> remove(final Core core,
+    public static RemoveResponse remove(final Core core,
                                               CollectionIdentifier collectionIdentifier,
                                               final String id,
                                               final Duration timeout,
@@ -115,56 +118,59 @@ public class TransactionKVHandler {
                                               final Optional<DurabilityLevel> durabilityLevel,
                                               final Map<String, Object> clientContext,
                                               final SpanWrapper pspan) {
-        return Mono.defer(() -> {
-            long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, pspan);
+        long start = System.nanoTime();
+        SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_REMOVE, pspan);
 
-            RemoveRequest request = new RemoveRequest(id,
-                    cas,
-                    timeout,
-                    core.context(),
-                    collectionIdentifier,
-                    BestEffortRetryStrategy.INSTANCE,
-                    durabilityLevel,
-                    span.span());
-            request.context()
-                    .clientContext(clientContext)
-                    .encodeLatency(System.nanoTime() - start);
+        RemoveRequest request = new RemoveRequest(id,
+                cas,
+                timeout,
+                core.context(),
+                collectionIdentifier,
+                BestEffortRetryStrategy.INSTANCE,
+                durabilityLevel,
+                span.span());
+        request.context()
+                .clientContext(clientContext)
+                .encodeLatency(System.nanoTime() - start);
 
-            core.send(request);
-            return Mono.fromFuture(request
-                    .response()
-                    .thenApply(response -> {
-                        if (response.status().success()) {
-                            return response;
-                        }
-                        throw keyValueStatusToException(request, response);
-                    }).whenComplete((r, t) -> request.context().logicallyComplete(t)));
-        });
+        core.send(request);
+        try {
+            RemoveResponse response = request.response().get();
+            if (response.status().success()) {
+                request.context().logicallyComplete();
+                return response;
+            }
+            throw keyValueStatusToException(request, response);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw handleBlockingException(span, request, e);
+        } catch (ExecutionException e) {
+            throw handleBlockingException(span, request, e);
+        } finally {
+            span.finish();
+        }
     }
 
-    public static Mono<CoreSubdocGetResult> lookupIn(final Core core,
-                                                   CollectionIdentifier collectionIdentifier,
-                                                   final String id,
-                                                   final Duration timeout,
-                                                   boolean accessDeleted,
-                                                   final Map<String, Object> clientContext,
-                                                   @Nullable final SpanWrapper pspan,
-                                                   boolean preferredReplicaMode,
-                                                   final List<SubdocGetRequest.Command> commands) {
-        return Mono.defer(() -> {
-            long start = System.nanoTime();
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
+    public static CoreSubdocGetResult lookupIn(final Core core,
+                                               CollectionIdentifier collectionIdentifier,
+                                               final String id,
+                                               final Duration timeout,
+                                               boolean accessDeleted,
+                                               final Map<String, Object> clientContext,
+                                               @Nullable final SpanWrapper pspan,
+                                               boolean preferredReplicaMode,
+                                               final List<SubdocGetRequest.Command> commands) {
+        long start = System.nanoTime();
+        SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_LOOKUP_IN, pspan);
 
-
+        SubdocGetRequest request = null;
+        try {
             if (preferredReplicaMode) {
                 CompletableFuture<CoreSubdocGetResult> replicas =
                         BucketConfigUtil.waitForBucketTopology(core, collectionIdentifier.bucket(), timeout).toFuture()
                                 .thenCompose(bucketConfig -> {
                                     byte flags = 0;
                                     if (accessDeleted) {
-                                        // We can only accessDeleted when the server supports it (8.0+).
-                                        // Otherwise we will proceed with the operation though it is sub-optimal.
                                         if (bucketConfig.bucket().capabilities().contains(SUBDOC_ACCESS_DELETED)) {
                                             flags = SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
                                         }
@@ -173,10 +179,8 @@ public class TransactionKVHandler {
                                             clientContext, pspan == null ? null : pspan.span(), CoreReadPreference.PREFERRED_SERVER_GROUP_OR_ALL_AVAILABLE, flags, (r) -> r);
                                 });
 
-                return Reactor.wrap(replicas, () -> {})
-                        .switchIfEmpty(Mono.error(new DocumentUnretrievableException(ReducedKeyValueErrorContext.create(id, collectionIdentifier))))
-                        .doOnError(span::recordException)
-                        .doOnTerminate(span::finish);
+                // See comments elsewhere in this file for why we do not timeout-bound the .get() here
+                return replicas.get();
             }
 
             byte flags = 0;
@@ -184,7 +188,7 @@ public class TransactionKVHandler {
                 flags |= SubdocMutateRequest.SUBDOC_DOC_FLAG_ACCESS_DELETED;
             }
 
-            SubdocGetRequest request = new SubdocGetRequest(timeout,
+            request = new SubdocGetRequest(timeout,
                     core.context(),
                     collectionIdentifier,
                     BestEffortRetryStrategy.INSTANCE,
@@ -198,25 +202,26 @@ public class TransactionKVHandler {
                     .encodeLatency(System.nanoTime() - start);
 
             core.send(request);
-            return Mono.fromFuture(request
-                    .response()
-                    .thenApply(response -> {
-                        if (response.status().success() || response.status() == ResponseStatus.SUBDOC_FAILURE) {
-                            return response.toCore(CoreKeyspace.from(collectionIdentifier), id);
-                        }
-                        throw keyValueStatusToException(request, response);
-                    })
-                    .whenComplete((t, e) -> {
-                      if (e == null || e instanceof DocumentNotFoundException) {
-                        request.context().logicallyComplete();
-                      } else {
-                        request.context().logicallyComplete(e);
-                      }
-                    }));
-        });
+            // See comments elsewhere in this file for why we do not timeout-bound the .get() here
+            SubdocGetResponse response = request.response().get();
+            if (response.status().success() || response.status() == ResponseStatus.SUBDOC_FAILURE) {
+                CoreSubdocGetResult result = response.toCore(CoreKeyspace.from(collectionIdentifier), id);
+                request.context().logicallyComplete();
+                return result;
+            }
+
+            throw keyValueStatusToException(request, response);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw handleBlockingException(span, request, e);
+        } catch (ExecutionException e) {
+            throw handleBlockingException(span, request, e);
+        } finally {
+            span.finish();
+        }
     }
 
-    public static Mono<SubdocMutateResponse> mutateIn(final Core core,
+    public static SubdocMutateResponse mutateIn(final Core core,
                                                       CollectionIdentifier collectionIdentifier,
                                                       final String id,
                                                       final Duration timeout,
@@ -250,7 +255,7 @@ public class TransactionKVHandler {
                 commands);
     }
 
-    public static Mono<SubdocMutateResponse> mutateIn(final Core core,
+    public static SubdocMutateResponse mutateIn(final Core core,
                                                       CollectionIdentifier collectionIdentifier,
                                                       final String id,
                                                       final Duration timeout,
@@ -267,53 +272,71 @@ public class TransactionKVHandler {
                                                       final SpanWrapper pspan,
                                                       @Nullable CoreExpiry expiry,
                                                       final List<SubdocMutateRequest.Command> commands) {
-        return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
-            long start = System.nanoTime();
-            CompletableFuture<BucketConfig> bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, collectionIdentifier.bucket(), timeout).toFuture();
+        SpanWrapper span = SpanWrapperUtil.createOp(null, core.context().coreResources().requestTracerAndDecorator(), collectionIdentifier, id, TracingIdentifiers.SPAN_REQUEST_KV_MUTATE_IN, pspan);
+        long start = System.nanoTime();
+        CompletableFuture<BucketConfig> bucketConfigFuture = BucketConfigUtil.waitForBucketConfig(core, collectionIdentifier.bucket(), timeout).toFuture();
+        SubdocMutateRequest request = null;
 
-            CompletableFuture<SubdocMutateResponse> future = bucketConfigFuture.thenCompose(bucketConfig -> {
-                // Preserve expiry is only supported on 7.0+; use presence of collections capability as the indicator.
-                boolean supportsPreserveExpiry = bucketConfig.bucketCapabilities().contains(BucketCapabilities.COLLECTIONS);
-                // Sub-doc does not allow sending both preserveExpiry and an expiry, at least with StoreSemantics.Replace.
-                // Also cannot send preserveExpiry with StoreSemantics.Insert.
-                boolean sendPreserveExpiry = allowedToSendPreserveExpiry && supportsPreserveExpiry && expiry == null && !insertDocument;
+        try {
+            BucketConfig bucketConfig = bucketConfigFuture.get();
+            // Preserve expiry is only supported on 7.0+; use presence of collections capability as the indicator.
+            boolean supportsPreserveExpiry = bucketConfig.bucketCapabilities().contains(BucketCapabilities.COLLECTIONS);
+            // Sub-doc does not allow sending both preserveExpiry and an expiry, at least with StoreSemantics.Replace.
+            // Also cannot send preserveExpiry with StoreSemantics.Insert.
+            boolean sendPreserveExpiry = allowedToSendPreserveExpiry && supportsPreserveExpiry && expiry == null && !insertDocument;
 
-                SubdocMutateRequest request = new SubdocMutateRequest(timeout,
-                        core.context(),
-                        collectionIdentifier,
-                        bucketConfig,
-                        BestEffortRetryStrategy.INSTANCE,
-                        id,
-                        insertDocument,
-                        upsertDocument,
-                        reviveDocument,
-                        accessDeleted,
-                        createAsDeleted,
-                        commands,
-                        expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
-                        sendPreserveExpiry,
-                        cas,
-                        userFlags,
-                        durabilityLevel,
-                        span.span()
-                );
-                request.context()
-                        .clientContext(clientContext)
-                        .encodeLatency(System.nanoTime() - start);
+            request = new SubdocMutateRequest(timeout,
+                    core.context(),
+                    collectionIdentifier,
+                    bucketConfig,
+                    BestEffortRetryStrategy.INSTANCE,
+                    id,
+                    insertDocument,
+                    upsertDocument,
+                    reviveDocument,
+                    accessDeleted,
+                    createAsDeleted,
+                    commands,
+                    expiry == null ? 0 : ClassicExpiryHelper.encode(expiry),
+                    sendPreserveExpiry,
+                    cas,
+                    userFlags,
+                    durabilityLevel,
+                    span.span()
+            );
+            request.context()
+                    .clientContext(clientContext)
+                    .encodeLatency(System.nanoTime() - start);
 
-                core.send(request);
-                return request
-                        .response()
-                        .thenApply(response -> {
-                            if (response.status().success()) {
-                                return response;
-                            }
-                            throw response.throwError(request, insertDocument);
-                        }).whenComplete((r, t) -> request.context().logicallyComplete(t));
-            });
+            core.send(request);
+            // Note we intentionally don't use a timeout on the .get() as that will raise concurrent.TimeoutException
+            // and bypass the SDK's standard timeout handling in BaseRequest.cancel().  The operation is still
+            // bounded by that standard timeout handling.
+            SubdocMutateResponse response = request.response().get();
+            if (response.status().success()) {
+                request.context().logicallyComplete();
+                return response;
+            }
+            throw response.throwError(request, insertDocument);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw handleBlockingException(span, request, e);
+        } catch (ExecutionException e) {
+            throw handleBlockingException(span, request, e);
+        } finally {
+            span.finish();
+        }
+    }
 
-            return Mono.fromFuture(future);
-        });
+    private static RuntimeException handleBlockingException(SpanWrapper span, @Nullable Request<?> request, Exception e) {
+        Throwable cause = e instanceof ExecutionException && e.getCause() != null ? e.getCause() : e;
+        if (request != null) {
+            request.context().logicallyComplete(cause);
+        }
+        span.recordException(cause);
+        if (cause instanceof RuntimeException) {
+            return (RuntimeException) cause;
+        }
+        return new RuntimeException(cause);
     }
 }

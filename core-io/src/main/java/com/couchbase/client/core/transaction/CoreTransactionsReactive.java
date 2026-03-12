@@ -21,23 +21,16 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
-import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
 import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.api.query.CoreReactiveQueryResult;
 import com.couchbase.client.core.classic.query.ClassicCoreReactiveQueryResult;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
-import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
-import com.couchbase.client.core.error.transaction.RetryTransactionException;
 import com.couchbase.client.core.error.transaction.TransactionOperationFailedException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionCommitAmbiguousException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
-import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.retry.reactor.DefaultRetry;
-import com.couchbase.client.core.retry.reactor.Jitter;
-import com.couchbase.client.core.retry.reactor.RetryContext;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
@@ -51,214 +44,44 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
-import java.time.Duration;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import static com.couchbase.client.core.transaction.CoreTransactions.configDebug;
 
 @Stability.Internal
 public class CoreTransactionsReactive {
-    // This is a safety-guard against bugs.  The txn will be aborted when it expires.
-    static final int MAX_ATTEMPTS = 100;
     private final Core core;
     private final CoreTransactionsConfig config;
+    private final CoreTransactions blocking;
 
     public CoreTransactionsReactive(Core core, CoreTransactionsConfig config) {
-        this.core = Objects.requireNonNull(core);
-        this.config = Objects.requireNonNull(config);
+        this.core = core;
+        this.config = config;
+        this.blocking = new CoreTransactions(core, config);
     }
 
-    /**
-     * The main transactions 'engine', responsible for attempting the transaction logic as many times as required,
-     * until the transaction commits, is explicitly rolled back, or expires.
-     */
-    public Mono<CoreTransactionResult>
-    executeTransaction(Mono<CoreTransactionAttemptContext> createAttempt,
-                                                               CoreMergedTransactionConfig config,
-                                                               CoreTransactionContext overall,
-                                                               Function<CoreTransactionAttemptContext, Mono<Void>> transactionLogic,
-                                                               boolean singleQueryTransactionMode) {
-        AtomicReference<Long> startTime = new AtomicReference<>();
-
-        return createAttempt
-
-                // TXNJ-50: Make sure we run user's blocking logic on a scheduler that can take it
-                .publishOn(core.context().environment().transactionsSchedulers().schedulerBlocking())
-
-                .doOnSubscribe(v -> {
-                    if (startTime.get() == null) startTime.set(System.nanoTime());
-                })
-
-                // Where the magic happens: execute the app's transaction logic
-                // A AttemptContextReactive gets created in here.  Rollback requires one of these (so it knows what
-                // to rollback), so only errors thrown inside this block can trigger rollback.
-                // So, expiry checks only get done inside this block.
-                .doOnNext(ctx -> {
-                    overall.incAttempts();
-                    ctx.LOGGER.info(ctx.attemptId(), "starting attempt {}/{}/{}", overall.numAttempts(), ctx.transactionId(), ctx.attemptId());
-                })
-
-                .flatMap(ctx -> transactionLogic.apply(ctx)
-
-                        // Remember that contextWrite is subscribe based so it will only be 'seen' by operators above
-                        // this point in the code - e.g. the lambda.  We don't have to unset the context after this point
-                        // as it effectively doesn't exist.
-                        .contextWrite(reactiveContext -> {
-                            TransactionMarker marker = new TransactionMarker(ctx);
-                            return reactiveContext.put(TransactionMarker.class, marker);
-                        })
-
-                        .onErrorResume(err -> Mono.error(ctx.convertToOperationFailedIfNeeded(err, singleQueryTransactionMode)))
-
-                        .then(ctx.implicitCommit(singleQueryTransactionMode))
-
-                        // lambdaEnd either propagates `err` or throws RetryTransaction.
-                        // This works around reactive's lack of a true `finally` equivalent.
-                        .onErrorResume(err -> ctx.lambdaEnd(core().transactionsCleanup(), err, singleQueryTransactionMode))
-
-                        .then(ctx.lambdaEnd(core().transactionsCleanup(), null, singleQueryTransactionMode))
-
-                        .then(ctx.transactionEnd(null, singleQueryTransactionMode))
-
-                        .onErrorResume(err -> {
-                            if (err instanceof RetryTransactionException) {
-                                return Mono.error(err);
-                            }
-                            else if (err instanceof CoreTransactionFailedException) {
-                                // Must have come from transactionEnd, so just propagate.
-                                return Mono.error(err);
-                            }
-
-                            return ctx.transactionEnd(err, singleQueryTransactionMode);
-                        }))
-
-                // Retry transaction if required - controlled by a RetryTransaction exception.
-                .retryWhen(executeCreateRetryWhen(overall, startTime))
-
-                .doOnNext(v -> overall.finish(null))
-                .doOnError(err -> overall.finish(err))
-
-                // If we get here, success
-                .doOnTerminate(() -> {
-                    long elapsed = TimeUnit.NANOSECONDS.toMicros(System.nanoTime() - startTime.get());
-                    overall.LOGGER.info("finished txn in {}us", elapsed);
-                });
-    }
-
-    private reactor.util.retry.Retry executeCreateRetryWhen(CoreTransactionContext overall, AtomicReference<Long> startTime) {
-        Predicate<? super RetryContext<Object>> predicate = context -> {
-            Throwable exception = context.exception();
-            return exception instanceof RetryTransactionException;
-        };
-
-        return DefaultRetry.create(predicate)
-
-                .exponentialBackoff(Duration.ofMillis(1), Duration.ofMillis(100))
-
-                .doOnRetry(v -> {
-                    Duration ofLastAttempt = Duration.ofNanos(System.nanoTime() - startTime.get());
-                    overall.LOGGER.info("<>", "retrying transaction after backoff {}millis", v.backoff().toMillis());
-                    overall.incrementRetryAttempts(ofLastAttempt, RetryReason.UNKNOWN);
-                })
-
-                // Add some jitter so two txns don't livelock each other
-                .jitter(Jitter.random())
-
-                .retryMax(MAX_ATTEMPTS)
-
-                .toReactorRetry();
-    }
-
-    public CoreTransactionAttemptContext createAttemptContext(CoreTransactionContext overall,
-                                                              CoreMergedTransactionConfig config,
-                                                              String attemptId) {
-        return config.attemptContextFactory()
-                .create(core, overall, config, attemptId, this, Optional.of(overall.span()));
-    }
-
-    /**
-     * Runs the supplied transactional logic until success or failure.
-     * <ul>
-     * <li>The transaction logic is supplied with a {@link CoreTransactionAttemptContext}, which contains asynchronous
-     * methods to allow it to read, mutate, insert and delete documents, as well as commit or rollback the
-     * transactions.</li>
-     * <li>The transaction logic should run these methods as a Reactor chain.</li>
-     * <li>The transaction logic should return a <code>Mono{@literal <}Void{@literal >}</code>.  Any
-     * <code>Flux</code> or <code>Mono</code> can be converted to a <code>Mono{@literal <}Void{@literal >}</code> by
-     * calling <code>.then()</code> on it.</li>
-     * <li>This method returns a <code>Mono{@literal <}TransactionResult{@literal >}</code>, which should be handled
-     * as a normal Reactor Mono.</li>
-     * </ul>
-     *
-     * @param transactionLogic the application's transaction logic
-     * @param perConfig        the configuration to use for this transaction
-     * @return there is no need to check the returned {@link CoreTransactionResult}, as success is implied by the lack of a
-     * thrown exception.  It contains information useful only for debugging and logging.
-     * @throws CoreTransactionFailedException or a derived exception if the transaction fails to commit for any reason, possibly
-     *                           after multiple retries.  The exception contains further details of the error.  Not
-     */
     public Mono<CoreTransactionResult> run(Function<CoreTransactionAttemptContext, Mono<?>> transactionLogic,
                                            @Nullable CoreTransactionOptions perConfig) {
-        return Mono.defer(() -> {
-            CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, Optional.ofNullable(perConfig));
-
-            CoreTransactionContext overall =
-                    new CoreTransactionContext(core.context(),
-                            UUID.randomUUID().toString(),
-                            merged,
-                            core.transactionsCleanup());
-
-            overall.LOGGER.info(configDebug(config, perConfig, core));
-
-            Mono<CoreTransactionAttemptContext> createAttempt = Mono.fromCallable(() -> {
-                String attemptId = UUID.randomUUID().toString();
-                return createAttemptContext(overall, merged, attemptId);
-            });
-
-            Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return transactionLogic.apply(ctx);
-            }).then();
-
-            return executeTransaction(createAttempt, merged, overall, runLogic, false);
-        });
-    }
-
-    // Printing the stacktrace is expensive in terms of log noise, but has been a life saver on many debugging
-    // encounters.  Strike a balance by eliding the more useless elements.
-    private void logElidedStacktrace(CoreTransactionAttemptContext ctx, Throwable err) {
-        ctx.LOGGER.info(ctx.attemptId(), DebugUtil.createElidedStacktrace(err));
-    }
-
-    static private String configDebug(CoreTransactionsConfig config, @Nullable CoreTransactionOptions perConfig, Core core) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("SDK version: ");
-        sb.append(core.context().environment().clientVersion().orElse("-"));
-        sb.append(" config: ");
-        sb.append("atrs=");
-        sb.append(config.numAtrs());
-        sb.append(", metadataCollection=");
-        sb.append(config.metadataCollection());
-        sb.append(", expiry=");
-        if (perConfig != null) {
-            sb.append(perConfig.timeout().orElse(config.transactionExpirationTime()).toMillis());
-        }
-        else {
-            sb.append(config.transactionExpirationTime().toMillis());
-        }
-        sb.append("ms durability=");
-        sb.append(config.durabilityLevel());
-        if (perConfig != null) {
-            sb.append(" per-txn config=");
-            sb.append(" durability=");
-            sb.append(perConfig.durabilityLevel());
-        }
-        sb.append(", supported=");
-        sb.append(config.supported());
-        return sb.toString();
+        return Mono.fromCallable(() -> blocking.run(ctx -> {
+                    transactionLogic.apply(ctx)
+                            // Remember that contextWrite is subscribe based so it will only be 'seen' by operators above
+                            // this point in the code - e.g. the lambda.  We don't have to unset the context after this point
+                            // as it effectively doesn't exist.
+                            .contextWrite(reactiveContext -> {
+                                TransactionMarker marker = new TransactionMarker(ctx);
+                                return reactiveContext.put(TransactionMarker.class, marker);
+                            })
+                            .block();
+                    return null;
+                }, perConfig))
+                // This will put the transaction onto a thread on transactionsSchedulers().schedulerBlocking(),
+                // blocking that thread until the transaction is complete.
+                // Each operation inside the transaction will use a thread also (handled elsewhere).
+                .subscribeOn(core.context().environment().transactionsSchedulers().schedulerBlocking());
     }
 
     public CoreTransactionsConfig config() {
@@ -278,7 +101,7 @@ public class CoreTransactionsReactive {
                                                CoreQueryOptions queryOptions,
                                                Optional<RequestSpan> parentSpan,
                                                Function<Throwable, RuntimeException> errorConverter) {
-        return Mono.defer(() -> {
+        Mono<CoreReactiveQueryResult> out = Mono.fromSupplier(() -> {
             CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, Optional.empty());
             CoreTransactionContext overall =
                     new CoreTransactionContext(core.context(),
@@ -287,68 +110,67 @@ public class CoreTransactionsReactive {
                             core.transactionsCleanup());
             overall.LOGGER.info(configDebug(config, null, core));
 
-            Mono<CoreTransactionAttemptContext> createAttempt = Mono.fromCallable(() -> {
+            Supplier<CoreTransactionAttemptContext> createAttempt = () -> {
                 String attemptId = UUID.randomUUID().toString();
-                return createAttemptContext(overall, merged, attemptId);
-            });
+                return blocking.createAttemptContext(overall, merged, attemptId);
+            };
 
             AtomicReference<ClassicCoreReactiveQueryResult> qr = new AtomicReference<>();
 
-            Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return ctx.doQueryOperation("single query streaming", statement, queryOptions, parentSpan.map(SpanWrapper::new).orElse(null),
-                                (sidx, lockToken, span) -> {
-                                    core.coreResources().tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
-                                    return ctx.queryWrapperLocked(0,
-                                                    queryContext,
-                                                    statement,
-                                                    queryOptions,
-                                                    CoreTransactionAttemptContextHooks.HOOK_QUERY,
-                                                    false,
-                                                    true,
-                                                    null,
-                                                    null,
-                                                    span,
-                                                    true,
-                                                    null,
-                                                    true)
-                                            .doOnNext(ret -> qr.set(ret));
-                                })
-                        .then();
-            });
+            Function<CoreTransactionAttemptContext, Void> runLogic = (ctx) -> {
+                ctx.doQueryOperation("single query streaming", statement, queryOptions, parentSpan.map(SpanWrapper::new).orElse(null),
+                        (sidx, span) -> {
+                            core.coreResources().tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_SINGLE_QUERY, span.span(), true);
+                            ClassicCoreReactiveQueryResult ret = ctx.queryWrapperLocked(0,
+                                    queryContext,
+                                    statement,
+                                    queryOptions,
+                                    CoreTransactionAttemptContextHooks.HOOK_QUERY,
+                                    false,
+                                    true,
+                                    null,
+                                    null,
+                                    span,
+                                    true,
+                                    true);
+                            qr.set(ret);
+                            return ret;
+                        });
+                return null;
+            };
 
             Function<Throwable, RuntimeException> errorHandler = singleQueryHandleErrorDuringRowStreaming(overall, errorConverter);
 
-            return executeTransaction(createAttempt, merged, overall, runLogic, true)
-                    .then(Mono.defer(() -> {
-                        ClassicCoreReactiveQueryResult orig = qr.get();
+            blocking.executeTransaction(createAttempt, overall, runLogic, true);
+            ClassicCoreReactiveQueryResult orig = qr.get();
 
-                        if (orig == null) {
-                            // It's a bug to reach here.  If the query errored then that should have been raised.
-                            return Mono.error(new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId()));
-                        }
+            if (orig == null) {
+                // It's a bug to reach here.  If the query errored then that should have been raised.
+                throw new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId());
+            }
 
-                        // Need to return the original result, but customed to call our errorHandler during the row streaming.
-                        return Mono.just(new CoreReactiveQueryResult() {
-                            @Override
-                            public Flux<QueryChunkRow> rows() {
-                                return orig.rows()
-                                        .onErrorResume(err -> {
-                                            return Mono.error(errorHandler.apply(err));
-                                        });
-                            }
+            // Need to return the original result, but customised to call our errorHandler during the row streaming.
+            return new CoreReactiveQueryResult() {
+                @Override
+                public Flux<QueryChunkRow> rows() {
+                    return orig.rows()
+                            .onErrorResume(err -> {
+                                return Mono.error(errorHandler.apply(err));
+                            });
+                }
 
-                            @Override
-                            public Mono<CoreQueryMetaData> metaData() {
-                                return orig.metaData();
-                            }
+                @Override
+                public Mono<CoreQueryMetaData> metaData() {
+                    return orig.metaData();
+                }
 
-                            @Override
-                            public NodeIdentifier lastDispatchedTo() {
-                                return orig.lastDispatchedTo();
-                            }
-                        });
-                    }));
+                @Override
+                public NodeIdentifier lastDispatchedTo() {
+                    return orig.lastDispatchedTo();
+                }
+            };
         });
+        return out.publishOn(core.context().environment().transactionsSchedulers().schedulerBlocking());
     }
 
     private static Function<Throwable, RuntimeException> singleQueryHandleErrorDuringRowStreaming(CoreTransactionContext overall,
@@ -394,42 +216,7 @@ public class CoreTransactionsReactive {
                                                @Nullable CoreQueryContext qc,
                                                CoreQueryOptions queryOptions,
                                                Optional<RequestSpan> parentSpan) {
-        return Mono.defer(() -> {
-            // Not strictly speaking a copy, but does the same job - we're not modifying the original.
-            CoreQueryOptionsTransactions optionsCopy = new CoreQueryOptionsTransactions(queryOptions);
-            optionsCopy.put("tximplicit", TextNode.valueOf("true"));
-
-            CoreMergedTransactionConfig merged = new CoreMergedTransactionConfig(config, parentSpan.map(CoreTransactionOptions::create));
-            CoreTransactionContext overall =
-                    new CoreTransactionContext(core.context(),
-                            UUID.randomUUID().toString(),
-                            merged,
-                            core.transactionsCleanup());
-            overall.LOGGER.info(configDebug(config, null, core));
-
-            Mono<CoreTransactionAttemptContext> createAttempt = Mono.fromCallable(() -> {
-                String attemptId = UUID.randomUUID().toString();
-                return createAttemptContext(overall, merged, attemptId);
-            });
-
-            AtomicReference<CoreQueryResult> qr = new AtomicReference<>();
-
-            Function<CoreTransactionAttemptContext, Mono<Void>> runLogic = (ctx) -> Mono.defer(() -> {
-                return ctx.queryBlocking(statement, qc, optionsCopy, true)
-                        // All rows have already been streamed and buffered, so it's ok to save this
-                        .doOnNext(ret -> qr.set(ret))
-                        .then();
-            });
-
-            return executeTransaction(createAttempt, merged, overall, runLogic, true)
-                    .then(Mono.defer(() -> {
-                        if (qr.get() != null) {
-                            return Mono.just(qr.get());
-                        }
-
-                        // It's a bug to reach here.  If the query errored then that should have been raised.
-                        return Mono.error(new CoreTransactionFailedException(new IllegalStateException("No query has been run"), overall.LOGGER, overall.transactionId()));
-                    }));
-        });
+        return Mono.fromCallable(() -> blocking.queryBlocking(statement, qc, queryOptions, parentSpan))
+                .subscribeOn(core.context().environment().transactionsSchedulers().schedulerBlocking());
     }
 }

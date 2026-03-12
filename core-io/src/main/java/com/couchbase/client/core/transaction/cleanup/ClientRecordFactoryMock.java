@@ -17,7 +17,6 @@ package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
 
@@ -28,32 +27,31 @@ import java.util.function.Supplier;
  */
 @Stability.Internal
 public class ClientRecordFactoryMock extends ClientRecordFactory {
-    private Mono<Integer> standard = Mono.just(1);
-    public Supplier<Mono<Integer>> beforeCreateRecord = () -> standard;
-    public Supplier<Mono<Integer>> beforeRemoveClient = () -> standard;
-    public Supplier<Mono<Integer>> beforeGetRecord = () -> standard;
-    public Supplier<Mono<Integer>> beforeUpdateRecord = () -> standard;
+    public Runnable beforeCreateRecord = () -> {};
+    public Runnable beforeRemoveClient = () -> {};
+    public Runnable beforeGetRecord = () -> {};
+    public Runnable beforeUpdateRecord = () -> {};
 
     public ClientRecord create(Core core) {
         return new ClientRecord(core) {
             @Override
-            protected Mono<Integer> beforeCreateRecord(ClientRecord self) {
-                return Mono.defer(() -> beforeCreateRecord.get());
+            protected void beforeCreateRecord(ClientRecord self) {
+                beforeCreateRecord.run();
             }
 
             @Override
-            protected Mono<Integer> beforeRemoveClient(ClientRecord self) {
-                return Mono.defer(() -> beforeRemoveClient.get());
+            protected void beforeRemoveClient(ClientRecord self) {
+                beforeRemoveClient.run();
             }
 
             @Override
-            protected Mono<Integer> beforeGetRecord(ClientRecord self) {
-                return Mono.defer(() -> beforeGetRecord.get());
+            protected void beforeGetRecord(ClientRecord self) {
+                beforeGetRecord.run();
             }
 
             @Override
-            protected Mono<Integer> beforeUpdateRecord(ClientRecord self) {
-                return Mono.defer(() -> beforeUpdateRecord.get());
+            protected void beforeUpdateRecord(ClientRecord self) {
+                beforeUpdateRecord.run();
             }
         };
     }

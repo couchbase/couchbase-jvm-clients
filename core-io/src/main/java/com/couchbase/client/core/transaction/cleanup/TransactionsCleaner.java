@@ -51,9 +51,7 @@ import com.couchbase.client.core.transaction.util.TriFunction;
 import com.couchbase.client.core.transaction.util.MeteringUnits;
 import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.CbPreconditions;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -91,33 +89,27 @@ public class TransactionsCleaner {
         return core.context().environment().timeoutConfig().kvTimeout();
     }
 
-    Mono<Void> cleanupDocs(CoreTransactionLogger perEntryLog, CleanupRequest req, SpanWrapper pspan) {
+    void cleanupDocs(CoreTransactionLogger perEntryLog, CleanupRequest req, SpanWrapper pspan) {
         String attemptId = req.attemptId();
 
         switch (req.state()) {
 
             case COMMITTED: {
                 // Half-finished commit to complete
-                Mono<Void> inserts = commitDocs(perEntryLog, attemptId, req.stagedInserts(), req, pspan);
-                Mono<Void> replaces = commitDocs(perEntryLog, attemptId, req.stagedReplaces(), req, pspan);
-                Mono<Void> removes = removeDocsStagedForRemoval(perEntryLog, attemptId, req.stagedRemoves(), req, pspan);
-
-                return inserts
-                        .then(replaces)
-                        .then(removes);
+                commitDocs(perEntryLog, attemptId, req.stagedInserts(), req, pspan);
+                commitDocs(perEntryLog, attemptId, req.stagedReplaces(), req, pspan);
+                removeDocsStagedForRemoval(perEntryLog, attemptId, req.stagedRemoves(), req, pspan);
+                return;
             }
 
             case ABORTED: {
                 // Half-finished rollback to complete
-                Mono<Void> inserts = removeDocs(perEntryLog, attemptId, req.stagedInserts(), req, pspan);
+                removeDocs(perEntryLog, attemptId, req.stagedInserts(), req, pspan);
 
                 // This will just remove the xattrs, which is exactly what we want
-                Mono<Void> replaces = removeTxnLinks(perEntryLog, attemptId, req.stagedReplaces(), req, pspan);
-                Mono<Void> removes = removeTxnLinks(perEntryLog, attemptId, req.stagedRemoves(), req, pspan);
-
-                return inserts
-                        .then(replaces)
-                        .then(removes);
+                removeTxnLinks(perEntryLog, attemptId, req.stagedReplaces(), req, pspan);
+                removeTxnLinks(perEntryLog, attemptId, req.stagedRemoves(), req, pspan);
+                return;
             }
 
             case PENDING:
@@ -126,7 +118,7 @@ public class TransactionsCleaner {
                 perEntryLog.logDefer(req.attemptId(), "No docs cleanup possible as txn in state {}, just removing",
                         Event.Severity.DEBUG, req.state());
 
-                return Mono.empty();
+                return;
 
             case COMPLETED:
             case ROLLED_BACK:
@@ -135,17 +127,17 @@ public class TransactionsCleaner {
                 perEntryLog.logDefer(req.attemptId(), "No docs cleanup to do as txn in state {}, just removing",
                         Event.Severity.DEBUG, req.state());
 
-                return Mono.empty();
+                return;
         }
     }
 
 
-    private Mono<Void> commitDocs(CoreTransactionLogger perEntryLog,
-                                  String attemptId,
-                                  List<DocRecord> docs,
-                                  CleanupRequest req,
-                                  SpanWrapper pspan) {
-        return doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
+    private void commitDocs(CoreTransactionLogger perEntryLog,
+                            String attemptId,
+                            List<DocRecord> docs,
+                            CleanupRequest req,
+                            SpanWrapper pspan) {
+        doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
             TransactionLinks links = doc.links();
             CbPreconditions.check(links != null);
             CbPreconditions.check(links.isDocumentInTransaction());
@@ -153,81 +145,73 @@ public class TransactionsCleaner {
 
             byte[] content = links.stagedContentJsonOrBinary().get();
 
-            return hooks.beforeCommitDoc.apply(doc.id()) // Testing hook
+            hooks.beforeCommitDoc.apply(doc.id()); // Testing hook
 
-                    .then(Mono.defer(() -> {
-                        if (lir.tombstone()) {
-                            return TransactionKVHandler.insert(core, collection, doc.id(), content, links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
-                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan, links.stagedExpiry().orElse(null));
-                        } else {
-                            List<SubdocMutateRequest.Command> commands = Arrays.asList(
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 0),
-                                    // No need to set binary flag here even if document is binary - that's just for xattrs.
-                                    new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", content, false, false, false, 1)
-                            );
-                            return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
-                                    false, false, false,
-                                    lir.tombstone(), false, true, doc.cas(), links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
-                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan, links.stagedExpiry().orElse(null),
-                                    commands);
-                        }
-                    }))
+            perEntryLog.logDefer(attemptId, "removing txn links and writing content to doc {}",
+                    Event.Severity.DEBUG, DebugUtil.docId(doc));
 
-                    .doOnSubscribe(v -> {
-                        perEntryLog.logDefer(attemptId, "removing txn links and writing content to doc {}",
-                                Event.Severity.DEBUG, DebugUtil.docId(doc));
-                    })
-
-                    .then();
-
+            if (lir.tombstone()) {
+                TransactionKVHandler.insert(core, collection, doc.id(), content, links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS), kvDurableTimeout(),
+                        req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocsInsert"), pspan, links.stagedExpiry().orElse(null));
+            } else {
+                List<SubdocMutateRequest.Command> commands = Arrays.asList(
+                        new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, null, false, true, false, 0),
+                        // No need to set binary flag here even if document is binary - that's just for xattrs.
+                        new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", content, false, false, false, 1)
+                );
+                TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
+                        false, false, false,
+                        lir.tombstone(), false, true, doc.cas(), links.stagedUserFlags().orElse(CodecFlags.JSON_COMMON_FLAGS),
+                        req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan, links.stagedExpiry().orElse(null),
+                        commands);
+            }
+            return null;
         });
     }
 
     /**
      * Transaction is ABORTED, rolling back a replace or remove by removing its links
      */
-    private Mono<Void> removeTxnLinks(CoreTransactionLogger perEntryLog,
-                                      String attemptId,
-                                      List<DocRecord> docs,
-                                      CleanupRequest req,
-                                      SpanWrapper pspan) {
-        return doPerDoc(perEntryLog, attemptId, docs, pspan, false, (collectionIdentifier, doc, lir) -> {
-            return hooks.beforeRemoveLinks.apply(doc.id())
+    private void removeTxnLinks(CoreTransactionLogger perEntryLog,
+                                String attemptId,
+                                List<DocRecord> docs,
+                                CleanupRequest req,
+                                SpanWrapper pspan) {
+        doPerDoc(perEntryLog, attemptId, docs, pspan, false, (collectionIdentifier, doc, lir) -> {
+            hooks.beforeRemoveLinks.apply(doc.id());
 
-                    .then(TransactionKVHandler.mutateIn(core, collectionIdentifier, doc.id(), kvDurableTimeout(),
-                                false, false, false,
-                                lir.tombstone(), false, doc.cas(), doc.userFlags(),
-                                req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeTxnLinks"), pspan, Arrays.asList(
-                                    new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
-                            )))
+            perEntryLog.logDefer(attemptId, "removing txn links from doc {}",
+                    Event.Severity.DEBUG, DebugUtil.docId(doc));
 
-                    .doOnSubscribe(v -> perEntryLog.logDefer(attemptId, "removing txn links from doc {}",
-                            Event.Severity.DEBUG, DebugUtil.docId(doc)))
+            TransactionKVHandler.mutateIn(core, collectionIdentifier, doc.id(), kvDurableTimeout(),
+                    false, false, false,
+                    lir.tombstone(), false, doc.cas(), doc.userFlags(),
+                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeTxnLinks"), pspan, Arrays.asList(
+                            new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
+                    ));
 
-                    .then();
+            return null;
         });
     }
 
-    private Mono<Void> removeDocsStagedForRemoval(CoreTransactionLogger perEntryLog,
-                                                  String attemptId,
-                                                  List<DocRecord> docs,
-                                                  CleanupRequest req,
-                                                  SpanWrapper pspan) {
-        return doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
+    private void removeDocsStagedForRemoval(CoreTransactionLogger perEntryLog,
+                                            String attemptId,
+                                            List<DocRecord> docs,
+                                            CleanupRequest req,
+                                            SpanWrapper pspan) {
+        doPerDoc(perEntryLog, attemptId, docs, pspan, true, (collection, doc, lir) -> {
             if (doc.links().isDocumentBeingRemoved()) {
-                return hooks.beforeRemoveDocStagedForRemoval.apply(doc.id()) // testing hook
+                hooks.beforeRemoveDocStagedForRemoval.apply(doc.id()); // testing hook
 
-                        .then(TransactionKVHandler.remove(core, collection, doc.id(), kvDurableTimeout(),
-                                        doc.cas(), req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeDoc"), pspan))
+                perEntryLog.debug(attemptId, "removing doc {}", doc.id());
 
-                        .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc {}", doc.id()))
-                        .then();
+                TransactionKVHandler.remove(core, collection, doc.id(), kvDurableTimeout(),
+                        doc.cas(), req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeDoc"), pspan);
+                return null;
             } else {
-                return Mono.create(v -> {
-                    perEntryLog.debug(attemptId, "doc {} does not have expected remove indication, skipping",
-                            DebugUtil.docId(doc));
-                    v.success();
-                });
+                perEntryLog.debug(attemptId, "doc {} does not have expected remove indication, skipping",
+                        DebugUtil.docId(doc));
+                return null;
             }
         });
     }
@@ -235,139 +219,128 @@ public class TransactionsCleaner {
     /**
      * Transaction is ABORTED, rolling back a staged insert.
      */
-    private Mono<Void> removeDocs(CoreTransactionLogger perEntryLog,
-                                  String attemptId,
-                                  List<DocRecord> docs,
-                                  CleanupRequest req,
-                                  SpanWrapper pspan) {
-        return doPerDoc(perEntryLog, attemptId, docs, pspan, false, (collection, doc, lir) -> {
-            return hooks.beforeRemoveDoc.apply(doc.id())
+    private void removeDocs(CoreTransactionLogger perEntryLog,
+                            String attemptId,
+                            List<DocRecord> docs,
+                            CleanupRequest req,
+                            SpanWrapper pspan) {
+        doPerDoc(perEntryLog, attemptId, docs, pspan, false, (collection, doc, lir) -> {
+            hooks.beforeRemoveDoc.apply(doc.id());
 
-                    .then(Mono.defer(() -> {
-                        if (lir.tombstone()) {
-                            return TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
-                                    false, false, false,
-                                    true, false, doc.cas(), doc.userFlags(),
-                                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
-                                    Collections.singletonList(
-                                            new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
-                                    ));
-                        } else {
-                            return TransactionKVHandler.remove(core, collection, doc.id(), kvDurableTimeout(),
-                                    doc.cas(), req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeDocs"), pspan);
-                        }
-                    }))
+            perEntryLog.debug(attemptId, "removing doc {}", DebugUtil.docId(doc));
 
-                    .doOnSubscribe(v -> perEntryLog.debug(attemptId, "removing doc {}",
-                            DebugUtil.docId(doc)))
+            if (lir.tombstone()) {
+                TransactionKVHandler.mutateIn(core, collection, doc.id(), kvDurableTimeout(),
+                        false, false, false,
+                        true, false, doc.cas(), doc.userFlags(),
+                        req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::commitDocs"), pspan,
+                        Collections.singletonList(
+                                new SubdocMutateRequest.Command(SubdocCommandType.DELETE, TransactionFields.TRANSACTION_INTERFACE_PREFIX_ONLY, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
+                        ));
+            } else {
+                TransactionKVHandler.remove(core, collection, doc.id(), kvDurableTimeout(),
+                        doc.cas(), req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeDocs"), pspan);
+            }
 
-                    .then();
+            return null;
         });
     }
 
-    private Mono<Void> doPerDoc(CoreTransactionLogger perEntryLog,
-                                String attemptId,
-                                List<DocRecord> docs,
-                                SpanWrapper pspan,
-                                boolean requireCrc32ToMatchStaging,
-                                TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Mono<Void>> perDoc) {
-        return Flux.fromIterable(docs)
-                .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
-                .concatMap(docRecord -> {
-                    CollectionIdentifier collection = new CollectionIdentifier(docRecord.bucketName(),
-                            Optional.of(docRecord.scopeName()), Optional.of(docRecord.collectionName()));
-                    MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
+    private void doPerDoc(CoreTransactionLogger perEntryLog,
+                          String attemptId,
+                          List<DocRecord> docs,
+                          SpanWrapper pspan,
+                          boolean requireCrc32ToMatchStaging,
+                          TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Void> perDoc) {
+        for (DocRecord docRecord : docs) {
+            CollectionIdentifier collection = new CollectionIdentifier(docRecord.bucketName(),
+                    Optional.of(docRecord.scopeName()), Optional.of(docRecord.collectionName()));
+            MeteringUnits.MeteringUnitsBuilder units = new MeteringUnits.MeteringUnitsBuilder();
 
-                    return hooks.beforeDocGet.apply(docRecord.id())
+            hooks.beforeDocGet.apply(docRecord.id());
 
-                            .then(doPerDocGotDoc(perEntryLog,
-                                    attemptId,
-                                    pspan,
-                                    requireCrc32ToMatchStaging,
-                                    perDoc,
-                                    docRecord,
-                                    collection,
-                                    units));
-                })
-                .then();
+            doPerDocGotDoc(perEntryLog,
+                    attemptId,
+                    pspan,
+                    requireCrc32ToMatchStaging,
+                    perDoc,
+                    docRecord,
+                    collection,
+                    units);
+        }
     }
 
-    private Mono<Void> doPerDocGotDoc(CoreTransactionLogger perEntryLog,
-                                      String attemptId,
-                                      SpanWrapper pspan,
-                                      boolean requireCrc32ToMatchStaging,
-                                      TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Mono<Void>> perDoc,
-                                      DocRecord docRecord,
-                                      CollectionIdentifier collection,
-                                      MeteringUnits.MeteringUnitsBuilder units) {
-        return DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog, units, false)
+    private void doPerDocGotDoc(CoreTransactionLogger perEntryLog,
+                                String attemptId,
+                                SpanWrapper pspan,
+                                boolean requireCrc32ToMatchStaging,
+                                TriFunction<CollectionIdentifier, CoreTransactionGetResult, CoreSubdocGetResult, Void> perDoc,
+                                DocRecord docRecord,
+                                CollectionIdentifier collection,
+                                MeteringUnits.MeteringUnitsBuilder units) {
+        try {
+            Optional<reactor.util.function.Tuple2<CoreTransactionGetResult, CoreSubdocGetResult>> docOpt = DocumentGetter.justGetDoc(core, collection, docRecord.id(), kvNonMutatingTimeout(), pspan, true, perEntryLog, units, false);
 
-                .flatMap(docOpt -> {
-                    if (docOpt.isPresent()) {
-                        CoreTransactionGetResult doc = docOpt.get().getT1();
-                        CoreSubdocGetResult lir = docOpt.get().getT2();
-                        MeteringUnits built = units.build();
+            if (docOpt.isPresent()) {
+                CoreTransactionGetResult doc = docOpt.get().getT1();
+                CoreSubdocGetResult lir = docOpt.get().getT2();
+                MeteringUnits built = units.build();
 
-                        perEntryLog.debug(attemptId, "handling doc {} with cas {} " +
-                                        "and links {}, isTombstone={}{}",
-                                DebugUtil.docId(doc), doc.cas(), doc.links(), lir.tombstone(), DebugUtil.dbg(built));
+                perEntryLog.debug(attemptId, "handling doc {} with cas {} " +
+                                "and links {}, isTombstone={}{}",
+                        DebugUtil.docId(doc), doc.cas(), doc.links(), lir.tombstone(), DebugUtil.dbg(built));
 
-                        if (!doc.links().isDocumentInTransaction()) {
-                            // The txn probably committed this doc then crashed.  This is fine, can skip.
-                            perEntryLog.debug(attemptId, "no staged content for doc {}, assuming it was committed and skipping",
+                if (!doc.links().isDocumentInTransaction()) {
+                    // The txn probably committed this doc then crashed.  This is fine, can skip.
+                    perEntryLog.debug(attemptId, "no staged content for doc {}, assuming it was committed and skipping",
+                            DebugUtil.docId(doc));
+                    return;
+                } else if (!doc.links().stagedAttemptId().get().equals(attemptId)) {
+                    perEntryLog.debug(attemptId, "for doc {}, staged version is for a " +
+                                    "different attempt {}, skipping",
+                            DebugUtil.docId(doc),
+                            doc.links().stagedAttemptId().get());
+                    return;
+                } else {
+                    // This field is only present if cleaning up a protocol 2 transaction.
+                    if (requireCrc32ToMatchStaging && doc.links().crc32OfStaging().isPresent()) {
+                        String crc32WhenStaging = doc.links().crc32OfStaging().get();
+                        // This field must always be present since the doc has just been fetched.
+                        String crc32Now = doc.crc32OfGet().get();
+
+                        perEntryLog.debug(attemptId, "checking whether document {} has changed since staging, crc32 then {} now {}",
+                                DebugUtil.docId(doc), crc32WhenStaging, crc32Now);
+
+                        if (!crc32Now.equals(crc32WhenStaging)) {
+                            perEntryLog.warn(attemptId, "document {} has changed since staging, ignoring it to avoid data loss",
                                     DebugUtil.docId(doc));
-                            return Mono.empty();
-                        } else if (!doc.links().stagedAttemptId().get().equals(attemptId)) {
-                            perEntryLog.debug(attemptId, "for doc {}, staged version is for a " +
-                                            "different attempt {}, skipping",
-                                    DebugUtil.docId(doc),
-                                    doc.links().stagedAttemptId().get());
-                            return Mono.empty();
-                        } else {
-                            // This field is only present if cleaning up a protocol 2 transaction.
-                            if (requireCrc32ToMatchStaging && doc.links().crc32OfStaging().isPresent()) {
-                                String crc32WhenStaging = doc.links().crc32OfStaging().get();
-                                // This field must always be present since the doc has just been fetched.
-                                String crc32Now = doc.crc32OfGet().get();
-
-                                perEntryLog.debug(attemptId, "checking whether document {} has changed since staging, crc32 then {} now {}",
-                                        DebugUtil.docId(doc), crc32WhenStaging, crc32Now);
-
-                                if (!crc32Now.equals(crc32WhenStaging)) {
-                                    perEntryLog.warn(attemptId, "document {} has changed since staging, ignoring it to avoid data loss",
-                                            DebugUtil.docId(doc));
-                                    return Mono.empty();
-                                }
-                            }
-
-                            return perDoc.apply(collection, doc, lir);
+                            return;
                         }
-                    } else {
-                        perEntryLog.debug(attemptId, "could not get doc {}, skipping",
-                                DebugUtil.docId(collection, docRecord.id()));
-                        return Mono.empty();
                     }
-                })
 
-                .onErrorResume(err -> {
-                    ErrorClass ec = ErrorClass.classify(err);
+                    perDoc.apply(collection, doc, lir);
+                }
+            } else {
+                perEntryLog.debug(attemptId, "could not get doc {}, skipping",
+                        DebugUtil.docId(collection, docRecord.id()));
+            }
+        } catch (RuntimeException err) {
+            ErrorClass ec = ErrorClass.classify(err);
 
-                    perEntryLog.debug(attemptId, "got exception while handling doc {}: {}",
-                            DebugUtil.docId(collection, docRecord.id()), DebugUtil.dbg(err));
+            perEntryLog.debug(attemptId, "got exception while handling doc {}: {}",
+                    DebugUtil.docId(collection, docRecord.id()), DebugUtil.dbg(err));
 
-                    if (ec == ErrorClass.FAIL_CAS_MISMATCH) {
-                        // Cleanup is conservative.  It could be running hours, even days after the
-                        // transaction originally committed.  If the document has changed since it
-                        // was staged, fail this cleanup attempt.  It will be tried again later.
-                        perEntryLog.debug(attemptId, "got CAS mismatch while cleaning up doc {}, " +
-                                        "failing this cleanup attempt (it will be retried)",
-                                DebugUtil.docId(collection, docRecord.id()));
+            if (ec == ErrorClass.FAIL_CAS_MISMATCH) {
+                // Cleanup is conservative.  It could be running hours, even days after the
+                // transaction originally committed.  If the document has changed since it
+                // was staged, fail this cleanup attempt.  It will be tried again later.
+                perEntryLog.debug(attemptId, "got CAS mismatch while cleaning up doc {}, " +
+                                "failing this cleanup attempt (it will be retried)",
+                        DebugUtil.docId(collection, docRecord.id()));
+            }
 
-                        return Mono.error(err);
-                    } else {
-                        return Mono.error(err);
-                    }
-                });
+            throw err;
+        }
     }
 
     private RequestTracerAndDecorator tracer() {
@@ -383,8 +356,10 @@ public class TransactionsCleaner {
                                                                 String attemptId,
                                                                 ActiveTransactionRecordEntry atrEntry,
                                                                 boolean isRegularCleanup) {
-        CleanupRequest req = CleanupRequest.fromAtrEntry(atrCollection, atrEntry);
-        return performCleanup(req, isRegularCleanup, null);
+        return Mono.fromCallable(() -> {
+            CleanupRequest req = CleanupRequest.fromAtrEntry(atrCollection, atrEntry);
+            return performCleanup(req, isRegularCleanup, null);
+        });
     }
 
     /*
@@ -394,9 +369,9 @@ public class TransactionsCleaner {
      *
      * Pre-condition: This is an expired attempt that should be cleaned up.  This code will not check that.
      */
-    public Mono<TransactionCleanupAttemptEvent> performCleanup(CleanupRequest req,
-                                                               boolean isRegularCleanup,
-                                                               @Nullable SpanWrapper pspan) {
+    public TransactionCleanupAttemptEvent performCleanup(CleanupRequest req,
+                                                         boolean isRegularCleanup,
+                                                         SpanWrapper pspan) {
         SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), req.atrCollection(), req.atrId(), TracingIdentifiers.TRANSACTION_CLEANUP, pspan);
         TracingDecorator tip = core.context().coreResources().tracingDecorator();
         tip.provideAttr(TracingAttribute.TRANSACTION_ATTEMPT_ID, span.span(), req.attemptId());
@@ -407,82 +382,67 @@ public class TransactionsCleaner {
             tip.provideLowCardinalityAttr(TracingAttribute.DURABILITY, span.span(), DurabilityLevelUtil.convertDurabilityLevel(v))
         );
 
-        return Mono.defer(() -> {
-            CollectionIdentifier atrCollection = req.atrCollection();
-            String atrId = req.atrId();
-            String attemptId = req.attemptId();
+        CollectionIdentifier atrCollection = req.atrCollection();
+        String atrId = req.atrId();
+        String attemptId = req.attemptId();
 
-            CoreTransactionLogger perEntryLog = new CoreTransactionLogger(core.context().environment().eventBus(),
-                    ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId).toString());
+        CoreTransactionLogger perEntryLog = new CoreTransactionLogger(core.context().environment().eventBus(),
+                ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId).toString());
 
-            Event.Severity logLevel = Event.Severity.DEBUG;
-            //            if (!isRegularCleanup) {
-            // Cleanup of lost txns should be rare enough to make them log worthy
-            // Update: nope.  If client crashes could have thousands of these to remove.
-            //                logLevel = Event.Severity.INFO;
-            //            }
-            perEntryLog.logDefer(attemptId, "Cleaning up ATR entry (isRegular={}) {}", logLevel, isRegularCleanup,
-                    req);
+        Event.Severity logLevel = Event.Severity.DEBUG;
+        perEntryLog.logDefer(attemptId, "Cleaning up ATR entry (isRegular={}) {}", logLevel, isRegularCleanup, req);
 
-            Mono<Void> cleanupDocs = cleanupDocs(perEntryLog, req, span);
+        try {
+            ForwardCompatibility.check(core, ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, supported);
 
-            Mono<Object> cleanupEntry = removeATREntry(req.state(), atrCollection, atrId, attemptId, perEntryLog, span, req);
+            cleanupDocs(perEntryLog, req, span);
 
-            return ForwardCompatibility.check(core, ForwardCompatibilityStage.CLEANUP_ENTRY, req.forwardCompatibility(), perEntryLog, supported)
+            removeATREntry(req.state(), atrCollection, atrId, attemptId, perEntryLog, span, req);
 
-                    .then(cleanupDocs)
-                    .then(cleanupEntry)
+            TransactionCleanupAttemptEvent event = new TransactionCleanupAttemptEvent(Event.Severity.DEBUG,
+                    true, isRegularCleanup, perEntryLog.logs(), attemptId, atrId, atrCollection,
+                    req, "");
 
-                    .then(Mono.fromCallable(() -> {
+            core.context().environment().eventBus().publish(event);
+            return event;
 
-                        TransactionCleanupAttemptEvent event = new TransactionCleanupAttemptEvent(Event.Severity.DEBUG,
-                                true, isRegularCleanup, perEntryLog.logs(), attemptId, atrId, atrCollection,
-                                req, "");
+        } catch (Throwable err) {
+            // If cleanup fails, assume it's for a temporary reason.  The lost txns process will have
+            // another go at cleaning it up in a while.
 
-                        core.context().environment().eventBus().publish(event);
+            long ageInMinutes = TimeUnit.MILLISECONDS.toMinutes(req.ageMillis());
 
-                        return event;
-                    }))
+            perEntryLog.logDefer(attemptId, "error while attempting to cleanup ATR entry {}, entry is {} mins old, " +
+                            "cleanup will retry later: {}",
+                    Event.Severity.WARN, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId), ageInMinutes, DebugUtil.dbg(err));
 
-                    .onErrorResume(err -> {
-                        // If cleanup fails, assume it's for a temporary reason.  The lost txns process will have
-                        // another go at cleaning it up in a while.
+            Event.Severity level = Event.Severity.DEBUG;
+            String addlDebug = "";
 
-                        long ageInMinutes = TimeUnit.MILLISECONDS.toMinutes(req.ageMillis());
+            // TXNJ-208: If the transaction is very old and it's still failing to be cleaned up, it's
+            // indicative of a bug.  Log it at a level the application is likely to automatically see, so
+            // it can be caught and investigated.  TransactionCleanupAttempt will automatically write its
+            // logs too.
+            if (ageInMinutes >= BEING_LOGGING_FAILED_CLEANUPS_AT_WARN_AFTER_X_MINUTES) {
+                level = Event.Severity.WARN;
+                addlDebug = "despite being " + ageInMinutes + " mins old which could indicate a serious error - please raise with support.  Diagnostics: ";
+            }
 
-                        perEntryLog.logDefer(attemptId, "error while attempting to cleanup ATR entry {}, entry is {} mins old, " +
-                                        "cleanup will retry later: {}",
-                                Event.Severity.WARN, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId), ageInMinutes, DebugUtil.dbg(err));
+            TransactionCleanupAttemptEvent event = new TransactionCleanupAttemptEvent(level,
+                    false, isRegularCleanup, perEntryLog.logs(), attemptId, atrId, atrCollection,
+                    req, addlDebug);
 
-                        Event.Severity level = Event.Severity.DEBUG;
-                        String addlDebug = "";
-
-                        // TXNJ-208: If the transaction is very old and it's still failing to be cleaned up, it's
-                        // indicative of a bug.  Log it at a level the application is likely to automatically see, so
-                        // it can be caught and investigated.  TransactionCleanupAttempt will automatically write its
-                        // logs too.
-                        if (ageInMinutes >= BEING_LOGGING_FAILED_CLEANUPS_AT_WARN_AFTER_X_MINUTES) {
-                            level = Event.Severity.WARN;
-                            addlDebug = "despite being " + ageInMinutes + " mins old which could indicate a serious error - please raise with support.  Diagnostics: ";
-                        }
-
-                        TransactionCleanupAttemptEvent event = new TransactionCleanupAttemptEvent(level,
-                                false, isRegularCleanup, perEntryLog.logs(), attemptId, atrId, atrCollection,
-                                req, addlDebug);
-
-                        core.context().environment().eventBus().publish(event);
-
-                        return Mono.just(event);
-                    })
-
-                    .doOnError(err -> span.finish(err))
-                    .doOnTerminate(() -> span.finish());
-        });
+            core.context().environment().eventBus().publish(event);
+            span.recordException(err);
+            return event;
+        } finally {
+            span.finish();
+        }
     }
 
 
-    Mono<Object> removeATREntry(AttemptState state, CollectionIdentifier atrCollection, String atrId, String attemptId,
-                                CoreTransactionLogger perEntryLog, SpanWrapper pspan, CleanupRequest req) {
+    void removeATREntry(AttemptState state, CollectionIdentifier atrCollection, String atrId, String attemptId,
+                        CoreTransactionLogger perEntryLog, SpanWrapper pspan, CleanupRequest req) {
         List<SubdocMutateRequest.Command> specs = new ArrayList<>();
 
         if (state == AttemptState.PENDING) {
@@ -490,35 +450,33 @@ public class TransactionsCleaner {
         }
         specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, "attempts." + attemptId, Bytes.EMPTY_BYTE_ARRAY, false, true, false, specs.size()));
 
-        return hooks.beforeAtrRemove.get() // testing hook
+        hooks.beforeAtrRemove.get(); // testing hook
 
-                .then(TransactionKVHandler.mutateIn(core, atrCollection, atrId, kvDurableTimeout(),
-                                false, false, false,
-                                false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
-                                req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeATREntry"), pspan, specs))
+        try {
+            TransactionKVHandler.mutateIn(core, atrCollection, atrId, kvDurableTimeout(),
+                    false, false, false,
+                    false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
+                    req.durabilityLevel(), OptionsUtil.createClientContext("Cleaner::removeATREntry"), pspan, specs);
 
-                .doOnNext(v -> perEntryLog.debug(attemptId, "successfully removed ATR entry"))
-                .onErrorResume(err -> {
-                    ErrorClass ec = ErrorClass.classify(err);
+            perEntryLog.debug(attemptId, "successfully removed ATR entry");
+        } catch (RuntimeException err) {
+            ErrorClass ec = ErrorClass.classify(err);
 
-                    perEntryLog.debug(attemptId, "got exception while removing ATR entry {}: {}",
-                            atrId, DebugUtil.dbg(err));
+            perEntryLog.debug(attemptId, "got exception while removing ATR entry {}: {}",
+                    atrId, DebugUtil.dbg(err));
 
-                    if (ec == ErrorClass.FAIL_PATH_NOT_FOUND) {
-                        perEntryLog.logDefer(attemptId, "failed to remove {} as entry isn't there, likely" +
-                                        " due to concurrent cleanup",
-                                Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
-                        return Mono.empty();
-                    } else if (ec == ErrorClass.FAIL_PATH_ALREADY_EXISTS) {
-                        perEntryLog.logDefer(attemptId, "not removing {} as it has changed from PENDING to COMMITTED",
-                                Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
-                        return Mono.error(err);
-                    } else {
-                        return Mono.error(err);
-                    }
-                })
-                // Return Mono<Object> so we can track how many lost attempts were cleaned up
-                .map(v -> v);
+            if (ec == ErrorClass.FAIL_PATH_NOT_FOUND) {
+                perEntryLog.logDefer(attemptId, "failed to remove {} as entry isn't there, likely" +
+                                " due to concurrent cleanup",
+                        Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
+            } else if (ec == ErrorClass.FAIL_PATH_ALREADY_EXISTS) {
+                perEntryLog.logDefer(attemptId, "not removing {} as it has changed from PENDING to COMMITTED",
+                        Event.Severity.DEBUG, ActiveTransactionRecordUtil.getAtrDebug(atrCollection, atrId));
+                throw err;
+            } else {
+                throw err;
+            }
+        }
     }
 
     public CleanerHooks hooks() {

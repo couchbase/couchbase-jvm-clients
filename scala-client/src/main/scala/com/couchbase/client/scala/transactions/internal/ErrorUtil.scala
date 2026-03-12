@@ -30,25 +30,25 @@ import reactor.core.publisher.Mono
 
 private[scala] object ErrorUtil {
 
-  def convertTransactionFailedInternal[T](err: Throwable): Mono[T] = {
-    Mono.error[T](err match {
+  def convertTransactionFailedInternal(err: Throwable): Throwable = {
+    err match {
       case e: CoreTransactionCommitAmbiguousException =>
         new TransactionCommitAmbiguousException(e)
       case e: CoreTransactionExpiredException =>
         new TransactionExpiredException(e)
       case e: CoreTransactionFailedException =>
         new TransactionFailedException(e)
-    })
+      case e => e
+    }
   }
 
   def convertTransactionFailedSingleQueryMono[T](err: Throwable): Mono[T] = {
-    convertTransactionFailedInternal(err)
-      .onErrorResume {
-        // From a cluster.query() transaction the user will be expecting the traditional SDK errors
-        case ex: TransactionExpiredException =>
-          Mono.error[T](new UnambiguousTimeoutException(ex.getMessage, null))
-        case ex => Mono.error[T](ex)
-      };
+    convertTransactionFailedInternal(err) match {
+      // From a cluster.query() transaction the user will be expecting the traditional SDK errors
+      case ex: TransactionExpiredException =>
+        Mono.error[T](new UnambiguousTimeoutException(ex.getMessage, null))
+      case ex => Mono.error[T](ex)
+    }
   }
 
   def convertTransactionFailedSingleQuery[T](err: RuntimeException): RuntimeException = {

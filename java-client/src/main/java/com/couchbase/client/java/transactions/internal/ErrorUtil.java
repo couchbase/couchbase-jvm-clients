@@ -29,32 +29,16 @@ import reactor.core.publisher.Mono;
 public class ErrorUtil {
     private ErrorUtil() {}
 
-    public static <T> Mono<T> convertTransactionFailedInternal(Throwable err) {
-        Throwable out = err;
-
+    public static RuntimeException convertTransactionFailedInternalBlocking(Throwable err) {
         if (err instanceof CoreTransactionCommitAmbiguousException) {
-            out = new TransactionCommitAmbiguousException((CoreTransactionCommitAmbiguousException) err);
+            return new TransactionCommitAmbiguousException((CoreTransactionCommitAmbiguousException) err);
         } else if (err instanceof CoreTransactionExpiredException) {
-            out = new TransactionExpiredException((CoreTransactionExpiredException) err);
+            return new TransactionExpiredException((CoreTransactionExpiredException) err);
         } else if (err instanceof CoreTransactionFailedException) {
-            out = new TransactionFailedException((CoreTransactionFailedException) err);
+            return new TransactionFailedException((CoreTransactionFailedException) err);
+        } if (err instanceof RuntimeException) {
+            return (RuntimeException) err;
         }
-
-        return Mono.error(out);
-    }
-
-    public static Mono<?> convertTransactionFailedSingleQueryMono(Throwable err) {
-        return convertTransactionFailedInternal(err)
-                .onErrorResume(ex -> {
-                    // From a cluster.query() transaction the user will be expecting the traditional SDK errors
-                    if (ex instanceof TransactionExpiredException) {
-                        return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
-                    }
-                    return Mono.error(ex);
-                });
-    }
-
-    public static void convertTransactionFailedSingleQuery(RuntimeException err) {
-        convertTransactionFailedSingleQueryMono(err).block();
+        return new RuntimeException(err);
     }
 }

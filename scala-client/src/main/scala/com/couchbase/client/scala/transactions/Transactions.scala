@@ -15,29 +15,17 @@
  */
 package com.couchbase.client.scala.transactions
 
-import com.couchbase.client.core.error.transaction.internal.CoreTransactionFailedException
-import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig
-import com.couchbase.client.core.transaction.threadlocal.{TransactionMarker, TransactionMarkerOwner}
-import com.couchbase.client.core.transaction.{
-  CoreTransactionAttemptContext,
-  CoreTransactionContext,
-  CoreTransactionResult,
-  CoreTransactionsReactive
-}
+import com.couchbase.client.core.transaction.{CoreTransactionResult, CoreTransactions}
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transactions.config.TransactionOptions
 import com.couchbase.client.scala.transactions.internal.ErrorUtil
-import reactor.core.publisher.Mono
 
-import java.util.UUID
-import java.util.function.{Consumer, Function}
-import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 /** The starting point for accessing Couchbase transactions.
   */
 class Transactions private[scala] (
-    private val internal: CoreTransactionsReactive,
+    private val internal: CoreTransactions,
     private val environment: ClusterEnvironment
 ) {
 
@@ -58,73 +46,28 @@ class Transactions private[scala] (
     * If the lambda returns a [[Success]], the transaction will commit.
     *
     * @param transactionLogic the application's transaction logic
-    * @param options        the configuration to use for this transaction
+    * @param options          the configuration to use for this transaction
     * @return there is no need to check the returned {@link CoreTransactionResult}, as success is implied by the lack of a
-    * thrown exception.  It contains information useful only for debugging and logging.
-    * Raises TransactionFailedException or a derived exception if the transaction fails to commit for any reason, possibly
-    * after multiple retries.
+    *         thrown exception.  It contains information useful only for debugging and logging.
+    *         Raises TransactionFailedException or a derived exception if the transaction fails to commit for any reason, possibly
+    *         after multiple retries.
     */
   def run(
       transactionLogic: (TransactionAttemptContext) => Try[Unit],
       options: TransactionOptions = TransactionOptions.Default
   ): Try[TransactionResult] = {
-    val scheduler = internal.core.context.environment.transactionsSchedulers.schedulerBlocking
-
-    val x: Mono[CoreTransactionResult] = Mono.defer(() => {
-      val merged =
-        new CoreMergedTransactionConfig(internal.config(), java.util.Optional.of(options.toCore))
-      val overall =
-        new CoreTransactionContext(
-          internal.core().context(),
-          UUID.randomUUID().toString(),
-          merged,
-          internal.core().transactionsCleanup()
-        )
-
-      val createAttempt: Mono[CoreTransactionAttemptContext] = Mono.defer(() => {
-        val attemptId = UUID.randomUUID().toString()
-        val ctx       = internal.createAttemptContext(overall, merged, attemptId)
-        Mono.just(ctx)
-      })
-
-      val newTransactionLogic: Function[CoreTransactionAttemptContext, Mono[Void]] =
-        (ctx: CoreTransactionAttemptContext) =>
-          Mono.defer(() => {
-            val async       = new AsyncTransactionAttemptContext(ctx, environment)
-            val ctxBlocking = new TransactionAttemptContext(async)
-            Mono
-              .fromCallable(() => {
-                TransactionMarkerOwner.set(new TransactionMarker(ctx))
-                val out = Try(transactionLogic(ctxBlocking))
-                TransactionMarkerOwner.clear()
-                out match {
-                  // If the lambda has thrown an exception directly.
-                  case Failure(exception) => throw exception
-
-                  // If the user has returned a Try wrapping an exception.
-                  case Success(Failure(exception)) => throw exception
-
-                  // Lambda ended successfully
-                  case _ =>
-                }
-              })
-              .subscribeOn(scheduler)
-              .`then`()
-          })
-
-      internal
-        .executeTransaction(createAttempt, merged, overall, newTransactionLogic, false)
-        .onErrorResume((err: Throwable) =>
-          ErrorUtil.convertTransactionFailedInternal[CoreTransactionResult](err)
-        )
-    })
-
     Try(
-      x.map[TransactionResult](new Function[CoreTransactionResult, TransactionResult] {
-        override def apply(result: CoreTransactionResult): TransactionResult =
-          TransactionResult(result)
-      }).publishOn(scheduler)
-        .block()
-    )
+      internal.run(
+        (internalCtx) => {
+          val async = new AsyncTransactionAttemptContext(internalCtx, environment)
+          val ctx = new TransactionAttemptContext(async)
+          transactionLogic(ctx)
+        },
+        options.toCore
+      )
+    ) match {
+      case Success(value) => Success(TransactionResult(value))
+      case Failure(err)   => Failure(ErrorUtil.convertTransactionFailedInternal(err))
+    }
   }
 }

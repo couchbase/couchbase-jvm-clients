@@ -731,7 +731,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Stability.Internal
   public Mono<Void> shutdown(final Duration timeout) {
     return Mono.fromRunnable(appTelemetry::close)
-      .then(transactionsCleanup.shutdown(timeout))
+      .then(Mono.fromRunnable(() -> transactionsCleanup.shutdown(timeout)))
       .then(Mono.defer(() -> {
         NanoTimestamp start = NanoTimestamp.now();
         if (shutdown.compareAndSet(false, true)) {

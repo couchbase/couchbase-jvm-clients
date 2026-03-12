@@ -112,7 +112,7 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetResult> get(ReactiveCollection collection, String id, TransactionGetOptions options) {
         TransactionGetOptions.Built built = options.build();
         return reactor.publishOnUserScheduler(
-            internal.get(makeCollectionIdentifier(collection.async()), id)
+            internal.getReactive(makeCollectionIdentifier(collection.async()), id)
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
         );
     }
@@ -151,7 +151,7 @@ public class ReactiveTransactionAttemptContext {
         notNull(options, "Options");
         TransactionGetReplicaFromPreferredServerGroupOptions.Built built = options.build();
         return reactor.publishOnUserScheduler(
-            internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id)
+            internal.getReplicaFromPreferredServerGroupReactive(makeCollectionIdentifier(collection.async()), id)
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
         );
     }
@@ -168,7 +168,7 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetMultiResult> getMulti(List<TransactionGetMultiSpec> specs, TransactionGetMultiOptions options) {
         notNull(options, "options");
         return reactor.publishOnUserScheduler(
-            internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), options.build(), false)
+            internal.getMultiAlgoReactive(TransactionGetMultiUtil.convert(specs), options.build(), false)
                 .map(result -> TransactionGetMultiUtil.convert(result, specs, serializer())));
     }
 
@@ -189,7 +189,7 @@ public class ReactiveTransactionAttemptContext {
     public Mono<TransactionGetMultiReplicasFromPreferredServerGroupResult> getMultiReplicasFromPreferredServerGroup(List<TransactionGetMultiReplicasFromPreferredServerGroupSpec> specs, TransactionGetMultiReplicasFromPreferredServerGroupOptions options) {
         notNull(options, "options");
         return reactor.publishOnUserScheduler(
-            internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), options.build(), true)
+            internal.getMultiAlgoReactive(TransactionGetMultiUtil.convertReplica(specs), options.build(), true)
                 .map(result -> TransactionGetMultiUtil.convertReplica(result, specs, serializer())));
     }
 
@@ -220,7 +220,7 @@ public class ReactiveTransactionAttemptContext {
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
 
         return reactor.publishOnUserScheduler(
-            internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
+            internal.insertReactive(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())
@@ -257,7 +257,7 @@ public class ReactiveTransactionAttemptContext {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
         return reactor.publishOnUserScheduler(
-            internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
+            internal.replaceReactive(doc.internal(), encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
                 .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())
@@ -272,7 +272,7 @@ public class ReactiveTransactionAttemptContext {
     public Mono<Void> remove(TransactionGetResult doc) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
         return reactor.publishOnUserScheduler(
-            internal.remove(doc.internal(), new SpanWrapper(span))
+            internal.removeReactive(doc.internal(), new SpanWrapper(span))
                 .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
                 .doOnTerminate(() -> span.end())
         );
@@ -340,7 +340,7 @@ public class ReactiveTransactionAttemptContext {
                                               final TransactionQueryOptions options) {
         CoreQueryOptions opts = options != null ? options.builder().build() : null;
         return reactor.publishOnUserScheduler(
-            internal.queryBlocking(statement,
+            internal.queryReactive(statement,
                     scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
                     opts,
                     false)

@@ -65,7 +65,7 @@ class AsyncTransactions private[scala] (
       )
       .map[TransactionResult](result => TransactionResult(result))
       .onErrorResume((err: Throwable) =>
-        ErrorUtil.convertTransactionFailedInternal[TransactionResult](err)
+        Mono.error[TransactionResult](ErrorUtil.convertTransactionFailedInternal(err))
       )
 
     FutureConversions.javaMonoToScalaFuture(monoResult)

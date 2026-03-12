@@ -19,10 +19,13 @@ package com.couchbase.client.java.transactions;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.query.CoreQueryContext;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
+import com.couchbase.client.core.api.query.CoreQueryResult;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
+import com.couchbase.client.core.transaction.CoreTransactionGetResult;
+import com.couchbase.client.core.transaction.CoreTransactionOptionalGetMultiResult;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.java.Collection;
@@ -118,9 +121,8 @@ public class TransactionAttemptContext {
     public TransactionGetResult get(Collection collection, String id, TransactionGetOptions options) {
         notNull(options, "Options");
         TransactionGetOptions.Built built = options.build();
-        return internal.get(makeCollectionIdentifier(collection.async()), id)
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .block();
+        CoreTransactionGetResult result = internal.get(makeCollectionIdentifier(collection.async()), id);
+        return new TransactionGetResult(result, serializer(), built.transcoder());
     }
 
     /**
@@ -156,9 +158,8 @@ public class TransactionAttemptContext {
     public TransactionGetResult getReplicaFromPreferredServerGroup(Collection collection, String id, TransactionGetReplicaFromPreferredServerGroupOptions options) {
         notNull(options, "Options");
         TransactionGetReplicaFromPreferredServerGroupOptions.Built built = options.build();
-        return internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id)
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .block();
+        CoreTransactionGetResult result = internal.getReplicaFromPreferredServerGroup(makeCollectionIdentifier(collection.async()), id);
+        return new TransactionGetResult(result, serializer(), built.transcoder());
     }
 
     /**
@@ -180,9 +181,8 @@ public class TransactionAttemptContext {
     @Stability.Uncommitted
     public TransactionGetMultiResult getMulti(List<TransactionGetMultiSpec> specs, TransactionGetMultiOptions options) {
         notNull(options, "options");
-        return internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), options.build(), false)
-            .map(result -> TransactionGetMultiUtil.convert(result, specs, serializer()))
-            .block();
+        List<CoreTransactionOptionalGetMultiResult> result = internal.getMultiAlgo(TransactionGetMultiUtil.convert(specs), options.build(), false);
+        return TransactionGetMultiUtil.convert(result, specs, serializer());
     }
 
     /**
@@ -201,9 +201,8 @@ public class TransactionAttemptContext {
     @Stability.Uncommitted
     public TransactionGetMultiReplicasFromPreferredServerGroupResult getMultiReplicasFromPreferredServerGroup(List<TransactionGetMultiReplicasFromPreferredServerGroupSpec> specs, TransactionGetMultiReplicasFromPreferredServerGroupOptions options) {
         notNull(options, "options");
-        return internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), options.build(), true)
-            .map(result -> TransactionGetMultiUtil.convertReplica(result, specs, serializer()))
-            .block();
+        List<CoreTransactionOptionalGetMultiResult> result = internal.getMultiAlgo(TransactionGetMultiUtil.convertReplica(specs), options.build(), true);
+        return TransactionGetMultiUtil.convertReplica(result, specs, serializer());
     }
 
     /**
@@ -253,11 +252,15 @@ public class TransactionAttemptContext {
         TransactionReplaceOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REPLACE, internal.span());
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
-        return internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-            .doOnTerminate(() -> span.end())
-            .block();
+         try {
+            CoreTransactionGetResult result = internal.replace(doc.internal(), encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span));
+            return new TransactionGetResult(result, serializer(), built.transcoder());
+        } catch (Exception err) {
+            span.status(RequestSpan.StatusCode.ERROR);
+            throw err;
+        } finally {
+            span.end();
+        }
     }
 
     private JsonSerializer serializer() {
@@ -302,11 +305,15 @@ public class TransactionAttemptContext {
         TransactionInsertOptions.Built built = options.build();
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_INSERT, internal.span());
         Transcoder.EncodedValue encoded = encode(content, span, serializer, built.transcoder(), internal.core().context());
-        return internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span))
-            .map(result -> new TransactionGetResult(result, serializer(), built.transcoder()))
-            .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-            .doOnTerminate(() -> span.end())
-            .block();
+        try {
+            CoreTransactionGetResult result = internal.insert(makeCollectionIdentifier(collection.async()), id, encoded.encoded(), encoded.flags(), built.expiry(), new SpanWrapper(span));
+            return new TransactionGetResult(result, serializer(), built.transcoder());
+        } catch (Exception err) {
+            span.status(RequestSpan.StatusCode.ERROR);
+            throw err;
+        } finally {
+            span.end();
+        }
     }
 
     /**
@@ -325,10 +332,14 @@ public class TransactionAttemptContext {
      */
     public void remove(TransactionGetResult doc) {
         RequestSpan span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span());
-        internal.remove(doc.internal(), new SpanWrapper(span))
-                .doOnError(err -> span.status(RequestSpan.StatusCode.ERROR))
-                .doOnTerminate(() -> span.end())
-                .block();
+        try {
+            internal.remove(doc.internal(), new SpanWrapper(span));
+        } catch (Exception err) {
+            span.status(RequestSpan.StatusCode.ERROR);
+            throw err;
+        } finally {
+            span.end();
+        }
     }
 
     /**
@@ -368,13 +379,11 @@ public class TransactionAttemptContext {
                              String statement,
                              TransactionQueryOptions options) {
         CoreQueryOptions opts = options != null ? options.builder().build() : null;
-        return internal.queryBlocking(statement,
+        CoreQueryResult result = internal.queryBlocking(statement,
                         scope == null ? null : CoreQueryContext.of(scope.bucketName(), scope.name()),
                         opts,
-                        false)
-                .publishOn(internal.core().context().environment().transactionsSchedulers().schedulerBlocking())
-                .map(response -> new TransactionQueryResult(response, serializer()))
-                .block();
+                        false);
+        return new TransactionQueryResult(result, serializer());
     }
 
     /**

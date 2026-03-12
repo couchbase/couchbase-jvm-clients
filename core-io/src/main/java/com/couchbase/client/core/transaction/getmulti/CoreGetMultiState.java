@@ -99,6 +99,13 @@ public class CoreGetMultiState {
         return alreadyFetched;
     }
 
+    // Sort the results according to the original specs before returning to user.
+    public List<CoreTransactionOptionalGetMultiResult> alreadyFetchedSorted() {
+        return alreadyFetched().stream()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
     public CoreGetMultiPhase phase() {
         return phase;
     }

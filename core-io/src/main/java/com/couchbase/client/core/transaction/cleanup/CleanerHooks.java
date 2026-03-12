@@ -16,22 +16,20 @@
 package com.couchbase.client.core.transaction.cleanup;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.core.publisher.Mono;
-
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 @Stability.Internal
 public class CleanerHooks {
     public static final CleanerHooks DEFAULT = new CleanerHooks();
-    public static final Mono<Integer> standard = Mono.just(1);
+    public static final Integer standard = 1;
 
     // Just for testing so these are public
-    public Function<String, Mono<Integer>> beforeAtrGet = (x) -> standard;
-    public Function<String, Mono<Integer>> beforeCommitDoc = (x) -> standard;
-    public Function<String, Mono<Integer>> beforeRemoveDocStagedForRemoval = (x) -> standard;
-    public Function<String, Mono<Integer>> beforeDocGet = (x) -> standard;
-    public Function<String, Mono<Integer>> beforeRemoveDoc = (x) -> standard;
-    public Function<String, Mono<Integer>> beforeRemoveLinks = (x) -> standard;
-    public Supplier<Mono<Integer>> beforeAtrRemove = () -> standard;
+    public Function<String, Integer> beforeAtrGet = (x) -> standard;
+    public Function<String, Integer> beforeCommitDoc = (x) -> standard;
+    public Function<String, Integer> beforeRemoveDocStagedForRemoval = (x) -> standard;
+    public Function<String, Integer> beforeDocGet = (x) -> standard;
+    public Function<String, Integer> beforeRemoveDoc = (x) -> standard;
+    public Function<String, Integer> beforeRemoveLinks = (x) -> standard;
+    public Supplier<Integer> beforeAtrRemove = () -> standard;
 }

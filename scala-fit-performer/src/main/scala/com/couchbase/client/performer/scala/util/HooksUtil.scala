@@ -64,8 +64,26 @@ object HooksUtil {
       hook: Hook,
       getCluster: () => ClusterConnection,
       param: String
-  ): Mono[Any] =
-    configureHookRaw(ctx, callCount, hook, getCluster, param).map((v) => v.asInstanceOf[Integer])
+  ): Unit =
+    configureHookRaw(ctx, callCount, hook, getCluster, param).block()
+
+  private def configureHookInt(
+      @Nullable ctx: CoreTransactionAttemptContext,
+      callCount: CallCounts,
+      hook: Hook,
+      getCluster: () => ClusterConnection,
+      param: String
+  ): Integer =
+    configureHookRaw(ctx, callCount, hook, getCluster, param).block().asInstanceOf[Integer]
+
+  private def configureHookString(
+      @Nullable ctx: CoreTransactionAttemptContext,
+      callCount: CallCounts,
+      hook: Hook,
+      clusterConn: () => ClusterConnection,
+      param: String
+  ): String =
+    configureHookRaw(ctx, callCount, hook, clusterConn, param).block().asInstanceOf[String]
 
   // The slightly awkward Mono<Object> is because we occasionally need the result as a String.
   private def configureHookRaw(
@@ -249,30 +267,11 @@ object HooksUtil {
       Mono.fromRunnable(() => callCount.add(hook.getHookPoint)).`then`(out)
     })
 
-  private def setHookIfExists(
-      hook: Hook,
-      mock: CoreTransactionAttemptContextHooks,
-      fieldName: String,
-      toHook: (CoreTransactionAttemptContext, String) => Mono[Any]
-  ): Unit = {
-    try {
-      val field = mock.getClass.getDeclaredField(fieldName)
-      field.set(mock, scalaFunctoJava(toHook))
-    } catch {
-      case e @ (_: NoSuchFieldException | _: IllegalAccessException) =>
-        throw new InternalPerformerFailure(
-          new IllegalArgumentException(
-            "Trying to perform a test that requires hook " + hook.getHookPoint + " on a transaction library that doesn't have the required"
-          )
-        )
-    }
-  }
-
   /** This is to support backwards compatibility with older transaction libraries that do not have newer hooks.
     */
   private def setHookIfExists(
       mock: CoreTransactionAttemptContextHooks,
-      confHook: Function[CoreTransactionAttemptContext, Mono[Integer]],
+      confHook: java.util.function.Consumer[CoreTransactionAttemptContext],
       hook: Hook,
       name: String
   ): Unit = {
@@ -283,39 +282,56 @@ object HooksUtil {
       case e @ (_: NoSuchFieldException | _: IllegalAccessException) =>
         throw new InternalPerformerFailure(
           new IllegalArgumentException(
-            "Trying to perform a test that requires hook " + hook.getHookPoint + " on a transaction library that doesn't have the required " + name
+            "Trying to perform a test that requires hook " + hook.getHookPoint + " on a transaction library that doesn't have the required"
+          )
+        )
+    }
+  }
+
+  private def setHookIfExists(
+      mock: CoreTransactionAttemptContextHooks,
+      fieldName: String,
+      toHook: (CoreTransactionAttemptContext, String) => Unit
+  ): Unit = {
+    try {
+      val field = mock.getClass.getDeclaredField(fieldName)
+      field.set(mock, scalaFunctoJava(toHook))
+    } catch {
+      case e @ (_: NoSuchFieldException | _: IllegalAccessException) =>
+        throw new InternalPerformerFailure(
+          new IllegalArgumentException(
+            "Trying to perform a test that requires hook on a transaction library that doesn't have the required " + fieldName
           )
         )
     }
   }
 
   def scalaFunctoJava[T](
-      function: (CoreTransactionAttemptContext, T) => Mono[Any]
-  ): BiFunction[CoreTransactionAttemptContext, T, Mono[Integer]] = {
-    new BiFunction[CoreTransactionAttemptContext, T, Mono[Integer]] {
-      override def apply(t: CoreTransactionAttemptContext, u: T): Mono[Integer] = {
-        val out = function.apply(t, u)
-        out.thenReturn(0)
+      function: (CoreTransactionAttemptContext, T) => Unit
+  ): java.util.function.BiConsumer[CoreTransactionAttemptContext, T] = {
+    new java.util.function.BiConsumer[CoreTransactionAttemptContext, T] {
+      override def accept(t: CoreTransactionAttemptContext, u: T): Unit = {
+        function.apply(t, u)
       }
     }
   }
 
   def scalaFunctoJava(
-      function: (CoreTransactionAttemptContext) => Mono[Any]
-  ): Function[CoreTransactionAttemptContext, Mono[Integer]] = {
-    new Function[CoreTransactionAttemptContext, Mono[Integer]] {
-      override def apply(t: CoreTransactionAttemptContext): Mono[Integer] = {
-        val out = function.apply(t)
-        out.thenReturn(0)
+      function: (CoreTransactionAttemptContext) => Unit
+  ): java.util.function.Consumer[CoreTransactionAttemptContext] = {
+    new java.util.function.Consumer[CoreTransactionAttemptContext] {
+      override def accept(t: CoreTransactionAttemptContext): Unit = {
+        function.apply(t)
       }
     }
   }
 
-  def scalaFunctoJava2(function: (String) => Mono[Any]): Function[String, Mono[Integer]] = {
-    new Function[String, Mono[Integer]] {
-      override def apply(t: String): Mono[Integer] = {
-        val out = function.apply(t)
-        out.thenReturn(0)
+  def scalaFunctoJava2(
+      function: (String) => Integer
+  ): java.util.function.Function[String, Integer] = {
+    new java.util.function.Function[String, Integer] {
+      override def apply(t: String): Integer = {
+        function.apply(t)
       }
     }
   }
@@ -330,16 +346,22 @@ object HooksUtil {
     if (!hooks.isEmpty) {
       val mock = new CoreTransactionAttemptContextHooks
       for (i <- 0 until hooks.size) {
-        val hook     = hooks(i)
-        val confHook = scalaFunctoJava((ctx: CoreTransactionAttemptContext) =>
-          configureHook(ctx, callCount, hook, clusterConn, null)
-        )
+        val hook                                                                 = hooks(i)
+        val confHook: java.util.function.Consumer[CoreTransactionAttemptContext] =
+          (ctx: CoreTransactionAttemptContext) =>
+            configureHook(ctx, callCount, hook, clusterConn, null)
         hook.getHookPoint match {
           case HookPoint.BEFORE_ATR_COMMIT =>
             mock.beforeAtrCommit = confHook
 
           case HookPoint.BEFORE_ATR_COMMIT_AMBIGUITY_RESOLUTION =>
-            setHookIfExists(mock, confHook, hook, "beforeAtrCommitAmbiguityResolution")
+            setHookIfExists(
+              mock,
+              (ctx: CoreTransactionAttemptContext) =>
+                configureHook(ctx, callCount, hook, clusterConn, null),
+              hook,
+              "beforeAtrCommitAmbiguityResolution"
+            )
 
           case HookPoint.BEFORE_ATR_COMPLETE =>
             Logger.info("Inside BEFORE_ATR_COMPLETE")
@@ -561,7 +583,6 @@ object HooksUtil {
 
           case HookPoint.BEFORE_DOC_CHANGED_DURING_COMMIT =>
             setHookIfExists(
-              hook,
               mock,
               "beforeDocChangedDuringCommit",
               (ctx: CoreTransactionAttemptContext, query: String) =>
@@ -570,7 +591,6 @@ object HooksUtil {
 
           case HookPoint.BEFORE_DOC_CHANGED_DURING_ROLLBACK =>
             setHookIfExists(
-              hook,
               mock,
               "beforeDocChangedDuringRollback",
               (ctx: CoreTransactionAttemptContext, query: String) =>
@@ -579,7 +599,6 @@ object HooksUtil {
 
           case HookPoint.BEFORE_DOC_CHANGED_DURING_STAGING =>
             setHookIfExists(
-              hook,
               mock,
               "beforeDocChangedDuringStaging",
               (ctx: CoreTransactionAttemptContext, query: String) =>
@@ -614,30 +633,34 @@ object HooksUtil {
       val hook = hooks(i)
       hook.getHookPoint match {
         case HookPoint.CLEANUP_BEFORE_COMMIT_DOC =>
-          mock.beforeCommitDoc =
-            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
+          mock.beforeCommitDoc = scalaFunctoJava2((id: String) =>
+            configureHookInt(null, callCount, hook, clusterConn, id)
+          )
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC_STAGED_FOR_REMOVAL =>
-          mock.beforeRemoveDocStagedForRemoval =
-            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
+          mock.beforeRemoveDocStagedForRemoval = scalaFunctoJava2((id: String) =>
+            configureHookInt(null, callCount, hook, clusterConn, id)
+          )
 
         case HookPoint.CLEANUP_BEFORE_DOC_GET =>
-          mock.beforeDocGet =
-            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
+          mock.beforeDocGet = scalaFunctoJava2((id: String) =>
+            configureHookInt(null, callCount, hook, clusterConn, id)
+          )
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC =>
-          mock.beforeRemoveDoc =
-            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
+          mock.beforeRemoveDoc = scalaFunctoJava2((id: String) =>
+            configureHookInt(null, callCount, hook, clusterConn, id)
+          )
 
         case HookPoint.CLEANUP_BEFORE_REMOVE_DOC_LINKS =>
-          mock.beforeRemoveLinks =
-            scalaFunctoJava2((id: String) => configureHook(null, callCount, hook, clusterConn, id))
+          mock.beforeRemoveLinks = scalaFunctoJava2((id: String) =>
+            configureHookInt(null, callCount, hook, clusterConn, id)
+          )
 
         case HookPoint.CLEANUP_BEFORE_ATR_REMOVE =>
-          mock.beforeAtrRemove = new Supplier[Mono[Integer]] {
-            override def get(): Mono[Integer] = {
-              val out = configureHook(null, callCount, hook, clusterConn, null)
-              out.thenReturn(0)
+          mock.beforeAtrRemove = new Supplier[Integer] {
+            override def get(): Integer = {
+              configureHookInt(null, callCount, hook, clusterConn, null)
             }
           }
 
@@ -653,10 +676,9 @@ object HooksUtil {
     val callCount = new CallCounts
     val mock      = new ClientRecordFactoryMock
     for (hook <- hooks) {
-      val basic = new Supplier[Mono[Integer]]() {
-        override def get(): Mono[Integer] = {
-          val out = configureHook(null, callCount, hook, () => clusterConn, null)
-          out.thenReturn(0)
+      val basic = new Runnable() {
+        override def run(): Unit = {
+          configureHook(null, callCount, hook, () => clusterConn, null)
         }
       }
       hook.getHookPoint match {

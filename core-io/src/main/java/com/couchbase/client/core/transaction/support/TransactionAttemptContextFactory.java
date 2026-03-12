@@ -19,7 +19,6 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.CoreTransactionContext;
-import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.util.CoreTransactionAttemptContextHooks;
 
@@ -31,13 +30,11 @@ public class TransactionAttemptContextFactory {
                                                 CoreTransactionContext overall,
                                                 CoreMergedTransactionConfig config,
                                                 String attemptId,
-                                                CoreTransactionsReactive parent,
                                                 Optional<SpanWrapper> parentSpan) {
         return new CoreTransactionAttemptContext(core,
                 overall,
                 config,
                 attemptId,
-                parent,
                 parentSpan,
                 new CoreTransactionAttemptContextHooks());
     }

@@ -19,14 +19,13 @@ package com.couchbase.client.core.transaction.cleanup;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.transaction.CleanupFailedEvent;
+import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent;
 import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.util.BlockingRetryHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -40,7 +39,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.core.Reactor.safeInterval;
 import static com.couchbase.client.core.cnc.events.transaction.TransactionEvent.DEFAULT_CATEGORY;
 
 /**
@@ -66,20 +64,19 @@ public class CoreTransactionsCleanup {
     private final CountDownLatch stopLatch;
     private @Nullable final LostCleanupDistributed lostCleanup;
     private final CleanerFactory cleanerFactory;
+    private Thread regularCleanupThread;
 
     public CoreTransactionsCleanup(Core core, CoreTransactionsConfig config) {
         this.core = Objects.requireNonNull(core);
         this.config = Objects.requireNonNull(config);
         this.lostCleanup = config.cleanupConfig().runLostAttemptsCleanupThread() ? new LostCleanupDistributed(core, config, this::getCleaner) : null;
-        int countdown = 0;
+        int countdown = config.cleanupConfig().runRegularAttemptsCleanupThread() ? 1 : 0;
+        stopLatch = new CountDownLatch(countdown);
         cleanerFactory = config.cleanerFactory();
 
         if (config.cleanupConfig().runRegularAttemptsCleanupThread()) {
             runRegularAttemptsCleanupThread();
-            countdown += 1;
         }
-
-        stopLatch = new CountDownLatch(countdown);
 
         config.metadataCollection().ifPresent(mc -> {
             // JVMCBC-1084: this can potentially open buckets that the user has also opened.
@@ -102,100 +99,73 @@ public class CoreTransactionsCleanup {
         return lostCleanup != null ? lostCleanup.cleanupSet() : new HashSet<>();
     }
 
-    Mono<Void> stopBackgroundProcesses(Duration timeout) {
-        return Mono.defer(() -> {
-            stop = true;
-            LOGGER.info("Waiting for {} regular background threads to exit", stopLatch.getCount());
-            try {
-                if (!stopLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
-                    LOGGER.info("Background threads did not stop in expected time {}", timeout);
-                }
-            } catch (InterruptedException e) {
-                LOGGER.warn("Interrupted while waiting for background threads " + e);
+    void stopBackgroundProcesses(Duration timeout) {
+        stop = true;
+        if (regularCleanupThread != null) {
+            regularCleanupThread.interrupt();
+        }
+
+        LOGGER.info("Waiting for {} regular background threads to exit", stopLatch.getCount());
+        try {
+            if (!stopLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+                LOGGER.info("Background threads did not stop in expected time {}", timeout);
             }
-            if (lostCleanup != null) {
-                return lostCleanup.shutdown(timeout);
-            }
-            else {
-                return Mono.empty();
-            }
-        }).doOnTerminate(() -> LOGGER.info("Background threads have exitted"));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Interrupted while waiting for background threads {}", e.toString());
+        }
+
+        if (lostCleanup != null) {
+            lostCleanup.shutdown(timeout);
+        }
+
+        LOGGER.info("Background threads have exitted");
     }
 
     private void runRegularAttemptsCleanupThread() {
         Objects.requireNonNull(LOGGER);
 
         LOGGER_REGULAR.debug("Starting background cleanup thread to find transactions from this client");
-
-        // Periodically check and drain the cleanupQueue
-        safeInterval(Duration.ofMillis(100), core.context().environment().transactionsSchedulers().schedulerCleanup())
-
-                .flatMap(v -> {
-                    if (stop) {
-                        LOGGER_REGULAR.info("Stopping background cleanup thread for transactions from this client");
-                        stopLatch.countDown();
-                        return Mono.error(new ThreadStopRequestedException());
-                    } else {
-                        return Mono.just(v);
-                    }
-                })
-
-                .flatMap(v -> {
-
+        regularCleanupThread = new Thread(() -> {
+            try {
+                while (!stop) {
                     List<CleanupRequest> requests = new ArrayList<>();
-                    CleanupRequest head = null;
-                    do {
-                        head = cleanupQueue.poll();
-                        if (head != null) {
-                            requests.add(head);
+                    // Periodically check and drain the cleanupQueue
+                    cleanupQueue.drainTo(requests);
+
+                    for (CleanupRequest req : requests) {
+                        TransactionsCleaner cleaner = getCleaner();
+                        try {
+                            TransactionCleanupAttemptEvent result = cleaner.performCleanup(req, true, null);
+                            LOGGER_REGULAR.debug("result of cleanup request {}: success={}", req, result.success());
+                        } catch (Throwable err) {
+                            CleanupFailedEvent ev = new CleanupFailedEvent(req, err);
+                            core.context().environment().eventBus().publish(ev);
+                            // [REGULAR-CLEANUP-FAILURES] - retry it later
+                            LOGGER_REGULAR.debug("error while handling cleanup request {}, leaving for lost cleanup: '{}'",
+                                    req, err);
+                            if (err instanceof ThreadStopRequestedException) {
+                                stop = true;
+                            }
                         }
                     }
-                    while (head != null);
 
-                    return Flux.fromIterable(requests)
-                            .publishOn(core.context().environment().transactionsSchedulers().schedulerCleanup());
-                })
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        if (!stop) {
+                            LOGGER_REGULAR.warn("Unexpected: got InterruptedException but stop is not set");
+                        }
+                    }
+                }
+            } finally {
+                stopLatch.countDown();
+            }
+        }, "cbtxn-reg-cleanup");
 
-                .flatMap(req -> {
-                    TransactionsCleaner cleaner = getCleaner();
-
-                    return cleaner.performCleanup(req, true, null)
-
-                            .doOnSuccess(result -> {
-                                LOGGER_REGULAR.debug("result of cleanup request {}: success={}", req, result.success());
-                            })
-
-                            .onErrorResume(err -> {
-                                CleanupFailedEvent ev = new CleanupFailedEvent(req, err);
-                                core.context().environment().eventBus().publish(ev);
-                                // [REGULAR-CLEANUP-FAILURES] - retry it later
-                                LOGGER_REGULAR.debug("error while handling cleanup request {}, leaving for lost cleanup: '{}'",
-                                        req, err);
-                                return Mono.empty();
-                            });
-                })
-
-                // Note this is not retrying the attempt cleanup, just all failures to do with reading ATRs etc.
-                .retryWhen(Retry.allBut(ThreadStopRequestedException.class)
-                        .exponentialBackoff(Duration.ofMillis(10), Duration.ofMillis(2000))
-                        .doOnRetry(v -> {
-                            LOGGER_REGULAR.debug("retrying regular cleanup on error '{}'", String.valueOf(v.exception()));
-                        })
-                        .retryMax(100000)
-                        .toReactorRetry()
-                )
-
-                .subscribe(next -> {},
-
-                        (err) -> {
-                            if (!(err instanceof ThreadStopRequestedException)) {
-                                LOGGER_REGULAR.warn("regular cleanup thread ended with exception " + err);
-                            }
-                        },
-
-                        () -> {
-                            LOGGER_REGULAR.warn("regular cleanup thread ending");
-                        });
+        regularCleanupThread.setDaemon(true);
+        regularCleanupThread.start();
     }
 
     public TransactionsCleaner getCleaner() {
@@ -215,8 +185,8 @@ public class CoreTransactionsCleanup {
         cleanupQueue.add(cleanupRequest);
     }
 
-    public Mono<Void> shutdown(Duration timeout) {
-        return stopBackgroundProcesses(timeout);
+    public void shutdown(Duration timeout) {
+        stopBackgroundProcesses(timeout);
         // Note we don't shutdown the schedulers here - those are part of the CoreEnvironment, which may be
         // shared by multiple Clusters.
     }

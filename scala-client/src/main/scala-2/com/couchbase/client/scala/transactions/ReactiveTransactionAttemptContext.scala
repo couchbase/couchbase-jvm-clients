@@ -87,7 +87,7 @@ class ReactiveTransactionAttemptContext private[scala] (
       options: TransactionGetOptions
   ): SMono[TransactionGetResult] = {
     FutureConversions
-      .javaMonoToScalaMono(internal.get(collection.collectionIdentifier, id))
+      .javaMonoToScalaMono(internal.getReactive(collection.collectionIdentifier, id))
       .map(result => TransactionGetResult(result, options.transcoder))
   }
 
@@ -137,7 +137,7 @@ class ReactiveTransactionAttemptContext private[scala] (
   ): SMono[TransactionGetResult] =
     FutureConversions
       .javaMonoToScalaMono(
-        internal.getReplicaFromPreferredServerGroup(collection.collectionIdentifier, id)
+        internal.getReplicaFromPreferredServerGroupReactive(collection.collectionIdentifier, id)
       )
       .map(result => TransactionGetResult(result, options.transcoder))
 
@@ -154,7 +154,7 @@ class ReactiveTransactionAttemptContext private[scala] (
   ): SMono[TransactionGetMultiResult] = {
     val coreSpecs = TransactionGetMultiUtil.convert(specs)
     FutureConversions
-      .javaMonoToScalaMono(internal.getMultiAlgo(coreSpecs, options.toCore, false))
+      .javaMonoToScalaMono(internal.getMultiAlgoReactive(coreSpecs, options.toCore, false))
       .map(res => TransactionGetMultiUtil.convert(res, specs))
   }
 
@@ -169,7 +169,7 @@ class ReactiveTransactionAttemptContext private[scala] (
   ): SMono[TransactionGetMultiReplicasFromPreferredServerGroupResult] = {
     val coreSpecs = TransactionGetMultiUtil.convertReplica(specs)
     FutureConversions
-      .javaMonoToScalaMono(internal.getMultiAlgo(coreSpecs, options.toCore, true))
+      .javaMonoToScalaMono(internal.getMultiAlgoReactive(coreSpecs, options.toCore, true))
       .map(res => TransactionGetMultiUtil.convertReplica(res, specs))
   }
 
@@ -208,7 +208,7 @@ class ReactiveTransactionAttemptContext private[scala] (
       case Success(encoded)   =>
         FutureConversions
           .javaMonoToScalaMono(
-            internal.insert(
+            internal.insertReactive(
               collection.collectionIdentifier,
               id,
               encoded.encoded,
@@ -254,7 +254,13 @@ class ReactiveTransactionAttemptContext private[scala] (
         FutureConversions
           .javaMonoToScalaMono(
             internal
-              .replace(doc.internal, encoded.encoded, encoded.flags, null, new SpanWrapper(span))
+              .replaceReactive(
+                doc.internal,
+                encoded.encoded,
+                encoded.flags,
+                null,
+                new SpanWrapper(span)
+              )
           )
           .map(result => TransactionGetResult(result, options.transcoder))
           .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
@@ -269,7 +275,7 @@ class ReactiveTransactionAttemptContext private[scala] (
   def remove(doc: TransactionGetResult): SMono[Unit] = {
     val span = CbTracing.newSpan(internal.core().context(), TRANSACTION_OP_REMOVE, internal.span())
     FutureConversions
-      .javaMonoToScalaMono(internal.remove(doc.internal, new SpanWrapper(span)))
+      .javaMonoToScalaMono(internal.removeReactive(doc.internal, new SpanWrapper(span)))
       .doOnError(_ => span.status(RequestSpan.StatusCode.ERROR))
       .doOnTerminate(() => span.end())
       .`then`()
@@ -345,7 +351,7 @@ class ReactiveTransactionAttemptContext private[scala] (
     val opts: CoreQueryOptions = Option(options).map(v => v.toCore).orNull
     FutureConversions
       .javaMonoToScalaMono(
-        internal.queryBlocking(
+        internal.queryReactive(
           statement,
           if (scope == null) null else CoreQueryContext.of(scope.bucketName, scope.name),
           opts,

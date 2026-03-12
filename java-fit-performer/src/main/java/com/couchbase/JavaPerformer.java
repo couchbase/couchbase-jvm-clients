@@ -489,8 +489,7 @@ public class JavaPerformer extends CorePerformer {
                 ClientRecordDetails result = cr.processClient(request.getClientUuid(),
                                 collection,
                                 config,
-                                null)
-                        .block();
+                                null);
 
                 response.setSuccess(true)
                         .setNumActiveClients(result.numActiveClients())

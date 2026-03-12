@@ -21,7 +21,6 @@ import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.CoreTransactionContext;
-import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 
 import java.util.Optional;
@@ -40,7 +39,7 @@ public class TestTransactionAttemptContextFactory extends TransactionAttemptCont
 
     @Override
     public CoreTransactionAttemptContext create(Core core, CoreTransactionContext overall, CoreMergedTransactionConfig config, String attemptId,
-                                                CoreTransactionsReactive parent, Optional<SpanWrapper> parentSpan) {
-        return new CoreTransactionAttemptContext(core, overall, config, attemptId, parent, parentSpan, hooks);
+                                                Optional<SpanWrapper> parentSpan) {
+        return new CoreTransactionAttemptContext(core, overall, config, attemptId, parentSpan, hooks);
     }
 }

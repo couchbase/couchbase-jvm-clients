@@ -35,7 +35,6 @@ import com.couchbase.client.core.msg.kv.CodecFlags;
 import com.couchbase.client.core.msg.kv.SubdocCommandType;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocMutateRequest;
-import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.transaction.CoreTransactionsReactive;
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
@@ -44,12 +43,11 @@ import com.couchbase.client.core.transaction.support.OptionsUtil;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.transaction.util.DebugUtil;
+import com.couchbase.client.core.transaction.util.BlockingRetryHandler;
 import com.couchbase.client.core.transaction.util.TransactionKVHandler;
 import com.couchbase.client.core.util.Bytes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.io.IOException;
@@ -108,69 +106,65 @@ public class ClientRecord {
         this.core = Objects.requireNonNull(core);
     }
 
-    public Flux<Void> removeClientFromClientRecord(String clientUuid, Set<CollectionIdentifier> cleanupSet) {
-        return removeClientFromClientRecord(clientUuid, TIMEOUT, cleanupSet);
+    public void removeClientFromClientRecord(String clientUuid, Set<CollectionIdentifier> cleanupSet) {
+        removeClientFromClientRecord(clientUuid, TIMEOUT, cleanupSet);
     }
 
     /**
      * Called on shutdown to cleanly remove a client from the client-record.
      */
-    public Flux<Void> removeClientFromClientRecord(String clientUuid, Duration timeout, Set<CollectionIdentifier> collections) {
-        return Flux.fromIterable(collections)
+    public void removeClientFromClientRecord(String clientUuid, Duration timeout, Set<CollectionIdentifier> collections) {
+        for (CollectionIdentifier collection : collections) {
+            LOGGER.info("{} removing from client record on collection {}", clientUuid, RedactableArgument.redactUser(collection));
 
-                .subscribeOn(core.context().environment().transactionsSchedulers().schedulerCleanup())
+            long start = System.nanoTime();
+            BlockingRetryHandler retry = BlockingRetryHandler.builder(BACKOFF_START, BACKOFF_END).build();
 
-                .doOnNext(v -> LOGGER.info("{} removing from client record on collection {}", clientUuid, RedactableArgument.redactUser(v)))
+            do {
+                retry.shouldRetry(false);
+                try {
+                    beforeRemoveClient(this); // testing hook
 
-                .concatMap(collection -> beforeRemoveClient(this) // testing hook
+                    // Use default timeout+durability here.  App is probably shutting down, let's not
+                    // hold it up.  Not mission critical if record doesn't get removed, it will get
+                    // cleaned up when it expires.
+                    TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
+                            false, false, false,
+                            false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
+                            Optional.empty(), OptionsUtil.createClientContext("Cleaner::removeClientFromCleanupSet"), null, Arrays.asList(
+                                    new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
+                            ));
 
-                        // Use default timeout+durability here.  App is probably shutting down, let's not
-                        // hold it up.  Not mission critical if record doesn't get removed, it will get
-                        // cleaned up when it expires.
-                        .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                                false, false, false,
-                                false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
-                                Optional.empty(), OptionsUtil.createClientContext("Cleaner::removeClientFromCleanupSet"), null, Arrays.asList(
-                                        new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid, Bytes.EMPTY_BYTE_ARRAY, false, true, false, 0)
-                                )))
-
-                        .onErrorResume(err -> {
-                            switch (ErrorClass.classify(err)) {
-                                case FAIL_DOC_NOT_FOUND:
-                                    LOGGER.info("{}/{} remove skipped as client record does not exist",
-                                            RedactableArgument.redactUser(collection), clientUuid);
-                                    return Mono.empty();
-                                case FAIL_PATH_NOT_FOUND:
-                                    LOGGER.info("{}/{} remove skipped as client record entry does not exist",
-                                            RedactableArgument.redactUser(collection), clientUuid);
-                                    return Mono.empty();
-                                default:
-                                    LOGGER.info("{}/{} got error while removing client from client record: {}",
-                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err));
-                                    return Mono.error(err);
-                            }
-                        })
-
-                        // TXNJ-96
-                        .retryWhen(Retry.any()
-                                .exponentialBackoff(BACKOFF_START, BACKOFF_END)
-                                .doOnRetry(v -> {
-                                    LOGGER.info("{}/{} retrying removing client from record on error {}",
-                                            RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(v.exception()));
-                                })
-                                .toReactorRetry())
-
-                        .timeout(timeout)
-
-                        .doOnNext(v -> {
-                            LOGGER.info("{}/{} removed from client record",
+                    LOGGER.info("{}/{} removed from client record",
+                            RedactableArgument.redactUser(collection), clientUuid);
+                    break;
+                } catch (Throwable err) {
+                    switch (ErrorClass.classify(err)) {
+                        case FAIL_DOC_NOT_FOUND:
+                            LOGGER.info("{}/{} remove skipped as client record does not exist",
                                     RedactableArgument.redactUser(collection), clientUuid);
-                        })
+                            break;
+                        case FAIL_PATH_NOT_FOUND:
+                            LOGGER.info("{}/{} remove skipped as client record entry does not exist",
+                                    RedactableArgument.redactUser(collection), clientUuid);
+                            break;
+                        default:
+                            LOGGER.info("{}/{} got error while removing client from client record: {}",
+                                    RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err));
 
-                        .doOnError(err -> {
-                            LOGGER.info("got error while removing client record '{}'", String.valueOf(err));
-                        })
-                        .then());
+                            if (Duration.ofNanos(System.nanoTime() - start).compareTo(timeout) > 0) {
+                                LOGGER.info("got error while removing client record '{}'", String.valueOf(err));
+                                throw err;
+                            }
+
+                            LOGGER.info("{}/{} retrying removing client from record on error {}",
+                                    RedactableArgument.redactUser(collection), clientUuid, DebugUtil.dbg(err));
+                            retry.sleepForNextBackoffAndSetShouldRetry();
+                            break;
+                    }
+                }
+            } while (retry.shouldRetry());
+        }
     }
 
     private Duration mutatingTimeout() {
@@ -246,7 +240,7 @@ public class ClientRecord {
         }
     }
 
-    public Mono<CoreSubdocGetResult> getClientRecord(CollectionIdentifier collection, @Nullable SpanWrapper span) {
+    public CoreSubdocGetResult getClientRecord(CollectionIdentifier collection, @Nullable SpanWrapper span) {
         return TransactionKVHandler.lookupIn(core, collection, CLIENT_RECORD_DOC_ID, nonMutatingTimeout(), false, OptionsUtil.createClientContext("ClientRecord::getClientRecord"), span,
                 false,
                 Arrays.asList(
@@ -267,168 +261,153 @@ public class ClientRecord {
      * Handles all the logic to do with a client checking the client record, adding or updating itself, pruning expired
      * clients, and finding which ATRs it should be checking.
      */
-    public Mono<ClientRecordDetails> processClient(String clientUuid,
-                                                   CollectionIdentifier collection,
-                                                   CoreTransactionsConfig config,
-                                                   @Nullable SpanWrapper pspan) {
-        return Mono.defer(() -> {
-            SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, TracingIdentifiers.TRANSACTION_CLEANUP_CLIENT, pspan);
-            tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_CLIENT_ID, span.span(), clientUuid);
+    public ClientRecordDetails processClient(String clientUuid,
+                                             CollectionIdentifier collection,
+                                             CoreTransactionsConfig config,
+                                             @Nullable SpanWrapper pspan) {
+        SpanWrapper span = SpanWrapperUtil.createOp(null, tracer(), collection, CLIENT_RECORD_DOC_ID, TracingIdentifiers.TRANSACTION_CLEANUP_CLIENT, pspan);
+        tracingDecorator().provideAttr(TracingAttribute.TRANSACTION_CLEANUP_CLIENT_ID, span.span(), clientUuid);
 
-            String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
-
-            return beforeGetRecord(this)
-
-                    .then(getClientRecord(collection, span))
-
-                    .flatMap(clientRecord -> {
-                        ClientRecordDetails cr = parseClientRecord(clientRecord, clientUuid);
-
-                        LOGGER.debug("{} found {} existing clients including this ({} active, {} " +
-                                        "expired), included this={}, index of this={}, override={enabled={},expires={},now={},active={}}",
-                                bp, cr.numExistingClients(), cr.numActiveClients(), cr.numExpiredClients(),
-                                !cr.clientIsNew(), cr.indexOfThisClient(),
-                                cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive());
-
-                        if (cr.overrideActive()) {
-                            // Nothing to do: an external process has taken over cleanup, for now.
-                            return Mono.just(cr);
-                        } else {
-                            ArrayList<SubdocMutateRequest.Command> specs = new ArrayList<>();
-
-                            String field = FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid;
-
-                            String host = "unavailable";
-                            try {
-                                host = InetAddress.getLocalHost().getHostAddress();
-                            } catch (Throwable e) {
-                            }
-
-                            long pid = 0;
-                            String name = ManagementFactory.getRuntimeMXBean().getName();
-                            try {
-                                pid = Long.parseLong(name.split("@")[0]);
-                            } catch (Throwable err) {
-                                LOGGER.debug("Discarding error {} while trying to parse PID {}", err.getMessage(), name);
-                            }
-
-                            // Either update existing record or add new one
-                            byte[] toWrite = Mapper.encodeAsBytes(Mapper.createObjectNode()
-                                    .put(FIELD_EXPIRES, config.cleanupConfig().cleanupWindow().toMillis() + SAFETY_MARGIN_EXPIRY_MILLIS)
-                                    .put(FIELD_NUM_ATRS, config.numAtrs())
-                                    .put(FIELD_IMPLEMENTATION, "java")
-                                    .put(FIELD_VERSION, CoreTransactionsReactive.class.getPackage().getImplementationVersion())
-                                    .put(FIELD_HOST, host)
-                                    .put(FIELD_PROCESS_ID, pid));
-                            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field, toWrite, true, true, false, 0));
-                            try {
-                                specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field + "." + FIELD_HEARTBEAT, Mapper.writer().writeValueAsBytes("${Mutation.CAS}"), false, true, true, 1));
-                            } catch (JsonProcessingException e) {
-                                throw new EncodingFailureException(e);
-                            }
-
-                            // Subdoc supports a max of 16 fields, fill up the rest with removing expired clients
-                            // Any remaining expired clients will be handled on another run or by another client
-                            cr.expiredClientIds().stream()
-                                    .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)
-                                    .forEach(expiredClientId -> {
-                                        LOGGER.debug("{} removing expired client {}",
-                                                bp, expiredClientId);
-
-                                        specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + expiredClientId, null, false, true, false, specs.size()));
-                                    });
-
-                            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, specs.size()));
-
-                            return beforeUpdateRecord(this) // testing hook
-
-                                    // Use default timeout+durability, as this update is not mission critical.
-                                    .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                                            false, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
-                                            Optional.empty(), OptionsUtil.createClientContext("ClientRecord::processClient"), span, specs))
-
-                                    .thenReturn(cr);
-                        }
-                    })
-
-                    .onErrorResume(err -> {
-                        ErrorClass ec = ErrorClass.classify(err);
-
-                        LOGGER.debug("{} got error processing client record: {}", bp, DebugUtil.dbg(err));
-
-                        if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
-                            return createClientRecord(clientUuid, collection, span)
-                                    .then(processClient(clientUuid, collection, config, pspan));
-                        } else if ((err instanceof CouchbaseException)
-                                && ((CouchbaseException) err).context() != null
-                                && ((CouchbaseException) err).context().responseStatus() == ResponseStatus.NO_ACCESS) {
-                            // This will catch both read and write access failures
-                            // These aren't logged as it'll get spammy, since the thread is tried every periodically
-                            return Mono.error(new AccessErrorException());
-                        } else {
-                            // Any other errors, propagate through for perBucketThread to handle
-                            return Mono.error(err);
-                        }
-                    })
-
-                    .doOnError(err -> span.finish(err))
-                    .doOnTerminate(() -> span.finish());
-        });
-    }
-
-    private Mono<Void> createClientRecord(String clientUuid,
-                                          CollectionIdentifier collection,
-                                          SpanWrapper pspan) {
         String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
 
-        return beforeCreateRecord(this) // testing hook
+        try {
+            beforeGetRecord(this);
 
-                .then(TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
-                        true, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
-                        Optional.empty(), OptionsUtil.createClientContext("ClientRecord::createClientRecord"), pspan, Arrays.asList(
-                                new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, FIELD_RECORDS + "." + FIELD_CLIENTS, "{}".getBytes(StandardCharsets.UTF_8), false, true, false, 0),
-                                new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 1))))
+            CoreSubdocGetResult clientRecord = getClientRecord(collection, span);
+            ClientRecordDetails cr = parseClientRecord(clientRecord, clientUuid);
 
-                .doOnSubscribe(v -> {
-                    LOGGER.debug("{} found client record does not exist, creating and retrying", bp);
-                })
+            LOGGER.debug("{} found {} existing clients including this ({} active, {} " +
+                            "expired), included this={}, index of this={}, override={enabled={},expires={},now={},active={}}",
+                    bp, cr.numExistingClients(), cr.numActiveClients(), cr.numExpiredClients(),
+                    !cr.clientIsNew(), cr.indexOfThisClient(),
+                    cr.overrideEnabled(), cr.overrideExpires(), cr.casNow(), cr.overrideActive());
 
-                .onErrorResume(e -> {
-                    if (ErrorClass.FAIL_DOC_ALREADY_EXISTS == ErrorClass.classify(e)) {
-                        LOGGER.debug("{} found client record exists after retry, another client " +
-                                "must have created it, continuing", bp);
-                        return Mono.empty();
-                    } else if ((e instanceof CouchbaseException)
-                            && ((CouchbaseException) e).context().responseStatus() == ResponseStatus.NO_ACCESS) {
-                        return Mono.error(new AccessErrorException());
-                    } else {
-                        LOGGER.info("got error while creating client record '{}'", String.valueOf(e));
-                        return Mono.error(e);
-                    }
-                })
+            if (cr.overrideActive()) {
+                // Nothing to do: an external process has taken over cleanup, for now.
+                return cr;
+            }
 
-                .then();
+            ArrayList<SubdocMutateRequest.Command> specs = new ArrayList<>();
+
+            String field = FIELD_RECORDS + "." + FIELD_CLIENTS + "." + clientUuid;
+
+            String host = "unavailable";
+            try {
+                host = InetAddress.getLocalHost().getHostAddress();
+            } catch (Throwable e) {
+            }
+
+            long pid = 0;
+            String name = ManagementFactory.getRuntimeMXBean().getName();
+            try {
+                pid = Long.parseLong(name.split("@")[0]);
+            } catch (Throwable err) {
+                LOGGER.debug("Discarding error {} while trying to parse PID {}", err.getMessage(), name);
+            }
+
+            // Either update existing record or add new one
+            byte[] toWrite = Mapper.encodeAsBytes(Mapper.createObjectNode()
+                    .put(FIELD_EXPIRES, config.cleanupConfig().cleanupWindow().toMillis() + SAFETY_MARGIN_EXPIRY_MILLIS)
+                    .put(FIELD_NUM_ATRS, config.numAtrs())
+                    .put(FIELD_IMPLEMENTATION, "java")
+                    .put(FIELD_VERSION, CoreTransactionsReactive.class.getPackage().getImplementationVersion())
+                    .put(FIELD_HOST, host)
+                    .put(FIELD_PROCESS_ID, pid));
+            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field, toWrite, true, true, false, 0));
+            try {
+                specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DICT_UPSERT, field + "." + FIELD_HEARTBEAT, Mapper.writer().writeValueAsBytes("${Mutation.CAS}"), false, true, true, 1));
+            } catch (JsonProcessingException e) {
+                throw new EncodingFailureException(e);
+            }
+
+            // Subdoc supports a max of 16 fields, fill up the rest with removing expired clients
+            // Any remaining expired clients will be handled on another run or by another client
+            cr.expiredClientIds().stream()
+                    .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)
+                    .forEach(expiredClientId -> {
+                        LOGGER.debug("{} removing expired client {}",
+                                bp, expiredClientId);
+
+                        specs.add(new SubdocMutateRequest.Command(SubdocCommandType.DELETE, FIELD_RECORDS + "." + FIELD_CLIENTS + "." + expiredClientId, null, false, true, false, specs.size()));
+                    });
+
+            specs.add(new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, specs.size()));
+
+            beforeUpdateRecord(this); // testing hook
+
+            // Use default timeout+durability, as this update is not mission critical.
+            TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
+                    false, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
+                    Optional.empty(), OptionsUtil.createClientContext("ClientRecord::processClient"), span, specs);
+
+            return cr;
+        } catch (Throwable err) {
+            ErrorClass ec = ErrorClass.classify(err);
+            span.recordException(err);
+
+            LOGGER.debug("{} got error processing client record: {}", bp, DebugUtil.dbg(err));
+
+            if (ec == ErrorClass.FAIL_DOC_NOT_FOUND) {
+                createClientRecord(clientUuid, collection, span);
+                return processClient(clientUuid, collection, config, pspan);
+            } else if ((err instanceof CouchbaseException)
+                    && ((CouchbaseException) err).context() != null
+                    && ((CouchbaseException) err).context().responseStatus() == ResponseStatus.NO_ACCESS) {
+                // This will catch both read and write access failures
+                // These aren't logged as it'll get spammy, since the thread is tried every periodically
+                throw new AccessErrorException();
+            } else {
+                // Any other errors, propagate through for perBucketThread to handle
+                throw err;
+            }
+        } finally {
+            span.finish();
+        }
+    }
+
+    private void createClientRecord(String clientUuid,
+                                    CollectionIdentifier collection,
+                                    SpanWrapper pspan) {
+        String bp = collection.bucket() + "/" + collection.scope().orElse("-") + "/" + collection.collection().orElse("-") + "/" + clientUuid;
+
+        beforeCreateRecord(this); // testing hook
+
+        LOGGER.debug("{} found client record does not exist, creating and retrying", bp);
+
+        try {
+            TransactionKVHandler.mutateIn(core, collection, CLIENT_RECORD_DOC_ID, mutatingTimeout(),
+                    true, false, false, false, false, 0, CodecFlags.BINARY_COMMON_FLAGS,
+                    Optional.empty(), OptionsUtil.createClientContext("ClientRecord::createClientRecord"), pspan, Arrays.asList(
+                            new SubdocMutateRequest.Command(SubdocCommandType.DICT_ADD, FIELD_RECORDS + "." + FIELD_CLIENTS, "{}".getBytes(StandardCharsets.UTF_8), false, true, false, 0),
+                            new SubdocMutateRequest.Command(SubdocCommandType.SET_DOC, "", new byte[]{0}, false, false, false, 1)));
+        } catch (Throwable e) {
+            if (ErrorClass.FAIL_DOC_ALREADY_EXISTS == ErrorClass.classify(e)) {
+                LOGGER.debug("{} found client record exists after retry, another client " +
+                        "must have created it, continuing", bp);
+            } else if ((e instanceof CouchbaseException)
+                    && ((CouchbaseException) e).context().responseStatus() == ResponseStatus.NO_ACCESS) {
+                throw new AccessErrorException();
+            } else {
+                LOGGER.info("got error while creating client record '{}'", String.valueOf(e));
+                throw e;
+            }
+        }
     }
 
     // Testing hooks
-    protected Mono<Integer> beforeCreateRecord(ClientRecord self) {
-        return Mono.just(1);
+    protected void beforeCreateRecord(ClientRecord self) {
     }
 
-    protected Mono<Integer> beforeRemoveClient(ClientRecord self) {
-        return Mono.just(1);
+    protected void beforeRemoveClient(ClientRecord self) {
     }
 
     @Deprecated // No longer called as of TXNJ-274
-    protected Mono<Integer> beforeUpdateCAS(ClientRecord self) {
-        return Mono.just(1);
+    protected void beforeUpdateCAS(ClientRecord self) {
     }
 
-    protected Mono<Integer> beforeGetRecord(ClientRecord self) {
-        return Mono.just(1);
+    protected void beforeGetRecord(ClientRecord self) {
     }
 
-    protected Mono<Integer> beforeUpdateRecord(ClientRecord self) {
-        return Mono.just(1);
+    protected void beforeUpdateRecord(ClientRecord self) {
     }
 }

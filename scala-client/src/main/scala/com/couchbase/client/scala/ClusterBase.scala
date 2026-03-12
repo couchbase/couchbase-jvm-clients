@@ -20,14 +20,10 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, JwtAuthenticator, PasswordAuthenticator}
-import com.couchbase.client.core.transaction.CoreTransactionsReactive
+import com.couchbase.client.core.transaction.{CoreTransactions}
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
-import com.couchbase.client.scala.diagnostics.{
-  DiagnosticsOptions,
-  PingOptions,
-  WaitUntilReadyOptions
-}
+import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
 import com.couchbase.client.scala.search.SearchOptions
@@ -64,7 +60,7 @@ trait ClusterBase { this: Cluster =>
   val async = new AsyncCluster(environment, authenticator, connectionString)
 
   lazy val transactions = new Transactions(
-    new CoreTransactionsReactive(
+    new CoreTransactions(
       async.core,
       env.transactionsConfig.map(v => v.toCore).getOrElse(TransactionsConfig().toCore)
     ),
