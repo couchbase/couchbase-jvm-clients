@@ -99,13 +99,15 @@ trait AsyncScopeBase { this: AsyncScope =>
     */
   def query(statement: String, options: QueryOptions = QueryOptions()): Future[QueryResult] = {
     convert(
-      queryOps.queryAsync(
-        statement,
-        options.toCore,
-        CoreQueryContext.of(bucketName, name),
-        null,
-        null
-      )
-    ).map(result => convert(result))
+      queryOps
+        .queryAsync(
+          statement,
+          options.toCore,
+          CoreQueryContext.of(bucketName, name),
+          null,
+          null
+        )
+        .map[QueryResult](result => convert(result))
+    )
   }
 }

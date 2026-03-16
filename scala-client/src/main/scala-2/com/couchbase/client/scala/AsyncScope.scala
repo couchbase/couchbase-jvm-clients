@@ -135,8 +135,11 @@ class AsyncScope private[scala] (
     request.toCore match {
       case Failure(err) => Future.failed(err)
       case Success(req) =>
-        convert(searchOps.searchAsync(indexName, req, options.toCore))
-          .map(result => SearchResult(result))
+        convert(
+          searchOps
+            .searchAsync(indexName, req, options.toCore)
+            .map[SearchResult](result => SearchResult(result))
+        )
     }
   }
 }

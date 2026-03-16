@@ -107,8 +107,11 @@ class AsyncCluster(
     *         `Failure`
     */
   def query(statement: String, options: QueryOptions): Future[QueryResult] = {
-    convert(queryOps.queryAsync(statement, options.toCore, null, null, null))
-      .map(result => convert(result))
+    convert(
+      queryOps
+        .queryAsync(statement, options.toCore, null, null, null)
+        .map[QueryResult](result => convert(result))
+    )
   }
 
   /** Performs a N1QL query against the cluster.
@@ -136,18 +139,20 @@ class AsyncCluster(
       adhoc: Boolean = true
   ): Future[QueryResult] = {
     convert(
-      queryOps.queryAsync(
-        statement,
-        QueryOptions()
-          .adhoc(adhoc)
-          .timeout(timeout)
-          .parameters(parameters)
-          .toCore,
-        null,
-        null,
-        null
-      )
-    ).map(result => convert(result))
+      queryOps
+        .queryAsync(
+          statement,
+          QueryOptions()
+            .adhoc(adhoc)
+            .timeout(timeout)
+            .parameters(parameters)
+            .toCore,
+          null,
+          null,
+          null
+        )
+        .map[QueryResult](result => convert(result))
+    )
   }
 
   /** Performs an Analytics query against the cluster.
@@ -243,8 +248,11 @@ class AsyncCluster(
     request.toCore match {
       case Failure(err) => Future.failed(err)
       case Success(req) =>
-        convert(searchOps.searchAsync(indexName, req, options.toCore))
-          .map(result => SearchResult(result))
+        convert(
+          searchOps
+            .searchAsync(indexName, req, options.toCore)
+            .map[SearchResult](result => SearchResult(result))
+        )
     }
   }
 
@@ -269,8 +277,11 @@ class AsyncCluster(
       query: SearchQuery,
       options: SearchOptions
   ): Future[SearchResult] = {
-    convert(searchOps.searchQueryAsync(indexName, query.toCore, options.toCore))
-      .map(result => SearchResult(result))
+    convert(
+      searchOps
+        .searchQueryAsync(indexName, query.toCore, options.toCore)
+        .map[SearchResult](result => SearchResult(result))
+    )
   }
 
   /** Performs a Full Text Search (FTS) query against the cluster.

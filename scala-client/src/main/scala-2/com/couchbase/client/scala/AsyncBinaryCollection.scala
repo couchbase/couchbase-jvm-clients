@@ -73,14 +73,16 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       options: AppendOptions
   ): Future[MutationResult] = {
     convert(
-      kvBinaryOps.appendAsync(
-        id,
-        content,
-        convert(options),
-        options.cas,
-        convert(options.durability)
-      )
-    ).map(result => convert(result))
+      kvBinaryOps
+        .appendAsync(
+          id,
+          content,
+          convert(options),
+          options.cas,
+          convert(options.durability)
+        )
+        .map[MutationResult](result => convert(result))
+    )
   }
 
   /** Add bytes to the beginning of a Couchbase binary document.
@@ -114,14 +116,16 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       options: PrependOptions
   ): Future[MutationResult] = {
     convert(
-      kvBinaryOps.prependAsync(
-        id,
-        content,
-        convert(options),
-        options.cas,
-        convert(options.durability)
-      )
-    ).map(result => convert(result))
+      kvBinaryOps
+        .prependAsync(
+          id,
+          content,
+          convert(options),
+          options.cas,
+          convert(options.durability)
+        )
+        .map[MutationResult](result => convert(result))
+    )
   }
 
   /** Increment a Couchbase 'counter' document.
@@ -152,15 +156,17 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       options: IncrementOptions
   ): Future[CounterResult] = {
     convert(
-      kvBinaryOps.incrementAsync(
-        id,
-        convert(options),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-        delta,
-        options.initial.map(v => Long.box(v)).asJava,
-        convert(options.durability)
-      )
-    ).map(result => convert(result))
+      kvBinaryOps
+        .incrementAsync(
+          id,
+          convert(options),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+          delta,
+          options.initial.map(v => Long.box(v)).asJava,
+          convert(options.durability)
+        )
+        .map[CounterResult](result => convert(result))
+    )
   }
 
   /** Decrement a Couchbase 'counter' document.
@@ -191,14 +197,16 @@ class AsyncBinaryCollection(private[scala] val async: AsyncCollection) {
       options: DecrementOptions
   ): Future[CounterResult] = {
     convert(
-      kvBinaryOps.decrementAsync(
-        id,
-        convert(options),
-        ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
-        delta,
-        options.initial.map(v => Long.box(v)).asJava,
-        convert(options.durability)
-      )
-    ).map(result => convert(result))
+      kvBinaryOps
+        .decrementAsync(
+          id,
+          convert(options),
+          ExpiryUtil.expiryActual(options.expiry, options.expiryTime),
+          delta,
+          options.initial.map(v => Long.box(v)).asJava,
+          convert(options.durability)
+        )
+        .map[CounterResult](result => convert(result))
+    )
   }
 }
