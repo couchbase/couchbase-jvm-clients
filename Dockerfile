@@ -1,24 +1,18 @@
-# A Docker image for the Couchbase SDK test performer for Kotlin.
+# A Docker image for the JVM SDK FIT performers.
 #
-# NOTE: This is a "legacy" Dockerfile for the buildPerformer script in jenkins-sdk.
-#       New workflows should use the unified Dockerfile at the project root.
+# Build from project root with:
+#   docker build . --build-arg SDK=<sdk> -t performer
 #
-# To build:
-#   1. Uncomment the fit-performer modules in the parent POM.
-#   2. cd to the directory containing couchbase-jvm-clients, then run:
-#        docker build . -f couchbase-jvm-clients/java-fit-performer/Dockerfile
-#
-# To run:
-#   docker run -e LOG_LEVEL=DEBUG -p 8060:8060
-
+# Run with:
+#   docker run -e LOG_LEVEL=DEBUG -p 8060:8060 performer
 
 # Valid SDK values: java, scala, kotlin, columnar-java
-ARG SDK=kotlin
+ARG SDK=java
 
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 WORKDIR /app
-COPY couchbase-jvm-clients couchbase-jvm-clients/
+COPY . couchbase-jvm-clients/
 
 WORKDIR /app/couchbase-jvm-clients
 ARG MVN_FLAGS="--batch-mode --no-transfer-progress -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip"
@@ -28,7 +22,7 @@ RUN mvn $MVN_FLAGS -f tracing-opentelemetry-deps/pom.xml clean install
 
 # Defer declaring the ARG until first use, so the previous layers can be cached between SDKs
 ARG SDK
-RUN mvn $MVN_FLAGS package --projects ${SDK}-fit-performer --also-make
+RUN mvn $MVN_FLAGS package -Pfit --projects ${SDK}-fit-performer --also-make
 
 # Multistage build to keep things small
 FROM eclipse-temurin:21-jre-ubi10-minimal

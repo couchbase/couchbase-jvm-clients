@@ -75,12 +75,30 @@ $ ./mvnw clean test -fae
 #### Testing with FIT
 (This section is for internal consumption for Couchbase developers.)
 
-Increasingly the SDK is tested internally with Couchbase's FIT suite.  
-Each SDK has its own FIT 'performer' - java-fit-performer, scala-fit-performer and kotlin-fit-performer.
-They are not included in the build by default as they require a) JDK 17 and b) the fit-grpc library (built separately).
+Each SDK has its own FIT "performer" module (for example, `java-fit-performer`).
+These modules are not included in the build by default as they require a bit of setup.
 
-To use a performer, uncomment the lines in the top-level pom.xml after 'Uncomment next lines to include the FIT performers', and reload the Maven config.
-Then run one of the performers in an IDE.
+Tell your IDE about the performer modules by activating the `fit` Maven profile.
+Reload / sync the Maven project configuration for the change to take effect.
+See [Activating a Maven profile in IntelliJ IDEA](https://www.jetbrains.com/help/idea/work-with-maven-profiles.html#activate_maven_profiles).
+
+Before each FIT testing session, generate (or refresh) the FIT protocol source code by right-clicking on the `FIT Protocol (gRPC + Protobuf)` module in the Maven tool window and selecting "Generate Sources and Update Folders".
+Alternatively, if you prefer the command line:
+
+    cd fit-performer-protocol
+    ../mvnw clean protobuf:generate
+
+Now you can run or debug `JavaPerfomer` / `ScalaPerformer` / `KotlinPerformer` from within your IDE like any other class.
+
+##### Updating to the latest protocol
+
+The Protobuf files in `fit-performer-protocol` are manually mirrored from  `couchbaselabs/fit-protocol`.
+To update the local mirror:
+
+    cd fit-performer-protcol
+    ./scripts/update-protobuf.sh
+
+Then review and commit any changes.
 
 ### Branches & Tags
 

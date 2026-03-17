@@ -1,0 +1,6 @@
+**/Dockerfile*
+**/*.dockerignore
+**/.idea
+**/target
+
+# Not ignoring .git -- the build script wants to know the current commit hash.

@@ -236,8 +236,10 @@
         <module>metrics-opentelemetry</module>
         <module>metrics-micrometer</module>
         <module>columnar-java-client</module>
-        <!-- Uncomment next lines to include the FIT performers.  They are not included by default as they require
-        a) an externally built lib and b) JDK 17 -->
+        <!-- To include FIT performer modules, activate the `fit` profile by adding `-Pfit` to the Maven command line. -->
+        <!-- These commented-out module definitions are to support the buildPerformer script in the jenkins-sdk repo,
+             which un-comments every module whose name contains "fit-performer". -->
+<!--         <module>fit-performer-protocol</module>-->
 <!--         <module>core-fit-performer</module>-->
 <!--         <module>java-fit-performer</module>-->
 <!--         <module>kotlin-fit-performer</module>-->
@@ -453,6 +455,18 @@
     </dependencies>
 
     <profiles>
+        <profile>
+            <id>fit</id>
+            <modules>
+                <module>fit-performer-protocol</module>
+                <module>core-fit-performer</module>
+                <module>java-fit-performer</module>
+                <module>kotlin-fit-performer</module>
+                <module>scala-fit-performer</module>
+                <module>columnar-fit-performer-shared</module>
+                <module>columnar-java-fit-performer</module>
+            </modules>
+        </profile>
         <profile>
             <id>scala-2.13</id>
             <properties>

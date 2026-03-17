@@ -1,10 +1,12 @@
 # A Docker image for the Couchbase Columnar SDK test performer for Java.
-# To build:
 #
-# 1. Uncomment the fit-performer modules in the parent POM.
-# 2. Ensure `transactions-fit-performer` is present in the same directory as `couchbase-jvm-clients`.
-# 3. From that parent directory (containing both projects), run:
-#      docker build . -f couchbase-jvm-clients/columnar-java-fit-performer/Dockerfile
+# NOTE: This is a "legacy" Dockerfile for the buildPerformer script in jenkins-sdk.
+#       New workflows should use the unified Dockerfile at the project root.
+#
+# To build:
+#   1. Uncomment the fit-performer modules in the parent POM.
+#   2. cd to the directory containing couchbase-jvm-clients, then run:
+#        docker build . -f couchbase-jvm-clients/java-fit-performer/Dockerfile
 #
 # To run:
 #   docker run -e LOG_LEVEL=DEBUG -p 8060:8060
@@ -16,16 +18,10 @@ ARG SDK=columnar-java
 FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 WORKDIR /app
-
-COPY transactions-fit-performer transactions-fit-performer/
 COPY couchbase-jvm-clients couchbase-jvm-clients/
 
-ARG MVN_FLAGS="--batch-mode --no-transfer-progress -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip"
-
-WORKDIR /app/transactions-fit-performer
-RUN mvn $MVN_FLAGS --projects gRPC/jvm --also-make clean install
-
 WORKDIR /app/couchbase-jvm-clients
+ARG MVN_FLAGS="--batch-mode --no-transfer-progress -Dcheckstyle.skip -Dmaven.test.skip -Dmaven.javadoc.skip"
 RUN mvn $MVN_FLAGS -f protostellar/pom.xml clean install
 RUN mvn $MVN_FLAGS -f core-io-deps/pom.xml clean install
 RUN mvn $MVN_FLAGS -f tracing-opentelemetry-deps/pom.xml clean install

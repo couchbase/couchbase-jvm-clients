@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+import "columnar.caps.proto";
+import "columnar.query.proto";
+import "columnar.cluster_management.proto";
+import "columnar.result.proto";
+import "columnar.errors.proto";
+import "shared.echo.proto";
+import "columnar.serialization.proto";
+
+package fit.columnar;
+option java_package = "fit.columnar";
+option java_multiple_files = true;
+option go_package = "github.com/couchbaselabs/transactions-fit-performer/protocol";
+option csharp_namespace = "Couchbase.Grpc.Protocol.Columnar";
+
+// All RPCs related to the Columnar SDK.
+service ColumnarService {
+  // Performer management.
+  rpc FetchPerformerCaps (FetchPerformerCapsRequest) returns (FetchPerformerCapsResponse);
+  rpc Echo (protocol.shared.EchoRequest) returns (protocol.shared.EchoResponse);
+
+  // Columnar Cluster resource management.
+  rpc ClusterNewInstance (ClusterNewInstanceRequest) returns (EmptyResultOrFailureResponse);
+  rpc ClusterClose (ClusterCloseRequest) returns (EmptyResultOrFailureResponse);
+  rpc CloseAllClusters (CloseAllColumnarClustersRequest) returns (EmptyResultOrFailureResponse);
+}
+
+// To better permit DRY, instance.executeQuery() and scope.executeQuery() are here rather than in their respective services.
+service ColumnarCrossService {
+  rpc ExecuteQuery (ExecuteQueryRequest) returns (ExecuteQueryResponse);
+
+  // Get the QueryResult from the executeQuery()
+  rpc QueryResult (QueryResultRequest) returns (EmptyResultOrFailureResponse);
+  rpc QueryRow (QueryRowRequest) returns (QueryRowResponse);
+  rpc QueryCancel (QueryCancelRequest) returns (EmptyResultOrFailureResponse);
+  rpc QueryMetadata (QueryMetadataRequest) returns (QueryResultMetadataResponse);
+
+  rpc CloseQueryResult (CloseQueryResultRequest) returns (EmptyResultOrFailureResponse);
+  rpc CloseAllQueryResults (CloseAllQueryResultsRequest) returns (EmptyResultOrFailureResponse);
+}

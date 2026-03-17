@@ -16,13 +16,11 @@
     <name>FIT Performer (Core)</name>
 
     <dependencies>
-        <!-- This must be built externally -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
-            <artifactId>fit-grpc</artifactId>
+            <artifactId>fit-performer-protocol</artifactId>
             <!-- The SNAPSHOT here should not be removed. This package is internal to FIT and will never release -->
             <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
 
         <!-- For parsing PEM-encoded client certificate private key -->
