@@ -27,6 +27,7 @@ import com.couchbase.client.scala.kv.GetReplicaResult
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.{
+  AbsentDocumentStrategy,
   CoreExpiry,
   CoreReadPreference,
   CoreSubdocGetCommand,
@@ -99,7 +100,15 @@ class Collection(
       id: String,
       timeout: Duration = kvReadTimeout
   ): Try[GetResult] =
-    Try(kvOps.getBlocking(makeCommonOptions(timeout), id, AsyncCollectionBase.EmptyList, false))
+    Try(
+      kvOps.getBlocking(
+        makeCommonOptions(timeout),
+        id,
+        AsyncCollectionBase.EmptyList,
+        false,
+        AbsentDocumentStrategy.THROW_EXCEPTION
+      )
+    )
       .map(result => convert(result, async.environment, None))
 
   /** Fetches a full document from this collection.
@@ -115,7 +124,15 @@ class Collection(
       id: String,
       options: GetOptions
   ): Try[GetResult] =
-    Try(kvOps.getBlocking(convert(options), id, options.project.asJava, options.withExpiry))
+    Try(
+      kvOps.getBlocking(
+        convert(options),
+        id,
+        options.project.asJava,
+        options.withExpiry,
+        AbsentDocumentStrategy.THROW_EXCEPTION
+      )
+    )
       .map(result => convert(result, async.environment, options.transcoder))
 
   /** Inserts a full document into this collection, if it does not exist already.

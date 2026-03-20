@@ -100,12 +100,14 @@ public class CoreProtostellarAccessorsStreaming {
               ret.completeExceptionally(err);
             }
           }
-        } else {
+        } else if (behaviour.exception() != null) {
           if (!request.completed()) {
             // The completed() check is just a sanity check - it shouldn't be possible to be retrying an operation that has already completed.
             request.raisedResponseToUser(behaviour.exception());
             ret.completeExceptionally(behaviour.exception());
           }
+        } else {
+          throw new IllegalStateException("Internal bug: nullable returns are not supported on streaming paths");
         }
       }
 
@@ -164,12 +166,14 @@ public class CoreProtostellarAccessorsStreaming {
               ret.tryEmitError(err).orThrow();
             }
           }
-        } else {
+        } else if (behaviour.exception() != null) {
           if (!request.completed()) {
             // The completed() check is just a sanity check - it shouldn't be possible to be retrying an operation that has already completed.
             request.raisedResponseToUser(behaviour.exception());
             ret.tryEmitError(behaviour.exception()).orThrow();
           }
+        } else {
+          throw new IllegalStateException("Internal bug: nullable returns are not supported on streaming paths");
         }
       }
 

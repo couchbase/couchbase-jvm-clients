@@ -17,10 +17,10 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
@@ -33,6 +33,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 
+import static com.couchbase.client.core.api.kv.AbsentDocumentStrategy.THROW_EXCEPTION;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
@@ -49,14 +50,23 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
  */
 public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
+  private final AbsentDocumentStrategy absentDocumentStrategy;
+
   public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
                     final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
                     final RequestSpan span) {
+    this(key, timeout, ctx, collectionIdentifier, retryStrategy, span, THROW_EXCEPTION);
+  }
+
+  public GetRequest(final String key, final Duration timeout, final CoreContext ctx,
+                    final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy,
+                    final RequestSpan span, final AbsentDocumentStrategy absentDocumentStrategy) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
+    this.absentDocumentStrategy = absentDocumentStrategy;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
       TracingDecorator tip = ctx.coreResources().tracingDecorator();
-      tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, TracingIdentifiers.SPAN_REQUEST_KV_GET);
+      tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, absentDocumentStrategy.spanName);
     }
   }
 
@@ -93,7 +103,7 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   @Override
   public String name() {
-    return "get";
+    return absentDocumentStrategy == THROW_EXCEPTION ? "get" : "get_or_null";
   }
 
 }

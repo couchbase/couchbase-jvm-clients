@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
@@ -65,6 +66,7 @@ import com.couchbase.client.core.msg.kv.GetAndLockRequest;
 import com.couchbase.client.core.msg.kv.GetAndTouchRequest;
 import com.couchbase.client.core.msg.kv.GetMetaRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
+import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.InsertRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RemoveRequest;
@@ -118,6 +120,7 @@ import static com.couchbase.client.core.classic.ClassicExpiryHelper.encode;
 import static com.couchbase.client.core.classic.ClassicHelper.maybeWrapWithLegacyDurability;
 import static com.couchbase.client.core.classic.ClassicHelper.setClientContext;
 import static com.couchbase.client.core.error.DefaultErrorUtil.keyValueStatusToException;
+import com.couchbase.client.core.msg.ResponseStatus;
 import static com.couchbase.client.core.msg.ResponseStatus.EXISTS;
 import static com.couchbase.client.core.msg.ResponseStatus.LOCKED;
 import static com.couchbase.client.core.msg.ResponseStatus.NOT_FOUND;
@@ -152,29 +155,40 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreAsyncResponse<CoreGetResult> getAsync(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry) {
+  public CoreAsyncResponse<CoreGetResult> getAsync(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry, AbsentDocumentStrategy absentDocumentStrategy) {
     validateGetParams(common, key, projections, withExpiry);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
 
     if (!withExpiry && projections.isEmpty()) {
-      RequestSpan span = span(common, TracingIdentifiers.SPAN_REQUEST_KV_GET);
-      GetRequest request = new GetRequest(key, timeout, ctx, collectionIdentifier, retryStrategy, span);
+      RequestSpan span = span(common, absentDocumentStrategy.spanName);
+      GetRequest request = new GetRequest(key, timeout, ctx, collectionIdentifier, retryStrategy, span, absentDocumentStrategy);
       setClientContext(request, common);
 
       return newAsyncResponse(
           request,
-          it -> new CoreGetResult(
-              CoreKvResponseMetadata.from(it.flexibleExtras()),
-              keyspace,
-              key,
-              it.content(),
-              it.flags(),
-              it.cas(),
-              null,
-              false
-          )
+          (KeyValueRequest<GetResponse> req, GetResponse res) -> {
+            if (isDocumentAbsent(res.status()) && absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL) {
+              return;
+            }
+            throw keyValueStatusToException(request, res);
+      },
+          it -> {
+            if (isDocumentAbsent(it.status()) && absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL) {
+              return null;
+            }
+            return new CoreGetResult(
+                CoreKvResponseMetadata.from(it.flexibleExtras()),
+                keyspace,
+                key,
+                it.content(),
+                it.flags(),
+                it.cas(),
+                null,
+                false
+            );
+          }
       );
     }
 
@@ -182,11 +196,19 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     return newAsyncResponse(
         request,
         (req, res) -> {
+          if (isDocumentAbsent(res.status()) && absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL) {
+            return;
+          }
           if (res.status() != SUBDOC_FAILURE) {
             throw keyValueStatusToException(request, res);
           }
         },
-        it -> parseGetWithProjectionsOrExpiry(key, it)
+        it -> {
+          if (isDocumentAbsent(it.status()) && absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL) {
+            return null;
+          }
+          return parseGetWithProjectionsOrExpiry(key, it);
+        }
     );
   }
 
@@ -950,6 +972,10 @@ public final class ClassicCoreKvOps implements CoreKvOps {
   ) {
     CompletableFuture<R> response = execute(request, responseChecker, responseTransformer);
     return ClassicHelper.newAsyncResponse(request, response);
+  }
+
+  private static boolean isDocumentAbsent(ResponseStatus status) {
+    return status == NOT_FOUND || status == NOT_STORED;
   }
 
   private static void markComplete(KeyValueRequest<?> request, Throwable failure) {

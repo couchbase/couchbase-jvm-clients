@@ -68,7 +68,7 @@ public class CoreProtostellarAccessors {
    * @param <TGrpcResponse> e.g. com.couchbase.client.protostellar.kv.v1.InsertResponse
    */
   public static <TSdkResult, TGrpcRequest, TGrpcResponse>
-  TSdkResult blocking(CoreProtostellar core,
+  @Nullable TSdkResult blocking(CoreProtostellar core,
                       ProtostellarRequest<TGrpcRequest>     request,
                       Function<ProtostellarEndpoint, TGrpcResponse> executeBlockingGrpcCall,
                       Function<TGrpcResponse, TSdkResult>   convertResponse,
@@ -101,9 +101,13 @@ public class CoreProtostellarAccessors {
             throw new RuntimeException(e);
           }
           // Loop round again for a retry.
-        } else {
+        } else if (behaviour.exception() != null) {
           request.raisedResponseToUser(behaviour.exception());
           throw behaviour.exception();
+        } else if (behaviour.returnNull()){
+          return null;
+        } else {
+          throw new RuntimeException("Internal bug: unhandleable state " + behaviour);
         }
       }
     }
@@ -188,12 +192,16 @@ public class CoreProtostellarAccessors {
             }
           }
         }
-        else {
+        else if (behaviour.exception() != null) {
           if (!request.completed()) {
             // The completed() check is just a sanity check - it shouldn't be possible to be retrying an operation that has already completed.
             request.raisedResponseToUser(behaviour.exception());
             ret.completeExceptionally(behaviour.exception());
           }
+        } else if (behaviour.returnNull()){
+          ret.complete(null);
+        } else {
+          throw new RuntimeException("Internal bug: unhandleable state " + behaviour);
         }
       }
     }, core.context().environment().executor());
@@ -284,12 +292,16 @@ public class CoreProtostellarAccessors {
             }
           }
         }
-        else {
+        else if (behaviour.exception() != null) {
           if (!request.completed()) {
             // The completed() check is just a sanity check - it shouldn't be possible to be retrying an operation that has already completed.
             request.raisedResponseToUser(behaviour.exception());
             ret.tryEmitError(behaviour.exception()).orThrow();
           }
+        } else if (behaviour.returnNull()) {
+          ret.tryEmitValue(null).orThrow();
+        } else {
+          throw new RuntimeException("Internal bug: unhandleable state " + behaviour);
         }
       }
     }, core.context().environment().executor());

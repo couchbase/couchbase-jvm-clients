@@ -19,6 +19,7 @@ package com.couchbase.client.kotlin
 import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy
 import com.couchbase.client.core.api.kv.CoreAsyncResponse
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
@@ -152,7 +153,8 @@ public class Collection internal constructor(
             common.toCore(),
             validateDocumentId(id),
             project,
-            withExpiry
+            withExpiry,
+            AbsentDocumentStrategy.THROW_EXCEPTION
         ).await().let {
             if (withExpiry) {
                 val expiry = it.expiry()?.let { instant -> Expiry.of(instant) } ?: Expiry.none()

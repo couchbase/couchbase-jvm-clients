@@ -19,6 +19,7 @@ package com.couchbase.client.core.protostellar.kv;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.CoreProtostellar;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.kv.CoreDurability;
 import com.couchbase.client.core.api.kv.CoreEncodedContent;
@@ -33,6 +34,9 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
+import com.couchbase.client.core.deps.com.google.rpc.Code;
+import com.couchbase.client.core.deps.io.grpc.StatusRuntimeException;
+import com.couchbase.client.core.deps.io.grpc.protobuf.StatusProto;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -40,7 +44,10 @@ import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanType;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessors;
+import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
+import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -76,7 +83,7 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   }
 
   @Override
-  public CoreGetResult getBlocking(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry) {
+  public @Nullable CoreGetResult getBlocking(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry, AbsentDocumentStrategy absentDocumentStrategy) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetRequest> req = getRequest(core, common, keyspace, key, projections, withExpiry, compression());
 
     return CoreProtostellarAccessors.blocking(core,
@@ -86,17 +93,29 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
         // However, we've measured the impact and found zero difference.
         return endpoint.kvBlockingStub().withDeadline(req.deadline()).get(req.request());
       },
-      (response) -> convertResponse(keyspace, key, response));
+      (response) -> convertResponse(keyspace, key, response),
+      (err) -> {
+        if (absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL && isErrorDocumentNotFound(err)) {
+          return ProtostellarRequestBehaviour.successReturningNull();
+        }
+        return CoreProtostellarErrorHandlingUtil.convertException(core, req, err);
+      });
   }
 
   @Override
-  public CoreAsyncResponse<CoreGetResult> getAsync(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry) {
+  public CoreAsyncResponse<CoreGetResult> getAsync(CoreCommonOptions common, String key, List<String> projections, boolean withExpiry, AbsentDocumentStrategy absentDocumentStrategy) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.GetRequest> req = getRequest(core, common, keyspace, key, projections, withExpiry, compression());
 
     return CoreProtostellarAccessors.async(core,
       req,
       (endpoint) -> endpoint.kvStub().withDeadline(req.deadline()).get(req.request()),
-      (response) -> convertResponse(keyspace, key, response));
+      (response) -> convertResponse(keyspace, key, response),
+      (err) -> {
+        if (absentDocumentStrategy == AbsentDocumentStrategy.RETURN_NULL && isErrorDocumentNotFound(err)) {
+          return ProtostellarRequestBehaviour.successReturningNull();
+        }
+        return CoreProtostellarErrorHandlingUtil.convertException(core, req, err);
+      });
   }
 
   @Override
@@ -284,18 +303,18 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   public CoreSubdocGetResult subdocGetBlocking(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
     return CoreProtostellarAccessors.blocking(core,
-            request,
-            (endpoint) -> endpoint.kvBlockingStub().withDeadline(request.deadline()).lookupIn(request.request()),
-            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+      request,
+      (endpoint) -> endpoint.kvBlockingStub().withDeadline(request.deadline()).lookupIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
   }
 
   @Override
   public CoreAsyncResponse<CoreSubdocGetResult> subdocGetAsync(CoreCommonOptions common, String key, List<CoreSubdocGetCommand> commands, boolean accessDeleted) {
     ProtostellarRequest<com.couchbase.client.protostellar.kv.v1.LookupInRequest> request = lookupInRequest(core, keyspace, common, key, commands, accessDeleted);
     return CoreProtostellarAccessors.async(core,
-            request,
-            (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
-            (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
+      request,
+      (endpoint) -> endpoint.kvStub().withDeadline(request.deadline()).lookupIn(request.request()),
+      (response) -> CoreProtostellarKeyValueResponses.convertResponse(core, request, keyspace, key, response, commands));
   }
 
   @Override
@@ -383,5 +402,14 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
 
   private CompressionConfig compression() {
     return core.environment().compressionConfig();
+  }
+
+  private static boolean isErrorDocumentNotFound(Throwable err) {
+    if (err instanceof StatusRuntimeException) {
+      StatusRuntimeException sre = (StatusRuntimeException) err;
+      com.couchbase.client.core.deps.com.google.rpc.Status status = StatusProto.fromThrowable(sre);
+      return status.getCode() == Code.NOT_FOUND.getNumber();
+    }
+    return false;
   }
 }

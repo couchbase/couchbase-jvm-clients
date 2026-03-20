@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.CoreCouchbaseOps;
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
@@ -203,6 +204,11 @@ public class AsyncCollection {
 
   /**
    * Fetches a full document (or a projection of it) from a collection with default options.
+   * <p>
+   * This returns a future failed with {@link com.couchbase.client.core.error.DocumentNotFoundException} if the
+   * document is not present.
+   * See {@link #getOrNull(String, GetOptions)} (String)} for a version that instead returns a future completed with null
+   * if the document does not exist.
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link CompletableFuture} indicating once loaded or failed.
@@ -213,6 +219,11 @@ public class AsyncCollection {
 
   /**
    * Fetches a full document (or a projection of it) from a collection with custom options.
+   * <p>
+   * This returns a future failed with {@link com.couchbase.client.core.error.DocumentNotFoundException} if the
+   * document is not present.
+   * See {@link #getOrNull(String, GetOptions)} (String)} for a version that returns a future completed with null
+   * if the document does not exist.
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options custom options to change the default behavior.
@@ -223,8 +234,40 @@ public class AsyncCollection {
     final GetOptions.Built opts = options.build();
 
     final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
-    return kvOps.getAsync(opts, id, opts.projections(), opts.withExpiry())
+    return kvOps.getAsync(opts, id, opts.projections(), opts.withExpiry(), AbsentDocumentStrategy.THROW_EXCEPTION)
       .thenApply(coreGetResult -> new GetResult(coreGetResult, transcoder));
+  }
+
+  /**
+   * Fetches the full document from this collection, returning null if the document does not exist.
+   * <p>
+   * See {@link #get(String)} for a version that throws {@link com.couchbase.client.core.error.DocumentNotFoundException}
+   * if the document does not exist.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link CompletableFuture} completing with the result, or null if not found.
+   */
+  public CompletableFuture<GetResult> getOrNull(final String id) {
+    return getOrNull(id, DEFAULT_GET_OPTIONS);
+  }
+
+  /**
+   * Fetches the full document from this collection with custom options, returning null if the document does not exist.
+   * <p>
+   * See {@link #get(String, GetOptions)} for a version that throws
+   * {@link com.couchbase.client.core.error.DocumentNotFoundException} if the document does not exist.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a {@link CompletableFuture} completing with the result, or null if not found.
+   */
+  public CompletableFuture<GetResult> getOrNull(final String id, final GetOptions options) {
+    notNull(options, "GetOptions", () -> ReducedKeyValueErrorContext.create(id, collectionIdentifier()));
+    final GetOptions.Built opts = options.build();
+
+    final Transcoder transcoder = opts.transcoder() == null ? environment.transcoder() : opts.transcoder();
+    return kvOps.getAsync(opts, id, opts.projections(), opts.withExpiry(), AbsentDocumentStrategy.RETURN_NULL)
+      .thenApply(coreGetResult -> coreGetResult == null ? null : new GetResult(coreGetResult, transcoder));
   }
 
   /**

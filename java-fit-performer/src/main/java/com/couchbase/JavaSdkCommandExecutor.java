@@ -148,6 +148,19 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             result.setElapsedNanos(System.nanoTime() - start);
             if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
             else setSuccess(result);
+        } else if (op.hasGetOrNull()) {
+          var request = op.getGetOrNull();
+          var collection = connection.collection(request.getLocation());
+          var docId = getDocId(request.getLocation());
+          var options = createOptions(request, spans);
+          result.setInitiated(getTimeNow());
+          long start = System.nanoTime();
+          GetResult gr;
+          if (options == null) gr = collection.getOrNull(docId);
+          else gr = collection.getOrNull(docId, options);
+          result.setElapsedNanos(System.nanoTime() - start);
+          if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
+          else setSuccess(result);
         } else if (op.hasRemove()){
             var request = op.getRemove();
             var collection = connection.collection(request.getLocation());
@@ -836,7 +849,12 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
                 .setMutationResult(builder));
     }
 
-  public static void populateResult(ContentAs contentAs, Result.Builder result, GetResult value) {
+  public static void populateResult(ContentAs contentAs, Result.Builder result, @org.jspecify.annotations.Nullable GetResult value) {
+      if (value == null) {
+        result.setSdk(com.couchbase.client.protocol.sdk.Result.newBuilder().setNullResult(true));
+        return;
+      }
+
     var content = ContentAsUtil.contentType(contentAs,
             () -> value.contentAs(byte[].class),
             () -> value.contentAs(String.class),
@@ -1217,15 +1235,27 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     public static @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.Get request, ConcurrentHashMap<String, RequestSpan> spans) {
         if (request.hasOptions()) {
             var opts = request.getOptions();
-            var out = GetOptions.getOptions();
-            if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
-            if (opts.hasWithExpiry()) out.withExpiry(opts.getWithExpiry());
-            if (opts.getProjectionCount() > 0) out.project(opts.getProjectionList().stream().toList());
-            if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
-            if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
-            return out;
+            return createOptions(opts, spans);
         }
         else return null;
+    }
+
+    public static @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetOrNull request, ConcurrentHashMap<String, RequestSpan> spans) {
+        if (request.hasOptions()) {
+            var opts = request.getOptions();
+            return createOptions(opts, spans);
+        }
+        else return null;
+    }
+
+    public static @Nullable GetOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetOptions opts, ConcurrentHashMap<String, RequestSpan> spans) {
+        var out = GetOptions.getOptions();
+        if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+        if (opts.hasWithExpiry()) out.withExpiry(opts.getWithExpiry());
+        if (opts.getProjectionCount() > 0) out.project(opts.getProjectionList().stream().toList());
+        if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+        if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+        return out;
     }
 
     public static @Nullable GetAndLockOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetAndLock request, ConcurrentHashMap<String, RequestSpan> spans) {

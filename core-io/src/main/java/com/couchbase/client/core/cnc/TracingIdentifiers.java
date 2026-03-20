@@ -99,6 +99,8 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_KV_GET = "get";
 
+  public static final String SPAN_REQUEST_KV_GET_OR_NULL = "get_or_null";
+
   public static final String SPAN_REQUEST_KV_GET_REPLICA = "get_replica";
 
   public static final String SPAN_REQUEST_KV_UPSERT = "upsert";

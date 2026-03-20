@@ -25,9 +25,12 @@ import static java.util.Objects.requireNonNull;
 /**
  * Determines what to do with a request.
  * <p>
- * This is an Either - if retryDuration is null, RuntimeException must not be.
+ * Exactly one of these conditions must be true:
  * <p>
- * Both can be null, in which case the operation succeeded (used for LookupIn).
+ * - retryDuration is non-null, indicating the operation should be retried
+ * - exception is non-null, indicating the operation should be failed to the user
+ * - returnNull is true, indicating the operation should succeed and return null to the user
+ * - if all the above are false, a non-null success (operation-dependent) is returned to the user
  */
 @Stability.Internal
 public class ProtostellarRequestBehaviour {
@@ -41,23 +44,36 @@ public class ProtostellarRequestBehaviour {
    */
   private final @Nullable RuntimeException exception;
 
-  private ProtostellarRequestBehaviour(@Nullable Duration retryDuration, @Nullable RuntimeException exception) {
+  /**
+   * If true, a successful null result is returned to the user.
+   */
+  private final boolean returnNull;
+
+  private ProtostellarRequestBehaviour(@Nullable Duration retryDuration, @Nullable RuntimeException exception, boolean returnNull) {
+    if (returnNull && (retryDuration != null || exception != null)) {
+      throw new IllegalArgumentException("Internal bug: cannot combine returnNull with errors");
+    }
     this.retryDuration = retryDuration;
     this.exception = exception;
+    this.returnNull = returnNull;
   }
 
   public static ProtostellarRequestBehaviour retry(Duration retryDuration) {
     requireNonNull(retryDuration);
-    return new ProtostellarRequestBehaviour(retryDuration, null);
+    return new ProtostellarRequestBehaviour(retryDuration, null, false);
   }
 
   public static ProtostellarRequestBehaviour fail(RuntimeException err) {
     requireNonNull(err);
-    return new ProtostellarRequestBehaviour(null, err);
+    return new ProtostellarRequestBehaviour(null, err, false);
   }
 
   public static ProtostellarRequestBehaviour success() {
-    return new ProtostellarRequestBehaviour(null, null);
+    return new ProtostellarRequestBehaviour(null, null, false);
+  }
+
+  public static ProtostellarRequestBehaviour successReturningNull() {
+    return new ProtostellarRequestBehaviour(null, null, true);
   }
 
   public @Nullable Duration retryDuration() {
@@ -66,5 +82,18 @@ public class ProtostellarRequestBehaviour {
 
   public @Nullable RuntimeException exception() {
     return exception;
+  }
+
+  public boolean returnNull() {
+    return returnNull;
+  }
+
+  @Override
+  public String toString() {
+    return "ProtostellarRequestBehaviour{" +
+            "retryDuration=" + retryDuration +
+            ", exception=" + exception +
+            ", returnNull=" + returnNull +
+            '}';
   }
 }

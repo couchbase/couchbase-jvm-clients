@@ -232,6 +232,61 @@ public class ReactiveCollection {
   }
 
   /**
+   * Fetches the full document from this collection, returning an empty Mono if the document does not exist.
+   * (The method is named getOrNull which is inaccurate for this reactive API, to maintain parity with the other APIs.)
+   * <p>
+   * See {@link #get(String)} for a version that signals {@link com.couchbase.client.core.error.DocumentNotFoundException}
+   * if the document does not exist.
+   * <p>
+   * Some examples for working with the empty Mono:
+   * <p>
+   * {@code
+   *   // Blocking on an empty Mono will return null:
+   *
+   *   GetResult result = collection.reactive().getOrNull("doc-id").block();
+   *
+   *   if (result == null) {
+   *     // ... handling for document not found
+   *   }
+   *
+   *   // Or handling in a more reactive style:
+   *
+   *   collection.reactive().getOrNull("doc-id")
+   *    .switchIfEmpty(Mono.defer(() -> {
+   *      // ... handling for document not found
+   *    })
+   *    .subscribe();
+   * }
+   * </code>
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link Mono} completing with an {@link Optional} containing the result, or an empty Optional if not found.
+   */
+  public Mono<GetResult> getOrNull(final String id) {
+    return getOrNull(id, DEFAULT_GET_OPTIONS);
+  }
+
+  /**
+   * Fetches the full document from this collection with custom options, returning an empty {@link Optional} if not found.
+   * <p>
+   * See {@link #get(String, GetOptions)} for a version that signals
+   * {@link com.couchbase.client.core.error.DocumentNotFoundException} if the document does not exist.
+   * <p>
+   * See {@link #getOrNull(String)} for code usage examples.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options custom options to change the default behavior.
+   * @return a {@link Mono} completing with the result, or an empty Mono if not found.
+   */
+  public Mono<GetResult> getOrNull(final String id, final GetOptions options) {
+    GetOptions.Built opts = options.build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+
+    return kvOps.getReactiveIfPresent(opts, id, opts.projections(), opts.withExpiry())
+      .map(it -> new GetResult(it, transcoder));
+  }
+
+  /**
    * Fetches a full document and write-locks it for the given duration with default options.
    * <p>
    * Note that the client does not enforce an upper limit on the {@link Duration} lockTime. The maximum lock time

@@ -18,6 +18,7 @@ package com.couchbase.client.scala
 import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.api.kv.{
+  AbsentDocumentStrategy,
   CoreExpiry,
   CoreReadPreference,
   CoreSubdocGetCommand,
@@ -252,7 +253,13 @@ class AsyncCollection(
   ): Future[GetResult] = {
     convert(
       kvOps
-        .getAsync(makeCommonOptions(timeout), id, AsyncCollectionBase.EmptyList, false)
+        .getAsync(
+          makeCommonOptions(timeout),
+          id,
+          AsyncCollectionBase.EmptyList,
+          false,
+          AbsentDocumentStrategy.THROW_EXCEPTION
+        )
         .map[GetResult](result => convert(result, environment, None))
     )
   }
@@ -267,7 +274,13 @@ class AsyncCollection(
   ): Future[GetResult] = {
     convert(
       kvOps
-        .getAsync(convert(options), id, options.project.asJava, options.withExpiry)
+        .getAsync(
+          convert(options),
+          id,
+          options.project.asJava,
+          options.withExpiry,
+          AbsentDocumentStrategy.THROW_EXCEPTION
+        )
         .map[GetResult](result => convert(result, environment, options.transcoder))
     )
   }

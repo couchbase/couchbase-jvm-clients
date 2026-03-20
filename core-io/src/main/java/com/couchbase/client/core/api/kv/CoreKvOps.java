@@ -22,11 +22,13 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanType;
+import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -38,16 +40,18 @@ public interface CoreKvOps {
       CoreCommonOptions common,
       String key,
       List<String> projections,
-      boolean withExpiry
+      boolean withExpiry,
+      AbsentDocumentStrategy absentDocumentStrategy
   );
 
-  default CoreGetResult getBlocking(
+  default @Nullable CoreGetResult getBlocking(
       CoreCommonOptions common,
       String key,
       List<String> projections,
-      boolean withExpiry
+      boolean withExpiry,
+      AbsentDocumentStrategy absentDocumentStrategy
   ) {
-    return getAsync(common, key, projections, withExpiry).toBlocking();
+    return getAsync(common, key, projections, withExpiry, absentDocumentStrategy).toBlocking();
   }
 
   default Mono<CoreGetResult> getReactive(
@@ -56,7 +60,17 @@ public interface CoreKvOps {
       List<String> projections,
       boolean withExpiry
   ) {
-    return Mono.defer(() -> getAsync(common, key, projections, withExpiry).toMono());
+    return Mono.defer(() -> getAsync(common, key, projections, withExpiry, AbsentDocumentStrategy.THROW_EXCEPTION).toMono());
+  }
+
+  // Will complete as empty (not emitting any next value), instead of raising DocumentNotFound.
+  default Mono<CoreGetResult> getReactiveIfPresent(
+      CoreCommonOptions common,
+      String key,
+      List<String> projections,
+      boolean withExpiry
+  ) {
+    return Mono.defer(() -> getAsync(common, key, projections, withExpiry, AbsentDocumentStrategy.RETURN_NULL).toMono());
   }
 
   default void checkProjectionLimits(

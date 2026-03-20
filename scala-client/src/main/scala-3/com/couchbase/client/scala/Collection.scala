@@ -23,6 +23,7 @@ import scala.jdk.CollectionConverters._
 import scala.concurrent.duration.Duration
 import scala.util.{Try, Failure, Success}
 import com.couchbase.client.core.annotation.SinceCouchbase
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy
 
 class Collection(
     /** Provides access to an async version of this API. */
@@ -43,7 +44,15 @@ class Collection(
       id: String,
       options: GetOptions = GetOptions.Default
   ): Try[GetResult] =
-    Try(kvOps.getBlocking(convert(options), id, options.project.asJava, options.withExpiry))
+    Try(
+      kvOps.getBlocking(
+        convert(options),
+        id,
+        options.project.asJava,
+        options.withExpiry,
+        AbsentDocumentStrategy.THROW_EXCEPTION
+      )
+    )
       .map(result => convert(result, async.environment, options.transcoder))
 
   /** Inserts a full document into this collection, if it does not exist already.

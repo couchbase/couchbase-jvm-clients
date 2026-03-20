@@ -19,6 +19,8 @@ package com.couchbase.client.java;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.AbsentDocumentStrategy;
+import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
@@ -71,6 +73,7 @@ import com.couchbase.client.java.kv.TouchOptions;
 import com.couchbase.client.java.kv.UnlockOptions;
 import com.couchbase.client.java.kv.UpsertOptions;
 import com.couchbase.client.java.manager.query.CollectionQueryIndexManager;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -226,6 +229,10 @@ public class Collection {
 
   /**
    * Fetches the full document from this collection.
+   * <p>
+   * See {@link #getOrNull} for a version that returns null if the document does not
+   * exist, which can deliver a minor performance improvement in cases where documents
+   * are regularly not present (such as caching use-cases).
    *
    * @param id the document id which is used to uniquely identify it.
    * @return a {@link GetResult} once the document has been loaded.
@@ -239,6 +246,10 @@ public class Collection {
 
   /**
    * Fetches the full document from this collection with custom options.
+   * <p>
+   * See {@link #getOrNull} for a version that returns null if the document does not
+   * exist, which can deliver a minor performance improvement in cases where documents
+   * are regularly not present (such as caching use-cases).
    *
    * @param id the document id which is used to uniquely identify it.
    * @param options options to customize the get request.
@@ -248,12 +259,38 @@ public class Collection {
    * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
    */
   public GetResult get(final String id, final GetOptions options) {
-    GetOptions.Built opts = notNull(options, "options").build();
+    return getInternal(id, options, AbsentDocumentStrategy.THROW_EXCEPTION);
+  }
 
-    return new GetResult(
-      kvOps.getBlocking(opts, id, opts.projections(), opts.withExpiry()),
-      opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
-    );
+  /**
+   * Fetches the full document from this collection.
+   * <p>
+   * The only difference to {@link #get(String)}} is that it will return null if the document is not
+   * found, and will not attach a `DocumentNotFoundException` to OpenTelemetry spans.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public @Nullable GetResult getOrNull(final String id) {
+    return getOrNull(id, DEFAULT_GET_OPTIONS);
+  }
+
+  /**
+   * Fetches the full document from this collection with custom options.
+   * <p>
+   * The only difference to {@link #get(String, GetOptions)}} is that it will return null if the document is not
+   * found, and will not attach a `DocumentNotFoundException` to OpenTelemetry spans.
+   *
+   * @param id the document id which is used to uniquely identify it.
+   * @param options options to customize the get request.
+   * @return a {@link GetResult} once the document has been loaded.
+   * @throws TimeoutException if the operation times out before getting a result.
+   * @throws CouchbaseException for all other error reasons (acts as a base type and catch-all).
+   */
+  public @Nullable GetResult getOrNull(final String id, final GetOptions options) {
+    return getInternal(id, options, AbsentDocumentStrategy.RETURN_NULL);
   }
 
   /**
@@ -1023,4 +1060,13 @@ public class Collection {
     return reactive().scan(scanType, options).toStream();
   }
 
+  private @Nullable GetResult getInternal(String id, GetOptions options, AbsentDocumentStrategy absentDocumentStrategy) {
+    GetOptions.Built opts = notNull(options, "options").build();
+
+    CoreGetResult internal = kvOps.getBlocking(opts, id, opts.projections(), opts.withExpiry(), absentDocumentStrategy);
+    if (internal == null) {
+      return null;
+    }
+    return new GetResult(internal, opts.transcoder() == null ? environment().transcoder() : opts.transcoder());
+  }
 }

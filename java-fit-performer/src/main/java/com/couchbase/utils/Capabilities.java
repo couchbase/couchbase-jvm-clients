@@ -112,6 +112,10 @@ public class Capabilities {
         out.add(Caps.SDK_STABLE_OTEL_SEMANTIC_CONVENTIONS);
         // [end]
 
-        return out;
+        // [if:3.12.0]
+        out.add(Caps.SDK_GET_OR_NULL);
+        // [end]
+
+      return out;
     }
 }

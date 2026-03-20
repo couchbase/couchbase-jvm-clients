@@ -130,6 +130,30 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
                     else setSuccess(result);
                     return result.build();
                 });
+            } else if (op.hasGetOrNull()) {
+                var request = op.getGetOrNull();
+                var collection = connection.collection(request.getLocation()).reactive();
+                var docId = getDocId(request.getLocation());
+                var options = createOptions(request, spans);
+                result.setInitiated(getTimeNow());
+                long start = System.nanoTime();
+                Mono<GetResult> gr;
+                if (options == null) gr = collection.getOrNull(docId);
+                else gr = collection.getOrNull(docId, options);
+                return withSchedulerCheck(gr)
+                        .flatMap(r -> {
+                            result.setElapsedNanos(System.nanoTime() - start);
+                            if (op.getReturnResult()) populateResult(request.getContentAs(), result, r);
+                            else setSuccess(result);
+                            return Mono.just(result.build());
+                        })
+                        // Called if no document was found
+                        .switchIfEmpty(Mono.fromSupplier(() -> {
+                            result.setElapsedNanos(System.nanoTime() - start);
+                            if (op.getReturnResult()) populateResult(request.getContentAs(), result, null);
+                            else setSuccess(result);
+                            return result.build();
+                        }));
             } else if (op.hasRemove()) {
                 var request = op.getRemove();
                 var collection = connection.collection(request.getLocation()).reactive();
