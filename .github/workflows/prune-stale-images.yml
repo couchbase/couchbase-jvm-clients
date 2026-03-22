@@ -1,0 +1,29 @@
+name: Prune stale images
+
+on:
+  schedule:
+    - cron: '53 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    strategy:
+      matrix:
+        sdk: [ java, scala, kotlin, columnar-java ]
+
+    steps:
+      - name: Prune
+        uses: vlaurin/action-ghcr-prune@0cf7d39f88546edd31965acba78cdcb0be14d641 # v0.6.0
+        with:
+          token: ${{ github.token }}
+          organization: ${{ github.repository_owner }}
+          container: ${{ matrix.sdk }}-fit-performer
+          keep-younger-than: 7 # days
+          prune-untagged: true
+          prune-tags-regexes: |
+            ^refs-
+            ^sha-

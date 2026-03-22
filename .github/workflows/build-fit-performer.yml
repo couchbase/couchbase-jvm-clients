@@ -1,0 +1,49 @@
+name: Build FIT performer
+
+run-name: ${{ inputs.ref }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - 'master'
+      - '[0-9]+.[0-9]+.x' # release branches
+    tags:
+      - '*'
+    paths-ignore:
+      - '.gitignore'
+      - '.editorconfig'
+      - '.scalafmt.conf'
+      - '*-examples/**'
+      - 'Jenkinsfile'
+      - '*.md'
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        type: string
+        description: "Performer version. Specify a branch, tag, full commit hash, GitHub PR like 'refs/pull/37/merge', or Gerrit PR like 'refs/changes/58/240858/6'"
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: [ java, scala, kotlin, columnar-java ]
+
+    steps:
+      - uses: couchbaselabs/sdk-docker-build-action@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+          ref: ${{ inputs.ref }}
+        env:
+          DOCKER_BUILD_SUMMARY: false
