@@ -36,7 +36,7 @@ public class SpanWrapper {
     private final boolean isInternal;
 
     public long elapsedMicros() {
-        return (System.nanoTime() - startTime) * 1_000;
+        return (System.nanoTime() - startTime) / 1_000;
     }
 
     public long finish(@Nullable Throwable err) {
