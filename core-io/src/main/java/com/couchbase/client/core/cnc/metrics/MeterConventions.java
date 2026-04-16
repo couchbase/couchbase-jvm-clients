@@ -29,8 +29,8 @@ public class MeterConventions {
    * should be output in.  The only unit that is currently used is "s" for
    * seconds.
    * <p>
-   * Note this not indicate the unit the metric is provided in: that is always
-   * nanoseconds/
+   * Note this not indicate the unit in which the metric is provided to {@link com.couchbase.client.core.cnc.ValueRecorder}:
+   * that is always nanoseconds.
    */
   public static final String METRIC_TAG_UNITS = "__unit";
   public static final String METRIC_TAG_UNIT_SECONDS = "s";

@@ -27,6 +27,7 @@ import com.couchbase.client.core.topology.ClusterIdentifier;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.couchbase.client.core.cnc.TracingIdentifiers.ATTR_SYSTEM_COUCHBASE;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -48,8 +49,10 @@ public class MeterProviderImplV1 implements MeterProviderImpl {
     Map<String, String> tags = new HashMap<>(10);
     tags.put(tip.requireAttributeName(TracingAttribute.SERVICE), rmi.service());
     tags.put(tip.requireAttributeName(TracingAttribute.OPERATION), rmi.operation());
-    // V1 addition
+
+    // V1 additions
     tags.put(MeterConventions.METRIC_TAG_UNITS, MeterConventions.METRIC_TAG_UNIT_SECONDS);
+    tags.put(tip.requireAttributeName(TracingAttribute.SYSTEM), ATTR_SYSTEM_COUCHBASE);
 
     // The LoggingMeter only uses the service and operation labels, so optimise this hot-path by skipping
     // assigning other labels.
