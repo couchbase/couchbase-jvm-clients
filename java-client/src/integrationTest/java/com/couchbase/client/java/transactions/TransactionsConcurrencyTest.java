@@ -71,7 +71,7 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
 
     @DisplayName("Run many concurrent transactions and verify nothing falls over")
     @Test
-    void concurrent() {
+    void concurrent() throws Throwable {
         AtomicReference<Throwable> err = new AtomicReference<>();
 
         Runnable r = () -> {
@@ -85,13 +85,13 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
                 cluster.transactions().run((ctx) -> {
                             Thread ct = Thread.currentThread();
                             LOGGER.info("In lambda on thread {} {}, was on {} {}", ct.getId(), ct.getName(), t.getId(), t.getName());
-                            assertTrue(ct.getName().startsWith("cb-txn"));
+                            assertStartsWith(ct.getName(), "cb-txn");
 
                             ctx.insert(collection, docId, content);
 
                             Thread ct2 = Thread.currentThread();
                             LOGGER.info("In lambda after insert on thread {} {}, was on {} {} and {} {}", ct2.getId(), ct2.getName(), ct.getId(), ct.getName(), t.getId(), t.getName());
-                            assertTrue(ct2.getName().startsWith("cb-txn"));
+                            assertStartsWith(ct2.getName(), "cb-txn");
                             assertEquals(ct2.getId(), ct.getId());
                         },
                         // Once hotspot is warmed up these transactions take a second or two to complete.  Before then,
@@ -127,7 +127,13 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
         });
 
         if (err.get() != null) {
-            throw new RuntimeException(err.get());
+            throw err.get();
+        }
+    }
+
+    private static void assertStartsWith(String s, String expectedPrefix) {
+        if (!s.startsWith(expectedPrefix)) {
+            fail("Expected '" + s + "' to start with '" + expectedPrefix + "'.");
         }
     }
 }
