@@ -51,8 +51,10 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TransactionsConcurrencyTest extends JavaIntegrationTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(TransactionsConcurrencyTest.class);
 
-    static private Cluster cluster;
-    static private Collection collection;
+    private static Cluster cluster;
+    private static Collection collection;
+
+    private static final String TEST_THREAD_NAME = "test-thread";
 
     @BeforeAll
     static void beforeAll() {
@@ -76,6 +78,7 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
 
         Runnable r = () -> {
             Thread t = Thread.currentThread();
+            t.setName(TEST_THREAD_NAME);
             try {
                 LOGGER.info("Started thread {} {}", t.getId(), t.getName());
 
@@ -85,13 +88,13 @@ public class TransactionsConcurrencyTest extends JavaIntegrationTest {
                 cluster.transactions().run((ctx) -> {
                             Thread ct = Thread.currentThread();
                             LOGGER.info("In lambda on thread {} {}, was on {} {}", ct.getId(), ct.getName(), t.getId(), t.getName());
-                            assertStartsWith(ct.getName(), "cb-txn");
+                            assertEquals(TEST_THREAD_NAME, ct.getName());
 
                             ctx.insert(collection, docId, content);
 
                             Thread ct2 = Thread.currentThread();
                             LOGGER.info("In lambda after insert on thread {} {}, was on {} {} and {} {}", ct2.getId(), ct2.getName(), ct.getId(), ct.getName(), t.getId(), t.getName());
-                            assertStartsWith(ct2.getName(), "cb-txn");
+                            assertEquals(TEST_THREAD_NAME, ct2.getName());
                             assertEquals(ct2.getId(), ct.getId());
                         },
                         // Once hotspot is warmed up these transactions take a second or two to complete.  Before then,
