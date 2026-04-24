@@ -65,6 +65,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.CbDurations;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.SingleStateful;
 import reactor.core.publisher.Flux;
@@ -327,13 +328,29 @@ public abstract class BaseEndpoint implements Endpoint {
             }
           });
 
+        boolean isEpoll = eventLoopGroup instanceof EpollEventLoopGroup;
+
         if (env.ioConfig().tcpKeepAlivesEnabled() && !(eventLoopGroup instanceof DefaultEventLoopGroup)) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-          if (eventLoopGroup instanceof EpollEventLoopGroup) {
-            channelBootstrap.option(
-              EpollChannelOption.TCP_KEEPIDLE,
-              (int) TimeUnit.MILLISECONDS.toSeconds(env.ioConfig().tcpKeepAliveTime().toMillis()));
+          if (isEpoll) {
+            // Nb at least on some platforms, some keepalive settings will raise `setsockopt() failed: Invalid argument` if 0 is provided.
+            if (!env.ioConfig().tcpKeepAliveTime().isZero()) {
+              int keepIdleSeconds = Math.toIntExact(CbDurations.getSecondsCeil(env.ioConfig().tcpKeepAliveTime()));
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPIDLE, keepIdleSeconds);
+            }
+            if (!env.ioConfig().tcpKeepAliveInterval().isZero()) {
+              int keepIntervalSeconds = Math.toIntExact(CbDurations.getSecondsCeil(env.ioConfig().tcpKeepAliveInterval()));
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPINTVL, keepIntervalSeconds);
+            }
+            if (env.ioConfig().tcpKeepAliveCount() != 0) {
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPCNT, env.ioConfig().tcpKeepAliveCount());
+            }
           }
+        }
+
+        if (!env.ioConfig().tcpUserTimeout().isZero() && isEpoll) {
+          int userTimeoutMillis = Math.toIntExact(env.ioConfig().tcpUserTimeout().toMillis());
+          channelBootstrap.option(EpollChannelOption.TCP_USER_TIMEOUT, userTimeoutMillis);
         }
 
         state.transition(EndpointState.CONNECTING);
