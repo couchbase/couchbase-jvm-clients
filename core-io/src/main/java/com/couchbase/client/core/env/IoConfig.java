@@ -19,6 +19,7 @@ package com.couchbase.client.core.env;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 import com.couchbase.client.core.node.Sdk2CompatibleMemcachedHashingStrategy;
 import com.couchbase.client.core.node.StandardMemcachedHashingStrategy;
@@ -43,6 +44,9 @@ public class IoConfig {
   public static final boolean DEFAULT_DNS_SRV_ENABLED = true;
   public static final boolean DEFAULT_TCP_KEEPALIVE_ENABLED = true;
   public static final Duration DEFAULT_TCP_KEEPALIVE_TIME = Duration.ofSeconds(60);
+  public static final Duration DEFAULT_TCP_KEEPALIVE_INTERVAL = Duration.ZERO;
+  public static final int DEFAULT_TCP_KEEPALIVE_COUNT = 0;
+  public static final Duration DEFAULT_TCP_USER_TIMEOUT = Duration.ofSeconds(20);
   public static final Duration DEFAULT_CONFIG_POLL_INTERVAL = Duration.ofMillis(2500);
   public static final NetworkResolution DEFAULT_NETWORK_RESOLUTION = NetworkResolution.AUTO;
   public static final int DEFAULT_NUM_KV_CONNECTIONS = 1;
@@ -66,6 +70,9 @@ public class IoConfig {
   private final boolean dnsSrvEnabled;
   private final boolean tcpKeepAlivesEnabled;
   private final Duration tcpKeepAliveTime;
+  private final Duration tcpKeepAliveInterval;
+  private final Duration tcpUserTimeout;
+  private final int tcpKeepAliveCount;
   private final int numKvConnections;
   private final int maxHttpConnections;
   private final Duration idleHttpConnectionTimeout;
@@ -93,6 +100,9 @@ public class IoConfig {
     networkResolution = builder.networkResolution;
     tcpKeepAlivesEnabled = builder.tcpKeepAlivesEnabled;
     tcpKeepAliveTime = builder.tcpKeepAliveTime;
+    tcpKeepAliveInterval = builder.tcpKeepAliveInterval;
+    tcpUserTimeout = builder.tcpUserTimeout;
+    tcpKeepAliveCount = builder.tcpKeepAliveCount;
     numKvConnections = builder.numKvConnections;
     maxHttpConnections = builder.maxHttpConnections;
     idleHttpConnectionTimeout = builder.idleHttpConnectionTimeout;
@@ -373,6 +383,18 @@ public class IoConfig {
     return tcpKeepAliveTime;
   }
 
+  public Duration tcpKeepAliveInterval() {
+    return tcpKeepAliveInterval;
+  }
+
+  public int tcpKeepAliveCount() {
+    return tcpKeepAliveCount;
+  }
+
+  public Duration tcpUserTimeout() {
+    return tcpUserTimeout;
+  }
+
   public int numKvConnections() {
     return numKvConnections;
   }
@@ -410,6 +432,9 @@ public class IoConfig {
     export.put("dnsSrvEnabled", dnsSrvEnabled);
     export.put("tcpKeepAlivesEnabled", tcpKeepAlivesEnabled);
     export.put("tcpKeepAliveTimeMs", tcpKeepAliveTime.toMillis());
+    export.put("tcpKeepAliveIntervalMs", tcpKeepAliveInterval.toMillis());
+    export.put("tcpKeepAliveCount", tcpKeepAliveCount);
+    export.put("tcpUserTimeoutMs", tcpUserTimeout.toMillis());
     export.put("configPollIntervalMs", configPollInterval.toMillis());
     export.put("kvCircuitBreakerConfig", kvCircuitBreakerConfig.enabled() ? kvCircuitBreakerConfig.exportAsMap() : "disabled");
     export.put("queryCircuitBreakerConfig", queryCircuitBreakerConfig.enabled() ? queryCircuitBreakerConfig.exportAsMap() : "disabled");
@@ -445,6 +470,9 @@ public class IoConfig {
     private boolean dnsSrvEnabled = DEFAULT_DNS_SRV_ENABLED;
     private boolean tcpKeepAlivesEnabled = DEFAULT_TCP_KEEPALIVE_ENABLED;
     private Duration tcpKeepAliveTime = DEFAULT_TCP_KEEPALIVE_TIME;
+    private Duration tcpKeepAliveInterval = DEFAULT_TCP_KEEPALIVE_INTERVAL;
+    private Duration tcpUserTimeout = DEFAULT_TCP_USER_TIMEOUT;
+    private int tcpKeepAliveCount = DEFAULT_TCP_KEEPALIVE_COUNT;
     private int numKvConnections = DEFAULT_NUM_KV_CONNECTIONS;
     private int maxHttpConnections = DEFAULT_MAX_HTTP_CONNECTIONS;
     private Duration idleHttpConnectionTimeout = DEFAULT_IDLE_HTTP_CONNECTION_TIMEOUT;
@@ -476,24 +504,130 @@ public class IoConfig {
       return this;
     }
 
+    /**
+     * Whether to use TCP keepalive probes.
+     * <p>
+     * Defaults to true.
+     */
     public Builder enableTcpKeepAlives(boolean tcpKeepAlivesEnabled) {
       this.tcpKeepAlivesEnabled = tcpKeepAlivesEnabled;
       return this;
     }
 
     /**
-     * Allows to customize the idle time after which a tcp keepalive gets fired.
+     * The time the connection needs to remain idle before TCP starts sending keepalive probes,
+     * if {@link #enableTcpKeepAlives(boolean)} is set to true (TCP_KEEPIDLE / tcp_keepalive_time).
      * <p>
-     * Please note that this setting only propagates to the OS on linux when the epoll transport is used. On all
+     * Resolution: seconds.
+     * <p>
+     * Defaults to 1 minute.
+     * <p>
+     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
      * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
      * the default behavior).
      *
      * @param tcpKeepAliveTime the custom keepalive time.
      * @return this builder for chaining purposes.
+     *
+     * @see #enableTcpKeepAlives(boolean)
+     * @see #tcpKeepAliveInterval(Duration)
+     * @see #tcpKeepAliveCount(int)
+     * @see #tcpUserTimeout(Duration)
      */
     public Builder tcpKeepAliveTime(final Duration tcpKeepAliveTime) {
       this.tcpKeepAliveTime = tcpKeepAliveTime;
       return this;
+    }
+
+    /**
+     * The time between individual keepalive probes. (TCP_KEEPINTVL / tcp_keepalive_intvl).
+     * Used only if {@link #enableTcpKeepAlives(boolean)} is set to true.
+     * <p>
+     * Resolution: seconds.
+     * <p>
+     * Defaults to zero, in which case the OS-level default is used.
+     * <p>
+     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
+     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * the default behavior).
+     *
+     * @param tcpKeepAliveInterval the custom keepalive time.
+     * @return this builder for chaining purposes.
+     *
+     * @see #enableTcpKeepAlives(boolean)
+     * @see #tcpKeepAliveTime(Duration)
+     * @see #tcpKeepAliveCount(int)
+     * @see #tcpUserTimeout(Duration)
+     */
+    public Builder tcpKeepAliveInterval(final Duration tcpKeepAliveInterval) {
+      this.tcpKeepAliveInterval = requireNonNegative(tcpKeepAliveInterval, "io.tcpKeepAliveInterval");
+      return this;
+    }
+
+    /**
+     * The maximum number of keepalive probes TCP should send
+     * before dropping the connection (TCP_KEEPCNT / tcp_keepalive_probes).
+     * Used only if {@link #enableTcpKeepAlives(boolean)} is set to true.
+     * <p>
+     * Defaults to zero, in which case the OS-level default is used.
+     * <p>
+     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
+     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * the default behavior).
+     *
+     * @param tcpKeepAliveCount The maximum number of probes, or zero for the OS default.
+     * @return this builder for chaining purposes.
+     *
+     * @see #enableTcpKeepAlives(boolean)
+     * @see #tcpKeepAliveTime(Duration)
+     * @see #tcpKeepAliveInterval(Duration)
+     * @see #tcpUserTimeout(Duration)
+     */
+    public Builder tcpKeepAliveCount(int tcpKeepAliveCount) {
+      if (tcpKeepAliveCount < 0) {
+        throw InvalidArgumentException.fromMessage("io.tcpKeepAliveCount must be non-negative");
+      }
+      this.tcpKeepAliveCount = tcpKeepAliveCount;
+      return this;
+    }
+
+    /**
+     * The maximum amount of time that transmitted data may remain
+     * unacknowledged, or buffered data may remain untransmitted
+     * (due to zero window size) before TCP will forcibly close
+     * the corresponding connection and return ETIMEDOUT to the
+     * application.
+     * <p>
+     * This setting will also be used in the Linux kernel's calculation of when idle connections are reset
+     * during keepalive transmissions.
+     * <p>
+     * Resolution: milliseconds.
+     * <p>
+     * Defaults to 20 seconds.
+     * <p>
+     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
+     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * the default behavior).
+     *
+     * @param tcpUserTimeout The desired timeout, or {@code Duration.zero()} for the OS default.
+     * @return this builder for chaining purposes.
+     *
+     * @see #enableTcpKeepAlives(boolean)
+     * @see #tcpKeepAliveTime(Duration)
+     * @see #tcpKeepAliveInterval(Duration)
+     * @see #tcpKeepAliveCount(int)
+     */
+    public Builder tcpUserTimeout(Duration tcpUserTimeout) {
+      this.tcpUserTimeout = requireNonNegative(tcpUserTimeout, "io.tcpUserTimeout");
+      return this;
+    }
+
+    private static Duration requireNonNegative(Duration d, String description) {
+      notNull(d, description);
+      if (d.isNegative()) {
+        throw InvalidArgumentException.fromMessage(description + " must be non-negative, but got " + d);
+      }
+      return d;
     }
 
     /**
