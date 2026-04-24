@@ -62,6 +62,7 @@ import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.CbDurations;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.SingleStateful;
 import org.slf4j.Logger;
@@ -85,6 +86,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import static com.couchbase.client.core.env.IoConfig.DEFAULT_TCP_KEEPALIVE_COUNT;
 import static com.couchbase.client.core.io.netty.EventLoopGroups.isEpoll;
 import static com.couchbase.client.core.io.netty.EventLoopGroups.isLocal;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -391,10 +393,24 @@ public abstract class BaseEndpoint implements Endpoint {
         if (env.ioConfig().tcpKeepAlivesEnabled() && !isLocal(eventLoopGroup)) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
           if (isEpoll(eventLoopGroup)) {
-            channelBootstrap.option(
-              EpollChannelOption.TCP_KEEPIDLE,
-              (int) TimeUnit.MILLISECONDS.toSeconds(env.ioConfig().tcpKeepAliveTime().toMillis()));
+            // Nb at least on some platforms, some keepalive settings will raise `setsockopt() failed: Invalid argument` if 0 is provided.
+            if (!env.ioConfig().tcpKeepAliveTime().isZero()) {
+              int keepIdleSeconds = Math.toIntExact(CbDurations.getSecondsCeil(env.ioConfig().tcpKeepAliveTime()));
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPIDLE, keepIdleSeconds);
+            }
+            if (!env.ioConfig().tcpKeepAliveInterval().isZero()) {
+              int keepIntervalSeconds = Math.toIntExact(CbDurations.getSecondsCeil(env.ioConfig().tcpKeepAliveInterval()));
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPINTVL, keepIntervalSeconds);
+            }
+            if (env.ioConfig().tcpKeepAliveCount() != 0) {
+              channelBootstrap.option(EpollChannelOption.TCP_KEEPCNT, env.ioConfig().tcpKeepAliveCount());
+            }
           }
+        }
+
+        if (!env.ioConfig().tcpUserTimeout().isZero() && isEpoll(eventLoopGroup)) {
+          int userTimeoutMillis = Math.toIntExact(env.ioConfig().tcpUserTimeout().toMillis());
+          channelBootstrap.option(EpollChannelOption.TCP_USER_TIMEOUT, userTimeoutMillis);
         }
 
         state.transition(EndpointState.CONNECTING);
