@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupStartR
 import com.couchbase.client.core.cnc.events.transaction.TransactionLogEvent;
 import com.couchbase.client.core.cnc.tracing.RequestTracerAndDecorator;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
+import com.couchbase.client.core.env.CouchbaseThreadFactory;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.transaction.internal.ThreadStopRequestedException;
@@ -57,6 +58,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -95,6 +97,8 @@ class CollectionDeletedException extends CouchbaseException { }
 public class LostCleanupDistributed {
     private static final Logger LOGGER = LoggerFactory.getLogger(CoreTransactionsCleanup.LOST_CATEGORY);
 
+    private static final ThreadFactory cleanupThreadFactory = new CouchbaseThreadFactory("txn-cleanup-");
+
     private final Core core;
     private final ClientRecord clientRecord;
     private final CoreTransactionsConfig config;
@@ -103,7 +107,7 @@ public class LostCleanupDistributed {
      */
     private final Supplier<TransactionsCleaner> cleanerSupplier;
     private volatile boolean stop = false;
-    private final ScheduledExecutorService cleanupThreadLauncher = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService cleanupThreadLauncher = Executors.newSingleThreadScheduledExecutor(cleanupThreadFactory);
     private final Duration actualCleanupWindow;
     private static final Duration BACKOFF_START = Duration.ofMillis(10);
     private final String clientUuid = UUID.randomUUID().toString();
