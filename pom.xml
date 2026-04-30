@@ -159,6 +159,15 @@
                 <groupId>io.projectreactor.tools</groupId>
                 <artifactId>blockhound</artifactId>
                 <version>${blockhound.version}</version>
+                <!-- BlockHound is a Java agent loaded via -javaagent; it must never leak as a transitive compile dependency. -->
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j-impl</artifactId>
+                <version>${log4j-slf4j-impl.version}</version>
+                <!-- Test-only SLF4J binding; centralized here as the single source of truth. -->
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
