@@ -20,9 +20,11 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.UnsupportedResponseTypeReceivedEvent;
+import com.couchbase.client.core.cnc.tracing.TracingDecorator;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -52,6 +54,8 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Implements the chunk stream handling for all generic http stream based services.
@@ -123,6 +127,11 @@ public abstract class ChunkedMessageHandler
    * Holds the start dispatch time for the current request.
    */
   private long dispatchTimingStart;
+
+  /**
+   * For inclusion in the exception message if response processing fails.
+   */
+  private final ByteBuf startOfResponseBody = Unpooled.buffer(1024, 1024);
 
   /**
    * Creates a new {@link ChunkedMessageHandler}.
@@ -259,7 +268,14 @@ public abstract class ChunkedMessageHandler
   }
 
   private void handleHttpContent(final HttpContent msg) {
-    chunkResponseParser.feed(msg.content());
+    ByteBuf content = msg.content();
+
+    if (startOfResponseBody.isWritable()) {
+      int len = Math.min(startOfResponseBody.writableBytes(), content.readableBytes());
+      startOfResponseBody.writeBytes(content, content.readerIndex(), len);
+    }
+
+    chunkResponseParser.feed(content);
 
     boolean isLastChunk = msg instanceof LastHttpContent;
     if (currentResponse == null && isSuccess() && chunkResponseParser.header(isLastChunk).isPresent()) {
@@ -286,7 +302,13 @@ public abstract class ChunkedMessageHandler
     if (!currentRequest.completed()) {
       final CouchbaseException cause = chunkResponseParser.decodingFailure().orElseGet(
         () -> chunkResponseParser.error().orElseGet(
-          () -> new CouchbaseException("Request failed, but no more information available")));
+          () -> {
+            String status = currentResponseStatus == null ? "unknown" : currentResponseStatus.status().toString();
+            String body = startOfResponseBody.isReadable() ? redactUser(startOfResponseBody.toString(UTF_8)).toString() : "<empty>";
+            return new CouchbaseException("Request failed. HTTP status code: " + status + ". Response body: " + body);
+          }
+        )
+      );
 
       Optional<RetryReason> qualifies = qualifiesForRetry(cause);
       if (qualifies.isPresent()) {
@@ -311,6 +333,7 @@ public abstract class ChunkedMessageHandler
 
   private void cleanupState() {
     chunkResponseParser.cleanup();
+    startOfResponseBody.clear();
     currentResponse = null;
     currentRequest = null;
     currentDispatchSpan = null;
