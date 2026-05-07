@@ -23,7 +23,6 @@ import com.couchbase.client.core.kv.LastCoreRangeScanItem;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UnsignedLEB128;
-import reactor.blockhound.shaded.net.bytebuddy.implementation.bytecode.Throw;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
