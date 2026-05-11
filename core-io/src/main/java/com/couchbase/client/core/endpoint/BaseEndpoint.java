@@ -90,6 +90,7 @@ import static com.couchbase.client.core.env.IoConfig.DEFAULT_TCP_KEEPALIVE_COUNT
 import static com.couchbase.client.core.io.netty.EventLoopGroups.isEpoll;
 import static com.couchbase.client.core.io.netty.EventLoopGroups.isLocal;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
+import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
 
 /**
@@ -411,6 +412,10 @@ public abstract class BaseEndpoint implements Endpoint {
         if (!env.ioConfig().tcpUserTimeout().isZero() && isEpoll(eventLoopGroup)) {
           int userTimeoutMillis = Math.toIntExact(env.ioConfig().tcpUserTimeout().toMillis());
           channelBootstrap.option(EpollChannelOption.TCP_USER_TIMEOUT, userTimeoutMillis);
+        }
+
+        if (log.isDebugEnabled()) {
+          log.debug("Attempting to connect to {} with socket options: {}", redactSystem(remoteAddress()), channelBootstrap.config().options());
         }
 
         state.transition(EndpointState.CONNECTING);
