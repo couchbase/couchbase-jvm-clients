@@ -27,6 +27,7 @@ message ClusterNewInstanceRequest {
       google.protobuf.Duration connect_timeout = 1;
       google.protobuf.Duration dispatch_timeout = 2;
       google.protobuf.Duration query_timeout = 3;
+      google.protobuf.Duration handle_timeout = 4;
     }
 
     optional Deserializer deserializer = 1;
@@ -41,8 +42,25 @@ message ClusterNewInstanceRequest {
       string password = 2;
     }
 
+    // Authenticates using a JSON Web Token (JWT).
+    // The SDK sets an "Authorization: Bearer <jwt>" header on every HTTP request.
+    message JwtAuth {
+      string jwt = 1;
+    }
+
+    // Authenticates using a client certificate (mTLS).
+    // The SDK authenticates the client during the TLS handshake.
+    message CertificateAuth {
+      // PEM-encoded X509 client certificate
+      string cert = 1;
+      // PEM-encoded private key
+      string key = 2;
+    }
+
     oneof type {
       UsernameAndPassword username_and_password = 1;
+      JwtAuth jwt_auth = 2;
+      CertificateAuth certificate_auth = 3;
     }
   }
 
@@ -80,4 +98,10 @@ message ClusterCloseRequest {
 // The performer should close all Columnar Cluster objects it has open.  In the RFC this is `cluster.close()`.
 message CloseAllColumnarClustersRequest {
   ExecutionContext execution_context = 1;
+}
+
+// Requests the performer to update the credential on an existing cluster connection.
+message SetCredentialRequest {
+  ExecutionContextClusterLevel execution_context = 1;
+  ClusterNewInstanceRequest.Credential credential = 2;
 }

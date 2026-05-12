@@ -55,12 +55,18 @@ message InvalidCredentialException {
   // No additional info here yet
 }
 
+// Used to represent the detailed QueryNotFoundException sub-ColumnarError type
+message QueryNotFoundException {
+  // No additional info here yet
+}
+
 // Represents the ColumnarError's sub types
 message SubColumnarError {
   oneof sub_error {
     QueryException query_exception = 1;
     TimeoutException timeout_exception = 2;
     InvalidCredentialException invalid_credential_exception = 3;
+    QueryNotFoundException query_not_found_exception = 4;
   }
 }
 

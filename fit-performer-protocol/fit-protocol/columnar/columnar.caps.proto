@@ -10,6 +10,12 @@ message PerApiElementGeneric {
   // Currently empty.
 }
 
+message CredentialSupport {
+  bool supports_jwt_credential = 1;
+  bool supports_certificate_credential = 2;
+  bool supports_set_credential = 3;
+}
+
 message PerApiElementClusterNewInstance {
   //  The SDK implements a dispatch timeout, which is optional. The SDK may or may not implement this feature.
   bool supports_dispatch_timeout = 1;
@@ -261,4 +267,9 @@ message FetchPerformerCapsResponse {
   map<int32, SdkConnectionError> sdk_connection_error = 7;
 
   AnalyticsProduct analytics_product = 8;
+
+  // WWhether the SDK supports async queries, that is startQuery.
+  bool supports_server_async_queries = 9;
+
+  CredentialSupport credential_support = 10;
 }

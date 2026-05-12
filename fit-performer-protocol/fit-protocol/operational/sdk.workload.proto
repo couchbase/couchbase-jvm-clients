@@ -143,6 +143,7 @@ message Command {
     // KV commands.  These would be added to CollectionLevelCommand if added now.
     kv.Insert insert = 1;
     kv.Get get = 2;
+    kv.GetOrNull getOrNull = 9;
     kv.Remove remove = 3;
     kv.Replace replace = 4;
     kv.Upsert upsert = 5;
@@ -175,6 +176,10 @@ message Result {
 
     // If the operation failed.
     protocol.shared.Exception exception = 2;
+
+    // If the SDK return null/none/undefined.
+    // Nb the SDK should very rarely do this!  It is reserved for cases like getOrNull.
+    bool null_result = 21;
 
     // If the operation succeeded and sdk.Command.returnResult==true, return one of these.
     kv.GetResult get_result = 3;

@@ -257,10 +257,120 @@ message QueryResultMetadataResponse {
 // Executes nothing on the SDK, and is purely for cleanup purposes.  Tells the performer a query_handle is no longer needed.
 // The performer should not cancel anything as a result of this call, or block until row iteration or metadata is complete, or
 // similar.  It may only do memory cleanup, remove the query_handle from internal collections, and do similar "tidyup".
+//
+// This should clean up ALL state associated with the query_handle, regardless of whether it originated from
+// executeQuery() or startQuery().  For startQuery() handles, this includes any stored QueryHandle, QueryStatus,
+// QueryResultHandle, and QueryResult.
 message CloseQueryResultRequest {
   string query_handle = 1;
 }
 
 // Same as CloseQueryResultRequest except for all query_handles.
 message CloseAllQueryResultsRequest {
+}
+
+// StartQueryRequest
+// ==================
+// Tells the performer it should **synchronously** call [instance|scope].startQuery().
+//
+// Unlike ExecuteQueryRequest, this is a synchronous call that should return only once startQuery() has returned,
+// and it should return a UUID representing the query_handle from that call.
+// All subsequent calls from the driver that reference that query_handle.
+message StartQueryRequest {
+    message Options {
+        enum ScanConsistency {
+            SCAN_CONSISTENCY_NOT_BOUNDED = 0;
+            SCAN_CONSISTENCY_REQUEST_PLUS = 1;
+        }
+
+        optional google.protobuf.ListValue parameters_positional = 2;
+        optional google.protobuf.Struct parameters_named = 3;
+        optional bool readonly = 4;
+        optional ScanConsistency scan_consistency = 5;
+        optional google.protobuf.Struct raw = 6;
+        google.protobuf.Duration timeout = 7;
+        optional int32 max_retries = 8;
+    }
+
+    oneof level {
+        ExecutionContextClusterLevel cluster_level = 1;
+        ExecutionContextScopeLevel scope_level = 2;
+    }
+    string statement = 3;
+    optional Options options = 4;
+}
+
+message StartQueryResponse {
+    oneof result {
+        string query_handle = 1;
+        Error failure = 2;
+    }
+}
+
+// AsyncFetchStatusRequest
+// ==================
+// The driver is requesting the SDK call the FetchStatus request on QueryHandle.
+// The performer should block until this (or failure) has been returned from that call.
+// The performer must hold onto the QueryStatus object keyed by the query_handle, regardless of ResultsReady().
+message AsyncFetchStatusRequest {
+    string query_handle = 1;
+}
+
+message AsyncFetchStatusResponse {
+    message QueryStatusResult {
+        // The result of calling ResultsReady() on the QueryStatus.
+        bool results_ready = 1;
+        // The string representation of the QueryStatus (e.g. via toString()).
+        string to_string = 2;
+    }
+
+    oneof result {
+        QueryStatusResult query_status = 1;
+        Error failure = 2;
+    }
+}
+
+// AsyncQueryStatusResultHandleRequest
+// ==================
+// Calls ResultHandle() on the QueryStatus returned from the latest AsyncFetchStatus call.
+// The driver may call this when ResultsReady() was false, to test error handling.
+// If the driver calls this before an AsyncFetchStatus call, this can be treated as a driver bug.
+//
+// On success, the performer stores the SDK's QueryResultHandle internally, keyed by query_handle.
+message AsyncQueryStatusResultHandleRequest {
+    string query_handle = 1;
+}
+
+// AsyncCancelHandleRequest
+// ==================
+// Calls the cancel function on the QueryHandle returned from startQuery().
+message AsyncCancelHandleRequest {
+    string query_handle = 1;
+}
+
+// AsyncFetchResultsRequest
+// ==================
+// The driver is requesting the performer call FetchResults() on the internally-stored QueryResultHandle.
+// The performer should block until this (or failure) has been returned from that call.
+//
+// On success, the performer should store the resulting QueryResult in the same way it would store one from
+// executeQuery(). I.e. keyed by the query_handle and available for subsequent QueryRow, QueryMetadata,
+// QueryCancel, and CloseQueryResult calls, exactly as if it came from the executeQuery() path.
+
+// Some modes of some SDKs will not have a QueryResult, in which case this should be surfaced in the performer caps,
+// and the driver should not be sending it.
+message AsyncFetchResultsRequest {
+    message Options {
+        optional Deserializer deserializer = 1;
+    }
+
+    string query_handle = 1;
+    optional Options options = 2;
+}
+
+// AsyncDiscardResultsRequest
+// ==================
+// Calls the discard function on the QueryResultHandle.
+message AsyncDiscardResultsRequest {
+    string query_handle = 1;
 }

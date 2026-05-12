@@ -200,6 +200,8 @@ enum EventingFunctionStatus {
   PAUSING = 3;
   UNDEPLOYED = 4;
   UNDEPLOYING = 5;
+  RESUMING = 6;
+  UNKNOWN = 10;
 }
 
 message EventingFunctionBucketBinding {

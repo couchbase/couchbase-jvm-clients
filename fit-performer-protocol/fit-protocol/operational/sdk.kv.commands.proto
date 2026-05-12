@@ -30,6 +30,16 @@ message Get {
   shared.ContentAs content_as = 3;
 }
 
+// Performer will return a GetResult or a Result.null_result=true
+message GetOrNull {
+  shared.DocLocation location = 1;
+  // This must be a GetOrNullOptions block in the SDK in case they ever diverge, but in FIT where future breakage is
+  // more easily patched, we can be lazy and DRY.
+  optional GetOptions options = 2;
+
+  shared.ContentAs content_as = 3;
+}
+
 // Performer will return a GetResult
 message GetAndLock {
   shared.DocLocation location = 1;
