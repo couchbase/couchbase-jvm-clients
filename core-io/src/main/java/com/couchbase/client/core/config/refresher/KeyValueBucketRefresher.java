@@ -142,12 +142,24 @@ public class KeyValueBucketRefresher implements BucketRefresher {
 
     pollRegistration = provider.topologyPollingTriggers(pollerInterval())
       .filter(v -> !registrations.isEmpty())
-      .concatMap(signal -> {
-          if (signal == TIMER) {
-            return Flux
-              .fromIterable(registrations.keySet())
-              .flatMap(bucketName -> maybeUpdateBucket(bucketName, false))
-              .doOnNext(provider::proposeBucketConfig);
+      .concatMap(signal -> handleTrigger(signal)
+        // We do not expect to see any errors here; continue if we do.
+        .onErrorResume(t -> {
+          log.warn("Suppressing error while processing poll signal {}", signal, t);
+          return Mono.empty();
+        })
+      )
+      .doFinally(v -> log.warn("Bucket config refresher terminating with signal {}", v))
+      .subscribe();
+  }
+
+  private Mono<Void> handleTrigger(ConfigurationProvider.TopologyPollingTrigger signal) {
+    if (signal == TIMER) {
+      return Flux
+        .fromIterable(registrations.keySet())
+        .flatMap(bucketName -> maybeUpdateBucket(bucketName, false))
+        .doOnNext(provider::proposeBucketConfig)
+        .then();
 
           } else if (signal == SERVER_NOTIFICATION) {
             return Flux
@@ -169,16 +181,15 @@ public class KeyValueBucketRefresher implements BucketRefresher {
                   return Mono.empty();
                 }
 
-                return maybeUpdateBucket(bucketName, true);
-              })
-              .doOnNext(provider::proposeBucketConfig);
+          return maybeUpdateBucket(bucketName, true);
+        })
+        .doOnNext(provider::proposeBucketConfig)
+        .then();
 
-          } else {
-            return Mono.error(new RuntimeException("Unexpected topology poll trigger: " + signal));
-          }
-        }
-      )
-      .subscribe();
+    } else {
+      log.warn("Unexpected topology poll trigger: {}", signal);
+      return Mono.empty();
+    }
   }
 
   /**
@@ -262,7 +273,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     AtomicInteger counter = numFailedRefreshes.get(name);
     if (counter != null && counter.get() >= nodes.size()) {
       provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
-      numFailedRefreshes.get(name).set(0);
+      counter.set(0);
     }
     return fetchConfigPerNode(name, Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
       .next()

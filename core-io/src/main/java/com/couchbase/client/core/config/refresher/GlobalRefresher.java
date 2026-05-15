@@ -122,47 +122,58 @@ public class GlobalRefresher {
 
     pollRegistration = provider.topologyPollingTriggers(pollerInterval())
       .filter(trigger -> started)
-      .concatMap(trigger -> {
-        if (trigger == TopologyPollingTrigger.TIMER) {
-          // It's a polling tick! Ticks can be more frequent than the configured polling interval, or might occur right after a triggered update, so maybe skip this tick.
-          if (!lastPoll.hasElapsed(configPollInterval)) {
-            log.trace("Ignoring tick because last poll for global topology was {} ago, which is less than config poll interval {}", lastPoll.elapsed(), configPollInterval);
-            return Mono.empty();
-
-          } else {
-            log.debug("Polling for global topology because polling interval has elapsed.");
-          }
-
-        } else if (trigger == TopologyPollingTrigger.SERVER_NOTIFICATION) {
-          TopologyRevision availableRevision = provider.removeTopologyRevisionChangeNotification(null);
-          TopologyRevision currentRevision = provider.config().globalTopologyRevision();
-
-          if (availableRevision == null) {
-            log.trace("Ignoring redundant global topology change notification.");
-            return Mono.empty();
-          }
-
-          if (availableRevision.newerThan(currentRevision)) {
-            log.debug("Fetching updated global topology; available revision {} is newer than current ({}).", availableRevision, currentRevision);
-
-          } else {
-            log.debug("Skipping global topology revision {} because it's not newer than current ({}).", availableRevision, currentRevision);
-            return Mono.empty();
-          }
-
-        } else {
-          return Mono.error(new RuntimeException("Unexpected topology poll trigger: " + trigger));
-        }
-
-        List<PortInfo> nodes = filterEligibleNodes();
-        if (numFailedRefreshes.get() >= nodes.size()) {
-          provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
-          numFailedRefreshes.set(0);
-        }
-        return attemptUpdateGlobalConfig(Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
-          .doOnNext(provider::proposeGlobalConfig);
-      })
+      .concatMap(trigger -> handlePollSignal(trigger)
+        // We do not expect to see any errors here; continue if we do.
+        .onErrorResume(t -> {
+          log.warn("Suppressed error while processing poll signal {}", trigger, t);
+          return Mono.empty();
+        })
+      )
+      .doFinally(v -> log.warn("Global config refresher terminating with signal {}", v))
       .subscribe();
+  }
+
+  private Mono<Void> handlePollSignal(TopologyPollingTrigger trigger) {
+    if (trigger == TopologyPollingTrigger.TIMER) {
+      // It's a polling tick! Ticks can be more frequent than the configured polling interval, or might occur right after a triggered update, so maybe skip this tick.
+      if (!lastPoll.hasElapsed(configPollInterval)) {
+        log.trace("Ignoring tick because last poll for global topology was {} ago, which is less than config poll interval {}", lastPoll.elapsed(), configPollInterval);
+        return Mono.empty();
+
+      } else {
+        log.debug("Polling for global topology because polling interval has elapsed.");
+      }
+
+    } else if (trigger == TopologyPollingTrigger.SERVER_NOTIFICATION) {
+      TopologyRevision availableRevision = provider.removeTopologyRevisionChangeNotification(null);
+      TopologyRevision currentRevision = provider.config().globalTopologyRevision();
+
+      if (availableRevision == null) {
+        log.trace("Ignoring redundant global topology change notification.");
+        return Mono.empty();
+      }
+
+      if (availableRevision.newerThan(currentRevision)) {
+        log.debug("Fetching updated global topology; available revision {} is newer than current ({}).", availableRevision, currentRevision);
+
+      } else {
+        log.debug("Skipping global topology revision {} because it's not newer than current ({}).", availableRevision, currentRevision);
+        return Mono.empty();
+      }
+
+    } else {
+      log.warn("Unexpected topology poll trigger: {}", trigger);
+      return Mono.empty();
+    }
+
+    List<PortInfo> nodes = filterEligibleNodes();
+    if (numFailedRefreshes.get() >= nodes.size()) {
+      provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
+      numFailedRefreshes.set(0);
+    }
+    return attemptUpdateGlobalConfig(Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
+            .doOnNext(provider::proposeGlobalConfig)
+            .then();
   }
 
   /**
