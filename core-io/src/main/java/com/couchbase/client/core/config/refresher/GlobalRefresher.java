@@ -223,7 +223,7 @@ public class GlobalRefresher {
           new ProposedGlobalConfigContext(new String(response.content(), UTF_8), nodeInfo.hostname())
         )
         // If we got a good proposed config, make sure to set the lastPoll timestamp.
-        .doOnSuccess(r -> {
+        .doOnNext(r -> {
           numFailedRefreshes.set(0);
           lastPoll = NanoTimestamp.now();
         })

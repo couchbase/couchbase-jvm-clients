@@ -277,7 +277,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     }
     return fetchConfigPerNode(name, Flux.fromIterable(nodes).take(MAX_PARALLEL_FETCH))
       .next()
-      .doOnSuccess(ctx -> registrations.replace(name, NanoTimestamp.now()));
+      .doOnNext(ctx -> registrations.replace(name, NanoTimestamp.now()));
   }
 
   /**
