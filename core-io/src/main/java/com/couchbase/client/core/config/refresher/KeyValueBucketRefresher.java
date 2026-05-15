@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger.SERVER_NOTIFICATION;
 import static com.couchbase.client.core.config.ConfigurationProvider.TopologyPollingTrigger.TIMER;
+import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -102,7 +103,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
   private final ConfigurationProvider provider;
 
   /**
-   * Holds all current registrations and their last timestamp when the bucket has been
+   * Holds all current registrations (buckets the user has requested be opened) and their last timestamp when the bucket has been
    * updated.
    */
   private final Map<String, NanoTimestamp> registrations = new ConcurrentHashMap<>();
@@ -141,6 +142,7 @@ public class KeyValueBucketRefresher implements BucketRefresher {
     this.configRequestTimeout = clampConfigRequestTimeout(configPollInterval);
 
     pollRegistration = provider.topologyPollingTriggers(pollerInterval())
+      // Optimisation to skip trigger handling if the user has requested no buckets be opened yet.
       .filter(v -> !registrations.isEmpty())
       .concatMap(signal -> handleTrigger(signal)
         // We do not expect to see any errors here; continue if we do.
@@ -251,26 +253,21 @@ public class KeyValueBucketRefresher implements BucketRefresher {
    * @return a {@link Mono} either with a new config or nothing to ignore.
    */
   private Mono<ProposedBucketConfigContext> maybeUpdateBucket(final String name, boolean triggeredByConfigChangeNotification) {
+    // Check when we last fetched a config for this bucket, and potentially skip if it's too soon (though this can be overridden for reasons including receiving a config push).
     NanoTimestamp last = registrations.getOrDefault(name, NanoTimestamp.never());
     boolean overInterval = last.hasElapsed(configPollInterval);
     boolean topologyInTransition = tainted.contains(name);
     boolean allowed = triggeredByConfigChangeNotification || topologyInTransition || overInterval;
+    AtomicInteger counter = numFailedRefreshes.get(name);
+
+    log.debug("Checking whether should poll for topology on bucket '{}' - allowed={} due to following factors: topologyInTransition={} overInterval={} isPush={} failedRefreshes={}",
+      redactUser(name), allowed, topologyInTransition, overInterval, triggeredByConfigChangeNotification, counter == null ? -1 : counter.get());
 
     if (!allowed) {
       return Mono.empty();
     }
 
-    if (!triggeredByConfigChangeNotification) {
-      if (topologyInTransition) {
-        log.debug("Polling for topology for bucket '{}' because current topology is in transition.", name);
-
-      } else {
-        log.debug("Polling for topology for bucket '{}' because polling interval has elapsed.", name);
-      }
-    }
-
     List<NodeInfo> nodes = filterEligibleNodes(name);
-    AtomicInteger counter = numFailedRefreshes.get(name);
     if (counter != null && counter.get() >= nodes.size()) {
       provider.signalConfigRefreshFailed(ConfigRefreshFailure.ALL_NODES_TRIED_ONCE_WITHOUT_SUCCESS);
       counter.set(0);
