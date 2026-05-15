@@ -35,7 +35,7 @@ public class IndividualGlobalConfigRefreshFailedEvent extends AbstractEvent {
 
   public IndividualGlobalConfigRefreshFailedEvent(Duration duration, CoreContext context, Throwable cause, String host,
                                                   CarrierGlobalConfigResponse response) {
-    super(Severity.DEBUG, Category.CONFIG, duration, context);
+    super(Severity.WARN, Category.CONFIG, duration, context);
     this.cause = cause;
     this.host = host;
     this.response = response;
