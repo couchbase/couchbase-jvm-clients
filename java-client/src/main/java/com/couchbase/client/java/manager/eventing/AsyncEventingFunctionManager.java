@@ -19,6 +19,7 @@ package com.couchbase.client.java.manager.eventing;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.DeserializationFeature;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
@@ -37,6 +38,7 @@ import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.query.QueryScanConsistency;
 import reactor.util.annotation.Nullable;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -385,7 +387,17 @@ public class AsyncEventingFunctionManager {
   public CompletableFuture<EventingStatus> functionsStatus(final FunctionsStatusOptions options) {
     return coreManager
       .functionsStatus(options.build())
-      .thenApply(bytes -> Mapper.decodeInto(bytes, EventingStatus.class));
+      .thenApply(AsyncEventingFunctionManager::decodeEventingStatus);
+  }
+
+  static EventingStatus decodeEventingStatus(final byte[] bytes) {
+    try {
+      return Mapper.reader()
+        .with(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE) // for EventingFunctionStatus
+        .readValue(bytes, EventingStatus.class);
+    } catch (IOException e) {
+      throw new CouchbaseException("Failed to parse eventing function status.", e);
+    }
   }
 
   /**

@@ -28,7 +28,6 @@ import com.couchbase.client.core.error.EventingFunctionIdenticalKeyspaceExceptio
 import com.couchbase.client.core.error.EventingFunctionNotBootstrappedException;
 import com.couchbase.client.core.error.EventingFunctionNotDeployedException;
 import com.couchbase.client.core.error.EventingFunctionNotFoundException;
-import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreEventingFunctionManager;
 import com.couchbase.client.core.util.PreventsGarbageCollection;
 import com.couchbase.client.java.AsyncCluster;
@@ -377,6 +376,6 @@ public class AsyncScopeEventingFunctionManager {
   public CompletableFuture<EventingStatus> functionsStatus(final FunctionsStatusOptions options) {
     return coreManager
       .functionsStatus(options.build())
-      .thenApply(bytes -> Mapper.decodeInto(bytes, EventingStatus.class));
+      .thenApply(AsyncEventingFunctionManager::decodeEventingStatus);
   }
 }

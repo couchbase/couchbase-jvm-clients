@@ -16,41 +16,25 @@
 
 package com.couchbase.client.java.manager.eventing;
 
-import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.EnumNamingStrategies;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.annotation.EnumNaming;
 
 /**
  * The compound status an eventing function can be in at any given point in time.
  */
+@EnumNaming(EnumNamingStrategies.LowerCamelCaseStrategy.class)
 public enum EventingFunctionStatus {
-  /**
-   * The function is not deployed.
-   */
-  @JsonProperty("undeployed")
   UNDEPLOYED,
-  /**
-   * The function is currently being deployed.
-   */
-  @JsonProperty("deploying")
   DEPLOYING,
-  /**
-   * The function is deployed.
-   */
-  @JsonProperty("deployed")
   DEPLOYED,
-  /**
-   * The function is currently being undeployed.
-   */
-  @JsonProperty("undeploying")
   UNDEPLOYING,
-  /**
-   * The function is paused.
-   */
-  @JsonProperty("paused")
   PAUSED,
-  /**
-   * The function is currently being paused.
-   */
-  @JsonProperty("pausing")
-  PAUSING;
+  PAUSING,
+  RESUMING,
 
+  /**
+   * A special value indicating the SDK did not recognize the status code returned by the server.
+   */
+  @JsonEnumDefaultValue UNKNOWN,
 }
