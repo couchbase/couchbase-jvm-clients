@@ -18,6 +18,8 @@ package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.BaseSubscriber;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -45,6 +47,8 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public class LatestStateSubscription<T> {
 
+  private static final Logger log = LoggerFactory.getLogger(LatestStateSubscription.class);
+
   @FunctionalInterface
   public interface AsyncSubscriber<T> {
     /**
@@ -55,6 +59,17 @@ public class LatestStateSubscription<T> {
      * @param doFinally Callback to run after asynchronous processing is complete.
      */
     void hookOnNext(T value, Runnable doFinally);
+
+    /**
+     * Called exactly once when the upstream flux terminates, regardless of
+     * whether it completed, errored, or was cancelled. No further values
+     * will be processed after this.
+     *
+     * @param signalType the terminal signal from the upstream flux.
+     */
+    default void hookOnFinally(SignalType signalType) {
+      log.warn("LatestStateSubscription's upstream Flux is terminating ({})", signalType);
+    }
   }
 
   private final Sinks.One<Void> terminationSignal = Sinks.one();
@@ -81,6 +96,7 @@ public class LatestStateSubscription<T> {
     flux
       .onBackpressureLatest()
       .publishOn(scheduler)
+      .doFinally(subscriber::hookOnFinally)
       .subscribe(
         new BaseSubscriber<T>() {
           @Override
