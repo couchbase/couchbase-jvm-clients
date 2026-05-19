@@ -66,7 +66,11 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
             String bucketOrNullIfGlobal = emptyToNull(MemcacheProtocol.keyAsString(buf));
             TopologyRevision newRevision = parseTopologyRevision(buf);
 
-            this.endpointContext.core().configurationProvider().signalNewTopologyAvailable(bucketOrNullIfGlobal, newRevision);
+            this.endpointContext.core().configurationProvider().signalNewTopologyAvailable(
+              bucketOrNullIfGlobal,
+              newRevision,
+              this.endpointContext.remoteSocket()
+            );
             return;
           }
 

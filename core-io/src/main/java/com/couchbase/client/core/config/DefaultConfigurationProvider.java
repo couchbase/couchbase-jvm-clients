@@ -71,6 +71,7 @@ import com.couchbase.client.core.topology.TopologyParser;
 import com.couchbase.client.core.topology.TopologyRevision;
 import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
+import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import org.slf4j.Logger;
@@ -827,14 +828,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   @Override
   public void signalNewTopologyAvailable(
     @Nullable String bucketName,
-    @Nullable TopologyRevision availableRevision
+    @Nullable TopologyRevision availableRevision,
+    @Nullable HostAndPort origin
   ) {
 
     if (availableRevision == null) {
       availableRevision = NEWER_THAN_WHAT_WE_HAVE;
     }
 
-    if (topologyChangeNotificationBuffer.putIfNewer(nullToEmpty(bucketName), availableRevision)) {
+    if (topologyChangeNotificationBuffer.putIfNewer(nullToEmpty(bucketName), availableRevision, origin)) {
       // synchronized to prevent tryEmitNext from returning EmitResult.FAIL_NON_SERIALIZED
       synchronized (this) {
         topologyPollingTriggers.tryEmitNext(TopologyPollingTrigger.SERVER_NOTIFICATION);

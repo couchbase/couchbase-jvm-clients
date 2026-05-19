@@ -21,6 +21,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.topology.TopologyRevision;
+import com.couchbase.client.core.util.HostAndPort;
 import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -176,10 +177,12 @@ public interface ConfigurationProvider {
    *
    * @param bucketName null if the signal is for the global topology
    * @param availableRevision null if the server did not tell us the new revision
+   * @param origin the remote node that originated the signal, or null if not known
    */
   void signalNewTopologyAvailable(
     @Nullable String bucketName,
-    @Nullable TopologyRevision availableRevision
+    @Nullable TopologyRevision availableRevision,
+    @Nullable HostAndPort origin
   );
 
   /**

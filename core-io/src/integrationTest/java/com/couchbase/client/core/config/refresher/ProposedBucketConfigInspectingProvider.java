@@ -9,6 +9,7 @@ import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.topology.TopologyRevision;
+import com.couchbase.client.core.util.HostAndPort;
 import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -135,7 +136,7 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public void signalNewTopologyAvailable(@Nullable String bucketName, @Nullable TopologyRevision availableRevision) {
+  public void signalNewTopologyAvailable(@Nullable String bucketName, @Nullable TopologyRevision availableRevision, @Nullable HostAndPort origin) {
   }
 
   @Override
