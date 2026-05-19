@@ -206,4 +206,8 @@ object EventingFunctionStatus {
   case object Paused extends EventingFunctionStatus
 
   case object Pausing extends EventingFunctionStatus
+
+  case object Resuming extends EventingFunctionStatus
+
+  case object Unknown extends EventingFunctionStatus
 }

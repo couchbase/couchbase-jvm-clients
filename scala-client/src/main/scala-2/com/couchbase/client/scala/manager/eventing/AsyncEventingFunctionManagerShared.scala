@@ -408,11 +408,11 @@ private[scala] object AsyncEventingFunctionManagerShared {
                   case "undeployed"  => Success(EventingFunctionStatus.Undeployed)
                   case "deploying"   => Success(EventingFunctionStatus.Deploying)
                   case "deployed"    => Success(EventingFunctionStatus.Deployed)
-                  case "undeploying" => Success(EventingFunctionStatus.Deploying)
+                  case "undeploying" => Success(EventingFunctionStatus.Undeploying)
                   case "paused"      => Success(EventingFunctionStatus.Paused)
                   case "pausing"     => Success(EventingFunctionStatus.Pausing)
-                  case _             =>
-                    Failure(new DecodingFailureException(s"Unknown composite_status $status"))
+                  case "resuming"    => Success(EventingFunctionStatus.Resuming)
+                  case _             => Success(EventingFunctionStatus.Unknown)
                 }
                 numBootstrappingNodes <- app.num("num_bootstrapping_nodes")
                 numDeployedNodes      <- app.num("num_deployed_nodes")
