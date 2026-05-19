@@ -786,21 +786,17 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
           .flatMap(n -> maybeRemoveNode(n, configForThisAttempt))
           .then()
       ))
-      .subscribe(
-        v -> {
-        },
-        e -> {
-          doFinally.run();
-          eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
-        },
-        () -> {
-          doFinally.run();
-          eventBus.publish(new ReconfigurationCompletedEvent(
-            start.elapsed(),
-            coreContext
-          ));
-        }
-      );
+      .doOnSuccess(v -> eventBus.publish(new ReconfigurationCompletedEvent(
+        start.elapsed(),
+        coreContext
+      )))
+      .onErrorResume(e -> {
+        eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
+        return Mono.empty();
+      })
+      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))))
+      .doFinally(signalType -> doFinally.run())
+      .subscribe();
   }
 
   /**
@@ -815,21 +811,18 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .fromIterable(new ArrayList<>(nodes))
       .flatMap(Node::disconnect)
       .doOnComplete(nodes::clear)
-      .subscribe(
-        v -> {
-        },
-        e -> {
-          doFinally.run();
-          eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
-        },
-        () -> {
-          doFinally.run();
-          eventBus.publish(new ReconfigurationCompletedEvent(
-            start.elapsed(),
-            coreContext
-          ));
-        }
-      );
+      .then()
+      .doOnSuccess(v -> eventBus.publish(new ReconfigurationCompletedEvent(
+        start.elapsed(),
+        coreContext
+      )))
+      .onErrorResume(e -> {
+        eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
+        return Mono.empty();
+      })
+      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))))
+      .doFinally(signalType -> doFinally.run())
+      .subscribe();
   }
 
   private Mono<Void> reconfigureGlobal(final @Nullable ClusterTopology topology) {
