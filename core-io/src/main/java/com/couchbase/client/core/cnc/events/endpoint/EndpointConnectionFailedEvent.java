@@ -18,6 +18,7 @@ package com.couchbase.client.core.cnc.events.endpoint;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
 
@@ -30,12 +31,15 @@ public class EndpointConnectionFailedEvent extends AbstractEvent {
 
   private final long attempt;
   private final Throwable cause;
+  private final @Nullable Boolean targetInCurrentTopology;
 
   public EndpointConnectionFailedEvent(Severity severity, Duration duration, EndpointContext context,
-                                       long attempt, Throwable cause) {
+                                       long attempt, Throwable cause,
+                                       @Nullable Boolean targetInCurrentTopology) {
     super(severity, Category.ENDPOINT, duration, context);
     this.attempt = attempt;
     this.cause = cause;
+    this.targetInCurrentTopology = targetInCurrentTopology;
   }
 
   public long attempt() {
@@ -50,7 +54,10 @@ public class EndpointConnectionFailedEvent extends AbstractEvent {
   @Override
   public String description() {
     String msg = cause == null ? "" : " because of " + cause.getClass().getSimpleName() + ": " + cause.getMessage();
-    return "Connect attempt " + attempt + " failed" + msg;
+    String isTargetInTopology = targetInCurrentTopology == null
+      ? ""
+      : " (targetInCurrentTopology=" + targetInCurrentTopology + ")";
+    return "Connect attempt " + attempt + " failed" + msg + isTargetInTopology;
   }
 
 }

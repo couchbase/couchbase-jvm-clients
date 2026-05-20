@@ -107,6 +107,7 @@ public abstract class BaseEndpoint implements Endpoint {
   private static final Logger log = LoggerFactory.getLogger(BaseEndpoint.class);
 
   private static final String ALLOCATOR_SYSTEM_PROPERTY_NAME = "com.couchbase.client.core.deps.io.netty.allocator.type";
+  private static final int TOPOLOGY_CHECK_EVERY_N_RETRIES = 20;
   private static final ByteBufAllocator allocator;
 
   // Netty 4.2 changed the default allocator from `pooled` to `adaptive`.
@@ -464,16 +465,30 @@ public abstract class BaseEndpoint implements Endpoint {
           ex = trimNettyFromStackTrace(annotateConnectException(ex));
           lastConnectAttemptFailure = ex;
 
+          // Periodically check whether this endpoint's target host is still in the current
+          // cluster topology. If it persistently isn't, the SDK is reconnect-looping to a
+          // node that has been removed - i.e. a stuck reconfiguration upstream.
+          Boolean targetInTopology = null;
+          if (retryContext.iteration() > 0 && retryContext.iteration() % TOPOLOGY_CHECK_EVERY_N_RETRIES == 0) {
+            try {
+              targetInTopology = endpointContext.core().clusterConfig()
+                      .contains(serviceType, endpointContext.remoteSocket());
+            } catch (Throwable ignored) {
+            }
+          }
+
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             severity,
             duration,
             endpointContext,
             retryContext.iteration(),
-            ex
+            ex,
+            targetInTopology
           ));
         })
         .toReactorRetry()
       ).subscribe(
+        // Called once the endpoint connects.
         channel -> {
           long now = System.nanoTime();
           if (disconnect.get()) {

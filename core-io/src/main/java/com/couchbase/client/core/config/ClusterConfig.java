@@ -21,12 +21,14 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import com.couchbase.client.core.topology.TopologyRevision;
+import com.couchbase.client.core.util.HostAndPort;
 import reactor.util.annotation.Nullable;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -144,6 +146,25 @@ public class ClusterConfig {
     }
 
     return hosts;
+  }
+
+  public boolean contains(ServiceType service, HostAndPort address) {
+    ClusterTopology global = globalTopology();
+    if (global != null && contains(global, service, address)) return true;
+
+    return bucketTopologies().stream()
+            .anyMatch(bucket -> contains(bucket, service, address));
+  }
+
+  private static boolean contains(
+          ClusterTopology topology,
+          ServiceType service,
+          HostAndPort address
+  ) {
+    return topology.nodes().stream().anyMatch(node ->
+            node.host().equals(address.host())
+                    && Objects.equals(node.ports().get(service), address.port())
+    );
   }
 
   @Override
