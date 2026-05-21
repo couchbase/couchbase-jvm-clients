@@ -582,8 +582,7 @@ public class SecurityConfig {
       return (List<X509Certificate>) getX509CertificateFactory()
           .generateCertificates(new ByteArrayInputStream(bytes));
     } catch (CertificateException e) {
-      String inputAsString = new String(bytes, UTF_8);
-      throw InvalidArgumentException.fromMessage("Could not generate certificates from raw input: \"" + inputAsString + "\"", e);
+      throw InvalidArgumentException.fromMessage("Expected one or more PEM-encoded X.509 certificates, but got something else.", e);
     }
   }
 
