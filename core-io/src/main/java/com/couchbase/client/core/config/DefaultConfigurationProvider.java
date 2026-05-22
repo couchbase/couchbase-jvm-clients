@@ -63,6 +63,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.BucketTopology;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.TopologyChangeLogger;
 import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.core.topology.NetworkSelector;
 import com.couchbase.client.core.topology.NodeIdentifier;
@@ -661,7 +662,8 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private synchronized boolean checkAndApplyBucketTopology(final ClusterTopologyWithBucket newConfig, final boolean forceApply) {
     final String name = newConfig.bucket().name();
 
-    if (shouldIgnore(currentConfig.bucketTopology(name), newConfig, forceApply)) {
+    ClusterTopologyWithBucket previous = currentConfig.bucketTopology(name);
+    if (shouldIgnore(previous, newConfig, forceApply)) {
       return false;
     }
 
@@ -673,8 +675,11 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
       clusterManagerRefresher.markUntainted(name);
     }
 
-    eventBus.publish(new BucketConfigUpdatedEvent(core.context(), LegacyConfigHelper.toLegacyBucketConfig(newConfig)));
+    BucketConfig legacy = LegacyConfigHelper.toLegacyBucketConfig(newConfig);
+    eventBus.publish(new BucketConfigUpdatedEvent(core.context(), legacy));
+    TopologyChangeLogger.logChange(currentConfig.bucketConfig(name), legacy);
     currentConfig.setBucketConfig(newConfig);
+
     return true;
   }
 
@@ -690,11 +695,14 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
    * @return true if the proposed topology was applied.
    */
   private synchronized boolean checkAndApplyGlobalTopology(final ClusterTopology topology, final boolean forceApply) {
-    if (shouldIgnore(currentConfig.globalTopology(), topology, forceApply)) {
+    ClusterTopology previous = currentConfig.globalTopology();
+    if (shouldIgnore(previous, topology, forceApply)) {
       return false;
     }
 
-    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), new GlobalConfig(topology)));
+    GlobalConfig legacy = new GlobalConfig(topology);
+    eventBus.publish(new GlobalConfigUpdatedEvent(core.context(), legacy));
+    TopologyChangeLogger.logChange(currentConfig.globalConfig(), legacy);
     currentConfig.setGlobalConfig(topology);
     updateSeedNodeList(topology);
     return true;
