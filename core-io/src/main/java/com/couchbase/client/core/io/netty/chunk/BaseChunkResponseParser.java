@@ -63,6 +63,11 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   private ChannelConfig channelConfig;
 
   /**
+   * Whether there's a subscriber for the current response.
+   */
+  private boolean rowSinkSubscribed;
+
+  /**
    * Holds the current associated trailer.
    */
   private Sinks.One<T> trailer;
@@ -183,11 +188,19 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     this.trailer = Sinks.one();
     synchronized (autoReadLock) {
       this.demand = 0;
+      // Defensive callback for JVMCBC-1738: autoRead should be true here, but if not it will cause serious problems.
+      channelConfig.setAutoRead(true);
+      this.rowSinkSubscribed = false;
     }
 
     this.rowSink = Sinks.many().unicast().onBackpressureBuffer();
     this.rows = rowSink
       .asFlux()
+      .doOnSubscribe(sub -> {
+        synchronized (autoReadLock) {
+          rowSinkSubscribed = true;
+        }
+      })
       .doOnRequest(v -> {
         synchronized (autoReadLock) {
           if (demand == Long.MAX_VALUE) {
@@ -217,6 +230,8 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
 
   /**
    * Allow the remaining result rows to be consumed, even in the absence of demand.
+   * (Though note that it's only called if a user subscribes to the rows, so don't rely
+   * on this method but finally-style logic that absolutely has to trigger every query.)
    * Must not be called before the row subscription is terminated or cancelled.
    * <p>
    * From a memory usage perspective, this is safe because future attempts to emit
@@ -291,7 +306,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
 
       demand--;
 
-      if (demand <= 0 && channelConfig.isAutoRead()) {
+      if (rowSinkSubscribed && demand <= 0 && channelConfig.isAutoRead()) {
         channelConfig.setAutoRead(false);
       }
     }

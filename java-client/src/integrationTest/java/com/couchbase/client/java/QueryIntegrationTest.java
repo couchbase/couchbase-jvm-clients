@@ -737,4 +737,15 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         return id;
     }
 
+    // Regression test for JVMCBC-1738.
+    @Test
+    void chainedReactiveQueriesWithoutSubscribingRowsCompletes() {
+        ReactiveQueryResult result = cluster.reactive()
+                .query("SELECT 'hello' AS greeting")
+                .then(cluster.reactive().query("SELECT 1"))
+                .then(cluster.reactive().query("SELECT 1"))
+                .block();
+
+        assertNotNull(result, "final query Mono must emit a ReactiveQueryResult");
+    }
 }
