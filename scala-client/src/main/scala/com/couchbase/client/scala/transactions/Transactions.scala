@@ -60,7 +60,7 @@ class Transactions private[scala] (
       internal.run(
         (internalCtx) => {
           val async = new AsyncTransactionAttemptContext(internalCtx, environment)
-          val ctx = new TransactionAttemptContext(async)
+          val ctx   = new TransactionAttemptContext(async)
           transactionLogic(ctx)
         },
         options.toCore

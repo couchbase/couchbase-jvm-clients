@@ -23,7 +23,11 @@ import com.couchbase.client.core.env.{Authenticator, JwtAuthenticator, PasswordA
 import com.couchbase.client.core.transaction.{CoreTransactions}
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
-import com.couchbase.client.scala.diagnostics.{DiagnosticsOptions, PingOptions, WaitUntilReadyOptions}
+import com.couchbase.client.scala.diagnostics.{
+  DiagnosticsOptions,
+  PingOptions,
+  WaitUntilReadyOptions
+}
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
 import com.couchbase.client.scala.search.SearchOptions
