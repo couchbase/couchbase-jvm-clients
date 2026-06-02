@@ -100,8 +100,8 @@ public class TopologyChangeLogger {
 
       Set<BucketChange> changes = diff(previous, applied);
       // Config changes caused by partition map shuffling is very common during rebalances, and too expensive to
-      // log at INFO.
-      boolean meaningful = !changes.equals(setOf(BucketChange.PARTITION_MAP));
+      // log at INFO.  Skip no-op changes too.
+      boolean meaningful = !changes.isEmpty() && !changes.equals(setOf(BucketChange.PARTITION_MAP));
       String msg = "Change to {} (revision {} -> {}) {}: {}";
       if (meaningful) {
         log.info(msg, label, previous.version(), applied.version(), changes, redactSystem(applied));
