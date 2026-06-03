@@ -25,7 +25,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpClientCode
 public class SearchEndpoint extends BaseEndpoint {
 
   public SearchEndpoint(final ServiceContext ctx, final String hostname, final int port) {
-    super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroup().get(),
+    super(hostname, port, ctx.environment().ioEnvironment().searchEventLoopGroupAndType(),
       ctx, ctx.environment().ioConfig().searchCircuitBreakerConfig(), ServiceType.SEARCH, false);
   }
 

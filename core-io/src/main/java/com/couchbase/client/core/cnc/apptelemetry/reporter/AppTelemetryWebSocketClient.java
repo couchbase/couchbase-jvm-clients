@@ -24,7 +24,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpHeaders;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpRequest;
@@ -41,6 +40,7 @@ import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateHandler;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.SecurityException;
+import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
@@ -52,7 +52,6 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.core.endpoint.BaseEndpoint.channelFrom;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
@@ -130,12 +129,10 @@ class AppTelemetryWebSocketClient {
       collector
     );
 
-    EventLoopGroup group = coreContext.environment().ioEnvironment().managerEventLoopGroup().get();
+    EventLoopGroupAndType group = coreContext.environment().ioEnvironment().managerEventLoopGroupAndType();
     int connectTimeoutMillis = (int) coreContext.environment().timeoutConfig().connectTimeout().toMillis();
 
-    Bootstrap b = new Bootstrap()
-      .group(group)
-      .channel(channelFrom(group))
+    Bootstrap b = group.newBootstrap()
       .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
       .handler(new ChannelInitializer<SocketChannel>() {
         @Override

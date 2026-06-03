@@ -32,6 +32,7 @@ import com.couchbase.client.core.deps.io.netty.channel.local.LocalAddress;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalIoHandler;
 import com.couchbase.client.core.deps.io.netty.channel.local.LocalServerChannel;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CoreIntegrationTest;
@@ -61,20 +62,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BaseEndpointIntegrationTest extends CoreIntegrationTest {
 
   private CoreEnvironment env;
-  private EventLoopGroup eventLoopGroup;
+  private EventLoopGroupAndType eventLoopGroup;
   private SimpleEventBus eventBus;
 
   @BeforeEach
   void beforeEach() {
     eventBus = new SimpleEventBus(true);
     env = environment().eventBus(eventBus).build();
-    eventLoopGroup = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+    eventLoopGroup = EventLoopGroupAndType.from(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
   }
 
   @AfterEach
   void afterEach() {
     env.shutdown();
-    eventLoopGroup.shutdownGracefully().awaitUninterruptibly();
+    eventLoopGroup.group().shutdownGracefully().awaitUninterruptibly();
   }
 
   /**
@@ -83,7 +84,7 @@ class BaseEndpointIntegrationTest extends CoreIntegrationTest {
    */
   @Test
   void mustReconnectWhenChannelCloses() {
-    LocalServerController localServerController = startLocalServer(eventLoopGroup);
+    LocalServerController localServerController = startLocalServer(eventLoopGroup.group());
 
     ServiceContext serviceContext = new ServiceContext(
       new CoreContext(mockCore(env), 1, env, authenticator()),
