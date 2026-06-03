@@ -26,7 +26,7 @@ public class ViewEndpoint extends BaseEndpoint {
 
   public ViewEndpoint(final ServiceContext ctx, final String hostname,
                       final int port) {
-    super(hostname, port, ctx.environment().ioEnvironment().viewEventLoopGroup().get(),
+    super(hostname, port, ctx.environment().ioEnvironment().viewEventLoopGroupAndType(),
       ctx, ctx.environment().ioConfig().viewCircuitBreakerConfig(), ServiceType.VIEWS, false);
   }
 

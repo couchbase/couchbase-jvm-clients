@@ -18,9 +18,17 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.IoEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.IoHandlerFactory;
 import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.Epoll;
+import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollIoHandler;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueue;
+import com.couchbase.client.core.deps.io.netty.channel.kqueue.KQueueIoHandler;
+import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -35,10 +43,7 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.core.env.OwnedOrExternal.external;
 import static com.couchbase.client.core.env.OwnedOrExternal.owned;
-import static com.couchbase.client.core.io.netty.EventLoopGroups.isNio;
-import static com.couchbase.client.core.io.netty.EventLoopGroups.newIoHandlerFactory;
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
-import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * The {@link IoEnvironment} holds the I/O event loops and state.
@@ -84,14 +89,14 @@ public class IoEnvironment {
 
   private final boolean nativeIoEnabled;
   private final int eventLoopThreadCount;
-  private final OwnedOrExternal<EventLoopGroup> managerEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> kvEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> queryEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> analyticsEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> searchEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> viewEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> eventingEventLoopGroup;
-  private final OwnedOrExternal<EventLoopGroup> backupEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> managerEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> kvEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> queryEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> analyticsEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> searchEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> viewEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> eventingEventLoopGroup;
+  private final OwnedOrExternal<EventLoopGroupAndType> backupEventLoopGroup;
 
   /**
    * Creates the {@link IoEnvironment} with default settings.
@@ -335,7 +340,7 @@ public class IoEnvironment {
     nativeIoEnabled = builder.nativeIoEnabled;
     eventLoopThreadCount = builder.eventLoopThreadCount;
 
-    OwnedOrExternal<EventLoopGroup> httpDefaultGroup = null;
+    OwnedOrExternal<EventLoopGroupAndType> httpDefaultGroup = null;
     if (builder.queryEventLoopGroup == null
       || builder.analyticsEventLoopGroup == null
       || builder.searchEventLoopGroup == null
@@ -391,8 +396,8 @@ public class IoEnvironment {
    *
    * @param group the group to check.
    */
-  private void sanityCheckEventLoop(final OwnedOrExternal<EventLoopGroup> group) {
-    if (!nativeIoEnabled && !isNio(group.get())) {
+  private void sanityCheckEventLoop(final OwnedOrExternal<EventLoopGroupAndType> group) {
+    if (!nativeIoEnabled && !group.get().isNio()) {
       throw InvalidArgumentException.fromMessage("Native IO is disabled and the EventLoopGroup is not backed by NIO");
     }
   }
@@ -400,74 +405,147 @@ public class IoEnvironment {
   /**
    * Returns the {@link EventLoopGroup} to be used for config traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #managerEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> managerEventLoopGroup() {
-    return managerEventLoopGroup::get;
+    return () -> managerEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroupAndType} to be used for config traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType managerEventLoopGroupAndType() {
+    return managerEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for Key/Value traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #kvEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> kvEventLoopGroup() {
-    return kvEventLoopGroup::get;
+    return () -> kvEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroupAndType} to be used for Key/Value traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType kvEventLoopGroupAndType() {
+    return kvEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for N1QL Query traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #queryEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> queryEventLoopGroup() {
-    return queryEventLoopGroup::get;
+    return () -> queryEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroupAndType} to be used for N1QL Query traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType queryEventLoopGroupAndType() {
+    return queryEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for analytics traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #analyticsEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> analyticsEventLoopGroup() {
-    return analyticsEventLoopGroup::get;
+    return () -> analyticsEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroupAndType} to be used for analytics traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType analyticsEventLoopGroupAndType() {
+    return analyticsEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for search traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #searchEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> searchEventLoopGroup() {
-    return searchEventLoopGroup::get;
+    return () -> searchEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroup} to be used for search traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType searchEventLoopGroupAndType() {
+    return searchEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for view traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #viewEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> viewEventLoopGroup() {
-    return viewEventLoopGroup::get;
+    return () -> viewEventLoopGroup.get().group();
+  }
+
+
+  /**
+   * Returns the {@link EventLoopGroupAndType} to be used for view traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType viewEventLoopGroupAndType() {
+    return viewEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for eventing traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #eventingEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   public Supplier<EventLoopGroup> eventingEventLoopGroup() {
-    return eventingEventLoopGroup::get;
+    return () -> eventingEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroup} to be used for eventing traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType eventingEventLoopGroupAndType() {
+    return eventingEventLoopGroup.get();
   }
 
   /**
    * Returns the {@link EventLoopGroup} to be used for backup traffic.
    *
-   * @return the selected event loop group.
+   * @deprecated with no replacement in the public API. Internal SDK code should use {@link #backupEventLoopGroupAndType()} instead.
    */
+  @Deprecated
   @Stability.Volatile
   public Supplier<EventLoopGroup> backupEventLoopGroup() {
-    return backupEventLoopGroup::get;
+    return () -> backupEventLoopGroup.get().group();
+  }
+
+  /**
+   * Returns the {@link EventLoopGroup} to be used for backup traffic.
+   */
+  @Stability.Internal
+  public EventLoopGroupAndType backupEventLoopGroupAndType() {
+    return backupEventLoopGroup.get();
   }
 
   /**
@@ -512,9 +590,9 @@ public class IoEnvironment {
    * @param timeout the maximum time to wait until shutdown abort.
    * @return a mono indicating completion.
    */
-  private static Mono<Void> shutdownGroup(final OwnedOrExternal<EventLoopGroup> groupSupplier, final Duration timeout) {
+  private static Mono<Void> shutdownGroup(final OwnedOrExternal<EventLoopGroupAndType> groupSupplier, final Duration timeout) {
     if (groupSupplier.isOwned()) {
-      EventLoopGroup group = groupSupplier.get();
+      EventLoopGroup group = groupSupplier.get().group();
       if (!group.isShutdown() && !group.isShuttingDown()) {
         return Mono.create(sink -> group.shutdownGracefully(0, timeout.toMillis(), TimeUnit.MILLISECONDS)
           .addListener(future -> {
@@ -542,18 +620,32 @@ public class IoEnvironment {
    * @param poolName the name of the threads.
    * @return the created group.
    */
-  private static OwnedOrExternal<EventLoopGroup> createEventLoopGroup(
+  private static OwnedOrExternal<EventLoopGroupAndType> createEventLoopGroup(
     final boolean nativeIoEnabled,
     final int numThreads,
     final String poolName
   ) {
     return owned(
-      new MultiThreadIoEventLoopGroup(
-        numThreads,
-        new DefaultThreadFactory(poolName, true),
-        newIoHandlerFactory(nativeIoEnabled)
+      EventLoopGroupAndType.from(
+        new MultiThreadIoEventLoopGroup(
+          numThreads,
+          new DefaultThreadFactory(poolName, true),
+          newIoHandlerFactory(nativeIoEnabled)
+        )
       )
     );
+  }
+
+  private static IoHandlerFactory newIoHandlerFactory(boolean nativeIoEnabled) {
+    if (nativeIoEnabled && Epoll.isAvailable()) {
+      return EpollIoHandler.newFactory();
+    }
+
+    if (nativeIoEnabled && KQueue.isAvailable()) {
+      return KQueueIoHandler.newFactory();
+    }
+
+    return NioIoHandler.newFactory();
   }
 
   /**
@@ -576,14 +668,14 @@ public class IoEnvironment {
   public static class Builder {
 
     private boolean nativeIoEnabled = DEFAULT_NATIVE_IO_ENABLED;
-    private OwnedOrExternal<EventLoopGroup> managerEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> kvEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> queryEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> analyticsEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> searchEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> viewEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> eventingEventLoopGroup = null;
-    private OwnedOrExternal<EventLoopGroup> backupEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> managerEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> kvEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> queryEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> analyticsEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> searchEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> viewEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> eventingEventLoopGroup = null;
+    private OwnedOrExternal<EventLoopGroupAndType> backupEventLoopGroup = null;
     private int eventLoopThreadCount = DEFAULT_EVENT_LOOP_THREAD_COUNT;
 
     /**
@@ -724,8 +816,11 @@ public class IoEnvironment {
      * @param eventLoopGroup the event loop group to check.
      * @return the created external supplier.
      */
-    private static OwnedOrExternal<EventLoopGroup> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      return external(notNull(eventLoopGroup, "EventLoopGroup"));
+    private static OwnedOrExternal<EventLoopGroupAndType> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+      if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
+        throw new IllegalArgumentException("Expected instance of " + IoEventLoopGroup.class.getSimpleName() + " but got " + eventLoopGroup);
+      }
+      return external(EventLoopGroupAndType.from((IoEventLoopGroup) eventLoopGroup));
     }
 
     /**

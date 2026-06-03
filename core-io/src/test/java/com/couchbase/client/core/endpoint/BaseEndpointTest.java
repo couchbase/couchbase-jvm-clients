@@ -33,12 +33,12 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOutboundHandlerAdapter;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
-import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.Response;
@@ -81,7 +81,7 @@ class BaseEndpointTest {
    */
   private static final int PORT = 1234;
 
-  private EventLoopGroup eventLoopGroup;
+  private EventLoopGroupAndType eventLoopGroup;
   private SimpleEventBus eventBus;
   private CoreEnvironment environment;
   private ServiceContext ctx;
@@ -89,7 +89,7 @@ class BaseEndpointTest {
 
   @BeforeEach
   void beforeEach() {
-    eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+    eventLoopGroup = EventLoopGroupAndType.from(new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
     eventBus = new SimpleEventBus(true, Collections.singletonList(EndpointStateChangedEvent.class));
     environment = CoreEnvironment.builder().eventBus(eventBus).build();
     CoreContext coreContext = new CoreContext(mockCore(), 1, environment, authenticator);
@@ -99,7 +99,7 @@ class BaseEndpointTest {
 
   @AfterEach
   void afterEach() {
-    eventLoopGroup.shutdownGracefully();
+    eventLoopGroup.group().shutdownGracefully();
     environment.shutdown();
   }
 
@@ -400,12 +400,12 @@ class BaseEndpointTest {
 
     private final Supplier<Mono<Channel>> channelSupplier;
 
-    static InstrumentedEndpoint create(EventLoopGroup eventLoopGroup, ServiceContext ctx,
+    static InstrumentedEndpoint create(EventLoopGroupAndType eventLoopGroup, ServiceContext ctx,
                                        Supplier<Mono<Channel>> channelSupplier) {
       return new InstrumentedEndpoint(LOCALHOST, PORT, eventLoopGroup, ctx, channelSupplier);
     }
 
-    InstrumentedEndpoint(String hostname, int port, EventLoopGroup eventLoopGroup,
+    InstrumentedEndpoint(String hostname, int port, EventLoopGroupAndType eventLoopGroup,
                          ServiceContext ctx, Supplier<Mono<Channel>> channelSupplier) {
       super(hostname, port, eventLoopGroup, ctx, CircuitBreakerConfig.enabled(false).build(), ServiceType.KV, false);
       this.channelSupplier = channelSupplier;

@@ -37,7 +37,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFutureListener;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
-import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.WriteBufferWaterMark;
 import com.couchbase.client.core.deps.io.netty.channel.epoll.EpollChannelOption;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
@@ -47,7 +46,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.SecurityException;
-import com.couchbase.client.core.io.netty.EventLoopGroups;
+import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
 import com.couchbase.client.core.io.netty.PipelineErrorHandler;
 import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.io.netty.SslSessionLoggingHandler;
@@ -86,9 +85,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.core.env.IoConfig.DEFAULT_TCP_KEEPALIVE_COUNT;
-import static com.couchbase.client.core.io.netty.EventLoopGroups.isEpoll;
-import static com.couchbase.client.core.io.netty.EventLoopGroups.isLocal;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
@@ -174,7 +170,7 @@ public abstract class BaseEndpoint implements Endpoint {
   /**
    * The event loop group used for this endpoint, passed to netty.
    */
-  private final EventLoopGroup eventLoopGroup;
+  private final EventLoopGroupAndType eventLoopGroup;
 
   private final CircuitBreaker.CompletionCallback circuitBreakerCallback;
 
@@ -220,7 +216,7 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param serviceContext the core context.
    * @param circuitBreakerConfig the circuit breaker config used.
    */
-  BaseEndpoint(final String hostname, final int port, final EventLoopGroup eventLoopGroup,
+  BaseEndpoint(final String hostname, final int port, final EventLoopGroupAndType eventLoopGroup,
                final ServiceContext serviceContext, final CircuitBreakerConfig circuitBreakerConfig,
                final ServiceType serviceType, final boolean pipelined) {
     disconnect = new AtomicBoolean(false);
@@ -254,18 +250,6 @@ public abstract class BaseEndpoint implements Endpoint {
   @Override
   public EndpointContext context() {
     return endpointContext.get();
-  }
-
-  /**
-   * Helper method to locate the right socket channel class based on the injected
-   * event loop group.
-   *
-   * @param eventLoopGroup the group to compare against.
-   * @return the channel class selected.
-   */
-  @Stability.Internal
-  public static Class<? extends Channel> channelFrom(final EventLoopGroup eventLoopGroup) {
-    return EventLoopGroups.channelType(eventLoopGroup);
   }
 
   /**
@@ -347,7 +331,7 @@ public abstract class BaseEndpoint implements Endpoint {
           .connectTimeout()
           .toMillis();
 
-        if (eventLoopGroup.isShutdown()) {
+        if (eventLoopGroup.group().isShutdown()) {
           throw new IllegalStateException("Event Loop is already shut down, not pursuing connect attempt!");
         }
 
@@ -357,10 +341,8 @@ public abstract class BaseEndpoint implements Endpoint {
           io.highWaterMark().bytesAsInt()
         );
 
-        final Bootstrap channelBootstrap = new Bootstrap()
+        final Bootstrap channelBootstrap = eventLoopGroup.newBootstrap()
           .remoteAddress(remoteAddress())
-          .group(eventLoopGroup)
-          .channel(channelFrom(eventLoopGroup))
           .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeoutMs)
           .option(ChannelOption.WRITE_BUFFER_WATER_MARK, writeBufferWaterMark)
           .option(ChannelOption.ALLOCATOR, allocator)
@@ -392,9 +374,9 @@ public abstract class BaseEndpoint implements Endpoint {
         Optional.ofNullable(io.sendBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_SNDBUF, it.bytesAsInt()));
         Optional.ofNullable(io.receiveBuffer()).ifPresent(it -> channelBootstrap.option(ChannelOption.SO_RCVBUF, it.bytesAsInt()));
 
-        if (env.ioConfig().tcpKeepAlivesEnabled() && !isLocal(eventLoopGroup)) {
+        if (env.ioConfig().tcpKeepAlivesEnabled() && !eventLoopGroup.isLocal()) {
           channelBootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-          if (isEpoll(eventLoopGroup)) {
+          if (eventLoopGroup.isEpoll()) {
             // Nb at least on some platforms, some keepalive settings will raise `setsockopt() failed: Invalid argument` if 0 is provided.
             if (!env.ioConfig().tcpKeepAliveTime().isZero()) {
               int keepIdleSeconds = Math.toIntExact(CbDurations.getSecondsCeil(env.ioConfig().tcpKeepAliveTime()));
@@ -410,7 +392,7 @@ public abstract class BaseEndpoint implements Endpoint {
           }
         }
 
-        if (!env.ioConfig().tcpUserTimeout().isZero() && isEpoll(eventLoopGroup)) {
+        if (!env.ioConfig().tcpUserTimeout().isZero() && eventLoopGroup.isEpoll()) {
           int userTimeoutMillis = Math.toIntExact(env.ioConfig().tcpUserTimeout().toMillis());
           channelBootstrap.option(EpollChannelOption.TCP_USER_TIMEOUT, userTimeoutMillis);
         }

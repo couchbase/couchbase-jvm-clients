@@ -25,7 +25,7 @@ import com.couchbase.client.core.service.ServiceType;
 public class QueryEndpoint extends DeferredCloseEndpoint {
 
   public QueryEndpoint(final ServiceContext ctx, final String hostname, final int port) {
-    super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroup().get(),
+    super(hostname, port, ctx.environment().ioEnvironment().queryEventLoopGroupAndType(),
       ctx, ctx.environment().ioConfig().queryCircuitBreakerConfig(), ServiceType.QUERY, false);
   }
 

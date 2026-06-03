@@ -25,7 +25,7 @@ import com.couchbase.client.core.service.ServiceType;
 public class BackupEndpoint extends BaseEndpoint {
 
   public BackupEndpoint(final ServiceContext ctx, final String hostname, final int port) {
-    super(hostname, port, ctx.environment().ioEnvironment().backupEventLoopGroup().get(),
+    super(hostname, port, ctx.environment().ioEnvironment().backupEventLoopGroupAndType(),
         ctx, ctx.environment().ioConfig().backupCircuitBreakerConfig(), ServiceType.BACKUP, false);
   }
 

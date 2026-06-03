@@ -25,7 +25,7 @@ import com.couchbase.client.core.service.ServiceType;
 public class EventingEndpoint extends BaseEndpoint {
 
   public EventingEndpoint(final ServiceContext ctx, final String hostname, final int port) {
-    super(hostname, port, ctx.environment().ioEnvironment().eventingEventLoopGroup().get(),
+    super(hostname, port, ctx.environment().ioEnvironment().eventingEventLoopGroupAndType(),
       ctx, ctx.environment().ioConfig().eventingCircuitBreakerConfig(), ServiceType.EVENTING, false);
   }
 
