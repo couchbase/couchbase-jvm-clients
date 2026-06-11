@@ -228,7 +228,7 @@ public class ConsistencyUtil {
         if (err != null) throw err;
         return statusCode == requiredHttpStatus;
       },
-      "status == " + requiredHttpStatus,
+      path + " to return status " + requiredHttpStatus,
       (node) -> defaultManagerRequest(core, path, node));
   }
 
