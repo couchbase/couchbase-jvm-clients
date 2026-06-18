@@ -53,6 +53,10 @@ public class CoreRegexpQuery extends CoreSearchQuery {
       builder.setBoost(boost.floatValue());
     }
 
+    if (field != null) {
+      builder.setField(field);
+    }
+
     return Query.newBuilder().setRegexpQuery(builder).build();
   }
 }
