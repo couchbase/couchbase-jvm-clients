@@ -18,19 +18,16 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.GeoBoundingBoxQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreGeoBoundingBoxQuery extends CoreSearchQuery {
 
-  private final CoreGeoPoint topLeft;
-  private final CoreGeoPoint bottomRight;
-  private @Nullable final String field;
+  public final CoreGeoPoint topLeft;
+  public final CoreGeoPoint bottomRight;
+  public @Nullable final String field;
 
   public CoreGeoBoundingBoxQuery(double topLeftLon,
                                  double topLeftLat,
@@ -68,19 +65,7 @@ public class CoreGeoBoundingBoxQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    GeoBoundingBoxQuery.Builder builder = GeoBoundingBoxQuery.newBuilder()
-            .setTopLeft(toLatLng(topLeft))
-            .setBottomRight(toLatLng(bottomRight));
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setGeoBoundingBoxQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

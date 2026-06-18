@@ -18,19 +18,16 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.BooleanQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CoreBooleanQuery extends CoreSearchQuery {
 
-  private final @Nullable CoreConjunctionQuery must;
-  private final @Nullable CoreDisjunctionQuery mustNot;
-  private final @Nullable CoreDisjunctionQuery should;
+  public final @Nullable CoreConjunctionQuery must;
+  public final @Nullable CoreDisjunctionQuery mustNot;
+  public final @Nullable CoreDisjunctionQuery should;
 
   public CoreBooleanQuery(@Nullable CoreConjunctionQuery must,
                           @Nullable CoreDisjunctionQuery mustNot,
@@ -77,25 +74,7 @@ public class CoreBooleanQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    BooleanQuery.Builder query = BooleanQuery.newBuilder();
-
-    if (must != null) {
-      query.setMust(must.asConjunctionProtostellar());
-    }
-
-    if (mustNot != null) {
-      query.setMustNot(mustNot.asDisjunctionProtostellar());
-    }
-
-    if (should != null) {
-      query.setShould(should.asDisjunctionProtostellar());
-    }
-
-    if (boost != null) {
-        query.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setBooleanQuery(query).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

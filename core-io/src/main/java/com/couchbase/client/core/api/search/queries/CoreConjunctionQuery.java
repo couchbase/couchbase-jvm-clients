@@ -21,12 +21,9 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayN
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.ConjunctionQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Stability.Internal
 public class CoreConjunctionQuery extends CoreAbstractCompoundQuery {
@@ -51,20 +48,7 @@ public class CoreConjunctionQuery extends CoreAbstractCompoundQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    return Query.newBuilder().setConjunctionQuery(asConjunctionProtostellar()).build();
-  }
-
-  public ConjunctionQuery asConjunctionProtostellar() {
-    ConjunctionQuery.Builder query = ConjunctionQuery.newBuilder()
-        .addAllQueries(childQueries.stream()
-            .map(CoreSearchQuery::asProtostellar)
-            .collect(Collectors.toList()));
-
-    if (boost != null) {
-      query.setBoost(boost.floatValue());
-    }
-
-    return query.build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

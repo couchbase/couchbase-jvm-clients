@@ -18,17 +18,15 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.PrefixQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CorePrefixQuery extends CoreSearchQuery {
 
-  private final String prefix;
-  private final @Nullable String field;
+  public final String prefix;
+  public final @Nullable String field;
 
   public CorePrefixQuery(String prefix, @Nullable String field, @Nullable Double boost) {
     super(boost);
@@ -45,18 +43,7 @@ public class CorePrefixQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    PrefixQuery.Builder builder = PrefixQuery.newBuilder()
-            .setPrefix(prefix);
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setPrefixQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

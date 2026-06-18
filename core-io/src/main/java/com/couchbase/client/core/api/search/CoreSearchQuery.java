@@ -16,16 +16,17 @@
 package com.couchbase.client.core.api.search;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.search.queries.CoreSearchQueryConverter;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.Query;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public abstract class CoreSearchQuery {
 
-  protected Double boost;
+  public @Nullable Double boost;
 
-  protected CoreSearchQuery(Double boost) {
+  protected CoreSearchQuery(@Nullable Double boost) {
     this.boost = boost;
   }
 
@@ -37,7 +38,7 @@ public abstract class CoreSearchQuery {
 
   protected abstract void injectParams(ObjectNode input);
 
-  public abstract Query asProtostellar();
+  public abstract <T> T convert(CoreSearchQueryConverter<T> converter);
 
   public ObjectNode export() {
     ObjectNode out = Mapper.createObjectNode();

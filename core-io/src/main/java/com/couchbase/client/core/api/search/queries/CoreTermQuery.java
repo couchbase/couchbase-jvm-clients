@@ -18,19 +18,17 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.Query;
-import com.couchbase.client.protostellar.search.v1.TermQuery;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreTermQuery extends CoreSearchQuery {
 
-  private final String term;
-  private final @Nullable String field;
-  private final @Nullable Integer fuzziness;
-  private final @Nullable Integer prefixLength;
+  public final String term;
+  public final @Nullable String field;
+  public final @Nullable Integer fuzziness;
+  public final @Nullable Integer prefixLength;
 
   public CoreTermQuery(String term,
                        @Nullable String field,
@@ -59,26 +57,7 @@ public class CoreTermQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    TermQuery.Builder builder = TermQuery.newBuilder()
-            .setTerm(term);
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (prefixLength != null) {
-      builder.setPrefixLength(prefixLength);
-    }
-
-    if (fuzziness != null) {
-      builder.setFuzziness(fuzziness);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setTermQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

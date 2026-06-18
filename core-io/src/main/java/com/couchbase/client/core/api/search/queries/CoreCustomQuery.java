@@ -18,27 +18,20 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.util.ProtostellarUtil;
 import com.couchbase.client.core.util.Validators;
-import com.couchbase.client.protostellar.search.v1.BooleanQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
-import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.util.Collections.unmodifiableMap;
 
 @Stability.Internal
 public class CoreCustomQuery extends CoreSearchQuery {
-  private final Map<String, Object> params;
+  private final Map<String, @Nullable Object> params;
 
-  public CoreCustomQuery(Map<String, Object> customQuery, @Nullable Double boost) {
+  public CoreCustomQuery(Map<String, @Nullable Object> customQuery, @Nullable Double boost) {
     super(boost);
     Validators.notNull(customQuery, "custom query");
     this.params = unmodifiableMap(new HashMap<>(customQuery));
@@ -51,7 +44,7 @@ public class CoreCustomQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    throw unsupportedInProtostellar("custom search queries");
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

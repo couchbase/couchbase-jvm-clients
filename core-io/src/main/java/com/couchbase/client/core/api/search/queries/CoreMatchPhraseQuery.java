@@ -18,18 +18,16 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.MatchPhraseQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreMatchPhraseQuery extends CoreSearchQuery {
 
-    private final String matchPhrase;
-    private @Nullable final String field;
-    private @Nullable final String analyzer;
+    public final String matchPhrase;
+    public @Nullable final String field;
+    public @Nullable final String analyzer;
 
     public CoreMatchPhraseQuery(String matchPhrase, @Nullable String field, @Nullable String analyzer, @Nullable Double boost) {
         super(boost);
@@ -50,22 +48,7 @@ public class CoreMatchPhraseQuery extends CoreSearchQuery {
     }
 
     @Override
-    public Query asProtostellar() {
-        MatchPhraseQuery.Builder builder = MatchPhraseQuery.newBuilder()
-                .setPhrase(matchPhrase);
-
-        if (boost != null) {
-            builder.setBoost(boost.floatValue());
-        }
-
-        if (field != null) {
-          builder.setField(field);
-        }
-
-        if (analyzer != null) {
-          builder.setAnalyzer(analyzer);
-        }
-
-        return Query.newBuilder().setMatchPhraseQuery(builder).build();
+    public <T> T convert(CoreSearchQueryConverter<T> converter) {
+        return converter.convert(this);
     }
 }

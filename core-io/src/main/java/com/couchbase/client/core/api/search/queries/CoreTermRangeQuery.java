@@ -18,18 +18,16 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.Query;
-import com.couchbase.client.protostellar.search.v1.TermRangeQuery;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CoreTermRangeQuery extends CoreSearchQuery {
 
-  private final @Nullable String min;
-  private final @Nullable String max;
-  private final @Nullable Boolean inclusiveMin;
-  private final @Nullable Boolean inclusiveMax;
-  private final @Nullable String field;
+  public final @Nullable String min;
+  public final @Nullable String max;
+  public final @Nullable Boolean inclusiveMin;
+  public final @Nullable Boolean inclusiveMax;
+  public final @Nullable String field;
 
   public CoreTermRangeQuery(@Nullable String min,
                             @Nullable String max,
@@ -68,29 +66,7 @@ public class CoreTermRangeQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    TermRangeQuery.Builder builder = TermRangeQuery.newBuilder();
-
-    if (min != null) {
-      builder.setMin(min);
-      if (inclusiveMin != null) {
-        builder.setInclusiveMin(inclusiveMin);
-      }
-    }
-    if (max != null) {
-      builder.setMax(max);
-      if (inclusiveMax != null) {
-        builder.setInclusiveMax(inclusiveMax);
-      }
-    }
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setTermRangeQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

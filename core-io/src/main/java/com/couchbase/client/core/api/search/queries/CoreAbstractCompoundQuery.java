@@ -17,7 +17,7 @@ package com.couchbase.client.core.api.search.queries;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 

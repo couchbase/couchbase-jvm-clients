@@ -20,9 +20,7 @@ import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.PhraseQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -31,8 +29,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Internal
 public class CorePhraseQuery extends CoreSearchQuery {
 
-    private final List<String> terms;
-    private final @Nullable String field;
+    public final List<String> terms;
+    public final @Nullable String field;
 
     public CorePhraseQuery(List<String> terms, @Nullable String field, @Nullable Double boost) {
         super(boost);
@@ -52,18 +50,7 @@ public class CorePhraseQuery extends CoreSearchQuery {
     }
 
     @Override
-    public Query asProtostellar() {
-        PhraseQuery.Builder builder = PhraseQuery.newBuilder()
-                .addAllTerms(terms);
-
-        if (field != null) {
-            builder.setField(field);
-        }
-
-        if (boost != null) {
-            builder.setBoost(boost.floatValue());
-        }
-
-        return Query.newBuilder().setPhraseQuery(builder).build();
+    public <T> T convert(CoreSearchQueryConverter<T> converter) {
+        return converter.convert(this);
     }
 }

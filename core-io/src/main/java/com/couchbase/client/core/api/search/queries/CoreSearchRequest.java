@@ -21,7 +21,7 @@ import com.couchbase.client.core.api.search.vector.CoreVectorSearch;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CoreSearchRequest {

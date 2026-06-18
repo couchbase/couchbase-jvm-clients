@@ -18,20 +18,17 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.protostellar.search.v1.DateRangeQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CoreDateRangeQuery extends CoreSearchQuery {
 
-    private final @Nullable String start;
-    private final @Nullable String end;
-    private final @Nullable Boolean inclusiveStart;
-    private final @Nullable Boolean inclusiveEnd;
-    private final @Nullable String dateTimeParser;
-    private final @Nullable String field;
+    public final @Nullable String start;
+    public final @Nullable String end;
+    public final @Nullable Boolean inclusiveStart;
+    public final @Nullable Boolean inclusiveEnd;
+    public final @Nullable String dateTimeParser;
+    public final @Nullable String field;
 
     public CoreDateRangeQuery(@Nullable String start,
                               @Nullable String end,
@@ -76,36 +73,8 @@ public class CoreDateRangeQuery extends CoreSearchQuery {
         }
     }
 
-  @Override
-  public Query asProtostellar() {
-      DateRangeQuery.Builder builder = DateRangeQuery.newBuilder();
-
-      if (start != null) {
-          builder.setStartDate(start);
-          if (inclusiveStart != null) {
-              // Requires ING-381
-              throw new FeatureNotAvailableException("inclusiveStart is not currently supported in DateRangeQuery for couchbase2");
-          }
-      }
-      if (end != null) {
-          builder.setEndDate(end);
-          if (inclusiveEnd != null) {
-              // Requires ING-381
-              throw new FeatureNotAvailableException("inclusiveStart is not currently supported in DateRangeQuery for couchbase2");
-          }
-      }
-      if (dateTimeParser != null) {
-          builder.setDateTimeParser(dateTimeParser);
-      }
-
-      if (field != null) {
-          builder.setField(field);
-      }
-
-      if (boost != null) {
-          builder.setBoost(boost.floatValue());
-      }
-
-      return Query.newBuilder().setDateRangeQuery(builder).build();
-  }
+    @Override
+    public <T> T convert(CoreSearchQueryConverter<T> converter) {
+        return converter.convert(this);
+    }
 }

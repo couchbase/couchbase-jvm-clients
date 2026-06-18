@@ -19,10 +19,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.DocIdQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
@@ -31,9 +29,9 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Internal
 public class CoreDocIdQuery extends CoreSearchQuery {
 
-  private final List<String> docIds;
+  public final List<String> docIds;
 
-  public CoreDocIdQuery(Double boost, List<String> docIds) {
+  public CoreDocIdQuery(@Nullable Double boost, List<String> docIds) {
     super(boost);
     this.docIds = notNullOrEmpty(docIds, "Document IDs");
   }
@@ -46,14 +44,7 @@ public class CoreDocIdQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    DocIdQuery.Builder builder = DocIdQuery.newBuilder()
-            .addAllIds(docIds);
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setDocIdQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

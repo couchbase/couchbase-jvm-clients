@@ -22,13 +22,9 @@ import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.protostellar.CoreProtostellarUtil;
-import com.couchbase.client.protostellar.search.v1.GeoPolygonQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 
@@ -36,8 +32,8 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 @Stability.Internal
 public class CoreGeoPolygonQuery extends CoreSearchQuery {
 
-  private final List<? extends CoreGeoPoint> coordinates;
-  private final @Nullable String field;
+  public final List<? extends CoreGeoPoint> coordinates;
+  public final @Nullable String field;
 
   public CoreGeoPolygonQuery(
       List<? extends CoreGeoPoint> coordinates,
@@ -66,21 +62,7 @@ public class CoreGeoPolygonQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    GeoPolygonQuery.Builder builder = GeoPolygonQuery.newBuilder()
-        .addAllVertices(coordinates.stream()
-            .map(CoreProtostellarUtil::toLatLng)
-            .collect(Collectors.toList()));
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setGeoPolygonQuery(builder).build();
-
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

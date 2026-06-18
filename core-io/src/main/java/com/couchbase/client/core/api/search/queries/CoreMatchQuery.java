@@ -18,22 +18,19 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.protostellar.search.v1.MatchQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreMatchQuery extends CoreSearchQuery {
 
-    private final String match;
-    private @Nullable final String field;
-    private @Nullable final String analyzer;
-    private @Nullable final Integer prefixLength;
-    private @Nullable final Integer fuzziness;
-    private @Nullable final CoreMatchOperator operator;
+    public final String match;
+    public @Nullable final String field;
+    public @Nullable final String analyzer;
+    public @Nullable final Integer prefixLength;
+    public @Nullable final Integer fuzziness;
+    public @Nullable final CoreMatchOperator operator;
 
     public CoreMatchQuery(String match,
                           @Nullable String field,
@@ -71,35 +68,8 @@ public class CoreMatchQuery extends CoreSearchQuery {
         }
     }
 
-  @Override
-  public Query asProtostellar() {
-    MatchQuery.Builder builder = MatchQuery.newBuilder()
-        .setValue(match);
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
+    @Override
+    public <T> T convert(CoreSearchQueryConverter<T> converter) {
+        return converter.convert(this);
     }
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (analyzer != null) {
-      builder.setAnalyzer(analyzer);
-    }
-
-    if (fuzziness != null) {
-      builder.setFuzziness(fuzziness);
-    }
-
-    if (operator != null) {
-      builder.setOperator(operator == CoreMatchOperator.OR ? MatchQuery.Operator.OPERATOR_OR : MatchQuery.Operator.OPERATOR_AND);
-    }
-
-    if (prefixLength != null) {
-      builder.setPrefixLength(prefixLength);
-    }
-
-    return Query.newBuilder().setMatchQuery(builder).build();
-  }
 }

@@ -18,20 +18,17 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.GeoDistanceQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreGeoDistanceQuery extends CoreSearchQuery {
 
-  private final CoreGeoPoint location;
-  private final String distance;
-  private final @Nullable String field;
+  public final CoreGeoPoint location;
+  public final String distance;
+  public final @Nullable String field;
 
   public CoreGeoDistanceQuery(double locationLon, double locationLat, String distance, @Nullable String field, @Nullable Double boost) {
     this(
@@ -59,20 +56,7 @@ public class CoreGeoDistanceQuery extends CoreSearchQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-
-    GeoDistanceQuery.Builder builder = GeoDistanceQuery.newBuilder()
-        .setCenter(toLatLng(location))
-        .setDistance(distance);
-
-    if (field != null) {
-      builder.setField(field);
-    }
-
-    if (boost != null) {
-      builder.setBoost(boost.floatValue());
-    }
-
-    return Query.newBuilder().setGeoDistanceQuery(builder).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
 }

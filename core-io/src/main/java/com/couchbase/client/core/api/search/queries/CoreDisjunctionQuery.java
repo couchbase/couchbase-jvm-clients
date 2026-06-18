@@ -21,17 +21,14 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayN
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.DisjunctionQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Stability.Internal
 public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
 
-  private final @Nullable Integer min;
+  public final @Nullable Integer min;
 
   public CoreDisjunctionQuery(List<CoreSearchQuery> queries, @Nullable Integer min, @Nullable Double boost) {
     super(queries, boost);
@@ -61,25 +58,7 @@ public class CoreDisjunctionQuery extends CoreAbstractCompoundQuery {
   }
 
   @Override
-  public Query asProtostellar() {
-    return Query.newBuilder().setDisjunctionQuery(asDisjunctionProtostellar()).build();
+  public <T> T convert(CoreSearchQueryConverter<T> converter) {
+    return converter.convert(this);
   }
-
-  public DisjunctionQuery asDisjunctionProtostellar() {
-    DisjunctionQuery.Builder query = DisjunctionQuery.newBuilder()
-        .addAllQueries(childQueries.stream()
-            .map(CoreSearchQuery::asProtostellar)
-            .collect(Collectors.toList()));
-
-    if (min != null) {
-      query.setMinimum(min);
-    }
-
-    if (boost != null) {
-      query.setBoost(boost.floatValue());
-    }
-
-    return query.build();
-  }
-
 }

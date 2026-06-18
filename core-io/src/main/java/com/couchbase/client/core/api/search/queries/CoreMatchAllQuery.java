@@ -18,9 +18,7 @@ package com.couchbase.client.core.api.search.queries;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.MatchAllQuery;
-import com.couchbase.client.protostellar.search.v1.Query;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class CoreMatchAllQuery extends CoreSearchQuery {
@@ -35,7 +33,7 @@ public class CoreMatchAllQuery extends CoreSearchQuery {
     }
 
     @Override
-    public Query asProtostellar() {
-        return Query.newBuilder().setMatchAllQuery(MatchAllQuery.getDefaultInstance()).build();
+    public <T> T convert(CoreSearchQueryConverter<T> converter) {
+        return converter.convert(this);
     }
 }

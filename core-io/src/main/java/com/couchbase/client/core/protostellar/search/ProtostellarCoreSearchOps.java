@@ -50,13 +50,11 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.protostellar.CoreProtostellarAccessorsStreaming;
 import com.couchbase.client.core.protostellar.CoreProtostellarErrorHandlingUtil;
 import com.couchbase.client.core.protostellar.ProtostellarRequest;
-import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.protostellar.search.v1.DateRange;
 import com.couchbase.client.protostellar.search.v1.DateRangeFacet;
@@ -81,7 +79,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.createSpan;
 import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
@@ -377,7 +374,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     SearchQueryRequest.Builder request = SearchQueryRequest.newBuilder()
       .setIndexName(indexName)
-      .setQuery(query.asProtostellar());
+      .setQuery(query.convert(ProtostellarSearchQueryConverter.instance));
 
     if (scope != null) {
       request.setBucketName(scope.bucketName());
