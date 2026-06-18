@@ -16,8 +16,6 @@
 package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.protostellar.search.v1.IdSorting;
-import com.couchbase.client.protostellar.search.v1.Sorting;
 
 @Stability.Internal
 public class CoreSearchSortId extends CoreSearchSort {
@@ -32,9 +30,7 @@ public class CoreSearchSortId extends CoreSearchSort {
     }
 
     @Override
-    public Sorting asProtostellar() {
-        return Sorting.newBuilder()
-                .setIdSorting(IdSorting.newBuilder().setDescending(descending))
-                .build();
+    public <T> T convert(CoreSearchSortConverter<T> converter) {
+        return converter.convert(this);
     }
 }

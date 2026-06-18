@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2023 Couchbase, Inc.
+ * Copyright 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,25 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
-import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
-public class CoreSearchSortScore extends CoreSearchSort {
+public interface CoreSearchSortConverter<T> {
+  T convert(CoreSearchSortString core);
 
-    public CoreSearchSortScore(@Nullable Boolean descending) {
-        super(descending);
-    }
+  T convert(CoreSearchSortField core);
 
-    @Override
-    protected String identifier() {
-        return "score";
-    }
+  T convert(CoreSearchSortGeoDistance core);
 
-    @Override
-    public <T> T convert(CoreSearchSortConverter<T> converter) {
-        return converter.convert(this);
-    }
+  T convert(CoreSearchSortId core);
+
+  T convert(CoreSearchSortScore core);
 }

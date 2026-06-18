@@ -20,10 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.TextNode;
-import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.protostellar.search.v1.Sorting;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.unsupportedInProtostellar;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
@@ -48,8 +45,10 @@ public class CoreSearchSortString extends CoreSearchSort {
 
   @Override
   protected void injectParams(final ObjectNode queryJson) {
-    // The sort string is passed as a simple JSON string, not an Object.
-    throw new FeatureNotAvailableException("Cannot handle this FTS sort mode in couchbase2");
+    // This method is normally called by CoreSearchSort.toJsonNode(),
+    // but this class overrides toJsonNode() to return a JSON string instead of an Object.
+    // As a result, we do not expect this method to be called.
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -58,8 +57,7 @@ public class CoreSearchSortString extends CoreSearchSort {
   }
 
   @Override
-  public Sorting asProtostellar() {
-    // Requires ING-381
-    throw unsupportedInProtostellar("Specifying FTS sort order using a string");
+  public <T> T convert(CoreSearchSortConverter<T> converter) {
+    return converter.convert(this);
   }
 }

@@ -88,7 +88,7 @@ public class ProtostellarSearchQueryConverter implements CoreSearchQueryConverte
     return boost == null ? null : boost.floatValue();
   }
 
-  private static <T> void ifNotNull(@Nullable T value, Consumer<T> action) {
+  static <T> void ifNotNull(@Nullable T value, Consumer<T> action) {
     if (value != null) action.accept(value);
   }
 

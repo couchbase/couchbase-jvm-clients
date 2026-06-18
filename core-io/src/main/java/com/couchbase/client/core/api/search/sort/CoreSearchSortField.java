@@ -17,20 +17,18 @@ package com.couchbase.client.core.api.search.sort;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.FieldSorting;
-import com.couchbase.client.protostellar.search.v1.Sorting;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreSearchSortField extends CoreSearchSort {
 
-    private final String field;
+    public final String field;
 
-    private final @Nullable CoreSearchFieldType type;
-    private final @Nullable CoreSearchFieldMode mode;
-    private final @Nullable CoreSearchFieldMissing missing;
+    public final @Nullable CoreSearchFieldType type;
+    public final @Nullable CoreSearchFieldMode mode;
+    public final @Nullable CoreSearchFieldMissing missing;
 
     public CoreSearchSortField(String field,
                                @Nullable CoreSearchFieldType type,
@@ -67,23 +65,7 @@ public class CoreSearchSortField extends CoreSearchSort {
     }
 
     @Override
-    public Sorting asProtostellar() {
-        FieldSorting.Builder builder = FieldSorting.newBuilder()
-                .setField(field)
-                .setDescending(descending);
-
-        if (missing != null) {
-            builder.setMissing(missing.value());
-        }
-
-        if (mode != null) {
-            builder.setMode(mode.value());
-        }
-
-        if (type != null) {
-            builder.setType(type.value());
-        }
-
-        return Sorting.newBuilder().setFieldSorting(builder).build();
+    public <T> T convert(CoreSearchSortConverter<T> converter) {
+        return converter.convert(this);
     }
 }

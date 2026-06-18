@@ -425,7 +425,7 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
       request.addAllFields(opts.fields());
     }
 
-    opts.sort().forEach(sort -> request.addSort(sort.asProtostellar()));
+    opts.sort().forEach(sort -> request.addSort(sort.convert(ProtostellarSearchSortConverter.instance)));
 
     if (opts.disableScoring() != null) {
       request.setDisableScoring(opts.disableScoring());

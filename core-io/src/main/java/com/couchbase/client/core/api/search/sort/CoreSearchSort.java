@@ -19,13 +19,12 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.protostellar.search.v1.Sorting;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public abstract class CoreSearchSort {
 
-  protected @Nullable Boolean descending;
+  public final @Nullable Boolean descending;
 
   protected CoreSearchSort(@Nullable Boolean descending) {
     this.descending = descending;
@@ -46,5 +45,5 @@ public abstract class CoreSearchSort {
     }
   }
 
-  public abstract Sorting asProtostellar();
+  public abstract <T> T convert(CoreSearchSortConverter<T> converter);
 }

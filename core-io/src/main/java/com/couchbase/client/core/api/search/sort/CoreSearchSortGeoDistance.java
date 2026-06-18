@@ -18,19 +18,16 @@ package com.couchbase.client.core.api.search.sort;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.queries.CoreGeoPoint;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.protostellar.search.v1.GeoDistanceSorting;
-import com.couchbase.client.protostellar.search.v1.Sorting;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
-import static com.couchbase.client.core.protostellar.CoreProtostellarUtil.toLatLng;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 @Stability.Internal
 public class CoreSearchSortGeoDistance extends CoreSearchSort {
 
-    private final String field;
-    private final CoreGeoPoint location;
-    private final @Nullable CoreSearchGeoDistanceUnits unit;
+    public final String field;
+    public final CoreGeoPoint location;
+    public final @Nullable CoreSearchGeoDistanceUnits unit;
 
     public CoreSearchSortGeoDistance(CoreGeoPoint location,
                                      String field,
@@ -58,16 +55,7 @@ public class CoreSearchSortGeoDistance extends CoreSearchSort {
     }
 
     @Override
-    public Sorting asProtostellar() {
-        GeoDistanceSorting.Builder builder = GeoDistanceSorting.newBuilder()
-                .setField(field)
-                .setDescending(descending)
-                .setCenter(toLatLng(location));
-
-        if (unit != null) {
-            builder.setUnit(unit.identifier());
-        }
-
-        return Sorting.newBuilder().setGeoDistanceSorting(builder).build();
+    public <T> T convert(CoreSearchSortConverter<T> converter) {
+        return converter.convert(this);
     }
 }
