@@ -1,0 +1,25 @@
+name: Run FIT (Java)
+
+on:
+  schedule:
+    # Each day at midnight (UTC)
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      fit_cli_channel:
+        description: fit-cli install channel ("latest" or "ci").
+        required: false
+        type: string
+        default: ci
+
+permissions:
+  id-token: write   # required for GitHub OIDC
+  actions: write    # required to update the workflow run display_title
+
+jobs:
+  run-java-fit:
+    uses: ./.github/workflows/fit-testing-shared.yml
+    with:
+      preset: preset-qe-set
+      performer_image_name: 'java-fit-performer:main'
+      fit_cli_channel: ${{ inputs.fit_cli_channel || 'ci' }}

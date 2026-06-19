@@ -1,0 +1,56 @@
+name: Run FIT
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: FIT preset type to generate and execute.  (`fit definition list-presets`)
+        default: preset-qe-set
+        type: string
+      performer_image_name:
+        description: Performer image name to use e.g. "java-fit-performer:main".
+        required: true
+        type: string
+      fit_cli_channel:
+        description: fit-cli install channel. ("latest" or "ci")
+        required: false
+        type: string
+        default: ci
+  workflow_call:
+    inputs:
+      preset:
+        description: FIT preset type to generate and execute.  (`fit definition list-presets`)
+        required: true
+        type: string
+      performer_image_name:
+        description: Performer image name to use e.g. "java-fit-performer:main".
+        required: true
+        type: string
+      fit_cli_channel:
+        description: fit-cli install channel. ("latest" or "ci")
+        required: false
+        type: string
+        default: ci
+
+permissions:
+  id-token: write   # required for GitHub OIDC
+  actions: write    # required to update the workflow run display_title
+
+jobs:
+  run-fit-preset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::958525475024:role/fit-cli-role
+          role-session-name: gha-${{ github.actor }}-${{ github.run_id }}
+          audience: sts.amazonaws.com
+          retry-max-attempts: 3
+          role-duration-seconds: 43200
+
+      - name: Run fit-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/couchbaselabs/fit-cli/main/install.sh | CHANNEL="${{ inputs.fit_cli_channel || 'ci' }}" bash
+          fit definition execute-preset --type "${{ inputs.preset }}" --performer-image-name "${{ inputs.performer_image_name }}"
