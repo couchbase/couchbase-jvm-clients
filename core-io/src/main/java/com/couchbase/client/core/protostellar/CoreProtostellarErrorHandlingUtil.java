@@ -79,7 +79,7 @@ public class CoreProtostellarErrorHandlingUtil {
   }
 
   private static final String PRECONDITION_LOCKED = "LOCKED";
-  private static final String PRECONDITION_NOT_LOCKED = "NOT_OCKED";
+  private static final String PRECONDITION_NOT_LOCKED = "NOT_LOCKED";
   private static final String PRECONDITION_PATH_MISMATCH = "PATH_MISMATCH";
   private static final String PRECONDITION_DOC_NOT_JSON = "DOC_NOT_JSON";
   private static final String PRECONDITION_DOC_TOO_DEEP = "DOC_TOO_DEEP";
