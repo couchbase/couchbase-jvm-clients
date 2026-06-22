@@ -1,15 +1,15 @@
-name: Run FIT
+name: Run FIT (Internal/Shared)
 
 on:
   workflow_dispatch:
     inputs:
       preset:
         description: FIT preset type to generate and execute.  (`fit definition list-presets`)
-        default: preset-qe-set
+        default: qe-set
         type: string
       performer_image_name:
         description: Performer image name to use e.g. "java-fit-performer:main".
-        required: true
+        default: java-fit-performer:main
         type: string
       fit_cli_channel:
         description: fit-cli install channel. ("latest" or "ci")
@@ -34,7 +34,6 @@ on:
 
 permissions:
   id-token: write   # required for GitHub OIDC
-  actions: write    # required to update the workflow run display_title
 
 jobs:
   run-fit-preset:
@@ -52,5 +51,5 @@ jobs:
 
       - name: Run fit-cli
         run: |
-          curl -fsSL https://raw.githubusercontent.com/couchbaselabs/fit-cli/main/install.sh | CHANNEL="${{ inputs.fit_cli_channel || 'ci' }}" bash
-          fit definition execute-preset --type "${{ inputs.preset }}" --performer-image-name "${{ inputs.performer_image_name }}"
+          curl -fsSL https://raw.githubusercontent.com/couchbaselabs/fit-cli/main/install.sh | CHANNEL="${{ vars.FIT_CLI_CHANNEL || inputs.fit_cli_channel || 'ci' }}" bash
+          fit run preset "${{ inputs.preset }}" --performer-image-name "${{ inputs.performer_image_name }}"
