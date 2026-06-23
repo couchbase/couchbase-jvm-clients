@@ -24,7 +24,9 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static com.couchbase.client.core.util.CbCollections.setCopyOf;
+import static com.couchbase.client.core.util.CbCollections.setOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -50,15 +52,21 @@ class DnsSrvTest {
   @Test
   void bootstrapFromDnsSrv() throws Exception {
     try {
-      // Any public well-known DNS SRV record suffices here
-      String demoService = "_x-puppet._tcp.dnscheck.co.";
+      String demoService = "_couchbases._tcp.srv-example-for-java-sdk-test.cb-sdk.bemdas.com";
       String publicNameServer = "8.8.8.8"; //google's public DNS
       List<HostAndPort> addresses = new DnsSrvResolver(ForkJoinPool.commonPool(), publicNameServer)
         .resolve(demoService)
         .block();
 
       assertNotNull(addresses);
-      assertFalse(addresses.isEmpty());
+      assertEquals(
+        setOf(
+          new HostAndPort("groucho.marx", 11207),
+          new HostAndPort("chico.marx", 11207),
+          new HostAndPort("harpo.marx", 11207)
+        ),
+        setCopyOf(addresses)
+      );
 
     } catch (RuntimeException e) {
       if (isNetworkFailure(e)) {
