@@ -275,6 +275,16 @@
                             <pattern>io.netty</pattern>
                             <shadedPattern>${shaded.package.prefix}io.netty</shadedPattern>
                         </relocation>
+                        <!--
+                          Relocate resources used by Netty's `Version.identify()`.
+                          CAVEAT: A "rawString" relocation renames the resource and updates bytecode, but does not modify source code.
+                        -->
+                        <relocation>
+                            <pattern>META-INF/io\.netty\.versions\.properties</pattern>
+                            <shadedPattern>META-INF/${shaded.package.prefix}io.netty.versions.properties</shadedPattern>
+                            <rawString>true</rawString>
+                        </relocation>
+
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>${shaded.package.prefix}com.fasterxml.jackson</shadedPattern>
@@ -317,6 +327,11 @@
                     <transformers>
                         <!-- Required for gRPC -->
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+
+                        <!-- Each Netty JAR has its own version resource. AppendingTransformer is safe because the property names are unique. -->
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                            <resource>META-INF/${shaded.package.prefix}io.netty.versions.properties</resource>
+                        </transformer>
 
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                             <file>${native.folder}/META-INF/native/${native.epoll-x86_64.original}</file>
