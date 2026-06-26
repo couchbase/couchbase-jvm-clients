@@ -1,8 +1,9 @@
 # Couchbase JVM Clients
 
+[![Maven Central](https://maven-badges.sml.io/sonatype-central/com.couchbase.client/couchbase-client-bom/badge.svg?subject=Maven%20Central&color=blue)](https://central.sonatype.com/artifact/com.couchbase.client/couchbase-client-bom)
+
 Java, Scala, and Kotlin SDKs for server-side application development with Couchbase.
 
-[![latest](https://img.shields.io/maven-central/v/com.couchbase.client/couchbase-client-bom?color=brightgreen&label=latest)](https://central.sonatype.com/artifact/com.couchbase.client/couchbase-client-bom)
 
 ## Getting started
 * [Getting started with the Java SDK](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html)
