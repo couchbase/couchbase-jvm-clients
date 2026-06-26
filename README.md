@@ -96,8 +96,8 @@ Instead of committing directly to a maintenance branch, first commit to `master`
 
 Before 3.9.0, components were versioned independently, and we named maintenance branches after supercomputers. This table shows the historical maintenance branches and the SDK versions associated with each branch.
 
-| Branch     | core-io | java-client | scala-client | kotlin-client |
-|------------|---------|-------------|--------------|---------------|
+| Branch       | core-io | java-client | scala-client | kotlin-client |
+|--------------|---------|-------------|--------------|---------------|
 | `colossus`   | 2.0     | 3.0         | 1.0          |               |
 | `pegasus`    | 2.1     | 3.1         | 1.1          |               |
 | `hopper`     | 2.2     | 3.2         | 1.2          |               |
