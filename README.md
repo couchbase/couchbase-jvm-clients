@@ -14,6 +14,7 @@ Java, Scala, and Kotlin SDKs for server-side application development with Couchb
 ## Helpful resources
 
 * [Couchbase Technical Support](https://www.couchbase.com/support) for Enterprise License subscribers.
+
 * [Couchbase Developer Community](https://www.couchbase.com/developers/community/) for everyone!
 
 
