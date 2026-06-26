@@ -2,7 +2,7 @@
 
 [![Maven Central](https://maven-badges.sml.io/sonatype-central/com.couchbase.client/couchbase-client-bom/badge.svg?subject=Maven%20Central&color=blue)](https://central.sonatype.com/artifact/com.couchbase.client/couchbase-client-bom)
 
-Java, Scala, and Kotlin SDKs for server-side application development with Couchbase.
+Java, Scala, and Kotlin SDKs for server-side development with Couchbase.
 
 
 ## Getting started
