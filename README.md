@@ -109,7 +109,7 @@ Before 3.9.0, components were versioned independently, and we named maintenance 
 | `aurora`     | 3.8     | 3.8         | 1.8          | 1.5           |
 | `3.9.x` ‡    | 3.9     | 3.9         | 3.9          | 3.9           |
 
-\* We did not create maintenenace branches for `eos` or `frontier`, but we did use these names in release tags.
+\* We did not create maintenance branches for `eos` or `frontier`, but we did use these names in release tags.
 
 † For `selene` we aligned the `core-io` version with the `java-client` version.
 
