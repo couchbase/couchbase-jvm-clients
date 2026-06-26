@@ -1,112 +1,87 @@
-[**Issues**](https://issues.couchbase.com)
-| [**Forums**](https://forums.couchbase.com)
-| [**Discord**](https://discord.com/invite/sQ5qbPZuTh)
-| [**Documentation**](https://docs.couchbase.com/home/sdk.html)
-
 # Couchbase JVM Clients
 
-[![license](https://img.shields.io/github/license/couchbase/couchbase-jvm-clients?color=brightgreen)](https://opensource.org/licenses/Apache-2.0)
+Java, Scala, and Kotlin SDKs for server-side application development with Couchbase.
 
-[![java-client](https://img.shields.io/maven-central/v/com.couchbase.client/java-client?color=brightgreen&label=java-client)](https://central.sonatype.com/artifact/com.couchbase.client/java-client)
-[![scala-client](https://img.shields.io/maven-central/v/com.couchbase.client/scala-client_2.12?color=brightgreen&label=scala-client)](https://central.sonatype.com/artifact/com.couchbase.client/scala-client_2.12)
-[![kotlin-client](https://img.shields.io/maven-central/v/com.couchbase.client/kotlin-client?color=brightgreen&label=kotlin-client)](https://central.sonatype.com/artifact/com.couchbase.client/kotlin-client)
+[![latest](https://img.shields.io/maven-central/v/com.couchbase.client/couchbase-client-bom?color=brightgreen&label=latest)](https://central.sonatype.com/artifact/com.couchbase.client/couchbase-client-bom)
 
-This repository contains the third generation of the Couchbase SDKs on the JVM ("SDK 3").
+## Getting started
+* [Getting started with the Java SDK](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html)
 
-## Overview
+* [Getting started with the Scala SDK](https://docs.couchbase.com/scala-sdk/current/hello-world/start-using-sdk.html)
 
-This repository contains the following projects:
+* [Getting started with the Kotlin SDK](https://docs.couchbase.com/kotlin-sdk/current/hello-world/overview.html)
 
- - `core-io`: the foundational library for all language bindings
- - `java-client`: the Java language binding
- - `scala-client`: the Scala language binding
- - `kotlin-client`: the Kotlin language binding
- - `tracing-micrometer-observation`: module to integrate with [Micrometer Observation](https://micrometer.io/docs/observation)
- - `tracing-opentracing`: module to integrate with [OpenTracing](https://opentracing.io/)
- - `tracing-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) tracing
- - `metrics-opentelemetry`: module to integrate with [OpenTelemetry](https://opentelemetry.io/) metrics
- - `metrics-micrometer`: module to integrate with [Micrometer](https://micrometer.io/) metrics
- - `java-fit-performer`: for internal testing of the java-client transactions implementation
+## Helpful resources
 
-Other toplevel modules might be present which contain examples, experimental code or internal tooling and test infrastructure.
+* [Couchbase Technical Support](https://www.couchbase.com/support) for Enterprise License subscribers.
+* [Couchbase Developer Community](https://www.couchbase.com/developers/community/) for everyone!
 
-Documentation is available for [Java](https://docs.couchbase.com/java-sdk/current/hello-world/start-using-sdk.html), 
-[Scala](https://docs.couchbase.com/scala-sdk/current/hello-world/start-using-sdk.html)
-and [Kotlin](https://docs.couchbase.com/kotlin-sdk/current/hello-world/overview.html).  
-These include getting started guides.
 
-## Building
-Stable releases are published on [Maven Central](https://central.sonatype.com/namespace/com.couchbase.client).
+## Building from source
 
-You can always also just build it from source, using any JDK 17+:
+Most developers should use [pre-built artifacts from Maven Central](https://central.sonatype.com/namespace/com.couchbase.client).
+The following instructions are for developers who want to build the clients from source.
 
-```
-$ git clone https://github.com/couchbase/couchbase-jvm-clients.git
-$ cd couchbase-jvm-clients
-$ make
+To build the clients, you will need:
+
+* JDK 17 or later.
+* `make` (Yes, it's a strange requirement for a Java project.)
+
+Run these commands in your terminal.
+```shell
+git clone https://github.com/couchbase/couchbase-jvm-clients.git
+cd couchbase-jvm-clients
+make deps-only
+./mvnw clean install
 ```
 
-Yes, we need `make` because maven doesn't support the setup we need and neither does gradle. If you
-want to build for different Scala versions, after the first `make` you can do this through:
+The `make deps-only` step is required after the initial checkout, and also when the project's shaded dependencies change.
+To be on the safe side, run it after every pull.
 
-```sh
-$ ./mvnw -Pscala-2.13 clean install
-$ ./mvnw -Pscala-3 clean install
-```
+### Building just one SDK
 
-Notes:
-+ Couchbase provides, tests and supports builds for Scala 2.12, 2.13 and 3.3 LTS (which in turn supports apps built with Scala 3.3 through 3.7 inclusive).
-+ The build is currently biased towards building Scala 2.12 by default, but this is likely to change in future.
-+ You can build or test an individual project as so:
-    ```shell script
-    cd scala-client
-    ../mvnw -DskipTests clean install -pl scala-client -am
-    ```
-+ Use `-DskipTests` to skip testing.
-
-### Testing
-
-You can test like this:
+After running `make deps-only` at least once, you can build an individual client like this:
 
 ```shell script
-$ ./mvnw clean test -fae
+./mvnw clean install --also-make --projects java-client
 ```
 
-#### Testing with FIT
-(This section is for internal consumption for Couchbase developers.)
+Add `-DskipTests` to skip the unit tests.
 
-Each SDK has its own FIT "performer" module (for example, `java-fit-performer`).
-These modules are not included in the build by default as they require a bit of setup.
 
-Tell your IDE about the performer modules by activating the `fit` Maven profile.
-Reload / sync the Maven project configuration for the change to take effect.
-See [Activating a Maven profile in IntelliJ IDEA](https://www.jetbrains.com/help/idea/work-with-maven-profiles.html#activate_maven_profiles).
+### Targeting different Scala versions
 
-Before each FIT testing session, generate (or refresh) the FIT protocol source code by right-clicking on the `FIT Protocol (gRPC + Protobuf)` module in the Maven tool window and selecting "Generate Sources and Update Folders".
-Alternatively, if you prefer the command line:
+The Couchbase Scala SDK comes in different flavors for Scala 2.12, 2.13 and 3.3 LTS (which in turn supports apps built with Scala 3.3 through 3.7 inclusive).
 
-    cd fit-performer-protocol
-    ../mvnw clean protobuf:generate
+Select the Scala flavor by activating **exactly one** of these Maven profiles:
 
-Now you can run or debug `JavaPerfomer` / `ScalaPerformer` / `KotlinPerformer` from within your IDE like any other class.
+* `scala-2` (for Scala 2.12; this is the default)
+* `scala-2.13`
+* `scala-3`
 
-##### Updating to the latest protocol
+Example:
 
-The Protobuf files in `fit-performer-protocol` are manually mirrored from  `couchbaselabs/fit-protocol`.
-To update the local mirror:
+```shell
+./mvnw clean install -Pscala-2.13
+```
 
-    cd fit-performer-protcol
-    ./scripts/update-protobuf.sh
+### IDE Configuration
 
-Then review and commit any changes.
+#### IntelliJ
+Scala code is automatically formatted on compile with the tool `scalafmt`.  To make IntelliJ use the same settings:
 
-### Branches & Tags
+In Editor -> Code Style -> Scala:
+* Change formatter to scalafmt.
+* Click 'disable' next to the EditorConfig warning.
+* Check [Reformat on file save](https://scalameta.org/scalafmt/docs/installation.html#format-on-save).
 
-Since version 3.9.0, this repository uses a mono-versioning strategy.
-Each component in the monorepo is released with the same version number.
+(Run `mvn validate` in the terminal to force reformat.)
 
-Releases are tagged by version number.
-For example, version 3.9.0 is tagged as `3.9.0`.
+
+## Branches and tags
+
+This repository uses a unified versioning strategy.
+Each component has the same version number, which is defined in `.mvn/maven.config`.
 
 The `master` branch is where development for the next minor release happens.
 
@@ -115,76 +90,31 @@ For example, the maintenance branch for minor version 3.9 is named `3.9.x`.
 
 Instead of committing directly to a maintenance branch, first commit to `master` and then cherry-pick to the maintenance branch if possible.
 
-#### Prior to version 3.9.0
+### Historical branches
 
-Component versions before 3.9.0 were tagged as `<component>-<version>`.
-For example, to check out the code for version 3.6.0 of the Java client, use tag `java-client-3.6.0`.
+Before 3.9.0, components were versioned independently, and we named maintenance branches after supercomputers. This table shows the historical maintenance branches and the SDK versions associated with each branch.
 
-Before mono-versioning, this repository used release train code names
-to identify a collection of related release versions.
+| Branch     | core-io | java-client | scala-client | kotlin-client |
+|------------|---------|-------------|--------------|---------------|
+| `colossus`   | 2.0     | 3.0         | 1.0          |               |
+| `pegasus`    | 2.1     | 3.1         | 1.1          |               |
+| `hopper`     | 2.2     | 3.2         | 1.2          |               |
+| `eos` *      | 2.3     | 3.3         | 1.3          | 1.0           |
+| `frontier` * | 2.4     | 3.4         | 1.4          | 1.1           |
+| `titan`      | 2.5     | 3.5         | 1.5          | 1.2           |
+| `fugaku`     | 2.6     | 3.6         | 1.6          | 1.3           |
+| `selene` †   | 3.7     | 3.7         | 1.7          | 1.4           |
+| `aurora`     | 3.8     | 3.8         | 1.8          | 1.5           |
+| `3.9.x` ‡    | 3.9     | 3.9         | 3.9          | 3.9           |
 
-These trains were named after historic computers for your delight.
+\* We did not create maintenenace branches for `eos` or `frontier`, but we did use these names in release tags.
 
-Tags in each branch were named `branchname-ga` for the initial GA release, and then subsequently `branchname-sr-n` for
-each service release. See the tag information for specifics of what's in there.
+† For `selene` we aligned the `core-io` version with the `java-client` version.
 
- - [Titan](https://en.wikipedia.org/wiki/Titan_(supercomputer))
- - [Frontier](https://en.wikipedia.org/wiki/Frontier_(supercomputer))
- - [Eos](https://nvidianews.nvidia.com/news/nvidia-announces-dgx-h100-systems-worlds-most-advanced-enterprise-ai-infrastructure) (Initial Release 2022-03-26)
- - [Hopper](https://en.wikipedia.org/wiki/Grace_Hopper) (Initial Release 2021-07-20)
- - [Pegasus](https://en.wikipedia.org/wiki/Ferranti_Pegasus) (Initial Release 2020-12-02)
- - [Colossus](https://en.wikipedia.org/wiki/Colossus_computer) (Initial Release 2020-01-10)
+‡ Branch `3.9.x` is included in this table to show how we aligned the SDK versions and started naming the branch after the version.
+All subsequent versions follow this pattern.
 
-| Release Train | Java-Client | Scala-Client | Core-Io | Tracing-OpenTelemetry | Tracing-OpenTracing | Metrics-OpenTelemetry | Metrics-Micrometer |
-|---------------|-------------|--------------|---------|-----------------------|---------------------|-----------------------|--------------------|
-| colossus      | 3.0.x       | 1.0.x        | 2.0.x   | 0.2.x                 | 0.2.x               | -                     | -                  |
-| pegasus       | 3.1.x       | 1.1.x        | 2.1.x   | 0.3.x                 | 0.3.x               | 0.1.x                 | 0.1.x              |
-| hopper        | 3.2.x       | 1.2.x        | 2.2.x   | 1.0.x                 | 1.0.x               | 0.2.x                 | 0.2.x              |
-| eos           | 3.3.x       | 1.3.x        | 2.3.x   | 1.1.x                 | 1.2.x               | 0.3.x                 | 0.3.x              |
-| frontier      | 3.4.x       | 1.4.x        | 2.4.x   | 1.2.x                 | 1.3.x               | 0.4.x                 | 0.4.x              |
- | titan         | 3.5.x       | 1.5.x        | 2.5.x   | 1.3.x                 | 1.4.x               | 0.5.x                 | 0.5.x              |
+### Historical tags
 
-### Testing Info
+Before 3.9.0, release tags included the component name, like `java-client-3.6.0` or `scala-client-1.6.0`.
 
-To cover all tests, the suite needs to be run against the following topologies, but by default it
-runs against the mock. Recommended topologies:
-
- - 1 node, no replica
- - 2 nodes, 1 replica
- - 2 nodes, 2 replicas
-
-Also to have maximum service coverage use a cluster which has all services enabled (can be MDS setup).
-
-### Building Documentation
-Documentation will be built automatically by the `mvn install` command above.
-
-According to the Maven standard, the file is named artifact-version-javadoc.jar (i.e. java-client-3.4.5-javadoc.jar).
-
-This file can be extracted (jars are like zip files) with the following command:
-
-```
-jar xvf java-client-3.4.5-javadoc.jar
-```
-
-This will extract the contents of the javadoc file into the current directory. After the original jar is removed it can be uploaded to s3.
-
-The location of the javadoc files depends on where you get it from. The easiest is, once published, from Maven central.
-For example, look it up on Maven central: https://search.maven.org/artifact/com.couchbase.client/java-client/3.4.5/jar and download the javadoc jar: https://search.maven.org/remotecontent?filepath=com/couchbase/client/java-client/3.0.4/java-client-3.4.5-javadoc.jar
-
-The exact same approach can be used for any artifact, including Scala.
-The Scala documentation can also be built with this command:
-```
-cd scala-client && mvn scala:doc
-```
-
-## IDE Configuration
-
-### IntelliJ
-Scala code is automatically formatted on compile with the tool `scalafmt`.  To make IntelliJ use the same settings:
-
-In Editor -> Code Style -> Scala:
-* Change formatter to scalafmt.
-* Click 'disable' next to the EditorConfig warning.
-* Check [Reformat on file save](https://scalameta.org/scalafmt/docs/installation.html#format-on-save).
-
-(`mvn validate` can be used from command-line to force reformat)
