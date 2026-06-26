@@ -1,5 +1,7 @@
 name: Maven Deploy Release
 
+run-name: ${{ inputs.tag }}
+
 on:
   workflow_dispatch:
     inputs:
