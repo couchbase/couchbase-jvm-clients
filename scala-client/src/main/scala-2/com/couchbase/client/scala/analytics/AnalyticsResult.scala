@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.analytics
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsChunkRow
 import com.couchbase.client.core.util.Golang
@@ -118,7 +118,7 @@ case class AnalyticsMetrics(
 
 private[scala] object AnalyticsMetrics {
   def fromBytes(in: Array[Byte]): AnalyticsMetrics = {
-    JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
+    JsonObjectSafe.fromJson(new String(in, StandardCharsets.UTF_8)) match {
       case Success(jo) =>
         AnalyticsMetrics(
           jo.str("elapsedTime")

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.scala.query
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.CouchbaseException
 import com.couchbase.client.core.msg.query.QueryChunkRow
 import com.couchbase.client.core.util.Golang
@@ -87,7 +87,7 @@ case class QueryMetrics(
 private[scala] object QueryMetrics {
 
   def fromBytes(in: Array[Byte]): Option[QueryMetrics] = {
-    JsonObjectSafe.fromJson(new String(in, CharsetUtil.UTF_8)) match {
+    JsonObjectSafe.fromJson(new String(in, StandardCharsets.UTF_8)) match {
       case Success(jo) =>
         Some(
           QueryMetrics(

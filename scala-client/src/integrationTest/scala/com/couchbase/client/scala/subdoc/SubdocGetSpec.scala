@@ -1,6 +1,6 @@
 package com.couchbase.client.scala.subdoc
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.{DecodingFailureException, InvalidArgumentException}
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.service.ServiceType
@@ -109,7 +109,7 @@ class SubdocGetSpec extends ScalaIntegrationTest {
       case Success(result) =>
         assert(
           result.contentAs[Array[Byte]](0).get sameElements """["cat","dog"]"""
-            .getBytes(CharsetUtil.UTF_8)
+            .getBytes(StandardCharsets.UTF_8)
         )
         assert(result.contentAs[JsonArray](0).get == ujson.Arr("cat", "dog"))
         assert(result.contentAs[JsonArray](0).get == JsonArray("cat", "dog"))

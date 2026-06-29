@@ -1,7 +1,7 @@
 package com.couchbase.client.scala.kv
 
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.msg.kv.{SubdocCommandType, SubdocMutateRequest}
 import com.couchbase.client.scala.codec.JsonSerializer
 import com.couchbase.client.scala.util.RowTraversalUtil
@@ -503,7 +503,7 @@ case class Increment(
   }
 
   def convert = {
-    val bytes = delta.toString.getBytes(CharsetUtil.UTF_8)
+    val bytes = delta.toString.getBytes(StandardCharsets.UTF_8)
     new CoreSubdocMutateCommand(typ, path, bytes, _createPath, _xattr, false)
   }
 

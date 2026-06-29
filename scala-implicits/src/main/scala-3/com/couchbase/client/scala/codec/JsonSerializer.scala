@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.codec
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.scala.json.{JsonArray, JsonArraySafe, JsonObject, JsonObjectSafe}
 import com.couchbase.client.scala.kv.MutateInMacro
 import com.couchbase.client.scala.transformers.JacksonTransformers
@@ -104,41 +104,41 @@ object JsonSerializer {
   implicit object BooleanConvert extends JsonSerializer[Boolean] {
     override def serialize(content: Boolean): Try[Array[Byte]] = {
       val str = if (content) "true" else "false"
-      Try(str.getBytes(CharsetUtil.UTF_8))
+      Try(str.getBytes(StandardCharsets.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert an `Int` into `Array[Byte]` for sending to the server. */
   implicit object IntConvert extends JsonSerializer[Int] {
     override def serialize(content: Int): Try[Array[Byte]] = {
-      Try(content.toString.getBytes(CharsetUtil.UTF_8))
+      Try(content.toString.getBytes(StandardCharsets.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Double` into `Array[Byte]` for sending to the server. */
   implicit object DoubleConvert extends JsonSerializer[Double] {
     override def serialize(content: Double): Try[Array[Byte]] = {
-      Try(content.toString.getBytes(CharsetUtil.UTF_8))
+      Try(content.toString.getBytes(StandardCharsets.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Long` into `Array[Byte]` for sending to the server. */
   implicit object LongConvert extends JsonSerializer[Long] {
     override def serialize(content: Long): Try[Array[Byte]] = {
-      Try(content.toString.getBytes(CharsetUtil.UTF_8))
+      Try(content.toString.getBytes(StandardCharsets.UTF_8))
     }
   }
 
   /** `JsonSerializer` that can convert a `Short` into `Array[Byte]` for sending to the server. */
   implicit object ShortConvert extends JsonSerializer[Short] {
     override def serialize(content: Short): Try[Array[Byte]] = {
-      Try(content.toString.getBytes(CharsetUtil.UTF_8))
+      Try(content.toString.getBytes(StandardCharsets.UTF_8))
     }
   }
 
   implicit object MutateInMacroConvert extends JsonSerializer[MutateInMacro] {
     override def serialize(content: MutateInMacro): Try[Array[Byte]] = {
-      Try(content.value.getBytes(CharsetUtil.UTF_8))
+      Try(content.value.getBytes(StandardCharsets.UTF_8))
     }
   }
 }

@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.core.io.netty.query;
 
-import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
@@ -29,7 +28,6 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
@@ -45,6 +43,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import static com.couchbase.client.core.util.MockUtil.mockCore;
@@ -96,14 +95,14 @@ class QueryMessageHandlerTest {
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EmbeddedChannel channel = new EmbeddedChannel(new QueryMessageHandler(endpoint, ENDPOINT_CTX));
 
-    byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
+    byte[] query = "doesn'tmatter".getBytes(StandardCharsets.UTF_8);
     QueryRequest request = new QueryRequest(
       ENV.timeoutConfig().queryTimeout(), CORE_CTX, ENV.retryStrategy(), CORE_CTX.authenticator(), "statement", query, false, null, null, null,
     null, null, false);
     channel.writeAndFlush(request);
 
     FullHttpRequest encodedRequest = channel.readOutbound();
-    assertEquals("doesn'tmatter", encodedRequest.content().toString(CharsetUtil.UTF_8));
+    assertEquals("doesn'tmatter", encodedRequest.content().toString(StandardCharsets.UTF_8));
     ReferenceCountUtil.release(encodedRequest);
 
     verify(endpoint, never()).markRequestCompletion();
@@ -112,7 +111,7 @@ class QueryMessageHandlerTest {
 
     ByteBuf fullResponse = Unpooled.copiedBuffer(
       readResource("success_response.json", QueryMessageHandlerTest.class),
-      CharsetUtil.UTF_8
+      StandardCharsets.UTF_8
     );
 
     // send the header back first
@@ -148,7 +147,7 @@ class QueryMessageHandlerTest {
     BaseEndpoint endpoint = mock(BaseEndpoint.class);
     EmbeddedChannel channel = new EmbeddedChannel(new QueryMessageHandler(endpoint, ENDPOINT_CTX));
 
-    byte[] query = "doesn'tmatter".getBytes(CharsetUtil.UTF_8);
+    byte[] query = "doesn'tmatter".getBytes(StandardCharsets.UTF_8);
     QueryRequest request1 = new QueryRequest(
       ENV.timeoutConfig().queryTimeout(), CORE_CTX, FailFastRetryStrategy.INSTANCE, CORE_CTX.authenticator(), "statement", query,
       true, null, null, null, null, null, false

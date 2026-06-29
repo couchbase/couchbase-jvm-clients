@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.kv.ProjectionsApplier
@@ -23,11 +23,11 @@ import org.junit.jupiter.api.Test
 
 class ProjectionsApplierSpec {
   private def wrap(path: String, content: String): JsonObject = {
-    ProjectionsApplier.parse(path, content.getBytes(CharsetUtil.UTF_8)).get
+    ProjectionsApplier.parse(path, content.getBytes(StandardCharsets.UTF_8)).get
   }
 
   private def wrap(path: String, content: Int): JsonObject = {
-    ProjectionsApplier.parse(path, content.toString.getBytes(CharsetUtil.UTF_8)).get
+    ProjectionsApplier.parse(path, content.toString.getBytes(StandardCharsets.UTF_8)).get
   }
 
   private def wrap(path: String, content: JsonObject): JsonObject = {
@@ -41,13 +41,13 @@ class ProjectionsApplierSpec {
   }
   @Test
   def parse_string(): Unit = {
-    assert(ProjectionsApplier.parseContent("hello".getBytes(CharsetUtil.UTF_8)).get == "hello")
+    assert(ProjectionsApplier.parseContent("hello".getBytes(StandardCharsets.UTF_8)).get == "hello")
   }
 
   @Test
   def parse_obj(): Unit = {
     val out = ProjectionsApplier
-      .parseContent("""{"hello":"world"}""".getBytes(CharsetUtil.UTF_8))
+      .parseContent("""{"hello":"world"}""".getBytes(StandardCharsets.UTF_8))
       .get
       .asInstanceOf[JsonObject]
     assert(out.str("hello") == "world")
@@ -56,7 +56,7 @@ class ProjectionsApplierSpec {
   @Test
   def parse_arr(): Unit = {
     val out = ProjectionsApplier
-      .parseContent("""["hello","world"]""".getBytes(CharsetUtil.UTF_8))
+      .parseContent("""["hello","world"]""".getBytes(StandardCharsets.UTF_8))
       .get
       .asInstanceOf[JsonArray]
     assert(out.toSeq == Seq("hello", "world"))

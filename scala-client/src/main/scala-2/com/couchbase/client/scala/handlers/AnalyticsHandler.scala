@@ -19,7 +19,7 @@ package com.couchbase.client.scala.handlers
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.cnc.TracingIdentifiers
 import com.couchbase.client.core.classic.analytics.AnalyticsHelper
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.error.ErrorCodeAndMessage
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest
 import com.couchbase.client.scala.HandlerBasicParams
@@ -85,7 +85,7 @@ private[scala] class AnalyticsHandler(hp: HandlerBasicParams) {
       }
 
       Try(JacksonTransformers.MAPPER.writeValueAsString(params)).map(queryStr => {
-        val queryBytes = queryStr.getBytes(CharsetUtil.UTF_8)
+        val queryBytes = queryStr.getBytes(StandardCharsets.UTF_8)
 
         val timeout: Duration =
           options.timeout.getOrElse(environment.timeoutConfig.analyticsTimeout())

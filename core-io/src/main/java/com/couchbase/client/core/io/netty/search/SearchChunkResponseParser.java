@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.io.netty.search;
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -31,6 +30,7 @@ import com.couchbase.client.core.msg.search.SearchChunkHeader;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 public class SearchChunkResponseParser
@@ -83,7 +83,7 @@ public class SearchChunkResponseParser
 
   private CouchbaseException errorsToThrowable(final byte[] bytes) {
     int statusCode = responseHeader().status().code();
-    String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, CharsetUtil.UTF_8);
+    String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, StandardCharsets.UTF_8);
     SearchErrorContext errorContext = new SearchErrorContext(
       HttpProtocol.decodeStatus(responseHeader().status()),
       requestContext(),

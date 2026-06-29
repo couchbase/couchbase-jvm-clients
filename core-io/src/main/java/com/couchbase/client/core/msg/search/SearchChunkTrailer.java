@@ -16,8 +16,9 @@
 
 package com.couchbase.client.core.msg.search;
 
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil;
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
+
+import java.nio.charset.StandardCharsets;
 
 public class SearchChunkTrailer implements ChunkTrailer {
 
@@ -55,7 +56,7 @@ public class SearchChunkTrailer implements ChunkTrailer {
           "totalRows=" + totalRows +
           ", maxScore=" + maxScore +
           ", took=" + took +
-          ", facets=" + (facets != null ? new String(facets, CharsetUtil.UTF_8) : "null") +
+          ", facets=" + (facets != null ? new String(facets, StandardCharsets.UTF_8) : "null") +
           '}';
     }
 }

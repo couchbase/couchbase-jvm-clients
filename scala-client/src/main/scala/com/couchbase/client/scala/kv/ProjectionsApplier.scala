@@ -2,7 +2,7 @@ package com.couchbase.client.scala.kv
 
 import com.couchbase.client.scala.codec.Conversions
 import com.couchbase.client.scala.json._
-import com.couchbase.client.core.deps.io.netty.util.CharsetUtil
+import java.nio.charset.StandardCharsets
 import com.couchbase.client.core.projections.{
   JsonPathParser,
   PathArray,
@@ -26,13 +26,13 @@ private[scala] object ProjectionsApplier {
       case '{' => Conversions.decode[JsonObject](content)
       case '[' => Conversions.decode[JsonArray](content)
       case '"' =>
-        val str = new String(content, CharsetUtil.UTF_8)
+        val str = new String(content, StandardCharsets.UTF_8)
         Success(str.substring(1, str.size - 1))
       case 't'                                                       => Success(true)
       case 'f'                                                       => Success(false)
       case 'n'                                                       => Success(null)
       case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
-        val str = new String(content, CharsetUtil.UTF_8)
+        val str = new String(content, StandardCharsets.UTF_8)
         val out =
           try {
             if (str.contains('.')) str.toDouble else str.toLong
@@ -42,8 +42,8 @@ private[scala] object ProjectionsApplier {
           }
         Success(out)
       case _ =>
-        Try(new String(content, CharsetUtil.UTF_8))
-      //        Failure(new IllegalStateException(s"Could not parse content '${new String(content, CharsetUtil.UTF_8)}'"))
+        Try(new String(content, StandardCharsets.UTF_8))
+      //        Failure(new IllegalStateException(s"Could not parse content '${new String(content, StandardCharsets.UTF_8)}'"))
     }
   }
 
