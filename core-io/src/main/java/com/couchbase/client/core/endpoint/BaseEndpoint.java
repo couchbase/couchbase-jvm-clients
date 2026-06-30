@@ -28,6 +28,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointStateChangedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointWriteFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
+import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.deps.io.netty.bootstrap.Bootstrap;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
@@ -59,11 +60,13 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.retry.reactor.Retry;
+import com.couchbase.client.core.retry.reactor.RetryContext;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbDurations;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.SingleStateful;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -103,7 +106,8 @@ public abstract class BaseEndpoint implements Endpoint {
   private static final Logger log = LoggerFactory.getLogger(BaseEndpoint.class);
 
   private static final String ALLOCATOR_SYSTEM_PROPERTY_NAME = "com.couchbase.client.core.deps.io.netty.allocator.type";
-  private static final int TOPOLOGY_CHECK_EVERY_N_RETRIES = 20;
+  private static final Duration TARGET_ABSENT_BEFORE_DISCONNECT = Duration.ofSeconds(
+    Long.parseLong(System.getProperty("com.couchbase.endpoint.targetAbsentBeforeDisconnectSeconds", "60")));
   private static final ByteBufAllocator allocator;
 
   // Netty 4.2 changed the default allocator from `pooled` to `adaptive`.
@@ -206,6 +210,8 @@ public abstract class BaseEndpoint implements Endpoint {
    * Note that once the endpoint connects successfully, this error is discarded.
    */
   private volatile Throwable lastConnectAttemptFailure;
+
+  private long firstSawTargetAbsentNanos = 0;
 
   /**
    * Constructor to create a new endpoint, usually called by subclasses.
@@ -447,17 +453,7 @@ public abstract class BaseEndpoint implements Endpoint {
           ex = trimNettyFromStackTrace(annotateConnectException(ex));
           lastConnectAttemptFailure = ex;
 
-          // Periodically check whether this endpoint's target host is still in the current
-          // cluster topology. If it persistently isn't, the SDK is reconnect-looping to a
-          // node that has been removed - i.e. a stuck reconfiguration upstream.
-          Boolean targetInTopology = null;
-          if (retryContext.iteration() > 0 && retryContext.iteration() % TOPOLOGY_CHECK_EVERY_N_RETRIES == 0) {
-            try {
-              targetInTopology = endpointContext.core().clusterConfig()
-                      .contains(serviceType, endpointContext.remoteSocket());
-            } catch (Throwable ignored) {
-            }
-          }
+          Boolean targetInTopology = maybeDisconnectIfEndpointNoLongerInTopology(endpointContext, retryContext);
 
           endpointContext.environment().eventBus().publish(new EndpointConnectionFailedEvent(
             severity,
@@ -519,6 +515,40 @@ public abstract class BaseEndpoint implements Endpoint {
             error)
         )
       );
+  }
+
+  // Check whether this endpoint's target host is still in the current cluster topology. If it persistently isn't, the
+  // SDK is reconnect-looping to a node that has been removed - i.e. a stuck reconfiguration upstream.
+  private @Nullable Boolean maybeDisconnectIfEndpointNoLongerInTopology(EndpointContext endpointContext, RetryContext<Object> retryContext) {
+    Boolean targetInTopology = null;
+    try {
+      ClusterConfig config = endpointContext.core().clusterConfig();
+      boolean alreadyDisconnecting = disconnect.get();
+      boolean haveConfig = config != null && config.hasClusterOrBucketConfig();
+      if (!alreadyDisconnecting && haveConfig) {
+        targetInTopology = config.contains(serviceType, endpointContext.remoteSocket());
+      }
+
+      if (Boolean.FALSE.equals(targetInTopology)) {
+        if (firstSawTargetAbsentNanos == 0) {
+          firstSawTargetAbsentNanos = System.nanoTime();
+        } else if (System.nanoTime() - firstSawTargetAbsentNanos >= TARGET_ABSENT_BEFORE_DISCONNECT.toNanos()) {
+          log.warn("Endpoint's target has been absent from the cluster topology for over {}s ({}"
+                          + " failed connect attempts); abandoning reconnection and disconnecting the endpoint."
+                          + " This is a safety net for a stuck reconfiguration. Current nodes: {}",
+                  TARGET_ABSENT_BEFORE_DISCONNECT.getSeconds(), retryContext.iteration(), endpointContext.core().nodes());
+          disconnect();
+          // The owning Service and Node should GC themselves once all owned Endpoints disconnect and disappear.
+        }
+      } else {
+        // Target present, no usable config, or already disconnecting: reset the absence timer.
+        firstSawTargetAbsentNanos = 0;
+      }
+    } catch (Throwable t) {
+      log.warn("Topology membership check failed; ignoring", t);
+      firstSawTargetAbsentNanos = 0;
+    }
+    return targetInTopology;
   }
 
   /**

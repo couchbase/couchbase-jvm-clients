@@ -703,6 +703,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       .anyMatch(node -> node.id().equals(nodeId));
   }
 
+  @Stability.Internal
+  public List<Node> nodes() {
+    return new ArrayList<>(nodes);
+  }
+
   /**
    * This method is used to remove a service from a node.
    *
