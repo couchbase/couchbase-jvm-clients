@@ -16,14 +16,18 @@
 package com.couchbase.client.core.transaction.threadlocal;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
+
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 
 /**
  * Used to manage ThreadLocalStorage (or reactive context) of TransactionMarker.
  */
 @Stability.Internal
+@UsedBy(SPRING_DATA_COUCHBASE)
 public class TransactionMarkerOwner {
     private static final ThreadLocal<TransactionMarker> marker = new ThreadLocal<TransactionMarker>();
 
