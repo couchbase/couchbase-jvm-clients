@@ -16,12 +16,16 @@
 package com.couchbase.client.core.transaction.threadlocal;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
+
+import static com.couchbase.client.core.annotation.UsedBy.Project.SPRING_DATA_COUCHBASE;
 
 /**
  * Used to indicate that we are inside a transaction, and placed in ThreadLocalStorage (or reactive context).
  */
 @Stability.Internal
+@UsedBy(SPRING_DATA_COUCHBASE)
 public class TransactionMarker {
     private final CoreTransactionAttemptContext context;
 

@@ -22,6 +22,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.transaction.CoreTransactionAttemptContext;
 import com.couchbase.client.core.transaction.CoreTransactionResult;
 import com.couchbase.client.core.transaction.CoreTransactions;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
 import com.couchbase.client.java.codec.JsonSerializer;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
 import com.couchbase.client.java.transactions.error.TransactionFailedException;
@@ -82,7 +83,9 @@ public class ReactiveTransactions {
         // will also (re)use one Thread as they execute.
 
         return reactor.publishOnUserScheduler(Mono.fromCallable(() -> {
-                CoreTransactionResult res = internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(reactor, ctx, serializer)).block(), options == null ? null : options.build());
+                CoreTransactionResult res = internal.run((ctx) -> transactionLogic.apply(new ReactiveTransactionAttemptContext(reactor, ctx, serializer))
+                        .contextWrite(reactiveContext -> reactiveContext.put(TransactionMarker.class, new TransactionMarker(ctx)))
+                        .block(), options == null ? null : options.build());
                 return new TransactionResult(res);
             })
             .onErrorMap(ErrorUtil::convertTransactionFailedInternalBlocking)

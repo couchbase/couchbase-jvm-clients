@@ -28,8 +28,11 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionFaile
 import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions;
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarker;
+import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
 import com.couchbase.client.core.transaction.util.BlockingRetryHandler;
 import com.couchbase.client.core.transaction.util.DebugUtil;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;
@@ -64,6 +67,10 @@ public class CoreTransactions {
                                                     CoreTransactionContext overall,
                                                     Function<CoreTransactionAttemptContext, Void> transactionLogic,
                                                     boolean singleQueryTransactionMode) {
+        if (Schedulers.isInNonBlockingThread()) {
+            throw new IllegalStateException("Blocking transactions are not supported on a non-blocking thread. Use the reactive transactions API (cluster.reactive().transactions()) or run on a thread that permits blocking");
+        }
+
         long startTime = System.nanoTime();
         BlockingRetryHandler retry = BlockingRetryHandler.builder(Duration.ofMillis(1), Duration.ofMillis(100))
                 .jitter(0.5)
@@ -79,7 +86,12 @@ public class CoreTransactions {
             Throwable failure = null;
 
             try {
-                transactionLogic.apply(ctx);
+                TransactionMarkerOwner.set(new TransactionMarker(ctx));
+                try {
+                    transactionLogic.apply(ctx);
+                } finally {
+                    TransactionMarkerOwner.clear();
+                }
             } catch (Exception err) {
                 failure = ctx.convertToOperationFailedIfNeeded(err, singleQueryTransactionMode);
             }
