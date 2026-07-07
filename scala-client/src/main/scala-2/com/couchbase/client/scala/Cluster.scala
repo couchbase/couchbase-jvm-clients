@@ -410,6 +410,10 @@ object Cluster {
     * @param options   custom options used when connecting to the cluster.
     * @return a [[Cluster]] representing a connection to the cluster
     */
+  @deprecated(
+    "Please use the overload of `connect` that takes a connection string.",
+    since = "3.13.0"
+  )
   def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[Cluster] = {
     connect(asConnectionString(seedNodes.map(_.toCore).asJava).original(), options)
   }

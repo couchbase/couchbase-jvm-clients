@@ -506,6 +506,10 @@ object AsyncCluster {
     *
     * @return an [[AsyncCluster]] representing a connection to the cluster
     */
+  @deprecated(
+    "Please use the overload of `connect` that takes a connection string.",
+    since = "3.13.0"
+  )
   def connect(seedNodes: Set[SeedNode], options: ClusterOptions): Try[AsyncCluster] = {
     connect(asConnectionString(seedNodes.map(_.toCore).asJava).original(), options)
   }

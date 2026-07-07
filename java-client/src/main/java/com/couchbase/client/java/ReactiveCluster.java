@@ -156,16 +156,16 @@ public class ReactiveCluster {
   }
 
   /**
-   * Connect to a Couchbase cluster with a list of seed nodes and custom options.
-   * <p>
-   * Please note that you likely only want to use this method if you need to pass in custom ports for specific
-   * seed nodes during bootstrap. Otherwise we recommend relying ont he simpler {@link #connect(String, ClusterOptions)}
-   * method instead.
+   * Connect to a Couchbase cluster with a set of seed nodes and custom options.
    *
    * @param seedNodes the seed nodes used to connect to the cluster.
    * @param options custom options when creating the cluster.
    * @return the instantiated {@link ReactiveCluster}.
+   *
+   * @deprecated In favor of using a connection string instead of a set of {@link SeedNode}s.
+   * See the deprecation notice on {@link Cluster#connect(Set, ClusterOptions)}.
    */
+  @Deprecated
   public static ReactiveCluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
     return connect(asConnectionString(seedNodes).original(), options);
   }

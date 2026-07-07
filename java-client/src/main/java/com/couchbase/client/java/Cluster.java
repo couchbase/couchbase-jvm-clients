@@ -248,11 +248,7 @@ public class Cluster implements Closeable {
   }
 
   /**
-   * Connect to a Couchbase cluster with a list of seed nodes and custom options.
-   * <p>
-   * Note that you likely only want to use this method if you need to pass in custom ports for specific seed nodes
-   * during bootstrap. Otherwise we recommend relying on the simpler {@link #connect(String, String, String)} method
-   * instead.
+   * Connect to a Couchbase cluster with a set of seed nodes and custom options.
    * <p>
    * The following example shows how to bootstrap against a node with custom KV and management ports:
    * <pre>
@@ -261,13 +257,27 @@ public class Cluster implements Closeable {
    *     .withKvPort(12000)
    *     .withManagerPort(9000)
    * );
-   * Cluster cluster Cluster.connect(seedNodes, clusterOptions("user", "password"));
+   * var cluster = Cluster.connect(seedNodes, clusterOptions("user", "password"));
+   * </pre>
+   * <b>This method is deprecated in favor of using a connection string.</b>
+   * <p>
+   * To specify a custom KV port in a connection string, use the conventional host:port syntax.
+   * To specify a custom Manager port, append "=manager" to the port component.
+   * To specify both ports, include a separate host:port component for each port.
+   * <p>
+   * Here is the same configuration as the above example, expressed as a connection string:
+   * <pre>
+   * var connectionString = "couchbase://127.0.0.1:12000,127.0.0.1:9000=manager";
+   * var cluster = Cluster.connect(connectionString, clusterOptions("user", "password"));
    * </pre>
    *
    * @param seedNodes the seed nodes used to connect to the cluster.
    * @param options custom options when creating the cluster.
    * @return the instantiated {@link Cluster}.
+   *
+   * @deprecated In favor of using a connection string instead of a set of {@link SeedNode}s.
    */
+  @Deprecated
   public static Cluster connect(final Set<SeedNode> seedNodes, final ClusterOptions options) {
     return connect(asConnectionString(seedNodes).original(), options);
   }
