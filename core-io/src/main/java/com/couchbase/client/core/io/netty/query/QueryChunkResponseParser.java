@@ -45,10 +45,12 @@ import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.service.ServiceType;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
+import static com.couchbase.client.core.util.CbCollections.setOf;
 
 public class QueryChunkResponseParser
   extends BaseChunkResponseParser<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer> {
@@ -56,14 +58,14 @@ public class QueryChunkResponseParser
   /**
    * Holds error codes that are special cased for prepared statements.
    */
-  private static final List<Integer> PREPARED_ERROR_CODES = Arrays.asList(4040, 4050, 4060, 4070, 4080, 4090);
+  private static final Set<Integer> PREPARED_ERROR_CODES = setOf(4040, 4050, 4060, 4070, 4080, 4090);
 
   /**
    * Contains all prepared error codes that can be retried by the upper layers.
    * <p>
    * Note that this list is a strict subset of the {@link #PREPARED_ERROR_CODES}.
    */
-  private static final List<Integer> RETRYABLE_PREPARED_ERROR_CODES = Arrays.asList(4040, 4050, 4070);
+  private static final Set<Integer> RETRYABLE_PREPARED_ERROR_CODES = setOf(4040, 4050, 4070);
 
   private String requestId;
   private Optional<byte[]> signature;
