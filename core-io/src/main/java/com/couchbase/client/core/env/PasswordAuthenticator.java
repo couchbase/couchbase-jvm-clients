@@ -45,8 +45,7 @@ public class PasswordAuthenticator implements Authenticator {
   private static final Set<SaslMechanism> DEFAULT_SASL_MECHANISMS =
     unmodifiableSet(EnumSet.of(
       SaslMechanism.SCRAM_SHA512,
-      SaslMechanism.SCRAM_SHA256,
-      SaslMechanism.SCRAM_SHA1
+      SaslMechanism.SCRAM_SHA256
     ));
 
   private final Supplier<UsernameAndPassword> usernameAndPassword;

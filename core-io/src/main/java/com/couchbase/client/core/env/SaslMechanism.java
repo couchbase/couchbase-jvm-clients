@@ -31,7 +31,13 @@ import static java.util.stream.Collectors.toMap;
 public enum SaslMechanism {
 
   PLAIN("PLAIN", 1),
+
+  /**
+   * @deprecated in favor of {@link #SCRAM_SHA256} or {@link #SCRAM_SHA512}
+   */
+  @Deprecated
   SCRAM_SHA1("SCRAM-SHA1", 2),
+
   SCRAM_SHA256("SCRAM-SHA256", 2),
   SCRAM_SHA512("SCRAM-SHA512", 2),
   OAUTHBEARER("OAUTHBEARER", 1),
