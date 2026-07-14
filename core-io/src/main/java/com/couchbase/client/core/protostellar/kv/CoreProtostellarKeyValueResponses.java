@@ -101,7 +101,7 @@ public class CoreProtostellarKeyValueResponses {
   private static Optional<MutationToken> convertMutationToken(com.couchbase.client.protostellar.kv.v1.MutationToken mt) {
     Optional<MutationToken> mutationToken;
     if (mt != null) {
-      mutationToken = Optional.of(new MutationToken((short) mt.getVbucketId(), mt.getVbucketId(), mt.getSeqNo(), mt.getBucketName()));
+      mutationToken = Optional.of(new MutationToken((short) mt.getVbucketId(), mt.getVbucketUuid(), mt.getSeqNo(), mt.getBucketName()));
     } else {
       mutationToken = Optional.empty();
     }

@@ -56,7 +56,7 @@ public class CoreProtostellarKvBinaryResponses {
   static CoreCounterResult convertCounterResult(CoreKeyspace keyspace, String key, long cas, long content, MutationToken mt) {
     Optional<com.couchbase.client.core.msg.kv.MutationToken> mutationToken;
     if (mt != null) {
-      mutationToken = Optional.of(new com.couchbase.client.core.msg.kv.MutationToken((short) mt.getVbucketId(), mt.getVbucketId(), mt.getSeqNo(), mt.getBucketName()));
+      mutationToken = Optional.of(new com.couchbase.client.core.msg.kv.MutationToken((short) mt.getVbucketId(), mt.getVbucketUuid(), mt.getSeqNo(), mt.getBucketName()));
     } else {
       mutationToken = Optional.empty();
     }
