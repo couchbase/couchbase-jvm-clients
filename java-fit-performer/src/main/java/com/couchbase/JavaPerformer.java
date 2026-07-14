@@ -211,6 +211,7 @@ public class JavaPerformer extends CorePerformer {
         response.addPerformerCaps(Caps.OBSERVABILITY_1);
         // [end]
         response.addPerformerCaps(Caps.TIMING_ON_FAILED_OPS);
+        response.addPerformerCaps(Caps.AS_NULL_CONTENT_TYPE_SUPPORT);
         response.setPerformerUserAgent("java-sdk");
     }
 
