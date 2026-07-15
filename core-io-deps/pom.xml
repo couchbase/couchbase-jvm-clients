@@ -269,6 +269,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.3.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>eu.michael-simons.maven</groupId>
+                        <artifactId>native-image-config-transformer</artifactId>
+                        <version>1.0.2</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <relocations>
                         <relocation>
@@ -282,6 +289,13 @@
                         <relocation>
                             <pattern>META-INF/io\.netty\.versions\.properties</pattern>
                             <shadedPattern>META-INF/${shaded.package.prefix}io.netty.versions.properties</shadedPattern>
+                            <rawString>true</rawString>
+                        </relocation>
+
+                        <!-- Netty native image metadata -->
+                        <relocation>
+                            <pattern>META-INF/native-image/io\.netty</pattern>
+                            <shadedPattern>META-INF/native-image/${shaded.package.prefix}io.netty</shadedPattern>
                             <rawString>true</rawString>
                         </relocation>
 
@@ -332,6 +346,10 @@
                         <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                             <resource>META-INF/${shaded.package.prefix}io.netty.versions.properties</resource>
                         </transformer>
+
+                        <!-- Netty native image metadata -->
+                        <transformer implementation="ac.simons.maven.shade.NativeImagePropertiesTransformer"/>
+                        <transformer implementation="ac.simons.maven.shade.ReflectConfigTransformer"/>
 
                         <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
                             <file>${native.folder}/META-INF/native/${native.epoll-x86_64.original}</file>
