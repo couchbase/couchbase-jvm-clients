@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets
 import scala.util.Try
 
 object ContentAsUtil {
+  private def nullContentType: ContentTypes =
+    ContentTypes.newBuilder.setContentAsNull(ContentTypes.NullValue.newBuilder.build).build
+
   def contentType(
       contentAs: ContentAs,
       asByteArray: () => Try[Array[Byte]],
@@ -19,22 +22,30 @@ object ContentAsUtil {
       asFloatingPoint: () => Try[Double]
   ): Try[ContentTypes] = {
     if (contentAs.hasAsString) {
-      asString().map(value => ContentTypes.newBuilder.setContentAsString(value).build)
+      asString().map(value =>
+        if (value == null) nullContentType
+        else ContentTypes.newBuilder.setContentAsString(value).build
+      )
     } else if (contentAs.hasAsByteArray) {
       asByteArray().map(value =>
-        ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
+        if (value == null) nullContentType
+        else ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
       )
     } else if (contentAs.hasAsJsonObject) {
       asJsonObject().map(value =>
-        ContentTypes.newBuilder
-          .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
-          .build
+        if (value == null) nullContentType
+        else
+          ContentTypes.newBuilder
+            .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
+            .build
       )
     } else if (contentAs.hasAsJsonArray) {
       asJsonArray().map(value =>
-        ContentTypes.newBuilder
-          .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
-          .build
+        if (value == null) nullContentType
+        else
+          ContentTypes.newBuilder
+            .setContentAsBytes(ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8)))
+            .build
       )
     } else if (contentAs.hasAsBoolean) {
       asBoolean().map(value => ContentTypes.newBuilder.setContentAsBool(value).build)
@@ -60,32 +71,40 @@ object ContentAsUtil {
   ): Try[Seq[ContentTypes]] = {
     if (contentAs.hasAsString) {
       asString().map(values =>
-        values.map(value => ContentTypes.newBuilder.setContentAsString(value).build)
+        values.map(value =>
+          if (value == null) nullContentType
+          else ContentTypes.newBuilder.setContentAsString(value).build
+        )
       )
     } else if (contentAs.hasAsByteArray) {
       asByteArray().map(values =>
         values.map(value =>
-          ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
+          if (value == null) nullContentType
+          else ContentTypes.newBuilder.setContentAsBytes(ByteString.copyFrom(value)).build
         )
       )
     } else if (contentAs.hasAsJsonObject) {
       asJsonObject().map(values =>
         values.map(value =>
-          ContentTypes.newBuilder
-            .setContentAsBytes(
-              ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
-            )
-            .build
+          if (value == null) nullContentType
+          else
+            ContentTypes.newBuilder
+              .setContentAsBytes(
+                ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+              )
+              .build
         )
       )
     } else if (contentAs.hasAsJsonArray) {
       asJsonArray().map(values =>
         values.map(value =>
-          ContentTypes.newBuilder
-            .setContentAsBytes(
-              ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
-            )
-            .build
+          if (value == null) nullContentType
+          else
+            ContentTypes.newBuilder
+              .setContentAsBytes(
+                ByteString.copyFrom(value.toString.getBytes(StandardCharsets.UTF_8))
+              )
+              .build
         )
       )
     } else if (contentAs.hasAsBoolean) {

@@ -236,11 +236,14 @@ object QueryHelper {
 
     md.signatureAs[JsonObject] match {
       case Failure(_)     =>
+      // Nb CNG can return null for signature and profile
+      case Success(null)  =>
       case Success(value) => metaData.setSignature(ByteString.copyFrom(value.toString.getBytes))
     }
 
     md.profileAs[JsonObject] match {
       case Failure(_)     =>
+      case Success(null)  =>
       case Success(value) => metaData.setProfile(ByteString.copyFrom(value.toString.getBytes))
     }
 
