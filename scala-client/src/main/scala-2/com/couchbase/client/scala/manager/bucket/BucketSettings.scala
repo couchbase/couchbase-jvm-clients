@@ -440,6 +440,7 @@ private[scala] object BucketSettings {
         case _ => throw new CouchbaseException(s"Unknown compression type ${core.compressionMode}")
       },
       core.minimumDurabilityLevel match {
+        case null                                           => Durability.Disabled
         case DurabilityLevel.NONE                           => Durability.Disabled
         case DurabilityLevel.MAJORITY                       => Durability.Majority
         case DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE => Durability.MajorityAndPersistToActive
