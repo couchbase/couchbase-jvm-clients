@@ -15,7 +15,7 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.{Core, CoreKeyspace}
+import com.couchbase.client.core.CoreKeyspace
 import com.couchbase.client.core.api.manager._
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager
@@ -46,9 +46,9 @@ class AsyncCollectionQueryIndexManager(
 ) {
   private[scala] val internal = new CoreCollectionQueryIndexManager(
     collection.couchbaseOps.queryOps(),
-    collection.core.coreResources.requestTracer,
+    collection.couchbaseOps.coreResources.requestTracer,
     keyspace,
-    collection.core.coreResources.tracingDecorator()
+    collection.couchbaseOps.coreResources.tracingDecorator()
   )
   private[scala] val DefaultTimeout: Duration =
     collection.couchbaseOps.environment.timeoutConfig.managementTimeout

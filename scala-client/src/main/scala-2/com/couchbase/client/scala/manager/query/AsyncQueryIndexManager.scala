@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.scala.manager.query
 
-import com.couchbase.client.core.Core
 import com.couchbase.client.core.api.manager._
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
 import com.couchbase.client.core.error.InvalidArgumentException
@@ -55,7 +54,7 @@ class AsyncQueryIndexManager(private[scala] val cluster: AsyncCluster)(
 ) {
   private[scala] val internal = new CoreQueryIndexManager(
     cluster.couchbaseOps.queryOps(),
-    cluster.core.coreResources.requestTracerAndDecorator
+    cluster.couchbaseOps.coreResources.requestTracerAndDecorator
   )
 
   private[scala] val DefaultTimeout =
