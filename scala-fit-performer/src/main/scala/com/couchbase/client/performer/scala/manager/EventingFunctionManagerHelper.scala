@@ -432,9 +432,9 @@ object EventingFunctionManagerHelper {
       case EventingFunctionStatus.Pausing =>
         com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.EventingFunctionStatus.PAUSING
       case EventingFunctionStatus.Resuming =>
-          com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.EventingFunctionStatus.RESUMING
+        com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.EventingFunctionStatus.RESUMING
       case EventingFunctionStatus.Unknown =>
-          com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.EventingFunctionStatus.UNKNOWN
+        com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.EventingFunctionStatus.UNKNOWN
     }
   }
 

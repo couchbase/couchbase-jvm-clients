@@ -315,7 +315,9 @@ class ScalaPerformer extends CorePerformer {
       case err: com.couchbase.client.performer.scala.transaction.TestFailureRaiseFailedPrecondition =>
         logger.error("Operation failed during transactionCreate due to :  " + err)
         err.printStackTrace()
-        responseObserver.onError(Status.FAILED_PRECONDITION.withDescription(err.toString).asException)
+        responseObserver.onError(
+          Status.FAILED_PRECONDITION.withDescription(err.toString).asException
+        )
       case err: RuntimeException =>
         logger.error("Operation failed during transactionCreate due to :  " + err)
         err.printStackTrace()
