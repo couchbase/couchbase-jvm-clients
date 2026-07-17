@@ -176,20 +176,15 @@ class AsyncBucket private[scala] (
       timeout: Duration,
       options: WaitUntilReadyOptions = WaitUntilReadyOptions.Default
   ): Future[Unit] = {
-    couchbaseOps match {
-      case core: Core =>
-        FutureConversions
-          .javaCFToScalaFuture(
-            core.waitUntilReady(
-              if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
-              timeout,
-              options.desiredState,
-              name
-            )
-          )
-          .map(_ => ())
-
-      case _ => Future.failed(CoreProtostellarUtil.unsupportedCurrentlyInProtostellar())
-    }
+    FutureConversions
+      .javaCFToScalaFuture(
+        couchbaseOps.waitUntilReady(
+          if (options.serviceTypes.isEmpty) null else options.serviceTypes.asJava,
+          timeout,
+          options.desiredState,
+          name
+        )
+      )
+      .map(_ => ())
   }
 }
