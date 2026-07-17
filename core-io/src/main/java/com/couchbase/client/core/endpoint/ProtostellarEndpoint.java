@@ -249,9 +249,7 @@ public class ProtostellarEndpoint {
 
     ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port())
       .sslContext(sslContext)
-
-      // 20MB is the (current) maximum document size supported by the server.  Specifying 21MB to give wiggle room for the rest of the GRPC message.
-      .maxInboundMessageSize(21 * 1024 * 1024) // Max Couchbase document size (20 MiB) plus some slack
+      .maxInboundMessageSize(25 * 1024 * 1024) // 25Mb per RFC 77
       .executor(env.executor())
       .withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) env.timeoutConfig().connectTimeout().toMillis())
       // Retry strategies to be determined, but presumably we will need something custom rather than what GRPC provides
