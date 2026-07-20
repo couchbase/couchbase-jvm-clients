@@ -148,22 +148,13 @@ public class Collection internal constructor(
         common: CommonOptions = CommonOptions.Default,
         withExpiry: Boolean = false,
         project: List<String> = emptyList(),
-    ): GetResult {
-        return kvOps.getAsync(
-            common.toCore(),
-            validateDocumentId(id),
-            project,
-            withExpiry,
-            AbsentDocumentStrategy.THROW_EXCEPTION
-        ).await().let {
-            if (withExpiry) {
-                val expiry = it.expiry()?.let { instant -> Expiry.of(instant) } ?: Expiry.none()
-                GetResult.withKnownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder, expiry)
-            } else {
-                GetResult.withUnknownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder)
-            }
-        }
-    }
+    ): GetResult = doGet(
+        id,
+        common,
+        withExpiry,
+        project,
+        AbsentDocumentStrategy.THROW_EXCEPTION,
+    )!!
 
     /**
      * Like [get], but returns null instead of throwing
@@ -172,15 +163,40 @@ public class Collection internal constructor(
      * @see get
      */
     @VolatileCouchbaseApi
-    public suspend inline fun getOrNull(
+    public suspend fun getOrNull(
         id: String,
         common: CommonOptions = CommonOptions.Default,
         withExpiry: Boolean = false,
         project: List<String> = emptyList(),
-    ): GetResult? = try {
-        get(id, common, withExpiry, project)
-    } catch (t: DocumentNotFoundException) {
-        null
+    ): GetResult? = doGet(
+        id,
+        common,
+        withExpiry,
+        project,
+        AbsentDocumentStrategy.RETURN_NULL,
+    )
+
+    private suspend fun doGet(
+        id: String,
+        common: CommonOptions = CommonOptions.Default,
+        withExpiry: Boolean = false,
+        project: List<String> = emptyList(),
+        strategy: AbsentDocumentStrategy,
+    ): GetResult? {
+        return kvOps.getAsync(
+            common.toCore(),
+            validateDocumentId(id),
+            project,
+            withExpiry,
+            strategy,
+        ).await()?.let {
+            if (withExpiry) {
+                val expiry = it.expiry()?.let { instant -> Expiry.of(instant) } ?: Expiry.none()
+                GetResult.withKnownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder, expiry)
+            } else {
+                GetResult.withUnknownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder)
+            }
+        }
     }
 
     /**
