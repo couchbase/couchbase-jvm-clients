@@ -26,21 +26,31 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public enum ClusterCapability {
-  N1QL_ENHANCED_PREPARED_STATEMENTS("n1ql", "enhancedPreparedStatements"),
-  N1QL_READ_FROM_REPLICA("n1ql", "readFromReplica"),
+  N1QL_ENHANCED_PREPARED_STATEMENTS("n1ql", "enhancedPreparedStatements", "SQL++ enhanced prepared statements", "6.5"),
+  N1QL_READ_FROM_REPLICA("n1ql", "readFromReplica", "SQL++ read from replica", "7.6"),
 
-  SEARCH_VECTOR("search", "vectorSearch"),
-  SEARCH_SCOPED("search", "scopedSearchIndex"),
+  SEARCH_VECTOR("search", "vectorSearch", "vector search", "7.6"),
+  SEARCH_SCOPED("search", "scopedSearchIndex", "scoped search indexes", "7.6"),
+  SEARCH_SCORE_FUSION("search", "scoreFusion", "search score fusion", "8.5"),
   ;
 
   private static final List<ClusterCapability> VALUES = listOf(values());
 
   private final String namespace;
   private final String wireName;
+  private final String description;
+  private final String firstVersion;
 
-  ClusterCapability(String namespace, String wireName) {
+  ClusterCapability(
+    String namespace,
+    String wireName,
+    String description,
+    String firstVersion
+  ) {
     this.namespace = requireNonNull(namespace);
     this.wireName = requireNonNull(wireName);
+    this.description = requireNonNull(description);
+    this.firstVersion = requireNonNull(firstVersion);
   }
 
   public static List<ClusterCapability> valueList() {
@@ -55,4 +65,11 @@ public enum ClusterCapability {
     return wireName;
   }
 
+  public String description() {
+    return description;
+  }
+
+  public String firstVersion() {
+    return firstVersion;
+  }
 }

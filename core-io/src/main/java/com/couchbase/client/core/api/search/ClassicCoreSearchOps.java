@@ -23,6 +23,7 @@ import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring;
 import com.couchbase.client.core.api.search.result.CoreDateRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
@@ -43,9 +44,10 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.context.ReducedSearchErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
-import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.msg.search.SearchResponse;
+import com.couchbase.client.core.msg.search.ServerSearchRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.ClusterCapability;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -54,10 +56,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -81,36 +85,31 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
     this.scope = scope;
   }
 
-  CoreAsyncResponse<Void> preflightCheckScopedIndexes(Duration timeout) {
-    if (scope != null) {
-      return new CoreAsyncResponse<>(SearchCapabilityCheck.scopedSearchIndexCapabilityCheck(core, timeout), () -> {
-      });
-    }
-    return new CoreAsyncResponse<>(CompletableFuture.completedFuture(null), () -> {
-    });
-  }
-
-  CoreAsyncResponse<Void> preflightCheckVectorIndexes(boolean requiresVectorIndexSupport, Duration timeout) {
-    if (requiresVectorIndexSupport) {
-      return new CoreAsyncResponse<>(SearchCapabilityCheck.vectorSearchCapabilityCheck(core, timeout), () -> {
-      });
-    }
-    return new CoreAsyncResponse<>(CompletableFuture.completedFuture(null), () -> {
-    });
+  CoreAsyncResponse<Void> preflightCheck(
+      Set<ClusterCapability> capabilities,
+      Duration timeout
+  ) {
+    return new CoreAsyncResponse<>(
+        SearchCapabilityCheck.requireCapabilities(core, timeout, capabilities),
+        () -> {
+        }
+    );
   }
 
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    return searchAsyncShared(searchRequest(indexName, query, options), false, timeout);
+    Set<ClusterCapability> required = requiredCapabilities(null, options);
+    return searchAsyncShared(searchRequest(indexName, query, options), required, timeout);
   }
 
   @Override
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    return searchReactiveShared(searchRequest(indexName, query, options), false, timeout);
+    Set<ClusterCapability> required = requiredCapabilities(null, options);
+    return searchReactiveShared(searchRequest(indexName, query, options), required, timeout);
   }
 
   private static Map<String, CoreSearchFacetResult> parseFacets(final SearchChunkTrailer trailer) {
@@ -230,8 +229,9 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
       opts.sort().forEach(s -> sort.add(s.toJsonNode()));
       queryJson.set("sort", sort);
     }
-    if (opts.disableScoring()) {
-      queryJson.put("score", "none");
+    CoreSearchScoring scoring = opts.scoring();
+    if (scoring != null) {
+      scoring.inject(queryJson);
     }
 
     if (!opts.facets().isEmpty()) {
@@ -299,18 +299,39 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   @Override
   public CoreAsyncResponse<CoreSearchResult> searchAsync(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    return searchAsyncShared(searchRequestV2(indexName, searchRequest, options), searchRequest.vectorSearch != null, timeout);
+    Set<ClusterCapability> required = requiredCapabilities(searchRequest, options);
+    return searchAsyncShared(searchRequestV2(indexName, searchRequest, options), required, timeout);
+  }
+
+  private Set<ClusterCapability> requiredCapabilities(
+      @Nullable CoreSearchRequest searchRequest,
+      CoreSearchOptions options
+  ) {
+    Set<ClusterCapability> result = EnumSet.noneOf(ClusterCapability.class);
+
+    if (scope != null) result.add(ClusterCapability.SEARCH_SCOPED);
+    if (searchRequest != null && searchRequest.vectorSearch != null) result.add(ClusterCapability.SEARCH_VECTOR);
+
+    Optional.ofNullable(options.scoring())
+        .map(scoring -> scoring.requiredCapability)
+        .ifPresent(result::add);
+
+    return result;
   }
 
   @Override
   public Mono<CoreReactiveSearchResult> searchReactive(String indexName, CoreSearchRequest searchRequest, CoreSearchOptions options) {
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    return searchReactiveShared(searchRequestV2(indexName, searchRequest, options), searchRequest.vectorSearch != null, timeout);
+    Set<ClusterCapability> required = requiredCapabilities(searchRequest, options);
+    return searchReactiveShared(searchRequestV2(indexName, searchRequest, options), required, timeout);
   }
 
-  private CoreAsyncResponse<CoreSearchResult> searchAsyncShared(ServerSearchRequest request, boolean requiresVectorIndexSupport, Duration timeout) {
-    return preflightCheckScopedIndexes(timeout)
-            .flatMap(ignore -> preflightCheckVectorIndexes(requiresVectorIndexSupport, timeout))
+  private CoreAsyncResponse<CoreSearchResult> searchAsyncShared(
+      ServerSearchRequest request,
+      Set<ClusterCapability> required,
+      Duration timeout
+  ) {
+    return preflightCheck(required, timeout)
             .flatMap(ignore -> {
               core.send(request);
               return new CoreAsyncResponse<>(Mono.fromFuture(request.response())
@@ -329,9 +350,12 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
             });
   }
 
-  public Mono<CoreReactiveSearchResult> searchReactiveShared(ServerSearchRequest request, boolean requiresVectorIndexSupport, Duration timeout) {
-    return preflightCheckScopedIndexes(timeout).toMono()
-            .then(Mono.defer(() -> preflightCheckVectorIndexes(requiresVectorIndexSupport, timeout).toMono()))
+  public Mono<CoreReactiveSearchResult> searchReactiveShared(
+      ServerSearchRequest request,
+      Set<ClusterCapability> required,
+      Duration timeout
+  ) {
+    return preflightCheck(required, timeout).toMono()
             .then(Mono.defer(() -> {
               core.send(request);
               return Mono.fromFuture(request.response())

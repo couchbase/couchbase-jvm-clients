@@ -18,6 +18,7 @@ package com.couchbase.client.core.api.search;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
@@ -40,8 +41,22 @@ interface CoreSearchOptions {
   @Nullable
   CoreMutationState consistentWith();
 
-  @Nullable
-  Boolean disableScoring();
+  /**
+   * TODO: Remove this method after Scala implements {@link #scoring()}.
+   *
+   * @deprecated in favor of {@link #scoring()} with {@link CoreSearchScoring.Disabled}.
+   */
+  @Deprecated
+  default @Nullable Boolean disableScoring() {
+    return null;
+  }
+
+  // TODO: Remove the default implementation after Scala implements it.
+  default @Nullable CoreSearchScoring scoring() {
+    return Boolean.TRUE.equals(disableScoring())
+        ? CoreSearchScoring.Disabled.INSTANCE
+        : null;
+  }
 
   @Nullable
   Boolean explain();

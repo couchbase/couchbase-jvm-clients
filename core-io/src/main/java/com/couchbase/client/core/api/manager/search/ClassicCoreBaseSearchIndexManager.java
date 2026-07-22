@@ -34,19 +34,24 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
+import com.couchbase.client.core.topology.ClusterCapability;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static com.couchbase.client.core.api.search.util.SearchCapabilityCheck.requireCapabilities;
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
 import static com.couchbase.client.core.util.UrlQueryStringBuilder.urlEncode;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptySet;
 
 @Stability.Internal
 public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchIndexManager {
@@ -164,22 +169,16 @@ public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchInd
   public CompletableFuture<Void> upsertIndex(CoreSearchIndex index, CoreCommonOptions options) {
     notNull(index, "Search Index");
     Duration timeout = options.timeout().orElse(core.environment().timeoutConfig().managementTimeout());
+    Set<ClusterCapability> required = index.containsVectorMappings() ? EnumSet.of(ClusterCapability.SEARCH_VECTOR) : emptySet();
 
     return initialCheck(timeout)
-            .thenCompose(ignore -> vectorIndexCheck(core, index, timeout))
+            .thenCompose(ignore -> requireCapabilities(core, timeout, required))
             .thenCompose(ignore -> searchHttpClient.put(path(indexPath(index.name())), options)
                     .trace(TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX)
                     .json(index.toJson().getBytes(UTF_8))
                     .header(HttpHeaderNames.CACHE_CONTROL, "no-cache")
                     .exec(core)
                     .thenApply(response -> null));
-  }
-
-  private static CompletableFuture<Void> vectorIndexCheck(Core core, CoreSearchIndex index, Duration timeout) {
-    if (index.containsVectorMappings()) {
-      return SearchCapabilityCheck.vectorSearchCapabilityCheck(core, timeout);
-    }
-    return CompletableFuture.completedFuture(null);
   }
 
   public CompletableFuture<Void> dropIndex(String name, CoreCommonOptions options) {

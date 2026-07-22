@@ -40,6 +40,7 @@ import com.couchbase.client.java.search.SearchOptions;
 import com.couchbase.client.java.search.SearchQuery;
 import com.couchbase.client.java.search.SearchRequest;
 import com.couchbase.client.java.search.SearchScanConsistency;
+import com.couchbase.client.java.search.SearchScoring;
 import com.couchbase.client.java.search.facet.DateRange;
 import com.couchbase.client.java.search.facet.NumericRange;
 import com.couchbase.client.java.search.facet.SearchFacet;
@@ -297,7 +298,35 @@ public class SearchHelper {
       }
     }
 
+    if (o.hasDisableScoring()) {
+      opts.disableScoring(o.getDisableScoring());
+    }
+    if (o.hasScoring()) {
+      opts.scoring(convertScoring(o.getScoring()));
+    }
+
     return opts;
+  }
+
+  private static SearchScoring convertScoring(com.couchbase.client.protocol.sdk.search.SearchScoring scoring) {
+    if (scoring.hasNone()) return SearchScoring.disabled();
+
+    if (scoring.hasReciprocalRankFusion()) {
+      var fit = scoring.getReciprocalRankFusion();
+      var sdk = SearchScoring.reciprocalRankFusion();
+      if (fit.hasRankConstant()) sdk = sdk.withRankConstant(fit.getRankConstant());
+      if (fit.hasWindowSize()) sdk = sdk.withWindowSize(fit.getWindowSize());
+      return sdk;
+    }
+
+    if (scoring.hasRelativeScoreFusion()) {
+      var fit = scoring.getRelativeScoreFusion();
+      var sdk = SearchScoring.relativeScoreFusion();
+      if (fit.hasWindowSize()) sdk = sdk.withWindowSize(fit.getWindowSize());
+      return sdk;
+    }
+
+    throw new UnsupportedOperationException("Unrecognized SearchScoring: " + scoring);
   }
 
   private static Instant convertTimestamp(Timestamp timestamp) {

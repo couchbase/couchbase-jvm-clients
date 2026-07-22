@@ -23,6 +23,7 @@ import com.couchbase.client.core.api.search.CoreSearchKeyset;
 import com.couchbase.client.core.api.search.CoreSearchOptions;
 import com.couchbase.client.core.api.search.CoreSearchScanConsistency;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring;
 import com.couchbase.client.core.api.search.sort.CoreSearchSort;
 import com.couchbase.client.core.api.search.sort.CoreSearchSortString;
 import com.couchbase.client.core.api.shared.CoreMutationState;
@@ -54,7 +55,8 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   private @Nullable List<String> collections;
   private SearchScanConsistency consistency;
   private MutationState consistentWith;
-  private boolean disableScoring = false;
+  private @Nullable Boolean disableScoring;
+  private @Nullable SearchScoring scoring;
   private Boolean explain;
   private Map<String, SearchFacet> facets;
   private @Nullable List<String> fields;
@@ -305,12 +307,38 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   }
 
   /**
-   * If set to true, thee server will not perform any scoring on the hits.
+   * Specifies how the sderver should assign scores to hits.
+   *
+   * @param scoring null means use the server's default scoring strategy.
+   * @see SearchScoring#disabled()
+   * @see SearchScoring#relativeScoreFusion()
+   * @see SearchScoring#reciprocalRankFusion()
+   */
+  public SearchOptions scoring(final @Nullable SearchScoring scoring) {
+    if (disableScoring != null) throw illegalStateForScoringSetter();
+
+    this.scoring = scoring;
+    return this;
+  }
+
+  private static RuntimeException illegalStateForScoringSetter() {
+    return InvalidArgumentException.fromMessage(
+      "Illegal state: Cannot call both `scoring()` and `disableScoring()` (deprecated)."
+    );
+  }
+
+  /**
+   * If set to true, the server will not perform any scoring on the hits.
    *
    * @param disableScoring if scoring should be disabled.
    * @return these {@link SearchOptions} for chaining purposes.
+   *
+   * @deprecated in favor of {@link #scoring(SearchScoring)} with {@link SearchScoring#disabled()}.
    */
+  @Deprecated
   public SearchOptions disableScoring(final boolean disableScoring) {
+    if (scoring != null) throw illegalStateForScoringSetter();
+
     this.disableScoring = disableScoring;
     return this;
   }
@@ -392,8 +420,9 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
     }
 
     @Override
-    public Boolean disableScoring() {
-      return disableScoring;
+    public @Nullable CoreSearchScoring scoring() {
+      if (Boolean.TRUE.equals(disableScoring)) return CoreSearchScoring.Disabled.INSTANCE;
+      return scoring == null ? null : scoring.toCore();
     }
 
     @Override

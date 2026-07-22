@@ -19,8 +19,10 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.topology.ClusterCapability;
+import com.couchbase.client.core.topology.ClusterTopology;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
@@ -28,27 +30,25 @@ public class SearchCapabilityCheck {
   private SearchCapabilityCheck() {
   }
 
-  public static CompletableFuture<Void> scopedSearchIndexCapabilityCheck(Core core, Duration timeout) {
-    return requireCapability(core, timeout, ClusterCapability.SEARCH_SCOPED,
-        "This method cannot be used with this cluster, as it does not support scoped search indexes." +
-            " Please use a cluster fully upgraded to Couchbase Server 7.6 or above.");
-  }
+  public static CompletableFuture<Void> requireCapabilities(
+      Core core,
+      Duration timeout,
+      Set<ClusterCapability> capabilities
+  ) {
+    if (capabilities.isEmpty()) return CompletableFuture.completedFuture(null);
 
-  public static CompletableFuture<Void> vectorSearchCapabilityCheck(Core core, Duration timeout) {
-    return requireCapability(core, timeout, ClusterCapability.SEARCH_VECTOR,
-        "This method cannot be used with this cluster, as it does not support vector search." +
-            " Please use a cluster fully upgraded to Couchbase Server 7.6 or above.");
-  }
-
-  private static CompletableFuture<Void> requireCapability(Core core, Duration timeout, ClusterCapability capability, String message) {
     return core.waitForClusterTopology(timeout)
-        .doOnNext(topology -> {
-          if (!topology.hasCapability(capability)) {
-            throw new FeatureNotAvailableException(message);
-          }
-        })
+        .doOnNext(topology -> capabilities.forEach(capability -> require(topology, capability)))
         .then()
         .toFuture();
   }
 
+  private static void require(ClusterTopology topology, ClusterCapability capability) {
+    if (!topology.hasCapability(capability)) {
+      throw new FeatureNotAvailableException(
+          "This cluster does not support " + capability.description() + "." +
+              " Please use a cluster fully upgraded to Couchbase Server " + capability.firstVersion() + " or above."
+      );
+    }
+  }
 }

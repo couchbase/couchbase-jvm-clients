@@ -33,6 +33,7 @@ import com.couchbase.client.core.api.search.facet.CoreNumericRangeFacet;
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet;
 import com.couchbase.client.core.api.search.facet.CoreTermFacet;
 import com.couchbase.client.core.api.search.queries.CoreSearchRequest;
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring;
 import com.couchbase.client.core.api.search.result.CoreDateRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreNumericRangeSearchFacetResult;
 import com.couchbase.client.core.api.search.result.CoreReactiveSearchResult;
@@ -427,8 +428,11 @@ public class ProtostellarCoreSearchOps implements CoreSearchOps {
 
     opts.sort().forEach(sort -> request.addSort(sort.convert(ProtostellarSearchSortConverter.instance)));
 
-    if (opts.disableScoring() != null) {
-      request.setDisableScoring(opts.disableScoring());
+    CoreSearchScoring scoring = opts.scoring();
+    if (scoring instanceof CoreSearchScoring.Disabled) {
+      request.setDisableScoring(true);
+    } else if (scoring != null) {
+      throw unsupportedInProtostellar("scoring fusion");
     }
 
     if (!opts.collections().isEmpty()) {

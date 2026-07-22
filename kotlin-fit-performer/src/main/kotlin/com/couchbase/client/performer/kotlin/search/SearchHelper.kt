@@ -31,6 +31,7 @@ import com.couchbase.client.kotlin.search.Highlight
 import com.couchbase.client.kotlin.search.Missing
 import com.couchbase.client.kotlin.search.Mode
 import com.couchbase.client.kotlin.search.NumericRange
+import com.couchbase.client.kotlin.search.Score
 import com.couchbase.client.kotlin.search.SearchFacet
 import com.couchbase.client.kotlin.search.SearchMetadata
 import com.couchbase.client.kotlin.search.SearchPage
@@ -64,22 +65,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.Double
-import kotlin.Float
-import kotlin.Int
-import kotlin.Number
-import kotlin.String
-import kotlin.Suppress
-import kotlin.TODO
-import kotlin.apply
-import kotlin.getOrThrow
-import kotlin.let
-import kotlin.recoverCatching
-import kotlin.runCatching
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.with
 import com.couchbase.client.protocol.sdk.Result as FitResult
 import com.couchbase.client.protocol.sdk.search.BlockingSearchResult as FitBlockingSearchResult
 import com.couchbase.client.protocol.sdk.search.DateRange as FitDateRange
@@ -96,6 +82,7 @@ import com.couchbase.client.protocol.sdk.search.SearchOptions as FitSearchOption
 import com.couchbase.client.protocol.sdk.search.SearchQuery as FitSearchQuery
 import com.couchbase.client.protocol.sdk.search.SearchRow as FitSearchRow
 import com.couchbase.client.protocol.sdk.search.SearchRowLocation as FitSearchRowLocation
+import com.couchbase.client.protocol.sdk.search.SearchScoring as FitSearchScoring
 import com.couchbase.client.protocol.sdk.search.SearchSort as FitSearchSort
 import com.couchbase.client.protocol.sdk.search.VectorQuery as FitVectorQuery
 import com.couchbase.client.protocol.sdk.search.VectorSearch as FitVectorSearch
@@ -180,6 +167,18 @@ private data class SearchParams(
 
     val includeLocations: Boolean
         get() = options?.hasIncludeLocations() == true && options.includeLocations
+
+    val score: Score
+        get() = options?.let {
+            when {
+                // Kotlin SDK never had a separate "disable scoring" option, but the FIT driver doesn't know that.
+                it.hasScoring() && it.hasDisableScoring() -> throw InvalidArgumentException.fromMessage("Can't specify both scoring and disableScoring")
+
+                it.hasDisableScoring() && it.disableScoring -> Score.none()
+                it.hasScoring() -> it.scoring.toSdk()
+                else -> null
+            }
+        } ?: Score.default()
 
     val facets: List<SearchFacet>
         get() = options?.facetsMap?.entries?.map { it.value.toSdk(it.key) } ?: emptyList()
@@ -280,6 +279,7 @@ class SearchHelper {
                     sort = params.sort,
                     highlight = params.highlight,
                     includeLocations = params.includeLocations,
+                    score = params.score,
                     facets = params.facets,
                     explain = params.explain,
                 ).execute()
@@ -309,6 +309,7 @@ class SearchHelper {
                         sort = params.sort,
                         highlight = params.highlight,
                         includeLocations = params.includeLocations,
+                        score = params.score,
                         facets = params.facets,
                         explain = params.explain,
                     ).execute()
@@ -344,6 +345,24 @@ private fun FitHighlight.toSdk(): Highlight =
         }
     } else Highlight.html(fieldsList)
 
+private fun FitSearchScoring.toSdk(): Score = when {
+    hasNone() -> Score.none()
+
+    hasReciprocalRankFusion() -> with(reciprocalRankFusion) {
+        Score.reciprocalRankFusion(
+            windowSize = if (hasWindowSize()) windowSize else null,
+            rankConstant = if (hasRankConstant()) rankConstant else null,
+        )
+    }
+
+    hasRelativeScoreFusion() -> with(relativeScoreFusion) {
+        Score.relativeScoreFusion(
+            windowSize = if (hasWindowSize()) windowSize else null,
+        )
+    }
+
+    else -> throw UnsupportedOperationException("Unrecognized scoring: $this")
+}
 
 private fun FitSearchSort.toSdk(): SearchSort = when {
     hasField() -> with(field) {

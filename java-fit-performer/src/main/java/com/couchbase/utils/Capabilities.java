@@ -54,7 +54,8 @@ public class Capabilities {
             Caps.SDK_JWT,
             Caps.SDK_STABLE_OTEL_SEMANTIC_CONVENTIONS,
             Caps.SDK_GET_OR_NULL,
-            Caps.SDK_QUERY_2120
+            Caps.SDK_QUERY_2120,
+            Caps.SDK_SEARCH_SCORE_FUSION
         );
     }
 }

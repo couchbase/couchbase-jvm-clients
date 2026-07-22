@@ -29,7 +29,9 @@ public enum ClusterCapabilities {
 
   ENHANCED_PREPARED_STATEMENTS("enhancedPreparedStatements"),
   SCOPED_SEARCH_INDEX("scopedSearchIndex"),
-  VECTOR_SEARCH("vectorSearch");
+  VECTOR_SEARCH("vectorSearch"),
+  SCORE_FUSION("scoreFusion"),
+  ;
 
   private final String raw;
 

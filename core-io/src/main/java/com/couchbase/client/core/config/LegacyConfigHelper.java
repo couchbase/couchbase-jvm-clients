@@ -128,6 +128,9 @@ public class LegacyConfigHelper {
     if (topology.hasCapability(ClusterCapability.SEARCH_SCOPED)) {
       caps.get(ServiceType.SEARCH).add(ClusterCapabilities.SCOPED_SEARCH_INDEX);
     }
+    if (topology.hasCapability(ClusterCapability.SEARCH_SCORE_FUSION)) {
+      caps.get(ServiceType.SEARCH).add(ClusterCapabilities.SCORE_FUSION);
+    }
     return caps;
   }
 

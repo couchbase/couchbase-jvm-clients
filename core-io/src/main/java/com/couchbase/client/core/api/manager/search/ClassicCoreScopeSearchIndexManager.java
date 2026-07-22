@@ -21,8 +21,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.search.util.SearchCapabilityCheck;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.topology.ClusterCapability;
 
 import java.time.Duration;
+import java.util.EnumSet;
 import java.util.concurrent.CompletableFuture;
 
 @Stability.Internal
@@ -47,6 +49,6 @@ public class ClassicCoreScopeSearchIndexManager extends ClassicCoreBaseSearchInd
 
   @Override
   CompletableFuture<Void> initialCheck(Duration timeout) {
-    return SearchCapabilityCheck.scopedSearchIndexCapabilityCheck(core, timeout);
+    return SearchCapabilityCheck.requireCapabilities(core, timeout, EnumSet.of(ClusterCapability.SEARCH_SCOPED));
   }
 }

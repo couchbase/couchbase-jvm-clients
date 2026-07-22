@@ -26,6 +26,7 @@ import com.couchbase.client.core.api.search.CoreSearchOps
 import com.couchbase.client.core.api.search.CoreSearchOptions
 import com.couchbase.client.core.api.search.CoreSearchScanConsistency
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring
 import com.couchbase.client.core.api.search.sort.CoreSearchSort
 import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
@@ -466,7 +467,7 @@ internal fun CoreSearchOps.search(
                 is SearchScanConsistency.ConsistentWith -> CoreMutationState(consistency.tokens)
             }
 
-        override fun disableScoring(): Boolean = score is Score.None
+        override fun scoring(): CoreSearchScoring? = score.core
 
         override fun explain(): Boolean? = explain
 
