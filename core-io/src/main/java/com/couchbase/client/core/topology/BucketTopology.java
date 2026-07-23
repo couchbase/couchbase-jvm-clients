@@ -47,8 +47,11 @@ public interface BucketTopology {
   }
 
   /**
-   * Returns the subset of cluster nodes that are ready to service
-   * requests for this bucket.
+   * Returns the cluster nodes currently hosting this bucket.
+   * <p>
+   * During rebalance, this might be a subset of all nodes in the cluster.
+   *
+   * @see ClusterTopology#nodes()
    */
   @Stability.Internal
   List<HostAndServicePorts> nodes();

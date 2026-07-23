@@ -105,6 +105,14 @@ public class ClusterTopology {
     return revision;
   }
 
+  /**
+   * Returns all nodes in the cluster.
+   * <p>
+   * <b>CAVEAT:</b> During rebalance, the result might include
+   * nodes that are not currently hosting all buckets.
+   *
+   * @see BucketTopology#nodes()
+   */
   public List<HostAndServicePorts> nodes() {
     return nodes;
   }

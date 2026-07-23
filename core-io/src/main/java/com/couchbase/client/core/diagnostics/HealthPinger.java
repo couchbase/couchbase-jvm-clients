@@ -171,8 +171,15 @@ public class HealthPinger {
     topologiesToScan.stream()
       .filter(Objects::nonNull) // global or specific bucket topology might be absent
       .forEach(topology -> {
-        log.message("extractPingTargets: scanning " + describe(topology));
-        for (HostAndServicePorts node : topology.nodes()) {
+        // When pinging a bucket, ignore nodes that aren't currently hosting the bucket.
+        // Otherwise, waitUntilReady would likely time out during a rebalance.
+        List<HostAndServicePorts> nodes = bucket != null
+          ? topology.requireBucket().bucket().nodes()
+          : topology.nodes();
+
+        log.message("extractPingTargets: scanning " + describe(topology, nodes));
+
+        for (HostAndServicePorts node : nodes) {
           for (ServiceType advertisedService : advertisedServices(node)) {
             if (serviceTypeFilter.contains(advertisedService)) {
               boolean serviceRequiresBucket = servicesThatRequireBucket.contains(advertisedService);
@@ -190,11 +197,11 @@ public class HealthPinger {
     return result;
   }
 
-  private static String describe(ClusterTopology topology) {
+  private static String describe(ClusterTopology topology, List<HostAndServicePorts> nodes) {
     String bucketOrGlobal = (topology instanceof ClusterTopologyWithBucket)
       ? "bucket '" + topology.requireBucket().bucket().name() + "'"
       : "global";
-    return "topology from " + bucketOrGlobal + " ; nodes=" + topology.nodes();
+    return "topology from " + bucketOrGlobal + " ; nodes=" + nodes;
   }
 
   private static Set<ServiceType> advertisedServices(HostAndServicePorts node) {
