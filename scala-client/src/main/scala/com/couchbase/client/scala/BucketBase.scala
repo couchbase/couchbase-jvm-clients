@@ -32,6 +32,7 @@ import com.couchbase.client.scala.util.DurationConversions.{
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
+import java.util.concurrent.ConcurrentHashMap
 import scala.util.Try
 
 /** Represents a Couchbase bucket resource.
@@ -64,12 +65,14 @@ trait BucketBase { this: Bucket =>
     scope(DefaultResources.DefaultScope).defaultCollection
   }
 
+  private val scopeCache = new ConcurrentHashMap[String, Scope]()
+
   /** Opens and returns a Couchbase scope resource.
     *
     * @param scopeName the name of the scope
     */
   def scope(scopeName: String): Scope = {
-    new Scope(async.scope(scopeName), async.name)
+    scopeCache.computeIfAbsent(scopeName, _ => new Scope(async.scope(scopeName), async.name))
   }
 
   /** Opens and returns the default Couchbase scope. */

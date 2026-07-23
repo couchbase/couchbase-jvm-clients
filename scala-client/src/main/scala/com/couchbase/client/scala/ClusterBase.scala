@@ -43,6 +43,7 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
+import java.util.concurrent.ConcurrentHashMap
 import scala.util.Try
 
 /** Represents a connection to a Couchbase cluster.
@@ -74,12 +75,14 @@ trait ClusterBase { this: Cluster =>
   /** The environment used to create this cluster */
   def env: ClusterEnvironment = environment
 
+  private val bucketCache = new ConcurrentHashMap[String, Bucket]()
+
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): Bucket = {
-    new Bucket(async.bucket(bucketName))
+    bucketCache.computeIfAbsent(bucketName, _ => new Bucket(async.bucket(bucketName)))
   }
 
   /** Sets the authenticator used by the client.

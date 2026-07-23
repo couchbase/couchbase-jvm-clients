@@ -51,6 +51,7 @@ import java.util.{Optional, UUID}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -94,16 +95,23 @@ trait AsyncClusterBase { this: AsyncCluster =>
     env
   )
 
+  private val bucketCache = new ConcurrentHashMap[String, AsyncBucket]()
+
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): AsyncBucket = {
-    couchbaseOps match {
-      case core: Core => core.openBucket(bucketName)
-      case _          =>
-    }
-    new AsyncBucket(bucketName, couchbaseOps, environment)
+    bucketCache.computeIfAbsent(
+      bucketName,
+      _ => {
+        couchbaseOps match {
+          case core: Core => core.openBucket(bucketName)
+          case _          =>
+        }
+        new AsyncBucket(bucketName, couchbaseOps, environment)
+      }
+    )
   }
 
   /** @see [[ClusterBase.authenticator]] */

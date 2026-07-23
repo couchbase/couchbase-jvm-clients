@@ -31,6 +31,7 @@ import reactor.core.scala.publisher.{SFlux, SMono}
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
+import java.util.concurrent.ConcurrentHashMap
 import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase bucket resource.
@@ -57,12 +58,17 @@ class ReactiveBucket private[scala] (val async: AsyncBucket) {
   )
   lazy val viewIndexes = new ReactiveViewIndexManager(async.couchbaseOps, async.name)
 
+  private val scopeCache = new ConcurrentHashMap[String, ReactiveScope]()
+
   /** Opens and returns a Couchbase scope resource.
     *
     * @param scopeName the name of the scope
     */
   def scope(scopeName: String): ReactiveScope = {
-    new ReactiveScope(async.scope(scopeName), async.name)
+    scopeCache.computeIfAbsent(
+      scopeName,
+      _ => new ReactiveScope(async.scope(scopeName), async.name)
+    )
   }
 
   /** Opens and returns the default Couchbase scope. */

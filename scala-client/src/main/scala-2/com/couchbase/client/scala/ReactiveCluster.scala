@@ -55,6 +55,7 @@ import reactor.core.scala.publisher.SMono
 import java.util.UUID
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
@@ -308,12 +309,14 @@ class ReactiveCluster(val async: AsyncCluster) {
     searchQuery(indexName, query, SearchOptions(timeout = Some(timeout)))
   }
 
+  private val bucketCache = new ConcurrentHashMap[String, ReactiveBucket]()
+
   /** Opens and returns a Couchbase bucket resource that exists on this cluster.
     *
     * @param bucketName the name of the bucket to open
     */
   def bucket(bucketName: String): ReactiveBucket = {
-    new ReactiveBucket(async.bucket(bucketName))
+    bucketCache.computeIfAbsent(bucketName, _ => new ReactiveBucket(async.bucket(bucketName)))
   }
 
   /** Shutdown all cluster resources.search

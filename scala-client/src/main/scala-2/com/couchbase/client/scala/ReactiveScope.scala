@@ -32,6 +32,7 @@ import com.couchbase.client.scala.util.CoreCommonConvertersScala2
 import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.ExecutionContext
+import java.util.concurrent.ConcurrentHashMap
 import scala.util.{Failure, Success}
 
 /** Represents a Couchbase scope resource.
@@ -69,9 +70,14 @@ class ReactiveScope(async: AsyncScope, val bucketName: String) {
     collection(DefaultResources.DefaultCollection)
   }
 
+  private val collectionCache = new ConcurrentHashMap[String, ReactiveCollection]()
+
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): ReactiveCollection = {
-    new ReactiveCollection(async.collection(collectionName))
+    collectionCache.computeIfAbsent(
+      collectionName,
+      _ => new ReactiveCollection(async.collection(collectionName))
+    )
   }
 
   /** Performs a N1QL query against the cluster.
