@@ -26,6 +26,7 @@ import com.couchbase.client.scala.util.AsyncUtils
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.ConcurrentHashMap
 import scala.util.{Failure, Success, Try}
 
 /** Represents a Couchbase scope resource.
@@ -44,9 +45,14 @@ trait ScopeBase { this: Scope =>
   /** The name of this scope. */
   def name: String = async.name
 
+  private val collectionCache = new ConcurrentHashMap[String, Collection]()
+
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): Collection = {
-    new Collection(async.collection(collectionName), bucketName)
+    collectionCache.computeIfAbsent(
+      collectionName,
+      _ => new Collection(async.collection(collectionName), bucketName)
+    )
   }
 
   /** Opens and returns the default collection on this scope. */

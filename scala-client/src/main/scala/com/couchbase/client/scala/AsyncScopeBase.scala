@@ -30,6 +30,7 @@ import com.couchbase.client.scala.search.vector.SearchRequest
 import com.couchbase.client.scala.util.CoreCommonConverters.convert
 
 import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -60,26 +61,34 @@ trait AsyncScopeBase { this: AsyncScope =>
   private[scala] def defaultCollection: AsyncCollection =
     collection(DefaultResources.DefaultCollection)
 
+  private val collectionCache = new ConcurrentHashMap[String, AsyncCollection]()
+
   /** Opens and returns a Couchbase collection resource, that exists on this scope. */
   def collection(collectionName: String): AsyncCollection = {
-    couchbaseOps match {
-      case core: Core =>
-        val defaultScopeAndCollection = collectionName.equals(DefaultResources.DefaultCollection) &&
-          name.equals(DefaultResources.DefaultScope)
+    collectionCache.computeIfAbsent(
+      collectionName,
+      _ => {
+        couchbaseOps match {
+          case core: Core =>
+            val defaultScopeAndCollection =
+              collectionName.equals(DefaultResources.DefaultCollection) &&
+                name.equals(DefaultResources.DefaultScope)
 
-        if (!defaultScopeAndCollection) {
-          core.configurationProvider.refreshCollectionId(
-            new CollectionIdentifier(
-              bucketName,
-              Optional.of(name),
-              Optional.of(collectionName)
-            )
-          )
+            if (!defaultScopeAndCollection) {
+              core.configurationProvider.refreshCollectionId(
+                new CollectionIdentifier(
+                  bucketName,
+                  Optional.of(name),
+                  Optional.of(collectionName)
+                )
+              )
+            }
+          case _ =>
         }
-      case _ =>
-    }
 
-    new AsyncCollection(collectionName, bucketName, name, couchbaseOps, environment)
+        new AsyncCollection(collectionName, bucketName, name, couchbaseOps, environment)
+      }
+    )
   }
 
   /** Performs a N1QL query against the cluster.

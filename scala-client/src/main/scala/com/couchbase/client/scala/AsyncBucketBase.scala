@@ -28,18 +28,24 @@ import java.util.Optional
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 
 trait AsyncBucketBase { this: AsyncBucket =>
 
   private[scala] implicit val ec: ExecutionContext = environment.ec
 
+  private val scopeCache = new ConcurrentHashMap[String, AsyncScope]()
+
   /** Opens and returns a Couchbase scope resource.
     *
     * @param scopeName the name of the scope
     */
   def scope(scopeName: String): AsyncScope = {
-    new AsyncScope(scopeName, name, couchbaseOps, environment)
+    scopeCache.computeIfAbsent(
+      scopeName,
+      _ => new AsyncScope(scopeName, name, couchbaseOps, environment)
+    )
   }
 
   /** Opens and returns the default Couchbase scope. */
