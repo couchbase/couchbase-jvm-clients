@@ -1071,9 +1071,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     @Override
     public void run() {
       try {
-        if (currentConfig != null && currentConfig.hasClusterOrBucketConfig()) {
+        ClusterTopology topology = getAnyTopology(currentConfig);
+        if (topology != null) {
           int numNodes = nodes.size();
-          int numConfigNodes = currentConfig.allNodeAddresses().size();
+          int numConfigNodes = topology.nodes().size();
 
           if (numNodes != numConfigNodes) {
             String message = "Number of managed nodes (" + numNodes + ") differs from the current config ("
@@ -1088,4 +1089,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     }
   }
 
+  private static @Nullable ClusterTopology getAnyTopology(@Nullable ClusterConfig config) {
+    if (config == null) return null;
+    ClusterTopology global = config.globalTopology();
+    if (global != null) return global;
+    return config.bucketTopologies().stream().findFirst().orElse(null);
+  }
 }

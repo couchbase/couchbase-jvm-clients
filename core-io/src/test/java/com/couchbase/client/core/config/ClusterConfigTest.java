@@ -22,6 +22,7 @@ import com.couchbase.client.core.topology.ClusterTopologyBuilder;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -34,7 +35,7 @@ class ClusterConfigTest {
   @Test
   void returnsEmptyAllNodeAddresses() {
     ClusterConfig config = new ClusterConfig();
-    assertEquals(emptySet(), config.allNodeAddresses());
+    assertEquals(emptySet(), allHosts(config));
   }
 
   @Test
@@ -52,7 +53,7 @@ class ClusterConfigTest {
       "hostname2"
     );
 
-    assertEquals(expected, config.allNodeAddresses());
+    assertEquals(expected, allHosts(config));
   }
 
   @Test
@@ -72,7 +73,7 @@ class ClusterConfigTest {
       "hostname3"
     );
 
-    assertEquals(expected, config.allNodeAddresses());
+    assertEquals(expected, allHosts(config));
   }
 
   @Test
@@ -98,7 +99,7 @@ class ClusterConfigTest {
       "hostname3"
     );
 
-    assertEquals(expected, config.allNodeAddresses());
+    assertEquals(expected, allHosts(config));
   }
 
   static ClusterTopologyBuilder minimalTopology(String... hosts) {
@@ -110,5 +111,26 @@ class ClusterConfigTest {
       )));
     }
     return builder;
+  }
+
+  /**
+   * Returns the set of all node hosts from global and bucket configs.
+   *
+   * @deprecated Because it reinforces the mistaken assumption that each node runs on a unique host.
+   */
+  @Deprecated
+  public Set<String> allHosts(ClusterConfig config) {
+    Set<String> hosts = new HashSet<>();
+
+    ClusterTopology global = config.globalTopology();
+    if (global != null) {
+      global.nodes().forEach(node -> hosts.add(node.host()));
+    }
+
+    for (ClusterTopologyWithBucket bucket : config.bucketTopologies()) {
+      bucket.nodes().forEach(node -> hosts.add(node.host()));
+    }
+
+    return hosts;
   }
 }

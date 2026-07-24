@@ -106,7 +106,7 @@ class CoreTest {
 
     public void accept(ClusterTopologyWithBucket bucketConfig) {
       clusterConfig.setBucketConfig(bucketConfig);
-      logger.info("Emitting config {}", clusterConfig.allNodeAddresses());
+      logger.info("Emitting config {}", clusterConfig);
       configs.tryEmitNext(clusterConfig).orThrow();
     }
   }
