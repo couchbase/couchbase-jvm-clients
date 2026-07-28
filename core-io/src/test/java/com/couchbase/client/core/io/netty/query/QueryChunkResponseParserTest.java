@@ -87,6 +87,7 @@ class QueryChunkResponseParserTest {
 
     assertThrows(AuthenticationFailureException.class, () -> runAndThrow("auth_13014"));
     assertThrows(AuthenticationFailureException.class, () -> runAndThrow("auth_10000"));
+    assertThrows(AuthenticationFailureException.class, () -> runAndThrow("auth_2120"));
 
     assertThrows(IndexFailureException.class, () -> runAndThrow("index_12000"));
     assertThrows(IndexFailureException.class, () -> runAndThrow("index_14000"));

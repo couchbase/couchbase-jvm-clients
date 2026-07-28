@@ -90,6 +90,10 @@ object Capabilities {
     out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH)
     // [end:1.9.0]
 
+    // [start:3.13.0]
+    out.add(Caps.SDK_QUERY_2120)
+    // [end:3.13.0]
+
     out
   }
 

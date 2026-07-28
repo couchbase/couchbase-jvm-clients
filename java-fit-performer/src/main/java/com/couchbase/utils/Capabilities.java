@@ -116,6 +116,10 @@ public class Capabilities {
         out.add(Caps.SDK_GET_OR_NULL);
         // [end]
 
+        // [if:3.13.0]
+        out.add(Caps.SDK_QUERY_2120);
+        // [end]
+
       return out;
     }
 }
