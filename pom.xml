@@ -47,7 +47,7 @@
         <scala.compat.library.version>2.12.21</scala.compat.library.version>
         <scala.scala-maven-plugin.rules>-target:jvm-1.8</scala.scala-maven-plugin.rules>
         <!-- Should be set to the latest available version of the Scala 3.3 LTS -->
-        <scala.scala3-library.version>3.3.7</scala.scala3-library.version>
+        <scala.scala3-library.version>3.3.8</scala.scala3-library.version>
         <scala.version-specific.src1>src/main/scala-2</scala.version-specific.src1>
         <scala.version-specific.src2>src/main/scala-2.13-</scala.version-specific.src2>
         <scala.version-specific.test-src>src/integrationTest/scala-2</scala.version-specific.test-src>
@@ -552,7 +552,7 @@
             <properties>
                 <scala.major>3</scala.major>
                 <scala.compat.version>3</scala.compat.version>
-                <scala.compat.library.version>3.3.6</scala.compat.library.version>
+                <scala.compat.library.version>3.3.8</scala.compat.library.version>
                 <scala.version-specific.src1>src/main/scala-3</scala.version-specific.src1>
                 <!-- Maven requires this duplicate to be present -->
                 <scala.version-specific.src2>src/main/scala-3</scala.version-specific.src2>
