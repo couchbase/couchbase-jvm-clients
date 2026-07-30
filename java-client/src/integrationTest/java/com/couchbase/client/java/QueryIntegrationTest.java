@@ -46,7 +46,6 @@ import com.couchbase.client.test.Capabilities;
 import com.couchbase.client.test.IgnoreWhen;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
@@ -276,7 +275,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    @Disabled("JVMCBC-1683")
     void blockingStreamingThrowsCancellationWhenThreadAlreadyInterrupted() {
         Thread.currentThread().interrupt();
         CancellationException e = assertThrows(
@@ -289,11 +287,6 @@ class QueryIntegrationTest extends JavaIntegrationTest {
         assertInstanceOf(InterruptedException.class, e.getCause());
         assertTrue(Thread.interrupted());
 
-        // JVMCBC-1683: Something about the above code leaves the endpoint in a
-        // bad state, causing a subsequent query to time out.
-        // Another way to reproduce the problem is to block for
-        // a reactive query results while the thread is interrupted,
-        // or subscribe to a reactive query result but fail to subscribe to the rows.
         for (int i = 0; i < 10; i++) {
             assertEquals(
                 1L,
