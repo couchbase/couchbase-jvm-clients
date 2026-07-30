@@ -26,6 +26,7 @@ import com.couchbase.client.core.transaction.CoreTransactionAttemptContext
 import com.couchbase.client.core.transaction.CoreTransactions
 import com.couchbase.client.core.transaction.config.CoreTransactionOptions
 import com.couchbase.client.core.transaction.support.TransactionAttemptContextFactory
+import com.couchbase.client.core.transaction.util.CoreTransactionsSchedulers.requireTransactionBlockingThread
 import com.couchbase.client.kotlin.Keyspace
 import com.couchbase.client.kotlin.env.dsl.checkTransactionDurability
 import com.couchbase.client.kotlin.env.env
@@ -33,7 +34,7 @@ import com.couchbase.client.kotlin.internal.toOptional
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.manager.bucket.levelIfSynchronous
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.reactor.mono
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.util.Optional
 import kotlin.time.Duration
@@ -116,7 +117,8 @@ public class Transactions internal constructor(internal val core: Core) {
 
         var value: V? = null
         val function = { ctx: CoreTransactionAttemptContext ->
-            mono {
+            requireTransactionBlockingThread()
+            runBlocking {
                 value = transactionLogic(TransactionAttemptContext(ctx, core.env.jsonSerializer))
             }
         }

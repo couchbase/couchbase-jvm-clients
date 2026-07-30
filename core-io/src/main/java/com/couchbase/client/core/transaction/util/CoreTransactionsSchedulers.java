@@ -49,6 +49,12 @@ public class CoreTransactionsSchedulers {
         return blockingExecutor;
     }
 
+    public static void requireTransactionBlockingThread() {
+        if (!Thread.currentThread().getName().startsWith(BLOCKING_SYNC_THREAD_PREFIX)) {
+            throw new IllegalStateException("This method can only be called in a blockable transactions I/O thread, but current thread is " + Thread.currentThread());
+        }
+    }
+
     public void shutdown() {
         schedulerBlocking.dispose();
         blockingExecutor.shutdown();
