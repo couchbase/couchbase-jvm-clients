@@ -16,14 +16,12 @@
 package com.couchbase.client.core.transaction.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import org.jspecify.annotations.NonNull;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.couchbase.client.core.util.CbThreads.unboundedExecutorService;
 
 /**
  * Mainly to aid debugging, transactions use their own pool of schedulers.  Though the underlying KV and query operations
@@ -31,14 +29,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Stability.Internal
 public class CoreTransactionsSchedulers {
-    private final static String BLOCKING_SYNC_THREAD_PREFIX = "cb-txnb";
+    private final static String BLOCKING_SYNC_THREAD_PREFIX = "cb-txnb-";
 
     // The scheduler/executor used as-needed for transactional operations, which is an uncapped caching thread pool.
     //
     // A key benefit to this scheduler is we run anything in 'user space' (e.g. including when passing back
     // control the lambda in reactive API) on this scheduler, rather than on a limited SDK one.  This lets the
     // user accidentally block, without deadlocking the SDK.
-    private final ExecutorService blockingExecutor = Executors.newCachedThreadPool(new BlockingSyncThreadFactory());
+    private final ExecutorService blockingExecutor = unboundedExecutorService(BLOCKING_SYNC_THREAD_PREFIX);
     private final Scheduler schedulerBlocking = Schedulers.fromExecutor(blockingExecutor);
 
     public Scheduler schedulerBlocking() {
@@ -58,18 +56,5 @@ public class CoreTransactionsSchedulers {
     public void shutdown() {
         schedulerBlocking.dispose();
         blockingExecutor.shutdown();
-    }
-
-    private static final class BlockingSyncThreadFactory implements ThreadFactory {
-        private final AtomicInteger counter = new AtomicInteger();
-
-        @Override
-        public Thread newThread(@NonNull Runnable r) {
-            Thread t = new Thread(r);
-            t.setName(BLOCKING_SYNC_THREAD_PREFIX + "-" + counter.incrementAndGet());
-            // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
-            t.setDaemon(true);
-            return t;
-        }
     }
 }
