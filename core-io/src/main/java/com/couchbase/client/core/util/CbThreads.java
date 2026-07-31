@@ -30,6 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CbThreads {
   private static final Logger log = LoggerFactory.getLogger(CbThreads.class);
 
+  private CbThreads() {
+  }
+
   /**
    * Returns a new executor from {@link Executors#newThreadPerTaskExecutor(ThreadFactory)}
    * if virtual threads are available, otherwise {@link Executors#newCachedThreadPool()}
@@ -60,7 +63,7 @@ public class CbThreads {
       Class<?> builderClass = Class.forName("java.lang.Thread$Builder$OfVirtual");
 
       builderClass.getMethod("name", String.class, long.class)
-        .invoke(virtualThreadBuilder, namePrefix, 0L);
+        .invoke(virtualThreadBuilder, namePrefix, 1L);
 
       ThreadFactory result = (ThreadFactory) builderClass.getMethod("factory").invoke(virtualThreadBuilder);
       log.info("Using virtual threads for {}#", namePrefix);
@@ -92,13 +95,6 @@ public class CbThreads {
       // Create daemon threads so we don't block the JVM from exiting if the user forgets cluster.disconnect()
       t.setDaemon(true);
       return t;
-    }
-
-    @Override
-    public String toString() {
-      return "PlatformThreadFactory{" +
-        ", namePrefix='" + namePrefix + '\'' +
-        '}';
     }
   }
 }
