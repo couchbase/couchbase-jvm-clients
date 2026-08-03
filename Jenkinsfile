@@ -11,9 +11,6 @@ QUICK_TEST_MODE = false // enable to support quicker development iteration
 // https://hub.internal.couchbase.com/confluence/pages/viewpage.action?spaceKey=CR&title=cbdep+available+packages
 // https://github.com/couchbasebuild/cbdep/blob/master/cbdep.config
 
-Jvm oracle8() { oracle('8u192') } // Avoid above Oracle 8u201, for licensing reasons.
-Jvm oracle11() { oracle('11.0.3') }
-
 Jvm openjdk8() { openjdk('8u292-b10') } // https://github.com/AdoptOpenJDK/openjdk8-binaries/releases
 Jvm openjdk11() { openjdk('11.0.23+9') }
 Jvm openjdk17() { openjdk('17.0.11+9') }
@@ -22,7 +19,6 @@ Jvm openjdk21() { openjdk('21.0.3+9') }
 Jvm corretto8() { corretto('8.232.09.1') } // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/doc-history.html
 Jvm corretto11() { corretto('11.0.5.10.1') } // available versions: https://docs.aws.amazon.com/corretto/latest/corretto-11-ug/doc-history.html
 
-Jvm oracle(String version) { new Jvm('java', version) }
 Jvm openjdk(String version) { new Jvm('openjdk', version) }
 Jvm corretto(String version) { new Jvm('corretto', version) }
 
