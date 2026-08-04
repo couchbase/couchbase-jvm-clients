@@ -72,9 +72,7 @@ class QueryHelper {
                         pipelineCap = if (opts.hasPipelineCap()) opts.pipelineCap else null,
                         clientContextId = if (opts.hasClientContextId()) opts.clientContextId else UUID.randomUUID().toString(),
                         raw = if (opts.rawCount > 0) opts.rawMap else emptyMap(),
-                        // [if:1.1.9]
                         useReplica = if (opts.hasUseReplica()) opts.useReplica else null
-                        // [end]
                     ).execute()
                 } else {
                     cluster.query(req.statement).execute()
@@ -147,9 +145,7 @@ class QueryHelper {
                         pipelineCap = if (opts.hasPipelineCap()) opts.pipelineCap else null,
                         clientContextId = if (opts.hasClientContextId()) opts.clientContextId else UUID.randomUUID().toString(),
                         raw = if (opts.rawCount > 0) opts.rawMap else emptyMap(),
-                        // [if:1.1.9]
                         useReplica = if (opts.hasUseReplica()) opts.useReplica else null,
-                        // [end]
                     ).execute()
                 } else {
                     scope.query(req.statement).execute()

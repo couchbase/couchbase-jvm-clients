@@ -118,11 +118,9 @@ suspend fun createBucket(cluster: Cluster, request: CreateBucketRequest, result:
             else -> unrecognized("conflict resolution type", request.settings.conflictResolutionType)
         },
         replicateViewIndexes = if (!settings.hasReplicaIndexes()) null else settings.replicaIndexes,
-        // [if:1.2.0]
         historyRetentionCollectionDefault = if (!settings.hasHistoryRetentionCollectionDefault()) null else settings.historyRetentionCollectionDefault,
         historyRetentionSize = if (!settings.hasHistoryRetentionBytes()) null else settings.historyRetentionBytes.bytes,
         historyRetentionDuration = if (!settings.hasHistoryRetentionSeconds()) null else settings.historyRetentionSeconds.seconds,
-        // [end]
         numVBuckets = if (!settings.hasNumVbuckets()) null else settings.numVbuckets,
     )
 
@@ -161,11 +159,9 @@ suspend fun updateBucket(cluster: Cluster, request: UpdateBucketRequest, result:
             FitDurability.PERSIST_TO_MAJORITY -> Durability.persistToMajority()
             else -> unrecognized("durability", settings.minimumDurabilityLevel)
         },
-        // [if:1.2.0]
         historyRetentionCollectionDefault = if (!settings.hasHistoryRetentionCollectionDefault()) null else settings.historyRetentionCollectionDefault,
         historyRetentionSize = if (!settings.hasHistoryRetentionBytes()) null else settings.historyRetentionBytes.bytes,
         historyRetentionDuration = if (!settings.hasHistoryRetentionSeconds()) null else settings.historyRetentionSeconds.seconds,
-        // [end]
     )
 
     result.success()

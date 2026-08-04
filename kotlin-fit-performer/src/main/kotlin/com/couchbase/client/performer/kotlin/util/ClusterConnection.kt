@@ -49,10 +49,7 @@ class ClusterConnection(req: ClusterConnectionCreateRequest) {
                 if (hasQueryTimeoutSecs()) queryTimeout = queryTimeoutSecs.seconds
                 if (hasSearchTimeoutSecs()) searchTimeout = searchTimeoutSecs.seconds
                 if (hasManagementTimeoutSecs()) managementTimeout = managementTimeoutSecs.seconds
-
-                // [if:1.1.6]
                 if (hasKvScanTimeoutSecs()) kvScanTimeout = kvScanTimeoutSecs.seconds
-                // [end]
             }
         }
     }

@@ -49,9 +49,7 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_QUERY)
             .addSdkImplementationCaps(Caps.SDK_BUCKET_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_COLLECTION_MANAGEMENT)
-            // [if:1.2.0]
             .addSdkImplementationCaps(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
-            // [end]
             .addSdkImplementationCaps(Caps.SDK_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH)
             .addSdkImplementationCaps(Caps.SDK_VECTOR_SEARCH)
@@ -60,9 +58,7 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
-            // [if:3.13.0]
             .addSdkImplementationCaps(Caps.SDK_QUERY_2120)
-            // [end]
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_INSECURE)
     }

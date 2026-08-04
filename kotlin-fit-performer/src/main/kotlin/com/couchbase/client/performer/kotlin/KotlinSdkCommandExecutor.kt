@@ -23,16 +23,12 @@ import com.couchbase.client.kotlin.codec.JsonTranscoder
 import com.couchbase.client.kotlin.codec.RawBinaryTranscoder
 import com.couchbase.client.kotlin.codec.RawJsonTranscoder
 import com.couchbase.client.kotlin.codec.RawStringTranscoder
-// [if:1.1.6]
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_ITEM_LIMIT
 import com.couchbase.client.kotlin.kv.DEFAULT_SCAN_BATCH_SIZE_LIMIT
-// [end]
 import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetResult
-// [if:1.1.6]
 import com.couchbase.client.kotlin.kv.KvScanConsistency
-// [end]
 import com.couchbase.client.kotlin.kv.MutationResult
 import com.couchbase.client.kotlin.kv.PersistTo
 import com.couchbase.client.kotlin.kv.ReplicateTo
@@ -249,7 +245,6 @@ class KotlinSdkCommandExecutor(
                 result.elapsedNanos = System.nanoTime() - start
                 if (op.returnResult) populateResult(result, r)
                 else setSuccess(result)
-            // [if:1.1.6]
             } else if (op.hasRangeScan()) {
                 val request = op.rangeScan
                 val collection = connection.collection(request.collection)
@@ -307,7 +302,6 @@ class KotlinSdkCommandExecutor(
                                 .setStreamId(streamer.streamId())
                         )
                 )
-            // [end]
             } else if (op.hasClusterCommand()) {
                 val clc = op.clusterCommand
 

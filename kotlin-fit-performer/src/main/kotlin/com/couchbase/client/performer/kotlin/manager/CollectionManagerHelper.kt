@@ -35,15 +35,12 @@ suspend fun createCollection(bucket: Bucket, request: CreateCollectionRequest, r
         scopeName = request.scopeName,
         collectionName = request.name,
         maxExpiry = if (!request.settings.hasExpirySecs()) null else request.settings.expirySecs.seconds,
-        // [if:1.2.0]
         history = if (!request.settings.hasHistory()) null else request.settings.history,
-        // [end]
     )
 
     result.success()
 }
 
-// [if:1.2.0]
 suspend fun updateCollection(bucket: Bucket, request: UpdateCollectionRequest, result: Result.Builder) {
     bucket.collections.updateCollection(
         scopeName = request.scopeName,
@@ -54,7 +51,6 @@ suspend fun updateCollection(bucket: Bucket, request: UpdateCollectionRequest, r
 
     result.success()
 }
-// [end]
 
 suspend fun dropCollection(bucket: Bucket, request: DropCollectionRequest, result: Result.Builder) {
     bucket.collections.dropCollection(
@@ -120,9 +116,7 @@ suspend fun handleCollectionManager(
         command.hasCreateScope() -> createScope(bucket, command.createScope, result)
         command.hasDropScope() -> dropScope(bucket, command.dropScope, result)
         command.hasCreateCollection() -> createCollection(bucket, command.createCollection, result)
-        // [if:1.2.0]
         command.hasUpdateCollection() -> updateCollection(bucket, command.updateCollection, result)
-        // [end]
         command.hasDropCollection() -> dropCollection(bucket, command.dropCollection, result)
         command.hasGetAllScopes() -> getAllScopes(bucket, command.getAllScopes, result)
         else -> throw UnsupportedOperationException("unsupported")
