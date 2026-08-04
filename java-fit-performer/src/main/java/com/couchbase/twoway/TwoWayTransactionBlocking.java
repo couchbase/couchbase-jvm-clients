@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<3.3.0]
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
@@ -22,9 +21,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-// [start:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
-// [end:3.3.2]
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.Scope;
 import com.couchbase.client.java.json.JsonObject;
@@ -33,16 +30,10 @@ import com.couchbase.client.java.transactions.TransactionGetResult;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
 import com.couchbase.client.java.transactions.TransactionResult;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
-// [start:3.6.2]
-import com.couchbase.client.java.transactions.config.TransactionReplaceOptions;
-import static com.couchbase.client.java.transactions.config.TransactionReplaceOptions.transactionReplaceOptions;
-// [end:3.6.2]
-// [if:3.8.0]
-import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec;
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupResult;
+import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec;
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiResult;
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiSpec;
-// [end]
 import com.couchbase.client.performer.core.commands.BatchExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.API;
@@ -76,12 +67,10 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-// [if:3.8.0]
 import static com.couchbase.transactions.GetMultiHelper.convertToGetMulti;
 import static com.couchbase.transactions.GetMultiHelper.convertToGetMultiReplicas;
 import static com.couchbase.transactions.GetMultiHelper.handleGetMultiFromPreferredServerGroupResult;
 import static com.couchbase.transactions.GetMultiHelper.handleGetMultiResult;
-// [end]
 
 
 /**
@@ -144,11 +133,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
             }
         }, ptcb);
 
-        // [start:3.3.2]
         if (TransactionMarkerOwner.get().block().isPresent()) {
             throw new InternalPerformerFailure(new IllegalStateException("Still in blocking transaction context after completion"));
         }
-        // [end:3.3.2]
 
         return out;
     }
@@ -193,14 +180,12 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                                 request.getDocId().getDocId(),
                                 content);
                     }
-                    // [if:3.6.2]
                     else {
                         ctx.insert(collection,
                                 request.getDocId().getDocId(),
                                 content,
                                 options);
                     }
-                    // [end]
                 });
         } else if (op.hasInsertV2()) {
             var request = op.getInsertV2();
@@ -213,11 +198,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         if (options == null) {
                             ctx.insert(collection, executor.getDocId(request.getLocation()), content);
                         }
-                        // [start:3.6.2]
                         else {
                             ctx.insert(collection, executor.getDocId(request.getLocation()), content, options);
                         }
-                        // [end:3.6.2]
                     });
         } else if (op.hasReplace()) {
             final CommandReplace request = op.getReplace();
@@ -241,11 +224,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         if (options == null) {
                           ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                         }
-                        // [start:3.6.2]
                         else {
                           ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
                         };
-                        // [end:3.6.2]
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
                         logger.info("{} Performing replace operation on docId {} to new content {} on collection {}",
@@ -254,11 +235,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                       if (options == null) {
                         ctx.replace(r, content);
                       }
-                      // [start:3.6.2]
                       else {
                         ctx.replace(r, content, options);
                       }
-                        // [end:3.6.2]
                     }
                 });
         } else if (op.hasReplaceV2()) {
@@ -275,22 +254,18 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                             if (options == null) {
                                 ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                             }
-                            // [start:3.6.2]
                             else {
                                 ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
                             }
-                            // [end:3.6.2]
                         } else {
                             var collection = connection.collection(request.getLocation());
                             var r = ctx.get(collection, executor.getDocId(request.getLocation()));
                             if (options == null) {
                                 ctx.replace(r, content);
                             }
-                            // [start:3.6.2]
                             else {
                                 ctx.replace(r, content, options);
                             }
-                            // [end:3.6.2]
                         }
                     });
         } else if (op.hasRemove()) {
@@ -349,11 +324,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         if (options == null) {
                             out = ctx.get(collection, request.getDocId().getDocId());
                         }
-                        // [start:3.6.2]
                         else {
                             out = ctx.get(collection, request.getDocId().getDocId(), options);
                         }
-                        // [end:3.6.2]
                         if (out != null) {
                             handleGetResult(request, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                         }
@@ -368,11 +341,9 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         if (options == null) {
                             ctx.get(collection, executor.getDocId(request.getLocation()));
                         }
-                        // [start:3.6.2]
                         else {
                             ctx.get(collection, executor.getDocId(request.getLocation()), options);
                         }
-                        // [end:3.6.2]
                     });
         } else if (op.hasGetOptional()) {
             final CommandGetOptional req = op.getGetOptional();
@@ -388,17 +359,14 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                             if (options == null) {
                                 out = Optional.of(ctx.get(collection, request.getDocId().getDocId()));
                             }
-                            // [start:3.6.2]
                             else {
                                 out = Optional.of(ctx.get(collection, request.getDocId().getDocId(), options));
                             }
-                            // [end:3.6.2]
                         }
                         catch (DocumentNotFoundException ignored) {
                         }
                         handleGetOptionalResult(request, req, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                     });
-        // [if:3.7.4]
         } else if (op.hasGetFromPreferredServerGroup()) {
             var request = op.getGetFromPreferredServerGroup();
             var collection = connection.collection(request.getDocId());
@@ -416,8 +384,6 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                         }
                         handleGetReplicaFromPreferredServerGroupResult(request, out, request.hasContentAsValidation() ? request.getContentAsValidation() : null);
                     });
-        // [end]
-        // [if:3.8.0]
         } else if (op.hasGetMulti()) {
             var request = op.getGetMulti();
             if (!request.getGetMultiReplicasFromPreferredServerGroup()) {
@@ -472,7 +438,6 @@ public class TwoWayTransactionBlocking extends TwoWayTransactionShared {
                             handleGetMultiFromPreferredServerGroupResult(request, results, getLogger(ctx));
                         });
             }
-        // [end]
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();
             final String latchName = request.getLatchName();

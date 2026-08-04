@@ -76,7 +76,6 @@ public class UserSchedulerUtil {
           String hookType,
           @Nullable Exception locationWhereSchedulerCheckWasApplied
   ) {
-    // [if:3.7.5] first version that allows specifying custom publishOn scheduler
     String threadName = Thread.currentThread().getName();
     boolean isUserThread = threadName.contains(USER_SCHEDULER_THREAD_POOL_NAME);
 
@@ -89,6 +88,5 @@ public class UserSchedulerUtil {
       logger.error(msg);
       throw new InternalPerformerFailure(new RuntimeException(msg));
     }
-    // [end]
   }
 }

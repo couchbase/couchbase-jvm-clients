@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<3.3.0]
 package com.couchbase.twoway;
 
 import com.couchbase.InternalPerformerFailure;
@@ -22,19 +21,15 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.transaction.internal.TestFailOtherException;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
-// [if:3.3.2]
 import com.couchbase.client.core.transaction.threadlocal.TransactionMarkerOwner;
-// [end]
 import com.couchbase.client.core.transaction.util.MonoBridge;
 import com.couchbase.client.java.Collection;
 import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.transactions.ReactiveTransactionAttemptContext;
 import com.couchbase.client.java.transactions.TransactionQueryResult;
 import com.couchbase.client.java.transactions.config.TransactionOptions;
-// [if:3.8.0]
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiReplicasFromPreferredServerGroupSpec;
 import com.couchbase.client.java.transactions.getmulti.TransactionGetMultiSpec;
-// [end]
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.transactions.CommandBatch;
@@ -74,12 +69,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-// [if:3.8.0]
 import static com.couchbase.transactions.GetMultiHelper.convertToGetMulti;
 import static com.couchbase.transactions.GetMultiHelper.convertToGetMultiReplicas;
 import static com.couchbase.transactions.GetMultiHelper.handleGetMultiFromPreferredServerGroupResult;
 import static com.couchbase.transactions.GetMultiHelper.handleGetMultiResult;
-// [end]
 import static com.couchbase.utils.UserSchedulerUtil.withSchedulerCheck;
 
 /**
@@ -133,7 +126,6 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     .concatMap(command -> performOperation(connection, ctx, command, toTest, performanceMode, ""))
                     .then();
         }, ptcb)
-                // [if:3.3.2]
                 .flatMap(result -> {
                     return TransactionMarkerOwner.get()
                             .doOnNext(v -> {
@@ -143,7 +135,6 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                             })
                             .thenReturn(result);
                 })
-                // [end]
                 // Use a unique scheduler so can find the thread in the debugger
                 .subscribeOn(Schedulers.newBoundedElastic(4, Integer.MAX_VALUE, "java-performer"))
                 .block();
@@ -168,11 +159,9 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                 () -> {
                     logger.info("Performing insert operation on {} on bucket {} on collection {}",
                             request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
-                    // [if:3.6.2]
                     if (options != null) {
                         return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content, options).then();
                     }
-                    // [end]
                     return ctx.insert(collection.reactive(), request.getDocId().getDocId(), content).then();
                 });
         } else if (op.hasReplace()) {
@@ -188,11 +177,9 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                         if (!stashedGetMap.containsKey(request.getUseStashedSlot())) {
                             throw new IllegalStateException("Do not have a stashed get in slot " + request.getUseStashedSlot());
                         }
-                        // [if:3.6.2]
                         if (options != null) {
                             return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content, options);
                         }
-                        // [end]
                         return ctx.replace(stashedGetMap.get(request.getUseStashedSlot()), content);
                     } else {
                         final Collection collection = connection.collection(request.getDocId());
@@ -200,11 +187,9 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                                 request.getDocId().getDocId(), request.getContentJson(),request.getDocId().getCollectionName());
                         return ctx.get(collection.reactive(), request.getDocId().getDocId())
                                 .flatMap(r -> {
-                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.replace(r, content, options);
                                     }
-                                    // [end]
                                     return ctx.replace(r, content);
                                 })
                                 .then();
@@ -245,11 +230,9 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     () -> {
                         logger.info("Performing get operation on {} on bucket {} on collection {}", request.getDocId().getDocId(), request.getDocId().getBucketName(), request.getDocId().getCollectionName());
                         return Mono.defer(() -> {
-                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
                                     }
-                                    // [end]
                                     return ctx.get(collection.reactive(), request.getDocId().getDocId());
                                 })
                                 .doOnNext(out -> handleGetResult(request, out, connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
@@ -265,11 +248,9 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                     () -> {
                         logger.info("Performing getOptional operation on {} on bucket {} on collection {} ", request.getDocId().getDocId(),request.getDocId().getBucketName(),request.getDocId().getCollectionName());
                         return Mono.defer(() -> {
-                                    // [if:3.6.2]
                                     if (options != null) {
                                         return ctx.get(collection.reactive(), request.getDocId().getDocId(), options);
                                     }
-                                    // [end]
                                     return ctx.get(collection.reactive(), request.getDocId().getDocId());
                                 })
                                 .doOnNext(doc -> handleGetOptionalResult(request, req, Optional.of(doc), connection, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
@@ -284,7 +265,6 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                                 })
                                 .then();
                     });
-        // [if:3.7.4]
         } else if (op.hasGetFromPreferredServerGroup()) {
             var request = op.getGetFromPreferredServerGroup();
             var collection = connection.collection(request.getDocId());
@@ -302,8 +282,6 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                                 .doOnNext(out -> handleGetReplicaFromPreferredServerGroupResult(request, out, request.hasContentAsValidation() ? request.getContentAsValidation() : null))
                                 .then();
                     });
-        // [end]
-        // [if:3.8.0]
         } else if (op.hasGetMulti()) {
             var request = op.getGetMulti();
             if (!request.getGetMultiReplicasFromPreferredServerGroup()) {
@@ -351,7 +329,6 @@ public class TwoWayTransactionReactive extends TwoWayTransactionShared {
                             }
                         }).doOnNext(results -> handleGetMultiFromPreferredServerGroupResult(request, results, getLogger(ctx))));
             }
-            // [end]
         } else if (op.hasWaitOnLatch()) {
             final CommandWaitOnLatch request = op.getWaitOnLatch();
             final String latchName = request.getLatchName();

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<3.3.0]
 package com.couchbase;
 
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -23,7 +22,6 @@ import com.couchbase.client.performer.core.util.TimeUtil;
 import com.couchbase.client.protocol.shared.API;
 import com.couchbase.client.protocol.transactions.TransactionResult;
 import com.couchbase.twoway.TwoWayTransactionBlocking;
-import com.couchbase.twoway.TwoWayTransactionReactive;
 import com.couchbase.utils.ClusterConnection;
 
 import java.util.concurrent.ConcurrentHashMap;

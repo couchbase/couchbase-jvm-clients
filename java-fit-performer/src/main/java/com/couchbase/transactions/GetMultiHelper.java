@@ -15,8 +15,6 @@
  */
 package com.couchbase.transactions;
 
-// [skip:<3.8.0]
-
 import com.couchbase.InternalPerformerFailure;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
 import com.couchbase.client.java.json.JsonArray;

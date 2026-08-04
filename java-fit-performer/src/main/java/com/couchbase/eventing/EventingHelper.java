@@ -16,8 +16,6 @@
 
 package com.couchbase.eventing;
 
-// [skip:<3.2.1]
-
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.ReactiveCluster;

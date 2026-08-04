@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
+
 package com.couchbase.client.core.transaction;
 
 import java.util.Optional;

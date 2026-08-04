@@ -60,7 +60,6 @@ public class ClusterConnection {
         this.cluster = Cluster.connect(hostname, co);
     }
 
-    // [if:3.2.6]
     public ClusterConnection(String hostname,
                              Authenticator authenticator,
                              @Nullable Consumer<ClusterEnvironment.Builder> config,
@@ -79,7 +78,6 @@ public class ClusterConnection {
 
         this.cluster = Cluster.connect(hostname, co);
     }
-    // [end]
 
     public Cluster cluster(){
         return cluster;
