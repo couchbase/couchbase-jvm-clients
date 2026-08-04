@@ -66,15 +66,6 @@ object QueryHelper {
       command: Command,
       slc: ScopeLevelCommand
   ): Result.Builder = {
-    // [start:<1.0.9]
-    /*
-            throw new UnsupportedOperationException(
-              "This version of the Scala SDK does not support scoped queries"
-            )
-            // [end:<1.0.9]
-     */
-
-    // [start:1.0.9]
     val req     = slc.getQuery
     val options = createOptions(req.hasOptions, req.getOptions)
     val out     = Result.newBuilder
@@ -92,7 +83,6 @@ object QueryHelper {
     else setSuccess(out)
 
     out
-    // [end:1.0.9]
   }
 
   private def createOptions(
@@ -149,11 +139,9 @@ object QueryHelper {
           "SDK cannot support both named and positional params"
         )
       }
-      // [start:1.0.9]
       if (opts.hasFlexIndex) {
         out = out.flexIndex(opts.getFlexIndex)
       }
-      // [end:1.0.9]
       if (opts.hasPipelineCap) {
         out = out.pipelineCap(opts.getPipelineCap)
       }
@@ -179,17 +167,13 @@ object QueryHelper {
         throw new UnsupportedOperationException("Performer does not yet support OBSERVABILITY_1")
       }
       if (opts.hasUseReplica) {
-        // [start:1.4.9]
         out = out.useReplica(opts.getUseReplica)
-        // [end:1.4.9]
       }
       if (opts.hasClientContextId) {
         out = out.clientContextId(opts.getClientContextId)
       }
       if (opts.hasPreserveExpiry) {
-        // [start:1.2.5]
         out = out.preserveExpiry(opts.getPreserveExpiry)
-        // [end:1.2.5]
       }
       assertIsSerializable(out)
       Some(out)
@@ -235,7 +219,7 @@ object QueryHelper {
       )
 
     md.signatureAs[JsonObject] match {
-      case Failure(_)     =>
+      case Failure(_) =>
       // Nb CNG can return null for signature and profile
       case Success(null)  =>
       case Success(value) => metaData.setSignature(ByteString.copyFrom(value.toString.getBytes))

@@ -16,8 +16,6 @@
 
 package com.couchbase.client.performer.scala.search
 
-// [skip:<1.2.4]
-
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
@@ -34,17 +32,10 @@ import com.couchbase.client.protocol.sdk.search.SearchGeoDistanceUnits
 import com.couchbase.client.protocol.sdk.search.SearchScanConsistency.SEARCH_SCAN_CONSISTENCY_NOT_BOUNDED
 import com.couchbase.client.protocol.sdk.search.indexmanager.SearchIndexes
 import com.couchbase.client.protocol.shared.ContentAs
-import com.couchbase.client.scala.{Cluster, Scope}
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.manager.search.SearchIndex
 import com.couchbase.client.scala.search.facet.SearchFacet
-import com.couchbase.client.scala.search.facet.SearchFacet.{
-  DateRange,
-  DateRangeFacet,
-  NumericRange,
-  NumericRangeFacet,
-  TermFacet
-}
+import com.couchbase.client.scala.search.facet.SearchFacet._
 import com.couchbase.client.scala.search.queries.{MatchOperator, SearchQuery}
 import com.couchbase.client.scala.search.result.{
   SearchFacetResult,
@@ -59,14 +50,14 @@ import com.couchbase.client.scala.search.sort.{
   SearchSort
 }
 import com.couchbase.client.scala.search.{HighlightStyle, SearchOptions, SearchScanConsistency}
+import com.couchbase.client.scala.{Cluster, Scope}
 import com.google.protobuf.{ByteString, Timestamp}
 
-import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object SearchHelper {
   // Have to hardcode these.  The earliest versions of the Scala SDK do not give access to the environment.
@@ -217,13 +208,7 @@ object SearchHelper {
       opts = opts.facets(facets)
     }
     if (o.hasTimeoutMillis) {
-      // [if:1.4.5]
       opts = opts.timeout(Duration(o.getTimeoutMillis, TimeUnit.MILLISECONDS))
-      // [else]
-      // format: off
-      //? throw new UnsupportedOperationException()
-      // format: on
-      // [end]
     }
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
     if (o.getRawCount > 0) opts = opts.raw(o.getRawMap.asScala.toMap)
@@ -450,7 +435,6 @@ object SearchHelper {
     result
   }
 
-  // [if:1.6.0]
   def handleSearchBlocking(
       cluster: Cluster,
       command: com.couchbase.client.protocol.sdk.search.SearchWrapper
@@ -530,7 +514,6 @@ object SearchHelper {
   def convertVectorQuery(
       vq: com.couchbase.client.protocol.sdk.search.VectorQuery
   ): com.couchbase.client.scala.search.vector.VectorQuery = {
-    // [if:1.6.2]
     var out = if (vq.hasBase64VectorQuery) {
       com.couchbase.client.scala.search.vector
         .VectorQuery(vq.getVectorFieldName, vq.getBase64VectorQuery)
@@ -539,19 +522,11 @@ object SearchHelper {
         vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
       com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
     }
-    // [else]
-    // format: off
-    //? val query: Array[Float] = vq.getVectorQueryList.asScala.toArray.map(v => v.asInstanceOf[Float])
-    //? var out                 = com.couchbase.client.scala.search.vector.VectorQuery(vq.getVectorFieldName, query)
-    // format: on
-    // [end]
     if (vq.hasOptions) {
       val opts = vq.getOptions
       if (opts.hasNumCandidates) out = out.numCandidates(opts.getNumCandidates)
       if (opts.hasBoost) out = out.boost(opts.getBoost)
-      // [if:1.9.0]
       if (opts.hasPrefilter) out = out.prefilter(convertSearchQuery(opts.getPrefilter))
-      // [end]
     }
     out
   }
@@ -573,8 +548,6 @@ object SearchHelper {
       com.couchbase.client.scala.search.vector.SearchRequest.searchQuery(null)
     }
   }
-
-  // [end]
 
   private def convertResult(
       result: SearchResult,
@@ -692,7 +665,6 @@ object SearchHelper {
     handleSearchIndexManagerBlockingShared(cluster, command, sim.getShared)
   }
 
-  // [start:1.6.0]
   def handleScopeSearchIndexManager(
       scope: Scope,
       command: com.couchbase.client.protocol.sdk.Command
@@ -701,7 +673,6 @@ object SearchHelper {
     if (!sim.hasShared) throw new UnsupportedOperationException
     handleScopeSearchIndexManagerBlockingShared(scope, command, sim.getShared)
   }
-  // [end:1.6.0]
 
   private def handleSearchIndexManagerBlockingShared(
       cluster: Cluster,
@@ -745,7 +716,6 @@ object SearchHelper {
     } else if (command.hasUpsertIndex) {
       val req = command.getUpsertIndex
 
-      // [if:1.4.5]
       val converted = SearchIndex.fromJson(req.getIndexDefinition.toStringUtf8).get
       result.setInitiated(getTimeNow)
       val start = System.nanoTime
@@ -760,11 +730,6 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [else]
-      // format: off
-      //? throw new UnsupportedOperationException()
-      // format: on
-      // [end]
     } else if (command.hasDropIndex) {
       val req = command.getDropIndex
 
@@ -781,7 +746,6 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [start:1.6.0]
     } else if (command.hasGetIndexedDocumentsCount) {
       val req = command.getGetIndexedDocumentsCount
 
@@ -917,7 +881,6 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [end:1.6.0]
     } else
       throw new UnsupportedOperationException(
         "Unknown FTS operation"
@@ -926,7 +889,6 @@ object SearchHelper {
     result
   }
 
-  // [start:1.6.0]
   private def handleScopeSearchIndexManagerBlockingShared(
       scope: Scope,
       op: com.couchbase.client.protocol.sdk.Command,
@@ -999,7 +961,6 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [start:1.6.0]
     } else if (command.hasGetIndexedDocumentsCount) {
       val req = command.getGetIndexedDocumentsCount
 
@@ -1135,7 +1096,6 @@ object SearchHelper {
         .get
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
-      // [end:1.6.0]
     } else
       throw new UnsupportedOperationException(
         "The Scala SDK doesn't support several tertiary FTS index operations"
@@ -1143,7 +1103,6 @@ object SearchHelper {
 
     result
   }
-  // [end:1.6.0]
 
   private def populateResult(result: Result.Builder, indexes: Seq[SearchIndex]): Unit = {
     result.setSdk(

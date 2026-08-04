@@ -15,7 +15,6 @@
  */
 package com.couchbase.client.performer.scala.query
 
-import com.couchbase.client.core.retry.BestEffortRetryStrategy
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.setSuccess
 import com.couchbase.client.performer.scala.util.OptionsUtil.{
@@ -49,15 +48,8 @@ object QueryIndexManagerHelper {
     if (!command.getCollectionCommand.getQueryIndexManager.hasShared) {
       throw new UnsupportedOperationException("ClusterQueryIndexManager shared")
     }
-    // [start:1.4.3]
     val op = command.getCollectionCommand.getQueryIndexManager.getShared
     handleQueryIndexManagerShared(Right(collection), op)
-    // [end:1.4.3]
-    // [start:<1.4.3]
-    /*
-        throw new UnsupportedOperationException("Cannot handle ClusterQueryIndexManager");
-    // [end:<1.4.3]
-     */
   }
 
   private def handleQueryIndexManagerShared(
@@ -90,17 +82,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .createPrimaryIndex(
               if (req.hasOptions && req.getOptions.hasIndexName) Some(req.getOptions.getIndexName)
@@ -119,7 +108,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -146,17 +134,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .createIndex(
               req.getIndexName,
@@ -175,7 +160,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -192,17 +176,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .getAllIndexes(
               if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -211,12 +192,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
-        // [start:<1.4.4]
-        /*
-          throw new UnsupportedOperationException("QueryIndexManager")
-          // [end:<1.4.4]
-         */
       }
       result.setSdk(
         com.couchbase.client.protocol.sdk.Result.newBuilder
@@ -242,17 +217,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .dropPrimaryIndex(
               if (req.hasOptions && req.getOptions.hasIgnoreIfNotExists)
@@ -264,7 +236,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -285,17 +256,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .dropIndex(
               req.getIndexName,
@@ -308,7 +276,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -326,17 +293,14 @@ object QueryIndexManagerHelper {
               if (req.hasOptions && req.getOptions.hasWatchPrimary) req.getOptions.getWatchPrimary
               else false,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .watchIndexes(
               req.getIndexNamesList.toSeq,
@@ -346,7 +310,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -363,17 +326,14 @@ object QueryIndexManagerHelper {
                 Duration(req.getOptions.getTimeoutMsecs, TimeUnit.MILLISECONDS)
               else DefaultManagementTimeout,
               DefaultRetryStrategy,
-              // [start:1.2.5]
               if (req.hasOptions && req.getOptions.hasScopeName) Some(req.getOptions.getScopeName)
               else None,
               if (req.hasOptions && req.getOptions.hasCollectionName)
                 Some(req.getOptions.getCollectionName)
               else None
-              // [end:1.2.5]
             )
             .get
         case Right(collection) =>
-          // [start:1.4.4]
           collection.queryIndexes
             .buildDeferredIndexes(
               if (req.hasOptions && req.getOptions.hasTimeoutMsecs)
@@ -382,7 +342,6 @@ object QueryIndexManagerHelper {
               DefaultRetryStrategy
             )
             .get
-        // [end:1.4.4]
       }
       result.setElapsedNanos(System.nanoTime - start)
       setSuccess(result)
@@ -409,16 +368,12 @@ object QueryIndexManagerHelper {
           .setState(i.state)
           .setKeyspace(i.keyspaceId)
           .addAllIndexKey(i.indexKey.asJava)
-          // [start:1.2.5]
           .setBucketName(i.bucketName)
-        // [end:1.2.5]
 
         i.condition.map(v => builder.setCondition(v))
-        // [start:1.2.5]
         i.partition.map(v => builder.setPartition(v))
         i.scopeName.map(v => builder.setScopeName(v))
         i.collectionName.map(v => builder.setCollectionName(v))
-        // [end:1.2.5]
 
         builder.build
       })

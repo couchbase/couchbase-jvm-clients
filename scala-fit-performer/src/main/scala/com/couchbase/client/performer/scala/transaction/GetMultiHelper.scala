@@ -13,26 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<3.9.0]
+
 package com.couchbase.client.performer.scala.transaction
 
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
-
 import com.couchbase.client.performer.scala.util.ContentAsUtil
 import com.couchbase.client.protocol.transactions.CommandGetMulti
-import com.couchbase.client.scala.json.{JsonArray, JsonObject}
-import com.couchbase.client.scala.transactions.getmulti.{
-  TransactionGetMultiMode,
-  TransactionGetMultiOptions,
-  TransactionGetMultiReplicasFromPreferredServerGroupMode,
-  TransactionGetMultiReplicasFromPreferredServerGroupOptions,
-  TransactionGetMultiReplicasFromPreferredServerGroupResult,
-  TransactionGetMultiResult
-}
 import com.couchbase.client.protocol.transactions.TransactionGetMultiOptions.{
   TransactionGetMultiMode => ProtocolGetMultiMode
 }
+import com.couchbase.client.scala.json.{JsonArray, JsonObject}
+import com.couchbase.client.scala.transactions.getmulti._
 
 object GetMultiHelper {
   def convertToGetMulti(

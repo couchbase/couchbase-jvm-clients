@@ -21,21 +21,13 @@ import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.Content.{ContentJson, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
+import com.couchbase.client.performer.scala.manager.BucketManagerHelper
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer}
 import com.couchbase.client.protocol.run.Result
+import com.couchbase.client.scala.kv._
 import reactor.core.scala.publisher.SMono
 
 import scala.concurrent.duration.DurationInt
-import scala.runtime.Nothing$
-import scala.util.Try
-// [start:1.5.0]
-import com.couchbase.client.scala.kv.ScanType.{RangeScan, SamplingScan}
-// [end:1.5.0]
-import com.couchbase.client.scala.kv._
-// [start:1.4.11]
-import com.couchbase.client.performer.scala.manager.BucketManagerHelper
-import com.couchbase.client.performer.scala.manager.CollectionManagerHelper
-// [end:1.4.11]
 
 class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: Counters)
     extends SdkCommandExecutor(counters) {
@@ -145,7 +137,6 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
       result.setElapsedNanos(System.nanoTime - start)
       if (op.getReturnResult) populateResult(result, r)
       else setSuccess(result)
-      // [start:1.5.0]
     } else if (op.hasRangeScan) {
       val request    = op.getRangeScan
       val collection = connection.collection(request.getCollection).reactive
@@ -174,7 +165,6 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
               .setStreamId(streamer.streamId)
           )
       )
-      // [end:1.5.0]
     } else if (op.hasClusterCommand) {
       val clc     = op.getClusterCommand
       val cluster = connection.cluster.reactive
@@ -201,12 +191,9 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
             result.build()
           })
           .block()
-      }
-      // [start:1.4.11]
-      else if (clc.hasBucketManager) {
+      } else if (clc.hasBucketManager) {
         return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
       }
-      // [end:1.4.11]
     } else if (op.hasBucketCommand) {
       val blc    = op.getBucketCommand
       val bucket = connection.cluster.reactive.bucket(blc.getBucketName)

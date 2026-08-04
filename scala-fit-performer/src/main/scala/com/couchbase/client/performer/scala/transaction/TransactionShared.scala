@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
+
 package com.couchbase.client.performer.scala.transaction
 
 import com.couchbase.client.core.cnc.events.transaction.{
@@ -26,16 +26,15 @@ import com.couchbase.client.core.error.transaction.TransactionOperationFailedExc
 import com.couchbase.client.core.error.{DocumentExistsException, DocumentNotFoundException}
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
+import com.couchbase.client.performer.scala.{Content, ScalaSdkCommandExecutor}
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
-import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
-import com.couchbase.client.performer.scala.Content
-import com.couchbase.client.protocol.shared.{
-  Content => ProtocolContent,
-  ContentAsPerformerValidation
-}
 import com.couchbase.client.performer.scala.util.ResultValidation.{anythingAllowed, dbg}
-import com.couchbase.client.protocol.shared.Latch
+import com.couchbase.client.performer.scala.util.{ClusterConnection, ContentAsUtil}
+import com.couchbase.client.protocol.shared.{
+  ContentAsPerformerValidation,
+  Latch,
+  Content => ProtocolContent
+}
 import com.couchbase.client.protocol.transactions._
 import com.couchbase.client.scala.json.{JsonArray, JsonObject}
 import com.couchbase.client.scala.transactions.TransactionGetResult

@@ -14,15 +14,10 @@
  * limitations under the License.
  */
 
-// [skip:<1.4.11]
-
 package com.couchbase.client.performer.scala.manager
 
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{convertDurability, setSuccess}
-import com.couchbase.client.performer.scala.util.OptionsUtil.{
-  DefaultManagementTimeout,
-  convertDuration
-}
+import com.couchbase.client.performer.scala.util.OptionsUtil.DefaultManagementTimeout
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.protocol.sdk.Command
 import com.couchbase.client.protocol.sdk.cluster.bucketmanager
@@ -31,22 +26,13 @@ import com.couchbase.client.scala.durability.Durability._
 import com.couchbase.client.scala.manager.bucket
 import com.couchbase.client.scala.manager.bucket.BucketType.{Couchbase, Ephemeral, Memcached}
 import com.couchbase.client.scala.manager.bucket.CompressionMode.{Active, Off}
-import com.couchbase.client.scala.manager.bucket.{
-  BucketSettings,
-  CompressionMode,
-  ConflictResolutionType,
-  CreateBucketSettings,
-  EjectionMethod,
-  StorageBackend
-}
+import com.couchbase.client.scala.manager.bucket._
 import com.couchbase.client.scala.{Cluster, ReactiveCluster}
-import com.google.protobuf.Duration
 import reactor.core.scala.publisher.SMono
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.Duration
-import scala.util.{Failure, Success}
 import scala.jdk.CollectionConverters._
+import scala.util.{Failure, Success}
 
 object BucketManagerHelper {
 
@@ -305,9 +291,7 @@ object BucketManagerHelper {
           })
       case _ =>
     }
-    // [if:1.8.2]
     if (bs.hasNumVbuckets) cs = cs.numVBuckets(bs.getNumVbuckets)
-    // [end]
     cs
   }
 
@@ -403,9 +387,7 @@ object BucketManagerHelper {
     )
     response.historyRetentionBytes.foreach(v => builder.setHistoryRetentionBytes(v))
     response.historyRetentionDuration.foreach(v => builder.setHistoryRetentionSeconds(v.toSeconds))
-    // [if:1.8.2]
     response.numVBuckets.foreach(v => builder.setNumVbuckets(v))
-    // [end]
 
     response.storageBackend match {
       case Some(StorageBackend.Magma) =>

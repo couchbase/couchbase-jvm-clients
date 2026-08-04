@@ -104,13 +104,6 @@ object LookupInHelper {
       clc: CollectionLevelCommand,
       out: Result.Builder
   ): Unit = {
-    // [start:<1.4.10]
-    /*
-      throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
-      // [end:<1.4.10]
-     */
-
-    // [start:1.4.10]
     val req        = clc.getLookupInAnyReplica
     val collection = connection.collection(req.getLocation)
     val options    = createOptions(req)
@@ -133,7 +126,6 @@ object LookupInHelper {
         com.couchbase.client.protocol.sdk.Result.newBuilder.setLookupInAnyReplicaResult(r)
       )
     } else setSuccess(out)
-    // [end:1.4.10]
   }
 
   private def handleLookupInAllReplicas(
@@ -144,13 +136,6 @@ object LookupInHelper {
       clc: CollectionLevelCommand,
       out: Result.Builder
   ): Unit = {
-    // [start:<1.4.10]
-    /*
-    throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
-    // [end:<1.4.10]
-     */
-
-    // [start:1.4.10]
     val req        = clc.getLookupInAllReplicas
     val collection = connection.collection(req.getLocation)
     val options    = createOptions(req)
@@ -195,7 +180,6 @@ object LookupInHelper {
             .setStreamId(streamer.streamId)
         )
     )
-    // [end:1.4.10]
   }
 
   private def handleLookupInReactive(
@@ -232,13 +216,6 @@ object LookupInHelper {
       clc: CollectionLevelCommand,
       out: Result.Builder
   ): SMono[Unit] = {
-    // [start:<1.4.10]
-    /*
-          throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAnyReplica")
-          // [end:<1.4.10]
-     */
-
-    // [start:1.4.10]
     val req        = clc.getLookupInAnyReplica
     val collection = connection.collection(req.getLocation).reactive
     val options    = createOptions(req)
@@ -261,7 +238,6 @@ object LookupInHelper {
         )
       } else setSuccess(out)
     })
-    // [end:1.4.10]
   }
 
   private def handleLookupInAllReplicasReactive(
@@ -272,13 +248,6 @@ object LookupInHelper {
       clc: CollectionLevelCommand,
       out: Result.Builder
   ): SMono[Unit] = {
-    // [start:<1.4.10]
-    /*
-        throw new UnsupportedOperationException("This version of the Scala SDK does not support lookupInAllReplicas")
-        // [end:<1.4.10]
-     */
-
-    // [start:1.4.10]
     val req        = clc.getLookupInAllReplicas
     val collection = connection.collection(req.getLocation).reactive
     val options    = createOptions(req)
@@ -325,7 +294,6 @@ object LookupInHelper {
     )
 
     SMono.empty
-    // [end:1.4.10]
   }
 
   private def mapSpecs(specList: Seq[lookupin.LookupInSpec]): Seq[LookupInSpec] = {
@@ -353,16 +321,13 @@ object LookupInHelper {
       var out  = LookupInOptions()
       if (opts.hasTimeoutMillis)
         out = out.timeout(Duration.create(opts.getTimeoutMillis, TimeUnit.MILLISECONDS))
-      // [start:3.6.0]
       if (opts.hasAccessDeleted)
         out = out.accessDeleted(opts.getAccessDeleted)
-      // [end:3.6.0]
       assertIsSerializable(out)
       Some(out)
     } else None
   }
 
-  // [start:1.4.10]
   private def createOptions(
       request: com.couchbase.client.protocol.sdk.kv.lookupin.LookupInAnyReplica
   ) = {
@@ -375,7 +340,6 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
-      // [start:1.8.0]
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
@@ -387,7 +351,6 @@ object LookupInHelper {
             )
         }
       }
-      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None
@@ -405,7 +368,6 @@ object LookupInHelper {
         throw new UnsupportedOperationException(
           "Scala performer does not yet support OBSERVABILITY_1"
         )
-      // [start:1.8.0]
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
@@ -417,12 +379,10 @@ object LookupInHelper {
             )
         }
       }
-      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None
   }
-  // [end:1.4.10]
 
   private def populateResult(
       request: com.couchbase.client.protocol.sdk.kv.lookupin.LookupIn,
@@ -486,7 +446,6 @@ object LookupInHelper {
     )
   }
 
-  // [start:1.4.10]
   private def populateResult(
       specs: Seq[com.couchbase.client.protocol.sdk.kv.lookupin.LookupInSpec],
       result: LookupInReplicaResult
@@ -544,5 +503,4 @@ object LookupInHelper {
       .addAllResults(specResults.asJava)
       .build
   }
-  // [end:1.4.10]
 }

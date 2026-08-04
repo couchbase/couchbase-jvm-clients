@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2022 Couchbase, Inc.
+ * Copyright (c, 2022 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the "License",;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -20,81 +20,29 @@ import com.couchbase.client.protocol.sdk.Caps
 import java.util
 
 object Capabilities {
-  def sdkImplementationCaps: util.List[Caps] = {
-    val out = new util.ArrayList[Caps]
-
-    // [start:1.1.5]
-    out.add(Caps.SDK_PRESERVE_EXPIRY)
-    // [end:1.1.5]
-
-    // Range scan was actually introduced in 1.4.1, but in volatile status, and the API
-    // changed afterwards due to SDK-RFC changes.  Since we don't perf test this feature
-    // currently, just setting it to recent SDK version.
-    // [start:1.5.0]
-    out.add(Caps.SDK_KV_RANGE_SCAN)
-    // [end:1.5.0]
-
-    out.add(Caps.SDK_QUERY_INDEX_MANAGEMENT)
-
-    // [start:1.4.4]
-    out.add(Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT)
-    // [end:1.4.4]
-
-    // SearchIndex.fromJson only added here and is crucial for testing
-    // [start:1.4.5]
-    out.add(Caps.SDK_SEARCH)
-    // [end:1.4.5]
-    // [start:1.6.0]
-    out.add(Caps.SDK_SEARCH_INDEX_MANAGEMENT)
-    out.add(Caps.SDK_SCOPE_SEARCH)
-    out.add(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
-    // [end:1.6.0]
-
-    // [start:1.6.2]
-    out.add(Caps.SDK_EVENTING_FUNCTION_MANAGER)
-    // [end:1.6.2]
-
-    out.add(Caps.SDK_LOOKUP_IN)
-    out.add(Caps.SDK_QUERY)
-    out.add(Caps.SDK_QUERY_READ_FROM_REPLICA)
-
-    // [start:1.4.11]
-    out.add(Caps.SDK_BUCKET_MANAGEMENT)
-    out.add(Caps.SDK_COLLECTION_MANAGEMENT)
-    out.add(Caps.SDK_MANAGEMENT_HISTORY_RETENTION)
-    // [end:1.4.11]
-
-    // We don't currently performance test these, so to reduce tagging just run them from a recent SDK version onwards.
-    // [start:1.5.0]
-    out.add(Caps.SDK_KV)
-    out.add(Caps.SDK_DOCUMENT_NOT_LOCKED)
-    // [end:1.5.0]
-
-    // [start:1.6.0]
-    out.add(Caps.SDK_VECTOR_SEARCH)
-    // [end:1.6.0]
-
-    // [start:1.6.2]
-    out.add(Caps.SDK_VECTOR_SEARCH_BASE64)
-    // [end:1.6.2]
-
-    // [start:1.8.0]
-    out.add(Caps.SDK_ZONE_AWARE_READ_FROM_REPLICA)
-    // [end:1.8.0]
-
-    // [start:1.8.2]
-    out.add(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
-    // [end:1.8.2]
-
-    // [start:1.9.0]
-    out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH)
-    // [end:1.9.0]
-
-    // [start:3.13.0]
-    out.add(Caps.SDK_QUERY_2120)
-    // [end:3.13.0]
-
-    out
-  }
-
+  def sdkImplementationCaps: util.List[Caps] = util.List.of(
+    Caps.SDK_PRESERVE_EXPIRY,
+    Caps.SDK_KV_RANGE_SCAN,
+    Caps.SDK_QUERY_INDEX_MANAGEMENT,
+    Caps.SDK_COLLECTION_QUERY_INDEX_MANAGEMENT,
+    Caps.SDK_SEARCH,
+    Caps.SDK_SEARCH_INDEX_MANAGEMENT,
+    Caps.SDK_SCOPE_SEARCH,
+    Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT,
+    Caps.SDK_EVENTING_FUNCTION_MANAGER,
+    Caps.SDK_LOOKUP_IN,
+    Caps.SDK_QUERY,
+    Caps.SDK_QUERY_READ_FROM_REPLICA,
+    Caps.SDK_BUCKET_MANAGEMENT,
+    Caps.SDK_COLLECTION_MANAGEMENT,
+    Caps.SDK_MANAGEMENT_HISTORY_RETENTION,
+    Caps.SDK_KV,
+    Caps.SDK_DOCUMENT_NOT_LOCKED,
+    Caps.SDK_VECTOR_SEARCH,
+    Caps.SDK_VECTOR_SEARCH_BASE64,
+    Caps.SDK_ZONE_AWARE_READ_FROM_REPLICA,
+    Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS,
+    Caps.SDK_PREFILTER_VECTOR_SEARCH,
+    Caps.SDK_QUERY_2120
+  )
 }

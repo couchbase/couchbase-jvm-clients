@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
+
 package com.couchbase.client.performer.scala.util
 
 import com.couchbase.client.core.error.subdoc.{PathExistsException, PathNotFoundException}
@@ -50,7 +50,7 @@ import reactor.core.publisher.Mono
 import java.time.Duration
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.function.{BiFunction, Function, Supplier}
+import java.util.function.Supplier
 import javax.annotation.Nullable
 
 /** Utility routines related to configuring transaction hooks.

@@ -1,7 +1,5 @@
 package com.couchbase.client.performer.scala.manager
 
-// [skip:<1.6.2]
-
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertDuration
 import com.couchbase.client.performer.scala.util.OptionsUtil
 import com.couchbase.client.protocol.run.Result

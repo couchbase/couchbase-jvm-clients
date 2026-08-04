@@ -15,47 +15,34 @@
  */
 package com.couchbase.client.performer.scala
 
-// [if:1.5.0]
-import com.couchbase.client.core.cnc.events.transaction.TransactionCleanupAttemptEvent
-import com.couchbase.client.performer.scala.transaction.{
-  ScalaTransactionCommandExecutor,
-  TransactionBlocking,
-  TransactionMarshaller
-}
+import com.couchbase.client.core.io.CollectionIdentifier
+import com.couchbase.client.core.logging.{LogRedaction, RedactionLevel}
 import com.couchbase.client.core.transaction.cleanup.{ClientRecord, TransactionsCleaner}
 import com.couchbase.client.core.transaction.components.ActiveTransactionRecord
 import com.couchbase.client.core.transaction.config.{
   CoreMergedTransactionConfig,
   CoreTransactionsConfig
 }
-import com.couchbase.client.core.transaction.log.CoreTransactionLogger
-import com.couchbase.client.scala.transactions.config.TransactionsConfig
-import com.couchbase.client.performer.scala.util.HooksUtil
-import com.couchbase.utils.ResultsUtil
-// [if:1.7.2]
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension
-import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
-import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil.Supported
-// [end]
-// [if:<1.7.2]
-// format: off
-//? import com.couchbase.client.core.transaction.forwards.{Extension, Supported}
-// format: on
-// [end]
-// [end]
-
-import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
-import com.couchbase.client.performer.core.util.VersionUtil
-import com.couchbase.client.core.io.CollectionIdentifier
-import com.couchbase.client.core.logging.{LogRedaction, RedactionLevel}
+import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.core.CorePerformer
-import com.couchbase.client.performer.core.commands.SdkCommandExecutor
+import com.couchbase.client.performer.core.commands.{SdkCommandExecutor, TransactionCommandExecutor}
 import com.couchbase.client.performer.core.perf.Counters
-import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection}
+import com.couchbase.client.performer.core.util.VersionUtil
+import com.couchbase.client.performer.scala.transaction.{
+  ScalaTransactionCommandExecutor,
+  TransactionBlocking,
+  TransactionMarshaller
+}
+import com.couchbase.client.performer.scala.util.{Capabilities, ClusterConnection, HooksUtil}
 import com.couchbase.client.protocol.performer.{Caps, PerformerCapsFetchResponse}
 import com.couchbase.client.protocol.run.Workloads
 import com.couchbase.client.protocol.shared._
 import com.couchbase.client.protocol.transactions._
+import com.couchbase.client.scala.transactions.config.TransactionsConfig
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
+import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil.Supported
+import com.couchbase.utils.ResultsUtil
 import io.grpc.stub.StreamObserver
 import io.grpc.{ServerBuilder, Status}
 import org.slf4j.LoggerFactory
@@ -107,7 +94,6 @@ class ScalaPerformer extends CorePerformer {
       .addPerformerCaps(Caps.AS_NULL_CONTENT_TYPE_SUPPORT)
       .addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps)
 
-    // [if:1.7.2]
     response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
     val supported       = Supported
     val protocolVersion = supported.protocolMajor() + "." + supported.protocolMinor()
@@ -143,46 +129,6 @@ class ScalaPerformer extends CorePerformer {
             else logger.warn("Could not find FIT extension for " + ext.name)
         }
       })
-    // [end]
-
-    // [if:1.5.0]
-    // [if:<1.7.2]
-    // format: off
-//?    response.addPerformerCaps(Caps.TRANSACTIONS_SUPPORT_1)
-//?    val supported = new Supported
-//?    val protocolVersion = supported.protocolMajor + "." + supported.protocolMinor
-//?    response.setTransactionsProtocolVersion("2.0")
-//?    val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
-//?    val sdkVersion = if (sdkVersionRaw == null) {
-//?      //? Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
-//?      logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
-//?      "1.5.0"
-//?    }
-//?    else {
-//?      sdkVersionRaw
-//?    }
-//?    response.setLibraryVersion(sdkVersion)
-//?    Extension.SUPPORTED.asScala
-//?      .filterNot(v =>
-//?        //? Scala does not yet support single query transactions.
-//?        v == Extension.EXT_SINGLE_QUERY
-//?          //? core-io does support this, but the Scala performer does not support the custom serializer required for
-//?          //? testing.  It's not very necessary since it gets tested by Java performer.
-//?          || v == Extension.EXT_SERIALIZATION)
-//?      .foreach(ext => {
-//?        try {
-//?          val pc = com.couchbase.client.protocol.transactions.Caps.valueOf(ext.name)
-//?          response.addTransactionImplementationsCaps(pc)
-//?        } catch {
-//?          case _: IllegalArgumentException =>
-//?            //? FIT and Java have used slightly different names for this
-//?            if (ext.name == "EXT_CUSTOM_METADATA") response.addTransactionImplementationsCaps(com.couchbase.client.protocol.transactions.Caps.EXT_CUSTOM_METADATA_COLLECTION)
-//?            else logger.warn("Could not find FIT extension for " + ext.name)
-//?        }
-//?      })
-    // format: on
-    // [end]
-    // [end]
   }
 
   override def clusterConnectionCreate(
@@ -269,15 +215,8 @@ class ScalaPerformer extends CorePerformer {
       workloads: Workloads,
       counters: Counters
   ): TransactionCommandExecutor = {
-    // [start:1.5.0]
     val connection: ClusterConnection = getClusterConnection(workloads.getClusterConnectionId)
     new ScalaTransactionCommandExecutor(connection, counters, Map.empty)
-    // [end:1.5.0]
-    // [if:<1.5.0]
-    // format: off
-    //? null
-    // format: on
-    // [end]
   }
 
   def getClusterConnection(clusterConnectionId: String): ClusterConnection = clusterConnections(
@@ -298,7 +237,6 @@ class ScalaPerformer extends CorePerformer {
     responseObserver.onCompleted()
   }
 
-  // [start:1.5.0]
   override def transactionCreate(
       request: TransactionCreateRequest,
       responseObserver: StreamObserver[com.couchbase.client.protocol.transactions.TransactionResult]
@@ -344,18 +282,11 @@ class ScalaPerformer extends CorePerformer {
       val collection   = collectionIdentifierFor(request.getAtr)
       val cleanupHooks =
         HooksUtil.configureCleanupHooks(request.getHookList.asScala, () => connection)
-      // [if:1.7.2]
       val cleaner = new TransactionsCleaner(
         connection.cluster.async.core,
         cleanupHooks,
         TransactionsSupportedExtensionsUtil.Supported
       )
-      // [end]
-      // [if:<1.7.2]
-      // format: off
-      //? val cleaner = new TransactionsCleaner(connection.cluster.async.core, cleanupHooks)
-      // format: on
-      // [end]
       val l        = new CoreTransactionLogger(null, "")
       val merged   = new CoreMergedTransactionConfig(config.toCore)
       val atrEntry = ActiveTransactionRecord
@@ -471,5 +402,4 @@ class ScalaPerformer extends CorePerformer {
         responseObserver.onError(Status.ABORTED.withDescription(err.toString).asException)
     }
   }
-  // [end:1.5.0]
 }

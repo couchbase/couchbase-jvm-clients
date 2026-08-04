@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
+
 package com.couchbase.client.performer.scala.transaction
 
 import com.couchbase.client.core.cnc.RequestSpan
@@ -27,10 +27,7 @@ import com.couchbase.client.performer.scala.Content.{
   ContentString
 }
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor
-import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
-  convertContent,
-  convertTranscoder
-}
+import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertContent
 import com.couchbase.client.performer.scala.error.InternalPerformerFailure
 import com.couchbase.client.performer.scala.transaction.TransactionShared.ExpectSuccess
 import com.couchbase.client.performer.scala.util.{ClusterConnection, OptionsUtil, ResultValidation}
@@ -41,14 +38,8 @@ import com.couchbase.client.protocol.transactions.{
   TransactionCreateRequest,
   TransactionStreamPerformerToDriver
 }
-import com.couchbase.client.scala.codec._
-import com.couchbase.client.scala.codec.Conversions._
-import com.couchbase.client.scala.json._
 import com.couchbase.client.scala.json.JsonObject
-import com.couchbase.client.scala.transactions.TransactionAttemptContext
-// [if:3.9.0]
-import com.couchbase.client.scala.transactions.getmulti
-// [end]
+import com.couchbase.client.scala.transactions.{TransactionAttemptContext, getmulti}
 import io.grpc.stub.StreamObserver
 
 import java.util.concurrent.atomic.AtomicInteger
@@ -106,14 +97,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         if (!performanceMode) logger.info("Reached end of all operations and lambda")
         Success()
       },
-      // [if:3.9.0]
       ptcb.orNull
-      // [end]
-      // [if:<3.9.0]
-      // format: off
-      //? Option(ptcb.orNull)
-      // format: on
-      // [end]
     )
     if (TransactionMarkerOwner.get.block.isPresent)
       throw new InternalPerformerFailure(
@@ -159,7 +143,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionInsertOptions(request)
           content match {
             case ContentString(value) =>
@@ -187,17 +170,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
                 case None => ctx.insert(collection, request.getDocId.getDocId, value).get
               }
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? content match {
-          //?   case ContentString(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentJson(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentByteArray(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //?   case ContentNull(value) => ctx.insert(collection, request.getDocId.getDocId, value).get
-          //? }
-          // format: on
-          // [end]
         }
       )
     } else if (op.hasInsertV2) {
@@ -233,7 +205,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         op.getDoNotPropagateError,
         performanceMode,
         () => {
-          // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionReplaceOptions(request)
           if (request.getUseStashedResult) {
             content match {
@@ -321,46 +292,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
                 }
             }
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? if (request.getUseStashedResult) {
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentJson(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentByteArray(value) => ctx.replace(stashedGet.get, value).get
-          //?     case ContentNull(value) => ctx.replace(stashedGet.get, value).get
-          //?   }
-          //? } else if (request.hasUseStashedSlot) {
-          //?   if (!stashedGetMap.contains(request.getUseStashedSlot))
-          //?     throw new IllegalStateException(
-          //?       "Do not have a stashed get in slot " + request.getUseStashedSlot
-          //?     )
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentJson(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentByteArray(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?     case ContentNull(value) => ctx.replace(stashedGetMap(request.getUseStashedSlot), value).get
-          //?   }
-          //? } else {
-          //?   val collection = connection.collection(request.getDocId)
-          //?   logger.info(
-          //?     "{} Performing replace operation on docId {} to new content on collection {}",
-          //?     dbg,
-          //?     request.getDocId.getDocId,
-          //?     request.getDocId.getCollectionName
-          //?   )
-          //?   val r = ctx.get(collection, request.getDocId.getDocId).get
-          //?   content match {
-          //?     case ContentString(value) => ctx.replace(r, value).get
-          //?     case ContentJson(value) => ctx.replace(r, value).get
-          //?     case ContentByteArray(value) => ctx.replace(r, value).get
-          //?     case ContentNull(value) => ctx.replace(r, value).get
-          //?   }
-          //? }
-          // format: on
-          // [end]
-
         }
       )
     } else if (op.hasReplaceV2) {
@@ -472,18 +403,11 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionGetOptions(request)
           val out     = options match {
             case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts).get
             case None       => ctx.get(collection, request.getDocId.getDocId).get
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? val out = ctx.get(collection, request.getDocId.getDocId).get
-          // format: on
-          // [end]
           val contentAsValidation =
             if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
           handleGetResult(request, out, connection, contentAsValidation)
@@ -500,19 +424,12 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getLocation)
-          // [if:1.9.0]
-          val options = TransactionOptionsUtil.transactionGetOptions(request)
+          val options    = TransactionOptionsUtil.transactionGetOptions(request)
           options match {
             case Some(opts) =>
               ctx.get(collection, executor.get.getDocId(request.getLocation), opts).get
             case None => ctx.get(collection, executor.get.getDocId(request.getLocation)).get
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? ctx.get(collection, executor.get.getDocId(request.getLocation)).get
-          // format: on
-          // [end]
         }
       )
     } else if (op.hasGetOptional) {
@@ -533,24 +450,16 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             request.getDocId.getBucketName,
             request.getDocId.getCollectionName
           )
-          // [if:1.9.0]
           val options = TransactionOptionsUtil.transactionGetOptions(request)
           val out     = options match {
             case Some(opts) => ctx.get(collection, request.getDocId.getDocId, opts)
             case None       => ctx.get(collection, request.getDocId.getDocId)
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? val out = ctx.get(collection, request.getDocId.getDocId)
-          // format: on
-          // [end]
           val contentAsValidation =
             if (request.hasContentAsValidation) Some(request.getContentAsValidation) else None
           handleGetOptionalResult(request, req, out, connection, contentAsValidation)
         }
       )
-      // [start:1.8.0]
     } else if (op.hasGetFromPreferredServerGroup) {
       val request = op.getGetFromPreferredServerGroup
       performOperation(
@@ -561,8 +470,7 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
         performanceMode,
         () => {
           val collection = connection.collection(request.getDocId)
-          // [if:1.9.0]
-          val options =
+          val options    =
             TransactionOptionsUtil.transactionGetReplicaFromPreferredServerGroupOptions(request)
           val result = options match {
             case Some(opts) =>
@@ -572,16 +480,9 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
             case None =>
               ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
           }
-          // [end]
-          // [if:<1.9.0]
-          // format: off
-          //? val result = ctx.getReplicaFromPreferredServerGroup(collection, request.getDocId.getDocId).get
-          // format: on
-          // [end]
           handleGetReplicaFromPreferredServerGroupResult(request, result, connection)
         }
       )
-      // [end:1.8.0]
     } else if (op.hasWaitOnLatch) {
       val request   = op.getWaitOnLatch
       val latchName = request.getLatchName
@@ -705,7 +606,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           ResultValidation.validateQueryResult(request, qr.get)
         }
       )
-      // [if:3.9.0]
     } else if (op.hasGetMulti) {
       val request = op.getGetMulti
       if (!request.getGetMultiReplicasFromPreferredServerGroup) {
@@ -770,7 +670,6 @@ class TransactionBlocking(executor: Option[TransactionCommandExecutor])
           }
         )
       }
-      // [end]
     } else if (op.hasTestFail) {
       val msg   = "Should not reach here"
       val error = new InternalPerformerFailure(new IllegalStateException(msg))

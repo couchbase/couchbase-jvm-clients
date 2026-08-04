@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
 
 package com.couchbase.client.performer.scala.kv
 
@@ -298,13 +297,11 @@ object MutateInHelper {
       if (opts.hasTimeoutMillis)
         out = out.timeout(Duration.create(opts.getTimeoutMillis, TimeUnit.MILLISECONDS))
       if (opts.hasAccessDeleted) out = out.accessDeleted(true)
-      // [start:1.5.0]
       if (opts.hasPreserveExpiry) out = out.preserveExpiry(opts.getPreserveExpiry)
       if (opts.hasExpiry) out = convertExpiry(opts.getExpiry) match {
         case Left(expiry)  => out.expiry(expiry)
         case Right(expiry) => out.expiry(expiry)
       }
-      // [end:1.5.0]
       if (opts.hasCas) out = out.cas(opts.getCas)
       if (opts.hasDurability) out = out.durability(convertDurability(opts.getDurability))
       if (opts.hasStoreSemantics) out = out.document(opts.getStoreSemantics match {
@@ -316,9 +313,7 @@ object MutateInHelper {
           StoreSemantics.Upsert
         case _ => throw new UnsupportedOperationException()
       })
-      // [start:1.5.0]
       if (opts.hasCreateAsDeleted) out = out.createAsDeleted(opts.getCreateAsDeleted)
-      // [end:1.5.0]
       assertIsSerializable(out)
       Some(out)
     } else None

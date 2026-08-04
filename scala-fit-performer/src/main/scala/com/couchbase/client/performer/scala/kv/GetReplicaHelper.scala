@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [skip:<1.5.0]
 
 package com.couchbase.client.performer.scala.kv
 
@@ -199,13 +198,6 @@ object GetReplicaHelper {
       clc: CollectionLevelCommand,
       out: Result.Builder
   ): SMono[Unit] = {
-    // [start:<1.4.10]
-    /*
-        throw new UnsupportedOperationException("This version of the Scala SDK does not support getAllReplicas")
-        // [end:<1.4.10]
-     */
-
-    // [start:1.4.10]
     val req        = clc.getGetAllReplicas
     val collection = connection.collection(req.getLocation).reactive
     val options    = createOptions(req)
@@ -248,7 +240,6 @@ object GetReplicaHelper {
     )
 
     SMono.empty
-    // [end:1.4.10]
   }
 
   private def createOptions(
@@ -260,7 +251,6 @@ object GetReplicaHelper {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
-      // [start:1.8.0]
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
@@ -272,7 +262,6 @@ object GetReplicaHelper {
             )
         }
       }
-      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None
@@ -287,7 +276,6 @@ object GetReplicaHelper {
       if (opts.hasTimeoutMsecs)
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
-      // [start:1.8.0]
       if (opts.hasReadPreference) {
         opts.getReadPreference match {
           case com.couchbase.client.protocol.shared.ReadPreference.NO_PREFERENCE => // This is the same as default
@@ -299,7 +287,6 @@ object GetReplicaHelper {
             )
         }
       }
-      // [end:1.8.0]
       assertIsSerializable(out)
       Some(out)
     } else None
@@ -336,9 +323,7 @@ object GetReplicaHelper {
       case _ =>
     }
 
-    // [start:1.0.9]
     value.expiryTime.foreach(et => builder.setExpiryTime(et.getEpochSecond))
-    // [end:1.0.9]
 
     builder.build
   }

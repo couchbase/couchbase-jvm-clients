@@ -4,15 +4,23 @@ import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory
 import com.couchbase.client.core.msg.kv.DurabilityLevel
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
+import com.couchbase.client.core.transaction.cleanup.CleanerMockFactory
 import com.couchbase.client.protocol.shared.{
   ClusterConfig,
   ClusterConnectionCreateRequest,
   Durability,
   ScanConsistency
 }
+import com.couchbase.client.protocol.transactions.{CommandQuery, TransactionCreateRequest}
 import com.couchbase.client.scala.codec._
 import com.couchbase.client.scala.env.{ClusterEnvironment, IoConfig, SecurityConfig, TimeoutConfig}
 import com.couchbase.client.scala.query.{QueryParameters, QueryProfile, QueryScanConsistency}
+import com.couchbase.client.scala.transactions.TransactionKeyspace
+import com.couchbase.client.scala.transactions.config.{
+  TransactionOptions,
+  TransactionsCleanupConfig,
+  TransactionsConfig
+}
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
@@ -21,17 +29,6 @@ import java.security.cert.{CertificateFactory, X509Certificate}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.jdk.CollectionConverters._
-
-// [start:1.5.0]
-import com.couchbase.client.core.transaction.cleanup.CleanerMockFactory
-import com.couchbase.client.scala.transactions.TransactionKeyspace
-import com.couchbase.client.scala.transactions.config.{
-  TransactionOptions,
-  TransactionsCleanupConfig,
-  TransactionsConfig
-}
-import com.couchbase.client.protocol.transactions.{CommandQuery, TransactionCreateRequest}
-// [end:1.5.0]
 
 object OptionsUtil {
 
@@ -55,11 +52,9 @@ object OptionsUtil {
       if (cc.hasObservabilityConfig) {
         throw new UnsupportedOperationException("Cannot handle observability")
       }
-      // [start:1.5.0]
       if (cc.hasTransactionsConfig) {
         clusterEnvironment = applyTransactionsConfig(request, getCluster, clusterEnvironment)
       }
-      // [end:1.5.0]
     }
     Option(clusterEnvironment)
   }
@@ -130,10 +125,8 @@ object OptionsUtil {
       if (timeoutConfig == null) {
         timeoutConfig = TimeoutConfig()
       }
-      // [start:1.5.0]
       timeoutConfig =
         timeoutConfig.kvScanTimeout(Duration(cc.getKvScanTimeoutSecs, TimeUnit.SECONDS))
-      // [end:1.5.0]
     }
     if (cc.hasTranscoder) {
       clusterEnvironment.transcoder(convertTranscoder(cc.getTranscoder))
@@ -198,7 +191,6 @@ object OptionsUtil {
       }
       securityConfig = securityConfig.enableTls(true)
     }
-    // [start:1.2.1]
     if (cc.hasCertPath) {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
@@ -212,7 +204,6 @@ object OptionsUtil {
       // Cannot use enableCertificateVerification as it was added later
       securityConfig = securityConfig.trustManagerFactory(InsecureTrustManagerFactory.INSTANCE)
     }
-    // [end:1.2.1]
     if (cc.hasCert) {
       if (securityConfig == null) {
         securityConfig = SecurityConfig()
@@ -232,11 +223,9 @@ object OptionsUtil {
     if (securityConfig != null) {
       out = clusterEnvironment.securityConfig(securityConfig)
     }
-    // [if:1.8.0]
     if (cc.hasPreferredServerGroup) {
       out = out.preferredServerGroup(cc.getPreferredServerGroup)
     }
-    // [end]
     out
   }
 
@@ -254,7 +243,6 @@ object OptionsUtil {
     Duration(nanos, "nanosecond")
   }
 
-  // [start:1.5.0]
   def applyTransactionsConfig(
       request: ClusterConnectionCreateRequest,
       getCluster: () => ClusterConnection,
@@ -398,5 +386,4 @@ object OptionsUtil {
     }
     Option(queryOptions)
   }
-  // [end:1.5.0]
 }
