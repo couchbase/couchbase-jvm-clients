@@ -29,7 +29,7 @@ jobs:
         timeout-minutes: 40
         run: |
           make deps-only
-          MVN_OPTS="--batch-mode --no-transfer-progress -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true -Djvm=${JAVA_HOME_8_X64}/bin/java"
+          MVN_OPTS="--batch-mode --no-transfer-progress -Dmaven.test.failure.ignore=true -Dsurefire.rerunFailingTestsCount=1 -Dmaven.javadoc.skip=true -Djvm=${JAVA_HOME_8_X64}/bin/java"
           ./mvnw clean install -Pfit $MVN_OPTS
           ./mvnw $MVN_OPTS clean install --projects scala-implicits,scala-client --activate-profiles scala-2.13
           ./mvnw $MVN_OPTS clean install --projects scala-implicits,scala-client --activate-profiles scala-3
