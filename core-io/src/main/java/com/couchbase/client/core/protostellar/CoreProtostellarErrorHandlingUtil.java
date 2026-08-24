@@ -57,6 +57,7 @@ import com.couchbase.client.core.error.subdoc.DocumentTooDeepException;
 import com.couchbase.client.core.error.subdoc.PathExistsException;
 import com.couchbase.client.core.error.subdoc.PathMismatchException;
 import com.couchbase.client.core.error.subdoc.PathNotFoundException;
+import com.couchbase.client.core.error.subdoc.NumberTooBigException;
 import com.couchbase.client.core.error.subdoc.ValueInvalidException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.ProtostellarRequestBehaviour;
@@ -84,6 +85,7 @@ public class CoreProtostellarErrorHandlingUtil {
   private static final String PRECONDITION_DOC_NOT_JSON = "DOC_NOT_JSON";
   private static final String PRECONDITION_DOC_TOO_DEEP = "DOC_TOO_DEEP";
   private static final String PRECONDITION_VALUE_OUT_OF_RANGE = "VALUE_OUT_OF_RANGE";
+  private static final String PRECONDITION_PATH_VALUE_OUT_OF_RANGE = "PATH_VALUE_OUT_OF_RANGE";
   private static final String PRECONDITION_VALUE_TOO_LARGE = "VALUE_TOO_LARGE";
   private static final String TYPE_URL_PRECONDITION_FAILURE = "type.googleapis.com/google.rpc.PreconditionFailure";
   private static final String TYPE_URL_RESOURCE_INFO = "type.googleapis.com/google.rpc.ResourceInfo";
@@ -200,6 +202,8 @@ public class CoreProtostellarErrorHandlingUtil {
                 return ProtostellarRequestBehaviour.fail(new DocumentTooDeepException(context));
               } else if (type.equals(PRECONDITION_VALUE_OUT_OF_RANGE)) {
                 return ProtostellarRequestBehaviour.fail(new ValueInvalidException(context));
+              } else if (type.equals(PRECONDITION_PATH_VALUE_OUT_OF_RANGE)) {
+                return ProtostellarRequestBehaviour.fail(new NumberTooBigException(context));
               } else if (type.equals(PRECONDITION_VALUE_TOO_LARGE)) {
                 return ProtostellarRequestBehaviour.fail(new ValueTooLargeException(context));
               }
