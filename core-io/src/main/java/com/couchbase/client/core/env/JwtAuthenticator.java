@@ -46,7 +46,7 @@ import static java.util.stream.Collectors.toList;
  * <p>
  * Create a new instance by calling {@link JwtAuthenticator#create(String)}.
  */
-@SinceCouchbase("8.1")
+@SinceCouchbase("8.5")
 @NullMarked
 public class JwtAuthenticator implements Authenticator {
   /**
