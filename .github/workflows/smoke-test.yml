@@ -29,7 +29,16 @@ jobs:
         timeout-minutes: 40
         run: |
           make deps-only
-          ./mvnw verify -Pfit --batch-mode -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true -Djvm=${JAVA_HOME_8_X64}/bin/java
+          MVN_OPTS="--batch-mode --no-transfer-progress -Dmaven.test.failure.ignore=true -Dmaven.javadoc.skip=true -Djvm=${JAVA_HOME_8_X64}/bin/java"
+          ./mvnw verify -Pfit $MVN_OPTS
+          ./mvnw $MVN_OPTS clean install --projects scala-implicits,scala-client --activate-profiles scala-2.13
+          ./mvnw $MVN_OPTS clean install --projects scala-implicits,scala-client --activate-profiles scala-3
+
+      - name: core-io shade check
+        run: cd core-io && ./shade-check.sh || exit 1
+
+      - name: tracing-opentelemetry shade check
+        run: cd tracing-opentelemetry && ./shade-check.sh || exit 1
 
       - name: Remove artifacts from Maven repo so they're not cached
         run: rm -rfv ~/.m2/repository/com/couchbase/client/
