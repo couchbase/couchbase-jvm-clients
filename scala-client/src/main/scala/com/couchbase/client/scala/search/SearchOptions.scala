@@ -16,6 +16,7 @@
 package com.couchbase.client.scala.search
 
 import com.couchbase.client.core.api.search.facet.CoreSearchFacet
+import com.couchbase.client.core.api.search.queries.CoreSearchScoring
 import com.couchbase.client.core.api.search.sort.CoreSearchSort
 import com.couchbase.client.core.api.search.{
   CoreHighlightStyle,
@@ -26,6 +27,7 @@ import com.couchbase.client.core.api.shared.CoreMutationState
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions
+import com.couchbase.client.core.error.InvalidArgumentException
 import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.scala.search.facet.SearchFacet
@@ -56,8 +58,9 @@ case class SearchOptions(
     private[scala] val retryStrategy: Option[RetryStrategy] = None,
     private[scala] val parentSpan: Option[RequestSpan] = None,
     private[scala] val raw: Option[Map[String, Any]] = None,
-    private[scala] val disableScoring: Boolean = false,
-    private[scala] val includeLocations: Boolean = false
+    private[scala] val disableScoringValue: Option[Boolean] = None,
+    private[scala] val includeLocations: Boolean = false,
+    private[scala] val scoring: Option[SearchScoring] = None
 ) {
 
   /** Sets the parent `RequestSpan`.
@@ -222,9 +225,32 @@ case class SearchOptions(
     * This parameter only has an effect if the Couchbase Cluster version is 6.6.0 or above.
     *
     * @return a copy of this with the change applied, for chaining.
+    * @deprecated in favor of [[scoring]] with [[SearchScoring.Disabled]].
     */
+  @deprecated("Use scoring(SearchScoring.Disabled) instead", "3.13.0")
   def disableScoring(value: Boolean): SearchOptions = {
-    copy(disableScoring = value)
+    if (scoring.isDefined) throw illegalStateForScoringSetter()
+    copy(disableScoringValue = Some(value))
+  }
+
+  /** Specifies how the server should assign scores to hits.
+    *
+    * If not called, the server's default scoring strategy is used.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    * @see SearchScoring.Disabled
+    * @see SearchScoring.RelativeScoreFusion
+    * @see SearchScoring.ReciprocalRankFusion
+    */
+  def scoring(value: SearchScoring): SearchOptions = {
+    if (disableScoringValue.isDefined) throw illegalStateForScoringSetter()
+    copy(scoring = Some(value))
+  }
+
+  private def illegalStateForScoringSetter(): RuntimeException = {
+    InvalidArgumentException.fromMessage(
+      "Cannot call both `scoring` and `disableScoring`."
+    )
   }
 
   /** If set to true, will include the location in the search rows.
@@ -268,7 +294,9 @@ case class SearchOptions(
         case _                                              => null
       }
 
-      override def disableScoring(): lang.Boolean = x.disableScoring
+      override def scoring(): CoreSearchScoring =
+        if (x.disableScoringValue.contains(true)) CoreSearchScoring.Disabled.INSTANCE
+        else x.scoring.map(_.toCore).orNull
 
       override def explain(): lang.Boolean = x.explain.map(_.asInstanceOf[lang.Boolean]).orNull
 

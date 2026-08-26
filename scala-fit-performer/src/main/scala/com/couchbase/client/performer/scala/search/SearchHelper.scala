@@ -49,7 +49,12 @@ import com.couchbase.client.scala.search.sort.{
   FieldSortType,
   SearchSort
 }
-import com.couchbase.client.scala.search.{HighlightStyle, SearchOptions, SearchScanConsistency}
+import com.couchbase.client.scala.search.{
+  HighlightStyle,
+  SearchOptions,
+  SearchScanConsistency,
+  SearchScoring
+}
 import com.couchbase.client.scala.{Cluster, Scope}
 import com.google.protobuf.{ByteString, Timestamp}
 
@@ -213,7 +218,27 @@ object SearchHelper {
     if (o.hasParentSpanId) throw new UnsupportedOperationException()
     if (o.getRawCount > 0) opts = opts.raw(o.getRawMap.asScala.toMap)
     if (o.hasIncludeLocations) opts = opts.includeLocations(o.getIncludeLocations)
+    if (o.hasDisableScoring) opts = opts.disableScoring(o.getDisableScoring)
+    if (o.hasScoring) opts = opts.scoring(convertScoring(o.getScoring))
     Some(opts)
+  }
+
+  private def convertScoring(
+      scoring: com.couchbase.client.protocol.sdk.search.SearchScoring
+  ): SearchScoring = {
+    if (scoring.hasNone) SearchScoring.Disabled
+    else if (scoring.hasReciprocalRankFusion) {
+      val fit = scoring.getReciprocalRankFusion
+      SearchScoring.ReciprocalRankFusion(
+        windowSize = if (fit.hasWindowSize) Some(fit.getWindowSize) else None,
+        rankConstant = if (fit.hasRankConstant) Some(fit.getRankConstant) else None
+      )
+    } else if (scoring.hasRelativeScoreFusion) {
+      val fit = scoring.getRelativeScoreFusion
+      SearchScoring.RelativeScoreFusion(
+        windowSize = if (fit.hasWindowSize) Some(fit.getWindowSize) else None
+      )
+    } else throw new UnsupportedOperationException("Unrecognized SearchScoring: " + scoring)
   }
 
   private def convertTimestamp(timestamp: Timestamp) = Instant.ofEpochSecond(timestamp.getSeconds)
