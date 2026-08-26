@@ -307,7 +307,7 @@ public class SearchOptions extends CommonOptions<SearchOptions> {
   }
 
   /**
-   * Specifies how the sderver should assign scores to hits.
+   * Specifies how the server should assign scores to hits.
    *
    * @param scoring null means use the server's default scoring strategy.
    * @see SearchScoring#disabled()
