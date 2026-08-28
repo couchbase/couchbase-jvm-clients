@@ -21,11 +21,19 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockingWaitGroupTest {
 
@@ -238,7 +246,12 @@ class BlockingWaitGroupTest {
     wg.add("operation");
 
     Thread awaitThread = new Thread(() -> {
-      wg.await(Duration.ofSeconds(10));
+      try {
+        wg.await(Duration.ofSeconds(10));
+      } catch (RuntimeException e) {
+        if (!(e.getCause() instanceof InterruptedException)) throw e; // unexpected
+        // exit gracefully instead of throwing, so GHA doesn't create a failure annotation.
+      }
     });
     awaitThread.start();
 
