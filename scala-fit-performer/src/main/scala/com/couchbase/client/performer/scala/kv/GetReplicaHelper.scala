@@ -55,6 +55,8 @@ object GetReplicaHelper {
       handleGetAllReplicas(perRun, connection, command, docId, clc, out)
     } else if (clc.hasGetAnyReplica) {
       handleGetAnyReplica(connection, command, docId, clc, out)
+    } else if (clc.hasGetReplica) {
+      handleGetReplica(connection, command, docId, clc, out)
     }
 
     out
@@ -109,6 +111,77 @@ object GetReplicaHelper {
           .setGetReplicaResult(populateResult(Some(req.getContentAs), result))
       )
     } else setSuccess(out)
+  }
+
+  private def handleGetReplica(
+      connection: ClusterConnection,
+      command: Command,
+      getId: (DocLocation) => String,
+      clc: CollectionLevelCommand,
+      out: Result.Builder
+  ): Unit = {
+    val req        = clc.getGetReplica
+    val collection = connection.collection(req.getLocation)
+    val strategy   = convertStrategy(req.getStrategy)
+    val options    = createGetReplicaOptions(req)
+    val docId      = getId(req.getLocation)
+
+    val start = System.nanoTime
+
+    val result = options match {
+      case Some(opts) => collection.getReplica(docId, strategy, opts).get
+      case None       => collection.getReplica(docId, strategy).get
+    }
+
+    out.setElapsedNanos(System.nanoTime - start)
+
+    if (command.getReturnResult) {
+      out.setSdk(
+        com.couchbase.client.protocol.sdk.Result.newBuilder
+          .setGetReplicaResult(populateResult(Some(req.getContentAs), result))
+      )
+    } else setSuccess(out)
+  }
+
+  private def convertStrategy(
+      strategy: com.couchbase.client.protocol.sdk.kv.replicas.GetReplicaStrategy
+  ): GetReplicaStrategy = {
+    if (strategy.hasFromIndex) {
+      val fromIndex = strategy.getFromIndex
+      val index     = convertReplicaIndex(fromIndex.getIndex)
+      val options   = if (fromIndex.hasOptions) {
+        GetReplicaStrategyFromIndexOptions().wrap(fromIndex.getOptions.getWrap)
+      } else GetReplicaStrategyFromIndexOptions()
+      GetReplicaStrategy.fromIndex(index, options)
+    } else {
+      throw new UnsupportedOperationException(s"Unsupported GetReplicaStrategy: ${strategy}")
+    }
+  }
+
+  private def convertReplicaIndex(
+      index: com.couchbase.client.protocol.sdk.kv.replicas.ReplicaIndex
+  ): ReplicaIndex = {
+    index match {
+      case com.couchbase.client.protocol.sdk.kv.replicas.ReplicaIndex.FIRST  => ReplicaIndex.First
+      case com.couchbase.client.protocol.sdk.kv.replicas.ReplicaIndex.SECOND => ReplicaIndex.Second
+      case com.couchbase.client.protocol.sdk.kv.replicas.ReplicaIndex.THIRD  => ReplicaIndex.Third
+      case x                                                                 =>
+        throw new UnsupportedOperationException(s"Unsupported replica index ${x}")
+    }
+  }
+
+  private def createGetReplicaOptions(
+      request: com.couchbase.client.protocol.sdk.kv.GetReplica
+  ): Option[GetReplicaOptions] = {
+    if (request.hasOptions) {
+      val opts = request.getOptions
+      var out  = GetReplicaOptions()
+      if (opts.hasTimeoutMsecs)
+        out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
+      if (opts.hasTranscoder) out = out.transcoder(convertTranscoder(opts.getTranscoder))
+      assertIsSerializable(out)
+      Some(out)
+    } else None
   }
 
   private def handleGetAllReplicas(
@@ -300,6 +373,7 @@ object GetReplicaHelper {
     assertIsSerializable(value)
     val builder = com.couchbase.client.protocol.sdk.kv.GetReplicaResult.newBuilder
       .setCas(value.cas)
+      .setIsReplica(value.isReplica)
 
     streamId.foreach(v => builder.setStreamId(v))
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.core.error;
+package com.couchbase.client.core.api.kv;
 
-import com.couchbase.client.core.error.context.ErrorContext;
+import com.couchbase.client.core.annotation.Stability;
 
-/**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
- */
-public class DocumentNotFoundException extends CouchbaseException {
+@Stability.Internal
+public enum CoreReplicaIndex {
+  FIRST(1),
+  SECOND(2),
+  THIRD(3);
 
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
+  private final int index;
+
+  CoreReplicaIndex(int index) {
+    this.index = index;
   }
 
-  protected DocumentNotFoundException(final String message, final ErrorContext ctx) {
-    super(message, ctx);
+  /**
+   * @return 0..(numReplicas - 1) identifying a specific true replica.
+   */
+  public int replicaIndex() {
+    return index - 1;
   }
-
 }

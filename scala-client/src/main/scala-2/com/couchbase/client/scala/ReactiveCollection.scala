@@ -589,6 +589,22 @@ class ReactiveCollection(async: AsyncCollection) {
       .map(result => convertReplica(result, environment, options.transcoder))
   }
 
+  /** Reads a single, specific replica, using the given strategy.  See [[GetReplicaStrategy]] for full documentation.
+    *
+    * $Same
+    */
+  def getReplica(
+      id: String,
+      strategy: GetReplicaStrategy,
+      options: GetReplicaOptions = GetReplicaOptions()
+  ): SMono[GetReplicaResult] = {
+    CoreCommonConvertersScala2
+      .convert(
+        kvOps.getReplicaReactive(convert(options), id, strategy.toCore)
+      )
+      .map(result => convertReplica(result, environment, options.transcoder))
+  }
+
   /** Retrieves all available versions of the document.
     *
     * $Same

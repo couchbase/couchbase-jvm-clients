@@ -507,6 +507,22 @@ class AsyncCollection(
       .map(result => convertReplica(result, environment, options.transcoder))
   }
 
+  /** Reads a single, specific replica, using the given strategy.  See [[GetReplicaStrategy]] for full documentation.
+    *
+    * $Same
+    */
+  def getReplica(
+      id: String,
+      strategy: GetReplicaStrategy,
+      options: GetReplicaOptions = GetReplicaOptions()
+  ): Future[GetReplicaResult] = {
+    FutureConversions
+      .javaMonoToScalaFuture(
+        kvOps.getReplicaReactive(convert(options), id, strategy.toCore)
+      )
+      .map(result => convertReplica(result, environment, options.transcoder))
+  }
+
   /** Retrieves all available versions of the document.
     *
     * Note that this will block the user's thread until all versions have been returned (or failed).

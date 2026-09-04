@@ -21,6 +21,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreKeyspace;
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.api.kv.CoreKvResponseMetadata;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
@@ -32,11 +33,14 @@ import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundOnReplicaException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.AggregateErrorContext;
 import com.couchbase.client.core.error.context.ErrorContext;
+import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
+import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
@@ -45,6 +49,7 @@ import com.couchbase.client.core.msg.kv.ReplicaSubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetRequest;
 import com.couchbase.client.core.msg.kv.SubdocGetResponse;
 import com.couchbase.client.core.retry.RetryStrategy;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -128,6 +133,35 @@ public class ReplicaHelper {
             .map(response -> new GetReplicaResponse(response, request instanceof ReplicaGetRequest))
         )
         .doFinally(signalType -> getAllSpan.end());
+  }
+
+  public static CompletableFuture<CoreGetResult> getReplica(
+      Core core,
+      CollectionIdentifier collectionIdentifier,
+      String documentId,
+      int replicaNumber,
+      Duration timeout,
+      RetryStrategy retryStrategy,
+      Map<String, Object> clientContext,
+      @Nullable RequestSpan parentSpan
+  ) {
+    CoreContext coreContext = core.context();
+    RequestSpan span = coreContext.coreResources().requestTracer().requestSpan(TracingIdentifiers.SPAN_REQUEST_KV_GET_REPLICA, parentSpan);
+    ReplicaGetRequest request = new ReplicaGetRequest(
+        documentId, timeout, coreContext, collectionIdentifier, retryStrategy, (short) replicaNumber, span
+    );
+    request.context().clientContext(clientContext);
+
+    return getReplicaInternal(core, request).thenApply(response -> new CoreGetResult(
+        CoreKvResponseMetadata.from(response.flexibleExtras()),
+        CoreKeyspace.from(collectionIdentifier),
+        documentId,
+        response.content(),
+        response.flags(),
+        response.cas(),
+        null,
+        true
+    ));
   }
 
   /**
@@ -532,6 +566,22 @@ public class ReplicaHelper {
     return request
       .response()
       .thenApply(response -> {
+        if (!response.status().success()) {
+          throw keyValueStatusToException(request, response);
+        }
+        return response;
+      })
+      .whenComplete((t, e) -> request.context().logicallyComplete(e));
+  }
+
+  private static CompletableFuture<GetResponse> getReplicaInternal(final Core core, final ReplicaGetRequest request) {
+    core.send(request);
+    return request
+      .response()
+      .thenApply(response -> {
+        if (response.status() == ResponseStatus.NOT_FOUND) {
+          throw new DocumentNotFoundOnReplicaException(KeyValueErrorContext.completedRequest(request, response));
+        }
         if (!response.status().success()) {
           throw keyValueStatusToException(request, response);
         }
