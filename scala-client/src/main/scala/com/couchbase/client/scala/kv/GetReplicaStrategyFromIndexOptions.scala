@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.couchbase.client.core.error;
+package com.couchbase.client.scala.kv
 
-import com.couchbase.client.core.error.context.ErrorContext;
+/** Provides control over how [[GetReplicaStrategy.fromIndex]] is performed.
+  */
+case class GetReplicaStrategyFromIndexOptions(
+    private[scala] val wrap: Boolean = false
+) {
 
-/**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
- */
-public class DocumentNotFoundException extends CouchbaseException {
-
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
+  /** See [[GetReplicaStrategy.FromIndex]] for discussion of this parameter.
+    *
+    * Defaults to false.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  def wrap(value: Boolean): GetReplicaStrategyFromIndexOptions = {
+    copy(wrap = value)
   }
-
-  protected DocumentNotFoundException(final String message, final ErrorContext ctx) {
-    super(message, ctx);
-  }
-
 }

@@ -353,7 +353,7 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
       } else if (clc.hasLookupIn || clc.hasLookupInAllReplicas || clc.hasLookupInAnyReplica) {
         result = LookupInHelper.handleLookupIn(perRun, connection, op, (loc) => getDocId(loc))
         // [start:1.5.0]
-      } else if (clc.hasGetAnyReplica || clc.hasGetAllReplicas) {
+      } else if (clc.hasGetAnyReplica || clc.hasGetAllReplicas || clc.hasGetReplica) {
         result = GetReplicaHelper.handle(perRun, connection, op, (loc) => getDocId(loc))
       } else if (clc.hasMutateIn) {
         result = MutateInHelper.handleMutateIn(perRun, connection, op, (loc) => getDocId(loc))

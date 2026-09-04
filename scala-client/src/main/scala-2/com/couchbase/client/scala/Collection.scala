@@ -653,6 +653,24 @@ class Collection(
     block(async.getAnyReplica(id, options))
   }
 
+  /** Reads a single, specific replica, using the given strategy.  See [[GetReplicaStrategy]] for full documentation.
+    *
+    * @param id            $Id
+    * @param strategy      specifies a strategy used for the replica read
+    * @param options       $Options
+    *
+    * @return on success, a `Success(GetReplicaResult)`, else a `Failure(CouchbaseException)`.
+    *         See [[GetReplicaStrategy]] for additional error handling details of the specific strategy used.
+    *         $ErrorHandling
+    */
+  def getReplica(
+      id: String,
+      strategy: GetReplicaStrategy,
+      options: GetReplicaOptions = GetReplicaOptions()
+  ): Try[GetReplicaResult] = {
+    block(async.getReplica(id, strategy, options))
+  }
+
   /** Retrieves all available versions of the document.
     *
     * The application should default to using `.get()` instead.  This method is intended for advanced scenarios,

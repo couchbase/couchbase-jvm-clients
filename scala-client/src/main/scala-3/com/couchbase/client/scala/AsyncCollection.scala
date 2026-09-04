@@ -160,6 +160,20 @@ class AsyncCollection(
       .map(result => convert(result, environment, options.transcoder))
   }
 
+  /** Reads a single, specific replica, using the given strategy.  See [[GetReplicaStrategy]] for full documentation.
+    *
+    * $Same
+    */
+  def getReplica(
+      id: String,
+      strategy: GetReplicaStrategy,
+      options: GetReplicaOptions = GetReplicaOptions()
+  ): Future[GetReplicaResult] = {
+    convert(
+      kvOps.getReplicaAsync(convert(options), id, strategy.toCore)
+    ).map(result => convertReplica(result, environment, options.transcoder))
+  }
+
   /** Sub-Document mutations allow modifying parts of a JSON document directly, which can be more efficiently than
     * fetching and modifying the full document.
     *

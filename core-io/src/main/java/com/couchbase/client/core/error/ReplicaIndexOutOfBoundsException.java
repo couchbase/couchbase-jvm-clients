@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,19 @@
  */
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.context.ErrorContext;
-
 /**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
+ * Indicates a replica was requested by an index that is higher than the number of replicas configured for the bucket.
  */
-public class DocumentNotFoundException extends CouchbaseException {
+public class ReplicaIndexOutOfBoundsException extends InvalidArgumentException {
 
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
+  public ReplicaIndexOutOfBoundsException(String message) {
+    super(message, null, null);
   }
 
-  protected DocumentNotFoundException(final String message, final ErrorContext ctx) {
-    super(message, ctx);
+  public static ReplicaIndexOutOfBoundsException forIndex(int requestedReplica, int numReplicas) {
+    return new ReplicaIndexOutOfBoundsException(
+        "Requested replica index " + requestedReplica + " but the bucket only has " + numReplicas + " replica(s) configured."
+    );
   }
 
 }

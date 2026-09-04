@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -53,6 +54,14 @@ public class BucketConfigUtil {
     Duration timeout
   ) {
     return waitForBucket(bucketName, timeout, () -> core.clusterConfig().bucketTopology(bucketName));
+  }
+
+  public static CompletableFuture<ClusterTopologyWithBucket> waitForBucketTopologyAsync(
+          Core core,
+          String bucketName,
+          Duration timeout
+  ) {
+    return waitForBucketTopology(core, bucketName, timeout).toFuture();
   }
 
   private static <T> Mono<T> waitForBucket(

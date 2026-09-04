@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,15 @@ package com.couchbase.client.core.error;
 import com.couchbase.client.core.error.context.ErrorContext;
 
 /**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
+ * Indicates a replica read failed because the requested document does not (yet) exist on that
+ * replica. Because replicas are eventually consistent, this does not necessarily mean the document
+ * does not exist on the active node or other replicas.
  */
-public class DocumentNotFoundException extends CouchbaseException {
+public class DocumentNotFoundOnReplicaException extends DocumentNotFoundException {
 
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
-  }
-
-  protected DocumentNotFoundException(final String message, final ErrorContext ctx) {
-    super(message, ctx);
+  public DocumentNotFoundOnReplicaException(final ErrorContext ctx) {
+    super("Document with the given id not found on this replica. Note replicas are eventually " +
+        "consistent, so the document may still exist on the active node or other replicas.", ctx);
   }
 
 }

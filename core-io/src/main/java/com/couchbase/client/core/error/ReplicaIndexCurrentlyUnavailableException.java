@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Couchbase, Inc.
+ * Copyright (c) 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,17 @@
  */
 package com.couchbase.client.core.error;
 
-import com.couchbase.client.core.error.context.ErrorContext;
-
 /**
- * Indicates an operation failed because the key does not exist.
- *
- * @since 2.0
+ * Indicates that the replica requested is currently transiently unavailable, possibly due to ongoing topology
+ * changes.  A suitable approach might be to try another replica.
  */
-public class DocumentNotFoundException extends CouchbaseException {
+public class ReplicaIndexCurrentlyUnavailableException extends CouchbaseException {
 
-  public DocumentNotFoundException(final ErrorContext ctx) {
-    super("Document with the given id not found", ctx);
+  private ReplicaIndexCurrentlyUnavailableException(String message) {
+    super(message);
   }
 
-  protected DocumentNotFoundException(final String message, final ErrorContext ctx) {
-    super(message, ctx);
+  public static ReplicaIndexCurrentlyUnavailableException forIndex(int requestedReplica) {
+    return new ReplicaIndexCurrentlyUnavailableException("Requested replica index " + requestedReplica + " but this is transiently unavailable");
   }
-
 }

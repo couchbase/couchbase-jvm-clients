@@ -34,6 +34,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
+import com.couchbase.client.core.api.kv.CoreGetReplicaStrategy;
 import com.couchbase.client.core.deps.com.google.rpc.Code;
 import com.couchbase.client.core.deps.io.grpc.StatusRuntimeException;
 import com.couchbase.client.core.deps.io.grpc.protobuf.StatusProto;
@@ -348,6 +349,11 @@ public final class ProtostellarCoreKvOps implements CoreKvOps {
   @Override
   public Mono<CoreGetResult> getAnyReplicaReactive(CoreCommonOptions common, String key, CoreReadPreference readPreference) {
     // Protostellar get-from-replica support is currently incomplete.  JVMCBC-1263.
+    throw unsupported();
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreGetResult> getReplicaAsync(CoreCommonOptions common, String key, CoreGetReplicaStrategy strategy) {
     throw unsupported();
   }
 

@@ -90,6 +90,9 @@ object Capabilities {
     out.add(Caps.SDK_PREFILTER_VECTOR_SEARCH)
     // [end:1.9.0]
 
+    // Note from this point onwards the start/end tags are no longer needed, and may be removed in a future sweep.
+    out.add(Caps.SDK_GET_REPLICA)
+
     out
   }
 
