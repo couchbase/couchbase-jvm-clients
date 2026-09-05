@@ -82,6 +82,35 @@ class RetryStrategyIntegrationTest extends JavaIntegrationTest {
     collection.remove(docId);
   }
 
+  @Test
+  void retryStrategyFailurePropagates() {
+    String docId = UUID.randomUUID().toString();
+    RetryStrategy failIfLocked = new BestEffortRetryStrategy() {
+      @Override
+      public CompletableFuture<RetryAction> shouldRetry(final Request<? extends Response> request, final RetryReason reason) {
+        if (reason == RetryReason.KV_LOCKED) {
+          CompletableFuture<RetryAction> result = new CompletableFuture<>();
+          result.completeExceptionally(new IllegalStateException("retry strategy failed"));
+          return result;
+        }
+        return super.shouldRetry(request, reason);
+      }
+    };
+
+    collection.upsert(docId, "foo");
+    GetResult r = collection.getAndLock(docId, Duration.ofSeconds(15));
+
+    try {
+      assertThrows(IllegalStateException.class, () ->
+          collection.remove(docId, removeOptions()
+              .retryStrategy(failIfLocked)
+              .timeout(Duration.ofSeconds(1))));
+    } finally {
+      collection.unlock(docId, r.cas());
+      collection.remove(docId);
+    }
+  }
+
   @AfterAll
   static void tearDown() {
     cluster.disconnect();
