@@ -71,6 +71,8 @@ public class RetryOrchestrator {
         ctx.environment().eventBus().publish(
           new RequestNotRetriedEvent(Event.Severity.INFO, request.getClass(), request.context(), reason, throwable)
         );
+        request.cancel(CancellationReason.noMoreRetries(reason), ignored -> throwable);
+        return;
       }
 
       Optional<Duration> duration = retryAction.duration();
