@@ -32,20 +32,20 @@ object SearchScoring {
   }
 
   /** Combine vector and non-vector query results using reciprocal rank fusion.
-   * This merges the result by rank, and is the recommended approach.
-   *
-   * Only applicable when the [[vector.SearchRequest]] includes both a [[queries.SearchQuery]] and a
-   * [[vector.VectorSearch]].
-   *
-   * @param rankConstant sets the rank constant used in the
-   *                     [[https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf RFF algorithm]].
-   * @param windowSize how many results per list are used for score fusion.
-   */
+    * This merges the result by rank, and is the recommended approach.
+    *
+    * Only applicable when the [[vector.SearchRequest]] includes both a [[queries.SearchQuery]] and a
+    * [[vector.VectorSearch]].
+    *
+    * @param rankConstant sets the rank constant used in the
+    *                     [[https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf RFF algorithm]].
+    * @param windowSize how many results per list are used for score fusion.
+    */
   @SinceCouchbase("8.5")
   case class ReciprocalRankFusion(
-                                   windowSize: Option[Int] = None,
-                                   rankConstant: Option[Int] = None
-                                 ) extends SearchScoring {
+      windowSize: Option[Int] = None,
+      rankConstant: Option[Int] = None
+  ) extends SearchScoring {
     private[scala] def toCore: CoreScoring =
       new CoreScoring.ReciprocalRankFusion(
         windowSize.map(Integer.valueOf).orNull,
