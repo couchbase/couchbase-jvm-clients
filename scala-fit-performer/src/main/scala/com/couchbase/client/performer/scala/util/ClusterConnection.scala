@@ -17,7 +17,7 @@ package com.couchbase.client.performer.scala.util
 
 import com.couchbase.client.protocol.shared.{ClusterConnectionCreateRequest, DocLocation}
 import com.couchbase.client.protocol.transactions.DocId
-import com.couchbase.client.scala.{Bucket, Cluster, ClusterOptions, Collection}
+import com.couchbase.client.scala.{Cluster, ClusterOptions, Collection}
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
@@ -35,13 +35,6 @@ class ClusterConnection(req: ClusterConnectionCreateRequest, getCluster: () => C
       (Cluster.connect(hostname, opts).get, Some(built))
     case _ => (Cluster.connect(hostname, req.getClusterUsername, req.getClusterPassword).get, None)
   }
-  private val bucketCache = scala.collection.mutable.Map.empty[String, Bucket]
-
-  // SCBC-365: hit performance problems when repeatedly opening a scope or collection.  99% of the time we'll be
-  // using the same collection every time, so for performance don't use a map here
-  // Have to store both these as very old versions of the SDK don't put bucketName and scopeName on Collection
-  private var lastCollectionGrpc: com.couchbase.client.protocol.shared.Collection = _
-  private var lastCollection: Collection                                          = _
 
   def collection(loc: DocLocation): Collection = {
     val coll = {
@@ -65,20 +58,7 @@ class ClusterConnection(req: ClusterConnectionCreateRequest, getCluster: () => C
   }
 
   def collection(coll: com.couchbase.client.protocol.shared.Collection): Collection = {
-    if (lastCollectionGrpc == coll) {
-      lastCollection
-    } else {
-      val bucket = bucketCache.getOrElseUpdate(
-        coll.getBucketName, {
-          logger.info(s"Opening new bucket ${coll.getBucketName}")
-          cluster.bucket(coll.getBucketName)
-        }
-      )
-      val out = bucket.scope(coll.getScopeName).collection(coll.getCollectionName)
-      lastCollectionGrpc = coll
-      lastCollection = out
-      out
-    }
+    cluster.bucket(coll.getBucketName).scope(coll.getScopeName).collection(coll.getCollectionName)
   }
 
   def close(): Unit = {
