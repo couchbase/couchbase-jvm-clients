@@ -43,6 +43,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- Force this version of okio required by test-utils okhttp,
+                 otherwise it gets downgraded by the optional Moshi dependency. -->
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>3.18.1</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
