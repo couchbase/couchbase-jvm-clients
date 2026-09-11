@@ -34,6 +34,7 @@ import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.CancellationReason;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.RangeScanCancelRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
@@ -100,6 +101,11 @@ public class RangeScanOrchestrator {
 
   private static <T extends Comparable<T>> T min(T a, T b) {
     return a.compareTo(b) < 0 ? a : b;
+  }
+  
+  private static <T> Flux<T> completeWithError(Request<?> request, RuntimeException err) {
+    request.context().logicallyComplete(err);
+    return Flux.error(err);
   }
 
   public Flux<CoreRangeScanItem> rangeScan(CoreRangeScan rangeScan, CoreScanOptions options) {
@@ -180,8 +186,10 @@ public class RangeScanOrchestrator {
         core.send(request);
         Flux<CoreRangeScanItem> inner = Reactor
           .wrap(request, request.response(), true)
+          .doOnError(err -> request.context().logicallyComplete(err))
           .flatMapMany(res -> {
             if (res.status().success()) {
+              request.context().logicallyComplete();
               if (needToCancel.get()) {
                 return cancel(res.rangeScanId(), partition, options)
                   .thenMany(Flux.empty());
@@ -192,13 +200,14 @@ public class RangeScanOrchestrator {
             final KeyValueErrorContext errorContext = KeyValueErrorContext.completedRequest(request, res);
             switch (res.status()) {
               case NOT_FOUND:
+                request.context().logicallyComplete();
                 return Flux.empty();
               case INTERNAL_SERVER_ERROR:
-                return Flux.error(new InternalServerFailureException(errorContext));
+                return completeWithError(request, new InternalServerFailureException(errorContext));
               case VBUUID_NOT_EQUAL:
-                return Flux.error(new MutationTokenOutdatedException(errorContext));
+                return completeWithError(request, new MutationTokenOutdatedException(errorContext));
               default:
-                return Flux.error(new CouchbaseException(res.toString(), errorContext));
+                return completeWithError(request, new CouchbaseException(res.toString(), errorContext));
             }
           });
         return Reactor.shieldFromCancellation(inner);
@@ -231,39 +240,44 @@ public class RangeScanOrchestrator {
         core.send(request);
         return Reactor
           .wrap(request, request.response(), true)
+          .doOnError(err -> request.context().logicallyComplete(err))
           .flatMapMany(res -> {
             if (res.status() == ResponseStatus.SUCCESS || res.status() == ResponseStatus.COMPLETE || res.status() == ResponseStatus.CONTINUE) {
               if (needToCancel.get()) {
                 complete.set(true);
+                request.context().logicallyComplete();
                 return cancel(id, partition, options)
                   .thenMany(Flux.empty());
               }
-              return res.items();
+              return res.items()
+                .doOnComplete(() -> request.context().logicallyComplete())
+                .doOnError(err -> request.context().logicallyComplete(err))
+                .doOnCancel(() -> request.context().logicallyComplete());
             }
 
             final KeyValueErrorContext errorContext = KeyValueErrorContext.completedRequest(request, res);
             switch (res.status()) {
               case NOT_FOUND:
-                return Flux.error(new CouchbaseException("The range scan internal partition UUID could not be found on the server", errorContext));
+                return completeWithError(request, new CouchbaseException("The range scan internal partition UUID could not be found on the server", errorContext));
               case INVALID_REQUEST:
-                return Flux.error(new InvalidArgumentException("The request failed the server-side input validation check.", null, errorContext));
+                return completeWithError(request, new InvalidArgumentException("The request failed the server-side input validation check.", null, errorContext));
               case NO_ACCESS:
-                return Flux.error(new AuthenticationFailureException("The user is no longer authorized to perform this operation", errorContext, null));
+                return completeWithError(request, new AuthenticationFailureException("The user is no longer authorized to perform this operation", errorContext, null));
               case CANCELED:
-                return Flux.error(new RequestCanceledException("The range scan was cancelled.", CancellationReason.OTHER, new CancellationErrorContext(errorContext)));
+                return completeWithError(request, new RequestCanceledException("The range scan was cancelled.", CancellationReason.OTHER, new CancellationErrorContext(errorContext)));
               case NOT_MY_VBUCKET:
                 // The NMVB will not bubble up tho the user, it will be caught at a higher level to perform retry logic.
-                return Flux.error(new RangeScanPartitionFailedException("Received \"Not My VBucket\" for the continue response", res.status()));
+                return completeWithError(request, new RangeScanPartitionFailedException("Received \"Not My VBucket\" for the continue response", res.status()));
               case UNKNOWN_COLLECTION:
-                return Flux.error(new CollectionNotFoundException(
+                return completeWithError(request, new CollectionNotFoundException(
                   request.collectionIdentifier().collection().orElse(CollectionIdentifier.DEFAULT_COLLECTION),
                   errorContext)
                 );
               case SERVER_BUSY:
-                return Flux.error(new CouchbaseException("The range scan for this partition is already streaming " +
+                return completeWithError(request, new CouchbaseException("The range scan for this partition is already streaming " +
                   "on another connection - this is a SDK bug please report.", errorContext));
               default:
-                return Flux.error(new CouchbaseException(res.toString(), errorContext));
+                return completeWithError(request, new CouchbaseException(res.toString(), errorContext));
             }
           });
       })
@@ -294,6 +308,7 @@ public class RangeScanOrchestrator {
           collectionIdentifier
         );
         core.send(cancelRequest);
+        cancelRequest.response().whenComplete((r, t) -> cancelRequest.context().logicallyComplete(t));
         return Reactor.wrap(cancelRequest, cancelRequest.response(), true);
       })
       .onErrorResume(ignore -> Mono.empty()) // cancellation is best-effort
