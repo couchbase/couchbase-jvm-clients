@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.msg.query.PreparedStatement;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.LRUCache;
 import reactor.core.publisher.Mono;
 
@@ -51,7 +52,19 @@ public abstract class PreparedStatementStrategy {
    * Executes a query using an existing prepared statement.
    */
   protected Mono<QueryResponse> executeAlreadyPrepared(QueryRequest request, PreparedStatement prepared) {
-    return executeAdhoc(request.toExecuteRequest(prepared.name(), prepared.encodedPlan(), requestTracer()));
+    QueryRequest dispatched = request.toExecuteRequest(prepared.name(), prepared.encodedPlan(), requestTracer());
+    return executeAdhoc(dispatched)
+        .doOnNext(ignored -> propagateDispatchedNode(request, dispatched));
+  }
+
+  /**
+   * Passes back the lastDispatchedTo context from the dispatched request to the original request. This is needed for single query transactions to construct a TransactionQueryContext
+   */
+  protected static void propagateDispatchedNode(QueryRequest original, QueryRequest dispatched) {
+    NodeIdentifier lastDispatchedTo = dispatched.context().lastDispatchedToNode();
+    if (lastDispatchedTo != null) {
+      original.context().lastDispatchedToNode(lastDispatchedTo);
+    }
   }
 
   public Mono<QueryResponse> executeAdhoc(QueryRequest request) {
