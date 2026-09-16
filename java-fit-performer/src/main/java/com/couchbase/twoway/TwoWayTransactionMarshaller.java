@@ -29,6 +29,7 @@ import com.couchbase.client.protocol.transactions.TransactionResult;
 import com.couchbase.client.protocol.transactions.TransactionStreamDriverToPerformer;
 import com.couchbase.client.protocol.transactions.TransactionStreamPerformerToDriver;
 import com.couchbase.utils.ClusterConnection;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,47 +84,55 @@ public class TwoWayTransactionMarshaller {
                     final var counters = new Counters();
 
                     Thread t = new Thread(() -> {
-                        var connection = clusterConnections.get(req.getClusterConnectionId());
-                        var executor = new JavaTransactionCommandExecutor(connection, counters, spans);
-                        if (req.getApi() == API.DEFAULT) {
-                            twoWay = new TwoWayTransactionBlocking(executor);
-                        }
-                        else {
-                            twoWay = new TwoWayTransactionReactive(executor);
-                        }
-                        twoWay.create(req);
+                        try {
+                            var connection = clusterConnections.get(req.getClusterConnectionId());
+                            var executor = new JavaTransactionCommandExecutor(connection, counters, spans);
+                            if (req.getApi() == API.DEFAULT) {
+                                twoWay = new TwoWayTransactionBlocking(executor);
+                            }
+                            else {
+                                twoWay = new TwoWayTransactionReactive(executor);
+                            }
+                            twoWay.create(req);
 
-                        toTest.onNext(TransactionStreamPerformerToDriver.newBuilder()
-                            .setCreated(TransactionCreated.newBuilder().build())
-                            .build());
+                            toTest.onNext(TransactionStreamPerformerToDriver.newBuilder()
+                                .setCreated(TransactionCreated.newBuilder().build())
+                                .build());
 
-                        logger.info("{}Created, waiting until told to start", bp);
+                            logger.info("{}Created, waiting until told to start", bp);
 
-                        while (!readyToStart) {
+                            while (!readyToStart) {
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                            logger.info("{}Starting", bp);
+
+                            var cc = clusterConnections.get(req.getClusterConnectionId());
+
+                            TransactionResult result = twoWay.run(cc,
+                                    req,
+                                    toTest,
+                                    false,
+                                    spans);
+
+                            logger.info("Transaction has finished, completing stream and ending thread");
+
+                            toTest.onNext(TransactionStreamPerformerToDriver.newBuilder()
+                                    .setFinalResult(result)
+                                    .build());
+                            toTest.onCompleted();
+                        } catch (Throwable err) {
+                            logger.error("{}Transaction thread failed unexpectedly: {}", bp, err.toString(), err);
                             try {
-                                Thread.sleep(50);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                                toTest.onError(Status.ABORTED.withDescription(err.toString()).asException());
+                            } catch (RuntimeException onErrorFailure) {
+                                logger.error("{}Failed to notify driver of error", bp, onErrorFailure);
                             }
                         }
-
-                        logger.info("{}Starting", bp);
-
-                        var cc = clusterConnections.get(req.getClusterConnectionId());
-
-                        TransactionResult result = twoWay.run(cc,
-                                req,
-                                toTest,
-                                false,
-                                spans);
-
-                        logger.info("Transaction has finished, completing stream and ending thread");
-
-                        toTest.onNext(TransactionStreamPerformerToDriver.newBuilder()
-                                .setFinalResult(result)
-                                .build());
-                        toTest.onCompleted();
-
                     });
 
                     t.start();
