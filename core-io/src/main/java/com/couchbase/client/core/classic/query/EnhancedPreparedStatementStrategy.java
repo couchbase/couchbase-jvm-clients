@@ -43,7 +43,9 @@ public class EnhancedPreparedStatementStrategy extends PreparedStatementStrategy
   }
 
   private Mono<QueryResponse> prepareAndExecute(QueryRequest request) {
-    return executeAdhoc(request.toPrepareRequest(true, requestTracer())) // auto-execute!
+    QueryRequest dispatched = request.toPrepareRequest(true, requestTracer()); // auto-execute!
+    return executeAdhoc(dispatched)
+        .doOnNext(ignored -> propagateDispatchedNode(request, dispatched))
         .flatMap(queryResponse -> {
           // intercept the response and pluck out the prepared statement name
           String preparedName = queryResponse.header().prepared().orElse(null);

@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 /**
  * The starting point for accessing Couchbase transactions.
  * <p>
- * The main methods to run transactions are {@link Transactions#run} and {@link Transactions#reactive}.
+ * The main method to run transactions is {@link Transactions#run}.
  */
 public class Transactions {
     private final CoreTransactions internal;

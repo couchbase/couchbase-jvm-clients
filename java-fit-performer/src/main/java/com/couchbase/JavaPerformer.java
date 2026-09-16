@@ -459,7 +459,7 @@ public class JavaPerformer extends CorePerformer {
             responseObserver.onNext(ret);
             responseObserver.onCompleted();
         } catch (Throwable err) {
-            logger.error("Operation failed during transactionSingleQuery due to : " + err.toString());
+            logger.error("Operation failed during transactionSingleQuery due to : " + err.toString(), err);
             responseObserver.onError(Status.ABORTED.withDescription(err.toString()).asException());
         }
     }

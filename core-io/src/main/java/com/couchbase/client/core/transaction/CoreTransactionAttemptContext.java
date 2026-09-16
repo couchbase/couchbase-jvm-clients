@@ -4562,7 +4562,7 @@ public class CoreTransactionAttemptContext {
      * longer be the case.
      * <p>
      * Though the implementation is largely de-reactorised, this low-level function continues with ClassicCoreReactiveQueryResult
-     * as that supports streaming & backpressure, which is needed for single query transactions.
+     * as that supports streaming and backpressure, which is needed for single query transactions.
      */
     public ClassicCoreReactiveQueryResult queryWrapperLocked(final int sidx,
                                                      @Nullable CoreQueryContext qc,
