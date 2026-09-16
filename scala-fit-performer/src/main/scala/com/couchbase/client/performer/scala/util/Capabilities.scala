@@ -1,7 +1,7 @@
 /*
- * Copyright (c, 2022 Couchbase, Inc.
+ * Copyright (c) 2022 Couchbase, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License",;
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
@@ -44,6 +44,7 @@ object Capabilities {
     Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS,
     Caps.SDK_PREFILTER_VECTOR_SEARCH,
     Caps.SDK_QUERY_2120,
-    Caps.SDK_SEARCH_SCORE_FUSION
+    Caps.SDK_SEARCH_SCORE_FUSION,
+    Caps.SDK_GET_REPLICA
   )
 }

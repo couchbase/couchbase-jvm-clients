@@ -122,7 +122,7 @@ public class PartitionTopology {
     return index < 0 ? OptionalInt.empty() : OptionalInt.of(index);
   }
 
-  List<Integer> rawNodeIndexes() {
+  public List<Integer> rawNodeIndexes() {
     return rawNodeIndexes;
   }
 

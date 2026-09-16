@@ -365,6 +365,28 @@ public interface CoreKvOps {
       CoreReadPreference readPreference
   );
 
+  CoreAsyncResponse<CoreGetResult> getReplicaAsync(
+      CoreCommonOptions common,
+      String key,
+      CoreGetReplicaStrategy strategy
+  );
+
+  default @Nullable CoreGetResult getReplicaBlocking(
+      CoreCommonOptions common,
+      String key,
+      CoreGetReplicaStrategy strategy
+  ) {
+    return getReplicaAsync(common, key, strategy).toBlocking();
+  }
+
+  default Mono<CoreGetResult> getReplicaReactive(
+      CoreCommonOptions common,
+      String key,
+      CoreGetReplicaStrategy strategy
+  ) {
+    return Mono.defer(() -> getReplicaAsync(common, key, strategy).toMono());
+  }
+
   CoreAsyncResponse<CoreSubdocMutateResult> subdocMutateAsync(
       CoreCommonOptions common,
       String key,

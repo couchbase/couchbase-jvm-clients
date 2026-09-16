@@ -37,6 +37,7 @@ import com.couchbase.client.core.api.kv.CoreSubdocGetResult;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateResult;
 import com.couchbase.client.core.api.kv.CoreReadPreference;
+import com.couchbase.client.core.api.kv.CoreGetReplicaStrategy;
 import com.couchbase.client.core.classic.ClassicHelper;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -103,6 +104,7 @@ import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGet
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndLockParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAndTouchParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetAnyReplicaParams;
+import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetReplicaParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateGetParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateInsertParams;
 import static com.couchbase.client.core.api.kv.CoreKvParamValidators.validateRemoveParams;
@@ -772,6 +774,20 @@ public final class ClassicCoreKvOps implements CoreKvOps {
     return getAllReplicasReactive(common.withParentSpan(getAnySpan), key, readPreference)
         .next()
         .doFinally(signalType -> getAnySpan.end());
+  }
+
+  @Override
+  public CoreAsyncResponse<CoreGetResult> getReplicaAsync(CoreCommonOptions common, String key, CoreGetReplicaStrategy strategy) {
+    validateGetReplicaParams(common, key);
+
+    Duration timeout = timeout(common);
+    RetryStrategy retryStrategy = retryStrategy(common);
+
+    CompletableFuture<CoreGetResult> future = strategy.execute(
+        core, collectionIdentifier, key, timeout, retryStrategy, common.clientContext(), common.parentSpan().orElse(null)
+    );
+
+    return new CoreAsyncResponse<>(future, () -> future.cancel(true));
   }
 
   @Override

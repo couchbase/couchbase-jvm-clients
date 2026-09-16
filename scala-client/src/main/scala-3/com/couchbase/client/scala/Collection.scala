@@ -55,6 +55,25 @@ class Collection(
     )
       .map(result => convert(result, async.environment, options.transcoder))
 
+  /** Reads a single, specific replica, using the given strategy.  See [[GetReplicaStrategy]] for full documentation.
+    *
+    * @param id            $Id
+    * @param strategy      specifies a strategy used for the replica read
+    * @param options       $Options
+    *
+    * @return on success, a `Success(GetReplicaResult)`, else a `Failure(CouchbaseException)`.
+    *         See [[GetReplicaStrategy]] for additional error handling details of the specific strategy used.
+    *         $ErrorHandling
+    */
+  def getReplica(
+      id: String,
+      strategy: GetReplicaStrategy,
+      options: GetReplicaOptions = GetReplicaOptions()
+  ): Try[GetReplicaResult] = {
+    Try(kvOps.getReplicaBlocking(convert(options), id, strategy.toCore))
+      .map(result => convertReplica(result, async.environment, options.transcoder))
+  }
+
   /** Inserts a full document into this collection, if it does not exist already.
     *
     * @param id            $Id

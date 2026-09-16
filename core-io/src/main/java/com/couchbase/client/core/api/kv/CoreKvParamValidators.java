@@ -109,6 +109,10 @@ public class CoreKvParamValidators {
     validateCommonOptions(common, key);
   }
 
+  public static void validateGetReplicaParams(CoreCommonOptions common, String key) {
+    validateCommonOptions(common, key);
+  }
+
   public static void validateSubdocMutateParams(CoreCommonOptions common, String key, CoreStoreSemantics storeSemantics, long cas) {
     validateCommonOptions(common, key);
     if (cas != 0 && (storeSemantics != REPLACE && storeSemantics != REVIVE)) {
