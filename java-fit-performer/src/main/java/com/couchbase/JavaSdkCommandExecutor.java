@@ -43,6 +43,7 @@ import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.IncrementOptions;
@@ -268,6 +269,22 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
 
     if (clc.hasQueryIndexManager()) {
       QueryIndexManagerHelper.handleCollectionQueryIndexManager(collection, spans, op, result);
+    }
+
+    if (clc.hasGetReplica()) {
+      var request = clc.getGetReplica();
+      var docId = getDocId(request.getLocation());
+      var strategy = FitReplicaHelper.toSdk(request.getStrategy());
+      var options = createOptions(request, spans);
+
+      long start = System.nanoTime();
+      var sdkResult = options == null
+              ? collection.getReplica(docId, strategy)
+              : collection.getReplica(docId, strategy, options);
+      result.setElapsedNanos(System.nanoTime() - start);
+
+      if (op.getReturnResult()) populateResult(result, sdkResult, request.getContentAs());
+      else setSuccess(result);
     }
 
     if (clc.hasGetAndLock()) {
@@ -1244,6 +1261,18 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             return out;
         }
         else return null;
+    }
+
+    public static @Nullable GetReplicaOptions createOptions(com.couchbase.client.protocol.sdk.kv.GetReplica request, ConcurrentHashMap<String, RequestSpan> spans) {
+      if (request.hasOptions()) {
+        var opts = request.getOptions();
+        var out = GetReplicaOptions.getReplicaOptions();
+        if (opts.hasTimeoutMsecs()) out.timeout(Duration.ofMillis(opts.getTimeoutMsecs()));
+        if (opts.hasTranscoder()) out.transcoder(convertTranscoder(opts.getTranscoder()));
+        if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
+        return out;
+      }
+      else return null;
     }
 
     public static @Nullable UnlockOptions createOptions(com.couchbase.client.protocol.sdk.kv.Unlock request, ConcurrentHashMap<String, RequestSpan> spans) {

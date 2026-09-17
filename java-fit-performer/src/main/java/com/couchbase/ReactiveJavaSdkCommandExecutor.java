@@ -247,6 +247,28 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       return QueryIndexManagerHelper.handleCollectionQueryIndexManagerReactive(collection, spans, op, result);
     }
 
+    if (clc.hasGetReplica()) {
+      var request = clc.getGetReplica();
+      var docId = getDocId(request.getLocation());
+      var strategy = FitReplicaHelper.toSdk(request.getStrategy());
+      var options = createOptions(request, spans);
+
+      long start = System.nanoTime();
+      var sdkResult = options == null
+              ? collection.getReplica(docId, strategy)
+              : collection.getReplica(docId, strategy, options);
+
+      return withSchedulerCheck(sdkResult).map(r -> {
+        result.setElapsedNanos(System.nanoTime() - start);
+        if (op.getReturnResult()) {
+          populateResult(result, r, request.getContentAs());
+        } else {
+          setSuccess(result);
+        }
+        return result.build();
+      });
+    }
+
     if (clc.hasGetAndLock()) {
       var request = clc.getGetAndLock();
       var docId = getDocId(request.getLocation());

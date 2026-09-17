@@ -371,7 +371,7 @@ public interface CoreKvOps {
       CoreGetReplicaStrategy strategy
   );
 
-  default @Nullable CoreGetResult getReplicaBlocking(
+  default CoreGetResult getReplicaBlocking(
       CoreCommonOptions common,
       String key,
       CoreGetReplicaStrategy strategy

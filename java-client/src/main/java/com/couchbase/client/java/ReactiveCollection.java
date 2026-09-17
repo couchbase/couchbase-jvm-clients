@@ -21,6 +21,9 @@ import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.DocumentNotFoundOnReplicaException;
+import com.couchbase.client.core.error.ReplicaIndexCurrentlyUnavailableException;
+import com.couchbase.client.core.error.ReplicaIndexOutOfBoundsException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -34,7 +37,9 @@ import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
+import com.couchbase.client.java.kv.GetReplicaStrategy;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
@@ -377,6 +382,40 @@ public class ReactiveCollection {
 
     return kvOps.getAndTouchReactive(opts, id, expiry.encode())
       .map(it -> new GetResult(it, transcoder));
+  }
+
+  /**
+   * Reads a document from a replica.
+   *
+   * @param id the ID of the document to get.
+   * @throws DocumentNotFoundOnReplicaException if the specified replica document does not exist.
+   * @throws ReplicaIndexOutOfBoundsException if the strategy specifies a replica index not less than the number of replicas configured for the bucket.
+   * @throws ReplicaIndexCurrentlyUnavailableException if the strategy specifies a replica index that is not currently available.
+   */
+  public Mono<GetReplicaResult> getReplica(
+    String id,
+    GetReplicaStrategy strategy
+  ) {
+    return getReplica(id, strategy, GetReplicaOptions.getReplicaOptions());
+  }
+
+  /**
+   * Reads a document from a replica.
+   *
+   * @param id the ID of the document to get.
+   * @throws DocumentNotFoundOnReplicaException if the specified replica document does not exist.
+   * @throws ReplicaIndexOutOfBoundsException if the strategy specifies a replica index not less than the number of replicas configured for the bucket.
+   * @throws ReplicaIndexCurrentlyUnavailableException if the strategy specifies a replica index that is not currently available.
+   */
+  public Mono<GetReplicaResult> getReplica(
+    String id,
+    GetReplicaStrategy strategy,
+    GetReplicaOptions options
+  ) {
+    GetReplicaOptions.Built opts = notNull(options, "options").build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    return kvOps.getReplicaReactive(opts, id, strategy.toCore())
+      .map(result -> GetReplicaResult.from(result, transcoder));
   }
 
   /**
