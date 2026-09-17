@@ -56,6 +56,7 @@ import com.couchbase.client.kotlin.kv.Durability
 import com.couchbase.client.kotlin.kv.ExistsResult
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.GetReplicaResult
+import com.couchbase.client.kotlin.kv.GetReplicaStrategy
 import com.couchbase.client.kotlin.kv.GetResult
 import com.couchbase.client.kotlin.kv.KvScanConsistency
 import com.couchbase.client.kotlin.kv.LookupInReplicaResult
@@ -350,6 +351,23 @@ public class Collection internal constructor(
         ).await().let {
             GetResult.withKnownExpiry(id, it.cas(), Content(it.content(), it.flags()), defaultTranscoder, expiry)
         }
+    }
+
+    /**
+     * Reads a document from a replica.
+     *
+     * @param id the ID of the document to get.
+     * @throws com.couchbase.client.core.error.DocumentNotFoundOnReplicaException if the specified replica document does not exist.
+     * @throws com.couchbase.client.core.error.ReplicaIndexOutOfBoundsException if the strategy specifies a replica index not less than the number of replicas configured for the bucket.
+     * @throws com.couchbase.client.core.error.ReplicaIndexCurrentlyUnavailableException if the strategy specifies a replica index that is not currently available.
+     */
+    public suspend fun getReplica(
+        id: String,
+        strategy: GetReplicaStrategy = GetReplicaStrategy.any(),
+        common: CommonOptions = CommonOptions.Default,
+    ) : GetReplicaResult {
+        val coreResult = kvOps.getReplicaAsync(common.toCore(), id, strategy.toCore()).await()
+        return GetReplicaResult(id, coreResult, defaultTranscoder)
     }
 
     @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)

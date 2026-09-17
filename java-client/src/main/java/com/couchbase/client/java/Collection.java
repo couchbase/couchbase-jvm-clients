@@ -28,8 +28,11 @@ import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DocumentExistsException;
 import com.couchbase.client.core.error.DocumentNotFoundException;
+import com.couchbase.client.core.error.DocumentNotFoundOnReplicaException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.ReplicaIndexCurrentlyUnavailableException;
+import com.couchbase.client.core.error.ReplicaIndexOutOfBoundsException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -49,7 +52,9 @@ import com.couchbase.client.java.kv.GetAndLockOptions;
 import com.couchbase.client.java.kv.GetAndTouchOptions;
 import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetOptions;
+import com.couchbase.client.java.kv.GetReplicaOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
+import com.couchbase.client.java.kv.GetReplicaStrategy;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.kv.InsertOptions;
 import com.couchbase.client.java.kv.LookupInAllReplicasOptions;
@@ -401,6 +406,40 @@ public class Collection {
       kvOps.getAndTouchBlocking(opts, id, expiry.encode()),
       opts.transcoder() == null ? environment().transcoder() : opts.transcoder()
     );
+  }
+
+  /**
+   * Reads a document from a replica.
+   *
+   * @param id the ID of the document to get.
+   * @throws DocumentNotFoundOnReplicaException if the specified replica document does not exist.
+   * @throws ReplicaIndexOutOfBoundsException if the strategy specifies a replica index not less than the number of replicas configured for the bucket.
+   * @throws ReplicaIndexCurrentlyUnavailableException if the strategy specifies a replica index that is not currently available.
+   */
+  public GetReplicaResult getReplica(
+    String id,
+    GetReplicaStrategy strategy
+  ) {
+    return getReplica(id, strategy, GetReplicaOptions.getReplicaOptions());
+  }
+
+  /**
+   * Reads a document from a replica.
+   *
+   * @param id the ID of the document to get.
+   * @throws DocumentNotFoundOnReplicaException if the specified replica document does not exist.
+   * @throws ReplicaIndexOutOfBoundsException if the strategy specifies a replica index not less than the number of replicas configured for the bucket.
+   * @throws ReplicaIndexCurrentlyUnavailableException if the strategy specifies a replica index that is not currently available.
+   */
+  public GetReplicaResult getReplica(
+    String id,
+    GetReplicaStrategy strategy,
+    GetReplicaOptions options
+  ) {
+    GetReplicaOptions.Built opts = notNull(options, "options").build();
+    Transcoder transcoder = opts.transcoder() == null ? environment().transcoder() : opts.transcoder();
+    CoreGetResult result = kvOps.getReplicaBlocking(opts, id, strategy.toCore());
+    return GetReplicaResult.from(result, transcoder);
   }
 
   /**
