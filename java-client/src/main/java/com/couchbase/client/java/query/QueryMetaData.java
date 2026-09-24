@@ -24,9 +24,12 @@ import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.json.JsonObject;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Stores any non-rows results related to the execution of a particular N1QL query.
@@ -144,5 +147,18 @@ public class QueryMetaData {
         .stream()
         .map(v -> new QueryWarning(v.inner()))
         .collect(Collectors.toList());
+    }
+
+    @Override
+    public String toString() {
+      return "QueryMetaData{" +
+        "requestId=" + requestId() +
+        ", clientContextId=" + clientContextId() +
+        ", status=" + status().name() +
+        ", signature=" + signatureBytes().map(bytes -> new String(bytes, UTF_8)) +
+        ", profile=" + profileBytes().map(bytes -> new String(bytes, UTF_8)) +
+        ", metrics=" + metrics() +
+        ", warnings=" + warnings() +
+        '}';
     }
 }
