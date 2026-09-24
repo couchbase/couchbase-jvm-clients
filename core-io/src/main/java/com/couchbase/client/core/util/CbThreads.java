@@ -34,12 +34,13 @@ public class CbThreads {
   }
 
   /**
-   * Returns a new executor from {@link Executors#newThreadPerTaskExecutor(ThreadFactory)}
+   * Returns a new executor from {@code Executor.newThreadPerTaskExecutor(ThreadFactory)}
    * if virtual threads are available, otherwise {@link Executors#newCachedThreadPool()}
    * backed by platform daemon threads.
    *
    * @param threadNamePrefix including any trailing delimiters (for example, "my-pool-").
    */
+  @SuppressWarnings("JavaReflectionMemberAccess")
   public static ExecutorService unboundedExecutorService(String threadNamePrefix) {
     ThreadFactory threadFactory = virtualThreadFactoryOrNull(threadNamePrefix);
     if (threadFactory != null) {
@@ -57,6 +58,7 @@ public class CbThreads {
   /**
    * @return null if the JVM does not support virtual threads
    */
+  @SuppressWarnings("JavaReflectionMemberAccess")
   public static @Nullable ThreadFactory virtualThreadFactoryOrNull(String namePrefix) {
     try {
       Object virtualThreadBuilder = Thread.class.getMethod("ofVirtual").invoke(null);
