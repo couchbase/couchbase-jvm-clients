@@ -15,6 +15,7 @@
  */
 package com.couchbase.client.performer.scala
 
+import com.couchbase.client.core.env.VersionAndGitHash
 import com.couchbase.client.core.io.CollectionIdentifier
 import com.couchbase.client.core.logging.{LogRedaction, RedactionLevel}
 import com.couchbase.client.core.transaction.cleanup.{ClientRecord, TransactionsCleaner}
@@ -28,7 +29,6 @@ import com.couchbase.client.core.transaction.log.CoreTransactionLogger
 import com.couchbase.client.performer.core.CorePerformer
 import com.couchbase.client.performer.core.commands.{SdkCommandExecutor, TransactionCommandExecutor}
 import com.couchbase.client.performer.core.perf.Counters
-import com.couchbase.client.performer.core.util.VersionUtil
 import com.couchbase.client.performer.scala.transaction.{
   ScalaTransactionCommandExecutor,
   TransactionBlocking,
@@ -39,6 +39,7 @@ import com.couchbase.client.protocol.performer.{Caps, PerformerCapsFetchResponse
 import com.couchbase.client.protocol.run.Workloads
 import com.couchbase.client.protocol.shared._
 import com.couchbase.client.protocol.transactions._
+import com.couchbase.client.scala.Cluster
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
 import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil
 import com.couchbase.client.scala.transactions.internal.TransactionsSupportedExtensionsUtil.Supported
@@ -98,15 +99,7 @@ class ScalaPerformer extends CorePerformer {
     val supported       = Supported
     val protocolVersion = supported.protocolMajor() + "." + supported.protocolMinor()
     response.setTransactionsProtocolVersion(protocolVersion)
-    val sdkVersionRaw = VersionUtil.introspectSDKVersionScala
-    val sdkVersion    = if (sdkVersionRaw == null) {
-      // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
-      logger.warn("Unable to introspect the sdk version, forcing it to 1.5.0")
-      "1.5.0"
-    } else {
-      sdkVersionRaw
-    }
-    response.setLibraryVersion(sdkVersion)
+    response.setLibraryVersion(VersionAndGitHash.from(classOf[Cluster]).version())
 
     Supported.extensions.asScala
       .filterNot(v =>

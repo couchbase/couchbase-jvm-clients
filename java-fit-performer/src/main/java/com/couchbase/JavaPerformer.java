@@ -22,6 +22,7 @@ import com.couchbase.client.core.env.CertificateAuthenticator;
 import com.couchbase.client.core.env.JwtAuthenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.env.VersionAndGitHash;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.logging.LogRedaction;
 import com.couchbase.client.core.logging.RedactionLevel;
@@ -34,13 +35,13 @@ import com.couchbase.client.core.transaction.config.CoreMergedTransactionConfig;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsExtension;
 import com.couchbase.client.core.transaction.forwards.CoreTransactionsSupportedExtensions;
 import com.couchbase.client.core.transaction.log.CoreTransactionLogger;
+import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.transactions.config.TransactionsConfig;
 import com.couchbase.client.performer.core.CorePerformer;
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor;
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor;
 import com.couchbase.client.performer.core.perf.Counters;
 import com.couchbase.client.performer.core.util.PemUtil;
-import com.couchbase.client.performer.core.util.VersionUtil;
 import com.couchbase.client.protocol.observability.SpanCreateRequest;
 import com.couchbase.client.protocol.observability.SpanCreateResponse;
 import com.couchbase.client.protocol.observability.SpanFinishRequest;
@@ -127,13 +128,7 @@ public class JavaPerformer extends CorePerformer {
     @Override
     protected void customisePerformerCaps(PerformerCapsFetchResponse.Builder response) {
         response.addAllSdkImplementationCaps(Capabilities.sdkImplementationCaps());
-        var sdkVersion = VersionUtil.introspectSDKVersionJava();
-        if (sdkVersion == null) {
-            // Not entirely clear why this fails sometimes on CI, return something sort of sensible as a default.
-            sdkVersion = "3.5.0";
-            logger.warn("Unable to introspect the sdk version, forcing it to {}", sdkVersion);
-        }
-        response.setLibraryVersion(sdkVersion);
+        response.setLibraryVersion(VersionAndGitHash.from(Cluster.class).version());
 
         for (CoreTransactionsExtension ext : SUPPORTED.extensions) {
             try {
