@@ -16,6 +16,8 @@
 
 package com.couchbase.client.performer.kotlin
 
+import com.couchbase.client.core.env.VersionAndGitHash
+import com.couchbase.client.kotlin.Cluster
 import com.couchbase.client.performer.core.CorePerformer
 import com.couchbase.client.performer.core.commands.SdkCommandExecutor
 import com.couchbase.client.performer.core.commands.TransactionCommandExecutor
@@ -43,6 +45,7 @@ class KotlinPerformer : CorePerformer() {
     private val logger = LoggerFactory.getLogger(KotlinPerformer::class.java)
 
     override fun customisePerformerCaps(response: PerformerCapsFetchResponse.Builder) {
+        response.setLibraryVersion(VersionAndGitHash.from(Cluster::class.java).version())
         response.setPerformerUserAgent("kotlin")
             .addSdkImplementationCaps(Caps.SDK_PRESERVE_EXPIRY)
             .addSdkImplementationCaps(Caps.SDK_KV_RANGE_SCAN)
