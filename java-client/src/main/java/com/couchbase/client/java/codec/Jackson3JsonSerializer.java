@@ -18,8 +18,13 @@ package com.couchbase.client.java.codec;
 
 // CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
 
+import com.couchbase.client.core.encryption.CryptoManager;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
+import com.couchbase.client.java.encryption.databind.jackson3.EncryptionModule;
+import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.json.JsonObject;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,23 +37,39 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * In order to use this class, you must add Jackson 3 to your class path.
  * <p>
- * Example usage:
+ * There is no Jackson 3 module for Couchbase {@link JsonObject} and {@link JsonArray}.
+ * When you set this serializer on the cluster environment, the SDK handles
+ * a document that is a JsonObject or JsonArray itself, without the mapper.
+ * The mapper does not know these types, so do not put them inside other objects.
+ * <p>
+ * If you're using the {@link Encrypted} annotation for
+ * Couchbase Field-Level Encryption, make sure to register
+ * {@link EncryptionModule} with your {@code JsonMapper}.
+ * <p>
+ * Example usage without Couchbase Field-Level Encryption:
  * <pre>
- * var mapper = JsonMapper.builder().build();
- * var serializer = Jackson3JsonSerializer.create(mapper);
+ * JsonMapper mapper = JsonMapper.builder().build();
  *
- * // Set as default serializer when connecting
- * Cluster cluster = Cluster.connect(
- *   connectionString,
- *   ClusterOptions.clusterOptions(username, password)
- *     .environment(env -> env
- *       .jsonSerializer(serializer)
- *     )
- * );
+ * ClusterEnvironment env = ClusterEnvironment.builder()
+ *     .jsonSerializer(Jackson3JsonSerializer.create(mapper))
+ *     .build();
  * </pre>
- * <b>WARNING:</b> This serializer ignores the {@link com.couchbase.client.java.encryption.annotation.Encrypted}
- * annotation for automatic Field-Level Encryption (FLE). Automatic FLE with data binding requires using
- * {@link JacksonJsonSerializer} and Jackson 2, or the default serializer which uses a repackaged version of Jackson 2.
+ * <p>
+ * Example usage with Couchbase Field-Level Encryption:
+ * <pre>
+ * CryptoManager cryptoManager = ...
+ *
+ * JsonMapper mapper = JsonMapper.builder()
+ *     .addModule(new EncryptionModule(cryptoManager))
+ *     .build();
+ *
+ * ClusterEnvironment env = ClusterEnvironment.builder()
+ *     .cryptoManager(cryptoManager)
+ *     .jsonSerializer(Jackson3JsonSerializer.create(mapper))
+ *     .build();
+ * </pre>
+ *
+ * @see EncryptionModule
  */
 public class Jackson3JsonSerializer implements JsonSerializer {
   private final JsonMapper mapper;
@@ -60,6 +81,31 @@ public class Jackson3JsonSerializer implements JsonSerializer {
    */
   public static Jackson3JsonSerializer create(JsonMapper mapper) {
     return new Jackson3JsonSerializer(mapper);
+  }
+
+  /**
+   * Returns a new instance backed by a default JsonMapper without encryption support.
+   *
+   * @return the Jackson 3 JSON serializer with the default JsonMapper.
+   */
+  public static Jackson3JsonSerializer create() {
+    return create((CryptoManager) null);
+  }
+
+  /**
+   * Returns a new instance backed by a default JsonMapper
+   * with optional encryption support.
+   *
+   * @param cryptoManager (nullable) The manager to use for activating the
+   * {@link Encrypted} annotation, or null to disable encryption support.
+   * @return the Jackson 3 JSON serializer with the given crypto manager.
+   */
+  public static Jackson3JsonSerializer create(CryptoManager cryptoManager) {
+    JsonMapper.Builder builder = JsonMapper.builder();
+    if (cryptoManager != null) {
+      builder.addModule(new EncryptionModule(cryptoManager));
+    }
+    return new Jackson3JsonSerializer(builder.build());
   }
 
   private Jackson3JsonSerializer(JsonMapper mapper) {

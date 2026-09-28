@@ -78,7 +78,8 @@ public abstract class AbstractEncryptionModuleTest {
     Exception e = assertThrows(Exception.class, () ->
         doCheck(AnnotatedGetter.class, jsonPlaintext, pojo -> {
         }));
-    if (!e.getMessage().contains("Unrecognized field \"maxim\"")) {
+    // Jackson 2 says "field", Jackson 3 says "property"
+    if (!e.getMessage().contains("Unrecognized field \"maxim\"") && !e.getMessage().contains("Unrecognized property \"maxim\"")) {
       fail("unexpected exception message: " + e);
     }
   }
