@@ -17,6 +17,8 @@
 package com.couchbase.client.java.codec;
 
 
+import com.couchbase.client.java.encryption.FakeCryptoManager;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledForJreRange;
@@ -61,5 +63,44 @@ class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
   public static class Thing {
     @JsonProperty("n")
     public String name;
+  }
+
+  @Test
+  void createWithCryptoManagerEncryptsAnnotatedFields() {
+    JsonSerializer cryptoSerializer = Jackson3JsonSerializer.create(new FakeCryptoManager());
+
+    SecretThing thing = new SecretThing();
+    thing.name = "foo";
+    thing.secret = "bar";
+
+    byte[] jsonBytes = cryptoSerializer.serialize(thing);
+    assertEquals(
+      JsonMapper.shared().readTree("{\"name\":\"foo\",\"encrypted$secret\":{\"alg\":\"FAKE\",\"ciphertext\":\"ImJhciI=\"}}"),
+      JsonMapper.shared().readTree(jsonBytes)
+    );
+
+    thing = cryptoSerializer.deserialize(SecretThing.class, jsonBytes);
+    assertEquals("foo", thing.name);
+    assertEquals("bar", thing.secret);
+  }
+
+  @Test
+  void createWithoutCryptoManagerIgnoresEncryptedAnnotation() {
+    SecretThing thing = new SecretThing();
+    thing.name = "foo";
+    thing.secret = "bar";
+
+    byte[] jsonBytes = Jackson3JsonSerializer.create().serialize(thing);
+    assertEquals(
+      JsonMapper.shared().readTree("{\"name\":\"foo\",\"secret\":\"bar\"}"),
+      JsonMapper.shared().readTree(jsonBytes)
+    );
+  }
+
+  public static class SecretThing {
+    public String name;
+
+    @Encrypted
+    public String secret;
   }
 }
