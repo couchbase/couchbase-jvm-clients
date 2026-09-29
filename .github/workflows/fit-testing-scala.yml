@@ -20,6 +20,11 @@ on:
         required: false
         type: string
         default: ci
+      slack_thread:
+        description: Slack thread to post a run summary into (e.g. https://couchbase.slack.com/archives/C05LNBVQRE3/p1786376341783169).  Need to invite 'FIT Bot' to channel first.
+        required: false
+        type: string
+        default: '' # For adhoc runs, don't post on Slack by default
 
 permissions:
   id-token: write
@@ -34,3 +39,4 @@ jobs:
       collect_extra_diagnostics: ${{ inputs.collect_extra_diagnostics == '' && true || inputs.collect_extra_diagnostics }}
       performer: 'scala-fit-performer:main'
       channel: ${{ vars.FIT_CLI_CHANNEL || inputs.channel }}
+      slack_thread: ${{ inputs.slack_thread || 'https://couchbase.slack.com/archives/C05LNBVQRE3/p1786447683855129' }}

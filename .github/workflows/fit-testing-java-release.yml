@@ -1,16 +1,15 @@
-name: Run FIT Testing (Java)
+name: Run FIT Testing (Java release)
 
 on:
   schedule:
-    # Nb we have hit 429 limits on the `curl https://raw.githubusercontent.com` step, so try to stagger the CI jobs.  Github allows just 60 unauthenticated requests / hour.
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * SUN'
   workflow_dispatch:
     inputs:
       preset:
         description: FIT presets or preset groups to run, comma-separated. (`fit preset list`)
         required: false
         type: string
-        default: op-multi-lite
+        default: op-multi-release
       collect_extra_diagnostics:
         description: Collect additional diagnostics (includes cbcollect, is slower)
         required: false
@@ -36,7 +35,7 @@ jobs:
   fit:
     uses: couchbaselabs/fit-cli/.github/workflows/fit-cli.yaml@main
     with:
-      preset: ${{ vars.FIT_CLI_PRESET || inputs.preset || 'op-multi-lite' }}
+      preset: ${{ vars.FIT_CLI_PRESET || inputs.preset || 'op-multi-release' }}
       collect_extra_diagnostics: ${{ inputs.collect_extra_diagnostics == '' && true || inputs.collect_extra_diagnostics }}
       performer: 'java-fit-performer:main'
       channel: ${{ vars.FIT_CLI_CHANNEL || inputs.channel }}
