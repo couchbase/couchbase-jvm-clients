@@ -44,6 +44,7 @@ import com.couchbase.client.core.service.EventingService;
 import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.KeyValueServiceConfig;
 import com.couchbase.client.core.service.ManagerService;
+import com.couchbase.client.core.service.OkHttpQueryService;
 import com.couchbase.client.core.service.QueryService;
 import com.couchbase.client.core.service.QueryServiceConfig;
 import com.couchbase.client.core.service.SearchService;
@@ -452,12 +453,21 @@ public class Node implements Stateful<NodeState> {
       case MANAGER:
         return new ManagerService(ctx, host, port);
       case QUERY:
-        return new QueryService(QueryServiceConfig
+        return new OkHttpQueryService(
+          QueryServiceConfig
           .maxEndpoints(env.ioConfig().maxHttpConnections())
           .idleTime(env.ioConfig().idleHttpConnectionTimeout())
           .build(),
-          ctx, host, port
+          ctx,
+          address
         );
+
+//        return new QueryService(QueryServiceConfig
+//          .maxEndpoints(env.ioConfig().maxHttpConnections())
+//          .idleTime(env.ioConfig().idleHttpConnectionTimeout())
+//          .build(),
+//          ctx, host, port
+//        );
       case VIEWS:
         return new ViewService(ViewServiceConfig
           .maxEndpoints(env.ioConfig().maxHttpConnections())

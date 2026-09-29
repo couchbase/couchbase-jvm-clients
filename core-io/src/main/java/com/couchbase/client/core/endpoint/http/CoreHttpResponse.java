@@ -17,10 +17,13 @@
 package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.channel.ChannelId;
+import com.couchbase.client.core.deps.io.netty.channel.DefaultChannelId;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
+import reactor.util.annotation.NonNull;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -28,10 +31,16 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreHttpResponse extends BaseResponse {
+  private static final HttpChannelContext DUMMY_CHANNEL_CONTEXT = new HttpChannelContext(DefaultChannelId.newInstance());
+
   private final int httpStatus;
   private final byte[] content;
   private final HttpChannelContext channelContext;
   private final RequestContext requestContext;
+
+  public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, RequestContext requestContext) {
+    this(status, content, httpStatus, DUMMY_CHANNEL_CONTEXT, requestContext);
+  }
 
   public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, HttpChannelContext channelContext, RequestContext requestContext) {
     super(requireNonNull(status));

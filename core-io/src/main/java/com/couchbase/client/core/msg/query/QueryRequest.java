@@ -21,8 +21,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -36,6 +36,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -49,10 +50,12 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
+import static java.util.Objects.requireNonNull;
 
 public class QueryRequest
   extends BaseRequest<QueryResponse>
@@ -68,6 +71,9 @@ public class QueryRequest
   private final String scope;
   private final NodeIdentifier target;
   private final boolean parametersUsed;
+
+  private Runnable cancellationHook = () -> {
+  };
 
   public QueryRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
                       final Authenticator authenticator, final String statement, final byte[] query, boolean idempotent,
@@ -144,6 +150,10 @@ public class QueryRequest
     return statement;
   }
 
+  public byte[] query() {
+    return query;
+  }
+
   public Authenticator credentials() {
     return authenticator;
   }
@@ -164,6 +174,19 @@ public class QueryRequest
 
   public String scope() {
     return scope;
+  }
+
+  public synchronized void setCancellationHook(Runnable hook) {
+    this.cancellationHook = requireNonNull(hook);
+    if (cancelled()) {
+      hook.run();
+    }
+  }
+
+  @Override
+  public synchronized void cancel(CancellationReason reason, Function<Throwable, Throwable> exceptionTranslator) {
+    super.cancel(reason, exceptionTranslator);
+    cancellationHook.run();
   }
 
   @Override

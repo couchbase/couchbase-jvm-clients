@@ -26,6 +26,8 @@ import com.couchbase.client.core.service.ServiceType;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
+import javax.net.ssl.KeyManagerFactory;
+
 @NullMarked
 @Stability.Internal
 public abstract class AuthenticatorWrapper implements Authenticator {
@@ -50,6 +52,11 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   @Override
   public void applyTlsProperties(final SslContextBuilder sslContextBuilder) {
     wrapped().applyTlsProperties(sslContextBuilder);
+  }
+
+  @Override
+  public @Nullable KeyManagerFactory getKeyManagerFactory() {
+    return wrapped().getKeyManagerFactory();
   }
 
   @Override

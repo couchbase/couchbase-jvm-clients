@@ -26,6 +26,8 @@ import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
 
+import javax.net.ssl.KeyManagerFactory;
+
 /**
  * An authentication strategy.
  * <p>
@@ -80,6 +82,11 @@ public interface Authenticator {
    */
   @Stability.Internal
   default void applyTlsProperties(final SslContextBuilder sslContextBuilder) { }
+
+  @Stability.Internal
+  default @Nullable KeyManagerFactory getKeyManagerFactory() {
+    return null;
+  }
 
   @Stability.Internal
   default boolean requiresTls() {

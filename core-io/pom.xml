@@ -51,6 +51,20 @@
             <version>${slf4j.version}</version>
         </dependency>
 
+        <!-- todo shade these (but not kotlin-stdlib) -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-tls</artifactId>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.squareup.okio</groupId>-->
+<!--            <artifactId>okio-jvm</artifactId>-->
+<!--        </dependency>-->
+
         <!-- External, Optional Dependencies -->
         <dependency>
             <groupId>io.projectreactor.tools</groupId>

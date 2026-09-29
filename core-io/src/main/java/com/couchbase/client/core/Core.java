@@ -86,12 +86,15 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.node.AnalyticsLocator;
 import com.couchbase.client.core.node.KeyValueLocator;
 import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
+import com.couchbase.client.core.service.CouchbaseOkHttpClient;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -277,6 +280,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   private final AppTelemetry appTelemetry;
 
+  private final CouchbaseOkHttpClient okHttpClient;
+
   /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
@@ -310,6 +315,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.authenticator = DelegatingAuthenticator.create(
       environment.securityConfig().tlsEnabled(),
       initialAuthenticator
+    );
+
+    this.okHttpClient = new CouchbaseOkHttpClient(
+      environment.timeoutConfig().connectTimeout(),
+      environment.timeoutConfig().queryTimeout(),
+      environment.securityConfig(),
+      this.authenticator,
+      environment.ioConfig().maxHttpConnections(),
+      environment.userAgent().formattedLong()
     );
 
     this.connectionString = requireNonNull(connectionString);
@@ -443,6 +457,10 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   public CoreContext context() {
     return coreContext;
+  }
+
+  public CouchbaseOkHttpClient okHttpClient() {
+    return okHttpClient;
   }
 
   /**
@@ -736,6 +754,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Stability.Internal
   public Mono<Void> shutdown(final Duration timeout) {
     return Mono.fromRunnable(appTelemetry::close)
+      .then(Mono.fromRunnable(okHttpClient::close))
       .then(Mono.fromRunnable(() -> transactionsCleanup.shutdown(timeout)))
       .then(Mono.defer(() -> {
         NanoTimestamp start = NanoTimestamp.now();

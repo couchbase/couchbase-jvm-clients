@@ -17,9 +17,13 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 @Stability.Internal
 public class NanoTimestamp implements Comparable<NanoTimestamp> {
@@ -76,7 +80,23 @@ public class NanoTimestamp implements Comparable<NanoTimestamp> {
    * @see #isNever()
    */
   public Duration elapsed() {
-    return Duration.ofNanos(System.nanoTime() - nanoTime);
+    return Duration.ofNanos(elapsedNanos());
+  }
+
+  /**
+   * Returns the time elapsed since this timestamp was created.
+   * <p>
+   * NOTE: If this timestamp is {@link #never()}, the returned value
+   * will be at least 146 years.
+   *
+   * @see #isNever()
+   */
+  public long elapsed(TimeUnit unit) {
+    return unit.convert(elapsedNanos(), NANOSECONDS);
+  }
+
+  public long elapsedNanos() {
+    return System.nanoTime() - nanoTime;
   }
 
   /**
@@ -87,7 +107,7 @@ public class NanoTimestamp implements Comparable<NanoTimestamp> {
    * all "reasonable" durations (less than ~146 years).
    */
   public boolean hasElapsed(Duration d) {
-    return elapsed().compareTo(d) >= 0;
+    return elapsedNanos() >= d.toNanos();
   }
 
   public Duration minus(NanoTimestamp rhs) {
@@ -97,12 +117,12 @@ public class NanoTimestamp implements Comparable<NanoTimestamp> {
   @Override
   public String toString() {
     return "NanoTimestamp{" +
-        "elapsed=" + elapsed() +
-        '}';
+      "elapsed=" + elapsed() +
+      '}';
   }
 
   @Override
-  public boolean equals(Object o) {
+  public boolean equals(@Nullable Object o) {
     if (this == o) {
       return true;
     }

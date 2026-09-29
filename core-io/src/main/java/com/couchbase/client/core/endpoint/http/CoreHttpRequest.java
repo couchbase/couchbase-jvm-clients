@@ -39,6 +39,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -54,7 +55,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.endpoint.http.CoreHttpTimeoutHelper.resolveTimeout;
@@ -78,6 +81,8 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   private final AtomicBoolean executed = new AtomicBoolean();
   private final boolean bypassExceptionTranslation;
   private final @Nullable String name;
+  private Runnable cancellationHook = () -> {
+  };
 
   public static Builder builder(CoreCommonOptions options, CoreContext coreContext, HttpMethod method, CoreHttpPath path, RequestTarget target) {
     return new Builder(options, coreContext, target, method, path);
@@ -114,6 +119,32 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     core.send(this);
     return response()
         .whenComplete((r, t) -> context().logicallyComplete());
+  }
+
+  public String method() {
+    return method.name();
+  }
+
+  public byte[] contentAsByteArray() {
+    return ByteBufUtil.getBytes(content);
+  }
+
+  public void forEachHeader(BiConsumer<String, String> action) {
+    headers.entries()
+      .forEach(entry -> action.accept(entry.getKey(), entry.getValue()));
+  }
+
+  public synchronized void setCancellationHook(Runnable hook) {
+    this.cancellationHook = requireNonNull(hook);
+    if (cancelled()) {
+      hook.run();
+    }
+  }
+
+  @Override
+  public synchronized void cancel(CancellationReason reason, Function<Throwable, Throwable> exceptionTranslator) {
+    super.cancel(reason, exceptionTranslator);
+    cancellationHook.run();
   }
 
   @Override
@@ -170,7 +201,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     return ctx;
   }
 
-  private String pathAndQueryString() {
+  public String pathAndQueryString() {
     String p = path.format();
     if (queryString.isEmpty()) {
       return p;

@@ -35,11 +35,20 @@ public class HttpStatusCodeException extends CouchbaseException {
 
   public HttpStatusCodeException(HttpResponseStatus status, String content, Request<?> request,
                                  ErrorContext errorContext) {
+    this(status.code(), content, request, errorContext);
+  }
+
+  public HttpStatusCodeException(
+    int status,
+    String content,
+    Request<?> request,
+    ErrorContext errorContext
+  ) {
     super(
       "Unexpected HTTP status " + status,
-      errorContext == null ? new GenericHttpRequestErrorContext(request, status.code()): errorContext
+      errorContext == null ? new GenericHttpRequestErrorContext(request, status) : errorContext
     );
-    this.httpStatusCode = status.code();
+    this.httpStatusCode = status;
     this.couchbaseResponseStatus = HttpProtocol.decodeStatus(status);
     this.content = CbStrings.nullToEmpty(content);
   }

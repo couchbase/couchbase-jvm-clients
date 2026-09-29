@@ -22,8 +22,8 @@ import com.couchbase.client.java.query.QueryResult;
 
 public class SimpleQueryExample {
 
-  public static void main(String... args) {
-    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+  public static void main(String... args) throws InterruptedException {
+    Cluster cluster = Cluster.connect("groucho.marx", "Administrator", "password");
     Bucket bucket = cluster.bucket("travel-sample");
 
     QueryResult result = cluster.query(

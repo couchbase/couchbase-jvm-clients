@@ -24,6 +24,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
@@ -105,6 +106,44 @@ public final class JsonStreamParser implements Closeable {
     scratchBuffer.clear();
     scratchBuffer.writeBytes(input);
     feed(scratchBuffer.array(), 0, scratchBuffer.readableBytes());
+  }
+
+  /**
+   * Parses the contents of the stream, using the default buffer size
+   * for copying data from the stream.
+   * <p>
+   * Searches for values matching the configured JSON pointers
+   * and invokes callbacks for any matches.
+   *
+   * @throws UncheckedIOException if malformed JSON is detected in this chunk of input
+   * @throws RuntimeException if a value consumer throws an exception
+   */
+  public void feed(InputStream is) {
+    feed(is, 8 * 1024);
+  }
+
+  /**
+   * Parses the contents of the stream, using a buffer of the specified size (in bytes)
+   * for copying data from the stream.
+   * <p>
+   * Searches for values matching the configured JSON pointers
+   * and invokes callbacks for any matches.
+   *
+   * @throws UncheckedIOException if malformed JSON is detected in this chunk of input
+   * @throws RuntimeException if a value consumer throws an exception
+   */
+  public void feed(InputStream is, int bufferSizeInBytes) {
+    // borrow the scratch buffer!
+    scratchBuffer.clear().ensureWritable(bufferSizeInBytes);
+
+    try {
+      int bytesRead;
+      while ((bytesRead = is.read(scratchBuffer.array())) != -1) {
+        feed(scratchBuffer.array(), 0, bytesRead);
+      }
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
