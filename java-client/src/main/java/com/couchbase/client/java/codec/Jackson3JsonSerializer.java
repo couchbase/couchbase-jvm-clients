@@ -23,7 +23,7 @@ import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.couchbase.client.java.encryption.databind.jackson3.EncryptionModule;
-import com.couchbase.client.java.json.JsonArray;
+import com.couchbase.client.java.json.Jackson3JsonValueModule;
 import com.couchbase.client.java.json.JsonObject;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.json.JsonMapper;
@@ -37,18 +37,18 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * In order to use this class, you must add Jackson 3 to your class path.
  * <p>
- * There is no Jackson 3 module for Couchbase {@link JsonObject} and {@link JsonArray}.
- * When you set this serializer on the cluster environment, the SDK handles
- * a document that is a JsonObject or JsonArray itself, without the mapper.
- * The mapper does not know these types, so do not put them inside other objects.
+ * Make sure to register {@link Jackson3JsonValueModule} with your {@code JsonMapper}
+ * so it can handle Couchbase {@link JsonObject} instances.
  * <p>
- * If you're using the {@link Encrypted} annotation for
+ * Likewise, if you're using the {@link Encrypted} annotation for
  * Couchbase Field-Level Encryption, make sure to register
- * {@link EncryptionModule} with your {@code JsonMapper}.
+ * {@link EncryptionModule}.
  * <p>
  * Example usage without Couchbase Field-Level Encryption:
  * <pre>
- * JsonMapper mapper = JsonMapper.builder().build();
+ * JsonMapper mapper = JsonMapper.builder()
+ *     .addModule(new Jackson3JsonValueModule())
+ *     .build();
  *
  * ClusterEnvironment env = ClusterEnvironment.builder()
  *     .jsonSerializer(Jackson3JsonSerializer.create(mapper))
@@ -60,6 +60,7 @@ import static java.util.Objects.requireNonNull;
  * CryptoManager cryptoManager = ...
  *
  * JsonMapper mapper = JsonMapper.builder()
+ *     .addModule(new Jackson3JsonValueModule())
  *     .addModule(new EncryptionModule(cryptoManager))
  *     .build();
  *
@@ -69,6 +70,7 @@ import static java.util.Objects.requireNonNull;
  *     .build();
  * </pre>
  *
+ * @see Jackson3JsonValueModule
  * @see EncryptionModule
  */
 public class Jackson3JsonSerializer implements JsonSerializer {
@@ -101,7 +103,8 @@ public class Jackson3JsonSerializer implements JsonSerializer {
    * @return the Jackson 3 JSON serializer with the given crypto manager.
    */
   public static Jackson3JsonSerializer create(CryptoManager cryptoManager) {
-    JsonMapper.Builder builder = JsonMapper.builder();
+    JsonMapper.Builder builder = JsonMapper.builder()
+      .addModule(new Jackson3JsonValueModule());
     if (cryptoManager != null) {
       builder.addModule(new EncryptionModule(cryptoManager));
     }

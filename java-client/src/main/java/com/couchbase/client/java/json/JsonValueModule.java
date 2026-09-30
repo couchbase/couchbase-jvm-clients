@@ -33,6 +33,8 @@ import java.io.IOException;
 /**
  * Can be registered with a Jackson {@code ObjectMapper}
  * to add support for Couchbase {@link JsonObject} and {@link JsonArray}.
+ *
+ * @implNote Keep in sync with {@link RepackagedJsonValueModule} and {@link Jackson3JsonValueModule}.
  */
 public class JsonValueModule extends SimpleModule {
 
