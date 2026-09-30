@@ -25,7 +25,6 @@ import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.DisabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
-import tools.jackson.databind.json.JsonMapper;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 )
 class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
   private static final JsonSerializer serializer = new JsonValueSerializerWrapper(
-    Jackson3JsonSerializer.create(JsonMapper.shared())
+    Jackson3TestSupport.serializerWithSharedMapper()
   );
 
   @Override
@@ -74,9 +73,9 @@ class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
     thing.secret = "bar";
 
     byte[] jsonBytes = cryptoSerializer.serialize(thing);
-    assertEquals(
-      JsonMapper.shared().readTree("{\"name\":\"foo\",\"encrypted$secret\":{\"alg\":\"FAKE\",\"ciphertext\":\"ImJhciI=\"}}"),
-      JsonMapper.shared().readTree(jsonBytes)
+    Jackson3TestSupport.assertJsonEquals(
+      "{\"name\":\"foo\",\"encrypted$secret\":{\"alg\":\"FAKE\",\"ciphertext\":\"ImJhciI=\"}}",
+      jsonBytes
     );
 
     thing = cryptoSerializer.deserialize(SecretThing.class, jsonBytes);
@@ -91,9 +90,9 @@ class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
     thing.secret = "bar";
 
     byte[] jsonBytes = Jackson3JsonSerializer.create().serialize(thing);
-    assertEquals(
-      JsonMapper.shared().readTree("{\"name\":\"foo\",\"secret\":\"bar\"}"),
-      JsonMapper.shared().readTree(jsonBytes)
+    Jackson3TestSupport.assertJsonEquals(
+      "{\"name\":\"foo\",\"secret\":\"bar\"}",
+      jsonBytes
     );
   }
 

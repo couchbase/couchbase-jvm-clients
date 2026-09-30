@@ -20,14 +20,8 @@ import com.couchbase.client.java.encryption.databind.jackson.AbstractEncryptionM
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
-import tools.jackson.databind.DeserializationFeature;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.MapperFeature;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.util.function.Consumer;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisabledForJreRange(
   min = JRE.JAVA_8,
@@ -35,22 +29,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
   disabledReason = "Jackson 3 requires Java 17 or later."
 )
 public class Jackson3EncryptionModuleTest extends AbstractEncryptionModuleTest {
-  private static JsonMapper cryptoMapper;
+  private static Jackson3TestSupport jackson3;
 
   @BeforeAll
   static void init() {
-    // The shared tests expect these Jackson 2 defaults. Jackson 3 disables them by default.
-    cryptoMapper = JsonMapper.builder()
-      .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-      .enable(MapperFeature.ALLOW_FINAL_FIELDS_AS_MUTATORS)
-      .addModule(new EncryptionModule(getCryptoManager()))
-      .build();
+    jackson3 = new Jackson3TestSupport(getCryptoManager());
   }
 
   @Override
   protected <T extends MaximHolder> void doCheck(Class<T> pojoClass, String inputJson, String expectedOutputJson, Consumer<T> pojoValidator) throws Exception {
-    T pojo = cryptoMapper.readValue(inputJson, pojoClass);
+    T pojo = jackson3.readValue(inputJson, pojoClass);
     pojoValidator.accept(pojo);
-    assertEquals(cryptoMapper.readTree(expectedOutputJson), cryptoMapper.convertValue(pojo, JsonNode.class));
+    jackson3.assertJsonEquals(expectedOutputJson, pojo);
   }
 }
