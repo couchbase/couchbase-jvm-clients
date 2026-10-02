@@ -26,8 +26,8 @@ import com.couchbase.client.java.json.JsonObject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
 
@@ -38,9 +38,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DisabledForJreRange(
-  min = JRE.JAVA_8,
-  max = JRE.JAVA_16,
+@EnabledForJreRange(
+  min = JRE.JAVA_17,
   disabledReason = "Jackson 3 requires Java 17 or later."
 )
 class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
