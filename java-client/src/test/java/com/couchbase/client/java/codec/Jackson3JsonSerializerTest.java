@@ -17,13 +17,14 @@
 package com.couchbase.client.java.codec;
 
 
+import com.couchbase.client.java.encryption.FakeCryptoManager;
+import com.couchbase.client.java.encryption.annotation.Encrypted;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledForJreRange;
 import org.junit.jupiter.api.condition.DisabledOnJre;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
-import tools.jackson.databind.json.JsonMapper;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,7 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 )
 class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
   private static final JsonSerializer serializer = new JsonValueSerializerWrapper(
-    Jackson3JsonSerializer.create(JsonMapper.shared())
+    Jackson3TestSupport.serializerWithSharedMapper()
   );
 
   @Override
@@ -61,5 +62,44 @@ class Jackson3JsonSerializerTest extends JsonSerializerTestBase {
   public static class Thing {
     @JsonProperty("n")
     public String name;
+  }
+
+  @Test
+  void createWithCryptoManagerEncryptsAnnotatedFields() {
+    JsonSerializer cryptoSerializer = Jackson3JsonSerializer.create(new FakeCryptoManager());
+
+    SecretThing thing = new SecretThing();
+    thing.name = "foo";
+    thing.secret = "bar";
+
+    byte[] jsonBytes = cryptoSerializer.serialize(thing);
+    Jackson3TestSupport.assertJsonEquals(
+      "{\"name\":\"foo\",\"encrypted$secret\":{\"alg\":\"FAKE\",\"ciphertext\":\"ImJhciI=\"}}",
+      jsonBytes
+    );
+
+    thing = cryptoSerializer.deserialize(SecretThing.class, jsonBytes);
+    assertEquals("foo", thing.name);
+    assertEquals("bar", thing.secret);
+  }
+
+  @Test
+  void createWithoutCryptoManagerIgnoresEncryptedAnnotation() {
+    SecretThing thing = new SecretThing();
+    thing.name = "foo";
+    thing.secret = "bar";
+
+    byte[] jsonBytes = Jackson3JsonSerializer.create().serialize(thing);
+    Jackson3TestSupport.assertJsonEquals(
+      "{\"name\":\"foo\",\"secret\":\"bar\"}",
+      jsonBytes
+    );
+  }
+
+  public static class SecretThing {
+    public String name;
+
+    @Encrypted
+    public String secret;
   }
 }

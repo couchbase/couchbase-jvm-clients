@@ -1,11 +1,11 @@
 /*
- * Copyright 2020 Couchbase, Inc.
+ * Copyright 2026 Couchbase, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,11 +16,11 @@
 
 /**
  * Support for encryption during Jackson data binding, compatible with
- * the standard Jackson library.
+ * the standard Jackson 3 library.
  *
- * @implNote Please keep these classes in sync with their repackaged counterparts
+ * @implNote Please keep these classes in sync with their Jackson 2 counterparts
+ * in {@link com.couchbase.client.java.encryption.databind.jackson}
+ * and their repackaged counterparts
  * in {@link com.couchbase.client.java.encryption.databind.jackson.repackaged}
- * and their Jackson 3 counterparts
- * in {@link com.couchbase.client.java.encryption.databind.jackson3}
  */
-package com.couchbase.client.java.encryption.databind.jackson;
+package com.couchbase.client.java.encryption.databind.jackson3;

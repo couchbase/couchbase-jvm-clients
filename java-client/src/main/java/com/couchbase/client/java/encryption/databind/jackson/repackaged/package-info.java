@@ -20,5 +20,7 @@
  *
  * @implNote Please keep these classes in sync with their non-repackaged counterparts
  * in {@link com.couchbase.client.java.encryption.databind.jackson}
+ * and their Jackson 3 counterparts
+ * in {@link com.couchbase.client.java.encryption.databind.jackson3}
  */
 package com.couchbase.client.java.encryption.databind.jackson.repackaged;
