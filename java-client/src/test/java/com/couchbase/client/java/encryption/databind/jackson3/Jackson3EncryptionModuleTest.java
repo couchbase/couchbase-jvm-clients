@@ -18,14 +18,13 @@ package com.couchbase.client.java.encryption.databind.jackson3;
 
 import com.couchbase.client.java.encryption.databind.jackson.AbstractEncryptionModuleTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 
 import java.util.function.Consumer;
 
-@DisabledForJreRange(
-  min = JRE.JAVA_8,
-  max = JRE.JAVA_16,
+@EnabledForJreRange(
+  min = JRE.JAVA_17,
   disabledReason = "Jackson 3 requires Java 17 or later."
 )
 public class Jackson3EncryptionModuleTest extends AbstractEncryptionModuleTest {

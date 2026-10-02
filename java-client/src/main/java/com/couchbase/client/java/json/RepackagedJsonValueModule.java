@@ -29,6 +29,11 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.module.Simp
 
 import java.io.IOException;
 
+/**
+ * Adds support for Couchbase {@link JsonObject} and {@link JsonArray} to the repackaged Jackson.
+ *
+ * @implNote Keep in sync with {@link JsonValueModule} and {@link Jackson3JsonValueModule}.
+ */
 @Stability.Internal
 public class RepackagedJsonValueModule extends SimpleModule {
 

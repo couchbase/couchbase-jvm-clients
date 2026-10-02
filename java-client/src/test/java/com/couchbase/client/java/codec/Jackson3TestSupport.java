@@ -16,6 +16,7 @@
 
 package com.couchbase.client.java.codec;
 
+import com.couchbase.client.java.json.Jackson3JsonValueModule;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +32,12 @@ class Jackson3TestSupport {
 
   static JsonSerializer serializerWithSharedMapper() {
     return Jackson3JsonSerializer.create(JsonMapper.shared());
+  }
+
+  static JsonSerializer serializerWithJsonValueModule() {
+    return Jackson3JsonSerializer.create(JsonMapper.builder()
+      .addModule(new Jackson3JsonValueModule())
+      .build());
   }
 
   static void assertJsonEquals(String expectedJson, byte[] actualJson) {
