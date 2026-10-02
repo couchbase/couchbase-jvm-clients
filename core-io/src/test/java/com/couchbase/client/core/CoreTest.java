@@ -40,10 +40,13 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
@@ -57,6 +60,7 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -494,6 +498,46 @@ class CoreTest {
         }
       }
       assertEquals(2, numRaised);
+    }
+  }
+
+
+  @Test
+  void concurrentEnsureServiceAtCreatesOnlyOneNode() throws Exception {
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
+    AtomicInteger nodesCreated = new AtomicInteger();
+
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
+      @Override
+      public ConfigurationProvider createConfigurationProvider() {
+        return mockConfigProvider.configProvider;
+      }
+
+      @Override
+      protected Node createNode(final NodeIdentifier target) {
+        nodesCreated.incrementAndGet();
+        try {
+          // Widen the window between "node not found" and "node added".
+          Thread.sleep(50);
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        Node node = mock(Node.class);
+        configureMock(node, "mock", target.canonical().host(), target.canonical().port());
+        return node;
+      }
+    }) {
+      NodeIdentifier id = nodeId("10.143.190.101", 8091);
+
+      Flux.range(0, 8)
+        .flatMap(i -> core.ensureServiceAt(id, ServiceType.KV, 11210, Optional.of("bucket-" + i))
+          .subscribeOn(Schedulers.parallel()))
+        .then()
+        .block(Duration.ofSeconds(10));
+
+      assertEquals(1, nodesCreated.get());
+      assertEquals(1, core.nodes().size());
+      verify(core.nodes().get(0), times(8)).addService(eq(ServiceType.KV), eq(11210), any());
     }
   }
 
