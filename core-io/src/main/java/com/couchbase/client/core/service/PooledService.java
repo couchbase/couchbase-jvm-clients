@@ -383,6 +383,10 @@ abstract class PooledService implements Service {
       }
       endpoints.clear();
       reservedEndpoints.clear();
+
+      // Completes the states() stream, so subscribers waiting for this service
+      // to reach a certain state learn that it never will.
+      endpointStates.close();
     }
   }
 

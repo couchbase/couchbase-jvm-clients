@@ -30,6 +30,10 @@ public interface Stateful<S> {
 
   /**
    * Returns a stream of states for this component as they change.
+   * <p>
+   * Subscribers may be notified synchronously while the component holds internal locks,
+   * so they must not block or do non-trivial work on the notifying thread.
+   * See {@link SingleStateful} for details.
    */
   Flux<S> states();
 

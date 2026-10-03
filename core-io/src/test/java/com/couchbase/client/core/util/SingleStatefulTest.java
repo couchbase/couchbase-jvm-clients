@@ -21,16 +21,41 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the functionality of the {@link SingleStateful}.
  */
 class SingleStatefulTest {
 
-  @Test
+    /**
+   * Starts a thread and waits until it either finishes or blocks waiting for a monitor.
+   * <p>
+   * Lets a test pause one thread inside a critical section and run another thread "inside" it:
+   * if the critical section is properly guarded, the other thread blocks; otherwise it runs to completion.
+   */
+  static void startAndAwaitDoneOrBlocked(Thread thread) {
+    thread.start();
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+    while (thread.isAlive() && thread.getState() != Thread.State.BLOCKED) {
+      if (System.nanoTime() > deadline) {
+        throw new AssertionError("Thread neither finished nor blocked: " + thread.getState());
+      }
+      Thread.yield();
+    }
+  }
+
+    @Test
   void loadsWithInitialState() {
     SingleStateful<Integer> stateful = SingleStateful.fromInitial(1);
     assertEquals(1, stateful.state());
@@ -61,6 +86,39 @@ class SingleStatefulTest {
     List<Long> collectedStates = stateful.states().collectList().block();
     assertNotNull(collectedStates);
     assertEquals(6, collectedStates.size());
+  }
+
+  @Test
+  void concurrentTransitionsAreEmittedInOrder() throws Exception {
+    AtomicReference<SingleStateful<TestState>> ref = new AtomicReference<>();
+    Thread other = new Thread(() -> ref.get().transition(TestState.C));
+
+    // After compareAndTransition changes the state (but before it emits the new state),
+    // let another thread transition too. Without proper locking, the other thread's state
+    // is emitted first, so subscribers end up seeing a state that is no longer current.
+    AtomicBoolean pauseNextTransition = new AtomicBoolean();
+    SingleStateful<TestState> stateful = SingleStateful.fromInitial(TestState.A, (oldState, newState) -> {
+      if (pauseNextTransition.compareAndSet(true, false)) {
+        startAndAwaitDoneOrBlocked(other);
+      }
+    });
+    ref.set(stateful);
+
+    List<TestState> emitted = new CopyOnWriteArrayList<>();
+    stateful.states().subscribe(emitted::add);
+
+    pauseNextTransition.set(true);
+    assertTrue(stateful.compareAndTransition(TestState.A, TestState.B));
+    other.join();
+
+    assertEquals(TestState.C, stateful.state());
+    assertEquals(Arrays.asList(TestState.A, TestState.B, TestState.C), emitted);
+  }
+
+  enum TestState {
+    A,
+    B,
+    C
   }
 
 }
