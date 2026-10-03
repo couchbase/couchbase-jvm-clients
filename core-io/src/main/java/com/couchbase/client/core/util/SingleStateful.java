@@ -27,6 +27,18 @@ import static com.couchbase.client.core.util.Validators.notNull;
 
 /**
  * Represents a single stateful component.
+ * <p>
+ * All state changes (including completion of the {@link #states()} stream) happen while holding this object's
+ * monitor, so each subscriber sees the changes in the order they happened.
+ * <p>
+ * A subscriber is usually notified synchronously on the thread making the change, while that thread holds
+ * this object's monitor. This is not guaranteed, though: if a change happens while a new subscriber is still
+ * receiving the replayed latest state, the subscribing thread delivers the change to that subscriber
+ * possibly after the changing thread has released the monitor. Subscribers must not rely on either behavior.
+ * <p>
+ * Consequently, a subscriber must not block, and must not do work that might wait for a lock
+ * held by another thread that could be waiting for this object's monitor. A subscriber that needs to do
+ * anything non-trivial should first move to a different thread (with {@code publishOn}, for example).
  */
 public class SingleStateful<S> implements Stateful<S> {
 
@@ -98,7 +110,7 @@ public class SingleStateful<S> implements Stateful<S> {
    * @param newState the new state to apply.
    * @return true if the comparison has been successful.
    */
-  public boolean compareAndTransition(final S expectedState, final S newState) {
+  public synchronized boolean compareAndTransition(final S expectedState, final S newState) {
     notNull(newState, "New Stateful Type");
     notNull(expectedState, "Expected Stateful Type");
 
@@ -111,9 +123,10 @@ public class SingleStateful<S> implements Stateful<S> {
   }
 
   /**
-   * Doesn't have to be called, added for good measure.
+   * Completes the {@link #states()} stream. Subsequent transitions still change the current state,
+   * but are not emitted.
    */
-  public void close() {
+  public synchronized void close() {
     statesSink.emitComplete(emitFailureHandler());
   }
 

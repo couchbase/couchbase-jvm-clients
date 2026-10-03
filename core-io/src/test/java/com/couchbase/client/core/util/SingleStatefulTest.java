@@ -21,7 +21,11 @@ import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,6 +65,62 @@ class SingleStatefulTest {
     List<Long> collectedStates = stateful.states().collectList().block();
     assertNotNull(collectedStates);
     assertEquals(6, collectedStates.size());
+  }
+
+  @Test
+  void concurrentTransitionsAreEmittedInOrder() throws Exception {
+    SingleStateful<TestState> stateful = SingleStateful.fromInitial(TestState.A);
+
+    AtomicReference<TestState> lastEmitted = new AtomicReference<>();
+    List<Throwable> errors = new CopyOnWriteArrayList<>();
+    stateful.states().subscribe(s -> {
+      if (lastEmitted.getAndSet(s) == s) {
+        errors.add(new AssertionError("Emitted same state twice in a row: " + s));
+      }
+    });
+
+    int iterations = 20_000;
+    CountDownLatch start = new CountDownLatch(1);
+    List<Thread> threads = new ArrayList<>();
+    threads.add(new Thread(() -> {
+      await(start);
+      for (int i = 0; i < iterations; i++) {
+        stateful.transition(TestState.A);
+        stateful.compareAndTransition(TestState.A, TestState.B);
+      }
+    }));
+    threads.add(new Thread(() -> {
+      await(start);
+      for (int i = 0; i < iterations; i++) {
+        stateful.transition(TestState.C);
+      }
+    }));
+
+    for (Thread t : threads) {
+      t.setUncaughtExceptionHandler((thread, e) -> errors.add(e));
+      t.start();
+    }
+    start.countDown();
+    for (Thread t : threads) {
+      t.join();
+    }
+
+    assertEquals(new ArrayList<>(), errors);
+    assertEquals(stateful.state(), lastEmitted.get());
+  }
+
+  private static void await(CountDownLatch latch) {
+    try {
+      latch.await();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  enum TestState {
+    A,
+    B,
+    C
   }
 
 }
