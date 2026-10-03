@@ -133,7 +133,15 @@ public abstract class BaseBucketLoader implements BucketLoader {
       }
       return ss;
     })
-    .takeUntil(state -> state == ServiceState.CONNECTED || state == ServiceState.IDLE)
+    .filter(state -> state == ServiceState.CONNECTED || state == ServiceState.IDLE)
+    .next()
+    // The state stream completes without reaching CONNECTED or IDLE if the service is removed.
+    .switchIfEmpty(Mono.error(() -> new SeedNodeOutdatedException("Seed Node " + seed + " for service " + serviceType
+      + " was removed before it connected; bailing out.")))
+    // State changes are usually emitted on the thread making the change, while it holds the endpoint's and service's
+    // state locks. Don't continue on that thread, because sending the config request might need to lock the service
+    // (to open a new endpoint), and another thread holding the service lock might be waiting for a state lock.
+    .publishOn(core.context().environment().scheduler())
     .then();
   }
 
