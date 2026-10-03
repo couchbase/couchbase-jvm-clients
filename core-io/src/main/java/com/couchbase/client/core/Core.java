@@ -108,6 +108,7 @@ import com.couchbase.client.core.util.CoreIdGenerator;
 import com.couchbase.client.core.util.Deadline;
 import com.couchbase.client.core.util.LatestStateSubscription;
 import com.couchbase.client.core.util.NanoTimestamp;
+import com.couchbase.client.core.util.SerialTaskQueue;
 import com.couchbase.client.core.util.SynchronousEventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -220,6 +221,14 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * The list of currently managed nodes against the cluster.
    */
   private final CopyOnWriteArrayList<Node> nodes;
+
+  /**
+   * Serializes all changes to {@link #nodes} and their services.
+   * <p>
+   * Reconfiguration and config loaders both add nodes and services, from different threads.
+   * Running every such change as a task on this queue prevents them from interleaving.
+   */
+  private final SerialTaskQueue topologyMutations;
 
   /**
    * Reconfigures the core in response to configs emitted by {@link #configurationProvider}.
@@ -335,6 +344,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     this.coreContext = new CoreContext(this, CoreIdGenerator.nextId(), environment, authenticator);
     this.configurationProvider = createConfigurationProvider();
     this.nodes = new CopyOnWriteArrayList<>();
+    this.topologyMutations = new SerialTaskQueue(environment.scheduler());
     this.eventBus = environment.eventBus();
     this.timer = environment.timer();
     this.currentConfig = configurationProvider.config();
@@ -348,7 +358,13 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       environment.scheduler(),
       (config, doFinally) -> {
         currentConfig = config;
-        reconfigure(doFinally);
+        topologyMutations.submit(this::reconfigure)
+          .doFinally(signalType -> doFinally.run())
+          .subscribe(
+            ignored -> {
+            },
+            t -> logger.warn("Unexpected error during reconfiguration", t)
+          );
       }
     );
 
@@ -612,9 +628,12 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   /**
    * This method can be used by a caller to make sure a certain service is enabled at the given
    * target node.
-   *
-   * <p>This is advanced, internal functionality and should only be used if the caller knows
-   * what they are doing.</p>
+   *<p>
+   * The change is serialized with reconfiguration and other calls to this method,
+   * so it may wait for an in-progress reconfiguration to finish.
+   * <p>
+   * This is advanced, internal functionality and should only be used if the caller knows
+   * what they are doing.
    *
    * @param identifier the node to check.
    * @param serviceType the service type to enable if not enabled already.
@@ -629,21 +648,37 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     final int port,
     final Optional<String> bucket
   ) {
-    if (shutdown.get()) {
-      // We don't want do add a node if we are already shutdown!
-      return Mono.empty();
-    }
+    return topologyMutations.submit(() -> doEnsureServiceAt(identifier, serviceType, port, bucket));
+  }
 
-    return Flux
-      .fromIterable(nodes)
-      .filter(n -> n.identifier().equals(identifier))
-      .switchIfEmpty(Mono.defer(() -> {
-        Node node = createNode(identifier);
-        nodes.add(node);
-        return Mono.just(node);
-      }))
-      .flatMap(node -> node.addService(serviceType, port, bucket))
-      .then();
+  /**
+   * Implementation of {@link #ensureServiceAt}.
+   * <p>
+   * Must only be called from a {@link #topologyMutations} task.
+   */
+  private Mono<Void> doEnsureServiceAt(
+    final NodeIdentifier identifier,
+    final ServiceType serviceType,
+    final int port,
+    final Optional<String> bucket
+  ) {
+    return topologyMutations.requireInTask().then(Mono.defer(() -> {
+      if (shutdown.get()) {
+        // We don't want to add a node if we are already shut down!
+        return Mono.empty();
+      }
+
+      return Flux
+        .fromIterable(nodes)
+        .filter(n -> n.identifier().equals(identifier))
+        .switchIfEmpty(Mono.fromCallable(() -> {
+          Node node = createNode(identifier);
+          nodes.add(node);
+          return node;
+        }))
+        .flatMap(node -> node.addService(serviceType, port, bucket))
+        .then();
+    }));
   }
 
   @Stability.Internal
@@ -677,13 +712,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   /**
    * Check if the given {@link Node} needs to be removed from the cluster topology.
+   * <p>
+   * Must only be called from a {@link #topologyMutations} task.
    *
    * @param node the node in question
    * @param config the current config.
    * @return a mono once disconnected (or completes immediately if there is no need to do so).
    */
   private Mono<Void> maybeRemoveNode(final Node node, final ClusterConfig config) {
-    return Mono.defer(() -> {
+    return topologyMutations.requireInTask().then(Mono.defer(() -> {
       boolean stillPresentInBuckets = config.bucketTopologies().stream()
         .anyMatch(topology -> hasNode(topology, node.identifier()));
 
@@ -695,7 +732,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       }
 
       return Mono.empty();
-    });
+    }));
   }
 
   private static boolean hasNode(ClusterTopology topology, NodeIdentifier nodeId) {
@@ -710,6 +747,8 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   /**
    * This method is used to remove a service from a node.
+   * <p>
+   * Must only be called from a {@link #topologyMutations} task.
    *
    * @param identifier the node to check.
    * @param serviceType the service type to remove if present.
@@ -717,12 +756,13 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    */
   private Mono<Void> removeServiceFrom(final NodeIdentifier identifier, final ServiceType serviceType,
                                        final Optional<String> bucket) {
-    return Flux
+    return topologyMutations.requireInTask().then(Mono.defer(() -> Flux
       .fromIterable(new ArrayList<>(nodes))
       .filter(n -> n.identifier().equals(identifier))
       .filter(node -> node.serviceEnabled(serviceType))
       .flatMap(node -> node.removeService(serviceType, bucket))
-      .then();
+      .then()
+    ));
   }
 
   @Stability.Internal
@@ -767,23 +807,24 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * This is an eventually consistent process, so in-flight operations might still be rescheduled
    * and then picked up later (or cancelled, depending on the strategy). For those coming from 1.x,
    * it works very similar.
+   * <p>
+   * Must only be called from a {@link #topologyMutations} task.
    *
-   * @param doFinally A callback to execute after reconfiguration is complete.
+   * @return a Mono that completes when reconfiguration is complete. Never fails.
    */
-  private void reconfigure(Runnable doFinally) {
+  private Mono<Void> reconfigure() {
     final ClusterConfig configForThisAttempt = currentConfig;
 
     final ClusterTopology globalTopology = configForThisAttempt.globalTopology();
     final Collection<ClusterTopologyWithBucket> bucketTopologies = configForThisAttempt.bucketTopologies();
 
     if (bucketTopologies.isEmpty() && globalTopology == null) {
-      reconfigureDisconnectAll(doFinally);
-      return;
+      return reconfigureDisconnectAll();
     }
 
     final NanoTimestamp start = NanoTimestamp.now();
 
-    reconfigureBuckets(Flux.fromIterable(bucketTopologies))
+    return reconfigureBuckets(Flux.fromIterable(bucketTopologies))
       .then(reconfigureGlobal(globalTopology))
       .then(Mono.defer(() ->
         Flux
@@ -799,9 +840,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
         return Mono.empty();
       })
-      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))))
-      .doFinally(signalType -> doFinally.run())
-      .subscribe();
+      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))));
   }
 
   /**
@@ -810,12 +849,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
    * This must only be called by {@link #reconfigure}, and only when all buckets are closed,
    * which points to a shutdown/all buckets closed disconnect phase.
    */
-  private void reconfigureDisconnectAll(Runnable doFinally) {
+  private Mono<Void> reconfigureDisconnectAll() {
     NanoTimestamp start = NanoTimestamp.now();
-    Flux
-      .fromIterable(new ArrayList<>(nodes))
-      .flatMap(Node::disconnect)
-      .doOnComplete(nodes::clear)
+    return topologyMutations.requireInTask()
+      .thenMany(Flux.defer(() -> Flux.fromIterable(new ArrayList<>(nodes))))
+      .flatMap(node -> node.disconnect().doOnTerminate(() -> nodes.remove(node)))
       .then()
       .doOnSuccess(v -> eventBus.publish(new ReconfigurationCompletedEvent(
         start.elapsed(),
@@ -825,9 +863,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
         eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), e));
         return Mono.empty();
       })
-      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))))
-      .doFinally(signalType -> doFinally.run())
-      .subscribe();
+      .doOnCancel(() -> eventBus.publish(new ReconfigurationErrorDetectedEvent(context(), new RuntimeException("Cancellation signal"))));
   }
 
   private Mono<Void> reconfigureGlobal(final @Nullable ClusterTopology topology) {
@@ -897,7 +933,7 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
         Flux<Void> serviceAddFlux = Flux
           .fromIterable(ni.ports().entrySet())
-          .flatMap(s -> ensureServiceAt(
+          .flatMap(s -> doEnsureServiceAt(
               ni.id(),
               s.getKey(),
               s.getValue(),
