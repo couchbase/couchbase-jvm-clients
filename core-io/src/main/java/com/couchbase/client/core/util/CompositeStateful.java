@@ -17,36 +17,60 @@
 package com.couchbase.client.core.util;
 
 import reactor.core.Disposable;
+import reactor.core.Disposables;
 import reactor.core.publisher.Flux;
 
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 /**
  * Represents a stateful component of one or more individual stateful elements.
+ * <p>
+ * Every change to the composite state is serialized by this object's monitor, whether it is caused by
+ * registering or deregistering an element, or by an element changing state.
+ * <p>
+ * Elements usually notify the composite while holding their own {@link SingleStateful} monitor,
+ * so the lock order is: element, then composite, then the composite's own state.
+ * Code holding this composite's monitor must therefore never wait for an element's monitor.
+ * <p>
+ * An element's state change may instead be delivered by the thread registering that element (see
+ * {@link SingleStateful}). That thread already holds this composite's monitor, and does not hold the
+ * element's monitor, so this does not violate the lock order.
  */
 public class CompositeStateful<T, IN, OUT> implements Stateful<OUT> {
 
   private final OUT initialState;
-  private final Map<T, IN> states;
   private final SingleStateful<OUT> inner;
-  private final Map<T, Disposable> subscriptions;
-  private final BiConsumer<OUT, OUT> beforeTransitionCallback;
   private final Function<Collection<IN>, OUT> transformer;
+
+  /**
+   * Latest known state of each registered element. Guarded by {@code this}.
+   * <p>
+   * Always has the same keys as {@link #subscriptions}.
+   */
+  private final Map<T, IN> states = new HashMap<>();
+
+  /**
+   * Subscription to each registered element's state stream. Guarded by {@code this}.
+   * <p>
+   * Each registration gets a new instance, so signals that were already in flight when an element
+   * was deregistered (or registered again) can be recognized and ignored.
+   */
+  private final Map<T, Disposable.Swap> subscriptions = new HashMap<>();
+
+  /**
+   * Guarded by {@code this}.
+   */
+  private boolean closed;
 
   private CompositeStateful(final OUT initialState, final Function<Collection<IN>, OUT> transformer,
                             final BiConsumer<OUT, OUT> beforeTransitionCallback) {
-    this.inner = SingleStateful.fromInitial(initialState);
+    this.inner = SingleStateful.fromInitial(initialState, beforeTransitionCallback);
     this.initialState = initialState;
     this.transformer = transformer;
-    this.subscriptions = new ConcurrentHashMap<>();
-    this.states = new ConcurrentHashMap<>();
-    this.beforeTransitionCallback = beforeTransitionCallback;
   }
 
   /**
@@ -76,24 +100,54 @@ public class CompositeStateful<T, IN, OUT> implements Stateful<OUT> {
 
   /**
    * Registers a stateful element with the composite.
+   * <p>
+   * If an element is already registered with the same identifier, it is replaced.
+   * Does nothing if the composite is closed.
+   * <p>
+   * The element is deregistered automatically when its state stream terminates.
    *
    * @param identifier the unique identifier to use.
    * @param upstream the upstream flux with the state stream.
    */
   public synchronized void register(final T identifier, final Stateful<IN> upstream) {
+    if (closed) {
+      return;
+    }
+
+    Disposable.Swap previous = subscriptions.remove(identifier);
+    if (previous != null) {
+      previous.dispose();
+    }
+
+    // Track the registration before subscribing, because the subscription
+    // might signal synchronously (on this thread) before `subscribe` returns.
+    final Disposable.Swap registration = Disposables.swap();
+    subscriptions.put(identifier, registration);
     states.put(identifier, upstream.state());
     transition(transformer.apply(states.values()));
 
-    Disposable subscription = upstream.states().subscribe(
-      s -> {
-        states.put(identifier, s);
-        transition(transformer.apply(states.values()));
-      },
-      e -> deregister(identifier),
-      () -> deregister(identifier)
-    );
+    registration.update(upstream.states().subscribe(
+      s -> onUpstreamState(identifier, registration, s),
+      e -> onUpstreamTerminated(identifier, registration),
+      () -> onUpstreamTerminated(identifier, registration)
+    ));
+  }
 
-    subscriptions.put(identifier, subscription);
+  private synchronized void onUpstreamState(final T identifier, final Disposable.Swap registration, final IN state) {
+    if (subscriptions.get(identifier) != registration) {
+      return; // deregistered (or registered again) while this signal was in flight
+    }
+    states.put(identifier, state);
+    transition(transformer.apply(states.values()));
+  }
+
+  private synchronized void onUpstreamTerminated(final T identifier, final Disposable.Swap registration) {
+    if (subscriptions.get(identifier) != registration) {
+      return; // deregistered (or registered again) while this signal was in flight
+    }
+    subscriptions.remove(identifier);
+    states.remove(identifier);
+    transitionAfterRemoval();
   }
 
   /**
@@ -106,32 +160,45 @@ public class CompositeStateful<T, IN, OUT> implements Stateful<OUT> {
    * @param identifier the unique identifier to use.
    */
   public synchronized void deregister(final T identifier) {
-    Disposable subscription = subscriptions.remove(identifier);
-    if (subscription != null && !subscription.isDisposed()) {
-      subscription.dispose();
+    if (closed) {
+      return;
+    }
+
+    Disposable.Swap registration = subscriptions.remove(identifier);
+    if (registration != null) {
+      registration.dispose();
       states.remove(identifier);
-      transition(transformer.apply(states.values()));
     }
-    if (subscriptions.isEmpty()) {
-      transition(initialState);
-    }
+    transitionAfterRemoval();
   }
 
+  private void transitionAfterRemoval() {
+    transition(subscriptions.isEmpty() ? initialState : transformer.apply(states.values()));
+  }
+
+  /**
+   * Caller must hold this object's monitor.
+   */
   private void transition(final OUT newState) {
-    if (!inner.state().equals(newState)) {
-      beforeTransitionCallback.accept(inner.state(), newState);
-      inner.transition(newState);
-    }
+    inner.transition(newState);
   }
 
   /**
    * Closes the composite permanently and deregisters all elements.
+   * <p>
+   * Transitions to the initial state (if not already in it), then completes the {@link #states()} stream.
+   * Subsequent calls to {@link #register} and {@link #deregister} have no effect.
    */
   public synchronized void close() {
-    Set<T> identifiers = new HashSet<>(subscriptions.keySet());
-    for (T identifier : identifiers) {
-      deregister(identifier);
+    if (closed) {
+      return;
     }
+    closed = true;
+
+    subscriptions.values().forEach(Disposable::dispose);
+    subscriptions.clear();
+    states.clear();
+    transition(initialState);
     inner.close();
   }
 
