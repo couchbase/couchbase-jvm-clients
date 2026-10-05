@@ -22,6 +22,8 @@ import com.couchbase.client.core.env.IoEnvironment.DEFAULT_EVENT_LOOP_THREAD_COU
 import com.couchbase.client.core.env.IoEnvironment.DEFAULT_NATIVE_IO_ENABLED
 import kotlin.properties.Delegates.observable
 
+private const val eventLoopDeprecationMessage: String = "This method may be removed in a future version of the SDK. Netty classes might not always be part of the SDK's public API, and a future version might use a different I/O engine. There is no direct replacement. To change how many threads the SDK uses for I/O, please use [eventLoopThreadCount] instead."
+
 /**
  * DSL counterpart to [IoEnvironment.Builder].
  */
@@ -42,36 +44,42 @@ public class IoEnvironmentDslBuilder(private val wrapped: IoEnvironment.Builder)
     /**
      * @see IoEnvironment.Builder.managerEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var managerEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.managerEventLoopGroup(it) }
 
     /**
      * @see IoEnvironment.Builder.kvEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var kvEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.kvEventLoopGroup(it) }
 
     /**
      * @see IoEnvironment.Builder.queryEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var queryEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.queryEventLoopGroup(it) }
 
     /**
      * @see IoEnvironment.Builder.analyticsEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var analyticsEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.analyticsEventLoopGroup(it) }
 
     /**
      * @see IoEnvironment.Builder.searchEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var searchEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.searchEventLoopGroup(it) }
 
     /**
      * @see IoEnvironment.Builder.viewEventLoopGroup
      */
+    @Deprecated(eventLoopDeprecationMessage)
     public var viewEventLoopGroup: EventLoopGroup?
             by observable(null) { _, _, it -> wrapped.viewEventLoopGroup(it) }
 }

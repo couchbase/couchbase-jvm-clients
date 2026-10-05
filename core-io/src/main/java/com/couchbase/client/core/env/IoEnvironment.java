@@ -691,7 +691,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder managerEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.managerEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -707,7 +712,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder kvEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.kvEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -723,7 +733,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder queryEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.queryEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -739,7 +754,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder analyticsEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.analyticsEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -755,7 +775,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.searchEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -771,7 +796,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.eventingEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
@@ -787,7 +817,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     @Stability.Volatile
     public Builder backupEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.backupEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
@@ -804,7 +839,12 @@ public class IoEnvironment {
      *
      * @param eventLoopGroup the dedicated event loop group to use.
      * @return this {@link Builder} for chaining purposes.
+     * @deprecated This method may be removed in a future version of the SDK.
+     * Netty classes might not always be part of the SDK's public API, and a future version
+     * might use a different I/O engine. There is no direct replacement. To change how many
+     * threads the SDK uses for I/O, please use {@link #eventLoopThreadCount(int)} instead.
      */
+    @Deprecated
     public Builder viewEventLoopGroup(final EventLoopGroup eventLoopGroup) {
       this.viewEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
       return this;
