@@ -17,6 +17,18 @@ package com.couchbase.client.scala.env
 
 import com.couchbase.client.core
 import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup
+import com.couchbase.client.scala.env.IoEnvironmentDeprecation.EventLoopGroupDeprecationMessage
+
+// Not in an IoEnvironment companion object, because declaring an explicit companion
+// for a case class changes its synthesized companion (in Scala 2 it no longer extends FunctionN).
+private[env] object IoEnvironmentDeprecation {
+  // Must be a final val with no type annotation, so it's a constant usable in @deprecated.
+  final val EventLoopGroupDeprecationMessage =
+    "This method may be removed in a future version of the SDK." +
+      " Netty classes might not always be part of the SDK's public API, and a future version" +
+      " might use a different I/O engine. There is no direct replacement. To change how many" +
+      " threads the SDK uses for I/O, please use `eventLoopThreadCount` instead."
+}
 
 /** Holds all IO-related configuration and state.
   *
@@ -37,6 +49,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def managerEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(managerEventLoopGroup = Some(value))
   }
@@ -45,6 +58,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def kvEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(kvEventLoopGroup = Some(value))
   }
@@ -53,6 +67,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def queryEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(queryEventLoopGroup = Some(value))
   }
@@ -61,6 +76,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def analyticsEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(analyticsEventLoopGroup = Some(value))
   }
@@ -69,6 +85,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def searchEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(searchEventLoopGroup = Some(value))
   }
@@ -77,6 +94,7 @@ case class IoEnvironment(
     *
     * @return this, for chaining
     */
+  @deprecated(EventLoopGroupDeprecationMessage, since = "3.13.0")
   def viewEventLoopGroup(value: EventLoopGroup): IoEnvironment = {
     copy(viewEventLoopGroup = Some(value))
   }
