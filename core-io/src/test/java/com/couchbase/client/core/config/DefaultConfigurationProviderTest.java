@@ -19,12 +19,16 @@ package com.couchbase.client.core.config;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.cnc.events.config.BucketOpenRetriedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
 import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshIgnoredEvent;
+import com.couchbase.client.core.cnc.events.config.GlobalConfigRetriedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.ConfigException;
+import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -51,6 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -406,6 +411,91 @@ class DefaultConfigurationProviderTest {
       .subscribe(i -> bucket2Barrier.tryEmitValue(new ProposedBucketConfigContext("bucket2", "{}", "127.0.0.1")));
 
     assertTrue(latch.await(5, TimeUnit.SECONDS));
+  }
+
+  /**
+   * Regression test for JVMCBC-1446.
+   * <p>
+   * Verifies that if the seed nodes change while the global config is loading (so every original seed
+   * is skipped as stale), the load is retried with the new seed nodes instead of failing with
+   * "Could not locate a single global configuration".
+   */
+  @Test
+  void retriesGlobalConfigLoadWhenSeedNodesChange() {
+    Core core = mockCore(ENVIRONMENT);
+    String newTopology = readResource("global_config_mad_hatter_multi_node.json", DefaultConfigurationProviderTest.class);
+    List<String> loadedFrom = new CopyOnWriteArrayList<>();
+
+    provider = new DefaultConfigurationProvider(core, ConnectionString.create("127.0.0.1")) {
+      @Override
+      protected Mono<ProposedGlobalConfigContext> loadGlobalConfigForSeed(NodeIdentifier identifier, int kvPort) {
+        String host = identifier.hostForNetworkConnections();
+        loadedFrom.add(host);
+        if (host.equals("127.0.0.1")) {
+          // Simulate a topology update (which replaces the seed nodes) racing a failed load.
+          proposeGlobalConfig(new ProposedGlobalConfigContext(newTopology, host));
+          return Mono.error(new ConfigException("Simulated load failure"));
+        }
+        return Mono.just(new ProposedGlobalConfigContext(newTopology, host));
+      }
+    };
+    waitForSeedNodes(provider);
+
+    provider.loadAndRefreshGlobalConfig().block(Duration.ofSeconds(5));
+
+    assertTrue(loadedFrom.stream().anyMatch(it -> it.startsWith("10.143.193.")), "loaded from: " + loadedFrom);
+    assertTrue(EVENT_BUS.publishedEvents().stream().anyMatch(e ->
+      e instanceof GlobalConfigRetriedEvent && e.cause() instanceof SeedNodeOutdatedException
+    ));
+  }
+
+  /**
+   * Regression test for JVMCBC-1446.
+   * <p>
+   * Verifies that if a bucket config load fails because its seed is outdated and the seed nodes have changed,
+   * the load is retried with the new seed nodes instead of retrying the outdated seed forever.
+   */
+  @Test
+  void retriesBucketOpenWhenSeedNodesChange() {
+    Core core = mockCore(ENVIRONMENT);
+    String newTopology = readResource("global_config_mad_hatter_multi_node.json", DefaultConfigurationProviderTest.class);
+    List<String> loadedFrom = new CopyOnWriteArrayList<>();
+
+    provider = new DefaultConfigurationProvider(core, ConnectionString.create("127.0.0.1")) {
+      @Override
+      protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(
+        NodeIdentifier identifier,
+        int mappedKvPort,
+        int mappedManagerPort,
+        String name
+      ) {
+        String host = identifier.hostForNetworkConnections();
+        loadedFrom.add(host);
+        if (host.equals("127.0.0.1")) {
+          // Simulate a topology update (which replaces the seed nodes) removing the seed mid-load.
+          proposeGlobalConfig(new ProposedGlobalConfigContext(newTopology, host));
+          return Mono.error(new SeedNodeOutdatedException("Simulated outdated seed"));
+        }
+        return Mono.just(new ProposedBucketConfigContext(name, "{}", host));
+      }
+
+      @Override
+      public void proposeBucketConfig(ProposedBucketConfigContext ctx) {
+      }
+
+      @Override
+      protected Mono<Void> registerRefresher(String bucket) {
+        return Mono.empty();
+      }
+    };
+    waitForSeedNodes(provider);
+
+    provider.openBucket("travel-sample").block(Duration.ofSeconds(5));
+
+    assertTrue(loadedFrom.stream().anyMatch(it -> it.startsWith("10.143.193.")), "loaded from: " + loadedFrom);
+    assertTrue(EVENT_BUS.publishedEvents().stream().anyMatch(e ->
+      e instanceof BucketOpenRetriedEvent && e.cause() instanceof SeedNodeOutdatedException
+    ));
   }
 
   /**
