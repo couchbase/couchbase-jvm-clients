@@ -318,10 +318,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
 
         return waitForSeedNodes()
-          .flatMap(seedNodes -> fetchBucketConfigs(name, seedNodes, tls).switchIfEmpty(Mono.error(
-              new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
-            ))
-          )
+          .flatMap(seedNodes -> fetchBucketConfigs(name, seedNodes, tls).switchIfEmpty(Mono.defer(() ->
+            // fetchBucketConfigs gives up on outdated seeds that are no longer current. If it gave up on every seed
+            // because the seed nodes changed mid-load, retry with the new seed nodes instead of giving up.
+            Mono.error(currentSeedNodes().equals(seedNodes)
+              ? new ConfigException("Could not locate a single bucket configuration for bucket: " + name)
+              : new SeedNodeOutdatedException("Seed nodes changed while loading config for bucket: " + name)
+            )
+          )))
+          .retryWhen(Retry.indefinitely().filter(bucketConfigLoadRetryFilter(name, t -> t instanceof SeedNodeOutdatedException)))
           .map(ctx -> {
             proposeBucketConfig(ctx);
             return ctx;
@@ -385,10 +390,20 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         boolean tls = core.context().environment().securityConfig().tlsEnabled();
 
         return waitForSeedNodes()
-          .flatMap(seedNodes -> fetchGlobalConfigs(seedNodes, tls, false, true).switchIfEmpty(Mono.error(
-              new ConfigException("Could not locate a single global configuration")
-            ))
-          )
+          .flatMap(seedNodes -> fetchGlobalConfigs(seedNodes, tls, false, true).switchIfEmpty(Mono.defer(() ->
+            // fetchGlobalConfigs skips seeds that are no longer current. If every seed was skipped because
+            // the seed nodes changed mid-load, retry with the new seed nodes instead of giving up.
+            Mono.error(currentSeedNodes().equals(seedNodes)
+              ? new ConfigException("Could not locate a single global configuration")
+              : new SeedNodeOutdatedException("Seed nodes changed while loading global config; will try with fresh seed nodes.")
+            )
+          )))
+          .retryWhen(Retry.indefinitely().filter(t -> {
+            if (shutdown.get()) throw new AlreadyShutdownException();
+            boolean retry = t instanceof SeedNodeOutdatedException;
+            if (retry) eventBus.publish(new GlobalConfigRetriedEvent(Duration.ZERO, core.context(), t));
+            return retry;
+          }))
           .map(ctx -> {
             proposeGlobalConfig(ctx);
             return ctx;
@@ -950,7 +965,12 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
           final int mappedKvPort = seed.kvPort().orElse(kvPort);
           final int mappedManagerPort = seed.clusterManagerPort().orElse(managerPort);
 
-          return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name);
+          return loadBucketConfigForSeed(identifier, mappedKvPort, mappedManagerPort, name)
+            // Since updating the seed nodes can race loading the bucket config, stop retrying an outdated
+            // seed if it's no longer part of the list. The caller retries with the new seed nodes.
+            .onErrorResume(t -> t instanceof SeedNodeOutdatedException && !currentSeedNodes().contains(seed)
+              ? Mono.empty()
+              : Mono.error(t));
         })
         // Exponential backoff for certain errors.
         .retryWhen(Retry
@@ -995,6 +1015,15 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
     return Arrays.stream(candidates).anyMatch(it -> it.isInstance(o));
   }
 
+  /**
+   * Loads the global config from a single seed node.
+   * <p>
+   * This method can be overridden in tests to simulate various states/errors from the loader.
+   */
+  protected Mono<ProposedGlobalConfigContext> loadGlobalConfigForSeed(NodeIdentifier identifier, int kvPort) {
+    return globalLoader.load(identifier, kvPort);
+  }
+
   private Mono<ProposedGlobalConfigContext> fetchGlobalConfigs(final Set<SeedNode> seedNodes, final boolean tls,
                                                                boolean allowStaleSeeds, boolean retryTimeouts) {
     final AtomicBoolean hasErrored = new AtomicBoolean();
@@ -1019,8 +1048,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             seed.address(),
             seed.clusterManagerPort().orElse(DEFAULT_MANAGER_PORT)
           );
-          return globalLoader
-            .load(identifier, seed.kvPort().orElse(kvPort))
+          return loadGlobalConfigForSeed(identifier, seed.kvPort().orElse(kvPort))
             .doOnError(throwable -> core.context().environment().eventBus().publish(new IndividualGlobalConfigLoadFailedEvent(
               start.elapsed(),
               core.context(),
