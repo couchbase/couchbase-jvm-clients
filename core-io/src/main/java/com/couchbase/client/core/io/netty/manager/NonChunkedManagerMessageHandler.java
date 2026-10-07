@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.manager;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -26,16 +27,26 @@ import com.couchbase.client.core.error.context.ManagerErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
-class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
+public class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
   NonChunkedManagerMessageHandler(BaseEndpoint endpoint) {
     super(endpoint, ServiceType.MANAGER);
   }
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    return errorToThrowable(status, content, request);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the cluster manager.
+   * Also used by the OkHttp-based manager service.
+   */
+  @Stability.Internal
+  public static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
     ManagerErrorContext errorContext = new ManagerErrorContext(
       HttpProtocol.decodeStatus(status),
       request.context(),

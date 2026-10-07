@@ -24,17 +24,15 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.WaitUntilReadyCompletedEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.manager.GenericManagerRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.CbThrowables;
@@ -190,12 +188,19 @@ public class WaitUntilReadyHelper {
       // in a healthy status - but for this we need to actually fetch the verbose config, since
       // the terse one doesn't have that status in it.
       String httpPath = CoreHttpPath.formatPath("/pools/default/buckets/{}", bucketName);
-      GenericManagerRequest request = new GenericManagerRequest(
-        core.context(),
-        () -> new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, httpPath),
-        true,
-        null
-      );
+      CoreHttpRequest request = CoreHttpRequest.builder(
+          CoreCommonOptions.of(
+            core.context().environment().timeoutConfig().managementTimeout(),
+            core.context().environment().retryStrategy(),
+            null
+          ),
+          core.context(),
+          HttpMethod.GET,
+          CoreHttpPath.path(httpPath),
+          RequestTarget.manager()
+        )
+        .failOnErrorStatus(false) // we check the status ourselves
+        .build();
       log.message("Sending manager request to check bucket health; httpPath=" + httpPath);
       core.send(request);
       return Reactor.wrap(request, request.response(), true)

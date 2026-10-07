@@ -22,6 +22,8 @@ import com.couchbase.client.core.util.HostAndPort;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Objects.requireNonNull;
+
 public class ServiceContext extends CoreContext {
 
   private final HostAndPort remote;
@@ -33,12 +35,26 @@ public class ServiceContext extends CoreContext {
 
   private final Optional<String> bucket;
 
-  public ServiceContext(CoreContext ctx, String remoteHostname, int remotePort,
-                        ServiceType serviceType, Optional<String> bucket) {
+  public ServiceContext(
+    CoreContext ctx,
+    String remoteHostname,
+    int remotePort,
+    ServiceType serviceType,
+    Optional<String> bucket
+  ) {
+    this(ctx, new HostAndPort(remoteHostname, remotePort), serviceType, bucket);
+  }
+
+  public ServiceContext(
+    CoreContext ctx,
+    HostAndPort remoteAddress,
+    ServiceType serviceType,
+    Optional<String> bucket
+  ) {
     super(ctx.core(), ctx.id(), ctx.environment(), ctx.authenticator());
-    this.bucket = bucket;
-    this.serviceType = serviceType;
-    this.remote = new HostAndPort(remoteHostname, remotePort);
+    this.bucket = requireNonNull(bucket);
+    this.serviceType = requireNonNull(serviceType);
+    this.remote = requireNonNull(remoteAddress);
   }
 
   /**

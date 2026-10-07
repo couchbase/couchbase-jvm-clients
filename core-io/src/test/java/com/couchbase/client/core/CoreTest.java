@@ -51,11 +51,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.couchbase.client.core.topology.TopologyTestUtils.nodeId;
 import static com.couchbase.client.core.topology.TopologyTestUtils.topologyParser;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -102,6 +105,11 @@ class CoreTest {
       when(configProvider.configs()).thenReturn(configs.asFlux());
       when(configProvider.config()).thenReturn(clusterConfig);
       when(configProvider.closeBucket(anyString(), anyBoolean())).thenReturn(Mono.empty());
+      doAnswer(invocation -> {
+        logger.info("Republishing config {}", clusterConfig);
+        configs.tryEmitNext(clusterConfig).orThrow();
+        return null;
+      }).when(configProvider).republishCurrentConfig();
       when(configProvider.shutdown()).thenAnswer((Answer<Mono<Void>>) invocationOnMock -> {
         configs.tryEmitComplete().orThrow();
         return Mono.empty();
@@ -414,6 +422,53 @@ class CoreTest {
       logger.info("Validating");
 
       verify(mock102, timeout(TIMEOUT).times(1)).disconnect();
+    }
+  }
+
+  /**
+   * If the core manages a node that isn't in the config (it should have removed it, but didn't),
+   * republishing the config removes it. The OkHttp-based services ask for this if they fail to connect to a node
+   * that isn't in the config (see NodeConnectionTracker).
+   */
+  @Test
+  void republishingConfigRemovesStrayNode() throws Exception {
+    MockConfigProvider mockConfigProvider = new MockConfigProvider();
+
+    Node mock101 = mock(Node.class);
+    Node stray = mock(Node.class);
+    configureMock(mock101, "mock101", "10.143.190.101", 8091);
+    configureMock(stray, "stray", "10.143.190.102", 8091);
+    when(mock101.hasServicesEnabled()).thenReturn(true); // or the core removes it as unused
+    when(stray.hasServicesEnabled()).thenReturn(true);
+
+    final Map<NodeIdentifier, Node> mocks = mapOf(
+      mock101.identifier(), mock101,
+      stray.identifier(), stray
+    );
+    try (Core core = new Core(ENV, AUTHENTICATOR, CONNECTION_STRING) {
+      @Override
+      public ConfigurationProvider createConfigurationProvider() {
+        return mockConfigProvider.configProvider;
+      }
+
+      @Override
+      protected Node createNode(final NodeIdentifier target) {
+        return mocks.get(target);
+      }
+    }) {
+      mockConfigProvider.accept(readTopology("one_node_config.json"));
+      verify(mock101, timeout(TIMEOUT).times(1)).addService(ServiceType.QUERY, 8093, Optional.empty());
+
+      // A node the config doesn't have, however it came to be there.
+      core.ensureServiceAt(stray.identifier(), ServiceType.QUERY, 8093, Optional.empty()).block();
+      assertTrue(core.nodes().contains(stray));
+
+      core.configurationProvider().republishCurrentConfig();
+
+      verify(stray, timeout(TIMEOUT).times(1)).disconnect();
+      waitUntilCondition(() -> !core.nodes().contains(stray));
+      assertTrue(core.nodes().contains(mock101));
+      verify(mock101, never()).disconnect();
     }
   }
 

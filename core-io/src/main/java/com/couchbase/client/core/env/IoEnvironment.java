@@ -869,6 +869,9 @@ public class IoEnvironment {
      * Usually the native transports used (epoll on linux and kqueue on OSX) are going to be faster and more efficient
      * than the generic NIO one. We recommend to only set this to false if you experience issues with the native
      * transports or instructed by couchbase support to do so for troubleshooting reasons.
+     * <p>
+     * If set to false, the SDK also doesn't load the native library it uses to set the TCP user timeout on HTTP
+     * connections (see {@link IoConfig.Builder#tcpUserTimeout(Duration)}), so the OS default applies to them.
      *
      * @param nativeIoEnabled if native IO should be enabled or disabled.
      * @return this {@link Builder} for chaining purposes.

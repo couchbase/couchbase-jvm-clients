@@ -115,7 +115,7 @@ public class AnalyticsChunkResponseParser
   }
 
   @Stability.Internal
-  static CouchbaseException errorsToThrowable(final byte[] bytes, RequestContext ctx, HttpResponseStatus httpStatus) {
+  public static CouchbaseException errorsToThrowable(final byte[] bytes, RequestContext ctx, HttpResponseStatus httpStatus) {
     int httpCode = httpStatus != null ? httpStatus.code() : 0;
 
     final List<ErrorCodeAndMessage> errors = bytes.length == 0

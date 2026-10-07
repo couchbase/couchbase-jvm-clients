@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -24,13 +25,22 @@ import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
-class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
+public class NonChunkedQueryMessageHandler extends NonChunkedHttpMessageHandler {
   NonChunkedQueryMessageHandler(BaseEndpoint endpoint) {
     super(endpoint, ServiceType.QUERY);
   }
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    return errorToThrowable(content);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the query service.
+   * Also used by the OkHttp-based query service.
+   */
+  @Stability.Internal
+  public static Exception errorToThrowable(String content) {
     // todo: this needs to be cleaned up with the management apis later
     return new CouchbaseException("Unknown query error: " + content);
   }

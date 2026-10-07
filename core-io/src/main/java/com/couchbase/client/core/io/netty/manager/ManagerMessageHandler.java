@@ -27,10 +27,13 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.LastHttpContent;
 import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateEvent;
 import com.couchbase.client.core.deps.io.netty.handler.timeout.IdleStateHandler;
@@ -125,7 +128,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
 
       try {
         currentRequest = (ManagerRequest<Response>) msg;
-        FullHttpRequest encoded = currentRequest.encode();
+        FullHttpRequest encoded = encode(currentRequest);
         encoded.headers().set(HttpHeaderNames.HOST, remoteHost);
         encoded.headers().set(HttpHeaderNames.USER_AGENT, endpoint.context().environment().userAgent().formattedLong());
         ctx.writeAndFlush(encoded);
@@ -154,7 +157,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
       currentResponse = ((HttpResponse) msg);
 
       if (isStreamingConfigRequest()) {
-        streamingResponse = (BucketConfigStreamingResponse) currentRequest.decode(currentResponse, null);
+        streamingResponse = (BucketConfigStreamingResponse) currentRequest.decode(currentResponse.status().code(), null);
         currentRequest.succeed(streamingResponse);
         ctx.pipeline().addFirst(new IdleStateHandler(
           coreContext.environment().ioConfig().configIdleRedialTimeout().toMillis(),
@@ -191,7 +194,7 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
         } else {
           byte[] copy = new byte[currentContent.readableBytes()];
           currentContent.readBytes(copy);
-          Response response = currentRequest.decode(currentResponse, copy);
+          Response response = currentRequest.decode(currentResponse.status().code(), copy);
           currentRequest.succeed(response);
         }
 
@@ -207,6 +210,15 @@ public class ManagerMessageHandler extends ChannelDuplexHandler {
     }
 
     ReferenceCountUtil.release(msg);
+  }
+
+  /**
+   * Manager requests are GET requests with no body.
+   */
+  private static FullHttpRequest encode(ManagerRequest<?> request) {
+    FullHttpRequest encoded = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, request.path());
+    request.context().authenticator().authHttpRequest(ServiceType.MANAGER, encoded);
+    return encoded;
   }
 
   private boolean isStreamingConfigRequest() {

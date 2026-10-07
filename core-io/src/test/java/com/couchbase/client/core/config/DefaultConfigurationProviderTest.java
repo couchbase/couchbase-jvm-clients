@@ -27,6 +27,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.NetworkResolution;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.util.annotation.Nullable;
@@ -60,6 +62,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.readResource;
@@ -495,6 +498,46 @@ class DefaultConfigurationProviderTest {
     assertTrue(loadedFrom.stream().anyMatch(it -> it.startsWith("10.143.193.")), "loaded from: " + loadedFrom);
     assertTrue(EVENT_BUS.publishedEvents().stream().anyMatch(e ->
       e instanceof BucketOpenRetriedEvent && e.cause() instanceof SeedNodeOutdatedException
+    ));
+  }
+
+  /**
+   * A TLS handshake failure (for example, an untrusted certificate) won't fix itself, so the bucket config load
+   * backs off instead of retrying every 10 ms. A loader that fails fast (like the OkHttp-based manager service's)
+   * would otherwise retry in a tight loop.
+   */
+  @Test
+  void backsOffBucketOpenAfterAuthenticationFailure() throws Exception {
+    Core core = mockCore(ENVIRONMENT);
+    AtomicInteger attempts = new AtomicInteger();
+
+    provider = new DefaultConfigurationProvider(core, ConnectionString.create("127.0.0.1")) {
+      @Override
+      protected Mono<ProposedBucketConfigContext> loadBucketConfigForSeed(
+        NodeIdentifier identifier,
+        int mappedKvPort,
+        int mappedManagerPort,
+        String name
+      ) {
+        attempts.incrementAndGet();
+        // Like a loader's failure: wrapped in a ConfigException (see BaseBucketLoader).
+        return Mono.error(new ConfigException("Caught exception while loading config.",
+          new AuthenticationFailureException("Failed to establish secure connection to server.", null, null)));
+      }
+    };
+    waitForSeedNodes(provider);
+
+    Disposable open = provider.openBucket("travel-sample").subscribe(it -> {}, it -> {});
+    try {
+      Thread.sleep(1500);
+    } finally {
+      open.dispose();
+    }
+
+    // With a 500 ms initial backoff (and jitter), a handful at most; with the 10 ms fixed delay, over a hundred.
+    assertTrue(attempts.get() <= 6, "attempts: " + attempts.get());
+    assertTrue(EVENT_BUS.publishedEvents().stream().anyMatch(e ->
+      e instanceof BucketOpenRetriedEvent && hasCause(e.cause(), AuthenticationFailureException.class)
     ));
   }
 

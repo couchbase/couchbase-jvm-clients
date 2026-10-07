@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.view;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
@@ -32,7 +33,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.ScopedRequest;
@@ -49,7 +50,7 @@ import java.util.TreeMap;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
-public class ViewRequest extends BaseRequest<ViewResponse>
+public class ViewRequest extends BaseHttpRequest<ViewResponse>
   implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse>, ScopedRequest {
 
   private final Authenticator authenticator;
@@ -116,6 +117,21 @@ public class ViewRequest extends BaseRequest<ViewResponse>
     return new ViewResponse(status, header, rows, trailer);
   }
 
+  /**
+   * Returns the request's path and query string, starting with a slash.
+   */
+  @Stability.Internal
+  public String pathAndQuery() {
+    return CoreHttpPath.formatPath("/{}/_design/{}/_view/{}?"+query, bucket, development ? "dev_" + design : design, view);
+  }
+
+  /**
+   * Returns the JSON request body for a POST request, or empty for a GET request.
+   */
+  @Stability.Internal
+  public Optional<byte[]> keysJson() {
+    return keysJson;
+  }
 
   @Override
   public String bucket() {

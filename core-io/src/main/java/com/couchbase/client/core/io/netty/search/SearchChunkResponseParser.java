@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.io.netty.search;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -26,6 +28,7 @@ import com.couchbase.client.core.error.context.SearchErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.search.SearchChunkHeader;
 import com.couchbase.client.core.msg.search.SearchChunkRow;
 import com.couchbase.client.core.msg.search.SearchChunkTrailer;
@@ -82,11 +85,21 @@ public class SearchChunkResponseParser
   }
 
   private CouchbaseException errorsToThrowable(final byte[] bytes) {
-    int statusCode = responseHeader().status().code();
+    return errorsToThrowable(bytes, responseHeader().status(), requestContext());
+  }
+
+  /**
+   * Returns the exception for the {@code error} field of a search query response.
+   * Also used by the OkHttp-based search service.
+   */
+  @Stability.Internal
+  public static CouchbaseException errorsToThrowable(final byte[] bytes, final HttpResponseStatus status,
+                                                     final RequestContext requestContext) {
+    int statusCode = status.code();
     String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, StandardCharsets.UTF_8);
     SearchErrorContext errorContext = new SearchErrorContext(
-      HttpProtocol.decodeStatus(responseHeader().status()),
-      requestContext(),
+      HttpProtocol.decodeStatus(status),
+      requestContext,
       statusCode,
       errorDecoded
     );

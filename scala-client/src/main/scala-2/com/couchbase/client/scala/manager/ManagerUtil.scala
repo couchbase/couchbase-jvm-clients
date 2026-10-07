@@ -18,16 +18,15 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.{
-  DefaultFullHttpRequest,
-  HttpHeaderValues,
-  HttpMethod,
-  HttpVersion
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
+import com.couchbase.client.core.endpoint.http.{
+  CoreCommonOptions,
+  CoreHttpPath,
+  CoreHttpRequest,
+  CoreHttpResponse
 }
 import com.couchbase.client.core.error.CouchbaseException
-import com.couchbase.client.core.msg.ResponseStatus
-import com.couchbase.client.core.msg.manager.{GenericManagerRequest, GenericManagerResponse}
+import com.couchbase.client.core.msg.{RequestTarget, ResponseStatus}
 import com.couchbase.client.core.retry.RetryStrategy
 import com.couchbase.client.core.util.UrlQueryStringBuilder
 import com.couchbase.client.scala.util.DurationConversions._
@@ -38,7 +37,7 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 
 object ManagerUtil {
-  def sendRequest(core: Core, request: GenericManagerRequest): SMono[GenericManagerResponse] = {
+  def sendRequest(core: Core, request: CoreHttpRequest): SMono[CoreHttpResponse] = {
     SMono.defer(() => {
       core.send(request)
       FutureConversions
@@ -54,19 +53,8 @@ object ManagerUtil {
       path: String,
       timeout: Duration,
       retryStrategy: RetryStrategy
-  ): SMono[GenericManagerResponse] = {
-    val idempotent = method == HttpMethod.GET
-    sendRequest(
-      core,
-      new GenericManagerRequest(
-        timeout,
-        core.context,
-        retryStrategy,
-        () => new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path),
-        idempotent,
-        null
-      )
-    )
+  ): SMono[CoreHttpResponse] = {
+    sendRequest(core, requestBuilder(core, method, path, timeout, retryStrategy).build())
   }
 
   def sendRequest(
@@ -76,28 +64,30 @@ object ManagerUtil {
       body: UrlQueryStringBuilder,
       timeout: Duration,
       retryStrategy: RetryStrategy
-  ): SMono[GenericManagerResponse] = {
-    val idempotent = method == HttpMethod.GET
-    sendRequest(
-      core,
-      new GenericManagerRequest(
-        timeout,
-        core.context,
-        retryStrategy,
-        () => {
-          val content = Unpooled.copiedBuffer(body.build, UTF_8)
-          val req     = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, path, content)
-          req.headers.add("Content-Type", HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED)
-          req.headers.add("Content-Length", content.readableBytes)
-          req
-        },
-        idempotent,
-        null
-      )
-    )
+  ): SMono[CoreHttpResponse] = {
+    sendRequest(core, requestBuilder(core, method, path, timeout, retryStrategy).form(body).build())
   }
 
-  def checkStatus(response: GenericManagerResponse, action: String): Try[Unit] = {
+  private def requestBuilder(
+      core: Core,
+      method: HttpMethod,
+      path: String,
+      timeout: Duration,
+      retryStrategy: RetryStrategy
+  ): CoreHttpRequest.Builder = {
+    CoreHttpRequest
+      .builder(
+        CoreCommonOptions.of(timeout, retryStrategy, null),
+        core.context,
+        method,
+        CoreHttpPath.path(path),
+        RequestTarget.manager()
+      )
+      .idempotent(method == HttpMethod.GET)
+      .failOnErrorStatus(false) // callers check the status
+  }
+
+  def checkStatus(response: CoreHttpResponse, action: String): Try[Unit] = {
     if (response.status != ResponseStatus.SUCCESS) {
       Failure(
         new CouchbaseException(

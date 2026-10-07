@@ -16,16 +16,18 @@
 
 package com.couchbase.client.core.io.netty.view;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
-class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
+public class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
 
   NonChunkedViewMessageHandler(BaseEndpoint endpoint) {
     super(endpoint, ServiceType.VIEWS);
@@ -33,6 +35,15 @@ class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
+    return errorToThrowable(status, content, request);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the view service.
+   * Also used by the OkHttp-based view service.
+   */
+  @Stability.Internal
+  public static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
     return new ViewServiceException(content, new HttpStatusCodeException(status, content, request, null));
   }
 

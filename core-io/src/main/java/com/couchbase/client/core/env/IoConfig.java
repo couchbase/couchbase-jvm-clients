@@ -670,8 +670,10 @@ public class IoConfig {
      * <p>
      * Defaults to 1 minute.
      * <p>
-     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
-     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * Please note that for key-value connections, this setting only propagates to the OS on Linux when the epoll
+     * transport is used. For HTTP connections (for example, to the query and search services), it propagates
+     * wherever the JVM and OS support it (Java 11 or later on Linux and macOS, for example).
+     * Elsewhere, the OS-configured value is used (and you need to tune it there if you want to customize
      * the default behavior).
      *
      * @param tcpKeepAliveTime the custom keepalive time.
@@ -695,8 +697,10 @@ public class IoConfig {
      * <p>
      * Defaults to zero, in which case the OS-level default is used.
      * <p>
-     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
-     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * Please note that for key-value connections, this setting only propagates to the OS on Linux when the epoll
+     * transport is used. For HTTP connections (for example, to the query and search services), it propagates
+     * wherever the JVM and OS support it (Java 11 or later on Linux and macOS, for example).
+     * Elsewhere, the OS-configured value is used (and you need to tune it there if you want to customize
      * the default behavior).
      *
      * @param tcpKeepAliveInterval the custom keepalive time.
@@ -719,8 +723,10 @@ public class IoConfig {
      * <p>
      * Defaults to zero, in which case the OS-level default is used.
      * <p>
-     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
-     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
+     * Please note that for key-value connections, this setting only propagates to the OS on Linux when the epoll
+     * transport is used. For HTTP connections (for example, to the query and search services), it propagates
+     * wherever the JVM and OS support it (Java 11 or later on Linux and macOS, for example).
+     * Elsewhere, the OS-configured value is used (and you need to tune it there if you want to customize
      * the default behavior).
      *
      * @param tcpKeepAliveCount The maximum number of probes, or zero for the OS default.
@@ -753,9 +759,8 @@ public class IoConfig {
      * <p>
      * Defaults to 20 seconds.
      * <p>
-     * Please note that this setting only propagates to the OS on Linux when the epoll transport is used. On all
-     * other platforms, the OS-configured time is used (and you need to tune it there if you want to customize
-     * the default behavior).
+     * Please note that this setting only propagates to the OS on Linux, and only when {@link IoEnvironment.Builder#enableNativeIo(boolean) io.enableNativeIo} is true.
+     * Elsewhere, the OS-configured time is used (and you need to tune it there if you want to customize the default behavior).
      *
      * @param tcpUserTimeout The desired timeout, or {@code Duration.zero()} for the OS default.
      * @return this builder for chaining purposes.

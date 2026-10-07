@@ -20,6 +20,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.io.netty.chunk.ChunkedMessageHandler;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -28,6 +29,7 @@ import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.retry.RetryReason;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,8 +43,12 @@ public class QueryMessageHandler
 
   @Override
   protected Optional<RetryReason> qualifiesForRetry(final CouchbaseException exception) {
-    if (exception.context() instanceof QueryErrorContext) {
-      QueryErrorContext errorContext = (QueryErrorContext) exception.context();
+    return qualifiesForRetry(exception.context());
+  }
+
+  public static Optional<RetryReason> qualifiesForRetry(@Nullable ErrorContext ctx) {
+    if (ctx instanceof QueryErrorContext) {
+      QueryErrorContext errorContext = (QueryErrorContext) ctx;
       List<ErrorCodeAndMessage> errors = errorContext.errors();
       if (!errors.isEmpty()) {
         return mapError(errors.get(0));

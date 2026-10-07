@@ -39,24 +39,24 @@ public class HttpProtocol {
    * @return the response status.
    */
   public static ResponseStatus decodeStatus(final HttpResponseStatus status) {
-    if (status == null) {
-      return ResponseStatus.UNKNOWN;
-    }
+    return status == null ? ResponseStatus.UNKNOWN : decodeStatus(status.code());
+  }
 
-    if (status.equals(HttpResponseStatus.OK)
-      || status.equals(HttpResponseStatus.ACCEPTED)
-      || status.equals(HttpResponseStatus.CREATED)) {
+  public static ResponseStatus decodeStatus(final int status) {
+    if (status == HttpResponseStatus.OK.code()
+      || status == HttpResponseStatus.ACCEPTED.code()
+      || status == HttpResponseStatus.CREATED.code()) {
       return ResponseStatus.SUCCESS;
-    } else if (status.equals(HttpResponseStatus.NOT_FOUND)) {
+    } else if (status == HttpResponseStatus.NOT_FOUND.code()) {
       return ResponseStatus.NOT_FOUND;
-    } else if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+    } else if (status == HttpResponseStatus.BAD_REQUEST.code()) {
       return ResponseStatus.INVALID_ARGS;
-    } else if (status.equals(HttpResponseStatus.INTERNAL_SERVER_ERROR)) {
+    } else if (status == HttpResponseStatus.INTERNAL_SERVER_ERROR.code()) {
       return ResponseStatus.INTERNAL_SERVER_ERROR;
-    } else if (status.equals(HttpResponseStatus.UNAUTHORIZED)
-      || status.equals(HttpResponseStatus.FORBIDDEN)) {
+    } else if (status == HttpResponseStatus.UNAUTHORIZED.code()
+      || status == HttpResponseStatus.FORBIDDEN.code()) {
       return ResponseStatus.NO_ACCESS;
-    } else if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
+    } else if (status == HttpResponseStatus.TOO_MANY_REQUESTS.code()) {
       return ResponseStatus.TOO_MANY_REQUESTS;
     } else {
       return ResponseStatus.UNKNOWN;

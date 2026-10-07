@@ -18,12 +18,12 @@ package com.couchbase.client.java.manager.raw;
 
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
+import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpPath;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.msg.manager.GenericManagerRequest;
+import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.java.Cluster;
 import com.couchbase.client.java.codec.JsonSerializer;
@@ -41,7 +41,10 @@ import static com.couchbase.client.java.manager.raw.RawManagerOptions.rawManager
  * Please note that the results of the individual methods can vary greatly between server versions. This API
  * should only be used if you know what you ask for and it is not covered by the official, high level management
  * APIs already.
+ *
+ * @deprecated in favor of making HTTP calls using {@code cluster.httpClient()}.
  */
+@Deprecated
 @Stability.Uncommitted
 public class RawManager {
 
@@ -51,7 +54,9 @@ public class RawManager {
    * @param cluster the cluster to query against.
    * @param request the request to dispatch.
    * @return a Mono eventually containing the response when it arrives.
+   * @deprecated in favor of making HTTP calls using {@code cluster.httpClient()}.
    */
+  @Deprecated
   public static Mono<RawManagerResponse> call(final Cluster cluster, final RawManagerRequest request) {
     return call(cluster, request, rawManagerOptions());
   }
@@ -63,7 +68,9 @@ public class RawManager {
    * @param request the request to dispatch.
    * @param options the custom options to use.
    * @return a Mono eventually containing the response when it arrives.
+   * @deprecated in favor of making HTTP calls using {@code cluster.httpClient()}.
    */
+  @Deprecated
   public static Mono<RawManagerResponse> call(final Cluster cluster, final RawManagerRequest request,
                                               final RawManagerOptions options) {
     switch (request.serviceType()) {
@@ -83,20 +90,21 @@ public class RawManager {
     Duration timeout = opts.timeout().orElse(environment.timeoutConfig().managementTimeout());
     RetryStrategy retryStrategy = opts.retryStrategy().orElse(environment.retryStrategy());
 
-    final GenericManagerRequest req = new GenericManagerRequest(
-      timeout,
-      cluster.core().context(),
-      retryStrategy,
-      () -> {
-        FullHttpRequest httpRequest = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, request.method(), request.uri());
-        for (Map.Entry<String, Object> e : opts.httpHeaders().entrySet()) {
-          httpRequest.headers().set(e.getKey(), e.getValue());
-        }
-        return httpRequest;
-      },
-      request.method().equals(HttpMethod.GET),
-      null
-    );
+    CoreHttpRequest.Builder builder = CoreHttpRequest.builder(
+        CoreCommonOptions.of(timeout, retryStrategy, null),
+        cluster.core().context(),
+        request.method(),
+        CoreHttpPath.path(request.uri()), // may include a query string
+        RequestTarget.manager()
+      )
+      .idempotent(request.method().equals(HttpMethod.GET))
+      .failOnErrorStatus(false); // the caller checks the status
+
+    for (Map.Entry<String, Object> e : opts.httpHeaders().entrySet()) {
+      builder.header(e.getKey(), e.getValue());
+    }
+
+    final CoreHttpRequest req = builder.build();
 
     cluster.core().send(req);
 

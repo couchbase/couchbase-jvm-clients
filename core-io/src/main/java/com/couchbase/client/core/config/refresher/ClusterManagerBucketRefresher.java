@@ -101,8 +101,7 @@ public class ClusterManagerBucketRefresher implements BucketRefresher {
         ctx.environment().timeoutConfig().managementTimeout(),
         ctx,
         BestEffortRetryStrategy.INSTANCE,
-        name,
-        ctx.authenticator()
+        name
       );
       core.send(request);
       return Reactor.wrap(request, request.response(), true);
