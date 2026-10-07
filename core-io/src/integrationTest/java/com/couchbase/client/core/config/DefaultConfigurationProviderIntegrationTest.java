@@ -25,12 +25,12 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
-import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.util.ConfigWaitHelper;
 import com.couchbase.client.core.util.CoreIntegrationTest;
 import com.couchbase.client.test.Services;
 import com.couchbase.client.test.TestNodeConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -41,7 +41,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -229,10 +231,9 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
 
     ConfigurationProvider provider = newDefaultConfigurationProvider(core, seeds);
 
+    String bucketName = "this-bucket-does-not-exist";
+    CompletableFuture<Void> open = provider.openBucket(bucketName).toFuture();
     try {
-      String bucketName = "this-bucket-does-not-exist";
-      provider.openBucket(bucketName).subscribe(v -> {}, e -> assertInstanceOf(ConfigException.class, e));
-
       waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(p -> p instanceof BucketOpenRetriedEvent));
 
       for (Event event : eventBus.publishedEvents()) {
@@ -244,6 +245,10 @@ class DefaultConfigurationProviderIntegrationTest extends CoreIntegrationTest {
     } finally {
       provider.shutdown().block();
     }
+
+    // The open never succeeded; it kept retrying until the provider shut down.
+    ExecutionException e = assertThrows(ExecutionException.class, () -> open.get(10, TimeUnit.SECONDS));
+    assertInstanceOf(AlreadyShutdownException.class, e.getCause());
   }
 
   /**
