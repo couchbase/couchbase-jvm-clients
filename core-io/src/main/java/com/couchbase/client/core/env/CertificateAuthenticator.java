@@ -20,11 +20,15 @@ import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.KeyManagerFactory;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Optional;
@@ -32,16 +36,23 @@ import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Performs authentication through a client certificate instead of supplying username and password.
  */
 public class CertificateAuthenticator implements Authenticator {
-
-  private final PrivateKey key;
-  private final String keyPassword;
-  private final List<X509Certificate> keyCertChain;
   private final Supplier<KeyManagerFactory> keyManagerFactory;
+
+  /**
+   * Creates a new {@link CertificateAuthenticator} from a PKCS12 or JKS key store file.
+   *
+   * @param keyStorePath the file path to the keystore.
+   * @param keyStorePassword the password for the keystore.
+   */
+  public static CertificateAuthenticator fromKeyStore(final Path keyStorePath, final String keyStorePassword) {
+    return fromKeyStore(keyStorePath, keyStorePassword, Optional.empty());
+  }
 
   /**
    * Creates a new {@link CertificateAuthenticator} from a key store path.
@@ -98,7 +109,7 @@ public class CertificateAuthenticator implements Authenticator {
    */
   public static CertificateAuthenticator fromKeyManagerFactory(final Supplier<KeyManagerFactory> keyManagerFactory) {
     notNull(keyManagerFactory, "KeyManagerFactory");
-    return new CertificateAuthenticator(null, null, null, keyManagerFactory);
+    return new CertificateAuthenticator(keyManagerFactory);
   }
 
   /**
@@ -109,34 +120,43 @@ public class CertificateAuthenticator implements Authenticator {
    * @param keyCertChain the key certificate chain to use.
    * @return the created {@link CertificateAuthenticator}.
    */
-  public static CertificateAuthenticator fromKey(final PrivateKey key, final String keyPassword,
-                                                 final List<X509Certificate> keyCertChain) {
+  public static CertificateAuthenticator fromKey(
+    final PrivateKey key,
+    final String keyPassword,
+    final List<X509Certificate> keyCertChain
+  ) {
     notNull(key, "PrivateKey");
     notNullOrEmpty(keyCertChain, "KeyCertChain");
-    return new CertificateAuthenticator(key, keyPassword, keyCertChain, null);
+
+    try {
+      char[] keyPasswordChars = keyPassword == null ? null : keyPassword.toCharArray();
+
+      KeyStore ks = KeyStore.getInstance("PKCS12");
+      ks.load(null, null);
+      ks.setKeyEntry("1", key, keyPasswordChars, keyCertChain.toArray(new Certificate[0]));
+
+      return fromKeyStore(ks, keyPassword);
+
+    } catch (IOException unexpected) {
+      throw new UncheckedIOException(unexpected);
+
+    } catch (GeneralSecurityException e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  private CertificateAuthenticator(final PrivateKey key, final String keyPassword,
-                                   final List<X509Certificate> keyCertChain,
-                                   final Supplier<KeyManagerFactory> keyManagerFactory) {
-    this.key = key;
-    this.keyPassword = keyPassword;
-    this.keyCertChain = keyCertChain;
-    this.keyManagerFactory = keyManagerFactory;
+  private CertificateAuthenticator(final Supplier<KeyManagerFactory> keyManagerFactory) {
+    this.keyManagerFactory = requireNonNull(keyManagerFactory);
+  }
 
-    if (key != null && keyManagerFactory != null) {
-      throw InvalidArgumentException.fromMessage("Either a key certificate or a key manager factory" +
-        " can be provided, but not both!");
-    }
+  @Override
+  public KeyManagerFactory getKeyManagerFactory() {
+    return keyManagerFactory.get();
   }
 
   @Override
   public void applyTlsProperties(final SslContextBuilder context) {
-    if (keyManagerFactory != null) {
-      context.keyManager(keyManagerFactory.get());
-    } else if (key != null) {
-      context.keyManager(key, keyPassword, keyCertChain.toArray(new X509Certificate[0]));
-    }
+      context.keyManager(getKeyManagerFactory());
   }
 
   @Override

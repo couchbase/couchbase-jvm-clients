@@ -34,4 +34,14 @@ public interface NonChunkedHttpRequest<R extends Response> extends Encodable<Ful
   default boolean bypassExceptionTranslation() {
     return false;
   }
+
+  /**
+   * If true (the default), a non-2xx HTTP status code fails the request.
+   * <p>
+   * If false, the request completes with a response whatever the HTTP status code,
+   * and it's up to the caller to check the status.
+   */
+  default boolean failOnErrorStatus() {
+    return true;
+  }
 }

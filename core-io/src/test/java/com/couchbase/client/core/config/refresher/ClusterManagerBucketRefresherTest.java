@@ -19,10 +19,7 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
@@ -80,8 +77,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      BucketConfigStreamingResponse response = request.decode(httpResponse, null);
+      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.OK.code(), null);
       responseRef.set(response);
       request.succeed(response);
       return null;
@@ -106,8 +102,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      BucketConfigStreamingResponse response = request.decode(httpResponse, null);
+      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.OK.code(), null);
       responseRef.set(response);
       request.succeed(response);
       return null;
@@ -130,8 +125,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
-      BucketConfigStreamingResponse response = request.decode(httpResponse, null);
+      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), null);
       request.succeed(response);
       return null;
     }).when(core).send(any(BucketConfigStreamingRequest.class));

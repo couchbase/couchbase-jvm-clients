@@ -20,8 +20,12 @@ import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectDelayedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectResumedEvent;
+import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.error.TimeoutException;
+import com.couchbase.client.core.node.Node;
+import com.couchbase.client.core.service.ServiceContext;
+import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.json.JsonArray;
 import com.couchbase.client.java.util.JavaIntegrationTest;
 import com.couchbase.client.test.Capabilities;
@@ -42,10 +46,12 @@ import static com.couchbase.client.java.QueryIntegrationTest.verySlowQueryStatem
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @IgnoreWhen(missesCapabilities = {Capabilities.QUERY, Capabilities.CLUSTER_LEVEL_QUERY},
   clusterVersionEquals = DISABLE_QUERY_TESTS_FOR_CLUSTER)
@@ -101,22 +107,43 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
         new ProposedGlobalConfigContext(dummyConfigWithNoQueryNodes, "127.0.0.1", true)
       );
 
-      log.info("Verifying network channel closure was deferred.");
-      waitUntilEvents(eventBus, gracePeriod, listOf(
-        EndpointDisconnectDelayedEvent.class
-      ));
+      log.info("Waiting for the SDK to remove the query service while the query is in flight.");
+      waitUntilCondition(
+        () -> assertTrue(queryServiceRemoved(eventBus), "query service removed"),
+        gracePeriod
+      );
+
+      if (Node.useNetty()) {
+        log.info("Verifying network channel closure was deferred.");
+        waitUntilEvents(eventBus, gracePeriod, listOf(
+          EndpointDisconnectDelayedEvent.class
+        ));
+      }
 
       log.info("Waiting for query timeout.");
       Duration pollTimeout = queryTimeout.plus(gracePeriod);
       Throwable t = queryErrorFuture.get(pollTimeout.toMillis(), MILLISECONDS);
       assertInstanceOf(TimeoutException.class, t);
 
-      log.info("Verifying network channel was closed.");
-      waitUntilEvents(eventBus, gracePeriod, listOf(
-        EndpointDisconnectDelayedEvent.class,
-        EndpointDisconnectResumedEvent.class
-      ));
+      if (Node.useNetty()) {
+        log.info("Verifying network channel was closed.");
+        waitUntilEvents(eventBus, gracePeriod, listOf(
+          EndpointDisconnectDelayedEvent.class,
+          EndpointDisconnectResumedEvent.class
+        ));
+      } else {
+        // With OkHttp, removing the service doesn't touch in-flight calls (they use the shared
+        // OkHttp client), so there's no deferred channel closure. The query timing out above,
+        // rather than being canceled, shows it was allowed to complete.
+        assertEquals(emptyList(), getEventClasses(eventBus));
+      }
     }
+  }
+
+  private static boolean queryServiceRemoved(SimpleEventBus eventBus) {
+    return eventBus.publishedEvents().stream()
+      .anyMatch(e -> e instanceof ServiceRemovedEvent
+        && ((ServiceContext) e.context()).serviceType() == ServiceType.QUERY);
   }
 
   private static void waitUntilEvents(SimpleEventBus eventBus, Duration gracePeriod, List<Class<?>> expectedEventClasses) {
