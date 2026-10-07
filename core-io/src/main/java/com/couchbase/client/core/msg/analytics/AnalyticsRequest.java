@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.analytics;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.annotation.UsedBy;
 import com.couchbase.client.core.annotation.UsedBy.Project;
 import com.couchbase.client.core.cnc.CbTracing;
@@ -33,7 +34,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValu
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -52,7 +53,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 
 public class AnalyticsRequest
-  extends BaseRequest<AnalyticsResponse>
+  extends BaseHttpRequest<AnalyticsResponse>
   implements HttpRequest<AnalyticsChunkHeader, AnalyticsChunkRow, AnalyticsChunkTrailer, AnalyticsResponse> {
 
   public static final int NO_PRIORITY = 0;
@@ -324,6 +325,38 @@ public class AnalyticsRequest
 
   public String scope() {
     return scope;
+  }
+
+  /**
+   * Returns the HTTP request path, starting with a slash.
+   */
+  @Stability.Internal
+  public String httpPath() {
+    return httpPath;
+  }
+
+  /**
+   * Returns the HTTP request method, like "POST".
+   */
+  @Stability.Internal
+  public String httpMethodName() {
+    return httpMethod.name();
+  }
+
+  /**
+   * Returns the HTTP request body, or null or empty if there is none.
+   */
+  @Stability.Internal
+  public byte @Nullable [] query() {
+    return query;
+  }
+
+  /**
+   * Returns the analytics priority, or {@link #NO_PRIORITY}.
+   */
+  @Stability.Internal
+  public int priority() {
+    return priority;
   }
 
   @Override

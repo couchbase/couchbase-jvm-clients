@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.search;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -28,7 +29,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -44,7 +45,7 @@ import java.util.TreeMap;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
 // This would generally be called just "SearchRequest", but that's now an externally presented concept in the API.
-public class ServerSearchRequest extends BaseRequest<SearchResponse>
+public class ServerSearchRequest extends BaseHttpRequest<SearchResponse>
         implements HttpRequest<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse> {
 
     private final String indexName;
@@ -116,6 +117,16 @@ public class ServerSearchRequest extends BaseRequest<SearchResponse>
     @Override
     public String name() {
         return "search";
+    }
+
+    @Stability.Internal
+    public String indexName() {
+      return indexName;
+    }
+
+    @Stability.Internal
+    public byte[] content() {
+      return content;
     }
 
     public CoreBucketAndScope scope() {

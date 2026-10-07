@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.analytics;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -41,6 +42,15 @@ public class AnalyticsMessageHandler
 
   @Override
   protected Optional<RetryReason> qualifiesForRetry(final CouchbaseException exception) {
+    return retryReason(exception);
+  }
+
+  /**
+   * Returns the reason to retry an analytics query that failed with the given exception, if it should be retried.
+   * Also used by the OkHttp-based analytics service.
+   */
+  @Stability.Internal
+  public static Optional<RetryReason> retryReason(final CouchbaseException exception) {
     if (exception instanceof TemporaryFailureException || exception instanceof JobQueueFullException) {
       return Optional.of(RetryReason.ANALYTICS_TEMPORARY_FAILURE);
     }

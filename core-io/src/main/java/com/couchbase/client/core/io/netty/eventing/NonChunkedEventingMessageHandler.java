@@ -15,6 +15,7 @@
  */
 
 package com.couchbase.client.core.io.netty.eventing;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
@@ -24,6 +25,7 @@ import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.NonChunkedHttpMessageHandler;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
+import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.service.ServiceType;
 
@@ -39,6 +41,16 @@ public class NonChunkedEventingMessageHandler extends NonChunkedHttpMessageHandl
   @Override
   protected Exception failRequestWith(final HttpResponseStatus status, final String content,
                                       final NonChunkedHttpRequest<Response> request) {
+    return errorToThrowable(status, content, request);
+  }
+
+  /**
+   * Returns the exception for an error response to an HTTP request to the eventing service.
+   * Also used by the OkHttp-based eventing service.
+   */
+  @Stability.Internal
+  public static Exception errorToThrowable(final HttpResponseStatus status, final String content,
+                                           final Request<?> request) {
     final Map<String, Object> properties = extractProperties(content);
 
     EventingErrorContext errorContext = new EventingErrorContext(

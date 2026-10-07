@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.search;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -28,7 +29,7 @@ import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.Optional;
 
-class ChunkedSearchMessageHandler
+public class ChunkedSearchMessageHandler
         extends ChunkedMessageHandler<SearchChunkHeader, SearchChunkRow, SearchChunkTrailer, SearchResponse, ServerSearchRequest> {
 
     private static final int HTTP_TOO_MANY_REQUESTS = 429;
@@ -39,6 +40,15 @@ class ChunkedSearchMessageHandler
 
     @Override
     protected Optional<RetryReason> qualifiesForRetry(final CouchbaseException exception) {
+        return retryReason(exception);
+    }
+
+    /**
+     * Returns the reason to retry a search query that failed with the given exception, if it should be retried.
+     * Also used by the OkHttp-based search service.
+     */
+    @Stability.Internal
+    public static Optional<RetryReason> retryReason(final CouchbaseException exception) {
         if (exception instanceof RateLimitedException || exception instanceof QuotaLimitedException) {
             return Optional.empty();
         }

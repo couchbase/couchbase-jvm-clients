@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdapter;
@@ -62,9 +63,22 @@ public class SslSessionLoggingHandler extends ChannelInboundHandlerAdapter {
       return;
     }
 
+    log.debug(
+      "TLS handshake complete! remote = {} ; cipher suite = {} ; certificate chain = \n{}",
+      new HostAndPort(session.getPeerHost(), session.getPeerPort()),
+      session.getCipherSuite(),
+      pemChain(session.getPeerCertificates())
+    );
+  }
+
+  /**
+   * Returns the certificates in PEM format, or an explanation if they can't be encoded.
+   */
+  @Stability.Internal
+  public static String pemChain(Certificate[] chain) {
     StringBuilder pemChain = new StringBuilder();
     try {
-      for (Certificate cert : session.getPeerCertificates()) {
+      for (Certificate cert : chain) {
         String base64Encoded = Base64.getMimeEncoder().encodeToString(cert.getEncoded());
         pemChain.append("-----BEGIN CERTIFICATE-----\n");
         pemChain.append(base64Encoded).append("\n");
@@ -75,12 +89,6 @@ public class SslSessionLoggingHandler extends ChannelInboundHandlerAdapter {
       pemChain.append("Can't display encoded certificate chain; ");
       pemChain.append(getStackTraceAsString(e));
     }
-
-    log.debug(
-      "TLS handshake complete! remote = {} ; cipher suite = {} ; certificate chain = \n{}",
-      new HostAndPort(session.getPeerHost(), session.getPeerPort()),
-      session.getCipherSuite(),
-      pemChain
-    );
+    return pemChain.toString();
   }
 }

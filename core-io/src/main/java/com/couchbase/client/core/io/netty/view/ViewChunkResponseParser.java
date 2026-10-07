@@ -16,12 +16,15 @@
 
 package com.couchbase.client.core.io.netty.view;
 
+import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.ViewErrorContext;
 import com.couchbase.client.core.error.ViewNotFoundException;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
+import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.view.ViewChunkHeader;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
@@ -96,15 +99,22 @@ public class ViewChunkResponseParser
 
   @Override
   public Optional<CouchbaseException> error() {
-    return error.map(e -> {
-      int httpStatus = responseHeader().status().code();
-      ResponseStatus responseStatus = HttpProtocol.decodeStatus(responseHeader().status());
-      ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext(), e, httpStatus);
-      if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
-        return new ViewNotFoundException(errorContext);
-      }
-      return new CouchbaseException("Unknown view error: " + e.toString(), errorContext);
-    });
+    return error.map(e -> errorToThrowable(e, responseHeader().status(), requestContext()));
+  }
+
+  /**
+   * Returns the exception for the {@code error} and {@code reason} fields of a view query response.
+   * Also used by the OkHttp-based view service.
+   */
+  @Stability.Internal
+  public static CouchbaseException errorToThrowable(ViewError e, HttpResponseStatus status, RequestContext requestContext) {
+    int httpStatus = status.code();
+    ResponseStatus responseStatus = HttpProtocol.decodeStatus(status);
+    ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext, e, httpStatus);
+    if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
+      return new ViewNotFoundException(errorContext);
+    }
+    return new CouchbaseException("Unknown view error: " + e.toString(), errorContext);
   }
 
   @Override

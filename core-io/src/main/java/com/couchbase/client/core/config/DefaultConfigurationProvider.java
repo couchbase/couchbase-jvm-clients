@@ -43,6 +43,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.SeedNode;
 import com.couchbase.client.core.error.AlreadyShutdownException;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.BucketNotFoundDuringLoadException;
 import com.couchbase.client.core.error.BucketNotReadyDuringLoadException;
 import com.couchbase.client.core.error.ConfigException;
@@ -100,6 +101,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 import static com.couchbase.client.core.Reactor.ignoreIfDone;
 import static com.couchbase.client.core.Reactor.safeInterval;
@@ -973,6 +975,10 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
               : Mono.error(t));
         })
         // Exponential backoff for certain errors.
+        // An authentication failure includes a failed TLS handshake (for example, an untrusted server certificate),
+        // which won't fix itself in 10 ms. It arrives wrapped in a ConfigException (see BaseBucketLoader), and
+        // without a backoff, a loader that fails fast (like the OkHttp-based manager service's) would retry it
+        // in a tight loop.
         .retryWhen(Retry
           .backoff(Long.MAX_VALUE, Duration.ofMillis(500))
           .maxBackoff(Duration.ofSeconds(10))
@@ -980,7 +986,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
             BucketNotFoundDuringLoadException.class,
             BucketNotReadyDuringLoadException.class,
             NoAccessDuringConfigLoadException.class
-          )))
+          ) || hasCause(t, AuthenticationFailureException.class)))
         )
         // Short fixed delay for the others we want to retry.
         .retryWhen(Retry

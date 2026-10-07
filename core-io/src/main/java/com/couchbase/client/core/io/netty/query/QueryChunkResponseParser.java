@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.query;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
@@ -52,6 +53,7 @@ import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.setOf;
 
+@Stability.Internal
 public class QueryChunkResponseParser
   extends BaseChunkResponseParser<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer> {
 
@@ -132,13 +134,20 @@ public class QueryChunkResponseParser
 
   static CouchbaseException errorsToThrowable(final byte[] bytes, HttpResponse header, RequestContext ctx) {
     int httpStatus = header != null ? header.status().code() : 0;
+    return errorsToThrowable(bytes, httpStatus, ctx);
+  }
 
+  public static CouchbaseException errorsToThrowable(
+    final byte[] bytes,
+    int httpStatus,
+    RequestContext ctx
+  ) {
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()
       : ErrorCodeAndMessage.fromJsonArray(bytes);
     QueryErrorContext errorContext = new QueryErrorContext(ctx, errors, httpStatus);
 
-    if (errors.size() >= 1) {
+    if (!errors.isEmpty()) {
       ErrorCodeAndMessage codeAndMessage = errors.get(0);
       int code = codeAndMessage.code();
       String message = codeAndMessage.message();
