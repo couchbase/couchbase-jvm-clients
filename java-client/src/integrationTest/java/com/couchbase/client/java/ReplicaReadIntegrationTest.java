@@ -21,7 +21,6 @@ import com.couchbase.client.core.config.CouchbaseBucketConfig;
 import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.DocumentUnretrievableException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
-import com.couchbase.client.java.kv.GetAnyReplicaOptions;
 import com.couchbase.client.java.kv.GetReplicaResult;
 import com.couchbase.client.java.kv.GetResult;
 import com.couchbase.client.java.util.JavaIntegrationTest;
@@ -38,7 +37,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -51,15 +49,12 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.couchbase.client.core.util.CbCollections.setCopyOf;
-import static com.couchbase.client.core.util.CbCollections.setOf;
 import static com.couchbase.client.core.node.KeyValueLocator.partitionForKey;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.java.kv.GetAnyReplicaOptions.getAnyReplicaOptions;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -107,12 +102,15 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
 
     collection.upsert(id, "Hello, World!");
 
-    List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
-    assertEquals(numAvailableCopies(id), results.size(), results::toString);
-    for (GetResult result : results) {
-      assertEquals("Hello, World!", result.contentAs(String.class));
-      assertFalse(result.expiryTime().isPresent());
-    }
+    // The upsert doesn't wait for replication, so a replica might not have the document yet.
+    waitUntilCondition(() -> {
+      List<GetResult> results = collection.getAllReplicas(id).collect(Collectors.toList());
+      assertEquals(numAvailableCopies(id), results.size(), results::toString);
+      for (GetResult result : results) {
+        assertEquals("Hello, World!", result.contentAs(String.class));
+        assertFalse(result.expiryTime().isPresent());
+      }
+    }, Duration.ofSeconds(10));
   }
 
   /**
@@ -253,22 +251,25 @@ class ReplicaReadIntegrationTest extends JavaIntegrationTest {
     String id = UUID.randomUUID().toString();
     collection.upsert(id, "Hello, World!");
 
-    List<GetReplicaResult> results = collection.reactive()
-        .getAllReplicas(id)
-        .collectList()
-        .block();
+    // The upsert doesn't wait for replication, so a replica might not have the document yet.
+    waitUntilCondition(() -> {
+      List<GetReplicaResult> results = collection.reactive()
+          .getAllReplicas(id)
+          .collectList()
+          .block();
 
-    assertNotNull(results);
-    assertEquals(numAvailableCopies(absentId()), results.size(), results::toString);
+      assertNotNull(results);
+      assertEquals(numAvailableCopies(id), results.size(), results::toString);
 
-    int primaryCount = 0;
-    for (GetReplicaResult result : results) {
-      if (!result.isReplica()) {
-        primaryCount++;
+      int primaryCount = 0;
+      for (GetReplicaResult result : results) {
+        if (!result.isReplica()) {
+          primaryCount++;
+        }
+        assertEquals("Hello, World!", result.contentAs(String.class));
       }
-      assertEquals("Hello, World!", result.contentAs(String.class));
-    }
-    assertEquals(1, primaryCount);
+      assertEquals(1, primaryCount);
+    }, Duration.ofSeconds(10));
   }
 
   @Test
