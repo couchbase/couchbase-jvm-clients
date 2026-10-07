@@ -216,9 +216,6 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
         if (name.equals("fts") || name.equals("ftsSSL")) {
           capabilities.add(Capabilities.SEARCH);
         }
-        if (name.equals("capi") || name.equals("capiSSL")) {
-          capabilities.add(Capabilities.VIEWS);
-        }
         if (name.equals("eventing") || name.equals("eventingSSL")) {
           capabilities.add(Capabilities.EVENTING);
         }
@@ -228,6 +225,11 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       }
     }
     List<String> bucketCapabilities = (List<String>) decoded.get("bucketCapabilities");
+    if (bucketCapabilities.contains("couchapi")) {
+      // The nodes may run the views service (capi), but views are only available if the bucket advertises couchapi.
+      // For example, Magma buckets (the default in Couchbase Server 8.0) don't support views.
+      capabilities.add(Capabilities.VIEWS);
+    }
     if (bucketCapabilities.contains("durableWrite")) {
       capabilities.add(Capabilities.SYNC_REPLICATION);
       /// GCCCP was also added in 6.5 when sync replication was added, so we can assume the same.
