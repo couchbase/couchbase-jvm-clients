@@ -26,6 +26,10 @@ import java.nio.charset.StandardCharsets;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 
+/**
+ * @deprecated in favor of making HTTP calls using {@code cluster.httpClient()}.
+ */
+@Deprecated
 @Stability.Uncommitted
 public class RawManagerResponse {
 

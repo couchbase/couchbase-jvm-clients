@@ -93,7 +93,7 @@ class ManagerMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
-      BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
+      BestEffortRetryStrategy.INSTANCE, "bucket");
     channel.write(request);
 
     HttpRequest outboundHeader = channel.readOutbound();
@@ -161,7 +161,7 @@ class ManagerMessageHandlerTest {
     EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
     BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofMillis(200), ctx,
-      BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
+      BestEffortRetryStrategy.INSTANCE, "bucket");
     channel.write(request);
 
     HttpRequest outboundHeader = channel.readOutbound();
@@ -212,7 +212,7 @@ class ManagerMessageHandlerTest {
       EmbeddedChannel channel = new EmbeddedChannel(new ManagerMessageHandler(endpoint, ctx));
 
       BucketConfigStreamingRequest request = new BucketConfigStreamingRequest(Duration.ofSeconds(1), ctx,
-        BestEffortRetryStrategy.INSTANCE, "bucket", ctx.authenticator());
+        BestEffortRetryStrategy.INSTANCE, "bucket");
       channel.write(request);
 
       HttpRequest outboundHeader = channel.readOutbound();

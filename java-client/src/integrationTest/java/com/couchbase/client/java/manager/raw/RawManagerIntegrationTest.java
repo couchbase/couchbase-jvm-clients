@@ -18,7 +18,7 @@ package com.couchbase.client.java.manager.raw;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.msg.manager.GenericManagerRequest;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
 import com.couchbase.client.java.Cluster;
@@ -92,7 +92,7 @@ class RawManagerIntegrationTest extends JavaIntegrationTest {
 
     RawManager.call(clusterMock, request, options);
 
-    ArgumentCaptor<GenericManagerRequest> captor = ArgumentCaptor.forClass(GenericManagerRequest.class);
+    ArgumentCaptor<CoreHttpRequest> captor = ArgumentCaptor.forClass(CoreHttpRequest.class);
     verify(core, times(1)).send(captor.capture());
 
     FullHttpRequest encoded = captor.getValue().encode();

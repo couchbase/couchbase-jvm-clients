@@ -38,7 +38,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
@@ -65,7 +66,7 @@ import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
+public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
     implements NonChunkedHttpRequest<CoreHttpResponse> {
 
   private final RequestTarget target;
@@ -77,6 +78,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   private final boolean idempotent;
   private final AtomicBoolean executed = new AtomicBoolean();
   private final boolean bypassExceptionTranslation;
+  private final boolean failOnErrorStatus;
   private final @Nullable String name;
 
   public static Builder builder(CoreCommonOptions options, CoreContext coreContext, HttpMethod method, CoreHttpPath path, RequestTarget target) {
@@ -94,6 +96,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     this.headers = builder.headers;
     this.idempotent = defaultIfNull(builder.idempotent, method == GET);
     this.bypassExceptionTranslation = builder.bypassExceptionTranslation;
+    this.failOnErrorStatus = builder.failOnErrorStatus;
     this.name = name;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
@@ -114,6 +117,19 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     core.send(this);
     return response()
         .whenComplete((r, t) -> context().logicallyComplete());
+  }
+
+  public String method() {
+    return method.name();
+  }
+
+  public byte[] contentAsByteArray() {
+    return ByteBufUtil.getBytes(content);
+  }
+
+  public void forEachHeader(BiConsumer<String, String> action) {
+    headers.entries()
+      .forEach(entry -> action.accept(entry.getKey(), entry.getValue()));
   }
 
   @Override
@@ -170,7 +186,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     return ctx;
   }
 
-  private String pathAndQueryString() {
+  public String pathAndQueryString() {
     String p = path.format();
     if (queryString.isEmpty()) {
       return p;
@@ -191,6 +207,11 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
   @Override
   public boolean bypassExceptionTranslation() {
     return bypassExceptionTranslation;
+  }
+
+  @Override
+  public boolean failOnErrorStatus() {
+    return failOnErrorStatus;
   }
 
   /**
@@ -215,6 +236,7 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
     private Map<TracingAttribute, Object> spanAttributes; // nullable
     private Boolean idempotent; // nullable
     private boolean bypassExceptionTranslation;
+    private boolean failOnErrorStatus = true;
 
     public Builder(CoreCommonOptions options, CoreContext coreContext, RequestTarget target, HttpMethod method, CoreHttpPath path) {
       this.options = requireNonNull(options);
@@ -300,6 +322,20 @@ public class CoreHttpRequest extends BaseRequest<CoreHttpResponse>
      */
     public Builder bypassExceptionTranslation(boolean bypass) {
       this.bypassExceptionTranslation = bypass;
+      return this;
+    }
+
+    /**
+     * If true, a non-2xx HTTP status code fails the request.
+     * If false, the request completes with a response whatever the status code,
+     * so the caller can check the status.
+     * <p>
+     * Defaults to true.
+     *
+     * @see NonChunkedHttpRequest#failOnErrorStatus
+     */
+    public Builder failOnErrorStatus(boolean fail) {
+      this.failOnErrorStatus = fail;
       return this;
     }
 

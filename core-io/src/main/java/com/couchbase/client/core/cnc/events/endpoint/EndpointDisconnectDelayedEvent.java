@@ -24,8 +24,11 @@ import java.time.Duration;
 
 /**
  * This event is generated when an endpoint disconnect was delayed because it is still in use
+ *
+ * @deprecated With no replacement, since the OkHttp-based services to not send this event.
  */
 @Stability.Internal
+@Deprecated
 public class EndpointDisconnectDelayedEvent extends AbstractEvent {
 
   public EndpointDisconnectDelayedEvent(final EndpointContext context) {

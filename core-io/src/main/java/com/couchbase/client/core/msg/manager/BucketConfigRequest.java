@@ -17,22 +17,17 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
-import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.topology.NodeIdentifier;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
 
-import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
@@ -41,26 +36,13 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
   private static final String PATH = "/pools/default/b/{}";
 
   private final String bucketName;
-  private final Authenticator authenticator;
   private final NodeIdentifier target;
 
   public BucketConfigRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
-                             String bucketName, Authenticator authenticator, final NodeIdentifier target) {
+                             String bucketName, final NodeIdentifier target) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
-    this.authenticator = authenticator;
     this.target = target;
-  }
-
-  @Override
-  public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(
-      HttpVersion.HTTP_1_1,
-      HttpMethod.GET,
-      CoreHttpPath.formatPath(PATH, bucketName)
-    );
-    authenticator.authHttpRequest(serviceType(), request);
-    return request;
   }
 
   @Override
@@ -69,8 +51,13 @@ public class BucketConfigRequest extends BaseManagerRequest<BucketConfigResponse
   }
 
   @Override
-  public BucketConfigResponse decode(final HttpResponse response, final byte[] content) {
-    return new BucketConfigResponse(decodeStatus(response.status()), content);
+  public BucketConfigResponse decode(int httpStatus, byte @Nullable [] content) {
+    return new BucketConfigResponse(HttpProtocol.decodeStatus(httpStatus), content);
+  }
+
+  @Override
+  public String path() {
+    return CoreHttpPath.formatPath(PATH, bucketName);
   }
 
   @Override

@@ -241,7 +241,7 @@ public abstract class NonChunkedHttpMessageHandler extends ChannelDuplexHandler 
             FullHttpResponse httpResponse = (FullHttpResponse) msg;
             ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpResponse.status());
             if (!currentRequest.completed()) {
-              if (responseStatus == ResponseStatus.SUCCESS) {
+              if (responseStatus == ResponseStatus.SUCCESS || !currentRequest.failOnErrorStatus()) {
                 Response response = currentRequest.decode(httpResponse, channelContext);
                 currentRequest.succeed(response);
               } else {

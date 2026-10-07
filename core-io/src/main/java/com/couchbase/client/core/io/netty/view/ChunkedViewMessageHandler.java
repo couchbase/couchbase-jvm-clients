@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.view;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -31,7 +32,7 @@ import com.couchbase.client.core.retry.RetryReason;
 
 import java.util.Optional;
 
-class ChunkedViewMessageHandler
+public class ChunkedViewMessageHandler
         extends ChunkedMessageHandler<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse, ViewRequest> {
 
     ChunkedViewMessageHandler(BaseEndpoint endpoint, EndpointContext endpointContext) {
@@ -40,6 +41,15 @@ class ChunkedViewMessageHandler
 
     @Override
     protected Optional<RetryReason> qualifiesForRetry(CouchbaseException exception) {
+        return retryReason(exception);
+    }
+
+    /**
+     * Returns the reason to retry a view query that failed with the given exception, if it should be retried.
+     * Also used by the OkHttp-based view service.
+     */
+    @Stability.Internal
+    public static Optional<RetryReason> retryReason(CouchbaseException exception) {
         if (!(exception.context() instanceof ViewErrorContext)) {
             return Optional.empty();
         }

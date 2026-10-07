@@ -21,8 +21,8 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -35,7 +35,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.json.Mapper;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -55,7 +55,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 public class QueryRequest
-  extends BaseRequest<QueryResponse>
+  extends BaseHttpRequest<QueryResponse>
   implements HttpRequest<QueryChunkHeader, QueryChunkRow, QueryChunkTrailer, QueryResponse> {
 
   private static final String URI = "/query/service";
@@ -142,6 +142,10 @@ public class QueryRequest
 
   public String statement() {
     return statement;
+  }
+
+  public byte[] query() {
+    return query;
   }
 
   public Authenticator credentials() {

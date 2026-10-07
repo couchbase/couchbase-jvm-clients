@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.msg.BaseRequest;
+import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -28,7 +28,7 @@ import java.time.Duration;
 /**
  * Base class for the manager requests, mainly to define the service type in a uniform way.
  */
-public abstract class BaseManagerRequest<R extends Response> extends BaseRequest<R> implements ManagerRequest<R> {
+public abstract class BaseManagerRequest<R extends Response> extends BaseHttpRequest<R> implements ManagerRequest<R> {
 
   BaseManagerRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy) {
     super(timeout, ctx, retryStrategy);

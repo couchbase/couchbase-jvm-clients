@@ -17,10 +17,12 @@
 package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.io.netty.channel.DefaultChannelId;
 import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
+import org.jspecify.annotations.Nullable;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -28,16 +30,34 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreHttpResponse extends BaseResponse {
+  private static final HttpChannelContext DUMMY_CHANNEL_CONTEXT = new HttpChannelContext(DefaultChannelId.newInstance());
+
   private final int httpStatus;
   private final byte[] content;
   private final HttpChannelContext channelContext;
+  private final String channelId;
   private final RequestContext requestContext;
 
+  /**
+   * For responses that did not arrive over a Netty channel.
+   *
+   * @param channelId identifies the connection the response arrived on, in the same format as
+   * {@link #channelId()}: hex digits, without a "0x" prefix. Null if unknown.
+   */
+  public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, @Nullable String channelId, RequestContext requestContext) {
+    this(status, content, httpStatus, DUMMY_CHANNEL_CONTEXT, channelId == null ? "unknown" : channelId, requestContext);
+  }
+
   public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, HttpChannelContext channelContext, RequestContext requestContext) {
+    this(status, content, httpStatus, channelContext, channelContext.channelId().asShortText(), requestContext);
+  }
+
+  private CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, HttpChannelContext channelContext, String channelId, RequestContext requestContext) {
     super(requireNonNull(status));
     this.httpStatus = httpStatus;
     this.content = requireNonNull(content);
     this.channelContext = requireNonNull(channelContext);
+    this.channelId = requireNonNull(channelId);
     this.requestContext = requireNonNull(requestContext);
   }
 
@@ -53,8 +73,11 @@ public class CoreHttpResponse extends BaseResponse {
     return channelContext;
   }
 
+  /**
+   * Identifies the connection the response arrived on: hex digits, without a "0x" prefix.
+   */
   public String channelId() {
-    return channelContext.channelId().asShortText();
+    return channelId;
   }
 
   public RequestContext requestContext() {

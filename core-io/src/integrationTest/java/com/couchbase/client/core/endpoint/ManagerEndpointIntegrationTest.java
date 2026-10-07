@@ -88,7 +88,7 @@ class ManagerEndpointIntegrationTest extends ClusterAwareIntegrationTest {
     waitUntilCondition(() -> endpoint.state() == EndpointState.CONNECTED);
 
     BucketConfigRequest request = new BucketConfigRequest(Duration.ofSeconds(1),
-      serviceContext, null, config().bucketname(), serviceContext.authenticator(), null);
+      serviceContext, null, config().bucketname(), null);
 
     assertTrue(request.id() > 0);
     endpoint.send(request);

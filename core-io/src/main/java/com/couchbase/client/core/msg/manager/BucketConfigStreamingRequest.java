@@ -17,15 +17,10 @@
 package com.couchbase.client.core.msg.manager;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponse;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
-import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 
@@ -37,34 +32,25 @@ public class BucketConfigStreamingRequest extends BaseManagerRequest<BucketConfi
   private static final String PATH = "/pools/default/bs/{}";
 
   private final String bucketName;
-  private final Authenticator authenticator;
 
   public BucketConfigStreamingRequest(final Duration timeout, final CoreContext ctx,
-                                      final RetryStrategy retryStrategy, final String bucketName,
-                                      final Authenticator authenticator) {
+                                      final RetryStrategy retryStrategy, final String bucketName) {
     super(timeout, ctx, retryStrategy);
     this.bucketName = bucketName;
-    this.authenticator = authenticator;
   }
 
   @Override
-  public BucketConfigStreamingResponse decode(final HttpResponse response, final byte[] content) {
+  public BucketConfigStreamingResponse decode(int httpStatus, byte @Nullable [] content) {
     String lastDispatchedTo = null;
     if (context().lastDispatchedTo() != null) {
       lastDispatchedTo = context().lastDispatchedTo().host();
     }
-    return new BucketConfigStreamingResponse(HttpProtocol.decodeStatus(response.status()), lastDispatchedTo);
+    return new BucketConfigStreamingResponse(HttpProtocol.decodeStatus(httpStatus), lastDispatchedTo);
   }
 
   @Override
-  public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(
-      HttpVersion.HTTP_1_1,
-      HttpMethod.GET,
-      CoreHttpPath.formatPath(PATH, bucketName)
-    );
-    authenticator.authHttpRequest(serviceType(), request);
-    return request;
+  public String path() {
+    return CoreHttpPath.formatPath(PATH, bucketName);
   }
 
   @Override

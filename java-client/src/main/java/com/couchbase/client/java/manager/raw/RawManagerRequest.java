@@ -21,7 +21,11 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 
+/**
+ * @deprecated in favor of making HTTP calls using {@code cluster.httpClient()}.
+ */
 @Stability.Uncommitted
+@Deprecated
 public class RawManagerRequest {
 
   private final ServiceType serviceType;
