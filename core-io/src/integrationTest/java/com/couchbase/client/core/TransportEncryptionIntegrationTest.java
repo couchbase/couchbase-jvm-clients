@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
@@ -184,10 +185,14 @@ class TransportEncryptionIntegrationTest extends CoreIntegrationTest {
       fail("Cluster Certificate must be present for this test!");
     }
 
-    // Prepare a keystore and load it with the cert
+    // Prepare a keystore and load it with the certs
     KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
     trustStore.load(null, null);
-    trustStore.setCertificateEntry("server", config().clusterCerts().get().get(0));
+
+    List<X509Certificate> certs = config().clusterCerts().get();
+    for (int i = 0; i < certs.size(); i++) {
+      trustStore.setCertificateEntry("server-" + i, certs.get(i));
+    }
 
     try (
       CoreEnvironment env = secureEnvironment(

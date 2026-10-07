@@ -16,6 +16,11 @@
 
 package com.couchbase.client.test;
 
+// CHECKSTYLE:OFF IllegalImport - Allow unbundled Jackson
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import okhttp3.Credentials;
 import okhttp3.FormBody;
 import okhttp3.OkHttpClient;
@@ -31,9 +36,10 @@ import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -45,6 +51,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.couchbase.client.test.DnsSrvUtil.fromDnsSrv;
 import static com.couchbase.client.test.Util.urlEncode;
@@ -54,6 +61,8 @@ public class UnmanagedTestCluster extends TestCluster {
   private static Logger logger = LoggerFactory.getLogger(UnmanagedTestCluster.class);
 
   private static final int DEFAULT_PROTOSTELLAR_TLS_PORT = 18098;
+
+  private static final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private final OkHttpClient httpClient;
   private final String seedHost;
@@ -104,7 +113,6 @@ public class UnmanagedTestCluster extends TestCluster {
       bucketname = UUID.randomUUID().toString();
 
       Response postResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
         .url(baseUrl + "/pools/default/buckets")
         .post(new FormBody.Builder()
           .add("name", bucketname)
@@ -124,7 +132,6 @@ public class UnmanagedTestCluster extends TestCluster {
     }
 
     Response getResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
       .url(baseUrl + "/pools/default/b/" + urlEncode(bucketname))
       .build())
       .execute();
@@ -136,7 +143,6 @@ public class UnmanagedTestCluster extends TestCluster {
     waitUntilAllNodesHealthy();
 
     Response getClusterVersionResponse = httpClient.newCall(new Request.Builder()
-      .header("Authorization", Credentials.basic(adminUsername, adminPassword))
       .url(baseUrl + "/pools")
       .build())
       .execute();
@@ -176,49 +182,96 @@ public class UnmanagedTestCluster extends TestCluster {
     );
   }
 
-  private Optional<List<X509Certificate>> loadClusterCertificate() {
-    try {
-      Response getResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/certificate")
-        .build())
-        .execute();
+  private Response httpGet(String relativeUrl) throws IOException {
+    if (!relativeUrl.startsWith("/")) relativeUrl = "/" + relativeUrl;
+    return httpClient.newCall(
+        new Request.Builder()
+          .url(baseUrl + relativeUrl)
+          .build()
+      )
+      .execute();
+  }
 
+
+  private Optional<List<X509Certificate>> loadClusterCertificatesLegacy() {
+    String path = "/pools/default/certificate";
+    try (Response getResponse = httpGet(path)) {
       String raw = getResponse.body().string();
+      int status = getResponse.code();
 
-      CertificateFactory cf = CertificateFactory.getInstance("X.509");
-      Certificate cert = cf.generateCertificate(new ByteArrayInputStream(raw.getBytes(UTF_8)));
-      return Optional.of(Collections.singletonList((X509Certificate) cert));
+      if (status != 200) {
+        logger.info("Could not load certificates from '{}'. httpStatus={} responseBody={}", path, status, raw);
+        return Optional.empty();
+      }
+
+      return Optional.of(decodeCertificates(raw.getBytes(UTF_8)));
+
     } catch (Exception ex) {
-      // could not load certificate, maybe add logging? could be CE instance.
+      logger.error("Failed to decode certificates", ex);
       return Optional.empty();
     }
   }
 
-  private Optional<List<X509Certificate>> loadMultipleRootCertsFromFile() {
-    if (certsFile != null) {
-      try (FileInputStream fis = new FileInputStream(certsFile)){
-        List<X509Certificate> certs = new ArrayList<>();
-        CertificateFactory cf = CertificateFactory.getInstance("X.509");
-        Collection certCollection = cf.generateCertificates(fis);
-        certCollection.forEach(c -> certs.add((X509Certificate) c));
-        return Optional.of(certs);
-      } catch (Exception ex) {
-        // Could not load certs
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class CertificateInfo {
+    public String pem;
+  }
+
+  /**
+   * Loads trusted CA certificates from the endpoint added in Couchbase Server 7.1.
+   * This is the only way to get the certs from Couchbase Server 8.1 and later.
+   */
+  private Optional<List<X509Certificate>> loadClusterCertificatesModern() {
+    String path = "/pools/default/trustedCAs";
+    try (Response httpResponse = httpGet(path)) {
+      String raw = httpResponse.body().string();
+      int status = httpResponse.code();
+
+      if (status != 200) {
+        logger.info("Could not load certificates from '{}'. httpStatus={} responseBody={}", path, status, raw);
         return Optional.empty();
       }
+
+      List<CertificateInfo> certs = jsonMapper.readValue(raw, new TypeReference<List<CertificateInfo>>() {});
+      String mergedPem = certs.stream().map(it -> it.pem).collect(Collectors.joining("\r\n"));
+      return Optional.of(decodeCertificates(mergedPem.getBytes(UTF_8)));
+
+    } catch (Exception ex) {
+      logger.error("Failed to decode certificates", ex);
+      return Optional.empty();
     }
-    return Optional.empty();
+  }
+
+  private Optional<List<X509Certificate>> loadClusterCertificate() {
+    Optional<List<X509Certificate>> result = loadClusterCertificatesModern();
+    if (!result.isPresent()) result = loadClusterCertificatesLegacy();
+    return result;
+  }
+
+  private static List<X509Certificate> decodeCertificates(byte[] bytes) throws CertificateException {
+    return decodeCertificates(new ByteArrayInputStream(bytes));
+  }
+
+  private static List<X509Certificate> decodeCertificates(InputStream is) throws CertificateException {
+    //noinspection unchecked
+    return new ArrayList<>((Collection<X509Certificate>) CertificateFactory.getInstance("X.509")
+      .generateCertificates(is));
+  }
+
+  private Optional<List<X509Certificate>> loadMultipleRootCertsFromFile() {
+    if (certsFile == null) return Optional.empty();
+
+    try (FileInputStream fis = new FileInputStream(certsFile)) {
+      return Optional.of(decodeCertificates(fis));
+    } catch (Exception ex) {
+      logger.error("Could not load certificates from '{}'", certsFile, ex);
+      return Optional.empty();
+    }
   }
 
   private void waitUntilAllNodesHealthy() throws Exception {
     while(true) {
-      Response getResponse = httpClient.newCall(new Request.Builder()
-        .header("Authorization", Credentials.basic(adminUsername, adminPassword))
-        .url(baseUrl + "/pools/default/")
-        .build())
-        .execute();
-
+      Response getResponse = httpGet("/pools/default/");
       String raw = getResponse.body().string();
 
       Map<String, Object> decoded;
@@ -249,7 +302,6 @@ public class UnmanagedTestCluster extends TestCluster {
     if (deleteBucketOnClose) {
       try {
         httpClient.newCall(new Request.Builder()
-          .header("Authorization", Credentials.basic(adminUsername, adminPassword))
           .url(baseUrl + "/pools/default/buckets/" + urlEncode(bucketname))
           .delete()
           .build()).execute();
@@ -264,6 +316,12 @@ public class UnmanagedTestCluster extends TestCluster {
       .connectTimeout(30, TimeUnit.SECONDS)
       .readTimeout(30, TimeUnit.SECONDS)
       .writeTimeout(30, TimeUnit.SECONDS);
+
+    builder.addInterceptor(chain -> {
+      okhttp3.Request.Builder requestBuilder = chain.request().newBuilder()
+        .addHeader("Authorization", Credentials.basic(adminUsername, adminPassword));
+      return chain.proceed(requestBuilder.build());
+    });
 
     //NB: Not secure - ok for testing purposes only
     TrustManager[] trustAllCerts = new TrustManager[]{
