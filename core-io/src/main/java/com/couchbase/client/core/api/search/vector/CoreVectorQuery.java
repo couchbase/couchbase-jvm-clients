@@ -21,7 +21,10 @@ import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.topology.ClusterCapability;
 import reactor.util.annotation.Nullable;
+
+import java.util.Set;
 
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.util.Objects.requireNonNull;
@@ -51,6 +54,15 @@ public class CoreVectorQuery {
 
     if (numCandidates != null && numCandidates < 1) {
       throw InvalidArgumentException.fromMessage("If numCandidates is specified, it must be >= 1, but got: " + numCandidates);
+    }
+  }
+
+  /**
+   * Adds to the given set any cluster capabilities required by this query's prefilter.
+   */
+  public void addRequiredCapabilities(Set<ClusterCapability> result) {
+    if (prefilter != null) {
+      prefilter.addRequiredCapabilities(result);
     }
   }
 

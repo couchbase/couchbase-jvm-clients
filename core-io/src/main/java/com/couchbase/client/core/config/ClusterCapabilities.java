@@ -31,6 +31,7 @@ public enum ClusterCapabilities {
   SCOPED_SEARCH_INDEX("scopedSearchIndex"),
   VECTOR_SEARCH("vectorSearch"),
   SCORE_FUSION("scoreFusion"),
+  UDF_QUERY("udfQuery"),
   ;
 
   private final String raw;

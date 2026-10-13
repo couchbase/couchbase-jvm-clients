@@ -46,6 +46,7 @@ import com.couchbase.client.kotlin.search.SearchSpec
 import com.couchbase.client.kotlin.search.VectorQuery
 import com.couchbase.client.kotlin.search.VectorSearchSpec
 import com.couchbase.client.kotlin.search.execute
+import com.couchbase.client.performer.core.util.StructUtil
 import com.couchbase.client.performer.kotlin.manager.toByteString
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
 import com.couchbase.client.performer.kotlin.util.convert
@@ -789,6 +790,24 @@ private fun FitSearchQuery.toSdk(): SearchQuery = when {
         )
 
         query.maybeBoost(hasBoost(), boost)
+    }
+
+    hasCustomScore() -> with(customScore) {
+        SearchSpec.customScore(
+            query = query.toSdk(),
+            source = source,
+            fields = fieldsList,
+            params = if (hasParameters()) StructUtil.toMap(parameters) else emptyMap(),
+        )
+    }
+
+    hasCustomFilter() -> with(customFilter) {
+        SearchSpec.customFilter(
+            query = query.toSdk(),
+            source = source,
+            fields = fieldsList,
+            params = if (hasParameters()) StructUtil.toMap(parameters) else emptyMap(),
+        )
     }
 
     else -> TODO("unrecognized search query: $this")

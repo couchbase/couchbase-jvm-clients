@@ -24,6 +24,8 @@ import com.couchbase.client.java.json.JsonObject;
 import com.couchbase.client.java.search.queries.BooleanFieldQuery;
 import com.couchbase.client.java.search.queries.BooleanQuery;
 import com.couchbase.client.java.search.queries.ConjunctionQuery;
+import com.couchbase.client.java.search.queries.CustomFilterQuery;
+import com.couchbase.client.java.search.queries.CustomScoreQuery;
 import com.couchbase.client.java.search.queries.DateRangeQuery;
 import com.couchbase.client.java.search.queries.DisjunctionQuery;
 import com.couchbase.client.java.search.queries.DocIdQuery;
@@ -174,6 +176,30 @@ public abstract class SearchQuery {
     /** Prepare a {@link MatchNoneQuery} body. */
     public static MatchNoneQuery matchNone() {
         return new MatchNoneQuery();
+    }
+
+    /**
+     * Prepare a {@link CustomScoreQuery} body, which uses a user-defined JavaScript function
+     * to assign new scores to the results of the given query.
+     *
+     * @param query the query whose results are passed through the scoring function.
+     * @param source the JavaScript source code of the scoring function.
+     */
+    @SinceCouchbase("8.5")
+    public static CustomScoreQuery customScore(SearchQuery query, String source) {
+        return new CustomScoreQuery(query, source);
+    }
+
+    /**
+     * Prepare a {@link CustomFilterQuery} body, which uses a user-defined JavaScript function
+     * to filter the results of the given query.
+     *
+     * @param query the query whose results are passed through the filtering function.
+     * @param source the JavaScript source code of the filtering function.
+     */
+    @SinceCouchbase("8.5")
+    public static CustomFilterQuery customFilter(SearchQuery query, String source) {
+        return new CustomFilterQuery(query, source);
     }
 
     /** Prepare a {@link GeoBoundingBoxQuery} body. */

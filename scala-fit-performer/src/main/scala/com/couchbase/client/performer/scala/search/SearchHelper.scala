@@ -16,7 +16,9 @@
 
 package com.couchbase.client.performer.scala.search
 
+import com.couchbase.client.core.json.Mapper
 import com.couchbase.client.core.retry.BestEffortRetryStrategy
+import com.couchbase.client.performer.core.util.StructUtil
 import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.{
   convertMutationState,
@@ -431,6 +433,26 @@ object SearchHelper {
 
       case com.couchbase.client.protocol.sdk.search.SearchQuery.QueryCase.MATCH_NONE =>
         SearchQuery.matchNone
+
+      case com.couchbase.client.protocol.sdk.search.SearchQuery.QueryCase.CUSTOM_SCORE =>
+        val qr  = q.getCustomScore
+        var out = SearchQuery.customScore(convertSearchQuery(qr.getQuery), qr.getSource)
+        if (qr.getFieldsCount > 0) out = out.fields(qr.getFieldsList.asScala.toSeq: _*)
+        if (qr.hasParameters)
+          out = out.parameters(
+            JsonObject.fromJson(Mapper.encodeAsString(StructUtil.toMap(qr.getParameters)))
+          )
+        out
+
+      case com.couchbase.client.protocol.sdk.search.SearchQuery.QueryCase.CUSTOM_FILTER =>
+        val qr  = q.getCustomFilter
+        var out = SearchQuery.customFilter(convertSearchQuery(qr.getQuery), qr.getSource)
+        if (qr.getFieldsCount > 0) out = out.fields(qr.getFieldsList.asScala.toSeq: _*)
+        if (qr.hasParameters)
+          out = out.parameters(
+            JsonObject.fromJson(Mapper.encodeAsString(StructUtil.toMap(qr.getParameters)))
+          )
+        out
 
       case _ => throw new UnsupportedOperationException
     }

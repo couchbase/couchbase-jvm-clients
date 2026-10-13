@@ -32,6 +32,7 @@ public enum ClusterCapability {
   SEARCH_VECTOR("search", "vectorSearch", "vector search", "7.6"),
   SEARCH_SCOPED("search", "scopedSearchIndex", "scoped search indexes", "7.6"),
   SEARCH_SCORE_FUSION("search", "scoreFusion", "search score fusion", "8.5"),
+  SEARCH_UDF_QUERY("search", "udfQuery", "custom score/filter search queries", "8.5"),
   ;
 
   private static final List<ClusterCapability> VALUES = listOf(values());

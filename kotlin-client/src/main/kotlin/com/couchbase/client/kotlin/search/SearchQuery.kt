@@ -16,11 +16,14 @@
 
 package com.couchbase.client.kotlin.search
 
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.api.search.CoreSearchQuery
 import com.couchbase.client.core.api.search.queries.CoreBooleanFieldQuery
 import com.couchbase.client.core.api.search.queries.CoreBooleanQuery
 import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery
+import com.couchbase.client.core.api.search.queries.CoreCustomFilterQuery
 import com.couchbase.client.core.api.search.queries.CoreCustomQuery
+import com.couchbase.client.core.api.search.queries.CoreCustomScoreQuery
 import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery
 import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery
 import com.couchbase.client.core.api.search.queries.CoreDocIdQuery
@@ -42,8 +45,14 @@ import com.couchbase.client.core.api.search.queries.CoreTermQuery
 import com.couchbase.client.core.api.search.queries.CoreTermRangeQuery
 import com.couchbase.client.core.api.search.queries.CoreWildcardQuery
 import com.couchbase.client.kotlin.search.GeoShape.Companion.circle
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.geoShape
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.match
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.matchPhrase
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.phrase
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.prefix
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.regexp
 import com.couchbase.client.kotlin.search.SearchQuery.Companion.term
+import com.couchbase.client.kotlin.search.SearchQuery.Companion.wildcard
 import java.time.Instant
 
 /**
@@ -578,6 +587,103 @@ public sealed class SearchQuery : SearchSpec() {
         ) : SearchQuery() {
             override val core = CoreMatchNoneQuery(boost)
             override fun withBoost(boost: Double?) = copy(boost = boost)
+        }
+
+        /**
+         * A query that passes the results of an inner [query] through a user-defined
+         * JavaScript scoring function, which assigns a new score to each result.
+         *
+         * The function takes two parameters (`doc` and `params`) and returns a number:
+         * the new score of the document. For example:
+         * ```
+         * function hotel_score(doc, params) {
+         *   const maxPrice = params.max_price || 1000;
+         *   const f = doc.fields || {};
+         *   const price = (f.price !== undefined) ? f.price : maxPrice;
+         *   return doc.score * (2.0 - Math.min(price / maxPrice, 1.0));
+         * }
+         * ```
+         * The returned query does not support [boost]; calling it has no effect.
+         *
+         * Custom script queries are disabled by default. A server administrator must enable them
+         * by setting the Search service's `customScriptQueriesEnabled` manager option to `"true"`.
+         *
+         * @param query The query whose results are passed through the scoring function.
+         *
+         * @param source The JavaScript source code of the scoring function.
+         *
+         * @param fields Document fields made available to the function.
+         * Pass `"*"` to make all fields available. If empty (the default),
+         * the function does not have access to any document fields.
+         *
+         * @param params Parameters made available to the function via its `params` argument.
+         * Values are converted to JSON.
+         */
+        @SinceCouchbase("8.5")
+        public fun customScore(
+            query: SearchQuery,
+            source: String,
+            fields: List<String> = emptyList(),
+            params: Map<String, Any?> = emptyMap(),
+        ): SearchQuery = CustomScoreQuery(query, source, fields, params)
+
+        internal data class CustomScoreQuery(
+            val query: SearchQuery,
+            val source: String,
+            val fields: List<String>,
+            val params: Map<String, Any?>,
+        ) : SearchQuery() {
+            override val core = CoreCustomScoreQuery(query.core, source, fields, params)
+            override fun withBoost(boost: Double?) = this // boost not supported
+        }
+
+        /**
+         * A query that passes the results of an inner [query] through a user-defined
+         * JavaScript filtering function. A document is included in the results
+         * only if it satisfies the function.
+         *
+         * The function takes two parameters (`doc` and `params`) and returns a boolean:
+         * true if the document should be included in the results. For example:
+         * ```
+         * function hotel_filter(doc, params) {
+         *   const f = doc.fields || {};
+         *   if (f.price === undefined) return false;
+         *   return params.budget === undefined || f.price <= params.budget;
+         * }
+         * ```
+         *
+         * The returned query does not support [boost]; calling it has no effect.
+         *
+         * Custom script queries are disabled by default. A server administrator must enable them
+         * by setting the Search service's `customScriptQueriesEnabled` manager option to `"true"`.
+         *
+         * @param query The query whose results are passed through the filtering function.
+         *
+         * @param source The JavaScript source code of the filtering function.
+         *
+         * @param fields Document fields made available to the function.
+         * Pass `"*"` to make all fields available. If empty (the default),
+         * the function does not have access to any document fields.
+         *
+         * @param params Parameters made available to the function via its `params` argument.
+         * Values are converted to JSON.
+         */
+        @SinceCouchbase("8.5")
+        public fun customFilter(
+            query: SearchQuery,
+            source: String,
+            fields: List<String> = emptyList(),
+            params: Map<String, Any?> = emptyMap(),
+        ): SearchQuery = CustomFilterQuery(query, source, fields, params)
+
+        internal data class CustomFilterQuery(
+            val query: SearchQuery,
+            val source: String,
+            val fields: List<String>,
+            val params: Map<String, Any?>,
+        ) : SearchQuery() {
+            override val core = CoreCustomFilterQuery(query.core, source, fields, params)
+            override fun withBoost(boost: Double?) = this // boost not supported
         }
 
         /**

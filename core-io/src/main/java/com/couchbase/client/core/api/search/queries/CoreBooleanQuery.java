@@ -22,12 +22,18 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static java.util.Collections.unmodifiableList;
+
 @Stability.Internal
 public class CoreBooleanQuery extends CoreSearchQuery {
 
   public final @Nullable CoreConjunctionQuery must;
   public final @Nullable CoreDisjunctionQuery mustNot;
   public final @Nullable CoreDisjunctionQuery should;
+  private final List<CoreSearchQuery> childQueries;
 
   public CoreBooleanQuery(@Nullable CoreConjunctionQuery must,
                           @Nullable CoreDisjunctionQuery mustNot,
@@ -46,6 +52,12 @@ public class CoreBooleanQuery extends CoreSearchQuery {
     this.must = must;
     this.mustNot = mustNot;
     this.should = should;
+
+    List<CoreSearchQuery> children = new ArrayList<>(3);
+    if (must != null) children.add(must);
+    if (mustNot != null) children.add(mustNot);
+    if (should != null) children.add(should);
+    this.childQueries = unmodifiableList(children);
   }
 
   @Override
@@ -71,6 +83,11 @@ public class CoreBooleanQuery extends CoreSearchQuery {
       should.injectParamsAndBoost(jsonShould);
       input.set("should", jsonShould);
     }
+  }
+
+  @Override
+  public List<CoreSearchQuery> childQueries() {
+    return childQueries;
   }
 
   @Override

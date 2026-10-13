@@ -19,7 +19,14 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.search.queries.CoreSearchQueryConverter;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.topology.ClusterCapability;
 import org.jspecify.annotations.Nullable;
+
+import java.util.List;
+import java.util.Set;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 
 @Stability.Internal
 public abstract class CoreSearchQuery {
@@ -39,6 +46,30 @@ public abstract class CoreSearchQuery {
   protected abstract void injectParams(ObjectNode input);
 
   public abstract <T> T convert(CoreSearchQueryConverter<T> converter);
+
+  /**
+   * Returns the queries nested directly inside this one.
+   */
+  public List<CoreSearchQuery> childQueries() {
+    return emptyList();
+  }
+
+  /**
+   * Returns the cluster capabilities required by this query,
+   * not counting the requirements of its child queries.
+   */
+  protected Set<ClusterCapability> ownRequiredCapabilities() {
+    return emptySet();
+  }
+
+  /**
+   * Adds to the given set any cluster capabilities required by this query
+   * or its descendants.
+   */
+  public final void addRequiredCapabilities(Set<ClusterCapability> result) {
+    result.addAll(ownRequiredCapabilities());
+    childQueries().forEach(it -> it.addRequiredCapabilities(result));
+  }
 
   public ObjectNode export() {
     ObjectNode out = Mapper.createObjectNode();

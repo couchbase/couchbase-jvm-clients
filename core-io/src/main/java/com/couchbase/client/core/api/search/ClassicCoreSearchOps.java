@@ -100,7 +100,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   public CoreAsyncResponse<CoreSearchResult> searchQueryAsync(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    Set<ClusterCapability> required = requiredCapabilities(null, options);
+    Set<ClusterCapability> required = requiredCapabilities(new CoreSearchRequest(query, null), options);
     return searchAsyncShared(searchRequest(indexName, query, options), required, timeout);
   }
 
@@ -108,7 +108,7 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   public Mono<CoreReactiveSearchResult> searchQueryReactive(String indexName, CoreSearchQuery query, CoreSearchOptions options) {
     options.validate();
     Duration timeout = options.commonOptions().timeout().orElse(core.environment().timeoutConfig().searchTimeout());
-    Set<ClusterCapability> required = requiredCapabilities(null, options);
+    Set<ClusterCapability> required = requiredCapabilities(new CoreSearchRequest(query, null), options);
     return searchReactiveShared(searchRequest(indexName, query, options), required, timeout);
   }
 
@@ -304,13 +304,14 @@ public class ClassicCoreSearchOps implements CoreSearchOps {
   }
 
   private Set<ClusterCapability> requiredCapabilities(
-      @Nullable CoreSearchRequest searchRequest,
+      CoreSearchRequest searchRequest,
       CoreSearchOptions options
   ) {
     Set<ClusterCapability> result = EnumSet.noneOf(ClusterCapability.class);
 
     if (scope != null) result.add(ClusterCapability.SEARCH_SCOPED);
-    if (searchRequest != null && searchRequest.vectorSearch != null) result.add(ClusterCapability.SEARCH_VECTOR);
+    if (searchRequest.searchQuery != null) searchRequest.searchQuery.addRequiredCapabilities(result);
+    if (searchRequest.vectorSearch != null) searchRequest.vectorSearch.addRequiredCapabilities(result);
 
     Optional.ofNullable(options.scoring())
         .map(scoring -> scoring.requiredCapability)
