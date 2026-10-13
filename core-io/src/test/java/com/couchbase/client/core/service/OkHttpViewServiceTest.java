@@ -100,8 +100,7 @@ class OkHttpViewServiceTest {
     service = new OkHttpViewService(
       ViewServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, server.port()),
-      Duration.ofSeconds(15)
+      new HostAndPort(TestHttpServer.HOST_NAME, server.port())
     );
 
     // Retried requests come back through the core; send them to the same service.

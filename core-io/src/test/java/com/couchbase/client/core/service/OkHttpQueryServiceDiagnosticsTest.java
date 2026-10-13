@@ -94,8 +94,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     service = new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, server.port()),
-      Duration.ofSeconds(15)
+      new HostAndPort(TestHttpServer.HOST_NAME, server.port())
     );
   }
 
@@ -161,8 +160,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     OkHttpQueryService deadNodeService = new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, TestHttpServer.unusedPort()),
-      Duration.ofSeconds(15)
+      new HostAndPort(TestHttpServer.HOST_NAME, TestHttpServer.unusedPort())
     );
 
     // Fail fast, so the request completes instead of being retried.

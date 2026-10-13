@@ -26,8 +26,6 @@ import okhttp3.HttpUrl;
 import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 
-import java.time.Duration;
-
 /**
  * The query service on one node, using OkHttp.
  * <p>
@@ -39,23 +37,17 @@ public class OkHttpQueryService extends AbstractOkHttpService {
 
   private final HttpUrl queryServiceUrl;
 
-  /**
-   * @param streamingReadTimeout socket read timeout for the rest of a query response,
-   * once the SDK has completed the response future. See {@link StreamingJsonResponseHandler}.
-   */
   public OkHttpQueryService(
     QueryServiceConfig config,
     CoreContext context,
-    HostAndPort address,
-    Duration streamingReadTimeout
+    HostAndPort address
   ) {
     super(
       ServiceType.QUERY,
       context,
       address,
       config.maxEndpoints(),
-      context.environment().ioConfig().queryCircuitBreakerConfig(),
-      streamingReadTimeout
+      context.environment().ioConfig().queryCircuitBreakerConfig()
     );
 
     this.queryServiceUrl = baseUrl().newBuilder()

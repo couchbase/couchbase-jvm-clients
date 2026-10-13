@@ -60,7 +60,6 @@ import reactor.core.publisher.Flux;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.UnknownServiceException;
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -139,16 +138,6 @@ abstract class AbstractOkHttpService implements Service {
   }
 
   /**
-   * Socket read timeout for the rest of a streamed response, once the SDK has completed the
-   * response future and stopped enforcing the request timeout. Defends against dead connections.
-   * See {@link StreamingJsonResponseHandler}. Null if the service doesn't stream responses.
-   */
-  private final @Nullable Duration streamingReadTimeout;
-
-  /**
-   * For a service that doesn't stream responses (for example, one that only handles
-   * {@link CoreHttpRequest}s), so it can't use {@link #executeStreaming} or {@link #streamingReadTimeout()}.
-   *
    * @param maxInFlight the maximum number of HTTP exchanges in flight to this node at once.
    */
   protected AbstractOkHttpService(
@@ -158,23 +147,7 @@ abstract class AbstractOkHttpService implements Service {
     int maxInFlight,
     CircuitBreakerConfig circuitBreakerConfig
   ) {
-    this(serviceType, context, address, maxInFlight, circuitBreakerConfig, null);
-  }
-
-  /**
-   * @param maxInFlight the maximum number of HTTP exchanges in flight to this node at once.
-   * @param streamingReadTimeout see {@link #executeStreaming}, or null if the service doesn't stream responses.
-   */
-  protected AbstractOkHttpService(
-    ServiceType serviceType,
-    CoreContext context,
-    HostAndPort address,
-    int maxInFlight,
-    CircuitBreakerConfig circuitBreakerConfig,
-    @Nullable Duration streamingReadTimeout
-  ) {
     this.serviceType = requireNonNull(serviceType);
-    this.streamingReadTimeout = streamingReadTimeout;
     this.address = requireNonNull(address);
     this.serviceContext = new ServiceContext(context, address, serviceType, Optional.empty());
 
@@ -218,16 +191,6 @@ abstract class AbstractOkHttpService implements Service {
   protected abstract Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request);
 
   /**
-   * Returns the socket read timeout for the rest of a streamed response, once the request has completed.
-   */
-  protected final Duration streamingReadTimeout() {
-    if (streamingReadTimeout == null) {
-      throw new IllegalStateException(serviceType + " service was created without a streaming read timeout");
-    }
-    return streamingReadTimeout;
-  }
-
-  /**
    * Returns the URL of the service on this node, with no path.
    */
   protected final HttpUrl baseUrl() {
@@ -254,9 +217,8 @@ abstract class AbstractOkHttpService implements Service {
     DispatchAttempt attempt,
     StreamingResponseFormat<?, ?, ?, R> format
   ) {
-    Duration readTimeout = streamingReadTimeout(); // fail now (not in the response callback) if there isn't one
     execute(request, requestBuilder, attempt, response ->
-      StreamingJsonResponseHandler.handle(format, request, response, attempt, readTimeout, context())
+      StreamingJsonResponseHandler.handle(format, request, response, attempt, context())
     );
   }
 
