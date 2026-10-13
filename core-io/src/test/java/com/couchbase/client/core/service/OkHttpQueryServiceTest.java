@@ -98,8 +98,7 @@ class OkHttpQueryServiceTest {
     service = new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, server.port()),
-      Duration.ofSeconds(15)
+      new HostAndPort(TestHttpServer.HOST_NAME, server.port())
     );
   }
 
@@ -285,8 +284,7 @@ class OkHttpQueryServiceTest {
     return new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort("127.0.0.1", brokenOffServer.port()),
-      Duration.ofSeconds(15)
+      new HostAndPort("127.0.0.1", brokenOffServer.port())
     );
   }
 

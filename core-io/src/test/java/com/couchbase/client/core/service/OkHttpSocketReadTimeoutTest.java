@@ -21,7 +21,7 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
-import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
@@ -50,10 +50,10 @@ import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpC
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -185,24 +185,33 @@ class OkHttpSocketReadTimeoutTest {
     assertEquals(millis(Duration.ofSeconds(4).plus(GRACE_PERIOD)), socketReadTimeouts.get(1));
   }
 
+  /**
+   * A streamed result keeps the request's read timeout after the SDK completes the request: the server stops
+   * executing at the request timeout (the SDK sends it as the server-side timeout), so a slow but working server
+   * doesn't pause for longer. (Previously, it switched to a shorter timeout, which a slow server could trip.)
+   */
   @Test
-  void streamThatGoesQuietTimesOut() throws Exception {
+  void streamedResultKeepsTheRequestsReadTimeout() throws Exception {
+    // Sends the service's calls through the recording client, so the test can see their sockets.
+    CouchbaseOkHttpClient recordingCouchbaseClient = mock(CouchbaseOkHttpClient.class);
+    when(recordingCouchbaseClient.newCall(any(), any(), any())).thenAnswer(invocation -> recordingClient.newCall(
+      CouchbaseOkHttpClient.newRequest(invocation.getArgument(0), invocation.getArgument(1), invocation.getArgument(2))
+    ));
     Core core = mockCore(env);
-    when(core.okHttpClient()).thenReturn(okHttpClient);
+    when(core.okHttpClient()).thenReturn(recordingCouchbaseClient);
 
-    Duration streamingReadTimeout = Duration.ofMillis(500);
     OkHttpQueryService service = new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, server.port()),
-      streamingReadTimeout
+      new HostAndPort(TestHttpServer.HOST_NAME, server.port())
     );
 
     // The header and first row arrive, then nothing.
     server.enqueueStreaming("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1},", Duration.ofSeconds(30));
 
+    Duration requestTimeout = Duration.ofSeconds(7);
     QueryRequest request = new QueryRequest(
-      Duration.ofSeconds(10),
+      requestTimeout,
       core.context(),
       BestEffortRetryStrategy.INSTANCE,
       core.context().authenticator(),
@@ -218,14 +227,11 @@ class OkHttpSocketReadTimeoutTest {
     );
     service.send(request);
     QueryResponse response = request.response().get(10, TimeUnit.SECONDS);
+    assertEquals("{\"a\":1}", new String(response.rows().blockFirst(Duration.ofSeconds(10)).data(), UTF_8));
 
-    long start = System.nanoTime();
-    Exception e = assertThrows(Exception.class, () -> response.rows().blockLast(Duration.ofSeconds(10)));
-    Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
-
-    assertInstanceOf(DecodingFailureException.class, e);
-    assertTrue(hasCause(e, SocketTimeoutException.class), "expected a socket timeout, but got: " + e);
-    assertTrue(elapsed.compareTo(Duration.ofSeconds(5)) < 0, "should have timed out after about " + streamingReadTimeout + ", but took " + elapsed);
+    // The request has completed, and the rest of the result is being read.
+    assertEquals(millis(requestTimeout.plus(GRACE_PERIOD)), sockets.get(0).getSoTimeout());
+    request.cancel(CancellationReason.STOPPED_LISTENING);
   }
 
   @Test

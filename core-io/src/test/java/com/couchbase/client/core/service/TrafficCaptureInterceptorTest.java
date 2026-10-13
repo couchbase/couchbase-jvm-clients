@@ -90,8 +90,7 @@ class TrafficCaptureInterceptorTest {
     OkHttpQueryService service = new OkHttpQueryService(
       QueryServiceConfig.maxEndpoints(4).build(),
       core.context(),
-      new HostAndPort(TestHttpServer.HOST_NAME, server.port()),
-      Duration.ofSeconds(15)
+      new HostAndPort(TestHttpServer.HOST_NAME, server.port())
     );
 
     server.enqueue(200, "{\"requestID\":\"abc-123\",\"results\":[{\"greeting\":\"hello\"}],\"status\":\"success\"}", responseHeaders);
