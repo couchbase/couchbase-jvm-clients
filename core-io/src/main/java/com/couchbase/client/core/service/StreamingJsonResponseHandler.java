@@ -86,7 +86,7 @@ final class StreamingJsonResponseHandler {
     CoreContext retryContext
   ) {
     if (HttpProtocol.decodeStatus(httpResponse.code()).success()) {
-      handleSuccess(format, request, httpResponse, attempt, streamingReadTimeout);
+      handleSuccess(format, request, httpResponse, attempt, streamingReadTimeout, retryContext);
     } else {
       handleFailure(format, request, httpResponse, attempt, retryContext);
     }
@@ -97,7 +97,8 @@ final class StreamingJsonResponseHandler {
     Request<R> request,
     okhttp3.Response httpResponse,
     DispatchAttempt attempt,
-    Duration streamingReadTimeout
+    Duration streamingReadTimeout,
+    CoreContext retryContext
   ) {
     Sinks.One<T> trailerSink = Sinks.one();
     BlockingStreamBridge<ROW> rowBridge = new BlockingStreamBridge<>(ROW_BUFFER_HIGH_WATER_MARK);
@@ -144,6 +145,13 @@ final class StreamingJsonResponseHandler {
       } catch (RuntimeException parseFailure) {
         // Handled here, while the body stream is still open, so the start of the body can be reported.
         attempt.recordFailure(parseFailure);
+
+        IOException readFailure = bodyStream.readFailure();
+        if (readFailure != null && !headerArrived.get()) {
+          // The connection broke (rather than the body being malformed) before the request completed.
+          AbstractOkHttpService.maybeRetryAfterBrokenResponse(retryContext, request, readFailure);
+          return;
+        }
 
         DecodingFailureException failure = looksLikeJson(bodyStream)
           ? new DecodingFailureException("Failed to process " + format.serviceName() + " response", parseFailure)
@@ -231,8 +239,16 @@ final class StreamingJsonResponseHandler {
           }
         );
       } catch (RuntimeException parseFailure) {
-        // Not JSON (for example, an error page from a proxy). Report the start of the body.
         attempt.recordFailure(parseFailure);
+
+        IOException readFailure = bodyStream.readFailure();
+        if (readFailure != null) {
+          // The connection broke before the whole error arrived, so we don't know what it was.
+          AbstractOkHttpService.maybeRetryAfterBrokenResponse(retryContext, request, readFailure);
+          return;
+        }
+
+        // Not JSON (for example, an error page from a proxy). Report the start of the body.
         request.fail(unparseable(httpResponse.code(), bodyStream, parseFailure));
         return;
       }
