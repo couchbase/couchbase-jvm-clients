@@ -21,12 +21,14 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.TestHttpServer.RecordedRequest;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterAll;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -44,12 +47,15 @@ import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -111,6 +117,10 @@ class OkHttpQueryServiceTest {
   }
 
   private QueryRequest newQueryRequest(Duration timeout) {
+    return newQueryRequest(timeout, true);
+  }
+
+  private QueryRequest newQueryRequest(Duration timeout, boolean idempotent) {
     return new QueryRequest(
       timeout,
       core.context(),
@@ -118,7 +128,7 @@ class OkHttpQueryServiceTest {
       core.context().authenticator(),
       "SELECT 1",
       STATEMENT_JSON.getBytes(UTF_8),
-      true,
+      idempotent,
       null,
       null,
       null,
@@ -267,6 +277,77 @@ class OkHttpQueryServiceTest {
     String message = e.getCause().getMessage();
     assertTrue(message.contains("Failed to process query response"), message);
     assertFalse(message.contains("SECRET-SHOULD-NOT-BE-REPORTED"), message);
+  }
+
+  private static final String START_OF_RESULT = "{\"requestID\":\"abc-123\",\"signature\":{\"*\":\"*\"},\"results\":[";
+
+  private OkHttpQueryService serviceFor(BrokenOffHttpServer brokenOffServer) {
+    return new OkHttpQueryService(
+      QueryServiceConfig.maxEndpoints(4).build(),
+      core.context(),
+      new HostAndPort("127.0.0.1", brokenOffServer.port()),
+      Duration.ofSeconds(15)
+    );
+  }
+
+  /**
+   * The query service sends the start of the response right away, and the first row once it has one,
+   * so this can happen any time while the query executes (for example, the node fails over).
+   * Like the Netty implementation, the request is retried if it's idempotent.
+   */
+  @Test
+  void connectionBreakingBeforeFirstRowRetriesIdempotentRequest() throws Exception {
+    try (BrokenOffHttpServer brokenOff = new BrokenOffHttpServer(200, START_OF_RESULT)) {
+      QueryRequest request = newQueryRequest();
+      serviceFor(brokenOff).send(request);
+
+      waitUntilCondition(() -> request.context().retryReasons() != null);
+      assertEquals(singleton(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.context().retryReasons());
+      assertFalse(request.completed()); // waiting to be retried (by the real core; the mock doesn't)
+      request.cancel(CancellationReason.STOPPED_LISTENING);
+    }
+  }
+
+  @Test
+  void connectionBreakingBeforeFirstRowCancelsNonIdempotentRequest() throws Exception {
+    try (BrokenOffHttpServer brokenOff = new BrokenOffHttpServer(200, START_OF_RESULT)) {
+      QueryRequest request = newQueryRequest(TIMEOUT, false);
+      serviceFor(brokenOff).send(request);
+      ExecutionException e = assertThrows(ExecutionException.class,
+        () -> request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+
+      // The server may have executed it, so it isn't retried, and the outcome is unknown.
+      assertInstanceOf(RequestCanceledException.class, e.getCause());
+      assertEquals(CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.cancellationReason());
+    }
+  }
+
+  @Test
+  void connectionBreakingDuringErrorResponseRetriesIdempotentRequest() throws Exception {
+    try (BrokenOffHttpServer brokenOff = new BrokenOffHttpServer(500, "{\"requestID\":\"abc-123\",\"errors\":[{\"code\":")) {
+      QueryRequest request = newQueryRequest();
+      serviceFor(brokenOff).send(request);
+
+      waitUntilCondition(() -> request.context().retryReasons() != null);
+      assertEquals(singleton(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.context().retryReasons());
+      request.cancel(CancellationReason.STOPPED_LISTENING);
+    }
+  }
+
+  @Test
+  void connectionBreakingAfterFirstRowFailsTheRows() throws Exception {
+    // The request has completed (with the first row), so it can't be retried.
+    try (BrokenOffHttpServer brokenOff = new BrokenOffHttpServer(200, "{\"requestID\":\"abc-123\",\"results\":[{\"a\":1},")) {
+      QueryRequest request = newQueryRequest();
+      serviceFor(brokenOff).send(request);
+      QueryResponse response = request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+      StepVerifier.create(response.rows().map(row -> new String(row.data(), UTF_8)))
+        .expectNext("{\"a\":1}")
+        .expectError(DecodingFailureException.class)
+        .verify(Duration.ofSeconds(30));
+      assertNull(request.context().retryReasons());
+    }
   }
 
   @Test
