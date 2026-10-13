@@ -24,6 +24,7 @@ import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.RateLimitedException;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.RequestTarget;
@@ -33,6 +34,7 @@ import com.couchbase.client.core.msg.manager.BucketConfigResponse;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.TestHttpServer.RecordedRequest;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterEach;
@@ -47,10 +49,13 @@ import java.util.function.Consumer;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -148,6 +153,47 @@ class OkHttpManagerServiceTest {
     return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET, CoreHttpPath.path("/pools?x=1"), RequestTarget.manager())
       .failOnErrorStatus(failOnErrorStatus)
       .build();
+  }
+
+  /**
+   * Sends the request to a server whose response breaks off, and returns the request once it's been retried
+   * (by the real core; the mock doesn't, so the request is left waiting).
+   */
+  private <R extends Request<?>> R sendToBrokenOffServer(int status, R request) throws Exception {
+    try (BrokenOffHttpServer brokenOff = new BrokenOffHttpServer(status, "{\"rev\":")) {
+      new OkHttpManagerService(core.context(), new HostAndPort("127.0.0.1", brokenOff.port())).send(request);
+      waitUntilCondition(() -> request.context().retryReasons() != null || request.completed());
+      return request;
+    }
+  }
+
+  @Test
+  void coreHttpRequestWhoseResponseBreaksOffIsRetried() throws Exception {
+    // Like the Netty implementation: the connection broke, so the request might work on another attempt.
+    // (A GET is idempotent; otherwise, it would fail with RequestCanceledException.)
+    start();
+    CoreHttpRequest request = sendToBrokenOffServer(200, newCoreHttpRequest(true));
+    assertFalse(request.completed(), "should be retried, not " + request.cancellationReason());
+    assertEquals(singleton(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.context().retryReasons());
+    request.cancel(CancellationReason.STOPPED_LISTENING);
+  }
+
+  @Test
+  void coreHttpRequestWhoseErrorResponseBreaksOffIsRetried() throws Exception {
+    start();
+    CoreHttpRequest request = sendToBrokenOffServer(500, newCoreHttpRequest(true));
+    assertFalse(request.completed(), "should be retried, not " + request.cancellationReason());
+    assertEquals(singleton(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.context().retryReasons());
+    request.cancel(CancellationReason.STOPPED_LISTENING);
+  }
+
+  @Test
+  void managerRequestWhoseResponseBreaksOffIsRetried() throws Exception {
+    start();
+    BucketConfigRequest request = sendToBrokenOffServer(200, newBucketConfigRequest());
+    assertFalse(request.completed(), "should be retried, not " + request.cancellationReason());
+    assertEquals(singleton(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), request.context().retryReasons());
+    request.cancel(CancellationReason.STOPPED_LISTENING);
   }
 
   @Test

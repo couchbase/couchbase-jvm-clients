@@ -25,6 +25,9 @@ import java.io.InputStream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class HeadInterceptInputStreamTest {
 
@@ -119,5 +122,40 @@ class HeadInterceptInputStreamTest {
 
     assertEquals("", in.getHeadAsString());
     assertEquals("hello", readAll(in));
+  }
+
+  @Test
+  void remembersFirstReadFailure() throws Exception {
+    IOException broken = new IOException("unexpected end of stream");
+    InputStream failing = new InputStream() {
+      int calls;
+
+      @Override
+      public int read() throws IOException {
+        if (calls++ == 0) {
+          return 'x';
+        }
+        throw calls == 2 ? broken : new IOException("a later failure");
+      }
+    };
+
+    HeadInterceptInputStream in = new HeadInterceptInputStream(failing, 100);
+    assertNull(in.readFailure());
+    assertEquals('x', in.read());
+    assertNull(in.readFailure());
+
+    assertSame(broken, assertThrows(IOException.class, in::read));
+    assertThrows(IOException.class, () -> in.read(new byte[10], 0, 10));
+    assertSame(broken, in.readFailure()); // the first
+  }
+
+  @Test
+  void contentProblemsAreNotReadFailures() throws Exception {
+    // A reader (for example, a JSON parser) that rejects what it read doesn't make it a read failure.
+    HeadInterceptInputStream in = new HeadInterceptInputStream(new ByteArrayInputStream("not json".getBytes(UTF_8)), 100);
+    while (in.read() != -1) {
+      // read it all
+    }
+    assertNull(in.readFailure());
   }
 }

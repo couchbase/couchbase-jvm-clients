@@ -119,6 +119,10 @@ public class OkHttpManagerService extends AbstractOkHttpService {
         R decoded = managerRequest.decode(response.code(), responseBody.bytes());
         attempt.recordOutcome(decoded, null);
         request.succeed(decoded);
+      } catch (IOException e) {
+        // Reading the body failed: the connection broke, not the content.
+        attempt.recordFailure(e);
+        maybeRetryAfterBrokenResponse(context(), request, e);
       } catch (Throwable t) {
         attempt.recordFailure(t);
         request.fail(new DecodingFailureException("failed to process HTTP response", t));
