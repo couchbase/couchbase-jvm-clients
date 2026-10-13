@@ -101,6 +101,7 @@ abstract class AbstractOkHttpService implements Service {
    * Named after the subclass, so log messages say which service they're about.
    */
   protected final Logger log = LoggerFactory.getLogger(getClass());
+  private static final Logger brokenResponseLog = LoggerFactory.getLogger(AbstractOkHttpService.class);
 
   private final ServiceType serviceType;
   private final HostAndPort address;
@@ -500,6 +501,19 @@ abstract class AbstractOkHttpService implements Service {
     RetryOrchestrator.maybeRetry(context(), request, retryReason);
   }
 
+  /**
+   * Retries a request whose response broke off: the connection failed while reading the body, before the request
+   * completed. Like the Netty implementation, which does this when the connection closes with a request in flight.
+   * <p>
+   * The request reached the server, which may have acted on it, so the retry strategy only retries it if it's
+   * idempotent ({@link RetryReason#CHANNEL_CLOSED_WHILE_IN_FLIGHT}). Otherwise, it fails with a
+   * {@code RequestCanceledException}, which says the outcome is unknown.
+   */
+  static void maybeRetryAfterBrokenResponse(CoreContext retryContext, Request<?> request, IOException readFailure) {
+    brokenResponseLog.debug("Response to {} broke off: {}", request.getClass().getSimpleName(), readFailure.toString());
+    RetryOrchestrator.maybeRetry(retryContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
+  }
+
   private Call enqueue(
     Request<?> request,
     okhttp3.Request.Builder requestBuilder,
@@ -549,6 +563,11 @@ abstract class AbstractOkHttpService implements Service {
           attempt.recordOutcome(null, error);
           request.fail(error);
         }
+
+      } catch (IOException e) {
+        // Reading the body failed: the connection broke, not the content.
+        attempt.recordFailure(e);
+        maybeRetryAfterBrokenResponse(context(), request, e);
 
       } catch (Throwable t) {
         attempt.recordFailure(t);
