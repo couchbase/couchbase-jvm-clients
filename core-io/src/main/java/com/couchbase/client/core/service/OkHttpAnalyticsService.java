@@ -27,8 +27,6 @@ import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Duration;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
@@ -40,23 +38,17 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @NullMarked
 public class OkHttpAnalyticsService extends AbstractOkHttpService {
 
-  /**
-   * @param streamingReadTimeout socket read timeout for the rest of an analytics response,
-   * once the SDK has completed the response future. See {@link StreamingJsonResponseHandler}.
-   */
   public OkHttpAnalyticsService(
     AnalyticsServiceConfig config,
     CoreContext context,
-    HostAndPort address,
-    Duration streamingReadTimeout
+    HostAndPort address
   ) {
     super(
       ServiceType.ANALYTICS,
       context,
       address,
       config.maxEndpoints(),
-      context.environment().ioConfig().analyticsCircuitBreakerConfig(),
-      streamingReadTimeout
+      context.environment().ioConfig().analyticsCircuitBreakerConfig()
     );
   }
 

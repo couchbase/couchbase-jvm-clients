@@ -26,8 +26,6 @@ import com.couchbase.client.core.util.HostAndPort;
 import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 
-import java.time.Duration;
-
 /**
  * The view service on one node, using OkHttp.
  * <p>
@@ -37,23 +35,17 @@ import java.time.Duration;
 @NullMarked
 public class OkHttpViewService extends AbstractOkHttpService {
 
-  /**
-   * @param streamingReadTimeout socket read timeout for the rest of a view response,
-   * once the SDK has completed the response future. See {@link StreamingJsonResponseHandler}.
-   */
   public OkHttpViewService(
     ViewServiceConfig config,
     CoreContext context,
-    HostAndPort address,
-    Duration streamingReadTimeout
+    HostAndPort address
   ) {
     super(
       ServiceType.VIEWS,
       context,
       address,
       config.maxEndpoints(),
-      context.environment().ioConfig().viewCircuitBreakerConfig(),
-      streamingReadTimeout
+      context.environment().ioConfig().viewCircuitBreakerConfig()
     );
   }
 

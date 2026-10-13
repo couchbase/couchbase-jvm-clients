@@ -29,7 +29,6 @@ import org.jspecify.annotations.NullMarked;
 import reactor.core.publisher.Sinks;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -73,8 +72,6 @@ final class StreamingJsonResponseHandler {
   /**
    * Completes, fails, or retries the request, depending on the response.
    *
-   * @param streamingReadTimeout socket read timeout for the rest of a successful response,
-   * once the request has completed (see the comment where it's applied).
    * @param retryContext context for retrying the request
    */
   static <H, ROW, T, R extends Response> void handle(
@@ -82,11 +79,10 @@ final class StreamingJsonResponseHandler {
     Request<R> request,
     okhttp3.Response httpResponse,
     DispatchAttempt attempt,
-    Duration streamingReadTimeout,
     CoreContext retryContext
   ) {
     if (HttpProtocol.decodeStatus(httpResponse.code()).success()) {
-      handleSuccess(format, request, httpResponse, attempt, streamingReadTimeout, retryContext);
+      handleSuccess(format, request, httpResponse, attempt, retryContext);
     } else {
       handleFailure(format, request, httpResponse, attempt, retryContext);
     }
@@ -97,7 +93,6 @@ final class StreamingJsonResponseHandler {
     Request<R> request,
     okhttp3.Response httpResponse,
     DispatchAttempt attempt,
-    Duration streamingReadTimeout,
     CoreContext retryContext
   ) {
     Sinks.One<T> trailerSink = Sinks.one();
@@ -119,18 +114,15 @@ final class StreamingJsonResponseHandler {
             request.succeed(r);
             attempt.recordOutcome(r, null);
 
-            // Desired behavior for compatibility with the previous implementation:
-            // The SDK stops enforcing the request timeout as soon as it completes the response future,
-            // which happens when the header arrives (for example, with the first result row).
-            // After that, the request timeout no longer applies.
+            // For compatibility with the previous implementation, the SDK stops enforcing the request timeout
+            // once it completes the response future, which happens when the header arrives (for example,
+            // with the first row). The rest of the result can take as long as it needs.
             //
-            // Until now, the socket read timeout has been the request timeout (plus a grace period),
-            // because it can take that long for the header to arrive. Now that the SDK has stopped
-            // enforcing the request timeout, dial down the read timeout to something that defends against
-            // dead connections, without limiting how long it takes to stream the whole result.
-            // The timeout applies to each read, so the remaining rows can take as long as they need,
-            // as long as the server keeps sending data when we ask for it.
-            CouchbaseOkHttpClient.setSocketReadTimeout(httpResponse.request(), streamingReadTimeout);
+            // The socket read timeout stays as it is: the request timeout plus a grace period. It applies to
+            // each read, so it doesn't limit how long the whole result takes, only how long the server can go
+            // quiet. And the server stops executing the request at the request timeout (the SDK sends it as
+            // the server-side timeout), so a slow but working server doesn't pause longer than that;
+            // a longer pause means the connection is dead.
           },
           row -> {
             try {
