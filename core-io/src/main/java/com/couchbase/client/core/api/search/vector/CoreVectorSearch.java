@@ -20,9 +20,11 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayN
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.topology.ClusterCapability;
 import reactor.util.annotation.Nullable;
 
 import java.util.List;
+import java.util.Set;
 
 import static com.couchbase.client.core.util.Validators.notNull;
 import static java.util.Objects.requireNonNull;
@@ -41,6 +43,15 @@ public class CoreVectorSearch {
     vectorQueries.forEach(vq -> notNull(vq, "VectorQuery"));
     this.vectorQueries = requireNonNull(vectorQueries);
     this.options = options;
+  }
+
+  /**
+   * Adds to the given set any cluster capabilities required by this vector search,
+   * including those required by the prefilters of its vector queries.
+   */
+  public void addRequiredCapabilities(Set<ClusterCapability> result) {
+    result.add(ClusterCapability.SEARCH_VECTOR);
+    vectorQueries.forEach(it -> it.addRequiredCapabilities(result));
   }
 
   public void injectTopLevel(ObjectNode toSend) {

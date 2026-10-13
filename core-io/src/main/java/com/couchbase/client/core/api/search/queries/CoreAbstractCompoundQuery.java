@@ -32,6 +32,7 @@ public abstract class CoreAbstractCompoundQuery extends CoreSearchQuery {
     childQueries = notNull(queries, "Queries");
   }
 
+  @Override
   public List<CoreSearchQuery> childQueries() {
     return this.childQueries;
   }

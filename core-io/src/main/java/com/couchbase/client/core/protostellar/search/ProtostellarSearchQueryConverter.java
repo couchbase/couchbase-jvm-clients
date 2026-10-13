@@ -21,7 +21,9 @@ import com.couchbase.client.core.api.search.CoreSearchQuery;
 import com.couchbase.client.core.api.search.queries.CoreBooleanFieldQuery;
 import com.couchbase.client.core.api.search.queries.CoreBooleanQuery;
 import com.couchbase.client.core.api.search.queries.CoreConjunctionQuery;
+import com.couchbase.client.core.api.search.queries.CoreCustomFilterQuery;
 import com.couchbase.client.core.api.search.queries.CoreCustomQuery;
+import com.couchbase.client.core.api.search.queries.CoreCustomScoreQuery;
 import com.couchbase.client.core.api.search.queries.CoreDateRangeQuery;
 import com.couchbase.client.core.api.search.queries.CoreDisjunctionQuery;
 import com.couchbase.client.core.api.search.queries.CoreDocIdQuery;
@@ -139,6 +141,16 @@ public class ProtostellarSearchQueryConverter implements CoreSearchQueryConverte
   @Override
   public Query convert(CoreCustomQuery core) {
     throw unsupportedInProtostellar("custom search queries");
+  }
+
+  @Override
+  public Query convert(CoreCustomScoreQuery core) {
+    throw unsupportedInProtostellar("custom score search queries");
+  }
+
+  @Override
+  public Query convert(CoreCustomFilterQuery core) {
+    throw unsupportedInProtostellar("custom filter search queries");
   }
 
   @Override

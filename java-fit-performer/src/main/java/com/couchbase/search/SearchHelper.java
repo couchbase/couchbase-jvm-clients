@@ -59,6 +59,7 @@ import com.couchbase.client.java.search.vector.VectorSearch;
 import com.couchbase.client.java.search.vector.VectorSearchOptions;
 import com.couchbase.client.java.util.Coordinate;
 import com.couchbase.client.performer.core.perf.PerRun;
+import com.couchbase.client.performer.core.util.StructUtil;
 import com.couchbase.client.protocol.run.Result;
 import com.couchbase.client.protocol.sdk.search.BlockingSearchResult;
 import com.couchbase.client.protocol.sdk.search.Location;
@@ -631,6 +632,28 @@ public class SearchHelper {
       }
       case MATCH_NONE -> {
         query = SearchQuery.matchNone();
+      }
+      case CUSTOM_SCORE -> {
+        var qr = q.getCustomScore();
+        var out = SearchQuery.customScore(convertSearchQuery(qr.getQuery()), qr.getSource());
+        if (qr.getFieldsCount() > 0) {
+          out.fields(qr.getFieldsList().toArray(new String[0]));
+        }
+        if (qr.hasParameters()) {
+          out.parameters(JsonObject.from(StructUtil.toMap(qr.getParameters())));
+        }
+        query = out;
+      }
+      case CUSTOM_FILTER -> {
+        var qr = q.getCustomFilter();
+        var out = SearchQuery.customFilter(convertSearchQuery(qr.getQuery()), qr.getSource());
+        if (qr.getFieldsCount() > 0) {
+          out.fields(qr.getFieldsList().toArray(new String[0]));
+        }
+        if (qr.hasParameters()) {
+          out.parameters(JsonObject.from(StructUtil.toMap(qr.getParameters())));
+        }
+        query = out;
       }
       default -> {
         throw new UnsupportedOperationException();

@@ -30,6 +30,10 @@ public interface CoreSearchQueryConverter<T> {
 
   T convert(CoreCustomQuery core);
 
+  T convert(CoreCustomScoreQuery core);
+
+  T convert(CoreCustomFilterQuery core);
+
   T convert(CoreDateRangeQuery core);
 
   T convert(CoreDocIdQuery core);

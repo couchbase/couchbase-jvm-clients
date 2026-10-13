@@ -137,6 +137,26 @@ object SearchQuery {
     */
   def matchNone: MatchNoneQuery = MatchNoneQuery()
 
+  /** A search query that uses a user-defined JavaScript function to assign new scores
+    * to the results of the given query.
+    *
+    * @param query  the query whose results are passed through the scoring function
+    * @param source the JavaScript source code of the scoring function
+    */
+  @SinceCouchbase("8.5")
+  def customScore(query: SearchQuery, source: String): CustomScoreQuery =
+    CustomScoreQuery(query, source)
+
+  /** A search query that uses a user-defined JavaScript function to filter
+    * the results of the given query.
+    *
+    * @param query  the query whose results are passed through the filtering function
+    * @param source the JavaScript source code of the filtering function
+    */
+  @SinceCouchbase("8.5")
+  def customFilter(query: SearchQuery, source: String): CustomFilterQuery =
+    CustomFilterQuery(query, source)
+
   @SinceCouchbase("6.5.1")
   def geoPolygon(coordinates: Seq[Coordinate]): GeoPolygonQuery = GeoPolygonQuery(coordinates)
 

@@ -56,7 +56,8 @@ public class Capabilities {
             Caps.SDK_GET_OR_NULL,
             Caps.SDK_QUERY_2120,
             Caps.SDK_SEARCH_SCORE_FUSION,
-            Caps.SDK_GET_REPLICA
+            Caps.SDK_GET_REPLICA,
+            Caps.SDK_SEARCH_CUSTOM_SCRIPT_QUERIES
         );
     }
 }

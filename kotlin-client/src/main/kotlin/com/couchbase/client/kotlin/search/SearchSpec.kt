@@ -395,6 +395,35 @@ public sealed class SearchSpec {
         public fun matchNone(): SearchQuery = SearchQuery.matchNone()
 
         /**
+         * A query that passes the results of an inner [query] through a user-defined
+         * JavaScript scoring function, which assigns a new score to each result.
+         *
+         * See [SearchQuery.customScore] for details.
+         */
+        @SinceCouchbase("8.5")
+        public fun customScore(
+            query: SearchQuery,
+            source: String,
+            fields: List<String> = emptyList(),
+            params: Map<String, Any?> = emptyMap(),
+        ): SearchQuery = SearchQuery.customScore(query, source, fields, params)
+
+        /**
+         * A query that passes the results of an inner [query] through a user-defined
+         * JavaScript filtering function. A document is included in the results
+         * only if it satisfies the function.
+         *
+         * See [SearchQuery.customFilter] for details.
+         */
+        @SinceCouchbase("8.5")
+        public fun customFilter(
+            query: SearchQuery,
+            source: String,
+            fields: List<String> = emptyList(),
+            params: Map<String, Any?> = emptyMap(),
+        ): SearchQuery = SearchQuery.customFilter(query, source, fields, params)
+
+        /**
          * A Vector query, with the vector specified as a FloatArray.
          *
          * Vector queries can be ANDed or ORed together to create a compound vector query by passing
