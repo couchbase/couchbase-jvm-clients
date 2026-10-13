@@ -481,7 +481,7 @@ public class Node implements Stateful<NodeState> {
           .build();
         return useNetty
           ? new QueryService(config, ctx, host, port)
-          : new OkHttpQueryService(config, ctx, address, env.ioConfig().tcpUserTimeout());
+          : new OkHttpQueryService(config, ctx, address);
       }
       case VIEWS: {
         ViewServiceConfig config = ViewServiceConfig.builder()
@@ -490,7 +490,7 @@ public class Node implements Stateful<NodeState> {
           .build();
         return useNetty
           ? new ViewService(config, ctx, host, port)
-          : new OkHttpViewService(config, ctx, address, env.ioConfig().tcpUserTimeout());
+          : new OkHttpViewService(config, ctx, address);
       }
       case SEARCH: {
         SearchServiceConfig config = SearchServiceConfig.builder()
@@ -499,7 +499,7 @@ public class Node implements Stateful<NodeState> {
           .build();
         return useNetty
           ? new SearchService(config, ctx, host, port)
-          : new OkHttpSearchService(config, ctx, address, env.ioConfig().tcpUserTimeout());
+          : new OkHttpSearchService(config, ctx, address);
       }
       case ANALYTICS: {
         AnalyticsServiceConfig config = AnalyticsServiceConfig.builder()
@@ -508,7 +508,7 @@ public class Node implements Stateful<NodeState> {
           .build();
         return useNetty
           ? new AnalyticsService(config, ctx, host, port)
-          : new OkHttpAnalyticsService(config, ctx, address, env.ioConfig().tcpUserTimeout());
+          : new OkHttpAnalyticsService(config, ctx, address);
       }
       case EVENTING:
         return useNetty

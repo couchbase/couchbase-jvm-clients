@@ -28,8 +28,6 @@ import okhttp3.HttpUrl;
 import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 
-import java.time.Duration;
-
 /**
  * The search service on one node, using OkHttp.
  * <p>
@@ -39,23 +37,17 @@ import java.time.Duration;
 @NullMarked
 public class OkHttpSearchService extends AbstractOkHttpService {
 
-  /**
-   * @param streamingReadTimeout socket read timeout for the rest of a search response,
-   * once the SDK has completed the response future. See {@link StreamingJsonResponseHandler}.
-   */
   public OkHttpSearchService(
     SearchServiceConfig config,
     CoreContext context,
-    HostAndPort address,
-    Duration streamingReadTimeout
+    HostAndPort address
   ) {
     super(
       ServiceType.SEARCH,
       context,
       address,
       config.maxEndpoints(),
-      context.environment().ioConfig().searchCircuitBreakerConfig(),
-      streamingReadTimeout
+      context.environment().ioConfig().searchCircuitBreakerConfig()
     );
   }
 

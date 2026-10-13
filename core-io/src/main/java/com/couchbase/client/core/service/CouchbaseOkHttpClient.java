@@ -284,8 +284,12 @@ public class CouchbaseOkHttpClient implements Closeable {
    * Add a grace period, because we want the SDK's own timeout enforcement to kick in first, so it can
    * throw the right kind of exception, etc.
    * <p>
-   * There's no call timeout, because the Netty implementation didn't enforce one, and a streamed
-   * response switches to a shorter read timeout once the request completes.
+   * It applies to each read, for the whole response, including the rest of a streamed result (for example,
+   * query rows) after the SDK has completed the request: the server stops executing at the request timeout,
+   * so a longer pause means the connection is dead.
+   * <p>
+   * There's no call timeout, because the Netty implementation didn't enforce one: a streamed result can take
+   * as long as it needs.
    */
   private static Duration socketReadTimeout(Duration requestTimeout) {
     return atLeastOneMillisecond(requestTimeout.plus(READ_TIMEOUT_GRACE_PERIOD));

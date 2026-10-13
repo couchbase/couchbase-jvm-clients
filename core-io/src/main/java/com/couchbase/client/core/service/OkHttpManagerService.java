@@ -40,6 +40,7 @@ import org.jspecify.annotations.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.time.Duration;
 import java.util.Optional;
 
 
@@ -67,16 +68,20 @@ public class OkHttpManagerService extends AbstractOkHttpService {
    */
   private static final ByteString CONFIG_SEPARATOR = ByteString.encodeUtf8("\n\n\n\n");
 
+  /**
+   * The bucket config stream is closed if it's idle this long, so the refresher redials (maybe a different node).
+   */
+  private final Duration configIdleTimeout;
+
   public OkHttpManagerService(CoreContext context, HostAndPort address) {
     super(
       ServiceType.MANAGER,
       context,
       address,
       MAX_IN_FLIGHT,
-      context.environment().ioConfig().managerCircuitBreakerConfig(),
-      // The bucket config stream is closed if it's idle this long, so the refresher redials (maybe a different node).
-      context.environment().ioConfig().configIdleRedialTimeout()
+      context.environment().ioConfig().managerCircuitBreakerConfig()
     );
+    this.configIdleTimeout = context.environment().ioConfig().configIdleRedialTimeout();
   }
 
   @Override
@@ -154,7 +159,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
     try (ResponseBody responseBody = httpResponse.body()) {
       // Like the Netty implementation: once the stream is open, close it if nothing arrives for a while.
-      CouchbaseOkHttpClient.setSocketReadTimeout(httpResponse.request(), streamingReadTimeout());
+      CouchbaseOkHttpClient.setSocketReadTimeout(httpResponse.request(), configIdleTimeout);
       BufferedSource source = responseBody.source();
 
       while (true) {
