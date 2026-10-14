@@ -172,8 +172,6 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
     this.eventBus = Optional
       .ofNullable(builder.eventBus)
       .orElse(owned(DefaultEventBus.create(scheduler.get())));
-    this.timer = Timer.createAndStart(maxNumRequestsInRetry, builder.ioConfig.timerConfig().build());
-
 
     this.securityConfig = builder.securityConfig.build();
 
@@ -193,6 +191,9 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
             ? builder.transactionsConfig
             : CoreTransactionsConfig.createDefault(CoreTransactionsSupportedExtensions.ALL);
     this.observabilitySemanticConventions = builder.observabilitySemanticConventions;
+
+    // Start threads only after building the configs, so an invalid config doesn't leak them.
+    this.timer = Timer.createAndStart(maxNumRequestsInRetry, ioConfig.timerConfig());
 
     if (eventBus.isOwned()) {
       eventBus.get().start().block();
