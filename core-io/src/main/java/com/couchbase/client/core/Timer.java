@@ -23,7 +23,10 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.deps.io.netty.util.HashedWheelTimer;
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
+import com.couchbase.client.core.deps.io.netty.util.TimerTask;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -37,6 +40,7 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * @since 2.0.0
  */
+@NullMarked
 @Stability.Internal
 public class Timer {
 
@@ -130,14 +134,13 @@ public class Timer {
       return;
     }
 
-    schedule(() -> {
-      if (!request.completed()) {
-        core.send(request, false);
-      }
-    }, runAfter);
+    outstandingForRetry.incrementAndGet();
+    if (scheduleRequestTask(new RetryTask(core, request), runAfter) == null) {
+      outstandingForRetry.decrementAndGet();
+    }
   }
 
-  public Timeout schedule(final Runnable callback, final Duration runAfter) {
+  public @Nullable Timeout schedule(final Runnable callback, final Duration runAfter) {
     return schedule(callback, runAfter, false);
   }
 
@@ -145,8 +148,10 @@ public class Timer {
    * Schedule an arbitrary task for this timer.
    *
    * @param respectMax whether maxNumRequestsInRetry should be respected.  Will return null if the operation was not scheduled for this reason.
+   * @return the scheduled timeout, or null if the task was not scheduled because the timer is stopped
+   * or (when {@code respectMax} is true) too many requests are in retry.
    */
-  public Timeout schedule(final Runnable callback, final Duration runAfter, boolean respectMax) {
+  public @Nullable Timeout schedule(final Runnable callback, final Duration runAfter, boolean respectMax) {
     if (stopped) {
       return null;
     }
@@ -181,12 +186,37 @@ public class Timer {
       return;
     }
 
-    final Timeout registration = timer().newTimeout(
-      timeout -> request.cancel(CancellationReason.TIMEOUT),
-      request.timeout().toNanos(),
-      TimeUnit.NANOSECONDS
-    );
-    request.timeoutRegistration(registration);
+    final Timeout registration = scheduleRequestTask(new TimeoutTask(request), request.timeout());
+    if (registration != null) {
+      request.timeoutRegistration(registration);
+    }
+  }
+
+  /**
+   * Schedules a task on behalf of a request, making sure the request is cancelled
+   * if the timer is stopped before the task can run.
+   *
+   * @return the scheduled timeout, or null if the timer was already stopped.
+   */
+  private @Nullable Timeout scheduleRequestTask(final RequestTask task, final Duration runAfter) {
+    final Timeout timeout;
+    try {
+      timeout = timer().newTimeout(task, runAfter.toNanos(), TimeUnit.NANOSECONDS);
+    } catch (IllegalStateException e) {
+      // The wheel timer refuses new timeouts once stopped.
+      if (!stopped) {
+        throw e;
+      }
+      task.request().cancel(CancellationReason.SHUTDOWN);
+      return null;
+    }
+
+    // If stop() raced with scheduling, the wheel timer might not have returned this task
+    // as unprocessed, so cancel the request here. Cancelling twice is harmless.
+    if (stopped) {
+      task.request().cancel(CancellationReason.SHUTDOWN);
+    }
+    return timeout;
   }
 
   /**
@@ -198,10 +228,18 @@ public class Timer {
 
   /**
    * Stops this timer.
+   * <p>
+   * Requests with pending timeout or retry tasks are cancelled with {@link CancellationReason#SHUTDOWN}.
    */
   public void stop() {
     stopped = true;
-    wheelTimers.forEach(HashedWheelTimer::stop);
+    for (HashedWheelTimer wheelTimer : wheelTimers) {
+      for (Timeout timeout : wheelTimer.stop()) {
+        if (timeout.task() instanceof RequestTask) {
+          ((RequestTask) timeout.task()).request().cancel(CancellationReason.SHUTDOWN);
+        }
+      }
+    }
   }
 
 
@@ -210,6 +248,61 @@ public class Timer {
    */
   public long outstandingForRetry() {
     return outstandingForRetry.get();
+  }
+
+  /**
+   * A timer task that acts on behalf of a request, so the request can be cancelled
+   * if the timer is stopped before the task runs.
+   */
+  private interface RequestTask extends TimerTask {
+    Request<? extends Response> request();
+  }
+
+  /**
+   * Cancels the request when its timeout expires.
+   */
+  private static final class TimeoutTask implements RequestTask {
+    private final Request<? extends Response> request;
+
+    TimeoutTask(final Request<? extends Response> request) {
+      this.request = request;
+    }
+
+    @Override
+    public Request<? extends Response> request() {
+      return request;
+    }
+
+    @Override
+    public void run(final Timeout timeout) {
+      request.cancel(CancellationReason.TIMEOUT);
+    }
+  }
+
+  /**
+   * Sends the request again once its retry delay has elapsed.
+   */
+  private final class RetryTask implements RequestTask {
+    private final Core core;
+    private final Request<? extends Response> request;
+
+    RetryTask(final Core core, final Request<? extends Response> request) {
+      this.core = core;
+      this.request = request;
+    }
+
+    @Override
+    public Request<? extends Response> request() {
+      return request;
+    }
+
+    @Override
+    public void run(final Timeout timeout) {
+      outstandingForRetry.decrementAndGet();
+      if (!request.completed()) {
+        core.send(request, false);
+      }
+    }
   }
 
   @Override
