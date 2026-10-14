@@ -247,12 +247,25 @@ public class AsyncCluster {
   ) {
     this.environment = environment;
     this.connectionString = connectionString;
-    this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), initialAuthenticator, connectionString);
-    this.queryOps = couchbaseOps.queryOps();
-    this.searchOps = couchbaseOps.searchOps(null);
 
-    if (couchbaseOps instanceof Core) {
-      ((Core) couchbaseOps).initGlobalConfig();
+    try {
+      this.couchbaseOps = CoreCouchbaseOps.create(environment.get(), initialAuthenticator, connectionString);
+      this.queryOps = couchbaseOps.queryOps();
+      this.searchOps = couchbaseOps.searchOps(null);
+
+      if (couchbaseOps instanceof Core) {
+        ((Core) couchbaseOps).initGlobalConfig();
+      }
+    } catch (Throwable t) {
+      // Nobody else can shut down an environment the SDK created, so do it here.
+      if (environment.isOwned()) {
+        try {
+          environment.get().shutdown();
+        } catch (Throwable shutdownFailure) {
+          t.addSuppressed(shutdownFailure);
+        }
+      }
+      throw t;
     }
 
     Duration autoDisconnectTimeout = environment().timeoutConfig().disconnectTimeout()
