@@ -27,10 +27,12 @@ import java.time.Duration;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TimerTest {
 
@@ -80,6 +82,48 @@ class TimerTest {
     } finally {
       timer.stop();
     }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void stopCancelsRequestWaitingForTimeout() {
+    Timer timer = Timer.createAndStart(2);
+    Request<Response> request = mock(Request.class);
+    when(request.timeout()).thenReturn(Duration.ofMinutes(1));
+    timer.register(request);
+
+    timer.stop();
+    verify(request, times(1)).cancel(CancellationReason.SHUTDOWN);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void stopCancelsRequestWaitingForRetry() {
+    Timer timer = Timer.createAndStart(2);
+    Core core = mockCore();
+    Request<? extends Response> request = mock(Request.class);
+    timer.scheduleForRetry(core, request, Duration.ofMinutes(1));
+
+    timer.stop();
+    verify(request, times(1)).cancel(CancellationReason.SHUTDOWN);
+    verify(core, never()).send(any(), anyBoolean());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void cancelsRequestsScheduledAfterStop() {
+    Timer timer = Timer.createAndStart(2);
+    timer.stop();
+
+    Request<Response> request = mock(Request.class);
+    timer.register(request);
+    verify(request, times(1)).cancel(CancellationReason.SHUTDOWN);
+
+    Core core = mockCore();
+    Request<? extends Response> retryRequest = mock(Request.class);
+    timer.scheduleForRetry(core, retryRequest, Duration.ofMillis(1));
+    verify(retryRequest, times(1)).cancel(CancellationReason.SHUTDOWN);
+    assertEquals(0, timer.outstandingForRetry());
   }
 
 }
