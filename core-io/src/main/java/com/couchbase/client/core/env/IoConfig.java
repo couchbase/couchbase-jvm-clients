@@ -995,6 +995,12 @@ public class IoConfig {
      * <p>
      * Traffic capture should only be enabled during development and for debugging purposes. When enabled
      * it will add more overhead due to traffic parsing, logging, and analysis.
+     * <p>
+     * Captured traffic contains document keys and values, query statements and results, and other
+     * application data. KV authentication (SASL) payloads, HTTP {@code Authorization} header values,
+     * and the passwords and keys the SDK sends when managing users, analytics links, and eventing
+     * functions are masked. Secrets that appear anywhere else, such as in query statements, are not.
+     * Review the logs before sharing them.
      *
      * @return this {@link Builder} for chaining purposes.
      */
