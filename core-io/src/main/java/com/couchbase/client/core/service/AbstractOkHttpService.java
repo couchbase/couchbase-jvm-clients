@@ -57,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
-import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.net.UnknownServiceException;
 import java.util.Optional;
@@ -434,11 +433,14 @@ abstract class AbstractOkHttpService implements Service {
     boolean requestStarted = CouchbaseOkHttpClient.requestStarted(call.request());
     log.debug("Sending request to {} failed; requestStarted={}", call.request().url(), requestStarted, e);
 
-    if (e instanceof SSLException) {
-      // Untrusted server certificate, hostname mismatch, etc.
+    String tlsHint = OkHttpTlsHelper.permanentTlsFailureHint(e);
+    if (tlsHint != null) {
+      // For example, an untrusted server certificate, or a port that doesn't use TLS. Retrying won't help.
+      // (Other TLS failures, like the server closing the connection during the handshake, are retried below.)
+      // AuthenticationFailureException, so bucket config loading backs off (see DefaultConfigurationProvider).
       request.fail(
         new AuthenticationFailureException(
-          "Failed to establish secure connection to server.",
+          "Failed to establish secure connection to server - " + tlsHint,
           new GenericRequestErrorContext(request),
           e
         )
