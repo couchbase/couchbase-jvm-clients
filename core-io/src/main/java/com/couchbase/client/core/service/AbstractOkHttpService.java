@@ -228,8 +228,10 @@ abstract class AbstractOkHttpService implements Service {
    * Takes care of tracing, dispatch latency, connection tracking, and finishing the attempt.
    * If the call fails (for example, can't connect), retries the request or fails it.
    * If the request is cancelled, cancels the call.
+   *
+   * @return the call, which was already enqueued, so the handler might be running (or done) by now.
    */
-  protected final void execute(
+  protected final Call execute(
     BaseHttpRequest<?> request,
     okhttp3.Request.Builder requestBuilder,
     DispatchAttempt attempt,
@@ -270,6 +272,7 @@ abstract class AbstractOkHttpService implements Service {
     });
 
     request.setCancellationHook(call::cancel);
+    return call;
   }
 
   // ---- Service ----

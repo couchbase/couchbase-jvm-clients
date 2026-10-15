@@ -256,6 +256,22 @@ class OkHttpManagerServiceTest {
   }
 
   @Test
+  void disconnectEndsConfigStream() throws Exception {
+    start();
+    // Sends one config, then goes quiet for longer than the test waits.
+    server.enqueueStreaming("{\"rev\":1}\n\n\n\n", Duration.ofSeconds(60));
+
+    BucketConfigStreamingResponse response = send(newStreamingRequest());
+    assertEquals("{\"rev\":1}", response.configs().blockFirst(Duration.ofSeconds(20)));
+
+    service.disconnect();
+
+    // Completes (so the refresher can redial a node that's still in the cluster) without waiting for the server.
+    List<String> configs = response.configs().collectList().block(Duration.ofSeconds(20));
+    assertEquals(singletonList("{\"rev\":1}"), configs);
+  }
+
+  @Test
   void configStreamErrorStatusCompletesWithResponse() throws Exception {
     start();
     server.enqueue(404, "Requested resource not found.", Duration.ZERO);
