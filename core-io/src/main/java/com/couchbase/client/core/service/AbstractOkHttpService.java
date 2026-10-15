@@ -47,6 +47,7 @@ import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.SingleStateful;
 import okhttp3.Call;
+import okhttp3.EventListener;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
@@ -236,15 +237,16 @@ abstract class AbstractOkHttpService implements Service {
     DispatchAttempt attempt,
     ResponseHandler handler
   ) {
-    RequestSpan dispatchSpan = newDispatchSpan(request);
-    NanoTimestamp dispatchStart = NanoTimestamp.now();
+    DispatchTimer dispatchTimer = new DispatchTimer(request);
 
-    Call call = enqueue(request, requestBuilder, new okhttp3.Callback() {
+    Call call = enqueue(request, requestBuilder, dispatchTimer, new okhttp3.Callback() {
       @Override
       public void onResponse(Call call, okhttp3.Response response) throws IOException {
         try {
           try {
-            request.context().dispatchLatency(dispatchStart.elapsedNanos());
+            NanoTimestamp dispatchStart = dispatchTimer.start;
+            if (dispatchStart != null) request.context().dispatchLatency(dispatchStart.elapsedNanos());
+            RequestSpan dispatchSpan = dispatchTimer.span;
             if (dispatchSpan != null) dispatchSpan.end();
           } catch (RuntimeException e) {
             // For example, a custom tracer that throws. Don't let it stop the response from being handled,
@@ -265,7 +267,7 @@ abstract class AbstractOkHttpService implements Service {
           recordCallFailure(attempt, call, e);
         } finally {
           attempt.finish();
-          commonOnFailure(request, dispatchSpan, call, e);
+          commonOnFailure(request, dispatchTimer.span, call, e);
         }
       }
     });
@@ -484,12 +486,50 @@ abstract class AbstractOkHttpService implements Service {
   private Call enqueue(
     Request<?> request,
     okhttp3.Request.Builder requestBuilder,
+    DispatchTimer dispatchTimer,
     okhttp3.Callback callback
   ) {
     Call call = context().core().okHttpClient().newCall(requestBuilder, request.context(), request.timeout());
     call.addEventListener(connectionTracker);
+    call.addEventListener(dispatchTimer);
     call.enqueue(callback);
     return call;
+  }
+
+  /**
+   * Starts the dispatch latency timer and the dispatch span when OkHttp starts writing the request.
+   * <p>
+   * Not when the call is enqueued, because OkHttp connects lazily: the time before the request is written
+   * can include connecting and the TLS handshake, which aren't part of dispatching the request.
+   * Starting here also matches the Netty endpoints, which start timing when the request is written
+   * to a channel that's already connected. If the call fails before the request is written (for example,
+   * can't connect), there's no dispatch span, as with Netty.
+   * <p>
+   * OkHttp calls this on the thread that runs the call, which is also the thread that runs the call's callback.
+   */
+  private final class DispatchTimer extends EventListener {
+    private final Request<?> request;
+
+    volatile @Nullable NanoTimestamp start;
+    volatile @Nullable RequestSpan span;
+
+    DispatchTimer(Request<?> request) {
+      this.request = requireNonNull(request);
+    }
+
+    @Override
+    public void requestHeadersStart(Call call) {
+      if (start != null) {
+        return; // Doesn't happen, since the client doesn't retry or follow redirects. But don't leak a span if it does.
+      }
+      start = NanoTimestamp.now();
+      try {
+        span = newDispatchSpan(request);
+      } catch (RuntimeException e) {
+        // For example, a custom tracer that throws. Don't let it fail the call.
+        log.warn("Failed to start the dispatch span.", e);
+      }
+    }
   }
 
   /**
