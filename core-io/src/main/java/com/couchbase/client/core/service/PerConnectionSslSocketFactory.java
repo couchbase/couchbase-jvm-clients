@@ -82,7 +82,8 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
    * @param trustManagers supplies the trust manager, asked once per new connection.
    * @param handshakeTimeout read timeout for the TLS handshake, set on each socket that OkHttp layers TLS over.
    * <p>
-   * If either supplier throws, the connection fails with an {@link SSLException} that has the exception as its cause.
+   * If either supplier throws, the connection fails with a {@link CertificatesUnavailableException}
+   * that has the exception as its cause.
    */
   PerConnectionSslSocketFactory(
     Supplier<@Nullable KeyManagerFactory> clientCertificates,
@@ -93,6 +94,18 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
     this.trustManagers = requireNonNull(trustManagers);
     this.handshakeTimeoutMillis = (int) Math.max(1, Math.min(Integer.MAX_VALUE, handshakeTimeout.toMillis()));
     this.cipherSuiteInfo = newSslContext(null, trustManagers.get()).getSocketFactory();
+  }
+
+  /**
+   * Thrown when a new connection can't get its client certificate or trust manager, because a supplier threw.
+   * <p>
+   * Unlike an untrusted server certificate, this might be temporary (for example, a key file
+   * read while it's being replaced), so the request is retried, whatever the cause.
+   */
+  static final class CertificatesUnavailableException extends SSLException {
+    CertificatesUnavailableException(Throwable cause) {
+      super("Failed to get the certificates for a new connection.", cause);
+    }
   }
 
   private SSLSocketFactory newFactory() throws SSLException {
@@ -108,7 +121,7 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
       trustManager = CertificateLoggingTrustManager.wrap(trustManagers.get(), reportedUntrustedChains);
     } catch (RuntimeException e) {
       // For example, the authenticator couldn't provide the client certificate.
-      throw new SSLException("Failed to get the certificates for a new connection.", e);
+      throw new CertificatesUnavailableException(e);
     }
     return newSslContext(keyManagers, trustManager).getSocketFactory();
   }

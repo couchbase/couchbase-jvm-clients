@@ -22,6 +22,8 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
 import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,6 +72,29 @@ class CbThrowablesTest {
     assertTrue(result.isPresent());
     assertEquals(IllegalArgumentException.class, result.get().getClass());
     assertEquals("foo", result.get().getMessage());
+  }
+
+  @Test
+  void causesAndSuppressedListsEachOnceDepthFirst() {
+    Exception suppressedCause = new Exception("suppressed cause");
+    Exception suppressed = new Exception("suppressed", suppressedCause);
+    Exception rootCause = new Exception("root cause");
+    Exception cause = new Exception("cause", rootCause);
+    Exception top = new Exception("top", cause);
+    top.addSuppressed(suppressed);
+    cause.addSuppressed(suppressed); // reachable twice
+    rootCause.initCause(top); // a cycle
+
+    assertEquals(
+      asList(top, cause, rootCause, suppressed, suppressedCause),
+      CbThrowables.causesAndSuppressed(top)
+    );
+  }
+
+  @Test
+  void causesAndSuppressedOfAThrowableWithNeither() {
+    Exception e = new Exception("alone");
+    assertEquals(singletonList(e), CbThrowables.causesAndSuppressed(e));
   }
 
   @Test
