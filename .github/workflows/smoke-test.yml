@@ -40,6 +40,9 @@ jobs:
       - name: tracing-opentelemetry shade check
         run: cd tracing-opentelemetry && ./shade-check.sh || exit 1
 
+      - name: Embedded POM check
+        run: .github/scripts/embedded-pom-check.sh
+
       - name: Remove artifacts from Maven repo so they're not cached
         run: rm -rfv ~/.m2/repository/com/couchbase/client/
 
