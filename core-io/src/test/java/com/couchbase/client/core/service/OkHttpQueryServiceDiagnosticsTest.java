@@ -41,12 +41,14 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -197,14 +199,18 @@ class OkHttpQueryServiceDiagnosticsTest {
 
   @Test
   void requestsOnDifferentConnectionsReportDifferentIds() throws Exception {
-    // Slow responses, so the two requests are in flight at the same time and need two connections.
-    server.enqueue("one", Duration.ofMillis(500));
-    server.enqueue("two", Duration.ofMillis(500));
+    // The server holds both responses until it has received both requests,
+    // so the two requests are in flight at the same time and need two connections.
+    CountDownLatch release = new CountDownLatch(1);
+    server.enqueueHeld("one", release);
+    server.enqueueHeld("two", release);
 
     CoreHttpRequest first = newPingRequest();
     CoreHttpRequest second = newPingRequest();
     service.send(first);
     service.send(second);
+    waitUntilCondition(() -> server.requests().size() == 2);
+    release.countDown();
 
     CoreHttpResponse firstResponse = first.response().get(10, TimeUnit.SECONDS);
     CoreHttpResponse secondResponse = second.response().get(10, TimeUnit.SECONDS);
