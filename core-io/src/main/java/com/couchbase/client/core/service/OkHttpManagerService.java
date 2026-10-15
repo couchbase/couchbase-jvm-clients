@@ -31,6 +31,7 @@ import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
 import com.couchbase.client.core.util.HostAndPort;
+import okhttp3.Call;
 import okhttp3.ResponseBody;
 import okio.BufferedSource;
 import okio.ByteString;
@@ -42,6 +43,9 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
@@ -73,6 +77,11 @@ public class OkHttpManagerService extends AbstractOkHttpService {
    */
   private final Duration configIdleTimeout;
 
+  /**
+   * The calls whose responses are bucket config streams in progress. Cancelled when the service is disconnected.
+   */
+  private final Set<Call> configStreams = ConcurrentHashMap.newKeySet();
+
   public OkHttpManagerService(CoreContext context, HostAndPort address) {
     super(
       ServiceType.MANAGER,
@@ -82,6 +91,16 @@ public class OkHttpManagerService extends AbstractOkHttpService {
       context.environment().ioConfig().managerCircuitBreakerConfig()
     );
     this.configIdleTimeout = context.environment().ioConfig().configIdleRedialTimeout();
+  }
+
+  /**
+   * Also ends any bucket config streams from this node, so the refresher redials (on a node that's still
+   * in the cluster). The Netty implementation does the same by closing its connections.
+   */
+  @Override
+  public void disconnect() {
+    super.disconnect();
+    configStreams.forEach(Call::cancel);
   }
 
   @Override
@@ -99,7 +118,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
     if (request instanceof BucketConfigStreamingRequest) {
       BucketConfigStreamingRequest streamingRequest = (BucketConfigStreamingRequest) request;
-      execute(streamingRequest, requestBuilder, attempt, response -> handleConfigStream(streamingRequest, response, attempt));
+      sendConfigStreamRequest(streamingRequest, requestBuilder, attempt);
     } else {
       sendManagerRequest((BaseHttpRequest<?>) request, requestBuilder, attempt);
     }
@@ -136,10 +155,38 @@ public class OkHttpManagerService extends AbstractOkHttpService {
   }
 
   /**
+   * Sends the request, and tracks its call while the stream is being read, so {@link #disconnect()} can cancel it.
+   */
+  private void sendConfigStreamRequest(
+    BucketConfigStreamingRequest request,
+    okhttp3.Request.Builder requestBuilder,
+    DispatchAttempt attempt
+  ) {
+    // OkHttp runs the handler on another thread, possibly before execute() returns the call.
+    CompletableFuture<Call> callFuture = new CompletableFuture<>();
+
+    callFuture.complete(execute(request, requestBuilder, attempt, response -> {
+      Call call = callFuture.join(); // waits at most until execute() returns
+      // disconnect() changes the state before cancelling the calls in the set. Adding the call before
+      // checking the state means either this sees the disconnect, or the disconnect sees the call.
+      configStreams.add(call);
+      try {
+        if (state() == ServiceState.DISCONNECTED) {
+          call.cancel();
+        }
+        handleConfigStream(request, response, attempt);
+      } finally {
+        configStreams.remove(call);
+      }
+    }));
+  }
+
+  /**
    * Completes the request as soon as the response headers arrive, then pushes each config
    * to the response as it arrives, until the server closes the stream, the connection fails,
-   * or the stream is idle for too long. Then completes the stream (like the Netty implementation,
-   * which completes the stream when the connection closes), so the refresher can redial.
+   * the stream is idle for too long, or the service is disconnected. Then completes the stream
+   * (like the Netty implementation, which completes the stream when the connection closes),
+   * so the refresher can redial.
    * <p>
    * Runs on the thread that received the response, for as long as the stream lasts.
    */
@@ -176,7 +223,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
       context().environment().eventBus().publish(new IdleStreamingEndpointClosedEvent(ioContext(request.context())));
 
     } catch (IOException | RuntimeException e) {
-      // For example, the connection failed or was closed. The refresher will redial.
+      // For example, the connection failed or was closed, or the service was disconnected. The refresher will redial.
       log.debug("Bucket config stream ended: {}", e.toString());
 
     } finally {
