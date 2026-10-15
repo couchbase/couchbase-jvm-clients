@@ -22,8 +22,10 @@ import org.jspecify.annotations.Nullable;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -110,29 +112,36 @@ public class CbThrowables {
     Throwable t,
     Predicate<StackTraceElement> filter
   ) {
-    requireNonNull(t);
-    filterStackTraceRecursive(t, filter, newSetFromMap(new IdentityHashMap<>()));
+    for (Throwable it : causesAndSuppressed(t)) {
+      it.setStackTrace(
+        Arrays.stream(it.getStackTrace())
+          .filter(filter)
+          .toArray(StackTraceElement[]::new)
+      );
+    }
   }
 
-  private static void filterStackTraceRecursive(
-    @Nullable Throwable t,
-    Predicate<StackTraceElement> filter,
-    Set<Throwable> seen
-  ) {
+  /**
+   * Returns the given throwable, its causal chain, and their suppressed throwables, recursively.
+   * <p>
+   * Each throwable is listed once, even if it's reachable more than one way (or the graph has a cycle).
+   * The order is depth-first: a throwable, then its cause (and everything reachable from it),
+   * then its suppressed throwables.
+   */
+  public static List<Throwable> causesAndSuppressed(Throwable t) {
+    List<Throwable> result = new ArrayList<>();
+    collectCausesAndSuppressed(requireNonNull(t), result, newSetFromMap(new IdentityHashMap<>()));
+    return result;
+  }
+
+  private static void collectCausesAndSuppressed(@Nullable Throwable t, List<Throwable> result, Set<Throwable> seen) {
     if (t == null || !seen.add(t)) {
       return;
     }
-
-    t.setStackTrace(
-      Arrays.stream(t.getStackTrace())
-        .filter(filter)
-        .toArray(StackTraceElement[]::new)
-    );
-
-    filterStackTraceRecursive(t.getCause(), filter, seen);
-
+    result.add(t);
+    collectCausesAndSuppressed(t.getCause(), result, seen);
     for (Throwable suppressed : t.getSuppressed()) {
-      filterStackTraceRecursive(suppressed, filter, seen);
+      collectCausesAndSuppressed(suppressed, result, seen);
     }
   }
 }

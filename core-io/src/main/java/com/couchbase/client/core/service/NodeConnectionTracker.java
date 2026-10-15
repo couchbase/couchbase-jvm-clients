@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
@@ -59,6 +60,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -171,6 +173,12 @@ final class NodeConnectionTracker extends EventListener {
    * When the last connection failure published at WARN level was, if there have been any since the last success.
    */
   private final AtomicLong lastConnectFailureWarnNanos = new AtomicLong();
+
+  /**
+   * When the last TLS failure on an established connection was published, or null if none has been.
+   * (Null, not a sentinel value, since the clock's values can be anything.)
+   */
+  private final AtomicReference<@Nullable Long> lastConnectionTlsFailureEventNanos = new AtomicReference<>();
 
   /**
    * When this tracker last asked the core to reconfigure itself.
@@ -299,7 +307,8 @@ final class NodeConnectionTracker extends EventListener {
     // connecting, or doing the TLS handshake.
     if (state == null || !state.acquiredConnection) {
       IOException tlsFailure = state == null ? null : state.tlsFailure;
-      IOException cause = annotateConnectException(tlsFailure != null ? tlsFailure : ioe, call.request().isHttps());
+      IOException failure = tlsFailure != null ? tlsFailure : ioe;
+      IOException cause = annotateConnectException(failure, call.request().isHttps());
       recordConnectFailure(call, cause);
 
       if (!call.isCanceled()) {
@@ -313,6 +322,9 @@ final class NodeConnectionTracker extends EventListener {
         Boolean targetInTopology = coreContext == null ? null : isTargetInTopology(coreContext);
         publish(context -> new EndpointConnectionFailedEvent(
           severity, duration, endpointContext(context, null), attempt, cause, targetInTopology));
+        if (severity == Event.Severity.WARN) { // so a TLS failure on every retry doesn't flood the log
+          publishIfTlsFailure(failure);
+        }
         if (coreContext != null && Boolean.FALSE.equals(targetInTopology)) {
           maybeRequestReconfiguration(coreContext, now);
         }
@@ -324,8 +336,37 @@ final class NodeConnectionTracker extends EventListener {
     // cancelled the call (timeout, shutdown) or the read timed out, which say nothing about the connection.
     ConnectionInfo info = state.connection;
     if (info != null && !call.isCanceled() && !(ioe instanceof InterruptedIOException)) {
-      long connectedForNanos = nanoClock.getAsLong() - info.connectedAtNanos;
+      long now = nanoClock.getAsLong();
+      long connectedForNanos = now - info.connectedAtNanos;
       publish(context -> new UnexpectedEndpointDisconnectedEvent(endpointContext(context, info), 1, connectedForNanos));
+
+      // At most one per interval, like the connect failures' WARNs. For example, with TLS 1.3, a server that
+      // rejects the client's certificate does so after the handshake, so every request fails on a connection.
+      SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(ioe);
+      if (tlsFailure != null && shouldPublishTlsFailureOnConnection(now)) {
+        publish(context -> new SecureConnectionFailedEvent(endpointContext(context, info), tlsFailure));
+      }
+    }
+  }
+
+  /**
+   * Returns true if this is the first TLS failure on an established connection,
+   * or the first since {@link #CONNECT_FAILURE_WARN_INTERVAL} after the last one published.
+   */
+  private boolean shouldPublishTlsFailureOnConnection(long nowNanos) {
+    Long last = lastConnectionTlsFailureEventNanos.get();
+    return (last == null || nowNanos - last >= CONNECT_FAILURE_WARN_INTERVAL.toNanos())
+      // Only one of the calls failing at once. (Compares references: "last" is the object that was read.)
+      && lastConnectionTlsFailureEventNanos.compareAndSet(last, nowNanos);
+  }
+
+  /**
+   * Publishes a {@link SecureConnectionFailedEvent} if the failure is a TLS failure, like the Netty endpoints.
+   */
+  private void publishIfTlsFailure(IOException failure) {
+    SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(failure);
+    if (tlsFailure != null) {
+      publish(context -> new SecureConnectionFailedEvent(endpointContext(context, null), tlsFailure));
     }
   }
 
@@ -416,8 +457,12 @@ final class NodeConnectionTracker extends EventListener {
 
   /**
    * Returns a connect failure with a more helpful message, like the Netty endpoints' (see
-   * {@code BaseEndpoint.annotateConnectException}), or the failure as is if it isn't a {@link ConnectException}.
+   * {@code BaseEndpoint.annotateConnectException}), or the failure as is if it isn't a {@link ConnectException}
+   * or a TLS failure that retrying won't fix.
    * <p>
+   * For a TLS failure that retrying won't fix, adds a hint (see {@link OkHttpTlsHelper#permanentTlsFailureHint}).
+   * <p>
+   * For a {@link ConnectException}:
    * OkHttp's message only says which address it failed to connect to ("Failed to connect to /127.0.0.1:8093"),
    * leaving the reason ("Connection refused") to its cause, so this adds the reason, and a hint.
    * The result has no stack trace or cause.
@@ -426,6 +471,10 @@ final class NodeConnectionTracker extends EventListener {
    * open. And a cluster that requires TLS refuses connections; it doesn't let them time out.)
    */
   static IOException annotateConnectException(IOException e, boolean tls) {
+    if (OkHttpTlsHelper.permanentTlsFailureHint(e) != null) {
+      // Keeps the original as the cause, so the TLS failure is still in the chain (see internalDiagnostics).
+      return requireNonNull(OkHttpTlsHelper.describeTlsFailure(e));
+    }
     if (!(e instanceof ConnectException)) {
       return e;
     }
