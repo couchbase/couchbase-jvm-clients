@@ -46,6 +46,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -78,17 +79,19 @@ final class TestHttpServer implements Closeable {
     final Duration headersDelay;
     final Map<String, String> headers;
     final Duration holdOpen;
+    final @Nullable CountDownLatch release;
 
     Canned(int code, String body, Duration headersDelay) {
-      this(code, body, headersDelay, emptyMap(), Duration.ZERO);
+      this(code, body, headersDelay, emptyMap(), Duration.ZERO, null);
     }
 
-    Canned(int code, String body, Duration headersDelay, Map<String, String> headers, Duration holdOpen) {
+    Canned(int code, String body, Duration headersDelay, Map<String, String> headers, Duration holdOpen, @Nullable CountDownLatch release) {
       this.code = code;
       this.body = body.getBytes(UTF_8);
       this.headersDelay = requireNonNull(headersDelay);
       this.headers = requireNonNull(headers);
       this.holdOpen = requireNonNull(holdOpen);
+      this.release = release;
     }
   }
 
@@ -260,7 +263,18 @@ final class TestHttpServer implements Closeable {
   }
 
   void enqueue(int code, String body, Map<String, String> headers) {
-    responses.add(new Canned(code, body, Duration.ZERO, headers, Duration.ZERO));
+    responses.add(new Canned(code, body, Duration.ZERO, headers, Duration.ZERO, null));
+  }
+
+  /**
+   * Enqueues a 200 response that the server doesn't send until the latch is released.
+   * <p>
+   * Lets a test control when the response is sent, instead of relying on a delay being long enough.
+   * For example, to make sure two requests are in flight at the same time: hold both responses,
+   * wait until the server has received both requests (see {@link #requests()}), then release the latch.
+   */
+  void enqueueHeld(String body, CountDownLatch release) {
+    responses.add(new Canned(200, body, Duration.ZERO, emptyMap(), Duration.ZERO, requireNonNull(release)));
   }
 
   /**
@@ -268,7 +282,7 @@ final class TestHttpServer implements Closeable {
    * for the given time after the body is sent, like a stream that has gone quiet.
    */
   void enqueueStreaming(String body, Duration holdOpen) {
-    responses.add(new Canned(200, body, Duration.ZERO, emptyMap(), holdOpen));
+    responses.add(new Canned(200, body, Duration.ZERO, emptyMap(), holdOpen, null));
   }
 
   private void handle(HttpExchange ex) throws IOException {
@@ -285,6 +299,15 @@ final class TestHttpServer implements Closeable {
       if (!response.headersDelay.isZero()) {
         try {
           Thread.sleep(response.headersDelay.toMillis());
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          return; // server is shutting down
+        }
+      }
+
+      if (response.release != null) {
+        try {
+          response.release.await();
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           return; // server is shutting down
@@ -343,6 +366,6 @@ final class TestHttpServer implements Closeable {
   @Override
   public void close() {
     server.stop(0);
-    executor.shutdownNow(); // interrupts handlers sleeping in a headers delay
+    executor.shutdownNow(); // interrupts handlers sleeping in a headers delay, or waiting for a held response's release
   }
 }

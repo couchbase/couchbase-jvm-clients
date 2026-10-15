@@ -24,7 +24,6 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.HostAndPort;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.ConnectionPool;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -65,7 +64,6 @@ import static org.mockito.Mockito.verify;
  */
 class NodeConnectionTrackerIntegrationTest {
 
-  private static final Duration KEEP_ALIVE = Duration.ofMillis(500);
   private static final Duration WAIT = Duration.ofSeconds(10);
 
   private final List<OkHttpClient> clients = new ArrayList<>();
@@ -137,8 +135,6 @@ class NodeConnectionTrackerIntegrationTest {
     OkHttpClient client = builder
       .connectTimeout(Duration.ofSeconds(5))
       .readTimeout(Duration.ofSeconds(5))
-      // Short keep-alive, so tests can watch idle connections get evicted.
-      .connectionPool(new ConnectionPool(5, KEEP_ALIVE.toMillis(), MILLISECONDS))
       .build();
     clients.add(client);
     return client;
@@ -191,8 +187,9 @@ class NodeConnectionTrackerIntegrationTest {
     assertTrue(d.lastActivity().isPresent(), "connection was released, so there should be activity");
     assertTrue(d.id().isPresent());
 
-    // The pool closes the idle connection after the keep-alive period.
+    // Like the pool closing the connection after the keep-alive period, but at a time the test controls.
     // An idle node with a closed circuit reports nothing, like an idle Netty pool.
+    client.connectionPool().evictAll();
     waitUntilCondition(() -> tracker.diagnostics().isEmpty(), WAIT);
   }
 
@@ -212,8 +209,11 @@ class NodeConnectionTrackerIntegrationTest {
   @Test
   void concurrentRequestsUseSeparateConnections() throws Exception {
     TestHttpServer server = startHttp();
-    server.enqueue("one", Duration.ofMillis(500));
-    server.enqueue("two", Duration.ofMillis(500));
+    // The server holds both responses until it has received both requests,
+    // so the two requests are in flight at the same time and need two connections.
+    CountDownLatch release = new CountDownLatch(1);
+    server.enqueueHeld("one", release);
+    server.enqueueHeld("two", release);
     OkHttpClient client = newClient();
 
     CountDownLatch done = new CountDownLatch(2);
@@ -239,6 +239,8 @@ class NodeConnectionTrackerIntegrationTest {
       List<EndpointState> states = states(tracker);
       return states.size() == 2 && states.stream().allMatch(s -> s == EndpointState.CONNECTED);
     }, WAIT);
+    waitUntilCondition(() -> server.requests().size() == 2, WAIT);
+    release.countDown();
 
     assertTrue(done.await(WAIT.toMillis(), MILLISECONDS));
     assertEquals(2, tracker.diagnostics().size());

@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -155,11 +157,14 @@ class OkHttpBackupServiceTest {
 
   @Test
   void disconnectLetsRequestsInFlightFinish() throws Exception {
-    server.enqueue("{\"name\":\"my-plan\"}", Duration.ofMillis(500));
+    CountDownLatch release = new CountDownLatch(1);
+    server.enqueueHeld("{\"name\":\"my-plan\"}", release);
 
     CoreHttpRequest request = newRequest();
     service.send(request);
+    waitUntilCondition(() -> server.requests().size() == 1);
     service.disconnect(); // while the server is still "thinking"
+    release.countDown();
 
     CoreHttpResponse response = request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS);
     assertEquals(ResponseStatus.SUCCESS, response.status());
