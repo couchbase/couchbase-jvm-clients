@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
+import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
@@ -42,12 +43,14 @@ import okhttp3.Request;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -627,8 +630,16 @@ class NodeConnectionTrackerTest {
 
   @Test
   void otherFailuresAreNotAnnotated() {
-    SSLHandshakeException tlsFailure = new SSLHandshakeException("PKIX path building failed");
+    SSLHandshakeException tlsFailure = new SSLHandshakeException("Remote host terminated the handshake");
     assertSame(tlsFailure, NodeConnectionTracker.annotateConnectException(tlsFailure, true));
+  }
+
+  @Test
+  void tlsFailureThatRetryingWontFixHasTheHint() {
+    SSLException tlsFailure = new SSLException("Unsupported or unrecognized SSL message");
+    IOException annotated = NodeConnectionTracker.annotateConnectException(tlsFailure, true);
+    assertEquals("Unsupported or unrecognized SSL message - " + OkHttpTlsHelper.NOT_TLS_HINT, annotated.getMessage());
+    assertSame(tlsFailure, annotated.getCause());
   }
 
   @Test
@@ -748,6 +759,70 @@ class NodeConnectionTrackerTest {
     List<UnexpectedEndpointDisconnectedEvent> events = events(UnexpectedEndpointDisconnectedEvent.class);
     assertEquals(1, events.size());
     assertEquals(Event.Severity.WARN, events.get(0).severity());
+  }
+
+  @Test
+  void tlsConnectFailurePublishesSecureConnectionFailedEventWithTheWarning() {
+    NodeConnectionTracker tracker = publishingTracker();
+    SSLHandshakeException tlsFailure = new SSLHandshakeException("Remote host terminated the handshake");
+    failToConnect(tracker, newCall(), tlsFailure); // WARN
+    failToConnect(tracker, newCall(), tlsFailure); // DEBUG
+    failToConnect(tracker, newCall(), new ConnectException("Connection refused"));
+
+    List<SecureConnectionFailedEvent> events = events(SecureConnectionFailedEvent.class);
+    assertEquals(1, events.size());
+    assertSame(tlsFailure, events.get(0).sslException());
+  }
+
+  @Test
+  void tlsFailureOnAConnectionPublishesSecureConnectionFailedEvent() {
+    NodeConnectionTracker tracker = publishingTracker();
+    Call call = newCall();
+    tracker.connectionAcquired(call, newConnection(newSocket(50000)));
+    SSLException tlsFailure = new SSLException("Tag mismatch");
+    tracker.callFailed(call, tlsFailure);
+
+    List<SecureConnectionFailedEvent> events = events(SecureConnectionFailedEvent.class);
+    assertEquals(1, events.size());
+    assertSame(tlsFailure, events.get(0).sslException());
+    assertTrue(((EndpointContext) events.get(0).context()).channelId().isPresent());
+  }
+
+  @Test
+  void rejectedClientCertificatePublishesSecureConnectionFailedEventWithTheHint() {
+    NodeConnectionTracker tracker = publishingTracker();
+    Call call = newCall();
+    tracker.connectionAcquired(call, newConnection(newSocket(50000)));
+    // With TLS 1.3, the alert arrives after the handshake. OkHttp adds it to the write failure as a suppressed exception.
+    SocketException brokenPipe = new SocketException("Broken pipe");
+    brokenPipe.addSuppressed(new SSLHandshakeException("Received fatal alert: unknown_ca"));
+    tracker.callFailed(call, brokenPipe);
+
+    List<SecureConnectionFailedEvent> events = events(SecureConnectionFailedEvent.class);
+    assertEquals(1, events.size());
+    assertEquals("Received fatal alert: unknown_ca - " + OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT, events.get(0).sslException().getMessage());
+  }
+
+  @Test
+  void tlsFailuresOnConnectionsArePublishedAtMostOncePerInterval() {
+    NodeConnectionTracker tracker = publishingTracker();
+    Duration interval = NodeConnectionTracker.CONNECT_FAILURE_WARN_INTERVAL;
+    Runnable fail = () -> {
+      Call call = newCall();
+      tracker.connectionAcquired(call, newConnection(newSocket(50000)));
+      tracker.callFailed(call, new SSLHandshakeException("Received fatal alert: bad_certificate"));
+    };
+
+    fail.run(); // the first
+    fail.run();
+    advance(interval.minusMillis(1));
+    fail.run();
+    advance(Duration.ofMillis(1));
+    fail.run(); // an interval after the last one published
+    fail.run();
+
+    assertEquals(2, events(SecureConnectionFailedEvent.class).size());
+    assertEquals(5, events(UnexpectedEndpointDisconnectedEvent.class).size());
   }
 
   @Test
