@@ -1,0 +1,43 @@
+name: Backport
+
+# Cherry-picks a merged PR onto a release branch and opens a backport PR.
+# To use, add a label like "backport 3.13.x" to the PR, before or after merging.
+#
+# Out of an abundance of caution, triggers on `pull_request` instead of `pull_request_target`.
+# Consequently, it does not work for PRs from forks.
+
+on:
+  pull_request:
+    types: [closed, labeled]
+
+jobs:
+  backport:
+    name: Backport
+    permissions:
+      contents: write # to push the backport branch
+      pull-requests: write # to create the backport PR and comment on the original
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged &&
+      contains(toJSON(github.event.pull_request.labels.*.name), '"backport ')
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Create backport pull requests
+        id: backport
+        uses: korthout/backport-action@8560fb503c275d433c56f05a2f64850093baa9f7 # v4.7.0
+
+      # The action reports failures by commenting on the original PR, but doesn't fail the job.
+      # Checks for != 'true' because the output is unset when no label matches the backport pattern.
+      # See https://github.com/korthout/backport-action/issues/637
+      - name: Fail if backport failed
+        if: steps.backport.outputs.was_successful != 'true'
+        env:
+          RESULTS: ${{ steps.backport.outputs.was_successful_by_target }}
+        run: |
+          if [ -z "$RESULTS" ]; then
+            echo "::error::Nothing to backport. Backport labels must look like 'backport <target-branch>'."
+          else
+            echo "::error::Backport failed. Results by target: $RESULTS"
+          fi
+          exit 1
