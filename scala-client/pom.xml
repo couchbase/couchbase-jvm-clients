@@ -178,6 +178,12 @@
                 </executions>
             </plugin>
 
+            <!-- must come after flatten; see "Embedded POMs" in the parent POM (JVMCBC-1792) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
