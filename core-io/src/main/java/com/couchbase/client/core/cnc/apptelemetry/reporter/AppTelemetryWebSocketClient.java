@@ -55,7 +55,7 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
-class AppTelemetryWebSocketClient {
+class AppTelemetryWebSocketClient implements AppTelemetryClient {
   private static final Logger log = LoggerFactory.getLogger(AppTelemetryWebSocketClient.class);
 
   /**
@@ -81,11 +81,8 @@ class AppTelemetryWebSocketClient {
     this.collector = requireNonNull(collector);
   }
 
-  /**
-   * @throws InterruptedException if the thread was interrupted
-   * @throws RuntimeException if the connection attempt failed for any other reason
-   */
-  void connectAndWaitForClose(URI remote, Runnable doOnSuccessfulConnection) throws InterruptedException {
+  @Override
+  public void connectAndWaitForClose(URI remote, Runnable doOnSuccessfulConnection) throws InterruptedException {
     Channel channel = null;
     try {
       channel = newChannel(remote, doOnSuccessfulConnection);
