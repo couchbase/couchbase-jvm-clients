@@ -98,6 +98,12 @@ class AppTelemetryRequestClassifier {
             return AppTelemetryRequestType.EVENTING;
         case MANAGER:
             return AppTelemetryRequestType.MANAGEMENT;
+        case SEARCH:
+          return AppTelemetryRequestType.SEARCH;
+        case ANALYTICS:
+            return AppTelemetryRequestType.ANALYTICS;
+        case QUERY:
+          return AppTelemetryRequestType.QUERY;
         default:
             return null;
       }
