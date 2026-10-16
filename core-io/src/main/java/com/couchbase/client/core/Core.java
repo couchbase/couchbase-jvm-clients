@@ -314,12 +314,13 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     checkConnectionStringScheme(connectionString, ConnectionString.Scheme.COUCHBASE, ConnectionString.Scheme.COUCHBASES);
     sanityCheckPorts(connectionString);
 
-    CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
-
+    // Validates the authenticator (TLS requirement), so do it before taking a CoreLimiter slot.
     this.authenticator = DelegatingAuthenticator.create(
       environment.securityConfig().tlsEnabled(),
       initialAuthenticator
     );
+
+    CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
     this.connectionString = requireNonNull(connectionString);
     boolean ignoresAttributes = CbTracing.isInternalTracer(environment.requestTracer());
