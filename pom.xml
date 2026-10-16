@@ -57,6 +57,8 @@
         <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
         <build-helper-maven-plugin.version>3.2.0</build-helper-maven-plugin.version>
         <flatten-maven-plugin.version>1.7.0</flatten-maven-plugin.version>
+        <!-- Modules that use maven-shade-plugin must set this to `package`. See "Embedded POMs" below. -->
+        <flatten.phase>process-resources</flatten.phase>
         <scala-maven-plugin.version>4.9.5</scala-maven-plugin.version>
         <mvn-scalafmt.version>1.1.1713302731.c3d0074</mvn-scalafmt.version>
 
@@ -261,6 +263,26 @@
 
         <pluginManagement>
             <plugins>
+                <!-- Embedded POMs (JVMCBC-1792)
+
+                     The pom.xml embedded in a JAR (META-INF/maven/...) must be the flattened POM.
+                     The source POM has placeholders like `${revision}` that confuse vulnerability scanners.
+
+                     Most modules flatten in phase `process-resources`, before the JAR is built,
+                     so the JAR plugin embeds the flattened POM.
+
+                     Modules that use maven-shade-plugin must flatten in phase `package`, after shade
+                     (see https://github.com/mojohaus/flatten-maven-plugin/issues/100
+                     and https://stackoverflow.com/q/52552329/457612), so the JAR is built before the
+                     flattened POM exists. Those modules:
+                       1. Set the `flatten.phase` property to `package`.
+                       2. Declare plugins in this order: shade, flatten, antrun.
+                          - The shade filter (inherited from pluginManagement below) excludes our unflattened POMs,
+                            including those of internal modules shaded into the JAR.
+                          - The `embed-flattened-pom` execution of antrun adds the flattened POM to the shaded JAR.
+
+                     .github/scripts/embedded-pom-check.sh verifies the result. -->
+
                 <!-- Declare flatten in pluginManagement so modules that also use shade plugin
                      can control the relative order (flatten must come after shade)
                      without having to redeclare the flatten plugin config. -->
@@ -274,10 +296,8 @@
                     <executions>
                         <execution>
                             <id>flatten</id>
-                            <!-- Bind to phase `package` instead of `process-resources`
-                                 to prevent conflict with maven-shade-plugin.
-                                 See https://stackoverflow.com/q/52552329/457612 -->
-                            <phase>package</phase>
+                            <!-- See "Embedded POMs" above. -->
+                            <phase>${flatten.phase}</phase>
                             <goals>
                                 <goal>flatten</goal>
                             </goals>
@@ -288,6 +308,56 @@
                             <goals>
                                 <goal>clean</goal>
                             </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!-- See "Embedded POMs" above. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${maven-shade-plugin.version}</version>
+                    <configuration>
+                        <filters>
+                            <filter>
+                                <artifact>com.couchbase.client:*</artifact>
+                                <excludes>
+                                    <exclude>META-INF/maven/com.couchbase.client/*/pom.xml</exclude>
+                                    <!-- Internal module with a meaningless version (9999.0-SNAPSHOT) -->
+                                    <exclude>META-INF/maven/com.couchbase.client/protostellar/**</exclude>
+                                </excludes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </plugin>
+
+                <!-- See "Embedded POMs" above. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>3.1.0</version>
+                    <executions>
+                        <execution>
+                            <id>embed-flattened-pom</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>run</goal>
+                            </goals>
+                            <configuration>
+                                <target>
+                                    <property name="embedded.pom.dir" value="${project.build.directory}/embedded-pom"/>
+                                    <copy file="${project.basedir}/.flattened-pom.xml"
+                                          tofile="${embedded.pom.dir}/META-INF/maven/${project.groupId}/${project.artifactId}/pom.xml"/>
+                                    <!-- Use the JDK's jar tool instead of Ant's zip task, because Ant reorders the entries
+                                         so META-INF/MANIFEST.MF is no longer near the start, where JarInputStream expects it. -->
+                                    <exec executable="${java.home}/bin/jar" failonerror="true">
+                                        <arg value="--update"/>
+                                        <arg value="--file=${project.build.directory}/${project.build.finalName}.jar"/>
+                                        <arg value="-C"/>
+                                        <arg value="${embedded.pom.dir}"/>
+                                        <arg value="META-INF/maven"/>
+                                    </exec>
+                                </target>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
