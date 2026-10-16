@@ -278,6 +278,14 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
   }
 
   @Override
+  public void unexpectedEndOfInput(Throwable cause) {
+    // Not the emit methods: the rows may have already failed (for example, when the response reported an error),
+    // and emitting to a sink that has already ended would report the cause as a dropped error.
+    rowSink.tryEmitError(cause);
+    trailer.tryEmitError(cause);
+  }
+
+  @Override
   public Optional<CouchbaseException> decodingFailure() {
     return Optional.ofNullable(decodingFailure);
   }

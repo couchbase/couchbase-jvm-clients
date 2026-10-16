@@ -38,9 +38,12 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.io.netty.kv.ChannelAttributes;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
@@ -250,6 +253,16 @@ public abstract class ChunkedMessageHandler
 
   @Override
   public void channelInactive(ChannelHandlerContext ctx) {
+    if (currentResponse != null) {
+      // The header arrived, so the request has completed and can't be retried. End the rows and the trailer,
+      // or their subscribers would wait forever. Report it the way a request that can't be retried after
+      // its connection closes is reported, since the outcome is just as unknown. (Like the OkHttp services.)
+      chunkResponseParser.unexpectedEndOfInput(new RequestCanceledException(
+        "Connection closed before the whole response arrived",
+        CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT),
+        new CancellationErrorContext(currentRequest.context())
+      ));
+    }
     if (currentRequest != null) {
       RetryOrchestrator.maybeRetry(ioContext, currentRequest, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     }
