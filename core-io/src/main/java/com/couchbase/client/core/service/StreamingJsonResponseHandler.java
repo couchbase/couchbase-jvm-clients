@@ -148,7 +148,7 @@ final class StreamingJsonResponseHandler {
         DecodingFailureException failure = looksLikeJson(bodyStream)
           ? new DecodingFailureException("Failed to process " + format.serviceName() + " response", parseFailure)
           // Not JSON at all (for example, an HTML page from a proxy). Report the start of the body.
-          : unparseable(httpResponse.code(), bodyStream, parseFailure);
+          : unparseable(httpResponse, bodyStream, parseFailure);
 
         rowBridge.fail(failure);
         trailerSink.tryEmitError(failure);
@@ -241,7 +241,7 @@ final class StreamingJsonResponseHandler {
         }
 
         // Not JSON (for example, an error page from a proxy). Report the start of the body.
-        request.fail(unparseable(httpResponse.code(), bodyStream, parseFailure));
+        request.fail(unparseable(httpResponse, bodyStream, parseFailure));
         return;
       }
 
@@ -260,7 +260,7 @@ final class StreamingJsonResponseHandler {
         return;
       }
 
-      CouchbaseException unexpected = unexpected(httpResponse.code(), bodyStream);
+      CouchbaseException unexpected = unexpected(httpResponse, bodyStream);
       attempt.recordOutcome(null, unexpected);
       request.fail(unexpected);
 
@@ -308,10 +308,10 @@ final class StreamingJsonResponseHandler {
    * The parser may have given up before reading much of the body, so this first reads the rest
    * of the head from the stream (best effort, since the stream may have failed too).
    */
-  private static DecodingFailureException unparseable(int httpStatus, HeadInterceptInputStream body, Throwable cause) {
+  private static DecodingFailureException unparseable(okhttp3.Response response, HeadInterceptInputStream body, Throwable cause) {
     fillHead(body);
     return new DecodingFailureException(
-      "Request failed. HTTP status code: " + httpStatus + ". Failed to parse response body: " + describe(body),
+      "Request failed. HTTP status code: " + status(response) + ". Failed to parse response body: " + describe(body),
       cause
     );
   }
@@ -320,10 +320,18 @@ final class StreamingJsonResponseHandler {
    * Returns the exception for a response body that was parsed, but didn't contain what the
    * service expected (for example, an error response without any errors in it).
    */
-  private static CouchbaseException unexpected(int httpStatus, HeadInterceptInputStream body) {
+  private static CouchbaseException unexpected(okhttp3.Response response, HeadInterceptInputStream body) {
     return new CouchbaseException(
-      "Request failed. HTTP status code: " + httpStatus + ". Response had unexpected structure. Response body: " + describe(body)
+      "Request failed. HTTP status code: " + status(response) + ". Response had unexpected structure. Response body: " + describe(body)
     );
+  }
+
+  /**
+   * Returns the response's status code and reason phrase (for example, "503 Service Unavailable"),
+   * like the Netty implementation's messages.
+   */
+  private static String status(okhttp3.Response response) {
+    return response.code() + " " + response.message();
   }
 
   private static void fillHead(HeadInterceptInputStream body) {

@@ -289,7 +289,7 @@ class OkHttpAnalyticsServiceTest {
 
     Throwable cause = sendExpectingFailure(newAnalyticsRequest());
     assertEquals(CouchbaseException.class, cause.getClass());
-    assertTrue(cause.getMessage().contains("HTTP status code: 500"), cause.getMessage());
+    assertTrue(cause.getMessage().contains("HTTP status code: 500 Internal Server Error"), cause.getMessage());
     assertTrue(cause.getMessage().contains("{\"something\":\"unexpected\"}"), cause.getMessage());
   }
 
@@ -302,7 +302,7 @@ class OkHttpAnalyticsServiceTest {
     Throwable cause = sendExpectingFailure(newAnalyticsRequest());
     assertInstanceOf(DecodingFailureException.class, cause);
     String message = cause.getMessage();
-    assertTrue(message.contains("HTTP status code: 502"), message);
+    assertTrue(message.contains("HTTP status code: 502 Bad Gateway"), message);
     assertTrue(message.contains(head), "should include the first 1 KiB of the response body, but got: " + message);
     assertFalse(message.contains("THE-END-SHOULD-NOT-BE-REPORTED"), "should include only the first 1 KiB: " + message);
   }
@@ -316,7 +316,7 @@ class OkHttpAnalyticsServiceTest {
     Throwable cause = sendExpectingFailure(newAnalyticsRequest());
     assertInstanceOf(DecodingFailureException.class, cause);
     String message = cause.getMessage();
-    assertTrue(message.contains("HTTP status code: 200"), message);
+    assertTrue(message.contains("HTTP status code: 200 OK"), message);
     assertTrue(message.contains(head), "should include the first 1 KiB of the response body, but got: " + message);
     assertFalse(message.contains("THE-END-SHOULD-NOT-BE-REPORTED"), "should include only the first 1 KiB: " + message);
   }
