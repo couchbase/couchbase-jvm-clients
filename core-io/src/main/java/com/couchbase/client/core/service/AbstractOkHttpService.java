@@ -381,23 +381,27 @@ abstract class AbstractOkHttpService implements Service {
 
   // ---- Internals ----
 
-  @Nullable RequestSpan newDispatchSpan(Request<?> request) {
+  /**
+   * Call once the call has a connection: the local attributes come from the details
+   * the connection tracker records in the request context when the call acquires its connection.
+   */
+  private @Nullable RequestSpan newDispatchSpan(Request<?> request) {
     if (request.requestSpan() == null) return null;
 
     RequestTracer tracer = context().coreResources().requestTracer();
     RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
 
     if (!CbTracing.isInternalTracer(tracer)) {
-      HostAndPort canonicalRemote = request.context().lastDispatchedToNode().canonical();
+      RequestContext requestContext = request.context();
+      HostAndPort local = requestContext.lastDispatchedFrom();
       TracingDecorator tip = context().coreResources().tracingDecorator();
       tip.provideCommonDispatchSpanAttributes(
         dispatchSpan,
-        // TODO local address and canonical remote address
-        null, // local channel id
-        null, // local host
-        0, // local port
-        canonicalRemote.host(),
-        canonicalRemote.port(),
+        requestContext.lastChannelId(),
+        local == null ? null : local.host(),
+        local == null ? 0 : local.port(),
+        requestContext.lastDispatchedToNode().canonical().host(),
+        address.port(), // Like Netty: the service's port, not the canonical (manager) port.
         address.host(),
         address.port(),
         request.operationId()
