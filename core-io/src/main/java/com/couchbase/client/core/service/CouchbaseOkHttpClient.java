@@ -22,15 +22,17 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.CbThreads;
-import kotlin.reflect.KVariance;
 import okhttp3.Call;
 import okhttp3.Connection;
 import okhttp3.ConnectionPool;
+import okhttp3.ConnectionSpec;
 import okhttp3.Dispatcher;
 import okhttp3.EventListener;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
 import okhttp3.Request;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -46,7 +48,6 @@ import java.util.concurrent.TimeUnit;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.configureTls;
 import static com.couchbase.client.core.service.ServiceType.KV;
 import static com.couchbase.client.core.util.CbCollections.listOf;
-import static com.couchbase.client.core.util.CbCollections.setOf;
 import static java.util.Objects.requireNonNull;
 
 @NullMarked
@@ -90,6 +91,49 @@ public class CouchbaseOkHttpClient implements Closeable {
    */
   public Call newCall(okhttp3.Request.Builder requestBuilder, RequestContext requestContext, Duration requestTimeout) {
     return client.newCall(newRequest(requestBuilder, requestContext, requestTimeout));
+  }
+
+  /**
+   * Marks a request that mustn't carry the SDK's credentials.
+   */
+  private enum WithoutCredentials {
+    INSTANCE
+  }
+
+  /**
+   * Opens a WebSocket.
+   * <p>
+   * Builds the request from the given builder, which mustn't be used again.
+   *
+   * @param useClusterTlsAndCredentials true to use the SDK's TLS settings and send its credentials, like the
+   * HTTP requests (for a cluster node). False for plain text with no credentials (for example, for a custom
+   * app telemetry endpoint, which must not receive the cluster's credentials, and which is plain text even if
+   * the SDK uses TLS).
+   * @param handshakeTimeout how long to wait for the server to accept the WebSocket. Once it's open,
+   * reads have no timeout; the pings detect a dead connection instead.
+   * @param pingInterval how often to ping the server. If the pong hasn't arrived by the next ping,
+   * the WebSocket fails.
+   */
+  public WebSocket newWebSocket(
+    okhttp3.Request.Builder requestBuilder,
+    boolean useClusterTlsAndCredentials,
+    Duration handshakeTimeout,
+    Duration pingInterval,
+    WebSocketListener listener
+  ) {
+    // For the socket read timeout during the handshake. OkHttp clears it once the WebSocket is open.
+    // No RequestContext tag: there's no SDK request, so nothing to record or capture.
+    requestBuilder.tag(DispatchState.class, new DispatchState(atLeastOneMillisecond(handshakeTimeout)));
+
+    OkHttpClient.Builder clientBuilder = client.newBuilder() // shares the dispatcher and the connection pool
+      .pingInterval(pingInterval);
+
+    if (!useClusterTlsAndCredentials) {
+      requestBuilder.tag(WithoutCredentials.class, WithoutCredentials.INSTANCE);
+      clientBuilder.connectionSpecs(listOf(ConnectionSpec.CLEARTEXT));
+    }
+
+    return clientBuilder.build().newWebSocket(requestBuilder.build(), listener);
   }
 
   /**
@@ -203,7 +247,9 @@ public class CouchbaseOkHttpClient implements Closeable {
         }
 
         // get the value every time in case the credential is dynamic (deprecated)
-        String authorizationHeaderValue = credential.getAuthHeaderValue();
+        String authorizationHeaderValue = chain.request().tag(WithoutCredentials.class) == null
+          ? credential.getAuthHeaderValue()
+          : null;
         if (authorizationHeaderValue != null) {
           requestBuilder.header("Authorization", authorizationHeaderValue);
         }

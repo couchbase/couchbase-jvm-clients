@@ -102,8 +102,8 @@ public class Node implements Stateful<NodeState> {
   private static final boolean useNetty = Boolean.parseBoolean(System.getProperty("com.couchbase.useNetty", "false"));
 
   /**
-   * Returns true if the HTTP-based services use Netty, or false if they use OkHttp.
-   * For tests whose expectations depend on the implementation.
+   * Returns true if the HTTP-based services (and the app telemetry WebSocket) use Netty, or false if they use OkHttp.
+   * Also for tests whose expectations depend on the implementation.
    */
   @Stability.Internal
   public static boolean useNetty() {
