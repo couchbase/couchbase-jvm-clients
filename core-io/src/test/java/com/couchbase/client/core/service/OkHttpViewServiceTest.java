@@ -249,7 +249,7 @@ class OkHttpViewServiceTest {
 
     Throwable cause = sendExpectingFailure(newViewRequest());
     assertEquals(CouchbaseException.class, cause.getClass());
-    assertTrue(cause.getMessage().contains("HTTP status code: 400"), cause.getMessage());
+    assertTrue(cause.getMessage().contains("HTTP status code: 400 Bad Request"), cause.getMessage());
     assertTrue(cause.getMessage().contains("{\"something\":\"unexpected\"}"), cause.getMessage());
   }
 
@@ -262,7 +262,7 @@ class OkHttpViewServiceTest {
     Throwable cause = sendExpectingFailure(newViewRequest());
     assertInstanceOf(DecodingFailureException.class, cause);
     String message = cause.getMessage();
-    assertTrue(message.contains("HTTP status code: 400"), message);
+    assertTrue(message.contains("HTTP status code: 400 Bad Request"), message);
     assertTrue(message.contains(head), "should include the first 1 KiB of the response body, but got: " + message);
     assertFalse(message.contains("THE-END-SHOULD-NOT-BE-REPORTED"), "should include only the first 1 KiB: " + message);
   }
@@ -276,7 +276,7 @@ class OkHttpViewServiceTest {
     Throwable cause = sendExpectingFailure(newViewRequest());
     assertInstanceOf(DecodingFailureException.class, cause);
     String message = cause.getMessage();
-    assertTrue(message.contains("HTTP status code: 200"), message);
+    assertTrue(message.contains("HTTP status code: 200 OK"), message);
     assertTrue(message.contains(head), "should include the first 1 KiB of the response body, but got: " + message);
     assertFalse(message.contains("THE-END-SHOULD-NOT-BE-REPORTED"), "should include only the first 1 KiB: " + message);
   }
