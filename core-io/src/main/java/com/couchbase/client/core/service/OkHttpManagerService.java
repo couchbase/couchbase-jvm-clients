@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.IdleStreamingEndpointClosedEvent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
-import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.manager.NonChunkedManagerMessageHandler;
 import com.couchbase.client.core.msg.BaseHttpRequest;
@@ -149,7 +148,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
         maybeRetryAfterBrokenResponse(context(), request, e);
       } catch (Throwable t) {
         attempt.recordFailure(t);
-        request.fail(new DecodingFailureException("failed to process HTTP response", t));
+        request.fail(t);
       }
     });
   }
@@ -197,7 +196,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
     } catch (Throwable t) {
       httpResponse.close();
       attempt.recordFailure(t);
-      request.fail(new DecodingFailureException("failed to process HTTP response", t));
+      request.fail(t);
       return;
     }
 
