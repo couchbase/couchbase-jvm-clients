@@ -340,12 +340,19 @@ class OkHttpQueryServiceTest {
       serviceFor(brokenOff).send(request);
       QueryResponse response = request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
+      // Like a request that can't be retried after its connection breaks: the outcome is unknown.
       StepVerifier.create(response.rows().map(row -> new String(row.data(), UTF_8)))
         .expectNext("{\"a\":1}")
-        .expectError(DecodingFailureException.class)
+        .expectErrorSatisfies(OkHttpQueryServiceTest::assertConnectionClosed)
         .verify(Duration.ofSeconds(30));
+      assertConnectionClosed(assertThrows(RequestCanceledException.class, () -> response.trailer().block(Duration.ofSeconds(30))));
       assertNull(request.context().retryReasons());
     }
+  }
+
+  private static void assertConnectionClosed(Throwable t) {
+    RequestCanceledException e = assertInstanceOf(RequestCanceledException.class, t);
+    assertEquals(CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT), e.reason());
   }
 
   @Test
