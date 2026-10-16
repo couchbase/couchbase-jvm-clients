@@ -57,6 +57,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -219,6 +220,56 @@ class OkHttpManagerServiceTest {
     assertEquals(404, response.httpStatus());
     assertEquals(ResponseStatus.NOT_FOUND, response.status());
     assertEquals("Requested resource not found.", new String(response.content(), UTF_8));
+  }
+
+  // Like the Netty implementation: an unexpected exception while handling the response fails the request as is.
+
+  private final RuntimeException unexpected = new IllegalStateException("unexpected");
+
+  private Throwable failure(Request<?> request) {
+    service.send(request);
+    ExecutionException e = assertThrows(ExecutionException.class, () -> request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS));
+    return e.getCause();
+  }
+
+  @Test
+  void coreHttpRequestFailsWithUnexpectedException() throws Exception {
+    start();
+    service = new OkHttpManagerService(core.context(), new HostAndPort(TestHttpServer.HOST_NAME, server.port())) {
+      @Override
+      protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
+        throw unexpected;
+      }
+    };
+    server.enqueue(429, "num_concurrent_requests exceeded", Duration.ZERO);
+
+    assertSame(unexpected, failure(newCoreHttpRequest(true)));
+  }
+
+  @Test
+  void managerRequestFailsWithUnexpectedException() throws Exception {
+    start();
+    server.enqueue("{\"rev\":1}");
+
+    assertSame(unexpected, failure(new BucketConfigRequest(TIMEOUT, core.context(), BestEffortRetryStrategy.INSTANCE, "my-bucket", null) {
+      @Override
+      public BucketConfigResponse decode(int httpStatus, byte[] content) {
+        throw unexpected;
+      }
+    }));
+  }
+
+  @Test
+  void configStreamRequestFailsWithUnexpectedException() throws Exception {
+    start();
+    server.enqueue("{\"rev\":1}");
+
+    assertSame(unexpected, failure(new BucketConfigStreamingRequest(TIMEOUT, core.context(), BestEffortRetryStrategy.INSTANCE, "my-bucket") {
+      @Override
+      public BucketConfigStreamingResponse decode(int httpStatus, byte[] content) {
+        throw unexpected;
+      }
+    }));
   }
 
   @Test
