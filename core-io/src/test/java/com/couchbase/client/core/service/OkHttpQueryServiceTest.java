@@ -256,7 +256,7 @@ class OkHttpQueryServiceTest {
     assertInstanceOf(DecodingFailureException.class, e.getCause());
 
     String message = e.getCause().getMessage();
-    assertTrue(message.contains("HTTP status code: 200"), message);
+    assertTrue(message.contains("HTTP status code: 200 OK"), message);
     assertTrue(message.contains(head), "should include the first 1 KiB of the response body, but got: " + message);
     assertFalse(message.contains("THE-END-SHOULD-NOT-BE-REPORTED"), "should include only the first 1 KiB: " + message);
   }
