@@ -30,7 +30,6 @@ import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
@@ -582,7 +581,7 @@ abstract class AbstractOkHttpService implements Service {
 
       } catch (Throwable t) {
         attempt.recordFailure(t);
-        request.fail(new DecodingFailureException("failed to process HTTP response", t));
+        request.fail(t);
       }
     });
   }
