@@ -80,6 +80,12 @@ public interface ChunkResponseParser<H extends ChunkHeader, ROW extends ChunkRow
   void endOfInput();
 
   /**
+   * Indicates the rest of the JSON document will never arrive (for example, because the connection closed).
+   * Fails the rows and the trailer with the given cause, unless they have already ended.
+   */
+  void unexpectedEndOfInput(Throwable cause);
+
+  /**
    * Returns the currently assigned flux for the rows.
    */
   Flux<ROW> rows();
