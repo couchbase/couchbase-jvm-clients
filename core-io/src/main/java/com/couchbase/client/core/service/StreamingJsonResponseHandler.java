@@ -19,7 +19,10 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
@@ -145,10 +148,23 @@ final class StreamingJsonResponseHandler {
           return;
         }
 
-        DecodingFailureException failure = looksLikeJson(bodyStream)
-          ? new DecodingFailureException("Failed to process " + format.serviceName() + " response", parseFailure)
+        CouchbaseException failure;
+        if (readFailure != null) {
+          // The connection broke after the request completed (when the header arrived), so it can't be retried.
+          // Report it the way a request that can't be retried after its connection breaks is reported,
+          // since the outcome is just as unknown. (Like the Netty implementation.)
+          failure = new RequestCanceledException(
+            "Connection closed before the whole response arrived",
+            CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT),
+            readFailure,
+            new CancellationErrorContext(request.context())
+          );
+        } else if (looksLikeJson(bodyStream)) {
+          failure = new DecodingFailureException("Failed to process " + format.serviceName() + " response", parseFailure);
+        } else {
           // Not JSON at all (for example, an HTML page from a proxy). Report the start of the body.
-          : unparseable(httpResponse, bodyStream, parseFailure);
+          failure = unparseable(httpResponse, bodyStream, parseFailure);
+        }
 
         rowBridge.fail(failure);
         trailerSink.tryEmitError(failure);
