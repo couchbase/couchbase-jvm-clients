@@ -33,6 +33,7 @@ import reactor.core.publisher.Sinks;
 
 import java.nio.ByteBuffer;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.Reactor.emitFailureHandler;
 
@@ -194,7 +195,7 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
     }
 
     this.rowSink = Sinks.many().unicast().onBackpressureBuffer();
-    this.rows = rowSink
+    Flux<ROW> backpressuredRows = rowSink
       .asFlux()
       .doOnSubscribe(sub -> {
         synchronized (autoReadLock) {
@@ -223,9 +224,19 @@ public abstract class BaseChunkResponseParser<H extends ChunkHeader, ROW extends
         }
       })
       .doOnTerminate(this::readRemainingRowsWithoutBackpressure)
-      .doOnCancel(this::readRemainingRowsWithoutBackpressure)
-      .publish()
-      .refCount();
+      .doOnCancel(this::readRemainingRowsWithoutBackpressure);
+
+    // Only one subscriber gets the rows. Reject any other subscriber here, before it reaches the
+    // operators above; otherwise its requests and its failure would affect the backpressure of
+    // the subscriber that does get the rows.
+    AtomicBoolean subscribed = new AtomicBoolean();
+    this.rows = Flux.defer(() -> subscribed.compareAndSet(false, true)
+      ? backpressuredRows
+      : Flux.error(new IllegalStateException(
+        "The rows of a streaming result can be subscribed to only once." +
+          " To use them more than once, collect them (for example, with collectList()) or cache them."
+      ))
+    );
   }
 
   /**
