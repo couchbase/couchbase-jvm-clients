@@ -30,6 +30,7 @@ import java.security.cert.CertificateException;
 
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NOT_TLS_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NO_COMMON_PARAMETERS_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.describeTlsFailure;
@@ -76,6 +77,7 @@ class OkHttpTlsHelperTest {
     assertEquals(CLIENT_CERTIFICATE_HINT, permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: bad_certificate")));
     assertEquals(CLIENT_CERTIFICATE_HINT, permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: unknown_ca")));
     assertEquals(CLIENT_CERTIFICATE_HINT, permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: certificate_expired")));
+    assertEquals(CLIENT_CERTIFICATE_REQUIRED_HINT, permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: certificate_required")));
   }
 
   @Test

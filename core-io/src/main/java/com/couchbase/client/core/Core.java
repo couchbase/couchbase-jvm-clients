@@ -95,6 +95,8 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.CouchbaseOkHttpClient;
+import com.couchbase.client.core.service.KeyValueService;
+import com.couchbase.client.core.service.KeyValueSocketConnector;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
@@ -292,6 +294,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   private final CouchbaseOkHttpClient okHttpClient;
 
   /**
+   * Opens the sockets for KV connections that don't use Netty, or null if they use Netty.
+   */
+  private final @Nullable KeyValueSocketConnector kvSocketConnector;
+
+  /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
    */
   @Deprecated
@@ -334,6 +341,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       this.authenticator,
       environment.userAgent().formattedLong()
     );
+
+    this.kvSocketConnector = KeyValueService.useNettyForKv()
+      ? null
+      : KeyValueSocketConnector.create(
+        okHttpClient,
+        environment.securityConfig(),
+        this.authenticator,
+        environment.timeoutConfig().connectTimeout()
+      );
 
     this.connectionString = requireNonNull(connectionString);
     boolean ignoresAttributes = CbTracing.isInternalTracer(environment.requestTracer());
@@ -477,6 +493,20 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
 
   public CouchbaseOkHttpClient okHttpClient() {
     return okHttpClient;
+  }
+
+  /**
+   * Opens the sockets for KV connections that don't use Netty.
+   *
+   * @throws IllegalStateException if KV connections use Netty (see {@link KeyValueService#useNettyForKv()}).
+   */
+  @Stability.Internal
+  public KeyValueSocketConnector kvSocketConnector() {
+    KeyValueSocketConnector result = kvSocketConnector;
+    if (result == null) {
+      throw new IllegalStateException("KV connections use Netty, so there's no KV socket connector.");
+    }
+    return result;
   }
 
   /**
@@ -712,8 +742,15 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
     }
     final ClusterIdentifier clusterIdent = ClusterIdentifierUtil.fromConfig(currentConfig);
 
-    return responseMetrics.computeIfAbsent(ResponseMetricIdentifier.fromRequest(request, exceptionSimpleName, clusterIdent, isDefaultLoggingMeter), key ->
-            coreContext.coreResources().meter().valueRecorder(ValueRecorderName.OPERATIONS, key));
+    ResponseMetricIdentifier metricId = ResponseMetricIdentifier.fromRequest(request, exceptionSimpleName, clusterIdent, isDefaultLoggingMeter);
+
+    // Try get() first, since the recorder almost always exists already. Unlike get(), computeIfAbsent() can lock
+    // even when the key is present (it only skips locking if the key is first in its hash bin), and this is
+    // called for every response, so threads completing requests at the same time would contend for that lock.
+    ValueRecorder recorder = responseMetrics.get(metricId);
+    return recorder != null
+      ? recorder
+      : responseMetrics.computeIfAbsent(metricId, key -> coreContext.coreResources().meter().valueRecorder(ValueRecorderName.OPERATIONS, key));
   }
 
   /**

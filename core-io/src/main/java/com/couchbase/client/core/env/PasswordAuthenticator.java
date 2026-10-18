@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
+import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslHelper;
 import reactor.util.annotation.Nullable;
 
@@ -148,17 +149,28 @@ public class PasswordAuthenticator implements Authenticator {
 
   @Override
   public void authKeyValueConnection(final EndpointContext ctx, final ChannelPipeline pipeline) {
-    boolean tls = ctx.environment().securityConfig().tlsEnabled();
-    boolean forceSaslPlain = tls && platformHasSaslPlain();
-    UsernameAndPassword credentials = usernameAndPassword.get();
+    SaslCredentials credentials = keyValueSaslCredentials(ctx);
 
     pipeline.addLast(new SaslListMechanismsHandler(ctx));
     pipeline.addLast(new SaslAuthenticationHandler(
       ctx,
       credentials.username(),
       credentials.password(),
-      forceSaslPlain ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
+      credentials.allowedMechanisms()
     ));
+  }
+
+  @Override
+  public SaslCredentials keyValueSaslCredentials(final EndpointContext ctx) {
+    boolean tls = ctx.environment().securityConfig().tlsEnabled();
+    boolean forceSaslPlain = tls && platformHasSaslPlain();
+    UsernameAndPassword credentials = usernameAndPassword.get();
+
+    return new SaslCredentials(
+      credentials.username(),
+      credentials.password(),
+      forceSaslPlain ? EnumSet.of(SaslMechanism.PLAIN) : allowedSaslMechanisms
+    );
   }
 
   @Override

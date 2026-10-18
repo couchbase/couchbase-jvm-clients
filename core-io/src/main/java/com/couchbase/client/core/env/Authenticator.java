@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderName
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.service.ServiceType;
 import reactor.util.annotation.Nullable;
@@ -51,6 +52,20 @@ public interface Authenticator {
    */
   @Stability.Internal
   default void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) { }
+
+  /**
+   * Like {@link #authKeyValueConnection}, for KV connections that don't use Netty: returns the credentials the
+   * connection authenticates with using SASL, or null if it doesn't use SASL (like the default
+   * {@link #authKeyValueConnection}, which adds no handlers; for example, it authenticates with a client certificate).
+   * <p>
+   * An authenticator that overrides {@link #authKeyValueConnection} should override this too.
+   *
+   * @param endpointContext the endpoint context.
+   */
+  @Stability.Internal
+  default @Nullable SaslCredentials keyValueSaslCredentials(final EndpointContext endpointContext) {
+    return null;
+  }
 
   /**
    * Allows to add authentication credentials to the http request for the given service.
