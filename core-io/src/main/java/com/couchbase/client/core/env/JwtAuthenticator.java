@@ -23,6 +23,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.OauthBearerSaslClient;
+import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.json.Mapper;
 import org.jspecify.annotations.NullMarked;
@@ -130,6 +131,15 @@ public class JwtAuthenticator implements Authenticator {
       encodedJwt,
       supportedMechanisms
     ));
+  }
+
+  @Override
+  public SaslCredentials keyValueSaslCredentials(EndpointContext ctx) {
+    return new SaslCredentials(
+      null, // username not required
+      encodedJwt,
+      supportedMechanisms
+    );
   }
 
   @Override

@@ -38,6 +38,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.SocketFactory;
 import java.io.Closeable;
 import java.net.Proxy;
 import java.net.Socket;
@@ -154,6 +155,14 @@ public class CouchbaseOkHttpClient implements Closeable {
    */
   OkHttpClient getClientForTest() {
     return client;
+  }
+
+  /**
+   * The factory for the client's TCP sockets (see {@link CouchbaseSocketFactory}), so KV connections
+   * that don't use Netty get the same socket options.
+   */
+  SocketFactory socketFactory() {
+    return client.socketFactory();
   }
 
   /**

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelId;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionMap;
 import reactor.util.annotation.Nullable;
@@ -44,7 +43,7 @@ public class KeyValueChannelContext {
   private final boolean createAsDeleted;
   private final boolean preserveTtl;
   private final CollectionMap collectionMap;
-  private final ChannelId channelId;
+  private final @Nullable String channelId;
   private final boolean getClusterConfigWithKnownVersion;
   private final boolean subdocBinaryXattr;
 
@@ -53,7 +52,7 @@ public class KeyValueChannelContext {
     @Nullable final CompressionConfig compression,
     final Optional<String> bucket,
     final CollectionMap collectionMap,
-    @Nullable final ChannelId channelId,
+    @Nullable final String channelId,
     final Set<ServerFeature> features
   ) {
     this.compression = compression;
@@ -110,8 +109,11 @@ public class KeyValueChannelContext {
     return collectionMap;
   }
 
+  /**
+   * The connection's ID, in the short form of a Netty channel ID (hex digits, without a "0x" prefix).
+   */
   @Nullable
-  public ChannelId channelId() {
+  public String channelId() {
     return channelId;
   }
 

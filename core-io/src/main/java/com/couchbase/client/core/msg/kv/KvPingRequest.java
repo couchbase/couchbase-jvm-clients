@@ -42,7 +42,7 @@ public class KvPingRequest extends NoopRequest implements TargetedRequest {
 
   @Override
   public KvPingResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    return new KvPingResponse(MemcacheProtocol.decodeStatus(response), ctx.channelId().asShortText());
+    return new KvPingResponse(MemcacheProtocol.decodeStatus(response), ctx.channelId());
   }
 
   @Override

@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.SinceCouchbase;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
 import com.couchbase.client.core.compression.snappy.SnappyCodec;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -87,7 +88,7 @@ public enum MemcacheProtocol {
   /**
    * The fixed header size.
    */
-  static final int HEADER_SIZE = 24;
+  public static final int HEADER_SIZE = 24;
 
   /**
    * The offset of the magic byte.
@@ -527,7 +528,8 @@ public enum MemcacheProtocol {
    * @param request the request to check.
    * @return true if verified, false otherwise.
    */
-  static boolean verifyRequest(final ByteBuf request) {
+  @Stability.Internal
+  public static boolean verifyRequest(final ByteBuf request) {
     int readableBytes = request.readableBytes();
     if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
       return false;
@@ -547,7 +549,8 @@ public enum MemcacheProtocol {
    * @param response the response to check.
    * @return true if verified, false otherwise.
    */
-  static boolean verifyResponse(final ByteBuf response) {
+  @Stability.Internal
+  public static boolean verifyResponse(final ByteBuf response) {
     int readableBytes = response.readableBytes();
     if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
       return false;

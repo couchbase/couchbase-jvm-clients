@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.UnknownServerPushRequestReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
@@ -57,28 +58,10 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
   public void channelRead(ChannelHandlerContext ctx, Object msg) {
     if (msg instanceof ByteBuf) {
       ByteBuf buf = (ByteBuf) msg;
-      if (MemcacheProtocol.magic(buf) == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic()) {
+      if (isServerPush(buf)) {
         try {
-          byte opcodeByte = MemcacheProtocol.opcode(buf);
-          MemcacheProtocol.ServerPushOpcode opcode = MemcacheProtocol.ServerPushOpcode.of(opcodeByte);
-
-          if (opcode == MemcacheProtocol.ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
-            String bucketOrNullIfGlobal = emptyToNull(MemcacheProtocol.keyAsString(buf));
-            TopologyRevision newRevision = parseTopologyRevision(buf);
-
-            this.endpointContext.core().configurationProvider().signalNewTopologyAvailable(
-              bucketOrNullIfGlobal,
-              newRevision,
-              this.endpointContext.remoteSocket()
-            );
-            return;
-          }
-
-          endpointContext.core().environment().eventBus().publish(
-            new UnknownServerPushRequestReceivedEvent(null, ByteBufUtil.getBytes(buf))
-          );
+          handleServerPush(endpointContext, buf);
           return;
-
         } finally {
           buf.release();
         }
@@ -86,5 +69,38 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
     }
 
     ctx.fireChannelRead(msg);
+  }
+
+  /**
+   * Returns true if the packet is a request from the server (which {@link #handleServerPush} handles), not a response.
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static boolean isServerPush(ByteBuf packet) {
+    return MemcacheProtocol.magic(packet) == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic();
+  }
+
+  /**
+   * Handles a request from the server. Doesn't release the packet.
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static void handleServerPush(EndpointContext endpointContext, ByteBuf packet) {
+    byte opcodeByte = MemcacheProtocol.opcode(packet);
+    MemcacheProtocol.ServerPushOpcode opcode = MemcacheProtocol.ServerPushOpcode.of(opcodeByte);
+    if (opcode == MemcacheProtocol.ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
+      String bucketOrNullIfGlobal = emptyToNull(MemcacheProtocol.keyAsString(packet));
+      TopologyRevision newRevision = parseTopologyRevision(packet);
+      endpointContext.core().configurationProvider().signalNewTopologyAvailable(
+        bucketOrNullIfGlobal,
+        newRevision,
+        endpointContext.remoteSocket()
+      );
+      return;
+    }
+
+    endpointContext.core().environment().eventBus().publish(
+      new UnknownServerPushRequestReceivedEvent(null, ByteBufUtil.getBytes(packet))
+    );
   }
 }

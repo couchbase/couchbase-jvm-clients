@@ -17,6 +17,7 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.Authenticator;
@@ -29,6 +30,20 @@ import java.util.Optional;
 public class KeyValueService extends PooledService {
 
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
+
+  /**
+   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or plain sockets ({@link SocketKeyValueEndpoint}).
+   * Separate from {@code com.couchbase.useNetty} (for the HTTP-based services), so each can be switched on its own.
+   */
+  private static final boolean useNettyForKv = Boolean.parseBoolean(System.getProperty("com.couchbase.useNettyForKv", "true"));
+
+  /**
+   * Returns true if KV endpoints use Netty, or false if they use plain sockets.
+   */
+  @Stability.Internal
+  public static boolean useNettyForKv() {
+    return useNettyForKv;
+  }
 
   private final String hostname;
   private final int port;
@@ -65,7 +80,9 @@ public class KeyValueService extends PooledService {
 
   @Override
   protected Endpoint createEndpoint() {
-    return new KeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator);
+    return useNettyForKv
+      ? new KeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator)
+      : new SocketKeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator, serviceContext().core().kvSocketConnector());
   }
 
   @Override
