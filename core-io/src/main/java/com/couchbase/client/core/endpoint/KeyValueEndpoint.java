@@ -18,7 +18,9 @@ package com.couchbase.client.core.endpoint;
 
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.flush.FlushConsolidationHandler;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
@@ -101,7 +103,7 @@ public class KeyValueEndpoint extends BaseEndpoint {
       // can't tolerate being interrupted by a server push request (such as a clustermap change notification).
       pipeline.addLast(new ServerPushHandler(ctx));
 
-      pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures()));
+      pipeline.addLast(new FeatureNegotiatingHandler(ctx, serverFeatures(ctx.environment())));
       pipeline.addLast(new ErrorMapLoadingHandler(ctx));
 
       authenticator.authKeyValueConnection(ctx, pipeline);
@@ -114,10 +116,12 @@ public class KeyValueEndpoint extends BaseEndpoint {
 
     /**
      * Returns the server features that should be negotiated.
+     * Also used by the KV endpoint that doesn't use Netty.
      *
      * @return the server features to negotiate.
      */
-    private Set<ServerFeature> serverFeatures() {
+    @Stability.Internal
+    public static Set<ServerFeature> serverFeatures(CoreEnvironment environment) {
       Set<ServerFeature> features = EnumSet.of(
         ServerFeature.SELECT_BUCKET,
         ServerFeature.XATTR,
@@ -135,15 +139,15 @@ public class KeyValueEndpoint extends BaseEndpoint {
         ServerFeature.SUBDOC_BINARY_XATTR
       );
 
-      if (ctx.environment().ioConfig().configNotifications()) {
+      if (environment.ioConfig().configNotifications()) {
         features.add(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
       }
 
-      if (ctx.environment().ioConfig().mutationTokensEnabled()) {
+      if (environment.ioConfig().mutationTokensEnabled()) {
         features.add(ServerFeature.MUTATION_SEQNO);
       }
 
-      if (ctx.environment().compressionConfig().enabled()) {
+      if (environment.compressionConfig().enabled()) {
         features.add(ServerFeature.SNAPPY);
         features.add(ServerFeature.SNAPPY_EVERYWHERE);
       }

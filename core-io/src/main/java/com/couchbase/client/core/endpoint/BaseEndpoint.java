@@ -561,7 +561,8 @@ public abstract class BaseEndpoint implements Endpoint {
    * @param ex the throwable to annotate, if a ConnectException
    * @return either the throwable unchanged, or the ConnectException annotated.
    */
-  private static Throwable annotateConnectException(final Throwable ex) {
+  @Stability.Internal
+  public static Throwable annotateConnectException(final Throwable ex) {
     if (!(ex instanceof ConnectException)) {
       return ex;
     }

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
@@ -284,7 +285,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       compression ? compressionConfig : null,
       bucketName,
       ioContext.core().configurationProvider().collectionMap(),
-      ctx.channel().id(),
+      ctx.channel().id().asShortText(),
       features
     );
 
@@ -549,8 +550,18 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @return true if it indicates an invalid channel that needs to be closed.
    */
   private boolean statusIndicatesInvalidChannel(final ResponseStatus status) {
+    return statusIndicatesInvalidChannel(status, bucketName.isPresent());
+  }
+
+  /**
+   * Like {@link #statusIndicatesInvalidChannel(ResponseStatus)}. Also used by the KV endpoint that doesn't use Netty.
+   *
+   * @param bucketSelected true if the connection selected a bucket.
+   */
+  @Stability.Internal
+  public static boolean statusIndicatesInvalidChannel(final ResponseStatus status, final boolean bucketSelected) {
     return status == ResponseStatus.INTERNAL_SERVER_ERROR
-      || (status == ResponseStatus.NO_BUCKET && bucketName.isPresent())
+      || (status == ResponseStatus.NO_BUCKET && bucketSelected)
       || status == ResponseStatus.NOT_INITIALIZED;
   }
 
@@ -584,6 +595,16 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       return ResponseStatus.UNKNOWN;
     }
 
+    return statusForErrorCode(errorCode);
+  }
+
+  /**
+   * Returns the status the client uses for an error code the client doesn't know, given its attributes
+   * in the error map. (Doesn't check {@code CONN_STATE_INVALIDATED}, which means the caller closes the connection.)
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static ResponseStatus statusForErrorCode(final ErrorMap.ErrorCode errorCode) {
     if (errorCode.attributes().contains(TEMP)) {
       return ResponseStatus.TEMPORARY_FAILURE;
     }
@@ -605,7 +626,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param errorCode the error code to handle
    * @return true if retry is indicated.
    */
-  private boolean errorMapIndicatesRetry(final ErrorMap.ErrorCode errorCode) {
+  @Stability.Internal
+  public static boolean errorMapIndicatesRetry(final ErrorMap.ErrorCode errorCode) {
     return errorCode != null && (errorCode.attributes().contains(RETRY_NOW) || errorCode.attributes().contains(RETRY_LATER));
   }
 
@@ -619,7 +641,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param status the status code to check.
    * @return the retry reason that indicates the retry.
    */
-  private RetryReason statusCodeIndicatesRetry(final ResponseStatus status, final Request<?> request) {
+  @Stability.Internal
+  public static RetryReason statusCodeIndicatesRetry(final ResponseStatus status, final Request<?> request) {
     switch (status) {
       case LOCKED:
         return request instanceof UnlockRequest ? null : RetryReason.KV_LOCKED;
@@ -683,7 +706,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
   }
 
-  static class OutdatedCollectionContext extends IoContext {
+  @Stability.Internal
+  public static class OutdatedCollectionContext extends IoContext {
 
     private final CollectionMap collectionMap;
 

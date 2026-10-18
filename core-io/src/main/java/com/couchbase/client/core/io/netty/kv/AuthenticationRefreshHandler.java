@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
@@ -148,16 +149,24 @@ public class AuthenticationRefreshHandler extends ChannelInboundHandlerAdapter {
       });
   }
 
-  private static class SingleStepAuthResponse extends BaseResponse {
+  /**
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static class SingleStepAuthResponse extends BaseResponse {
     protected SingleStepAuthResponse(ResponseStatus status) {
       super(status);
     }
   }
 
-  private static class SingleStepAuthRequest extends BaseKeyValueRequest<SingleStepAuthResponse> {
+  /**
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static class SingleStepAuthRequest extends BaseKeyValueRequest<SingleStepAuthResponse> {
     private final SingleStepSaslAuthParameters params;
 
-    protected SingleStepAuthRequest(CoreContext ctx, SingleStepSaslAuthParameters params) {
+    public SingleStepAuthRequest(CoreContext ctx, SingleStepSaslAuthParameters params) {
       // We're sending this request at a low layer that bypasses timeout and retry handling,
       // so those arguments don't really matter -- but superclass requires us to pass _something_.
       super(Duration.ZERO, ctx, FailFastRetryStrategy.INSTANCE, null, null);

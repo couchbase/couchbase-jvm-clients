@@ -85,7 +85,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class SaslAuthenticationHandler extends ChannelDuplexHandler implements CallbackHandler {
 
-  private static final String LDAP_ADMONITION = "If you are using LDAP you must either" +
+  /**
+   * Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static final String LDAP_ADMONITION = "If you are using LDAP you must either" +
     " connect via TLS (recommended), or enable _only_ PLAIN in the allowed SASL mechanisms list on the PasswordAuthenticator" +
     " (without TLS this is insecure and will present the user credentials in plain-text over the wire).";
 

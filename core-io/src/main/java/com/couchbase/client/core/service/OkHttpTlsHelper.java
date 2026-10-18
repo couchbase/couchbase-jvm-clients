@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.SecurityConfig;
+import okhttp3.CipherSuite;
 import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.TlsVersion;
@@ -31,21 +32,23 @@ import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.time.Duration;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
@@ -85,13 +88,7 @@ class OkHttpTlsHelper {
 
     // Fails now if the trust manager factory is unusable (for example, has no X.509 trust manager).
     X509TrustManager initialTrustManager = getTrustManager(securityConfig);
-
-    // Like the Netty implementation, ask a user-supplied trust manager factory for each new connection,
-    // so trusted certificates can change (for example, if the user re-initializes the factory).
-    TrustManagerFactory tmf = securityConfig.trustManagerFactory();
-    Supplier<X509TrustManager> trustManagers = tmf == null || certificateVerificationDisabled(securityConfig)
-      ? () -> initialTrustManager
-      : () -> firstX509TrustManager(tmf);
+    Supplier<X509TrustManager> trustManagers = trustManagers(securityConfig, initialTrustManager);
 
     // OkHttp never uses "initialTrustManager" to decide what to trust; each connection's own TLS context
     // (with its own trust manager) does that. OkHttp only uses it to clean up certificate chains for:
@@ -104,10 +101,77 @@ class OkHttpTlsHelper {
     }
   }
 
+  /**
+   * Like the Netty implementation, asks a user-supplied trust manager factory for each new connection,
+   * so trusted certificates can change (for example, if the user re-initializes the factory).
+   */
+  private static Supplier<X509TrustManager> trustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
+    TrustManagerFactory tmf = securityConfig.trustManagerFactory();
+    return tmf == null || certificateVerificationDisabled(securityConfig)
+      ? () -> initialTrustManager
+      : () -> firstX509TrustManager(tmf);
+  }
+
+  /**
+   * Returns a factory for TLS sockets that don't go through OkHttp (for example, KV connections), with the same
+   * certificates as {@link #configureTls}. Use {@link #configureTlsSocket} on each socket it creates.
+   *
+   * @param clientCertificates supplies the client certificate (if any), asked once per new connection.
+   * Typically the authenticator's {@code getKeyManagerFactory}.
+   * @throws IllegalArgumentException if TLS isn't enabled.
+   */
+  static SSLSocketFactory newTlsSocketFactory(
+    Supplier<@Nullable KeyManagerFactory> clientCertificates,
+    SecurityConfig securityConfig,
+    Duration handshakeTimeout
+  ) {
+    if (!securityConfig.tlsEnabled()) {
+      throw new IllegalArgumentException("TLS is not enabled.");
+    }
+    X509TrustManager initialTrustManager = getTrustManager(securityConfig);
+    return new PerConnectionSslSocketFactory(clientCertificates, trustManagers(securityConfig, initialTrustManager), handshakeTimeout);
+  }
+
+  /**
+   * Configures a socket from {@link #newTlsSocketFactory} like {@link #configureTls} configures OkHttp's:
+   * the same TLS versions and cipher suites, and checks the server's host name unless that's disabled.
+   * Call before the handshake starts.
+   */
+  static void configureTlsSocket(SSLSocket socket, SecurityConfig securityConfig) {
+    ConnectionSpec spec = secureConnectionSpec(securityConfig);
+    SSLParameters params = socket.getSSLParameters();
+
+    // Only the versions and cipher suites the socket supports, like OkHttp does.
+    List<String> supportedProtocols = Arrays.asList(socket.getSupportedProtocols());
+    params.setProtocols(requireNonNull(spec.tlsVersions()).stream()
+      .map(TlsVersion::javaName)
+      .filter(supportedProtocols::contains)
+      .toArray(String[]::new));
+
+    List<CipherSuite> cipherSuites = spec.cipherSuites();
+    if (cipherSuites != null) {
+      List<String> supportedCipherSuites = Arrays.asList(socket.getSupportedCipherSuites());
+      params.setCipherSuites(cipherSuites.stream()
+        .map(CipherSuite::javaName)
+        .filter(supportedCipherSuites::contains)
+        .toArray(String[]::new));
+    }
+
+    // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake,
+    // like the Netty implementation (so a mismatch fails with a CertificateException, which gets CERTIFICATE_HINT).
+    if (!certificateVerificationDisabled(securityConfig) && securityConfig.hostnameVerificationEnabled()) {
+      params.setEndpointIdentificationAlgorithm("HTTPS");
+    }
+
+    socket.setSSLParameters(params);
+  }
+
   static final String CERTIFICATE_HINT =
     "Check that the SDK trusts the cluster's certificate, and that the certificate matches the host name.";
   static final String CLIENT_CERTIFICATE_HINT =
     "The server rejected the SDK's client certificate. Check the certificate (for example, that it hasn't expired), and that the cluster trusts its issuer.";
+  static final String CLIENT_CERTIFICATE_REQUIRED_HINT =
+    "The server requires a client certificate, but the SDK didn't send one. Check that the SDK is configured with a client certificate (for example, with CertificateAuthenticator), and that the cluster trusts its issuer (the SDK only sends a certificate whose issuer the server accepts).";
   static final String NOT_TLS_HINT =
     "The server doesn't use TLS on this port. Check server ports, and whether the cluster uses TLS (couchbases://) or not (couchbase://).";
   static final String NO_COMMON_PARAMETERS_HINT =
@@ -117,7 +181,8 @@ class OkHttpTlsHelper {
    * Hints for the TLS alerts a server sends when retrying won't help.
    * <p>
    * When the server rejects the client's certificate, Couchbase Server's cluster manager sends "bad_certificate",
-   * and its services written in Go send "unknown_ca". When there's no TLS version or cipher suite in common,
+   * and its services written in Go send "unknown_ca". With TLS 1.3, a server that requires a client certificate
+   * sends "certificate_required" if the client doesn't send one (as the data service does). When there's no TLS version or cipher suite in common,
    * the server sends the alert in reply to the ClientHello, having read everything the client sent, so the alert
    * reaches the client. (With no cipher suite in common, the cluster manager sends "insufficient_security",
    * and the Go services send "handshake_failure".)
@@ -133,11 +198,11 @@ class OkHttpTlsHelper {
       "certificate_expired",
       "certificate_unknown",
       "unknown_ca",
-      "access_denied",
-      "certificate_required"
+      "access_denied"
     )) {
       result.put(alert, CLIENT_CERTIFICATE_HINT);
     }
+    result.put("certificate_required", CLIENT_CERTIFICATE_REQUIRED_HINT);
     for (String alert : listOf(
       "protocol_version",
       "handshake_failure",

@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.service.ServiceType;
 import org.jspecify.annotations.NullMarked;
@@ -37,6 +38,11 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   @Override
   public void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) {
     wrapped().authKeyValueConnection(endpointContext, pipeline);
+  }
+
+  @Override
+  public @Nullable SaslCredentials keyValueSaslCredentials(final EndpointContext endpointContext) {
+    return wrapped().keyValueSaslCredentials(endpointContext);
   }
 
   @Override

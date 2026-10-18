@@ -294,7 +294,8 @@ public enum ServerFeature {
   /**
    * Returns the server feature associated with the raw short value, or null if not found.
    */
-  static ServerFeature from(final int input) {
+  @Stability.Internal
+  public static ServerFeature from(final int input) {
     return lookupTable.get(input);
   }
 }

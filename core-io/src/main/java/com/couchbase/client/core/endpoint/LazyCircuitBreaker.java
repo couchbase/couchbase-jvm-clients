@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.endpoint;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,7 +48,8 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @since 2.0.0
  */
-class LazyCircuitBreaker implements CircuitBreaker {
+@Stability.Internal
+public class LazyCircuitBreaker implements CircuitBreaker {
 
   /**
    * Current configuration.
@@ -95,7 +97,7 @@ class LazyCircuitBreaker implements CircuitBreaker {
    *
    * @param config the config for this circuit breaker.
    */
-  LazyCircuitBreaker(final CircuitBreakerConfig config) {
+  public LazyCircuitBreaker(final CircuitBreakerConfig config) {
     if (!config.enabled()) {
       throw InvalidArgumentException.fromMessage("This CircuitBreaker always needs to be enabled");
     }
