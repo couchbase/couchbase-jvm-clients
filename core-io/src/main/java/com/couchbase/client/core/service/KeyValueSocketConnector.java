@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.util.CbThreads;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -26,11 +27,22 @@ import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -47,6 +59,27 @@ public final class KeyValueSocketConnector {
   private final SocketFactory socketFactory;
   private final SecurityConfig securityConfig;
   private final @Nullable SSLSocketFactory tlsSocketFactory;
+  private final HostResolver hostResolver;
+
+  /**
+   * Lookups in progress, by host name. Connections to the same host share a lookup, so a lookup that takes longer
+   * than the connect timeout ties up one thread, not one per connect attempt.
+   */
+  private final ConcurrentMap<String, CompletableFuture<InetAddress>> lookupsInProgress = new ConcurrentHashMap<>();
+
+  /**
+   * Host name lookups. Lookups to the same host are shared (see lookup()), so there's about one thread per host
+   * being looked up; platform threads are fine. Idle threads end after a minute, so this needn't be shut down.
+   */
+  private static final ExecutorService hostNameLookups = Executors.newCachedThreadPool(CbThreads.platformThreadFactory("cb-kv-dns-"));
+
+  /**
+   * Resolves a host name. Blocks until it's done, or the OS gives up.
+   */
+  @FunctionalInterface
+  interface HostResolver {
+    InetAddress resolve(String host) throws UnknownHostException;
+  }
 
   /**
    * @param socketFactory creates unconnected TCP sockets, and sets their options once they connect
@@ -58,7 +91,18 @@ public final class KeyValueSocketConnector {
     Authenticator authenticator,
     Duration handshakeTimeout
   ) {
+    this(socketFactory, securityConfig, authenticator, handshakeTimeout, InetAddress::getByName);
+  }
+
+  KeyValueSocketConnector(
+    SocketFactory socketFactory,
+    SecurityConfig securityConfig,
+    Authenticator authenticator,
+    Duration handshakeTimeout,
+    HostResolver hostResolver
+  ) {
     this.socketFactory = requireNonNull(socketFactory);
+    this.hostResolver = requireNonNull(hostResolver);
     this.securityConfig = requireNonNull(securityConfig);
     this.tlsSocketFactory = securityConfig.tlsEnabled()
       ? OkHttpTlsHelper.newTlsSocketFactory(authenticator::getKeyManagerFactory, securityConfig, handshakeTimeout)
@@ -90,6 +134,7 @@ public final class KeyValueSocketConnector {
    * so the caller can close it to stop the attempt.
    * @param onTcpConnected called once the TCP connection is open, before the TLS handshake (if any).
    * @return the connected socket. Its read timeout is whatever time is left before the deadline.
+   * @throws UnknownHostException if the host name can't be resolved, or the deadline passes first.
    * @throws ConnectException if the deadline passes before the TCP connection is open.
    * @throws SocketTimeoutException if the deadline passes during the TLS handshake.
    * @throws IOException if connecting fails. If the TLS handshake fails, it's (or it's caused by)
@@ -105,8 +150,7 @@ public final class KeyValueSocketConnector {
     Socket socket = socketFactory.createSocket();
     try {
       onSocket.accept(socket);
-      // Resolves the host name (blocking, with the OS's own timeout), like Netty's default resolver.
-      InetSocketAddress address = new InetSocketAddress(host, port);
+      InetSocketAddress address = resolve(host, port, deadlineNanos);
       connectTcp(socket, address, deadlineNanos);
       onTcpConnected.run();
 
@@ -128,6 +172,61 @@ public final class KeyValueSocketConnector {
       closeQuietly(socket);
       throw e;
     }
+  }
+
+  /**
+   * Resolves the host name, giving up when the deadline passes, like the Netty implementation, whose connect timeout
+   * includes resolving the host name. (A lookup can't be interrupted, so one that's still going carries on
+   * in the background, until the OS gives up. Meanwhile, connect attempts to the same host wait for it.)
+   *
+   * @throws UnknownHostException if the host name can't be resolved, or the deadline passes first.
+   */
+  private InetSocketAddress resolve(String host, int port, long deadlineNanos) throws IOException {
+    int timeoutMillis = remainingMillis(deadlineNanos);
+    CompletableFuture<InetAddress> lookup = lookup(host);
+    try {
+      return new InetSocketAddress(lookup.get(timeoutMillis, TimeUnit.MILLISECONDS), port);
+    } catch (TimeoutException e) {
+      // Like the JDK's message when the OS gives up.
+      throw new UnknownHostException(host + ": timed out after " + timeoutMillis + " ms");
+    } catch (ExecutionException e) {
+      // A new exception for each connect attempt, since attempts can share a lookup (and its failure).
+      Throwable cause = e.getCause();
+      UnknownHostException failure = new UnknownHostException(cause.getMessage());
+      failure.initCause(cause);
+      throw failure;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new InterruptedIOException("Interrupted while resolving host name: " + host);
+    }
+  }
+
+  /**
+   * Returns the lookup in progress for the host name, or starts one.
+   */
+  private CompletableFuture<InetAddress> lookup(String host) {
+    CompletableFuture<InetAddress> newLookup = new CompletableFuture<>();
+    CompletableFuture<InetAddress> inProgress = lookupsInProgress.putIfAbsent(host, newLookup);
+    if (inProgress != null) {
+      return inProgress;
+    }
+
+    // Started once it's in the map, so it can remove itself when it's done (and the next connect looks up again).
+    try {
+      hostNameLookups.execute(() -> {
+        try {
+          newLookup.complete(hostResolver.resolve(host));
+        } catch (Throwable t) {
+          newLookup.completeExceptionally(t);
+        } finally {
+          lookupsInProgress.remove(host, newLookup);
+        }
+      });
+    } catch (RuntimeException e) {
+      lookupsInProgress.remove(host, newLookup);
+      newLookup.completeExceptionally(e);
+    }
+    return newLookup;
   }
 
   /**
