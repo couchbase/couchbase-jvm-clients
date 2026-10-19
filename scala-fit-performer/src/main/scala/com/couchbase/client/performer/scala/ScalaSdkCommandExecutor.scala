@@ -301,6 +301,10 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         result = SearchHelper.handleScopeSearchIndexManager(scope.get, op)
       } else if (slc.hasSearchV2) {
         result = SearchHelper.handleScopeSearchBlocking(scope.get, slc.getSearchV2)
+      } else if (slc.hasEventingFunctionManager) {
+        result = EventingFunctionManagerHelper
+          .handleScopeEventingFunctionManager(scope.get, op)
+          .toBuilder
       }
     } else if (op.hasCollectionCommand) {
       val clc        = op.getCollectionCommand

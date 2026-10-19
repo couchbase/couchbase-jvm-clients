@@ -505,6 +505,11 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       return handleSearchBlocking(connection.cluster(), scope, spans, slc.getSearchV2(), op);
     }
 
+    if (slc.hasEventingFunctionManager()) {
+      EventingHelper.handleScopeEventingFunctionManager(scope, spans, op, result);
+      return result.build();
+    }
+
     throw new UnsupportedOperationException("Unknown scope-level command");
   }
 
