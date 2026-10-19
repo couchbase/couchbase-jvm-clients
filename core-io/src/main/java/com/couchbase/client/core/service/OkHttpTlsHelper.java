@@ -51,15 +51,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.causesAndSuppressed;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static okhttp3.ConnectionSpec.MODERN_TLS;
 
 @Stability.Internal
@@ -96,7 +99,15 @@ class OkHttpTlsHelper {
     // (with its own trust manager) does that. OkHttp only uses it to clean up certificate chains for:
     // certificate pinning (which we don't enable), HTTP/2 connection coalescing (we use HTTP/1.1 only),
     // and the certificates reported by Response.handshake() (which the SDK doesn't read).
-    clientBuilder.sslSocketFactory(new PerConnectionSslSocketFactory(clientCertificates, trustManagers, handshakeTimeout), initialTrustManager);
+    PerConnectionSslSocketFactory socketFactory = new PerConnectionSslSocketFactory(clientCertificates, trustManagers, handshakeTimeout);
+    clientBuilder.sslSocketFactory(socketFactory, initialTrustManager);
+
+    // Here only, so it's logged once per Core: KV connections that don't use Netty (see newTlsSocketFactory)
+    // use the same cipher suites.
+    List<String> unsupported = unsupportedCipherSuites(socketFactory, securityConfig);
+    if (!unsupported.isEmpty()) {
+      log.warn("Ignoring configured TLS cipher suites the JVM doesn't support (see SecurityConfig.ciphers): {}", unsupported);
+    }
 
     if (certificateVerificationDisabled(securityConfig) || !securityConfig.hostnameVerificationEnabled()) {
       clientBuilder.hostnameVerifier(insecureHostnameVerifier);
@@ -135,6 +146,40 @@ class OkHttpTlsHelper {
   }
 
   /**
+   * Returns the configured cipher suites the socket factory doesn't support, which connections leave out.
+   * (The Netty implementation fails every connection instead, unless its TLS provider is OpenSSL,
+   * and OpenSSL supports them.)
+   */
+  static List<String> unsupportedCipherSuites(SSLSocketFactory socketFactory, SecurityConfig securityConfig) {
+    if (securityConfig.ciphers().isEmpty()) {
+      return emptyList(); // the defaults
+    }
+    List<CipherSuite> configured = requireNonNull(secureConnectionSpec(securityConfig).cipherSuites());
+    Set<CipherSuite> supported = Arrays.stream(socketFactory.getSupportedCipherSuites())
+      .map(CipherSuite::forJavaName) // like OkHttp, matches names that differ only in their "TLS_" or "SSL_" prefix
+      .collect(toSet());
+    return configured.stream()
+      .filter(it -> !supported.contains(it))
+      .map(CipherSuite::javaName)
+      .collect(toList());
+  }
+
+  /**
+   * Returns the socket's names for the configured cipher suites it supports, in the configured order.
+   * Like OkHttp, matches names that differ only in their "TLS_" or "SSL_" prefix.
+   */
+  private static List<String> supportedCipherSuites(List<CipherSuite> configured, String[] supported) {
+    Map<CipherSuite, String> supportedNames = new HashMap<>();
+    for (String name : supported) {
+      supportedNames.putIfAbsent(CipherSuite.forJavaName(name), name);
+    }
+    return configured.stream()
+      .map(supportedNames::get)
+      .filter(Objects::nonNull)
+      .collect(toList());
+  }
+
+  /**
    * Configures a socket from {@link #newTlsSocketFactory} like {@link #configureTls} configures OkHttp's:
    * the same TLS versions and cipher suites, and checks the server's host name unless that's disabled.
    * Call before the handshake starts.
@@ -152,11 +197,7 @@ class OkHttpTlsHelper {
 
     List<CipherSuite> cipherSuites = spec.cipherSuites();
     if (cipherSuites != null) {
-      List<String> supportedCipherSuites = Arrays.asList(socket.getSupportedCipherSuites());
-      params.setCipherSuites(cipherSuites.stream()
-        .map(CipherSuite::javaName)
-        .filter(supportedCipherSuites::contains)
-        .toArray(String[]::new));
+      params.setCipherSuites(supportedCipherSuites(cipherSuites, socket.getSupportedCipherSuites()).toArray(new String[0]));
     }
 
     // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake,

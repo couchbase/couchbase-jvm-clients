@@ -27,6 +27,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
+import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
@@ -79,6 +80,7 @@ import reactor.core.publisher.Mono;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -1005,6 +1007,29 @@ class SocketKeyValueEndpointTest {
     assertEquals(ResponseStatus.SUCCESS, response.status());
     assertArrayEquals("hello".getBytes(UTF_8), response.content());
     assertEquals(null, endpoint.internalDiagnostics().tlsHandshakeFailure);
+  }
+
+  @Test
+  void usesTheConfiguredCipherSuites() throws Exception {
+    HeldCertificate serverCert = new HeldCertificate.Builder().addSubjectAlternativeName(HOST).build();
+    HandshakeCertificates serverCerts = new HandshakeCertificates.Builder().heldCertificate(serverCert).build();
+    List<String> ciphers = listOf("TLS_AES_256_GCM_SHA384");
+    start(env -> env.securityConfig(it -> it.enableTls(true).trustCertificates(listOf(serverCert.certificate())).ciphers(ciphers)));
+    server = FakeKeyValueServer.start(serverCerts.sslContext().getServerSocketFactory());
+    cleanup.add(0, server);
+    List<String> negotiated = new CopyOnWriteArrayList<>();
+    server.handler((connection, request) -> {
+      negotiated.add(((SSLSocket) connection.socket).getSession().getCipherSuite());
+      connection.respond(request, STATUS_SUCCESS);
+    });
+
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+
+    assertEquals(ciphers, waitForEvent(CustomTlsCiphersEnabledEvent.class).ciphers());
+    GetRequest request = newGetRequest("foo");
+    endpoint.send(request);
+    request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    assertEquals("TLS_AES_256_GCM_SHA384", negotiated.get(0));
   }
 
   @Test

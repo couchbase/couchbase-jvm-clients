@@ -23,6 +23,7 @@ import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
+import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
@@ -91,6 +92,7 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -479,6 +481,11 @@ final class KeyValueConnection {
       authenticationRefreshSubscription = endpointContext.core().authenticationRefreshTriggers.subscribe(
         signal -> ioThreads.execute(this::onAuthenticationRefreshSignal)
       );
+    }
+
+    List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
+    if (connector.tlsEnabled() && !ciphers.isEmpty()) {
+      eventBus.publish(new CustomTlsCiphersEnabledEvent(ciphers, endpointContext)); // like the Netty implementation's SslHandlerFactory
     }
 
     long tcpStart = System.nanoTime();
