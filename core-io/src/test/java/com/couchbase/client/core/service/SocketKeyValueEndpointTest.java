@@ -28,11 +28,14 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEve
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
+import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
@@ -46,10 +49,12 @@ import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SaslMechanism;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.BucketNotFoundException;
+import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -1028,6 +1033,34 @@ class SocketKeyValueEndpointTest {
     endpoint.send(request);
 
     assertEquals(ResponseStatus.SUCCESS, request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).status());
+  }
+
+  @Test
+  void failsOnlyTheRequestWhenItFailsVerification() throws Exception {
+    start();
+    startServer();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
+
+    GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
+      @Override
+      public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
+        return super.encode(alloc, opaque, ctx).writeByte(0); // longer than its total length says
+      }
+    };
+    endpoint.send(malformed);
+    ExecutionException e = assertThrows(ExecutionException.class, () -> malformed.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+    assertInstanceOf(EncodingFailureException.class, e.getCause());
+    assertEquals(0, malformed.context().retryAttempts());
+    waitForEvent(InvalidPacketDetectedEvent.class);
+
+    // Nothing was written, so the connection is still open.
+    GetRequest wellFormed = newGetRequest("bar");
+    endpoint.send(wellFormed);
+    wellFormed.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    assertEquals(EndpointState.CONNECTED, endpoint.state());
+    assertEquals(channelId, endpoint.context().channelId().orElse(null));
+    assertTrue(events(UnexpectedEndpointDisconnectedEvent.class).isEmpty());
   }
 
   private static String base64Url(String s) {
