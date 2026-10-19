@@ -16,26 +16,35 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.env.SecurityConfig;
+import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.AEADBadTagException;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.security.cert.CertificateException;
+import java.time.Duration;
 
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static java.util.Collections.emptyList;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NOT_TLS_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NO_COMMON_PARAMETERS_HINT;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.configureTls;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.connectionFailedDuringTls;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.describeTlsFailure;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.newTlsSocketFactory;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.permanentTlsFailureHint;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.unsupportedCipherSuites;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -150,6 +159,33 @@ class OkHttpTlsHelperTest {
     assertFalse(connectionFailedDuringTls(new SSLException("Tag mismatch", new AEADBadTagException("Tag mismatch"))));
     // The connection failed because of the alert.
     assertFalse(connectionFailedDuringTls(brokenPipeWithSuppressed(new SSLHandshakeException("Received fatal alert: unknown_ca"))));
+  }
+
+  @Test
+  void unsupportedCipherSuitesAreIgnored() {
+    SecurityConfig securityConfig = SecurityConfig.builder()
+      .enableTls(true)
+      .ciphers(listOf("TLS_AES_128_GCM_SHA256", "TLS_BOGUS_WITH_NOTHING"))
+      .build();
+
+    SSLSocketFactory socketFactory = newTlsSocketFactory(() -> null, securityConfig, Duration.ofSeconds(1));
+    assertEquals(listOf("TLS_BOGUS_WITH_NOTHING"), unsupportedCipherSuites(socketFactory, securityConfig));
+    // Only logged: the Netty implementation might support them (with OpenSSL).
+    configureTls(new OkHttpClient.Builder(), () -> null, securityConfig, Duration.ofSeconds(1));
+  }
+
+  @Test
+  void supportedAndDefaultCipherSuitesAreNotReported() {
+    SecurityConfig securityConfig = SecurityConfig.builder()
+      .enableTls(true)
+      .ciphers(listOf("TLS_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"))
+      .build();
+    SSLSocketFactory socketFactory = newTlsSocketFactory(() -> null, securityConfig, Duration.ofSeconds(1));
+    assertEquals(emptyList(), unsupportedCipherSuites(socketFactory, securityConfig));
+
+    // OkHttp's defaults include some that recent JVMs don't support.
+    SecurityConfig defaults = SecurityConfig.builder().enableTls(true).build();
+    assertEquals(emptyList(), unsupportedCipherSuites(socketFactory, defaults));
   }
 
   @Test
