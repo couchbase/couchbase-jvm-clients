@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
@@ -36,9 +37,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.core.io.TrafficCaptureMasking.MASKED;
+import static com.couchbase.client.core.io.TrafficCaptureMasking.maskSecretFields;
+import static com.couchbase.client.core.io.TrafficCaptureMasking.replaceAll;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
@@ -71,41 +74,6 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
   private static final Pattern CONTENT_LENGTH_HEADER = Pattern.compile(
     "(?im)^(content-length[ \\t]*:[ \\t]*)[^\\r\\n]*"
   );
-
-  /**
-   * Names of request body fields whose values are secrets. Covers user management (password),
-   * analytics links (S3, Azure, GCS, remote Couchbase), and eventing URL bindings.
-   */
-  private static final String SECRET_FIELD_NAMES = String.join("|",
-    "password",
-    "clientKey",
-    "clientSecret",
-    "clientCertificatePassword",
-    "secretAccessKey",
-    "sessionToken",
-    "accountKey",
-    "sharedAccessSignature",
-    "connectionString",
-    "jsonCredentials",
-    "bearer_key"
-  );
-
-  /**
-   * Matches a secret field in a form-encoded body. Form values are percent-encoded,
-   * so they can't contain a raw '&amp;' or line break.
-   */
-  private static final Pattern SECRET_FORM_FIELD = Pattern.compile(
-    "(?im)(^|&)(" + SECRET_FIELD_NAMES + ")=[^&\\r\\n]*"
-  );
-
-  /**
-   * Matches a secret field with a string value in a JSON body.
-   */
-  private static final Pattern SECRET_JSON_FIELD = Pattern.compile(
-    "(?i)(\"(?:" + SECRET_FIELD_NAMES + ")\"\\s*:\\s*)\"(?:[^\"\\\\]|\\\\.)*\""
-  );
-
-  private static final String MASKED = "<masked>";
 
   private enum Direction {
     INBOUND,
@@ -176,8 +144,7 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
 
     String masked = replaceAll(AUTHORIZATION_HEADER, original, "$1" + MASKED);
     masked = replaceAll(CONTENT_LENGTH_HEADER, masked, "$1" + MASKED);
-    masked = replaceAll(SECRET_FORM_FIELD, masked, "$1$2=" + MASKED);
-    masked = replaceAll(SECRET_JSON_FIELD, masked, "$1\"" + MASKED + "\"");
+    masked = maskSecretFields(masked);
 
     if (masked == original) {
       return ByteBufUtil.prettyHexDump(msg);
@@ -185,20 +152,17 @@ public class TrafficCaptureHandler extends ChannelDuplexHandler {
     return ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(masked.getBytes(StandardCharsets.ISO_8859_1)));
   }
 
-  /**
-   * Like {@link Matcher#replaceAll(String)}, but returns the input instance if nothing matched.
-   */
-  private static String replaceAll(final Pattern pattern, final String input, final String replacement) {
-    Matcher matcher = pattern.matcher(input);
-    return matcher.find() ? matcher.replaceAll(replacement) : input;
-  }
-
   private static boolean isSasl(final byte opcode) {
     return opcode == MemcacheProtocol.Opcode.SASL_AUTH.opcode()
       || opcode == MemcacheProtocol.Opcode.SASL_STEP.opcode();
   }
 
-  private String memcacheToString(final ByteBuf msg) {
+  /**
+   * Describes a KV packet for a traffic capture event: a hex dump (tagged as user data), then its header fields
+   * and key. Doesn't change the buffer. Also used by the KV endpoint that doesn't use Netty.
+   */
+  @Stability.Internal
+  public static String memcacheToString(final ByteBuf msg) {
     byte magicByte = MemcacheProtocol.magic(msg);
     MemcacheProtocol.Magic magic = MemcacheProtocol.Magic.of(magicByte);
 
