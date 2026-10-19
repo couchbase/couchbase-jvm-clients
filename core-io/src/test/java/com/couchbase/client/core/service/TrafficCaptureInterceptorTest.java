@@ -29,6 +29,10 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.util.HostAndPort;
+import okhttp3.FormBody;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -123,13 +127,71 @@ class TrafficCaptureInterceptorTest {
     String written = captured(WriteTrafficCapturedEvent.class);
     assertTrue(written.contains("POST /query/service HTTP/1.1"), written);
     assertTrue(written.contains(STATEMENT_JSON), written);
-    assertTrue(written.contains("Authorization: <redacted>"), written);
-    assertFalse(written.contains("username"), "credentials should be redacted: " + written);
-    assertFalse(written.contains("dXNlcm5hbWU6cGFzc3dvcmQ="), "credentials should be redacted: " + written); // Base64
+    assertTrue(written.contains("Authorization: Basic <masked>"), written);
+    assertTrue(written.contains("Content-Length: <masked>"), written);
+    assertFalse(written.contains("username"), "credentials should be masked: " + written);
+    assertFalse(written.contains("dXNlcm5hbWU6cGFzc3dvcmQ="), "credentials should be masked: " + written); // Base64
 
     String read = captured(ReadTrafficCapturedEvent.class);
     assertTrue(read.contains("HTTP/1.1 200"), read);
     assertTrue(read.contains("\"greeting\":\"hello\""), read);
+  }
+
+  @Test
+  void masksSecretFormFields() throws Exception {
+    Request request = new Request.Builder()
+      .url("http://localhost:8091/settings/rbac/users/local/alice")
+      .header("Authorization", "Bearer some.jwt.token")
+      .header("Content-Type", "application/x-www-form-urlencoded") // added by OkHttp before network interceptors
+      .put(new FormBody.Builder().add("name", "Alice").add("password", "s3cret").add("clientKey", "AKIA/xyz").build())
+      .build();
+
+    String captured = TrafficCaptureInterceptor.describe(request);
+
+    assertTrue(captured.contains("Authorization: Bearer <masked>\n"), captured);
+    assertTrue(captured.contains("name=Alice&password=<masked>&clientKey=<masked>"), captured);
+    assertFalse(captured.contains("s3cret"), captured);
+    assertFalse(captured.contains("some.jwt.token"), captured);
+  }
+
+  @Test
+  void masksSecretJsonFieldsAndTheLengthOfTheOriginalBody() throws Exception {
+    String body = "{\"name\":\"myLink\",\"password\" : \"s3cret\",\"other\":\"visible\"}";
+    Request request = new Request.Builder()
+      .url("http://localhost:8095/analytics/link")
+      .header("Content-Type", "application/json") // like Content-Length, added by OkHttp before network interceptors
+      .header("Content-Length", String.valueOf(body.length()))
+      .post(RequestBody.create(body, MediaType.get("application/json")))
+      .build();
+
+    String captured = TrafficCaptureInterceptor.describe(request);
+
+    String masked = "{\"name\":\"myLink\",\"password\" : \"<masked>\",\"other\":\"visible\"}";
+    assertTrue(captured.contains("Content-Length: <masked>\n"), captured);
+    // The frame gives the masked text's length, not the original's (which would reveal the password's length).
+    assertTrue(captured.endsWith(TrafficCaptureInterceptor.framedText(masked, 0, masked.length())), captured);
+  }
+
+  @Test
+  void masksSecretFieldsInBodiesThatAreHexDumped() throws Exception {
+    Request request = new Request.Builder()
+      .url("http://localhost:8091/settings/rbac/users/local/alice")
+      .put(RequestBody.create("password=s3cret&name=Alice".getBytes(UTF_8), null))
+      .build();
+
+    String captured = TrafficCaptureInterceptor.describe(request);
+
+    assertTrue(captured.endsWith(TrafficCaptureInterceptor.hexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
+  }
+
+  @Test
+  void masksAuthorizationWithoutScheme() throws Exception {
+    Request request = new Request.Builder()
+      .url("http://localhost:8091/pools")
+      .header("Authorization", "opaque-credential")
+      .build();
+
+    assertTrue(TrafficCaptureInterceptor.describe(request).contains("Authorization: <masked>\n"));
   }
 
   @Test

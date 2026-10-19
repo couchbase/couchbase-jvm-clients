@@ -27,9 +27,11 @@ import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
 import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
+import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
+import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
@@ -49,6 +51,7 @@ import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
+import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -266,6 +269,12 @@ final class KeyValueConnection {
   private final IoConfig ioConfig;
   private final boolean isInternalTracer;
 
+  /**
+   * Whether to publish every packet written and read (io.servicesToCapture), like the Netty implementation's
+   * TrafficCaptureHandler.
+   */
+  private final boolean captureTraffic;
+
   private final int highWaterMark;
   private final int lowWaterMark;
   private final long readerIdleNanos;
@@ -372,6 +381,7 @@ final class KeyValueConnection {
     this.eventBus = endpointContext.environment().eventBus();
     this.ioConfig = endpointContext.environment().ioConfig();
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
+    this.captureTraffic = ioConfig.servicesToCapture().contains(ServiceType.KV);
 
     this.highWaterMark = ioConfig.highWaterMark().bytesAsInt();
     this.lowWaterMark = ioConfig.lowWaterMark().bytesAsInt();
@@ -520,6 +530,7 @@ final class KeyValueConnection {
           @Override
           public void write(ByteBuf packet) throws IOException {
             try {
+              captureWritten(packet);
               packet.readBytes(output, packet.readableBytes());
             } catch (IOException e) {
               throw withPendingTlsAlert(connector, e, input);
@@ -540,7 +551,9 @@ final class KeyValueConnection {
           @Override
           public ByteBuf read() throws IOException {
             s.setSoTimeout(remainingMillis(deadlineNanos));
-            return readPacket(input);
+            ByteBuf packet = readPacket(input);
+            captureRead(packet);
+            return packet;
           }
         },
         requestedFeatures,
@@ -794,6 +807,7 @@ final class KeyValueConnection {
       }
       int opaque = request.opaque();
       inFlight.put(opaque, new InFlight(request, System.nanoTime(), dispatchSpan));
+      captureWritten(outbound.encoded);
       outbound.encoded.readBytes(output, outbound.encoded.readableBytes());
     } finally {
       outbound.encoded.release();
@@ -955,6 +969,7 @@ final class KeyValueConnection {
 
   private void handle(ByteBuf packet) {
     try {
+      captureRead(packet);
       handleInbound(packet);
     } catch (RuntimeException e) {
       // Like Netty's pipeline, which reports a handler's exception, and carries on.
@@ -1262,6 +1277,26 @@ final class KeyValueConnection {
     // once a minute, so there's little danger of running out of memory due to too many of them piling up.
     if (!send(req)) {
       log.debug("Failed to send authentication refresh request, but that's probably okay because channel is closed. Channel: {}", this);
+    }
+  }
+
+  // ---- traffic capture
+
+  /**
+   * Publishes the packet about to be written, if capturing traffic. Doesn't change the buffer.
+   */
+  private void captureWritten(ByteBuf packet) {
+    if (captureTraffic) {
+      eventBus.publish(new WriteTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+    }
+  }
+
+  /**
+   * Publishes the packet just read, if capturing traffic. Doesn't change the buffer.
+   */
+  private void captureRead(ByteBuf packet) {
+    if (captureTraffic) {
+      eventBus.publish(new ReadTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
     }
   }
 
