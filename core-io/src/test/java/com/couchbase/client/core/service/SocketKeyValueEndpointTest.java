@@ -28,6 +28,7 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEve
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
+import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
@@ -83,6 +84,7 @@ import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -479,6 +481,31 @@ class SocketKeyValueEndpointTest {
     // Reconnects.
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED
       && !endpoint.context().channelId().orElse("").equals(firstChannelId));
+
+    // Like the Netty implementation, the server closing the connection isn't reported as a failure.
+    assertTrue(events(GenericFailureDetectedEvent.class).isEmpty());
+  }
+
+  @Test
+  void reportsWhyTheConnectionFailed() throws Exception {
+    start();
+    startServer();
+    server.handler((connection, request) -> {
+      if (request.is(MemcacheProtocol.Opcode.GET)) {
+        connection.socket.setSoLinger(true, 0); // so closing resets the connection
+        connection.close();
+      } else {
+        connection.respond(request, STATUS_SUCCESS);
+      }
+    });
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+
+    endpoint.send(newGetRequest("foo", FailFastRetryStrategy.INSTANCE));
+
+    GenericFailureDetectedEvent failure = waitForEvent(GenericFailureDetectedEvent.class);
+    assertInstanceOf(SocketException.class, failure.cause());
+    waitForEvent(UnexpectedEndpointDisconnectedEvent.class);
+    assertEquals(1, events(GenericFailureDetectedEvent.class).size());
   }
 
   @Test

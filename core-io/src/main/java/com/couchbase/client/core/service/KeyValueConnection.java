@@ -786,7 +786,9 @@ final class KeyValueConnection {
     } catch (Throwable t) {
       failure = t;
     } finally {
-      close(failure);
+      if (close(failure)) {
+        reportFailure(failure);
+      }
       threadFinished();
     }
   }
@@ -964,7 +966,9 @@ final class KeyValueConnection {
     } catch (Throwable t) {
       failure = t;
     } finally {
-      close(failure);
+      if (close(failure)) {
+        reportFailure(failure);
+      }
       threadFinished();
     }
   }
@@ -1341,6 +1345,22 @@ final class KeyValueConnection {
     queue.add(CLOSE);
     LockSupport.unpark(writerThread);
     return true;
+  }
+
+  /**
+   * Reports why the reader or writer failed, when that's what closed the connection. Like the Netty implementation's
+   * PipelineErrorHandler, which doesn't report the server closing the connection, either.
+   */
+  private void reportFailure(@Nullable Throwable failure) {
+    if (failure == null || failure instanceof EOFException || failure instanceof InvalidPacketException) {
+      return; // the server closed the connection, or the packet was already reported
+    }
+    if (failure instanceof SSLException) {
+      endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
+      eventBus.publish(new SecureConnectionFailedEvent(ioContext, (SSLException) failure));
+    } else {
+      eventBus.publish(new GenericFailureDetectedEvent(ioContext, failure));
+    }
   }
 
   private void closeWithReason(ChannelClosedProactivelyEvent.Reason reason) {
