@@ -28,9 +28,11 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointConnectionFailedEve
 import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnectedEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.FeaturesNegotiatedEvent;
+import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
+import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
@@ -976,6 +978,44 @@ class SocketKeyValueEndpointTest {
     assertNotNull(endpoint.internalDiagnostics().tlsHandshakeFailure);
     assertEquals(AuthenticationStatus.FAILED, endpoint.internalDiagnostics().authenticationStatus);
     assertFalse(endpoint.state() == EndpointState.CONNECTED);
+  }
+
+  @Test
+  void capturesTrafficWhenEnabled() throws Exception {
+    start(env -> env.ioConfig(it -> it.captureTraffic(ServiceType.KV)));
+    startServer();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+
+    GetRequest request = newGetRequest("captured-key");
+    endpoint.send(request);
+    request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+    // Like the Netty implementation's TrafficCaptureHandler: every packet, handshake included.
+    List<String> written = events(WriteTrafficCapturedEvent.class).stream().map(Event::description).collect(Collectors.toList());
+    List<String> read = events(ReadTrafficCapturedEvent.class).stream().map(Event::description).collect(Collectors.toList());
+    assertTrue(written.stream().anyMatch(it -> it.contains("(HELLO)")), String.join("", written));
+    assertTrue(read.stream().anyMatch(it -> it.contains("(HELLO)")), String.join("", read));
+    assertTrue(written.stream().anyMatch(it -> it.contains("(GET)") && it.contains("captured-key")), String.join("", written));
+    assertTrue(read.stream().anyMatch(it -> it.contains("(GET)") && it.contains("(SUCCESS)")), String.join("", read));
+
+    // The credentials are masked.
+    String saslAuth = written.stream().filter(it -> it.contains("(SASL_AUTH)")).findFirst().orElseThrow(AssertionError::new);
+    assertTrue(saslAuth.contains("(Hex dump omitted for SASL packet)"), saslAuth);
+    assertTrue(written.stream().noneMatch(it -> it.contains(PASSWORD)), "the password should not be captured");
+  }
+
+  @Test
+  void doesNotCaptureTrafficByDefault() throws Exception {
+    start();
+    startServer();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+
+    GetRequest request = newGetRequest("foo");
+    endpoint.send(request);
+    request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+    assertTrue(events(WriteTrafficCapturedEvent.class).isEmpty());
+    assertTrue(events(ReadTrafficCapturedEvent.class).isEmpty());
   }
 
   @Test

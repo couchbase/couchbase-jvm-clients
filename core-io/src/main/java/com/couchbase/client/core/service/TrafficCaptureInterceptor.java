@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.TrafficCaptureMasking;
 import com.couchbase.client.core.msg.RequestContext;
 import okhttp3.Connection;
 import okhttp3.Headers;
@@ -47,8 +48,12 @@ import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
+import static com.couchbase.client.core.io.TrafficCaptureMasking.MASKED;
+import static com.couchbase.client.core.io.TrafficCaptureMasking.maskAuthorization;
+import static com.couchbase.client.core.io.TrafficCaptureMasking.maskSecretFields;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Captures the HTTP traffic of the services in {@link IoConfig#servicesToCapture()}, like the Netty endpoints'
@@ -61,9 +66,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * Otherwise, it's captured as a hex dump, in the same format as the Netty endpoints'.
  * <p>
  * Unlike the Netty endpoints, which capture the bytes on the wire (as hex dumps), this captures the HTTP messages
- * as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included,
- * and the Authorization header's value is redacted. (Capturing the bytes inside a TLS connection would mean wrapping
- * OkHttp's SSLSocket, which OkHttp depends on the exact type of.)
+ * as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included.
+ * (Capturing the bytes inside a TLS connection would mean wrapping OkHttp's SSLSocket, which OkHttp depends on
+ * the exact type of.)
+ * <p>
+ * Credentials in requests are masked like the Netty endpoints' (see {@link TrafficCaptureMasking}): the credential
+ * in the Authorization header (keeping the auth scheme), the Content-Length header's value, and the values of known
+ * secret fields in form-encoded and JSON bodies.
  * <p>
  * Added as a network interceptor, so it sees each request as sent on the connection.
  * <p>
@@ -168,7 +177,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
       sb.append('?').append(request.url().encodedQuery());
     }
     sb.append(" HTTP/1.1\n");
-    appendHeaders(sb, request.headers(), name -> name.equalsIgnoreCase("Authorization"));
+    appendHeaders(sb, request.headers(), TrafficCaptureInterceptor::maskRequestHeader);
 
     RequestBody body = request.body();
     if (body != null) {
@@ -176,10 +185,48 @@ final class TrafficCaptureInterceptor implements Interceptor {
       body.writeTo(buffer);
       byte[] bytes = buffer.readByteArray();
       sb.append('\n').append(isTextual(request.header("Content-Type"))
-        ? framedText(new String(bytes, UTF_8), 0, bytes.length)
-        : hexDump(bytes, 0));
+        ? maskedText(bytes)
+        : hexDump(withSecretFieldsMasked(bytes), 0));
     }
     return sb.toString();
+  }
+
+  /**
+   * Returns the value of a request header as captured: masked if it's a credential, or if it's Content-Length
+   * (when a body field is masked, the original length would reveal the secret's length), like the Netty endpoints.
+   */
+  private static String maskRequestHeader(String name, String value) {
+    if (name.equalsIgnoreCase("Authorization")) {
+      return maskAuthorization(value);
+    }
+    if (name.equalsIgnoreCase("Content-Length")) {
+      return MASKED;
+    }
+    return value;
+  }
+
+  /**
+   * Returns a textual request body as framed text, with the values of secret fields masked. If any were masked,
+   * the frame gives the length of the masked text, since the original length would reveal the secrets' lengths.
+   */
+  private static String maskedText(byte[] bytes) {
+    String text = new String(bytes, UTF_8);
+    String masked = maskSecretFields(text);
+    return masked == text
+      ? framedText(text, 0, bytes.length)
+      : framedText(masked, 0, masked.getBytes(UTF_8).length);
+  }
+
+  /**
+   * Returns a request body (that isn't text) with the values of secret fields masked, like the Netty endpoints'
+   * hex dumps.
+   */
+  private static byte[] withSecretFieldsMasked(byte[] bytes) {
+    // ISO-8859-1 maps each byte to exactly one char, so the masked string converts back
+    // to the original bytes everywhere except where something was masked.
+    String original = new String(bytes, ISO_8859_1);
+    String masked = maskSecretFields(original);
+    return masked == original ? bytes : masked.getBytes(ISO_8859_1);
   }
 
   /**
@@ -268,14 +315,17 @@ final class TrafficCaptureInterceptor implements Interceptor {
     // Protocol.toString() is lowercase ("http/1.1"); the status line has it in uppercase.
     StringBuilder sb = new StringBuilder()
       .append(response.protocol().toString().toUpperCase(Locale.ROOT)).append(' ').append(response.code()).append(' ').append(response.message()).append('\n');
-    appendHeaders(sb, response.headers(), name -> false);
+    appendHeaders(sb, response.headers(), (name, value) -> value);
     return sb.toString();
   }
 
-  private static void appendHeaders(StringBuilder sb, Headers headers, Function<String, Boolean> redact) {
+  /**
+   * @param capturedValue given a header's name and value, returns the value to capture.
+   */
+  private static void appendHeaders(StringBuilder sb, Headers headers, BiFunction<String, String, String> capturedValue) {
     for (int i = 0; i < headers.size(); i++) {
       String name = headers.name(i);
-      sb.append(name).append(": ").append(redact.apply(name) ? "<redacted>" : headers.value(i)).append('\n');
+      sb.append(name).append(": ").append(capturedValue.apply(name, headers.value(i))).append('\n');
     }
   }
 
