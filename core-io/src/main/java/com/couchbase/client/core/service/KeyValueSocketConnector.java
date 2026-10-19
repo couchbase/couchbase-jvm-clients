@@ -26,6 +26,7 @@ import javax.net.SocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -89,7 +90,8 @@ public final class KeyValueSocketConnector {
    * so the caller can close it to stop the attempt.
    * @param onTcpConnected called once the TCP connection is open, before the TLS handshake (if any).
    * @return the connected socket. Its read timeout is whatever time is left before the deadline.
-   * @throws SocketTimeoutException if the deadline passes.
+   * @throws ConnectException if the deadline passes before the TCP connection is open.
+   * @throws SocketTimeoutException if the deadline passes during the TLS handshake.
    * @throws IOException if connecting fails. If the TLS handshake fails, it's (or it's caused by)
    * an {@link javax.net.ssl.SSLException}.
    */
@@ -105,7 +107,7 @@ public final class KeyValueSocketConnector {
       onSocket.accept(socket);
       // Resolves the host name (blocking, with the OS's own timeout), like Netty's default resolver.
       InetSocketAddress address = new InetSocketAddress(host, port);
-      socket.connect(address, remainingMillis(deadlineNanos));
+      connectTcp(socket, address, deadlineNanos);
       onTcpConnected.run();
 
       if (tlsSocketFactory == null) {
@@ -125,6 +127,22 @@ public final class KeyValueSocketConnector {
     } catch (IOException | RuntimeException e) {
       closeQuietly(socket);
       throw e;
+    }
+  }
+
+  /**
+   * @throws ConnectException if the deadline passes. Like Netty's ConnectTimeoutException, so it gets the same
+   * hint (see {@code BaseEndpoint.annotateConnectException}).
+   */
+  private static void connectTcp(Socket socket, InetSocketAddress address, long deadlineNanos) throws IOException {
+    long timeoutMillis = 0;
+    try {
+      timeoutMillis = remainingMillis(deadlineNanos);
+      socket.connect(address, (int) timeoutMillis);
+    } catch (SocketTimeoutException e) {
+      ConnectException timedOut = new ConnectException("connection timed out after " + timeoutMillis + " ms: " + address);
+      timedOut.initCause(e);
+      throw timedOut;
     }
   }
 
