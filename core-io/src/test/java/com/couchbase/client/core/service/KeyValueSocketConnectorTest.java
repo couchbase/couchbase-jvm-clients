@@ -27,10 +27,14 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -58,6 +62,110 @@ class KeyValueSocketConnectorTest {
     assertEquals(
       e.getMessage() + " - Check server ports and cluster encryption setting.",
       BaseEndpoint.annotateConnectException(e).getMessage()
+    );
+  }
+
+  @Test
+  void hostNameLookupGivesUpWhenTheDeadlinePasses() throws Exception {
+    CountDownLatch release = new CountDownLatch(1);
+    try {
+      KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
+        // Like a DNS server that doesn't answer.
+        try {
+          release.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        throw new UnknownHostException(host);
+      });
+
+      long start = System.nanoTime();
+      UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connect(
+        "node1.example",
+        11210,
+        System.nanoTime() + Duration.ofMillis(200).toNanos(),
+        socket -> {},
+        () -> {}
+      ));
+
+      assertTrue(e.getMessage().matches("node1\\.example: timed out after \\d+ ms"), e.getMessage());
+      Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
+      assertTrue(elapsed.compareTo(Duration.ofMillis(150)) >= 0 && elapsed.compareTo(Duration.ofSeconds(5)) < 0, elapsed.toString());
+    } finally {
+      release.countDown();
+    }
+  }
+
+  @Test
+  void connectAttemptsShareALookupInProgress() throws Exception {
+    AtomicInteger lookups = new AtomicInteger();
+    CountDownLatch release = new CountDownLatch(1);
+    try {
+      KeyValueSocketConnector connector = newConnector(new TimingOutSocketFactory(), host -> {
+        lookups.incrementAndGet();
+        try {
+          release.await();
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        return InetAddress.getLoopbackAddress();
+      });
+
+      // Both give up waiting for the same lookup.
+      for (int i = 0; i < 2; i++) {
+        assertThrows(UnknownHostException.class, () -> connector.connect(
+          "node1.example",
+          11210,
+          System.nanoTime() + Duration.ofMillis(100).toNanos(),
+          socket -> {},
+          () -> {}
+        ));
+      }
+      assertEquals(1, lookups.get());
+
+      // Once it's done, the next connect attempt looks up the host again. (The socket factory's connect times out.)
+      release.countDown();
+      long giveUp = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+      while (lookups.get() < 2 && System.nanoTime() < giveUp) {
+        assertThrows(ConnectException.class, () -> connector.connect(
+          "node1.example",
+          11210,
+          System.nanoTime() + Duration.ofSeconds(5).toNanos(),
+          socket -> {},
+          () -> {}
+        ));
+      }
+      assertEquals(2, lookups.get());
+    } finally {
+      release.countDown();
+    }
+  }
+
+  @Test
+  void failedHostNameLookupIsReported() {
+    UnknownHostException lookupFailure = new UnknownHostException("node1.example: nodename nor servname provided, or not known");
+    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
+      throw lookupFailure;
+    });
+
+    UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connect(
+      "node1.example",
+      11210,
+      System.nanoTime() + Duration.ofSeconds(10).toNanos(),
+      socket -> {},
+      () -> {}
+    ));
+    assertEquals(lookupFailure.getMessage(), e.getMessage());
+    assertSame(lookupFailure, e.getCause());
+  }
+
+  private static KeyValueSocketConnector newConnector(SocketFactory socketFactory, KeyValueSocketConnector.HostResolver hostResolver) {
+    return new KeyValueSocketConnector(
+      socketFactory,
+      SecurityConfig.builder().build(),
+      PasswordAuthenticator.create("user", "password"),
+      Duration.ofSeconds(10),
+      hostResolver
     );
   }
 
