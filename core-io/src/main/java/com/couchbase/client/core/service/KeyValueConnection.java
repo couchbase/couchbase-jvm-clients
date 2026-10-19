@@ -616,6 +616,9 @@ final class KeyValueConnection {
       ioContext = new IoContext(endpointContext, s.getLocalSocketAddress(), s.getRemoteSocketAddress(), endpointContext.bucket());
     }
     endpointContext.tlsHandshakeFailure(e);
+    if (OkHttpTlsHelper.connectionFailedDuringTls(e)) {
+      return tlsFailure; // might be temporary
+    }
     endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
     eventBus.publish(new SecureConnectionFailedEvent(ioContext, tlsFailure));
     // With a hint saying what to check, if retrying won't help.
@@ -1355,7 +1358,7 @@ final class KeyValueConnection {
     if (failure == null || failure instanceof EOFException || failure instanceof InvalidPacketException) {
       return; // the server closed the connection, or the packet was already reported
     }
-    if (failure instanceof SSLException) {
+    if (failure instanceof SSLException && !OkHttpTlsHelper.connectionFailedDuringTls(failure)) {
       endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
       eventBus.publish(new SecureConnectionFailedEvent(ioContext, (SSLException) failure));
     } else {
