@@ -46,6 +46,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
@@ -668,12 +669,13 @@ final class KeyValueConnection {
     }
 
     if (!MemcacheProtocol.verifyRequest(encoded)) {
-      // Like MemcacheProtocolVerificationHandler.
+      // Reported like MemcacheProtocolVerificationHandler, but the request fails instead of the connection closing.
+      // Nothing was written, so the connection is still good. A retry would encode the same bad packet.
       byte[] packet = ByteBufUtil.getBytes(encoded);
       encoded.release();
       eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));
-      close(new IOException("Request failed verification"));
-      return false;
+      request.fail(new EncodingFailureException("Outgoing packet failed structure verification"));
+      return true;
     }
 
     enqueue(new Outbound(request, encoded));
