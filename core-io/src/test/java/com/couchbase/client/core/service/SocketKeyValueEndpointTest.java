@@ -77,8 +77,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import reactor.core.publisher.Mono;
 
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocket;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
@@ -118,6 +120,7 @@ import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -638,6 +641,44 @@ class SocketKeyValueEndpointTest {
     assertTrue(failed.duration().compareTo(Duration.ofMillis(250)) >= 0 && failed.duration().compareTo(Duration.ofSeconds(5)) < 0,
       failed.duration().toString());
     assertTrue(events(SecureConnectionFailedEvent.class).isEmpty(), "a timeout isn't a TLS failure");
+  }
+
+  /**
+   * Like a server that's restarting. Like the Netty implementation, records the handshake failure,
+   * but doesn't treat it as a TLS (or authentication) failure, since it might be temporary.
+   */
+  @Test
+  void serverClosingTheConnectionDuringTlsHandshakeIsNotATlsFailure() throws Exception {
+    HeldCertificate cert = new HeldCertificate.Builder().addSubjectAlternativeName(HOST).build();
+    start(env -> env.securityConfig(it -> it.enableTls(true).trustCertificates(listOf(cert.certificate()))));
+    // Reads the ClientHello, then closes the connection (cleanly: closing with unread bytes would reset it).
+    ServerSocket closing = new ServerSocket(0, 50, InetAddress.getByName(HOST));
+    Thread acceptor = new Thread(() -> {
+      try {
+        while (true) {
+          try (Socket s = closing.accept()) {
+            DataInputStream in = new DataInputStream(s.getInputStream());
+            byte[] recordHeader = new byte[5];
+            in.readFully(recordHeader);
+            in.readFully(new byte[((recordHeader[3] & 0xff) << 8) | (recordHeader[4] & 0xff)]);
+          }
+        }
+      } catch (IOException e) {
+        // closed
+      }
+    });
+    acceptor.setDaemon(true);
+    acceptor.start();
+    cleanup.add(0, closing::close);
+
+    SocketKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), closing.getLocalPort());
+    endpoint.connect();
+
+    EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
+    assertInstanceOf(SSLException.class, failed.cause());
+    assertNotNull(endpoint.internalDiagnostics().tlsHandshakeFailure);
+    assertNotEquals(AuthenticationStatus.FAILED, endpoint.internalDiagnostics().authenticationStatus);
+    assertTrue(events(SecureConnectionFailedEvent.class).isEmpty());
   }
 
   @Test

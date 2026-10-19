@@ -33,11 +33,14 @@ import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICA
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NOT_TLS_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.NO_COMMON_PARAMETERS_HINT;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.connectionFailedDuringTls;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.describeTlsFailure;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.permanentTlsFailureHint;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OkHttpTlsHelperTest {
 
@@ -131,6 +134,22 @@ class OkHttpTlsHelperTest {
     Exception cause = new RuntimeException(new CertificateException("Unable to initialize"));
     assertNull(permanentTlsFailureHint(new PerConnectionSslSocketFactory.CertificatesUnavailableException(cause)));
     assertNull(permanentTlsFailureHint(brokenPipeWithSuppressed(new PerConnectionSslSocketFactory.CertificatesUnavailableException(cause))));
+  }
+
+  @Test
+  void connectionFailingDuringTls() {
+    SSLHandshakeException terminated = new SSLHandshakeException("Remote host terminated the handshake");
+    terminated.initCause(new EOFException("SSL peer shut down incorrectly"));
+    assertTrue(connectionFailedDuringTls(terminated));
+    assertTrue(connectionFailedDuringTls(new SSLException("Connection reset", new SocketException("Connection reset"))));
+    Exception cause = new RuntimeException(new CertificateException("Unable to initialize"));
+    assertTrue(connectionFailedDuringTls(new PerConnectionSslSocketFactory.CertificatesUnavailableException(cause)));
+
+    // TLS rejecting the connection, even if retrying might help.
+    assertFalse(connectionFailedDuringTls(new SSLHandshakeException("Received fatal alert: internal_error")));
+    assertFalse(connectionFailedDuringTls(new SSLException("Tag mismatch", new AEADBadTagException("Tag mismatch"))));
+    // The connection failed because of the alert.
+    assertFalse(connectionFailedDuringTls(brokenPipeWithSuppressed(new SSLHandshakeException("Received fatal alert: unknown_ca"))));
   }
 
   @Test

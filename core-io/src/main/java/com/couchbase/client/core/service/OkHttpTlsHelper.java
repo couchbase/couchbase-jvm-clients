@@ -40,7 +40,9 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.EOFException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -270,6 +272,17 @@ class OkHttpTlsHelper {
       }
     }
     return failures.isEmpty() ? null : failures.get(0);
+  }
+
+  /**
+   * Returns true if the TLS failure is the connection failing (for example, the server closed it during the handshake
+   * because it's restarting), or the SDK couldn't get the certificates, rather than TLS rejecting the connection.
+   * Like the Netty implementation, which doesn't count those as TLS failures, either.
+   */
+  static boolean connectionFailedDuringTls(Throwable t) {
+    List<SSLException> failures = tlsFailures(t);
+    return certificatesUnavailable(failures)
+      || failures.stream().allMatch(it -> hasCause(it, EOFException.class) || hasCause(it, SocketException.class));
   }
 
   /**
