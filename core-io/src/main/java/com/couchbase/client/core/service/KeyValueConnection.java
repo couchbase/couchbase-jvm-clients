@@ -78,9 +78,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -131,17 +128,6 @@ final class KeyValueConnection {
     ? CbThreads.unboundedExecutorService("cb-kv-io-")
     : Executors.newCachedThreadPool(CbThreads.platformThreadFactory("cb-kv-io-"));
 
-  /**
-   * Runs {@link #checkStuckWriter} for every connection. One thread is plenty: the checks are quick.
-   */
-  private static final ScheduledThreadPoolExecutor stuckWriterChecks = newStuckWriterChecks();
-
-  private static ScheduledThreadPoolExecutor newStuckWriterChecks() {
-    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, CbThreads.platformThreadFactory("cb-kv-idle-"));
-    executor.setRemoveOnCancelPolicy(true);
-    return executor;
-  }
-
   static final int BUFFER_SIZE = 64 * 1024;
 
   /**
@@ -149,25 +135,6 @@ final class KeyValueConnection {
    * {@code FlushConsolidationHandler} (which uses the same default).
    */
   private static final int FLUSH_CONSOLIDATION_LIMIT = 256;
-
-  /**
-   * How often the writer checks whether the server has been quiet, at most.
-   */
-  private static final long MAX_IDLE_CHECK_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1);
-
-  /**
-   * Like the Netty implementation's IdleStateHandler, which waits at least this long.
-   */
-  private static final long MIN_READER_IDLE_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
-
-  /**
-   * Returns how long the server can be quiet before the connection sends a NOOP: half the idle timeout.
-   * Or 0 if there's no idle detection: like the Netty implementation's IdleStateHandler, if it's not positive.
-   */
-  static long readerIdleNanos(Duration configIdleRedialTimeout) {
-    long half = configIdleRedialTimeout.toNanos() / 2;
-    return half <= 0 ? 0 : Math.max(half, MIN_READER_IDLE_NANOS);
-  }
 
   /**
    * What the connection tells its endpoint.
@@ -212,9 +179,6 @@ final class KeyValueConnection {
   private final IoConfig ioConfig;
   private final boolean isInternalTracer;
 
-  private final long readerIdleNanos;
-  private final long idleCheckIntervalNanos;
-
   /**
    * The connection's ID (see {@link KeyValueConnectionOpener}).
    */
@@ -255,11 +219,7 @@ final class KeyValueConnection {
    */
   private final Map<Integer, InFlight> inFlight = new ConcurrentHashMap<>();
 
-  private volatile long lastReadNanos;
-  private volatile boolean noopSentSinceLastRead;
-
-  // Only accessed by the writer.
-  private long noopSentNanos;
+  private final KeyValueIdleDetector idle;
 
   /**
    * Whether the reader should ignore the responses it already read, once the connection is closed.
@@ -268,17 +228,9 @@ final class KeyValueConnection {
   private boolean discardUnreadResponses;
 
   /**
-   * Whether the writer is writing (so it might be blocked, and can't run {@link #checkIdle}).
-   */
-  private volatile boolean writing;
-
-  /**
    * The reader and the writer. The last one to finish retries the connection's requests.
    */
   private final AtomicInteger runningThreads = new AtomicInteger(2);
-
-  // Guarded by "this".
-  private @Nullable ScheduledFuture<?> stuckWriterCheck;
 
   /**
    * Called by {@link KeyValueConnectionOpener}, once it has connected and done the handshake.
@@ -328,9 +280,17 @@ final class KeyValueConnection {
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
 
     this.queue = new KeyValueOutboundQueue(ioConfig.highWaterMark().bytesAsInt(), ioConfig.lowWaterMark().bytesAsInt());
-    // Like the Netty implementation's IdleStateHandler: NOOP after half the idle time, close after all of it.
-    this.readerIdleNanos = readerIdleNanos(ioConfig.configIdleRedialTimeout());
-    this.idleCheckIntervalNanos = Math.min(readerIdleNanos, MAX_IDLE_CHECK_INTERVAL_NANOS);
+    this.idle = new KeyValueIdleDetector(ioConfig.configIdleRedialTimeout(), new KeyValueIdleDetector.Connection() {
+      @Override
+      public void writeNoop() throws IOException {
+        KeyValueConnection.this.writeNoop(out);
+      }
+
+      @Override
+      public void closeBecauseIdle() {
+        KeyValueConnection.this.closeBecauseIdle();
+      }
+    });
 
     this.responses = new KeyValueResponseHandler(
       endpointContext,
@@ -404,17 +364,10 @@ final class KeyValueConnection {
    * Starts the reader and writer. Call once.
    */
   void start() {
-    lastReadNanos = System.nanoTime();
+    idle.start();
     startThread(this::runReader);
     startThread(this::runWriter);
 
-    synchronized (this) {
-      if (!closed.get() && idleDetectionEnabled()) {
-        stuckWriterCheck = stuckWriterChecks.scheduleWithFixedDelay(
-          this::checkStuckWriter, idleCheckIntervalNanos, idleCheckIntervalNanos, TimeUnit.NANOSECONDS
-        );
-      }
-    }
     if (authenticationRefresh.start(this::onAuthenticationRefreshSignal)) {
       log.info("Immediately reauthenticating the channel because a new authenticator was provided during the handshake process. Channel: {}", this);
       reauthenticate();
@@ -516,7 +469,7 @@ final class KeyValueConnection {
       OutputStream output = out;
       while (!closed.get()) {
         int written = 0;
-        writing = true;
+        idle.startedWriting();
         Outbound outbound;
         while (written < FLUSH_CONSOLIDATION_LIMIT && (outbound = queue.poll()) != null) {
           if (outbound == KeyValueOutboundQueue.CLOSE) {
@@ -533,12 +486,12 @@ final class KeyValueConnection {
         if (written > 0) {
           output.flush();
         }
-        checkIdle(output); // might write a NOOP
-        writing = false;
+        idle.check(); // might write a NOOP
+        idle.finishedWriting();
 
         if (written == 0) {
           // Until there's something to write, or the connection closes (or it's time to check whether it's idle).
-          queue.awaitRequests(idleDetectionEnabled() ? idleCheckIntervalNanos : 0);
+          queue.awaitRequests(idle.checkIntervalNanos());
         }
       }
     } catch (Throwable t) {
@@ -611,44 +564,6 @@ final class KeyValueConnection {
     setCommonKVSpanAttributes(dispatchSpan, request);
   }
 
-  /**
-   * Like KeyValueMessageHandler with its IdleStateHandler: if the server has been quiet for half the idle timeout,
-   * sends a NOOP (so a healthy connection answers); if it's quiet for all of it, closes the connection.
-   */
-  private void checkIdle(OutputStream output) throws IOException {
-    if (!idleDetectionEnabled()) {
-      return;
-    }
-    long now = System.nanoTime();
-    if (!noopSentSinceLastRead) {
-      if (now - lastReadNanos >= readerIdleNanos) {
-        noopSentNanos = now;
-        noopSentSinceLastRead = true;
-        writeNoop(output);
-      }
-
-    } else if (now - noopSentNanos >= readerIdleNanos) {
-      // Nothing for a whole idle period after the NOOP (measured from when it was sent, like the Netty
-      // implementation's second idle event), so nothing for at least io.configIdleRedialTimeout in all.
-      closeBecauseIdle();
-    }
-  }
-
-  private boolean idleDetectionEnabled() {
-    return readerIdleNanos > 0;
-  }
-
-  /**
-   * Does what {@link #checkIdle} would, if the writer is stuck writing (because the server isn't reading):
-   * closes the connection if the server has been quiet for io.configIdleRedialTimeout. Like the Netty
-   * implementation, whose idle check runs whether or not its writes are stuck.
-   */
-  private void checkStuckWriter() {
-    if (writing && System.nanoTime() - lastReadNanos >= 2 * readerIdleNanos) {
-      closeBecauseIdle();
-    }
-  }
-
   private void closeBecauseIdle() {
     if (closed.get()) {
       return;
@@ -669,7 +584,7 @@ final class KeyValueConnection {
     // and have no effect when the request is written directly
     // like this. That's okay, because they're not needed here;
     // we're just trying to get a healthy server to send something,
-    // so checkIdle doesn't close the connection as idle.
+    // so the idle detector doesn't close the connection.
     NoopRequest req = new NoopRequest(
       ioConfig.configIdleRedialTimeout(), // not actually enforced
       endpointContext.core().context(),
@@ -701,8 +616,7 @@ final class KeyValueConnection {
             queue.endReadBatch();
           }
           packets.fill();
-          lastReadNanos = System.nanoTime();
-          noopSentSinceLastRead = false;
+          idle.read();
           continue;
         }
 
@@ -897,12 +811,7 @@ final class KeyValueConnection {
     closeCause = cause;
 
     authenticationRefresh.unsubscribe();
-    synchronized (this) {
-      if (stuckWriterCheck != null) {
-        stuckWriterCheck.cancel(false);
-        stuckWriterCheck = null;
-      }
-    }
+    idle.stop();
 
     // Close the TCP socket first: closing a TLS socket might wait to send close_notify while the writer
     // is blocked writing.
