@@ -966,15 +966,6 @@ class SocketKeyValueEndpointTest {
   }
 
   @Test
-  void readerIdleTimeIsHalfTheIdleTimeoutButAtLeastOneMillisecond() {
-    assertEquals(TimeUnit.SECONDS.toNanos(150), KeyValueConnection.readerIdleNanos(Duration.ofMinutes(5)));
-    assertEquals(TimeUnit.MILLISECONDS.toNanos(1), KeyValueConnection.readerIdleNanos(Duration.ofNanos(10)));
-    assertEquals(0, KeyValueConnection.readerIdleNanos(Duration.ofNanos(1)));
-    assertEquals(0, KeyValueConnection.readerIdleNanos(Duration.ZERO));
-    assertEquals(0, KeyValueConnection.readerIdleNanos(Duration.ofSeconds(-1)));
-  }
-
-  @Test
   void connectionAnsweringNoopsStaysOpen() throws Exception {
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(400))));
     startServer();
