@@ -105,8 +105,8 @@ import static java.util.Objects.requireNonNull;
  * <p>
  * Like the Netty implementation's {@code FlushConsolidationHandler}, requests sent by the reader thread while it's
  * handling a batch of responses (for example, from a callback that sends the next request when a response arrives)
- * are written together: the reader wakes the writer once, when it has handled every response it already read,
- * instead of once per request.
+ * are written together: the reader wakes the writer once, when it has handled every response it already read
+ * (or every {@value #FLUSH_CONSOLIDATION_LIMIT} requests, if the batch goes on), instead of once per request.
  * When the connection closes (because either thread failed, the server closed it, or {@link #close} was called),
  * the last thread to finish retries the requests that were queued or in flight, then tells the listener.
  * <p>
@@ -143,8 +143,9 @@ final class KeyValueConnection {
   static final int BUFFER_SIZE = 64 * 1024;
 
   /**
-   * The most requests the writer writes before flushing, like the Netty implementation's
-   * {@code FlushConsolidationHandler} (which uses the same default).
+   * The most requests the writer writes before flushing, and the most requests the reader thread sends while
+   * handling a batch of responses before it wakes the writer. Like the Netty implementation's
+   * {@code FlushConsolidationHandler} (which uses the same default for both).
    */
   private static final int FLUSH_CONSOLIDATION_LIMIT = 256;
 
@@ -302,7 +303,11 @@ final class KeyValueConnection {
     this.ioConfig = endpointContext.environment().ioConfig();
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
 
-    this.queue = new KeyValueOutboundQueue(ioConfig.highWaterMark().bytesAsInt(), ioConfig.lowWaterMark().bytesAsInt());
+    this.queue = new KeyValueOutboundQueue(
+      ioConfig.highWaterMark().bytesAsInt(),
+      ioConfig.lowWaterMark().bytesAsInt(),
+      FLUSH_CONSOLIDATION_LIMIT
+    );
     this.idle = new KeyValueIdleDetector(ioConfig.configIdleRedialTimeout(), new KeyValueIdleDetector.Connection() {
       @Override
       public void sendNoop() {
