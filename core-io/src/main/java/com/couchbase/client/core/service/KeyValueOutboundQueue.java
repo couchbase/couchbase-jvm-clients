@@ -39,7 +39,9 @@ import static java.util.Objects.requireNonNull;
  *   <li>Waking the writer: a sender wakes it only if it's parked (see {@link #awaitRequests}). Requests sent by
  *       the reader thread while it's handling a batch of responses don't wake it; the reader wakes it once,
  *       when it finishes the batch (see {@link #endReadBatch}), so they're written together
- *       (like the Netty implementation's FlushConsolidationHandler).
+ *       (like the Netty implementation's FlushConsolidationHandler). A long batch (for example, one that keeps
+ *       going because each read ends partway through a packet) wakes the writer every so many requests,
+ *       so they don't wait for the batch to end.
  *   <li>Closing: {@link #close} tells the writer to stop. Once the connection's threads are done,
  *       {@link #drain} returns what was never written, and from then on, {@link #add} refuses requests,
  *       so none is left behind.
@@ -75,6 +77,7 @@ final class KeyValueOutboundQueue {
 
   private final int highWaterMark;
   private final int lowWaterMark;
+  private final int maxDeferredWakes;
 
   private final ConcurrentLinkedQueue<Outbound> queue = new ConcurrentLinkedQueue<>();
   private final AtomicLong queuedBytes = new AtomicLong();
@@ -87,13 +90,22 @@ final class KeyValueOutboundQueue {
   private volatile boolean drained;
 
   // Only accessed by the reader thread: whether it's handling responses it has already read,
-  // and whether it sent a request in the meantime without waking the writer.
+  // and how many requests it sent in the meantime without waking the writer.
   private boolean handlingReadBatch;
-  private boolean writerWakeDeferred;
+  private int deferredWakes;
 
-  KeyValueOutboundQueue(int highWaterMark, int lowWaterMark) {
+  /**
+   * @param maxDeferredWakes how many requests the reader thread can send while handling a batch of responses
+   * before it wakes the writer anyway (like the Netty implementation's FlushConsolidationHandler's
+   * explicitFlushAfterFlushes).
+   */
+  KeyValueOutboundQueue(int highWaterMark, int lowWaterMark, int maxDeferredWakes) {
+    if (maxDeferredWakes < 1) {
+      throw new IllegalArgumentException("maxDeferredWakes must be positive, but got " + maxDeferredWakes);
+    }
     this.highWaterMark = highWaterMark;
     this.lowWaterMark = lowWaterMark;
+    this.maxDeferredWakes = maxDeferredWakes;
   }
 
   /**
@@ -122,10 +134,12 @@ final class KeyValueOutboundQueue {
     }
 
     if (Thread.currentThread() == readerThread && handlingReadBatch) {
-      writerWakeDeferred = true; // the reader wakes the writer when it finishes the batch
-    } else {
-      wakeWriter();
+      if (++deferredWakes < maxDeferredWakes) {
+        return true; // the reader wakes the writer when it finishes the batch
+      }
+      deferredWakes = 0; // the batch goes on, so waking it now (for the deferred requests too)
     }
+    wakeWriter();
     return true;
   }
 
@@ -211,8 +225,8 @@ final class KeyValueOutboundQueue {
    */
   void endReadBatch() {
     handlingReadBatch = false;
-    if (writerWakeDeferred) {
-      writerWakeDeferred = false;
+    if (deferredWakes > 0) {
+      deferredWakes = 0;
       wakeWriter();
     }
   }
