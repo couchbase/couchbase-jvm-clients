@@ -196,8 +196,14 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
    * waiting longer after each failed attempt.
    */
   private void connectUntilConnectedOrDisconnected() {
-    for (long attempt = 1; !disconnect.get(); attempt++) {
-      state.transition(EndpointState.CONNECTING);
+    for (long attempt = 1; ; attempt++) {
+      // Under the lock, so if disconnect() comes first, the endpoint stays DISCONNECTED.
+      synchronized (lock) {
+        if (disconnect.get()) {
+          return;
+        }
+        state.transition(EndpointState.CONNECTING);
+      }
 
       EndpointContext ctx = endpointContext.get();
       Duration connectTimeout = ctx.environment().timeoutConfig().connectTimeout();
@@ -213,27 +219,34 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
           connecting = conn;
         }
         conn.open(connector, start + connectTimeout.toNanos());
+        connected(ctx, conn, start);
+        return;
 
       } catch (Throwable t) {
+        // Anything that goes wrong is a failed attempt (rather than ending the loop, which would leave the endpoint
+        // CONNECTING, with nothing reconnecting). Including connected() failing: it only throws before it hands
+        // the connection over.
         synchronized (lock) {
           connecting = null;
         }
-        state.transition(EndpointState.DISCONNECTED);
-        Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
-        if (disconnect.get()) {
-          ctx.environment().eventBus().publish(new EndpointConnectionAbortedEvent(elapsed, ctx, timings(conn)));
-          return;
+        if (conn != null) {
+          conn.close();
         }
-
-        reportConnectFailure(ctx, t, t instanceof TimeoutException ? connectTimeout : elapsed, attempt);
+        try {
+          state.transition(EndpointState.DISCONNECTED);
+          Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
+          if (disconnect.get()) {
+            ctx.environment().eventBus().publish(new EndpointConnectionAbortedEvent(elapsed, ctx, timings(conn)));
+            return;
+          }
+          reportConnectFailure(ctx, t, t instanceof TimeoutException ? connectTimeout : elapsed, attempt);
+        } catch (Throwable reportingFailure) {
+          log.warn("Failed to report a failed attempt to connect; trying again.", reportingFailure);
+        }
         if (!waitBeforeReconnecting(attempt)) {
           return; // told to disconnect while waiting
         }
-        continue;
       }
-
-      connected(ctx, conn, start);
-      return;
     }
   }
 
@@ -267,11 +280,15 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
   private boolean waitBeforeReconnecting(long attempt) {
     long delayMillis = FIRST_RECONNECT_DELAY.toMillis() << Math.min(attempt - 1, 30);
     delayMillis = Math.min(delayMillis, MAX_RECONNECT_DELAY.toMillis());
-    try {
-      return !disconnectSignal.await(delayMillis, TimeUnit.MILLISECONDS);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      return false;
+    long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayMillis);
+    while (true) {
+      try {
+        return !disconnectSignal.await(deadline - System.nanoTime(), TimeUnit.NANOSECONDS);
+      } catch (InterruptedException e) {
+        // Only disconnect() stops reconnecting (otherwise the endpoint would stay DISCONNECTED). Nothing in the SDK
+        // interrupts this thread. Doesn't restore the interrupt, which would make the next attempt's I/O fail.
+        log.debug("Ignoring an interrupt while waiting to reconnect; {}", endpointContext.get());
+      }
     }
   }
 
@@ -283,6 +300,8 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
       connecting = null;
 
       if (disconnect.get()) {
+        // Unlike the Netty implementation, doesn't publish EndpointDisconnectedEvent too (when the connection closes):
+        // the endpoint never reported it as connected.
         conn.close();
         ctx.environment().eventBus().publish(new EndpointConnectionIgnoredEvent(elapsed, ctx, conn.timings()));
         return;
@@ -313,10 +332,12 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
 
       // Connected before starting, so if the connection closes right away, closed() sees it was connected.
       // (Requests sent in the meantime wait in the connection's queue.)
+      // Hands the connection over last, and nothing after that throws: if anything before it does,
+      // the connect loop closes the connection, and tries again.
+      state.transition(EndpointState.CONNECTED);
       connection = conn;
       connectionClosed = false;
-      state.transition(EndpointState.CONNECTED);
-      conn.start();
+      conn.start(); // doesn't throw if it can't start a thread: the connection closes (see closed())
     }
   }
 

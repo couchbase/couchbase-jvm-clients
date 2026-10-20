@@ -637,8 +637,8 @@ final class KeyValueConnection {
    */
   void start() {
     lastReadNanos = System.nanoTime();
-    ioThreads.execute(this::runReader);
-    ioThreads.execute(this::runWriter);
+    startThread(this::runReader);
+    startThread(this::runWriter);
 
     boolean reauthenticate;
     synchronized (this) {
@@ -653,6 +653,22 @@ final class KeyValueConnection {
     if (reauthenticate) {
       log.info("Immediately reauthenticating the channel because a new authenticator was provided during the handshake process. Channel: {}", this);
       reauthenticate();
+    }
+  }
+
+  /**
+   * If the thread can't be started (for example, the JVM can't create another platform thread), closes
+   * the connection, and finishes in the thread's place. So once both threads are done, the requests are retried,
+   * and the listener hears the connection closed.
+   */
+  private void startThread(Runnable thread) {
+    try {
+      ioThreads.execute(thread);
+    } catch (Throwable t) {
+      if (close(t)) {
+        reportFailure(t);
+      }
+      threadFinished();
     }
   }
 
