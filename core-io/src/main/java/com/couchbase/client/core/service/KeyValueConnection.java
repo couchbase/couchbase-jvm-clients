@@ -19,15 +19,12 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
-import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -81,8 +78,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
-import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
+import static com.couchbase.client.core.io.netty.TracingUtils.newKeyValueDispatchSpan;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
 import static java.util.Objects.requireNonNull;
@@ -209,9 +205,6 @@ final class KeyValueConnection {
   private final SocketAddress localAddress;
   private final SocketAddress remoteAddress;
 
-  private final AtomicBoolean closed = new AtomicBoolean();
-  private volatile @Nullable Throwable closeCause;
-
   private final KeyValueOutboundQueue queue;
 
   /**
@@ -221,16 +214,27 @@ final class KeyValueConnection {
 
   private final KeyValueIdleDetector idle;
 
+  // Closing. close() sets "closed" (once), and closes the sockets, which stops the reader and the writer.
+  // The last of them to finish fails or retries every request still queued or in flight, then tells the listener
+  // (see threadFinished()). So every request is written and answered, retried, or failed, exactly once.
+
+  private final AtomicBoolean closed = new AtomicBoolean();
+
   /**
-   * Whether the reader should ignore the responses it already read, once the connection is closed.
-   * Only accessed by the reader.
+   * Why the connection closed (null if {@link #close()} was called), for the requests it couldn't write.
    */
-  private boolean discardUnreadResponses;
+  private volatile @Nullable Throwable closeCause;
 
   /**
    * The reader and the writer. The last one to finish retries the connection's requests.
    */
   private final AtomicInteger runningThreads = new AtomicInteger(2);
+
+  /**
+   * Whether the reader should ignore the responses it already read, once the connection is closed
+   * (because they might complete the wrong requests; see {@link KeyValueResponseHandler}). Only accessed by the reader.
+   */
+  private boolean discardUnreadResponses;
 
   /**
    * Called by {@link KeyValueConnectionOpener}, once it has connected and done the handshake.
@@ -513,7 +517,15 @@ final class KeyValueConnection {
       }
       RequestSpan dispatchSpan;
       try {
-        dispatchSpan = newDispatchSpan(request);
+        dispatchSpan = newKeyValueDispatchSpan(
+          request,
+          endpointContext,
+          isInternalTracer,
+          channelId,
+          ioContext,
+          remoteHostname,
+          remotePort
+        );
       } catch (Throwable t) {
         // A broken tracer. Like the Netty implementation, fails the request. (Unlike it, doesn't write the request,
         // since nothing would read its response: the Netty implementation closes the connection when it arrives.)
@@ -527,41 +539,6 @@ final class KeyValueConnection {
     } finally {
       outbound.encoded.release();
     }
-  }
-
-  private @Nullable RequestSpan newDispatchSpan(KeyValueRequest<Response> request) {
-    if (request.requestSpan() == null) {
-      return null;
-    }
-    RequestTracer tracer = endpointContext.coreResources().requestTracer();
-    RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
-
-    if (!isInternalTracer) {
-      try {
-        setDispatchSpanAttributes(dispatchSpan, request);
-      } catch (Throwable t) {
-        dispatchSpan.end();
-        throw t;
-      }
-    }
-    return dispatchSpan;
-  }
-
-  private void setDispatchSpanAttributes(RequestSpan dispatchSpan, KeyValueRequest<Response> request) {
-    setCommonDispatchSpanAttributes(
-      request.context().coreResources().tracingDecorator(),
-      dispatchSpan,
-      channelId,
-      ioContext.localHostname(),
-      ioContext.localPort(),
-      request.context().lastDispatchedToNode().canonical().host(),
-      remotePort,
-      remoteHostname,
-      remotePort,
-      null
-    );
-    request.context().coreResources().tracingDecorator().provideAttr(TracingAttribute.OPERATION_ID, dispatchSpan, request.opaque());
-    setCommonKVSpanAttributes(dispatchSpan, request);
   }
 
   private void closeBecauseIdle() {

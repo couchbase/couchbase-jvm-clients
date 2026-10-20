@@ -21,9 +21,6 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.RequestSpan;
-import com.couchbase.client.core.cnc.RequestTracer;
-import com.couchbase.client.core.cnc.tracing.TracingAttribute;
-import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
@@ -83,8 +80,7 @@ import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
-import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
-import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
+import static com.couchbase.client.core.io.netty.TracingUtils.newKeyValueDispatchSpan;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
@@ -304,26 +300,15 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.requestSpan() != null) {
-          RequestTracer tracer = endpointContext.coreResources().requestTracer();
-          RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
-
-          if (!isInternalTracer) {
-            setCommonDispatchSpanAttributes(
-              request.context().coreResources().tracingDecorator(),
-              dispatchSpan,
-              ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
-              ioContext.localHostname(),
-              ioContext.localPort(),
-              request.context().lastDispatchedToNode().canonical().host(),
-              endpoint.remotePort(),
-              endpoint.remoteHostname(),
-              endpoint.remotePort(),
-              null
-            );
-            request.context().coreResources().tracingDecorator().provideAttr(TracingAttribute.OPERATION_ID, dispatchSpan, request.opaque());
-            setCommonKVSpanAttributes(dispatchSpan, request);
-          }
-
+          RequestSpan dispatchSpan = newKeyValueDispatchSpan(
+            request,
+            endpointContext,
+            isInternalTracer,
+            ctx.channel().attr(ChannelAttributes.CHANNEL_ID_KEY).get(),
+            ioContext,
+            endpoint.remoteHostname(),
+            endpoint.remotePort()
+          );
           writtenRequestDispatchSpans.put(opaque, dispatchSpan);
         }
 
