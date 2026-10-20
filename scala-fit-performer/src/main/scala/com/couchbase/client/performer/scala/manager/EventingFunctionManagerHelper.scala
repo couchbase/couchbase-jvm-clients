@@ -3,155 +3,164 @@ package com.couchbase.client.performer.scala.manager
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor.convertDuration
 import com.couchbase.client.performer.scala.util.OptionsUtil
 import com.couchbase.client.protocol.run.Result
-import com.couchbase.client.scala.Cluster
+import com.couchbase.client.scala.{Cluster, Scope}
 import com.couchbase.client.scala.manager.eventing._
 import com.couchbase.client.scala.query.QueryScanConsistency
 import com.couchbase.client.scala.util.DurationConversions._
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 object EventingFunctionManagerHelper {
+
+  /** Abstract over the APIs and global vs scoped.
+    *
+    * A timeout of None calls the SDK without one, so it uses its default.
+    */
+  private case class Ops(
+      upsertFunction: (EventingFunction, Option[Duration]) => Try[Unit],
+      getFunction: (String, Option[Duration]) => Try[EventingFunction],
+      getAllFunctions: Option[Duration] => Try[Seq[EventingFunction]],
+      deployFunction: (String, Option[Duration]) => Try[Unit],
+      undeployFunction: (String, Option[Duration]) => Try[Unit],
+      dropFunction: (String, Option[Duration]) => Try[Unit],
+      pauseFunction: (String, Option[Duration]) => Try[Unit],
+      resumeFunction: (String, Option[Duration]) => Try[Unit],
+      functionsStatus: Option[Duration] => Try[EventingStatus]
+  )
+
+  private def ops(em: EventingFunctionManager): Ops = Ops(
+    (f, t) => t.fold(em.upsertFunction(f))(em.upsertFunction(f, _)),
+    (n, t) => t.fold(em.getFunction(n))(em.getFunction(n, _)),
+    t => t.fold(em.getAllFunctions())(em.getAllFunctions(_)),
+    (n, t) => t.fold(em.deployFunction(n))(em.deployFunction(n, _)),
+    (n, t) => t.fold(em.undeployFunction(n))(em.undeployFunction(n, _)),
+    (n, t) => t.fold(em.dropFunction(n))(em.dropFunction(n, _)),
+    (n, t) => t.fold(em.pauseFunction(n))(em.pauseFunction(n, _)),
+    (n, t) => t.fold(em.resumeFunction(n))(em.resumeFunction(n, _)),
+    t => t.fold(em.functionsStatus())(em.functionsStatus(_))
+  )
+
+  private def ops(em: ScopeEventingFunctionManager): Ops = Ops(
+    (f, t) => t.fold(em.upsertFunction(f))(em.upsertFunction(f, _)),
+    (n, t) => t.fold(em.getFunction(n))(em.getFunction(n, _)),
+    t => t.fold(em.getAllFunctions())(em.getAllFunctions(_)),
+    (n, t) => t.fold(em.deployFunction(n))(em.deployFunction(n, _)),
+    (n, t) => t.fold(em.undeployFunction(n))(em.undeployFunction(n, _)),
+    (n, t) => t.fold(em.dropFunction(n))(em.dropFunction(n, _)),
+    (n, t) => t.fold(em.pauseFunction(n))(em.pauseFunction(n, _)),
+    (n, t) => t.fold(em.resumeFunction(n))(em.resumeFunction(n, _)),
+    t => t.fold(em.functionsStatus())(em.functionsStatus(_))
+  )
 
   def handleClusterEventingFunctionManager(
       cluster: Cluster,
       command: com.couchbase.client.protocol.sdk.Command
   ): com.couchbase.client.protocol.run.Result = {
-    val sim                                = command.getClusterCommand.getEventingFunctionManager
-    val em                                 = cluster.eventingFunctions
-    val defaultManagementTimeout: Duration = em.DefaultTimeout
+    handle(ops(cluster.eventingFunctions), command.getClusterCommand.getEventingFunctionManager)
+  }
+
+  def handleScopeEventingFunctionManager(
+      scope: Scope,
+      command: com.couchbase.client.protocol.sdk.Command
+  ): com.couchbase.client.protocol.run.Result = {
+    handle(
+      ops(scope.eventingFunctions),
+      toClusterCommand(command.getScopeCommand.getEventingFunctionManager)
+    )
+  }
+
+  private def toClusterCommand(
+      in: com.couchbase.client.protocol.sdk.scope.eventingfunctionmanager.Command
+  ): com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command = {
+    import com.couchbase.client.protocol.sdk.scope.eventingfunctionmanager.Command.CommandCase._
+    val out = com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.newBuilder
+    in.getCommandCase match {
+      case GET_FUNCTION      => out.setGetFunction(in.getGetFunction)
+      case GET_ALL_FUNCTIONS => out.setGetAllFunctions(in.getGetAllFunctions)
+      case DEPLOY_FUNCTION   => out.setDeployFunction(in.getDeployFunction)
+      case DROP_FUNCTION     => out.setDropFunction(in.getDropFunction)
+      case FUNCTIONS_STATUS  => out.setFunctionsStatus(in.getFunctionsStatus)
+      case PAUSE_FUNCTION    => out.setPauseFunction(in.getPauseFunction)
+      case RESUME_FUNCTION   => out.setResumeFunction(in.getResumeFunction)
+      case UNDEPLOY_FUNCTION => out.setUndeployFunction(in.getUndeployFunction)
+      case UPSERT_FUNCTION   => out.setUpsertFunction(in.getUpsertFunction)
+      case other             =>
+        throw new UnsupportedOperationException(
+          s"Unknown scope eventing function manager command $other"
+        )
+    }
+    out.build
+  }
+
+  private def timeout(
+      hasTimeout: Boolean,
+      timeout: com.google.protobuf.Duration
+  ): Option[Duration] = {
+    if (hasTimeout) Some(OptionsUtil.convertDuration(timeout)) else None
+  }
+
+  private def handle(
+      ops: Ops,
+      sim: com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command
+  ): com.couchbase.client.protocol.run.Result = {
+    import com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase._
 
     sim.getCommandCase match {
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.GET_FUNCTION =>
+      case GET_FUNCTION =>
         val req = sim.getGetFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        convertGetFunctionResultToGRPC(ops.getFunction(req.getName, t).get)
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          convertGetFunctionResultToGRPC(em.getFunction(req.getName, timeout).get)
-        } else {
-          convertGetFunctionResultToGRPC(em.getFunction(req.getName).get)
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.GET_ALL_FUNCTIONS =>
+      case GET_ALL_FUNCTIONS =>
         val req = sim.getGetAllFunctions
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        convertGetAllFunctionsResult(ops.getAllFunctions(t).get)
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          convertGetAllFunctionsResult(em.getAllFunctions(timeout).get)
-        } else {
-          convertGetAllFunctionsResult(em.getAllFunctions().get)
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.DEPLOY_FUNCTION =>
+      case DEPLOY_FUNCTION =>
         val req = sim.getDeployFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.deployFunction(req.getName, t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.deployFunction(req.getName, timeout).get
-          returnSuccess()
-        } else {
-          em.deployFunction(req.getName).get
-          returnSuccess()
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.UNDEPLOY_FUNCTION =>
+      case UNDEPLOY_FUNCTION =>
         val req = sim.getUndeployFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.undeployFunction(req.getName, t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.undeployFunction(req.getName, timeout).get
-          returnSuccess()
-        } else {
-          em.undeployFunction(req.getName).get
-          returnSuccess()
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.DROP_FUNCTION =>
+      case DROP_FUNCTION =>
         val req = sim.getDropFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.dropFunction(req.getName, t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.dropFunction(req.getName, timeout).get
-          returnSuccess()
-        } else {
-          em.dropFunction(req.getName).get
-          returnSuccess()
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.PAUSE_FUNCTION =>
+      case PAUSE_FUNCTION =>
         val req = sim.getPauseFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.pauseFunction(req.getName, t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.pauseFunction(req.getName, timeout).get
-          returnSuccess()
-        } else {
-          em.pauseFunction(req.getName).get
-          returnSuccess()
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.RESUME_FUNCTION =>
+      case RESUME_FUNCTION =>
         val req = sim.getResumeFunction
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.resumeFunction(req.getName, t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.resumeFunction(req.getName, timeout).get
-          returnSuccess()
-        } else {
-          em.resumeFunction(req.getName).get
-          returnSuccess()
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.FUNCTIONS_STATUS =>
+      case FUNCTIONS_STATUS =>
         val req = sim.getFunctionsStatus
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        convertFunctionsStatusResultToGRPC(ops.functionsStatus(t).get)
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          convertFunctionsStatusResultToGRPC(em.functionsStatus(timeout).get)
-        } else {
-          convertFunctionsStatusResultToGRPC(em.functionsStatus().get)
-        }
-
-      case com.couchbase.client.protocol.sdk.cluster.eventingfunctionmanager.Command.CommandCase.UPSERT_FUNCTION =>
+      case UPSERT_FUNCTION =>
         val req = sim.getUpsertFunction
-        val ef  = convertToSdk(req.getFunction)
+        val t   = timeout(req.getOptions.hasTimeout, req.getOptions.getTimeout)
+        ops.upsertFunction(convertToSdk(req.getFunction), t).get
+        returnSuccess()
 
-        if (req.hasOptions) {
-          val opts              = req.getOptions
-          val timeout: Duration =
-            if (opts.hasTimeout) OptionsUtil.convertDuration(opts.getTimeout)
-            else defaultManagementTimeout
-          em.upsertFunction(ef, timeout).get
-          returnSuccess()
-        } else {
-          em.upsertFunction(ef).get
-          returnSuccess()
-        }
-
+      case other =>
+        throw new UnsupportedOperationException(s"Unknown eventing function manager command $other")
     }
   }
 

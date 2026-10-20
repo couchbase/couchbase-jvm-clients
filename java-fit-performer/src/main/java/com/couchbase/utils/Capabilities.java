@@ -33,7 +33,9 @@ public class Capabilities {
             Caps.SDK_SEARCH_INDEX_MANAGEMENT,
             Caps.SDK_SCOPE_SEARCH,
             Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT,
-            Caps.SDK_EVENTING_FUNCTION_MANAGER, //TODO: fully implement eventing function manager - Java performer only supports getFunction currently
+            Caps.SDK_EVENTING_FUNCTION_MANAGER,
+            Caps.SDK_SCOPE_EVENTING_FUNCTION_MANAGER,
+            Caps.SDK_EVENTING_RESUMING_FUNCTION_STATUS,
             Caps.SDK_QUERY,
             Caps.SDK_QUERY_READ_FROM_REPLICA,
             Caps.SDK_LOOKUP_IN,

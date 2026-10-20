@@ -590,6 +590,10 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
               .ofType(Result.class);
     }
 
+    if (slc.hasEventingFunctionManager()) {
+      return EventingHelper.handleScopeEventingFunctionManagerReactive(scope.reactive(), spans, op, result);
+    }
+
     return Mono.error(new UnsupportedOperationException("Unknown command " + op));
   }
 
