@@ -22,21 +22,15 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
-import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
 import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
-import com.couchbase.client.core.cnc.events.io.KeyValueErrorMapCodeHandledEvent;
-import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
-import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
-import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
-import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
@@ -46,16 +40,11 @@ import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
-import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
-import com.couchbase.client.core.error.RangeScanPartitionFailedException;
-import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
-import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -63,13 +52,9 @@ import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
-import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
-import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
-import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
@@ -87,7 +72,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -114,9 +98,6 @@ import java.util.concurrent.locks.LockSupport;
 
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
-import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
-import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.remainingMillis;
@@ -134,7 +115,8 @@ import static java.util.Objects.requireNonNull;
  *       queued requests to the socket, up to {@value #FLUSH_CONSOLIDATION_LIMIT} per flush, flushing when the queue
  *       is empty. It also sends a NOOP when the server has been quiet for a while, and closes the connection
  *       if the server stays quiet (like the Netty implementation's {@code IdleStateHandler}).
- *   <li>The reader reads packets from the server, and completes (or retries) the requests they answer.
+ *   <li>The reader reads packets from the server, and completes (or retries) the requests they answer
+ *       (see {@link KeyValueResponseHandler}).
  * </ul>
  * Like the Netty implementation's {@code FlushConsolidationHandler}, requests sent by the reader thread while it's
  * handling a batch of responses (for example, from a callback that sends the next request when a response arrives)
@@ -249,7 +231,7 @@ final class KeyValueConnection {
   /**
    * A request that was written, and is waiting for its response.
    */
-  private static final class InFlight {
+  static final class InFlight {
     final KeyValueRequest<Response> request;
     final long dispatchStartNanos;
     final @Nullable RequestSpan dispatchSpan;
@@ -308,7 +290,7 @@ final class KeyValueConnection {
   private @Nullable OutputStream out;
   private volatile IoContext ioContext;
   private volatile @Nullable KeyValueChannelContext channelContext;
-  private volatile @Nullable ErrorMap errorMap;
+  private volatile @Nullable KeyValueResponseHandler responses; // once the handshake is done
 
   private final AtomicBoolean closed = new AtomicBoolean();
   private volatile @Nullable Throwable closeCause;
@@ -576,13 +558,27 @@ final class KeyValueConnection {
       throw connectFailure(connector, e);
     }
 
-    errorMap = result.errorMap;
-    channelContext = new KeyValueChannelContext(
+    KeyValueChannelContext negotiated = new KeyValueChannelContext(
       result.features.contains(ServerFeature.SNAPPY) ? endpointContext.environment().compressionConfig() : null,
       bucketName,
       endpointContext.core().configurationProvider().collectionMap(),
       shortChannelId,
       result.features
+    );
+    channelContext = negotiated;
+    responses = new KeyValueResponseHandler(
+      endpointContext,
+      ioContext,
+      negotiated,
+      result.errorMap,
+      inFlight,
+      isInternalTracer,
+      (reason, discard) -> {
+        if (discard) {
+          discardUnreadResponses = true;
+        }
+        closeWithReason(reason);
+      }
     );
 
     // From now on, reads wait as long as it takes. The writer closes the connection if the server is quiet too long.
@@ -720,7 +716,7 @@ final class KeyValueConnection {
       } else if (cp.config().bucketConfig(request.bucket()) instanceof MemcachedBucketConfig) {
         request.fail(FeatureNotAvailableException.collectionsForMemcached());
       } else {
-        handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
+        requireNonNull(responses).handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
       }
       return;
     }
@@ -1088,181 +1084,10 @@ final class KeyValueConnection {
       return;
     }
     try {
-      decode(packet);
+      requireNonNull(responses).handle(packet);
     } finally {
       listener.responseReceived();
     }
-  }
-
-  // ---- handling responses (like KeyValueMessageHandler)
-
-  private void decode(ByteBuf response) {
-    int opaque = MemcacheProtocol.opaque(response);
-    InFlight written = inFlight.remove(opaque);
-
-    if (written == null) {
-      handleUnknownResponseReceived(response);
-      return;
-    }
-    KeyValueRequest<Response> request = written.request;
-
-    completeRequestTimings(written, response);
-
-    short statusCode = MemcacheProtocol.status(response);
-    ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
-    ErrorMap.ErrorCode errorCode = status != ResponseStatus.SUCCESS ? decodeErrorCode(statusCode) : null;
-
-    if (errorCode != null) {
-      request.errorCode(errorCode);
-    }
-
-    boolean errorUnknown = false;
-    if (status == ResponseStatus.UNKNOWN) {
-      errorUnknown = true;
-
-      if (errorCode != null) {
-        eventBus.publish(new KeyValueErrorMapCodeHandledEvent(ioContext, errorCode));
-        if (errorCode.attributes().contains(CONN_STATE_INVALIDATED)) {
-          closeWithReason(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
-        } else {
-          status = KeyValueMessageHandler.statusForErrorCode(errorCode);
-        }
-      }
-
-      eventBus.publish(new UnknownResponseStatusReceivedEvent(ioContext, statusCode));
-    }
-
-    boolean isRangeScanContinue = (Request<?>) request instanceof RangeScanContinueRequest;
-
-    if (errorUnknown && errorCode != null && errorCode.attributes().contains(FETCH_CONFIG)) {
-      log.warn("Refreshing cluster config in response to error code {} ; details={}", statusCode, errorCode);
-      endpointContext.core().configurationProvider().signalNewTopologyAvailable(bucketName.orElse(null), null, endpointContext.remoteSocket());
-    }
-
-    if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {
-      handleNotMyVbucket(request, response);
-    } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
-      handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
-    } else if (errorUnknown && KeyValueMessageHandler.errorMapIndicatesRetry(errorCode)) {
-      RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
-    } else if (KeyValueMessageHandler.statusIndicatesInvalidChannel(status, bucketName.isPresent())) {
-      closeWithReason(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION);
-      // Unlike the Netty implementation (which has already forgotten the request when it retries
-      // the ones in flight, so it times out), retry it like the other requests in flight.
-      RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
-    } else {
-      retryOrComplete(written, response, status, isRangeScanContinue);
-    }
-  }
-
-  private void retryOrComplete(InFlight written, ByteBuf response, ResponseStatus status, boolean isRangeScanContinue) {
-    KeyValueRequest<Response> request = written.request;
-    RetryReason retryReason = KeyValueMessageHandler.statusCodeIndicatesRetry(status, request);
-    if (retryReason != null) {
-      RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
-    } else if (isRangeScanContinue) {
-      decodeAndCompleteRangeScanContinue(written, response);
-    } else if (!request.completed()) {
-      decodeAndComplete(request, response);
-    } else {
-      ioContext.environment().orphanReporter().report(request);
-    }
-  }
-
-  private void completeRequestTimings(InFlight written, ByteBuf response) {
-    KeyValueRequest<Response> request = written.request;
-    long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
-    request.context().serverLatency(serverTime);
-    request.context().dispatchLatency(System.nanoTime() - written.dispatchStartNanos);
-
-    RequestSpan dispatchSpan = written.dispatchSpan;
-    if (dispatchSpan != null) {
-      if (!isInternalTracer) {
-        TracingUtils.setServerDurationAttribute(request.context().coreResources().tracingDecorator(), dispatchSpan, serverTime);
-      }
-      dispatchSpan.end();
-    }
-  }
-
-  private void decodeAndComplete(KeyValueRequest<Response> request, ByteBuf response) {
-    try {
-      Response decoded = request.decode(response, requireNonNull(channelContext));
-      request.succeed(decoded);
-    } catch (Throwable t) {
-      request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
-    }
-  }
-
-  private void decodeAndCompleteRangeScanContinue(InFlight written, ByteBuf response) {
-    KeyValueRequest<Response> request = written.request;
-    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(response, requireNonNull(channelContext));
-    if (!request.completed()) {
-      request.succeed(decoded);
-    }
-
-    ResponseStatus status = decoded.status();
-    boolean expectedStatus = status == ResponseStatus.COMPLETE
-      || status == ResponseStatus.CONTINUE
-      || status == ResponseStatus.SUCCESS;
-
-    if (!expectedStatus) {
-      decoded.failFeed(new RangeScanPartitionFailedException(
-        "Stream continue failed with non-successful response status",
-        status
-      ));
-      return;
-    }
-
-    boolean hasLastItem = status == ResponseStatus.COMPLETE;
-    boolean completeStream = hasLastItem || status == ResponseStatus.CONTINUE;
-    decoded.feedItems(MemcacheProtocol.body(response).orElse(Unpooled.EMPTY_BUFFER), hasLastItem, completeStream);
-
-    if (decoded.status() == ResponseStatus.SUCCESS) {
-      // More responses are coming for this request.
-      inFlight.put(request.opaque(), new InFlight(request, written.dispatchStartNanos, null));
-    }
-  }
-
-  private void handleUnknownResponseReceived(ByteBuf response) {
-    eventBus.publish(new UnknownResponseReceivedEvent(ioContext, ByteBufUtil.getBytes(response)));
-    // We got a response with an opaque value that we know nothing about. There is clearly something weird
-    // going on so to be sure we close the connection to avoid any further weird situations.
-    // Unlike the Netty implementation, doesn't handle the rest of the responses already read: they might
-    // complete the wrong requests.
-    discardUnreadResponses = true;
-    closeWithReason(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE);
-  }
-
-  private ErrorMap.@Nullable ErrorCode decodeErrorCode(short statusCode) {
-    ErrorMap map = errorMap;
-    return map != null ? map.errors().get(statusCode) : null;
-  }
-
-  private void handleNotMyVbucket(KeyValueRequest<? extends Response> request, ByteBuf response) {
-    request.indicateRejectedWithNotMyVbucket();
-
-    eventBus.publish(new NotMyVbucketReceivedEvent(ioContext, request.partition()));
-
-    String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().host() : null;
-    RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
-
-    String body = bodyAsString(response).trim();
-    if (body.startsWith("{")) {
-      ioContext.core().configurationProvider().proposeBucketConfig(
-        new ProposedBucketConfigContext(request.bucket(), body, origin)
-      );
-    }
-  }
-
-  private void handleOutdatedCollection(KeyValueRequest<? extends Response> request, RetryReason retryReason) {
-    eventBus.publish(new CollectionOutdatedHandledEvent(
-      request.collectionIdentifier(),
-      retryReason,
-      new KeyValueMessageHandler.OutdatedCollectionContext(ioContext, ioContext.core().configurationProvider().collectionMap())
-    ));
-
-    ioContext.core().configurationProvider().refreshCollectionId(request.collectionIdentifier());
-    RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
   }
 
   // ---- reauthentication (like AuthenticationRefreshHandler)
