@@ -33,7 +33,6 @@ import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -56,6 +55,7 @@ import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.service.KeyValueOutboundQueue.Outbound;
 import com.couchbase.client.core.service.KeyValuePacketReader.InvalidPacketException;
 import com.couchbase.client.core.util.CbThreads;
 import com.couchbase.client.core.util.SynchronousEventBus;
@@ -76,7 +76,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
@@ -84,8 +83,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
 
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchSpanAttributes;
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
@@ -195,30 +192,6 @@ final class KeyValueConnection {
   }
 
   /**
-   * A request waiting to be written.
-   */
-  private static final class Outbound {
-    private final @Nullable KeyValueRequest<Response> request; // null only for CLOSE
-    final ByteBuf encoded;
-    final int size;
-
-    Outbound(@Nullable KeyValueRequest<Response> request, ByteBuf encoded) {
-      this.request = request;
-      this.encoded = encoded;
-      this.size = encoded.readableBytes();
-    }
-
-    KeyValueRequest<Response> request() {
-      return requireNonNull(request);
-    }
-  }
-
-  /**
-   * Tells the writer to stop.
-   */
-  private static final Outbound CLOSE = new Outbound(null, Unpooled.EMPTY_BUFFER);
-
-  /**
    * A request that was written, and is waiting for its response.
    */
   static final class InFlight {
@@ -239,8 +212,6 @@ final class KeyValueConnection {
   private final IoConfig ioConfig;
   private final boolean isInternalTracer;
 
-  private final int highWaterMark;
-  private final int lowWaterMark;
   private final long readerIdleNanos;
   private final long idleCheckIntervalNanos;
 
@@ -277,19 +248,7 @@ final class KeyValueConnection {
   private final AtomicBoolean closed = new AtomicBoolean();
   private volatile @Nullable Throwable closeCause;
 
-  private final ConcurrentLinkedQueue<Outbound> queue = new ConcurrentLinkedQueue<>();
-
-  // Waking the writer (see wakeWriter()).
-  private volatile @Nullable Thread readerThread;
-  private volatile @Nullable Thread writerThread;
-  private volatile boolean writerParked;
-
-  // Only accessed by the reader thread: whether it's handling responses it has already read,
-  // and whether it sent a request in the meantime without waking the writer.
-  private boolean handlingReadBatch;
-  private boolean writerWakeDeferred;
-  private final AtomicLong queuedBytes = new AtomicLong();
-  private volatile boolean writable = true;
+  private final KeyValueOutboundQueue queue;
 
   /**
    * Written requests waiting for their responses, by opaque.
@@ -317,7 +276,6 @@ final class KeyValueConnection {
    * The reader and the writer. The last one to finish retries the connection's requests.
    */
   private final AtomicInteger runningThreads = new AtomicInteger(2);
-  private volatile boolean requestsRetried;
 
   // Guarded by "this".
   private @Nullable ScheduledFuture<?> stuckWriterCheck;
@@ -369,8 +327,7 @@ final class KeyValueConnection {
     this.ioConfig = endpointContext.environment().ioConfig();
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
 
-    this.highWaterMark = ioConfig.highWaterMark().bytesAsInt();
-    this.lowWaterMark = ioConfig.lowWaterMark().bytesAsInt();
+    this.queue = new KeyValueOutboundQueue(ioConfig.highWaterMark().bytesAsInt(), ioConfig.lowWaterMark().bytesAsInt());
     // Like the Netty implementation's IdleStateHandler: NOOP after half the idle time, close after all of it.
     this.readerIdleNanos = readerIdleNanos(ioConfig.configIdleRedialTimeout());
     this.idleCheckIntervalNanos = Math.min(readerIdleNanos, MAX_IDLE_CHECK_INTERVAL_NANOS);
@@ -431,7 +388,7 @@ final class KeyValueConnection {
    * with the same high and low water marks).
    */
   boolean isWritable() {
-    return writable && !closed.get();
+    return queue.isWritable() && !closed.get();
   }
 
   /**
@@ -536,45 +493,15 @@ final class KeyValueConnection {
   }
 
   private void enqueue(Outbound outbound) {
-    if (queuedBytes.addAndGet(outbound.size) > highWaterMark) {
-      writable = false;
-    }
-    queue.add(outbound);
-
-    // If the connection closed and its requests were already retried, nobody else will write or retry this one.
-    if (requestsRetried && queue.remove(outbound)) {
+    if (!queue.add(outbound)) {
+      // The connection closed, and its requests were already retried: nobody else will write or retry this one.
       failQueued(outbound);
-      return;
-    }
-
-    if (Thread.currentThread() == readerThread && handlingReadBatch) {
-      writerWakeDeferred = true; // the reader wakes the writer when it finishes the batch
-    } else {
-      wakeWriter();
-    }
-  }
-
-  /**
-   * Wakes the writer if it's waiting for requests.
-   * <p>
-   * The writer sets {@link #writerParked} before checking the queue one last time and parking, and senders add
-   * to the queue before checking the flag, so either the writer sees the request or the sender sees the flag.
-   */
-  private void wakeWriter() {
-    if (writerParked) {
-      LockSupport.unpark(writerThread);
-    }
-  }
-
-  private void dequeued(Outbound outbound) {
-    if (queuedBytes.addAndGet(-outbound.size) < lowWaterMark) {
-      writable = true;
     }
   }
 
   private void failQueued(Outbound outbound) {
     outbound.encoded.release();
-    dequeued(outbound);
+    queue.written(outbound);
     Throwable cause = closeCause;
     listener.writeFailed(outbound.request(), cause != null ? cause : new IOException("Connection closed"));
   }
@@ -583,7 +510,7 @@ final class KeyValueConnection {
 
   private void runWriter() {
     Thread.currentThread().setName("cb-kv-writer-" + shortChannelId);
-    writerThread = Thread.currentThread();
+    queue.writerStarted();
     Throwable failure = null;
     try {
       OutputStream output = out;
@@ -592,11 +519,15 @@ final class KeyValueConnection {
         writing = true;
         Outbound outbound;
         while (written < FLUSH_CONSOLIDATION_LIMIT && (outbound = queue.poll()) != null) {
-          if (outbound == CLOSE) {
+          if (outbound == KeyValueOutboundQueue.CLOSE) {
             output.flush();
             return;
           }
-          write(output, outbound);
+          try {
+            write(output, outbound);
+          } finally {
+            queue.written(outbound);
+          }
           written++;
         }
         if (written > 0) {
@@ -606,15 +537,8 @@ final class KeyValueConnection {
         writing = false;
 
         if (written == 0) {
-          writerParked = true;
-          if (queue.isEmpty() && !closed.get()) {
-            if (idleDetectionEnabled()) {
-              LockSupport.parkNanos(this, idleCheckIntervalNanos);
-            } else {
-              LockSupport.park(this); // until there's something to write, or the connection closes
-            }
-          }
-          writerParked = false;
+          // Until there's something to write, or the connection closes (or it's time to check whether it's idle).
+          queue.awaitRequests(idleDetectionEnabled() ? idleCheckIntervalNanos : 0);
         }
       }
     } catch (Throwable t) {
@@ -649,7 +573,6 @@ final class KeyValueConnection {
       outbound.encoded.readBytes(output, outbound.encoded.readableBytes());
     } finally {
       outbound.encoded.release();
-      dequeued(outbound);
     }
   }
 
@@ -756,9 +679,7 @@ final class KeyValueConnection {
     req.response().thenAccept(res -> log.debug("Read NOOP response; {}", endpointContext));
 
     KeyValueRequest<Response> request = (KeyValueRequest<Response>) (KeyValueRequest<?>) req;
-    Outbound outbound = new Outbound(request, request.encode(ALLOC, request.opaque(), channelContext));
-    queuedBytes.addAndGet(outbound.size);
-    write(output, outbound);
+    write(output, new Outbound(request, request.encode(ALLOC, request.opaque(), channelContext)));
     output.flush();
     log.debug("Wrote NOOP; {}", endpointContext);
   }
@@ -767,7 +688,7 @@ final class KeyValueConnection {
 
   private void runReader() {
     Thread.currentThread().setName("cb-kv-reader-" + shortChannelId);
-    readerThread = Thread.currentThread();
+    queue.readerStarted();
     Throwable failure = null;
     try {
       while (!closed.get()) {
@@ -777,7 +698,7 @@ final class KeyValueConnection {
             // Handled everything already read; the next read may wait for the server.
             // (With part of a packet read, the rest is usually on its way, so the batch goes on: requests sent
             // while handling it are written with the ones sent while handling the rest of the batch.)
-            endReadBatch();
+            queue.endReadBatch();
           }
           packets.fill();
           lastReadNanos = System.nanoTime();
@@ -785,7 +706,7 @@ final class KeyValueConnection {
           continue;
         }
 
-        handlingReadBatch = true;
+        queue.beginReadBatch();
         handle(packet);
       }
 
@@ -815,19 +736,6 @@ final class KeyValueConnection {
       eventBus.publish(new GenericFailureDetectedEvent(ioContext, e));
     } finally {
       packet.release();
-    }
-  }
-
-  /**
-   * Called by the reader when it has handled every response it already read. Like the Netty implementation's
-   * {@code FlushConsolidationHandler} on {@code channelReadComplete}: wakes the writer once for all the requests
-   * sent while handling them.
-   */
-  private void endReadBatch() {
-    handlingReadBatch = false;
-    if (writerWakeDeferred) {
-      writerWakeDeferred = false;
-      wakeWriter();
     }
   }
 
@@ -1000,8 +908,7 @@ final class KeyValueConnection {
     // is blocked writing.
     closeQuietly(tcpSocket);
     closeQuietly(socket);
-    queue.add(CLOSE);
-    LockSupport.unpark(writerThread);
+    queue.close();
     return true;
   }
 
@@ -1038,13 +945,8 @@ final class KeyValueConnection {
     }
 
     // Both threads are done, so nothing else writes or reads the requests.
-    requestsRetried = true;
-
-    Outbound unwritten;
-    while ((unwritten = queue.poll()) != null) {
-      if (unwritten != CLOSE) {
-        failQueued(unwritten);
-      }
+    for (Outbound unwritten : queue.drain()) {
+      failQueued(unwritten);
     }
 
     int requestsInFlight = inFlight.size();
