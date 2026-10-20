@@ -50,7 +50,7 @@ public class NonChunkedEventingMessageHandler extends NonChunkedHttpMessageHandl
 
 
     if (content != null) {
-      if (content.contains("ERR_APP_NOT_FOUND_TS")) {
+      if (content.contains("ERR_APP_NOT_FOUND_TS") || content.contains("ERR_APP_NOT_FOUND")) { // could search for just the one without the _TS suffix, but let's mention both in case we change how we match in the future.
         return new EventingFunctionNotFoundException("Eventing function not found", errorContext);
       } else if (content.contains("ERR_APP_NOT_DEPLOYED")) {
         return new EventingFunctionNotDeployedException("Eventing function not deployed", errorContext);
