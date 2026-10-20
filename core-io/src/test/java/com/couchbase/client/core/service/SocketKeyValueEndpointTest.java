@@ -986,6 +986,25 @@ class SocketKeyValueEndpointTest {
   }
 
   @Test
+  void reauthenticatesOnceConnectedWhenTriggeredDuringTheHandshake() throws Exception {
+    start();
+    startServer();
+    String jwt = base64Url("{}") + "." + base64Url("{}") + "." + base64Url("signature");
+    when(core.context().authenticator()).thenReturn(JwtAuthenticator.create(jwt));
+    // Published by the handshake, after HELLO.
+    onPublish = event -> {
+      if (event instanceof FeaturesNegotiatedEvent) {
+        authenticationRefreshTriggers.publish(Core.AuthenticationRefreshTrigger.INSTANCE);
+      }
+    };
+    connectedEndpoint();
+    server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT); // the handshake's
+
+    FakeKeyValueServer.Packet auth = server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT);
+    assertEquals("OAUTHBEARER", auth.key());
+  }
+
+  @Test
   void reauthenticatesWhenTriggered() throws Exception {
     start();
     startServer();

@@ -117,7 +117,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
   /**
    * The connect attempt in progress, if any. Guarded by {@link #lock}.
    */
-  private @Nullable KeyValueConnection connecting;
+  private @Nullable KeyValueConnectionOpener connecting;
 
   /**
    * The current connection, once connected. Like BaseEndpoint's channel, it's kept after it closes
@@ -208,17 +208,18 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
       EndpointContext ctx = endpointContext.get();
       Duration connectTimeout = ctx.environment().timeoutConfig().connectTimeout();
       long start = System.nanoTime();
+      KeyValueConnectionOpener opener = null;
       KeyValueConnection conn = null;
 
       try {
-        conn = new KeyValueConnection(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, this);
+        opener = new KeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
         synchronized (lock) {
           if (disconnect.get()) {
             throw new IllegalStateException("Endpoint was told to disconnect.");
           }
-          connecting = conn;
+          connecting = opener;
         }
-        conn.open(connector, start + connectTimeout.toNanos());
+        conn = opener.open(start + connectTimeout.toNanos(), this);
         connected(ctx, conn, start);
         return;
 
@@ -231,12 +232,14 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
         }
         if (conn != null) {
           conn.close();
+        } else if (opener != null) {
+          opener.close();
         }
         try {
           state.transition(EndpointState.DISCONNECTED);
           Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
           if (disconnect.get()) {
-            ctx.environment().eventBus().publish(new EndpointConnectionAbortedEvent(elapsed, ctx, timings(conn)));
+            ctx.environment().eventBus().publish(new EndpointConnectionAbortedEvent(elapsed, ctx, timings(opener)));
             return;
           }
           reportConnectFailure(ctx, t, t instanceof TimeoutException ? connectTimeout : elapsed, attempt);
@@ -341,8 +344,8 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     }
   }
 
-  private static TreeMap<String, Duration> timings(@Nullable KeyValueConnection conn) {
-    return conn == null ? new TreeMap<>() : new TreeMap<>(conn.timings());
+  private static TreeMap<String, Duration> timings(@Nullable KeyValueConnectionOpener opener) {
+    return opener == null ? new TreeMap<>() : new TreeMap<>(opener.timings());
   }
 
   /**
