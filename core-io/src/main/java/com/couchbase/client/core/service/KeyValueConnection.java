@@ -1381,6 +1381,10 @@ final class KeyValueConnection {
     if (failure == null || failure instanceof EOFException || failure instanceof InvalidPacketException) {
       return; // the server closed the connection, or the packet was already reported
     }
+    if (failure instanceof VirtualMachineError) {
+      // For example, OutOfMemoryError. So it stands out from ordinary connection failures (the event is a WARN).
+      log.error("KV connection {} failed with a JVM error; {}", this, endpointContext, failure);
+    }
     if (failure instanceof SSLException && !OkHttpTlsHelper.connectionFailedDuringTls(failure)) {
       endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
       eventBus.publish(new SecureConnectionFailedEvent(ioContext, (SSLException) failure));
