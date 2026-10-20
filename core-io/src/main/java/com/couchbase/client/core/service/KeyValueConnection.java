@@ -94,9 +94,8 @@ import static java.util.Objects.requireNonNull;
  * Lifecycle: {@link KeyValueConnectionOpener} connects and does the handshake, then creates the connection.
  * {@link #start} starts two threads, which run until the connection closes:
  * <ul>
- *   <li>The writer encodes nothing (requests are encoded by {@link #send}, on the caller's thread); it writes
- *       queued requests to the socket, up to {@value #FLUSH_CONSOLIDATION_LIMIT} per flush, flushing when the queue
- *       is empty.
+ *   <li>The writer encodes queued requests (like the Netty implementation's event loop), and writes them to
+ *       the socket, up to {@value #FLUSH_CONSOLIDATION_LIMIT} per flush, flushing when the queue is empty.
  *   <li>The reader reads packets from the server, and completes (or retries) the requests they answer
  *       (see {@link KeyValueResponseHandler}).
  * </ul>
@@ -430,7 +429,7 @@ final class KeyValueConnection {
   // ---- sending
 
   /**
-   * Encodes the request, and queues it to be written.
+   * Queues the request to be written (the writer encodes it).
    *
    * @return false if the connection is closed, so the request wasn't sent (the caller should retry it).
    */
@@ -441,12 +440,21 @@ final class KeyValueConnection {
     }
 
     KeyValueRequest<Response> request = (KeyValueRequest<Response>) req;
+    enqueue(new Outbound(request, KeyValueOutboundQueue.UNENCODED_REQUEST_SIZE));
+    return true;
+  }
+
+  /**
+   * Called by the writer. Returns the encoded request, or null if encoding failed (and the request was failed
+   * or retried).
+   */
+  private @Nullable ByteBuf encode(KeyValueRequest<Response> request) {
     ByteBuf encoded;
     try {
       encoded = request.encode(ALLOC, request.opaque(), channelContext);
     } catch (Throwable err) {
       handleEncodeFailure(request, err);
-      return true;
+      return null;
     }
 
     if (!MemcacheProtocol.verifyRequest(encoded)) {
@@ -456,11 +464,9 @@ final class KeyValueConnection {
       encoded.release();
       eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));
       request.fail(new EncodingFailureException("Outgoing packet failed structure verification"));
-      return true;
+      return null;
     }
-
-    enqueue(new Outbound(request, encoded));
-    return true;
+    return encoded;
   }
 
   /**
@@ -490,7 +496,6 @@ final class KeyValueConnection {
   }
 
   private void failQueued(Outbound outbound) {
-    outbound.encoded.release();
     queue.written(outbound);
     Throwable cause = closeCause;
     listener.writeFailed(outbound.request(), cause != null ? cause : new IOException("Connection closed"));
@@ -539,11 +544,15 @@ final class KeyValueConnection {
 
   private void write(OutputStream output, Outbound outbound) throws IOException {
     KeyValueRequest<Response> request = outbound.request();
+    if (request.completed()) {
+      // For example, it timed out while it was queued. The server needn't do it (and it needn't be encoded).
+      return;
+    }
+    ByteBuf encoded = encode(request);
+    if (encoded == null) {
+      return;
+    }
     try {
-      if (request.completed()) {
-        // For example, it timed out while it was queued. The server needn't do it.
-        return;
-      }
       RequestSpan dispatchSpan;
       try {
         dispatchSpan = newKeyValueDispatchSpan(
@@ -563,10 +572,10 @@ final class KeyValueConnection {
       }
       int opaque = request.opaque();
       inFlight.put(opaque, new InFlight(request, System.nanoTime(), dispatchSpan));
-      capture.written(outbound.encoded);
-      outbound.encoded.readBytes(output, outbound.encoded.readableBytes());
+      capture.written(encoded);
+      encoded.readBytes(output, encoded.readableBytes());
     } finally {
-      outbound.encoded.release();
+      encoded.release();
     }
   }
 

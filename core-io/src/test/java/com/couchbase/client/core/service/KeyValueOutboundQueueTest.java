@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.service.KeyValueOutboundQueue.Outbound;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -39,7 +38,7 @@ class KeyValueOutboundQueueTest {
   private static final int MAX_DEFERRED_WAKES = 3;
 
   private static Outbound outbound(int size) {
-    return new Outbound(null, Unpooled.buffer(size).writeZero(size));
+    return new Outbound(null, size);
   }
 
   @Test
