@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import org.jspecify.annotations.NullMarked;
@@ -35,7 +33,9 @@ import static java.util.Objects.requireNonNull;
  * A {@link KeyValueConnection}'s requests waiting to be written, and how senders wake its writer thread.
  * <ul>
  *   <li>Writability, like Netty's channel writability: once more than the high water mark of bytes is waiting,
- *       the connection isn't writable until less than the low water mark is.
+ *       the connection isn't writable until less than the low water mark is. Requests are queued unencoded
+ *       (the writer encodes them), so each counts as {@value #UNENCODED_REQUEST_SIZE} bytes, like a write the Netty
+ *       implementation's event loop hasn't encoded yet.
  *   <li>Waking the writer: a sender wakes it only if it's parked (see {@link #awaitRequests}). Requests sent by
  *       the reader thread while it's handling a batch of responses don't wake it; the reader wakes it once,
  *       when it finishes the batch (see {@link #endReadBatch}), so they're written together
@@ -56,13 +56,14 @@ final class KeyValueOutboundQueue {
    */
   static final class Outbound {
     private final @Nullable KeyValueRequest<Response> request; // null only for CLOSE
-    final ByteBuf encoded;
     final int size;
 
-    Outbound(@Nullable KeyValueRequest<Response> request, ByteBuf encoded) {
+    /**
+     * @param size how many bytes it counts as, for writability.
+     */
+    Outbound(@Nullable KeyValueRequest<Response> request, int size) {
       this.request = request;
-      this.encoded = encoded;
-      this.size = encoded.readableBytes();
+      this.size = size;
     }
 
     KeyValueRequest<Response> request() {
@@ -73,7 +74,14 @@ final class KeyValueOutboundQueue {
   /**
    * Tells the writer to stop.
    */
-  static final Outbound CLOSE = new Outbound(null, Unpooled.EMPTY_BUFFER);
+  static final Outbound CLOSE = new Outbound(null, 0);
+
+  /**
+   * How many bytes a queued (not yet encoded) request counts as, for writability: like the Netty implementation,
+   * where a write submitted from outside the event loop counts as its message size estimate (8 bytes for a request)
+   * plus the write task overhead (32 bytes), until the event loop encodes it.
+   */
+  static final int UNENCODED_REQUEST_SIZE = 40;
 
   private final int highWaterMark;
   private final int lowWaterMark;
