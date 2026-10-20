@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.service.KeyValueOutboundQueue.Outbound;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -139,12 +140,13 @@ class KeyValueOutboundQueueTest {
   }
 
   @Test
+  @Timeout(10) // interrupts the test thread, so a park returns (and the test fails)
   void writerDoesNotWaitWhenThereIsSomethingToWrite() {
     KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
     queue.writerStarted();
     queue.add(outbound(10));
 
-    queue.awaitRequests(0); // would wait forever otherwise
+    queue.awaitRequests(); // returns at once: there's a request to write
   }
 
   @Test
@@ -212,7 +214,7 @@ class KeyValueOutboundQueueTest {
   private static Thread startWriter(KeyValueOutboundQueue queue) throws InterruptedException {
     Thread writer = new Thread(() -> {
       queue.writerStarted();
-      queue.awaitRequests(0);
+      queue.awaitRequests();
     });
     writer.setDaemon(true);
     writer.start();

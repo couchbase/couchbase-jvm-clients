@@ -75,6 +75,9 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -93,11 +96,13 @@ import static java.util.Objects.requireNonNull;
  * <ul>
  *   <li>The writer encodes nothing (requests are encoded by {@link #send}, on the caller's thread); it writes
  *       queued requests to the socket, up to {@value #FLUSH_CONSOLIDATION_LIMIT} per flush, flushing when the queue
- *       is empty. It also sends a NOOP when the server has been quiet for a while, and closes the connection
- *       if the server stays quiet (like the Netty implementation's {@code IdleStateHandler}).
+ *       is empty.
  *   <li>The reader reads packets from the server, and completes (or retries) the requests they answer
  *       (see {@link KeyValueResponseHandler}).
  * </ul>
+ * A periodic check (see {@link #periodicCheck}) sends a NOOP when the server has been quiet for a while
+ * (a third of the idle timeout), and closes the connection if the server stays quiet (see {@link KeyValueIdleDetector}).
+ * <p>
  * Like the Netty implementation's {@code FlushConsolidationHandler}, requests sent by the reader thread while it's
  * handling a batch of responses (for example, from a callback that sends the next request when a response arrives)
  * are written together: the reader wakes the writer once, when it has handled every response it already read,
@@ -123,6 +128,17 @@ final class KeyValueConnection {
   static final ExecutorService ioThreads = Boolean.parseBoolean(System.getProperty("com.couchbase.kvVirtualThreads", "true"))
     ? CbThreads.unboundedExecutorService("cb-kv-io-")
     : Executors.newCachedThreadPool(CbThreads.platformThreadFactory("cb-kv-io-"));
+
+  /**
+   * Runs {@link #periodicCheck} for every connection. One thread is plenty: the checks are quick.
+   */
+  private static final ScheduledThreadPoolExecutor periodicChecks = newPeriodicChecks();
+
+  private static ScheduledThreadPoolExecutor newPeriodicChecks() {
+    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, CbThreads.platformThreadFactory("cb-kv-idle-"));
+    executor.setRemoveOnCancelPolicy(true);
+    return executor;
+  }
 
   static final int BUFFER_SIZE = 64 * 1024;
 
@@ -214,6 +230,9 @@ final class KeyValueConnection {
 
   private final KeyValueIdleDetector idle;
 
+  // Guarded by "this".
+  private @Nullable ScheduledFuture<?> periodicCheck;
+
   // Closing. close() sets "closed" (once), and closes the sockets, which stops the reader and the writer.
   // The last of them to finish fails or retries every request still queued or in flight, then tells the listener
   // (see threadFinished()). So every request is written and answered, retried, or failed, exactly once.
@@ -286,13 +305,13 @@ final class KeyValueConnection {
     this.queue = new KeyValueOutboundQueue(ioConfig.highWaterMark().bytesAsInt(), ioConfig.lowWaterMark().bytesAsInt());
     this.idle = new KeyValueIdleDetector(ioConfig.configIdleRedialTimeout(), new KeyValueIdleDetector.Connection() {
       @Override
-      public void writeNoop() throws IOException {
-        KeyValueConnection.this.writeNoop(out);
+      public void sendNoop() {
+        KeyValueConnection.this.sendNoop();
       }
 
       @Override
-      public void closeBecauseIdle() {
-        KeyValueConnection.this.closeBecauseIdle();
+      public void closeBecauseIdle(String reason) {
+        KeyValueConnection.this.closeBecauseIdle(reason);
       }
     });
 
@@ -371,6 +390,15 @@ final class KeyValueConnection {
     idle.start();
     startThread(this::runReader);
     startThread(this::runWriter);
+
+    synchronized (this) {
+      // Not once closed: nothing would cancel it.
+      if (!closed.get()) {
+        periodicCheck = periodicChecks.scheduleWithFixedDelay(
+          this::periodicCheck, idle.checkIntervalNanos(), idle.checkIntervalNanos(), TimeUnit.NANOSECONDS
+        );
+      }
+    }
 
     if (authenticationRefresh.start(this::onAuthenticationRefreshSignal)) {
       log.info("Immediately reauthenticating the channel because a new authenticator was provided during the handshake process. Channel: {}", this);
@@ -473,7 +501,6 @@ final class KeyValueConnection {
       OutputStream output = out;
       while (!closed.get()) {
         int written = 0;
-        idle.startedWriting();
         Outbound outbound;
         while (written < FLUSH_CONSOLIDATION_LIMIT && (outbound = queue.poll()) != null) {
           if (outbound == KeyValueOutboundQueue.CLOSE) {
@@ -490,12 +517,9 @@ final class KeyValueConnection {
         if (written > 0) {
           output.flush();
         }
-        idle.check(); // might write a NOOP
-        idle.finishedWriting();
 
         if (written == 0) {
-          // Until there's something to write, or the connection closes (or it's time to check whether it's idle).
-          queue.awaitRequests(idle.checkIntervalNanos());
+          queue.awaitRequests(); // until there's something to write, or the connection closes
         }
       }
     } catch (Throwable t) {
@@ -541,39 +565,44 @@ final class KeyValueConnection {
     }
   }
 
-  private void closeBecauseIdle() {
+  private void closeBecauseIdle(String reason) {
     if (closed.get()) {
       return;
     }
-    log.warn(
-      "Closing KV connection because there was no incoming traffic for {} (io.configIdleRedialTimeout); {}",
-      ioConfig.configIdleRedialTimeout(),
-      endpointContext
-    );
-    close(new IOException("No incoming traffic for " + ioConfig.configIdleRedialTimeout()));
+    log.warn("Closing KV connection because the server has gone quiet: {}; {}", reason, endpointContext);
+    close(new IOException(reason));
   }
 
-  @SuppressWarnings("unchecked")
-  private void writeNoop(OutputStream output) throws IOException {
-    log.debug("Writing NOOP; {}", endpointContext);
+  private void sendNoop() {
+    log.debug("Sending NOOP; {}", endpointContext);
 
-    // Timeout and retry strategy are handled by higher layers,
-    // and have no effect when the request is written directly
-    // like this. That's okay, because they're not needed here;
-    // we're just trying to get a healthy server to send something,
-    // so the idle detector doesn't close the connection.
+    // Its timeout isn't enforced (it's not sent through the Core), and that's okay: we're just trying to get
+    // a healthy server to send something, so the idle detector doesn't close the connection. If the connection
+    // closes first, the retry strategy cancels it.
     NoopRequest req = new NoopRequest(
-      ioConfig.configIdleRedialTimeout(), // not actually enforced
+      Duration.ofNanos(idle.noopIntervalNanos()),
       endpointContext.core().context(),
-      FailFastRetryStrategy.INSTANCE, // not actually enforced
+      FailFastRetryStrategy.INSTANCE,
       null
     );
     req.response().thenAccept(res -> log.debug("Read NOOP response; {}", endpointContext));
+    send(req);
+  }
 
-    KeyValueRequest<Response> request = (KeyValueRequest<Response>) (KeyValueRequest<?>) req;
-    write(output, new Outbound(request, request.encode(ALLOC, request.opaque(), channelContext)));
-    output.flush();
-    log.debug("Wrote NOOP; {}", endpointContext);
+  /**
+   * Runs every second or so (see {@link KeyValueIdleDetector#checkIntervalNanos}): checks whether the connection
+   * has been idle too long, and wakes the writer if requests are waiting to be written. (They only wait if the reader
+   * held back waking the writer, while it waits for the rest of a response; see {@link KeyValueOutboundQueue}.
+   * So they wait about a second at most, even if that response never comes.)
+   */
+  private void periodicCheck() {
+    try {
+      idle.check();
+      queue.wakeWriterIfNotEmpty();
+    } catch (Throwable t) {
+      // Otherwise the executor would silently stop running it.
+      log.warn("Periodic check of KV connection {} failed", this, t);
+    }
   }
 
   // ---- the reader
@@ -788,7 +817,12 @@ final class KeyValueConnection {
     closeCause = cause;
 
     authenticationRefresh.unsubscribe();
-    idle.stop();
+    synchronized (this) {
+      if (periodicCheck != null) {
+        periodicCheck.cancel(false);
+        periodicCheck = null;
+      }
+    }
 
     // Close the TCP socket first: closing a TLS socket might wait to send close_notify while the writer
     // is blocked writing.
