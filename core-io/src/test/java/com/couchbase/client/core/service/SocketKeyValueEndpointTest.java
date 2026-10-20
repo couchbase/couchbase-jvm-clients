@@ -92,6 +92,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
@@ -104,6 +105,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -390,6 +393,55 @@ class SocketKeyValueEndpointTest {
    * Requests sent by a response callback run on the reader thread, which defers waking the writer until it has
    * handled every response it already read. Checks that those requests are always written.
    */
+  /**
+   * A request sent from a response callback, while the reader waits for the rest of a packet, waits at most about
+   * a second (the reader only wakes the writer once it has the whole packet). Even with idle detection off.
+   */
+  @Test
+  void writesRequestsSentFromResponseCallbacksWhileWaitingForTheRestOfAPacket() throws Exception {
+    start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ZERO)));
+    startServer();
+    // Answers the first GET with the second GET's response, but only the first half of the second one's.
+    // Sends the rest once it has the third GET (sent from the first response's callback).
+    AtomicInteger gets = new AtomicInteger();
+    List<FakeKeyValueServer.Packet> held = new CopyOnWriteArrayList<>();
+    AtomicReference<byte[]> restOfSecond = new AtomicReference<>();
+    server.handler((connection, request) -> {
+      if (!request.is(MemcacheProtocol.Opcode.GET)) {
+        connection.respond(request, STATUS_SUCCESS);
+        return;
+      }
+      switch (gets.incrementAndGet()) {
+        case 1:
+          held.add(request);
+          break;
+        case 2:
+          byte[] first = connection.response(held.get(0), STATUS_SUCCESS, new byte[0]);
+          byte[] second = connection.response(request, STATUS_SUCCESS, new byte[100]);
+          int half = second.length / 2;
+          restOfSecond.set(Arrays.copyOfRange(second, half, second.length));
+          byte[] firstAndHalf = Arrays.copyOf(first, first.length + half); // in one write, so they're read together
+          System.arraycopy(second, 0, firstAndHalf, first.length, half);
+          connection.send(firstAndHalf);
+          break;
+        default:
+          connection.send(restOfSecond.get());
+          connection.respond(request, STATUS_SUCCESS);
+      }
+    });
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+
+    GetRequest third = newGetRequest("baz");
+    GetRequest first = newGetRequest("foo");
+    first.response().thenRun(() -> endpoint.send(third));
+    endpoint.send(first);
+    GetRequest second = newGetRequest("bar");
+    endpoint.send(second);
+
+    third.response().get(5, TimeUnit.SECONDS);
+    second.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+  }
+
   @Test
   void writesRequestsSentFromResponseCallbacks() throws Exception {
     start();
@@ -863,10 +915,12 @@ class SocketKeyValueEndpointTest {
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(400))));
     startServer();
     server.handler((connection, request) -> {
-      // Doesn't answer the NOOP.
+      // Doesn't answer the NOOPs.
     });
     connectedEndpoint();
 
+    // Two unanswered NOOPs (see KeyValueIdleDetectorTest for the exact timing).
+    server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
     server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
     waitForEvent(UnexpectedEndpointDisconnectedEvent.class);
   }
@@ -969,11 +1023,15 @@ class SocketKeyValueEndpointTest {
   void connectionAnsweringNoopsStaysOpen() throws Exception {
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(400))));
     startServer();
-    connectedEndpoint();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
-    server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
-    server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
+    // Well past the idle timeout.
+    for (int i = 0; i < 5; i++) {
+      server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
+    }
     assertTrue(events(UnexpectedEndpointDisconnectedEvent.class).isEmpty());
+    assertEquals(channelId, endpoint.context().channelId().orElse(null));
   }
 
   @Test

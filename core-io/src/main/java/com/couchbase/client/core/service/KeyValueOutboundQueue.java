@@ -157,23 +157,28 @@ final class KeyValueOutboundQueue {
 
   /**
    * Waits until a request is added, or the queue is closed (returns at once if there's already one, or it's
-   * already closed). Call from the writer thread.
-   *
-   * @param maxWaitNanos the longest to wait, or 0 to wait as long as it takes.
+   * already closed). Might also return with nothing to write (after a leftover or spurious wake-up); the caller
+   * checks again. Call from the writer thread.
    */
-  void awaitRequests(long maxWaitNanos) {
+  void awaitRequests() {
     // Sets the flag before checking the queue one last time, and senders add to the queue before checking the flag,
     // so either this sees the request, or the sender sees the flag (and wakes the writer, maybe before it parks:
     // then it doesn't park).
     writerParked = true;
     if (queue.isEmpty() && !closed) {
-      if (maxWaitNanos > 0) {
-        LockSupport.parkNanos(this, maxWaitNanos);
-      } else {
-        LockSupport.park(this);
-      }
+      LockSupport.park(this);
     }
     writerParked = false;
+  }
+
+  /**
+   * Wakes the writer if requests are waiting to be written (for example, ones the reader sent without waking it,
+   * while it handles a batch of responses).
+   */
+  void wakeWriterIfNotEmpty() {
+    if (!queue.isEmpty()) {
+      wakeWriter();
+    }
   }
 
   private void wakeWriter() {
