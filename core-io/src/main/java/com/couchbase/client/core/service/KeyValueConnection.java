@@ -22,7 +22,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
-import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.GenericFailureDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
@@ -45,12 +44,11 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
+import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
-import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -58,6 +56,7 @@ import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.service.KeyValuePacketReader.InvalidPacketException;
 import com.couchbase.client.core.util.CbThreads;
 import com.couchbase.client.core.util.SynchronousEventBus;
 import org.jspecify.annotations.NullMarked;
@@ -67,19 +66,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSocket;
-import java.io.BufferedOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -88,9 +81,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -100,7 +91,6 @@ import static com.couchbase.client.core.io.netty.TracingUtils.setCommonDispatchS
 import static com.couchbase.client.core.io.netty.TracingUtils.setCommonKVSpanAttributes;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
-import static com.couchbase.client.core.service.KeyValueSocketConnector.remainingMillis;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -108,8 +98,8 @@ import static java.util.Objects.requireNonNull;
  * Does what the Netty pipeline's KV handlers do (see {@link com.couchbase.client.core.endpoint.KeyValueEndpoint}),
  * with the same events, retries and errors.
  * <p>
- * Lifecycle: {@link #open} connects and does the handshake, blocking the caller. Then {@link #start} starts
- * two threads, which run until the connection closes:
+ * Lifecycle: {@link KeyValueConnectionOpener} connects and does the handshake, then creates the connection.
+ * {@link #start} starts two threads, which run until the connection closes:
  * <ul>
  *   <li>The writer encodes nothing (requests are encoded by {@link #send}, on the caller's thread); it writes
  *       queued requests to the socket, up to {@value #FLUSH_CONSOLIDATION_LIMIT} per flush, flushing when the queue
@@ -155,7 +145,7 @@ final class KeyValueConnection {
     return executor;
   }
 
-  private static final int BUFFER_SIZE = 64 * 1024;
+  static final int BUFFER_SIZE = 64 * 1024;
 
   /**
    * The most requests the writer writes before flushing, like the Netty implementation's
@@ -244,21 +234,10 @@ final class KeyValueConnection {
   }
 
   private final EndpointContext endpointContext;
-  private final String remoteHostname;
-  private final int remotePort;
-  private final Optional<String> bucketName;
-  private final @Nullable SaslCredentials credentials;
-  private final Set<ServerFeature> requestedFeatures;
   private final Listener listener;
   private final EventBus eventBus;
   private final IoConfig ioConfig;
   private final boolean isInternalTracer;
-
-  /**
-   * Whether to publish every packet written and read (io.servicesToCapture), like the Netty implementation's
-   * TrafficCaptureHandler.
-   */
-  private final boolean captureTraffic;
 
   private final int highWaterMark;
   private final int lowWaterMark;
@@ -266,31 +245,34 @@ final class KeyValueConnection {
   private final long idleCheckIntervalNanos;
 
   /**
-   * The connection's ID: short (8 hex digits, like a Netty channel ID's short form), and long
-   * (the endpoint's ID and this ID, as sent in the HELLO request, like the Netty implementation's).
+   * The connection's ID (see {@link KeyValueConnectionOpener}).
    */
   private final String shortChannelId;
   private final String channelId;
 
   /**
-   * How long each connect step took (see {@link #timings()}).
+   * How long each connect step took (see {@link #timings()}). Written by the opener.
    */
-  private final SortedMap<String, Duration> timings = Collections.synchronizedSortedMap(new TreeMap<>());
+  private final SortedMap<String, Duration> timings;
 
-  // Set while connecting, before the reader and writer start.
-  private volatile @Nullable Socket tcpSocket;
-  private volatile @Nullable Socket socket;
-  private @Nullable InputStream in;
+  private final Socket tcpSocket;
+  private final Socket socket;
 
-  /**
-   * Splits what the connection reads into packets. Used by the connecting thread during the handshake,
-   * then by the reader, so anything read ahead during the handshake isn't lost.
-   */
-  private final KeyValueFrameDecoder frames = new KeyValueFrameDecoder();
-  private @Nullable OutputStream out;
-  private volatile IoContext ioContext;
-  private volatile @Nullable KeyValueChannelContext channelContext;
-  private volatile @Nullable KeyValueResponseHandler responses; // once the handshake is done
+  // The host name and port the connection is to (not the resolved address), for tracing.
+  private final String remoteHostname;
+  private final int remotePort;
+
+  private final OutputStream out;
+  private final KeyValuePacketReader packets;
+  private final IoContext ioContext;
+  private final KeyValueChannelContext channelContext;
+  private final KeyValueResponseHandler responses;
+  private final TrafficCapture capture;
+  private final AuthenticationRefresh authenticationRefresh;
+
+  // For toString(), which is often called once the socket is closed (when it no longer knows its local address).
+  private final SocketAddress localAddress;
+  private final SocketAddress remoteAddress;
 
   private final AtomicBoolean closed = new AtomicBoolean();
   private volatile @Nullable Throwable closeCause;
@@ -338,35 +320,54 @@ final class KeyValueConnection {
   private volatile boolean requestsRetried;
 
   // Guarded by "this".
-  private SynchronousEventBus.@Nullable Subscription authenticationRefreshSubscription;
-  private boolean started;
-  private boolean reauthenticateWhenStarted;
   private @Nullable ScheduledFuture<?> stuckWriterCheck;
 
   /**
+   * Called by {@link KeyValueConnectionOpener}, once it has connected and done the handshake.
+   *
    * @param endpointContext the endpoint's context (at the start of this connect attempt).
-   * @param credentials null if the connection doesn't authenticate with SASL.
+   * @param tcpSocket the TCP socket (the same as {@code socket} unless TLS is enabled).
+   * @param socket the socket to read and write.
+   * @param timings how long each connect step took.
+   * @param authenticationRefresh this connection's subscription to reauthentication signals; it takes it over.
    */
   KeyValueConnection(
     EndpointContext endpointContext,
-    String remoteHostname,
-    int remotePort,
-    Optional<String> bucketName,
-    @Nullable SaslCredentials credentials,
-    Set<ServerFeature> requestedFeatures,
-    Listener listener
+    Listener listener,
+    Socket tcpSocket,
+    Socket socket,
+    OutputStream out,
+    KeyValuePacketReader packets,
+    IoContext ioContext,
+    KeyValueChannelContext channelContext,
+    @Nullable ErrorMap errorMap,
+    String shortChannelId,
+    String channelId,
+    SortedMap<String, Duration> timings,
+    AuthenticationRefresh authenticationRefresh,
+    TrafficCapture capture
   ) {
     this.endpointContext = requireNonNull(endpointContext);
-    this.remoteHostname = requireNonNull(remoteHostname);
-    this.remotePort = remotePort;
-    this.bucketName = requireNonNull(bucketName);
-    this.credentials = credentials;
-    this.requestedFeatures = requireNonNull(requestedFeatures);
     this.listener = requireNonNull(listener);
+    this.tcpSocket = requireNonNull(tcpSocket);
+    this.socket = requireNonNull(socket);
+    this.out = requireNonNull(out);
+    this.packets = requireNonNull(packets);
+    this.ioContext = requireNonNull(ioContext);
+    this.channelContext = requireNonNull(channelContext);
+    this.shortChannelId = requireNonNull(shortChannelId);
+    this.channelId = requireNonNull(channelId);
+    this.timings = requireNonNull(timings);
+    this.authenticationRefresh = requireNonNull(authenticationRefresh);
+    this.capture = requireNonNull(capture);
+    this.localAddress = socket.getLocalSocketAddress();
+    this.remoteAddress = socket.getRemoteSocketAddress();
+    this.remoteHostname = endpointContext.remoteSocket().host();
+    this.remotePort = endpointContext.remoteSocket().port();
+
     this.eventBus = endpointContext.environment().eventBus();
     this.ioConfig = endpointContext.environment().ioConfig();
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
-    this.captureTraffic = ioConfig.servicesToCapture().contains(ServiceType.KV);
 
     this.highWaterMark = ioConfig.highWaterMark().bytesAsInt();
     this.lowWaterMark = ioConfig.lowWaterMark().bytesAsInt();
@@ -374,11 +375,20 @@ final class KeyValueConnection {
     this.readerIdleNanos = readerIdleNanos(ioConfig.configIdleRedialTimeout());
     this.idleCheckIntervalNanos = Math.min(readerIdleNanos, MAX_IDLE_CHECK_INTERVAL_NANOS);
 
-    int id = ThreadLocalRandom.current().nextInt();
-    this.shortChannelId = String.format("%08x", id);
-    this.channelId = String.format("%016X", endpointContext.id()) + "/" + String.format("%016X", Integer.toUnsignedLong(id));
-
-    this.ioContext = new IoContext(endpointContext, null, null, endpointContext.bucket());
+    this.responses = new KeyValueResponseHandler(
+      endpointContext,
+      ioContext,
+      channelContext,
+      errorMap,
+      inFlight,
+      isInternalTracer,
+      (reason, discard) -> {
+        if (discard) {
+          discardUnreadResponses = true;
+        }
+        closeWithReason(reason);
+      }
+    );
   }
 
   /**
@@ -404,16 +414,12 @@ final class KeyValueConnection {
     }
   }
 
-  @Nullable
   SocketAddress localAddress() {
-    Socket s = socket;
-    return s == null ? null : s.getLocalSocketAddress();
+    return localAddress;
   }
 
-  @Nullable
   SocketAddress remoteAddress() {
-    Socket s = socket;
-    return s == null ? null : s.getRemoteSocketAddress();
+    return remoteAddress;
   }
 
   boolean isClosed() {
@@ -435,218 +441,24 @@ final class KeyValueConnection {
     return inFlight.size();
   }
 
-  // ---- connecting
+  // ---- starting
 
   /**
-   * Connects, and does the handshake. Blocks until it's done. Doesn't start the reader and writer.
-   *
-   * @param deadlineNanos when to give up, in {@link System#nanoTime()} terms.
-   * @throws TimeoutException if the deadline passes.
-   */
-  void open(KeyValueSocketConnector connector, long deadlineNanos) throws IOException, TimeoutException {
-    try {
-      doOpen(connector, deadlineNanos);
-    } catch (Throwable t) {
-      close(t);
-      throw t;
-    }
-  }
-
-  private void doOpen(KeyValueSocketConnector connector, long deadlineNanos) throws IOException, TimeoutException {
-    synchronized (this) {
-      // close() unsubscribes while holding the lock, so if it's already been called, it's too late to subscribe.
-      if (closed.get()) {
-        throw new IOException("Connection closed before it opened");
-      }
-      // Handled on another thread (like the Netty implementation, which switches to the channel's event loop),
-      // so the publisher isn't held up, and closing the connection can unsubscribe.
-      authenticationRefreshSubscription = endpointContext.core().authenticationRefreshTriggers.subscribe(
-        signal -> ioThreads.execute(this::onAuthenticationRefreshSignal)
-      );
-    }
-
-    List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
-    if (connector.tlsEnabled() && !ciphers.isEmpty()) {
-      eventBus.publish(new CustomTlsCiphersEnabledEvent(ciphers, endpointContext)); // like the Netty implementation's SslHandlerFactory
-    }
-
-    long tcpStart = System.nanoTime();
-    long[] tlsStart = new long[1];
-    Socket s;
-    try {
-      s = connector.connect(
-        remoteHostname,
-        remotePort,
-        deadlineNanos,
-        newSocket -> {
-          if (tcpSocket == null) {
-            tcpSocket = newSocket;
-          }
-          socket = newSocket;
-          if (closed.get()) {
-            closeQuietly(newSocket); // closed while connecting
-          }
-        },
-        () -> {
-          timings.put("TcpConnect", Duration.ofNanos(System.nanoTime() - tcpStart));
-          tlsStart[0] = System.nanoTime();
-        }
-      );
-    } catch (IOException e) {
-      throw connectFailure(connector, e);
-    }
-
-    if (connector.tlsEnabled()) {
-      timings.put("TlsHandshake", Duration.ofNanos(System.nanoTime() - tlsStart[0]));
-      // Cause is null if handshake was successful. Set it unconditionally,
-      // so the endpoint can recover from a transient on-path attack
-      // (where the "server" temporarily presents an untrusted certificate).
-      endpointContext.tlsHandshakeFailure(null);
-    }
-
-    ioContext = new IoContext(endpointContext, s.getLocalSocketAddress(), s.getRemoteSocketAddress(), endpointContext.bucket());
-    InputStream input = s.getInputStream(); // the frame decoder does the buffering
-    OutputStream output = new BufferedOutputStream(s.getOutputStream(), BUFFER_SIZE);
-    in = input;
-    out = output;
-
-    KeyValueHandshake.Result result;
-    try {
-      result = new KeyValueHandshake(
-        endpointContext,
-        ioContext,
-        ALLOC,
-        new KeyValueHandshake.PacketIo() {
-          @Override
-          public void write(ByteBuf packet) throws IOException {
-            try {
-              captureWritten(packet);
-              packet.readBytes(output, packet.readableBytes());
-            } catch (IOException e) {
-              throw withPendingTlsAlert(connector, e, input);
-            } finally {
-              packet.release();
-            }
-          }
-
-          @Override
-          public void flush() throws IOException {
-            try {
-              output.flush();
-            } catch (IOException e) {
-              throw withPendingTlsAlert(connector, e, input);
-            }
-          }
-
-          @Override
-          public ByteBuf read() throws IOException {
-            s.setSoTimeout(remainingMillis(deadlineNanos));
-            ByteBuf packet = readPacket(input);
-            captureRead(packet);
-            return packet;
-          }
-        },
-        requestedFeatures,
-        credentials,
-        bucketName,
-        channelId,
-        timings
-      ).run();
-    } catch (IOException e) {
-      // With TLS 1.3, the client finishes its side of the TLS handshake before the server checks the client's
-      // certificate. So if the server rejects it, its alert arrives now. Reported like any TLS handshake failure.
-      throw connectFailure(connector, e);
-    }
-
-    KeyValueChannelContext negotiated = new KeyValueChannelContext(
-      result.features.contains(ServerFeature.SNAPPY) ? endpointContext.environment().compressionConfig() : null,
-      bucketName,
-      endpointContext.core().configurationProvider().collectionMap(),
-      shortChannelId,
-      result.features
-    );
-    channelContext = negotiated;
-    responses = new KeyValueResponseHandler(
-      endpointContext,
-      ioContext,
-      negotiated,
-      result.errorMap,
-      inFlight,
-      isInternalTracer,
-      (reason, discard) -> {
-        if (discard) {
-          discardUnreadResponses = true;
-        }
-        closeWithReason(reason);
-      }
-    );
-
-    // From now on, reads wait as long as it takes. The writer closes the connection if the server is quiet too long.
-    s.setSoTimeout(0);
-  }
-
-  /**
-   * If writing failed (for example, with "Broken pipe") because the server sent a TLS alert and closed
-   * the connection, adds the alert (if it can be read) to the failure as a suppressed exception,
-   * like OkHttp does.
-   */
-  private static IOException withPendingTlsAlert(KeyValueSocketConnector connector, IOException e, InputStream input) {
-    if (connector.tlsEnabled() && OkHttpTlsHelper.describeTlsFailure(e) == null) {
-      try {
-        int ignored = input.read();
-      } catch (IOException readFailure) {
-        e.addSuppressed(readFailure);
-      }
-    }
-    return e;
-  }
-
-  /**
-   * Returns the exception to fail the connect attempt with, and if it's a TLS failure, records it like the
-   * Netty implementation does.
-   */
-  private IOException connectFailure(KeyValueSocketConnector connector, IOException e) {
-    if (!connector.tlsEnabled()) {
-      return e;
-    }
-    SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(e);
-    if (tlsFailure == null) {
-      return e;
-    }
-
-    Socket s = tcpSocket;
-    if (s != null) {
-      ioContext = new IoContext(endpointContext, s.getLocalSocketAddress(), s.getRemoteSocketAddress(), endpointContext.bucket());
-    }
-    endpointContext.tlsHandshakeFailure(e);
-    if (OkHttpTlsHelper.connectionFailedDuringTls(e)) {
-      return tlsFailure; // might be temporary
-    }
-    endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
-    eventBus.publish(new SecureConnectionFailedEvent(ioContext, tlsFailure));
-    // With a hint saying what to check, if retrying won't help.
-    return tlsFailure;
-  }
-
-  /**
-   * Starts the reader and writer. Call once, after {@link #open} succeeds.
+   * Starts the reader and writer. Call once.
    */
   void start() {
     lastReadNanos = System.nanoTime();
     startThread(this::runReader);
     startThread(this::runWriter);
 
-    boolean reauthenticate;
     synchronized (this) {
-      started = true;
-      reauthenticate = reauthenticateWhenStarted;
       if (!closed.get() && idleDetectionEnabled()) {
         stuckWriterCheck = stuckWriterChecks.scheduleWithFixedDelay(
           this::checkStuckWriter, idleCheckIntervalNanos, idleCheckIntervalNanos, TimeUnit.NANOSECONDS
         );
       }
     }
-    if (reauthenticate) {
+    if (authenticationRefresh.start(this::onAuthenticationRefreshSignal)) {
       log.info("Immediately reauthenticating the channel because a new authenticator was provided during the handshake process. Channel: {}", this);
       reauthenticate();
     }
@@ -684,7 +496,7 @@ final class KeyValueConnection {
     KeyValueRequest<Response> request = (KeyValueRequest<Response>) req;
     ByteBuf encoded;
     try {
-      encoded = request.encode(ALLOC, request.opaque(), requireNonNull(channelContext));
+      encoded = request.encode(ALLOC, request.opaque(), channelContext);
     } catch (Throwable err) {
       handleEncodeFailure(request, err);
       return true;
@@ -708,7 +520,7 @@ final class KeyValueConnection {
    * Like KeyValueMessageHandler, when encoding fails.
    */
   private void handleEncodeFailure(KeyValueRequest<Response> request, Throwable err) {
-    KeyValueChannelContext ctx = requireNonNull(channelContext);
+    KeyValueChannelContext ctx = channelContext;
     if (err instanceof CollectionNotFoundException && ctx.collectionsEnabled()) {
       ConfigurationProvider cp = ioContext.core().configurationProvider();
       if (cp.collectionRefreshInProgress(request.collectionIdentifier())) {
@@ -716,7 +528,7 @@ final class KeyValueConnection {
       } else if (cp.config().bucketConfig(request.bucket()) instanceof MemcachedBucketConfig) {
         request.fail(FeatureNotAvailableException.collectionsForMemcached());
       } else {
-        requireNonNull(responses).handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
+        responses.handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
       }
       return;
     }
@@ -774,7 +586,7 @@ final class KeyValueConnection {
     writerThread = Thread.currentThread();
     Throwable failure = null;
     try {
-      OutputStream output = requireNonNull(out);
+      OutputStream output = out;
       while (!closed.get()) {
         int written = 0;
         writing = true;
@@ -833,7 +645,7 @@ final class KeyValueConnection {
       }
       int opaque = request.opaque();
       inFlight.put(opaque, new InFlight(request, System.nanoTime(), dispatchSpan));
-      captureWritten(outbound.encoded);
+      capture.written(outbound.encoded);
       outbound.encoded.readBytes(output, outbound.encoded.readableBytes());
     } finally {
       outbound.encoded.release();
@@ -944,7 +756,7 @@ final class KeyValueConnection {
     req.response().thenAccept(res -> log.debug("Read NOOP response; {}", endpointContext));
 
     KeyValueRequest<Response> request = (KeyValueRequest<Response>) (KeyValueRequest<?>) req;
-    Outbound outbound = new Outbound(request, request.encode(ALLOC, request.opaque(), requireNonNull(channelContext)));
+    Outbound outbound = new Outbound(request, request.encode(ALLOC, request.opaque(), channelContext));
     queuedBytes.addAndGet(outbound.size);
     write(output, outbound);
     output.flush();
@@ -958,17 +770,16 @@ final class KeyValueConnection {
     readerThread = Thread.currentThread();
     Throwable failure = null;
     try {
-      InputStream input = requireNonNull(in);
       while (!closed.get()) {
-        ByteBuf packet = nextPacket();
+        ByteBuf packet = packets.next();
         if (packet == null) {
-          if (!frames.hasUnreadBytes()) {
+          if (!packets.hasUnreadBytes()) {
             // Handled everything already read; the next read may wait for the server.
             // (With part of a packet read, the rest is usually on its way, so the batch goes on: requests sent
             // while handling it are written with the ones sent while handling the rest of the batch.)
             endReadBatch();
           }
-          fill(input);
+          packets.fill();
           lastReadNanos = System.nanoTime();
           noopSentSinceLastRead = false;
           continue;
@@ -982,7 +793,7 @@ final class KeyValueConnection {
       // Like the Netty implementation, handles the rest of the responses already read (but doesn't read more),
       // so their requests complete, instead of being retried (or canceled, if they're not idempotent).
       ByteBuf packet;
-      while (!discardUnreadResponses && (packet = nextPacket()) != null) {
+      while (!discardUnreadResponses && (packet = packets.next()) != null) {
         handle(packet);
       }
     } catch (Throwable t) {
@@ -997,7 +808,7 @@ final class KeyValueConnection {
 
   private void handle(ByteBuf packet) {
     try {
-      captureRead(packet);
+      capture.read(packet);
       handleInbound(packet);
     } catch (RuntimeException e) {
       // Like Netty's pipeline, which reports a handler's exception, and carries on.
@@ -1020,71 +831,13 @@ final class KeyValueConnection {
     }
   }
 
-  /**
-   * Returns the next packet, reading from the socket as needed. Its buffer has exactly the packet's bytes,
-   * and is only valid until the next read (see {@link KeyValueFrameDecoder}).
-   *
-   * @throws InvalidPacketException if the packet failed verification
-   * (like the Netty implementation's MemcacheProtocolVerificationHandler, it's reported, and the connection closed).
-   */
-  private ByteBuf readPacket(InputStream input) throws IOException {
-    ByteBuf packet;
-    while ((packet = nextPacket()) == null) {
-      fill(input);
-    }
-    return packet;
-  }
-
-  /**
-   * Returns the next complete packet already read, or null if there isn't one.
-   *
-   * @throws InvalidPacketException if the packet failed verification.
-   */
-  private @Nullable ByteBuf nextPacket() throws InvalidPacketException {
-    ByteBuf packet;
-    try {
-      packet = frames.next();
-    } catch (KeyValueFrameDecoder.InvalidSizeException e) {
-      throw invalidPacket(e.header);
-    }
-    if (packet != null && !MemcacheProtocol.verifyResponse(packet)) {
-      throw invalidPacket(packet);
-    }
-    return packet;
-  }
-
-  /**
-   * Reads more from the socket, waiting until there's something to read.
-   *
-   * @throws EOFException if the server closed the connection.
-   */
-  private void fill(InputStream input) throws IOException {
-    if (!frames.fill(input)) {
-      throw new EOFException("The server closed the connection.");
-    }
-  }
-
-  private InvalidPacketException invalidPacket(ByteBuf packet) {
-    eventBus.publish(new InvalidPacketDetectedEvent(ioContext, ByteBufUtil.getBytes(packet)));
-    return new InvalidPacketException();
-  }
-
-  /**
-   * Thrown when a packet from the server fails verification.
-   */
-  static final class InvalidPacketException extends IOException {
-    InvalidPacketException() {
-      super("Invalid packet from server");
-    }
-  }
-
   private void handleInbound(ByteBuf packet) {
     if (ServerPushHandler.isServerPush(packet)) {
       ServerPushHandler.handleServerPush(endpointContext, packet);
       return;
     }
     try {
-      requireNonNull(responses).handle(packet);
+      responses.handle(packet);
     } finally {
       listener.responseReceived();
     }
@@ -1093,17 +846,9 @@ final class KeyValueConnection {
   // ---- reauthentication (like AuthenticationRefreshHandler)
 
   private void onAuthenticationRefreshSignal() {
-    synchronized (this) {
-      if (closed.get()) {
-        return;
-      }
-      if (!started) {
-        log.info("Deferring reauthentication until handshake completes. Channel: {}", this);
-        reauthenticateWhenStarted = true;
-        return;
-      }
+    if (!closed.get()) {
+      reauthenticate();
     }
-    reauthenticate();
   }
 
   private void reauthenticate() {
@@ -1137,23 +882,88 @@ final class KeyValueConnection {
     }
   }
 
-  // ---- traffic capture
+  // ---- traffic capture, and reauthentication signals (also used by the opener)
 
   /**
-   * Publishes the packet about to be written, if capturing traffic. Doesn't change the buffer.
+   * Publishes each packet written and read, if the config asks for KV's (io.servicesToCapture),
+   * like the Netty implementation's TrafficCaptureHandler.
    */
-  private void captureWritten(ByteBuf packet) {
-    if (captureTraffic) {
-      eventBus.publish(new WriteTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+  static final class TrafficCapture {
+    private final IoContext ioContext;
+    private final boolean enabled;
+
+    TrafficCapture(IoContext ioContext) {
+      this.ioContext = requireNonNull(ioContext);
+      this.enabled = ioContext.environment().ioConfig().servicesToCapture().contains(ServiceType.KV);
+    }
+
+    /**
+     * Publishes the packet about to be written. Doesn't change the buffer.
+     */
+    void written(ByteBuf packet) {
+      if (enabled) {
+        ioContext.environment().eventBus().publish(new WriteTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+      }
+    }
+
+    /**
+     * Publishes the packet just read. Doesn't change the buffer.
+     */
+    void read(ByteBuf packet) {
+      if (enabled) {
+        ioContext.environment().eventBus().publish(new ReadTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+      }
     }
   }
 
   /**
-   * Publishes the packet just read, if capturing traffic. Doesn't change the buffer.
+   * A connection's subscription to reauthentication signals (see {@code Core.authenticationRefreshTriggers}).
+   * The opener subscribes before connecting, so a signal during the handshake isn't missed. Signals before the
+   * connection starts are remembered, and acted on once it does (like the Netty implementation's
+   * AuthenticationRefreshHandler, which defers them until the handshake completes).
    */
-  private void captureRead(ByteBuf packet) {
-    if (captureTraffic) {
-      eventBus.publish(new ReadTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+  static final class AuthenticationRefresh {
+    private final SynchronousEventBus.Subscription subscription;
+
+    // Guarded by "this".
+    private @Nullable Runnable onSignal;
+    private boolean signalled;
+
+    AuthenticationRefresh(EndpointContext endpointContext) {
+      // Handled on another thread (like the Netty implementation, which switches to the channel's event loop),
+      // so the publisher isn't held up, and closing the connection can unsubscribe.
+      this.subscription = endpointContext.core().authenticationRefreshTriggers.subscribe(
+        signal -> ioThreads.execute(this::signal)
+      );
+    }
+
+    private void signal() {
+      Runnable action;
+      synchronized (this) {
+        action = onSignal;
+        if (action == null) {
+          log.info("Deferring reauthentication until handshake completes.");
+          signalled = true;
+          return;
+        }
+      }
+      action.run();
+    }
+
+    /**
+     * From now on, runs the action for each signal.
+     *
+     * @return true if there was a signal before now (which the caller should act on).
+     */
+    synchronized boolean start(Runnable onSignal) {
+      this.onSignal = requireNonNull(onSignal);
+      boolean result = signalled;
+      signalled = false;
+      return result;
+    }
+
+    void unsubscribe() {
+      subscription.unsubscribe();
     }
   }
 
@@ -1178,11 +988,8 @@ final class KeyValueConnection {
     }
     closeCause = cause;
 
+    authenticationRefresh.unsubscribe();
     synchronized (this) {
-      if (authenticationRefreshSubscription != null) {
-        authenticationRefreshSubscription.unsubscribe();
-        authenticationRefreshSubscription = null;
-      }
       if (stuckWriterCheck != null) {
         stuckWriterCheck.cancel(false);
         stuckWriterCheck = null;
@@ -1254,12 +1061,11 @@ final class KeyValueConnection {
 
   @Override
   public String toString() {
-    Socket s = socket;
     return "KeyValueConnection{" +
       "id=0x" + shortChannelId +
-      ", local=" + redactSystem(s == null ? null : s.getLocalSocketAddress()) +
-      ", remote=" + redactSystem(s == null ? remoteHostname + ":" + remotePort : s.getRemoteSocketAddress()) +
-      ", tls=" + (s instanceof SSLSocket) +
+      ", local=" + redactSystem(localAddress) +
+      ", remote=" + redactSystem(remoteAddress) +
+      ", tls=" + (socket instanceof SSLSocket) +
       '}';
   }
 }
