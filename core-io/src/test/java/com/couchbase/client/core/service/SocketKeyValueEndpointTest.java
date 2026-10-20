@@ -819,6 +819,30 @@ class SocketKeyValueEndpointTest {
   }
 
   @Test
+  void reportsJvmErrorOnTheReaderThreadAndReconnects() throws Exception {
+    start();
+    startServer();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
+    FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
+    // Thrown on the reader thread, while it handles the response. (Also logged at ERROR.)
+    OutOfMemoryError error = new OutOfMemoryError("simulated");
+    onPublish = event -> {
+      if (event instanceof UnknownResponseReceivedEvent) {
+        throw error;
+      }
+    };
+
+    connection.respond(MemcacheProtocol.Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
+
+    GenericFailureDetectedEvent failure = waitForEvent(GenericFailureDetectedEvent.class);
+    assertSame(error, failure.cause());
+    waitForEvent(UnexpectedEndpointDisconnectedEvent.class);
+    waitUntil(() -> endpoint.state() == EndpointState.CONNECTED
+      && !endpoint.context().channelId().orElse("").equals(channelId));
+  }
+
+  @Test
   void closesConnectionWhenResponseHasUnknownOpaque() throws Exception {
     start();
     startServer();
