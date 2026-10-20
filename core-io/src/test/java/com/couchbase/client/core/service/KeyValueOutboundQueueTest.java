@@ -36,13 +36,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class KeyValueOutboundQueueTest {
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
+  private static final int MAX_DEFERRED_WAKES = 3;
+
   private static Outbound outbound(int size) {
     return new Outbound(null, Unpooled.buffer(size).writeZero(size));
   }
 
   @Test
   void isNotWritableAboveTheHighWaterMarkUntilBelowTheLowWaterMark() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Outbound first = outbound(60);
     Outbound second = outbound(60);
 
@@ -65,7 +67,7 @@ class KeyValueOutboundQueueTest {
   @Test
   void isWritableOnceEverythingIsWrittenEvenWhenSendersRaceTheWriter() throws Exception {
     for (int round = 0; round < 200; round++) {
-      KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+      KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
       int senders = 4;
       CountDownLatch start = new CountDownLatch(1);
       Thread[] threads = new Thread[senders];
@@ -94,7 +96,7 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void drainReturnsWhatWasNeverWrittenAndThenRefusesRequests() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Outbound unwritten = outbound(10);
     queue.add(unwritten);
     queue.close();
@@ -108,7 +110,7 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void writerTakesCloseOnceItHasTakenWhatsAheadOfIt() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Outbound first = outbound(10);
     queue.add(first);
     queue.close();
@@ -119,7 +121,7 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void addingWakesTheParkedWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Thread writer = startWriter(queue);
 
     queue.add(outbound(10));
@@ -130,7 +132,7 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void closingWakesTheParkedWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Thread writer = startWriter(queue);
 
     queue.close();
@@ -142,7 +144,7 @@ class KeyValueOutboundQueueTest {
   @Test
   @Timeout(10) // interrupts the test thread, so a park returns (and the test fails)
   void writerDoesNotWaitWhenThereIsSomethingToWrite() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     queue.writerStarted();
     queue.add(outbound(10));
 
@@ -151,7 +153,7 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void requestsSentByTheReaderDuringABatchWakeTheWriterWhenTheBatchEnds() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Thread writer = startWriter(queue);
 
     CountDownLatch added = new CountDownLatch(1);
@@ -180,9 +182,50 @@ class KeyValueOutboundQueueTest {
     reader.join(TIMEOUT.toMillis());
   }
 
+  /**
+   * Like the Netty implementation's FlushConsolidationHandler: a batch that goes on and on (for example, because
+   * each read ends partway through a packet) doesn't keep the requests sent while handling it waiting.
+   */
+  @Test
+  void requestsSentByTheReaderDuringALongBatchWakeTheWriterEverySoOften() throws Exception {
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(1_000, 500, MAX_DEFERRED_WAKES);
+    Thread writer = startWriter(queue);
+
+    CountDownLatch addedAllButOne = new CountDownLatch(1);
+    CountDownLatch addLast = new CountDownLatch(1);
+    CountDownLatch done = new CountDownLatch(1);
+    Thread reader = new Thread(() -> {
+      queue.readerStarted();
+      queue.beginReadBatch();
+      for (int i = 0; i < MAX_DEFERRED_WAKES - 1; i++) {
+        queue.add(outbound(10));
+      }
+      addedAllButOne.countDown();
+      try {
+        addLast.await();
+        queue.add(outbound(10));
+        done.await(); // the batch hasn't ended
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      queue.endReadBatch();
+    });
+    reader.start();
+
+    assertTrue(addedAllButOne.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
+    Thread.sleep(100);
+    assertTrue(writer.isAlive(), "writer shouldn't wake before the limit");
+
+    addLast.countDown();
+    writer.join(TIMEOUT.toMillis());
+    assertFalse(writer.isAlive(), "writer should have woken at the limit, before the batch ends");
+    done.countDown();
+    reader.join(TIMEOUT.toMillis());
+  }
+
   @Test
   void requestsSentByOtherThreadsDuringTheReadersBatchWakeTheWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
     Thread writer = startWriter(queue);
 
     CountDownLatch inBatch = new CountDownLatch(1);
