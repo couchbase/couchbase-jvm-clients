@@ -16,11 +16,15 @@
 
 package com.couchbase.client.core.io.netty;
 
+import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.RequestSpan;
+import com.couchbase.client.core.cnc.RequestTracer;
+import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -34,6 +38,59 @@ import reactor.util.annotation.Nullable;
 public class TracingUtils {
 
   private TracingUtils() {}
+
+  /**
+   * Starts a KV request's dispatch span (a child of its request span), with the attributes both KV implementations
+   * set, unless the tracer is the SDK's internal one, which ignores them. If setting them throws, ends the span first.
+   *
+   * @param context for the tracer (only used if the request has a span).
+   * @param isInternalTracer whether the tracer is the SDK's internal one (see {@code CbTracing.isInternalTracer}).
+   * @param channelId the connection's ID.
+   * @param ioContext the connection's context, for its local address.
+   * @param remoteHost the host the connection is to, as the endpoint knows it.
+   * @param remotePort the port the connection is to.
+   * @return the span, or null if the request has no span.
+   */
+  public static @Nullable RequestSpan newKeyValueDispatchSpan(
+    final KeyValueRequest<Response> request,
+    final CoreContext context,
+    final boolean isInternalTracer,
+    @Nullable final String channelId,
+    final IoContext ioContext,
+    @Nullable final String remoteHost,
+    final int remotePort
+  ) {
+    if (request.requestSpan() == null) {
+      return null;
+    }
+    RequestTracer tracer = context.coreResources().requestTracer();
+    RequestSpan dispatchSpan = tracer.requestSpan(TracingIdentifiers.SPAN_DISPATCH, request.requestSpan());
+    if (isInternalTracer) {
+      return dispatchSpan;
+    }
+
+    try {
+      TracingDecorator tip = request.context().coreResources().tracingDecorator();
+      setCommonDispatchSpanAttributes(
+        tip,
+        dispatchSpan,
+        channelId,
+        ioContext.localHostname(),
+        ioContext.localPort(),
+        request.context().lastDispatchedToNode().canonical().host(),
+        remotePort,
+        remoteHost,
+        remotePort,
+        null
+      );
+      tip.provideAttr(TracingAttribute.OPERATION_ID, dispatchSpan, request.opaque());
+      setCommonKVSpanAttributes(dispatchSpan, request);
+    } catch (Throwable t) {
+      dispatchSpan.end();
+      throw t;
+    }
+    return dispatchSpan;
+  }
 
   /**
    * Sets common dispatch span attributes as per spec.
