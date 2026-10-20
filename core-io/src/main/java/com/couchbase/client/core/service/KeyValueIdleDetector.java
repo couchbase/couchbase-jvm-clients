@@ -16,29 +16,31 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.util.CbThreads;
 import org.jspecify.annotations.NullMarked;
-import org.jspecify.annotations.Nullable;
 
-import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decides when a {@link KeyValueConnection} has been idle too long, like the Netty implementation's
- * IdleStateHandler (with KeyValueMessageHandler): if the server has been quiet for half the idle timeout
- * (io.configIdleRedialTimeout), the connection sends a NOOP, so a healthy server answers; if it's quiet for
- * all of it, the connection closes.
+ * Decides when a {@link KeyValueConnection} is dead, because the server has gone quiet.
  * <p>
- * The writer thread checks (see {@link #check}), since it might send the NOOP. If the writer is stuck writing
- * (because the server isn't reading), a scheduled task checks instead (see {@link #checkStuckWriter}).
+ * If the server has been quiet for a third of the idle timeout (io.configIdleRedialTimeout), the connection sends
+ * a NOOP, so a healthy server answers. If nothing arrives within another third, it sends a second NOOP; if nothing
+ * arrives within a third after that one either, the connection closes. (So a dead connection closes when the server
+ * has been quiet for the whole idle timeout, like the Netty implementation.)
  * <p>
- * An idle timeout that's not positive turns idle detection off, like the Netty implementation.
+ * Waiting for two NOOPs means one long pause (a GC pause, for example) can't close a healthy connection: the check
+ * might run before the reader has read a response that arrived during the pause, but by the next check it has.
+ * <p>
+ * The NOOPs are sent whether or not other requests are outstanding: with unordered execution (on by default),
+ * the server answers a NOOP even while it works on a slow request. And a NOOP gives an idle connection unacknowledged
+ * data, which is what the TCP user timeout applies to (on Linux, where it's set).
+ * <p>
+ * An idle timeout that's not positive turns this off, like the Netty implementation's IdleStateHandler.
+ * The connection calls {@link #check} periodically.
  */
 @NullMarked
 final class KeyValueIdleDetector {
@@ -48,65 +50,40 @@ final class KeyValueIdleDetector {
    */
   interface Connection {
     /**
-     * Writes a NOOP. Called by the writer thread, from {@link #check}.
+     * Sends a NOOP.
      */
-    void writeNoop() throws IOException;
+    void sendNoop();
 
     /**
-     * Closes the connection, since the server has been quiet for the whole idle timeout.
+     * Closes the connection, since the server has gone quiet.
+     *
+     * @param reason why, for the log and the close cause.
      */
-    void closeBecauseIdle();
+    void closeBecauseIdle(String reason);
   }
 
   /**
-   * Runs {@link #checkStuckWriter} for every connection. One thread is plenty: the checks are quick.
+   * How many NOOPs in a row can go unanswered (each for a whole NOOP interval) before the connection closes.
    */
-  private static final ScheduledThreadPoolExecutor stuckWriterChecks = newStuckWriterChecks();
-
-  private static ScheduledThreadPoolExecutor newStuckWriterChecks() {
-    ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, CbThreads.platformThreadFactory("cb-kv-idle-"));
-    executor.setRemoveOnCancelPolicy(true);
-    return executor;
-  }
+  static final int MAX_UNANSWERED_NOOPS = 2;
 
   /**
-   * How often the writer checks whether the server has been quiet, at most.
+   * How often to {@link #check}, at most and at least. (Scheduling needs a positive interval.)
    */
   private static final long MAX_CHECK_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1);
+  private static final long MIN_CHECK_INTERVAL_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-  /**
-   * Like the Netty implementation's IdleStateHandler, which waits at least this long.
-   */
-  private static final long MIN_READER_IDLE_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
-
-  /**
-   * Returns how long the server can be quiet before the connection sends a NOOP: half the idle timeout.
-   * Or 0 if there's no idle detection: like the Netty implementation's IdleStateHandler, if it's not positive.
-   */
-  static long readerIdleNanos(Duration configIdleRedialTimeout) {
-    long half = configIdleRedialTimeout.toNanos() / 2;
-    return half <= 0 ? 0 : Math.max(half, MIN_READER_IDLE_NANOS);
-  }
-
-  private final long readerIdleNanos;
+  private final Duration idleTimeout;
+  private final long noopIntervalNanos; // 0 if off
   private final long checkIntervalNanos;
   private final Connection connection;
   private final LongSupplier nanoTime;
 
   private volatile long lastReadNanos;
-  private volatile boolean noopSentSinceLastRead;
 
-  // Only accessed by the writer.
-  private long noopSentNanos;
-
-  /**
-   * Whether the writer is writing (so it might be blocked, and can't run {@link #check}).
-   */
-  private volatile boolean writing;
-
-  // Guarded by "this".
-  private @Nullable ScheduledFuture<?> stuckWriterCheck;
-  private boolean stopped;
+  // Only the checking thread uses these.
+  private int unansweredNoops; // sent since the server last sent something
+  private long lastNoopNanos;
 
   KeyValueIdleDetector(Duration configIdleRedialTimeout, Connection connection) {
     this(configIdleRedialTimeout, connection, System::nanoTime);
@@ -116,47 +93,35 @@ final class KeyValueIdleDetector {
    * @param nanoTime the clock, like {@link System#nanoTime()}.
    */
   KeyValueIdleDetector(Duration configIdleRedialTimeout, Connection connection, LongSupplier nanoTime) {
-    this.readerIdleNanos = readerIdleNanos(configIdleRedialTimeout);
-    this.checkIntervalNanos = Math.min(readerIdleNanos, MAX_CHECK_INTERVAL_NANOS);
+    this.idleTimeout = requireNonNull(configIdleRedialTimeout);
+    long timeoutNanos = configIdleRedialTimeout.toNanos();
+    this.noopIntervalNanos = timeoutNanos > 0 ? Math.max(1, timeoutNanos / (MAX_UNANSWERED_NOOPS + 1)) : 0;
+    this.checkIntervalNanos = noopIntervalNanos > 0
+      ? Math.max(MIN_CHECK_INTERVAL_NANOS, Math.min(noopIntervalNanos, MAX_CHECK_INTERVAL_NANOS))
+      : MAX_CHECK_INTERVAL_NANOS;
     this.connection = requireNonNull(connection);
     this.nanoTime = requireNonNull(nanoTime);
   }
 
   /**
-   * How long the writer can wait for requests before it should {@link #check} again, or 0 if it can wait as long as it
-   * takes (when idle detection is off).
+   * How often to call {@link #check}: at most a second apart (more often for a short idle timeout).
    */
   long checkIntervalNanos() {
     return checkIntervalNanos;
   }
 
   /**
-   * Starts timing (as if the server just sent something), and the stuck-writer checks. Call once,
-   * when the connection starts.
+   * How long the server can be quiet before the connection sends a NOOP (a third of the idle timeout), or 0 if it never does.
    */
-  void start() {
-    lastReadNanos = nanoTime.getAsLong();
-    if (enabled()) {
-      synchronized (this) {
-        // Not once stopped: nothing would cancel it.
-        if (!stopped) {
-          stuckWriterCheck = stuckWriterChecks.scheduleWithFixedDelay(
-            this::checkStuckWriter, checkIntervalNanos, checkIntervalNanos, TimeUnit.NANOSECONDS
-          );
-        }
-      }
-    }
+  long noopIntervalNanos() {
+    return noopIntervalNanos;
   }
 
   /**
-   * Stops the stuck-writer checks. Call when the connection closes (even if it never started).
+   * Starts timing, as if the server just sent something. Call once, when the connection starts.
    */
-  synchronized void stop() {
-    stopped = true;
-    if (stuckWriterCheck != null) {
-      stuckWriterCheck.cancel(false);
-      stuckWriterCheck = null;
-    }
+  void start() {
+    lastReadNanos = nanoTime.getAsLong();
   }
 
   /**
@@ -164,58 +129,38 @@ final class KeyValueIdleDetector {
    */
   void read() {
     lastReadNanos = nanoTime.getAsLong();
-    noopSentSinceLastRead = false;
   }
 
   /**
-   * Call from the writer thread before it writes (and so might be blocked).
+   * Call at least every {@link #checkIntervalNanos}, from one thread at a time: sends a NOOP, or closes the
+   * connection, if the server has been quiet long enough (see the class description).
    */
-  void startedWriting() {
-    writing = true;
-  }
-
-  /**
-   * Call from the writer thread when it's done writing (after {@link #check}).
-   */
-  void finishedWriting() {
-    writing = false;
-  }
-
-  /**
-   * Call from the writer thread, at least every {@link #checkIntervalNanos}: if the server has been quiet for half
-   * the idle timeout, writes a NOOP; if it's quiet for all of it, closes the connection.
-   */
-  void check() throws IOException {
-    if (!enabled()) {
+  void check() {
+    if (noopIntervalNanos == 0) {
       return;
     }
     long now = nanoTime.getAsLong();
-    if (!noopSentSinceLastRead) {
-      if (now - lastReadNanos >= readerIdleNanos) {
-        noopSentNanos = now;
-        noopSentSinceLastRead = true;
-        connection.writeNoop();
-      }
-
-    } else if (now - noopSentNanos >= readerIdleNanos) {
-      // Nothing for a whole idle period after the NOOP (measured from when it was sent, like the Netty
-      // implementation's second idle event), so nothing for at least io.configIdleRedialTimeout in all.
-      connection.closeBecauseIdle();
+    long lastRead = lastReadNanos;
+    long quietNanos = now - lastRead;
+    if (quietNanos < noopIntervalNanos) {
+      return;
     }
-  }
 
-  /**
-   * Does what {@link #check} would, if the writer is stuck writing (because the server isn't reading):
-   * closes the connection if the server has been quiet for io.configIdleRedialTimeout. Like the Netty
-   * implementation, whose idle check runs whether or not its writes are stuck.
-   */
-  void checkStuckWriter() {
-    if (enabled() && writing && nanoTime.getAsLong() - lastReadNanos >= 2 * readerIdleNanos) {
-      connection.closeBecauseIdle();
+    if (unansweredNoops > 0 && lastRead - lastNoopNanos > 0) {
+      unansweredNoops = 0; // the server has sent something since
     }
-  }
-
-  private boolean enabled() {
-    return readerIdleNanos > 0;
+    if (unansweredNoops > 0 && now - lastNoopNanos < noopIntervalNanos) {
+      return; // still waiting for an answer
+    }
+    if (unansweredNoops >= MAX_UNANSWERED_NOOPS) {
+      connection.closeBecauseIdle(
+        "No incoming traffic for " + Duration.ofNanos(quietNanos) + ", including a third of the idle timeout"
+          + " (io.configIdleRedialTimeout = " + idleTimeout + ") after each of the last " + unansweredNoops + " NOOPs"
+      );
+      return;
+    }
+    unansweredNoops++;
+    lastNoopNanos = now;
+    connection.sendNoop();
   }
 }
