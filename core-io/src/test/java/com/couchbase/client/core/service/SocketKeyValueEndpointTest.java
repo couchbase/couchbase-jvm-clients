@@ -103,6 +103,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -710,6 +711,34 @@ class SocketKeyValueEndpointTest {
     assertTrue(endpoint.receivedDisconnectSignal());
     // The server sees the connection close (and closes its end).
     waitUntil(connection.socket::isClosed);
+  }
+
+  @Test
+  void failureAfterOpeningIsAFailedAttempt() throws Exception {
+    start();
+    startServer();
+    // For example, a custom event bus that throws.
+    RuntimeException failure = new RuntimeException("event bus failed");
+    AtomicBoolean failed = new AtomicBoolean();
+    onPublish = event -> {
+      if (event instanceof EndpointConnectedEvent && failed.compareAndSet(false, true)) {
+        throw failure;
+      }
+    };
+    SocketKeyValueEndpoint endpoint = newEndpoint();
+    endpoint.connect();
+
+    // Tries again, instead of being left CONNECTING.
+    EndpointConnectionFailedEvent attemptFailed = waitForEvent(EndpointConnectionFailedEvent.class);
+    assertSame(failure, attemptFailed.cause());
+    waitUntil(() -> endpoint.state() == EndpointState.CONNECTED);
+    FakeKeyValueServer.Connection first = server.nextConnection(TIMEOUT);
+    server.nextConnection(TIMEOUT);
+    waitUntil(first.socket::isClosed); // the server's side closes when the endpoint closes its own
+
+    GetRequest request = newGetRequest("foo");
+    endpoint.send(request);
+    request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   @Test
