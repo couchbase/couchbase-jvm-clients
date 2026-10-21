@@ -18,6 +18,8 @@ package com.couchbase.client.core;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.TimerConfig;
+import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -118,6 +120,9 @@ public class Timer {
    * <p>
    * Note that this operation performs backpressure handling for the SDK by doing account towards a maximum outstanding
    * request limit!
+   * <p>
+   * If a thread is blocked waiting for the request and does the request's work itself
+   * ({@link BaseHttpRequest#blockingCaller()}), that thread waits out the delay and retries, instead of this timer.
    *
    * @param core the core to eventually retry against.
    * @param request the request to retry.
@@ -135,9 +140,12 @@ public class Timer {
     }
 
     outstandingForRetry.incrementAndGet();
-    if (scheduleRequestTask(new RetryTask(core, request), runAfter) == null) {
-      outstandingForRetry.decrementAndGet();
+    RetryTask task = new RetryTask(core, request);
+    BlockingCaller caller = request instanceof BaseHttpRequest ? ((BaseHttpRequest<?>) request).blockingCaller() : null;
+    if (caller != null && caller.offerRetry(task, runAfter)) {
+      return;
     }
+    task.schedule(runAfter);
   }
 
   public @Nullable Timeout schedule(final Runnable callback, final Duration runAfter) {
@@ -280,15 +288,22 @@ public class Timer {
   }
 
   /**
-   * Sends the request again once its retry delay has elapsed.
+   * Sends the request again once its retry delay has elapsed,
+   * on this timer's thread, or on the request's blocking caller's thread.
    */
-  private final class RetryTask implements RequestTask {
+  private final class RetryTask implements RequestTask, BlockingCaller.Retry {
     private final Core core;
     private final Request<? extends Response> request;
 
     RetryTask(final Core core, final Request<? extends Response> request) {
       this.core = core;
       this.request = request;
+    }
+
+    void schedule(final Duration runAfter) {
+      if (scheduleRequestTask(this, runAfter) == null) {
+        outstandingForRetry.decrementAndGet();
+      }
     }
 
     @Override
@@ -298,10 +313,20 @@ public class Timer {
 
     @Override
     public void run(final Timeout timeout) {
+      run();
+    }
+
+    @Override
+    public void run() {
       outstandingForRetry.decrementAndGet();
       if (!request.completed()) {
         core.send(request, false);
       }
+    }
+
+    @Override
+    public void drop() {
+      outstandingForRetry.decrementAndGet();
     }
   }
 

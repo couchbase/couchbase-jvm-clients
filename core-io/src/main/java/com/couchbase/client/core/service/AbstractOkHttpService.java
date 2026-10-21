@@ -34,6 +34,7 @@ import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
@@ -227,8 +228,12 @@ abstract class AbstractOkHttpService implements Service {
    * Takes care of tracing, dispatch latency, connection tracking, and finishing the attempt.
    * If the call fails (for example, can't connect), retries the request or fails it.
    * If the request is cancelled, cancels the call.
+   * <p>
+   * Called by the request's {@link BaseHttpRequest#blockingCaller() blocking caller}, runs the call
+   * and the handler on the caller's thread, and returns once they're done.
+   * Otherwise, enqueues the call, and the handler runs on an OkHttp dispatcher thread.
    *
-   * @return the call, which was already enqueued, so the handler might be running (or done) by now.
+   * @return the call, which was already started, so the handler might be running (or done) by now.
    */
   protected final Call execute(
     BaseHttpRequest<?> request,
@@ -238,7 +243,7 @@ abstract class AbstractOkHttpService implements Service {
   ) {
     DispatchTimer dispatchTimer = new DispatchTimer(request);
 
-    Call call = enqueue(request, requestBuilder, dispatchTimer, new okhttp3.Callback() {
+    return start(request, requestBuilder, dispatchTimer, new okhttp3.Callback() {
       @Override
       public void onResponse(Call call, okhttp3.Response response) throws IOException {
         try {
@@ -270,9 +275,6 @@ abstract class AbstractOkHttpService implements Service {
         }
       }
     });
-
-    request.setCancellationHook(call::cancel);
-    return call;
   }
 
   // ---- Service ----
@@ -486,8 +488,8 @@ abstract class AbstractOkHttpService implements Service {
     RetryOrchestrator.maybeRetry(retryContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
   }
 
-  private Call enqueue(
-    Request<?> request,
+  private Call start(
+    BaseHttpRequest<?> request,
     okhttp3.Request.Builder requestBuilder,
     DispatchTimer dispatchTimer,
     okhttp3.Callback callback
@@ -495,8 +497,49 @@ abstract class AbstractOkHttpService implements Service {
     Call call = context().core().okHttpClient().newCall(requestBuilder, request.context(), request.timeout());
     call.addEventListener(connectionTracker);
     call.addEventListener(dispatchTimer);
-    call.enqueue(callback);
+
+    // Before starting the call, so cancelling the request (for example, when it times out)
+    // cancels the call even while it's running on this thread.
+    request.setCancellationHook(call::cancel);
+
+    BlockingCaller caller = request.blockingCaller();
+    if (caller != null && caller.isCurrentThread()) {
+      runOnThisThread(request, call, callback);
+    } else {
+      call.enqueue(callback);
+    }
     return call;
+  }
+
+  /**
+   * Runs the call and its callback on this thread, as an OkHttp dispatcher thread would for an enqueued call.
+   * <p>
+   * If this is a platform thread, and it's interrupted, the {@link InterruptWatcher} cancels the request,
+   * which stops the call. (Interrupting a virtual thread stops the call by closing its socket.)
+   */
+  private void runOnThisThread(Request<?> request, Call call, okhttp3.Callback callback) {
+    try (InterruptWatcher.Registration ignored = InterruptWatcher.INSTANCE.watchCurrentThread(request)) {
+      okhttp3.Response response;
+      try {
+        response = call.execute();
+      } catch (IOException e) {
+        callback.onFailure(call, e);
+        return;
+      } catch (RuntimeException e) {
+        // Like OkHttp, which reports an unexpected exception from an enqueued call as a failure, after cancelling it.
+        call.cancel();
+        callback.onFailure(call, new IOException("canceled due to " + e, e));
+        return;
+      }
+
+      try {
+        callback.onResponse(call, response);
+      } catch (IOException e) {
+        // Like OkHttp, which logs and otherwise ignores an IOException thrown by the callback of an enqueued call.
+        // (Our callbacks don't throw.)
+        log.warn("Callback failure for {}", call.request().url(), e);
+      }
+    }
   }
 
   /**

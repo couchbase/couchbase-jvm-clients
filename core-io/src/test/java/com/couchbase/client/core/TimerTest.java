@@ -17,19 +17,27 @@
 package com.couchbase.client.core;
 
 import com.couchbase.client.core.deps.io.netty.util.Timeout;
+import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -124,6 +132,65 @@ class TimerTest {
     timer.scheduleForRetry(core, retryRequest, Duration.ofMillis(1));
     verify(retryRequest, times(1)).cancel(CancellationReason.SHUTDOWN);
     assertEquals(0, timer.outstandingForRetry());
+  }
+
+  @Test
+  void handsRetriesToTheRequestsBlockingCaller() {
+    Timer timer = Timer.createAndStart(2);
+    try {
+      Core core = mockCore();
+      BlockingCaller caller = new BlockingCaller();
+      BaseHttpRequest<?> request = mock(BaseHttpRequest.class);
+      when(request.blockingCaller()).thenReturn(caller);
+
+      CompletableFuture<Void> result = new CompletableFuture<>();
+      AtomicReference<Thread> retriedOn = new AtomicReference<>();
+      doAnswer(invocation -> {
+        retriedOn.set(Thread.currentThread());
+        result.complete(null);
+        return null;
+      }).when(core).send(request, false);
+
+      timer.scheduleForRetry(core, request, Duration.ofMillis(10));
+      assertEquals(1, timer.outstandingForRetry()); // still counts towards the limit
+
+      caller.await(request, result);
+      assertSame(Thread.currentThread(), retriedOn.get());
+      assertEquals(0, timer.outstandingForRetry());
+    } finally {
+      timer.stop();
+    }
+  }
+
+  @Test
+  void dropsARetryWhenTheBlockingCallerStopsWaiting() {
+    Timer timer = Timer.createAndStart(2);
+    try {
+      Core core = mockCore();
+      BlockingCaller caller = new BlockingCaller();
+      BaseHttpRequest<?> request = mock(BaseHttpRequest.class); // never completes
+      when(request.blockingCaller()).thenReturn(caller);
+
+      timer.scheduleForRetry(core, request, Duration.ofMinutes(1));
+      assertEquals(1, timer.outstandingForRetry());
+
+      caller.await(request, CompletableFuture.completedFuture(null)); // stops waiting, dropping the retry
+      assertEquals(0, timer.outstandingForRetry(), "should no longer count towards the limit");
+      verify(request).cancel(CancellationReason.STOPPED_LISTENING); // since it wasn't done
+      verify(core, never()).send(any(), anyBoolean());
+
+      // Now that the caller isn't waiting, the timer retries the request itself.
+      AtomicReference<Thread> retriedOn = new AtomicReference<>();
+      doAnswer(invocation -> {
+        retriedOn.set(Thread.currentThread());
+        return null;
+      }).when(core).send(request, false);
+      timer.scheduleForRetry(core, request, Duration.ofMillis(1));
+      verify(core, timeout(5000)).send(request, false);
+      assertNotSame(Thread.currentThread(), retriedOn.get());
+    } finally {
+      timer.stop();
+    }
   }
 
 }
