@@ -64,6 +64,7 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_SCOPE_SEARCH_INDEX_MANAGEMENT)
             .addSdkImplementationCaps(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
             .addSdkImplementationCaps(Caps.SDK_QUERY_2120)
+            .addSdkImplementationCaps(Caps.SDK_HTTP_400_INVALID_ARGUMENT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_INSECURE)
     }

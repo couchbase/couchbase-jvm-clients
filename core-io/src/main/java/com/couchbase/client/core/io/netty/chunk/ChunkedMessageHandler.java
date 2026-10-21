@@ -38,6 +38,7 @@ import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.io.IoContext;
@@ -318,7 +319,10 @@ public abstract class ChunkedMessageHandler
           () -> {
             String status = currentResponseStatus == null ? "unknown" : currentResponseStatus.status().toString();
             String body = startOfResponseBody.isReadable() ? redactUser(startOfResponseBody.toString(UTF_8)).toString() : "<empty>";
-            return new CouchbaseException("Request failed. HTTP status code: " + status + ". Response body: " + body);
+            String message = "Request failed. HTTP status code: " + status + ". Response body: " + body;
+            return currentResponseStatus != null && currentResponseStatus.status().code() == 400
+              ? new InvalidArgumentException(message, null, null)
+              : new CouchbaseException(message);
           }
         )
       );

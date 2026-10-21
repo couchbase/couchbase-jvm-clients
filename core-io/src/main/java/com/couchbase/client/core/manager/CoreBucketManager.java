@@ -31,8 +31,6 @@ import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -94,7 +92,7 @@ public class CoreBucketManager {
         .exceptionally(t -> {
           throw httpResponseBody(t).contains("Bucket with given name already exists")
               ? BucketExistsException.forBucket(bucketName)
-              : propagateHttpException(t);
+              : CbThrowables.propagate(t);
         })
         .thenApply(response -> null);
   }
@@ -164,17 +162,8 @@ public class CoreBucketManager {
     return t -> {
       throw couchbaseResponseStatus(t) == ResponseStatus.NOT_FOUND
           ? BucketNotFoundException.forBucket(bucketName)
-          : propagateHttpException(t);
+          : CbThrowables.propagate(t);
     };
-  }
-
-  private static RuntimeException propagateHttpException(Throwable t) {
-    CbThrowables.findCause(t, HttpStatusCodeException.class).ifPresent(cause -> {
-      if (cause.httpStatusCode() == 400) {
-        throw new InvalidArgumentException("Unexpected HTTP status code 400 Bad Request", t, cause.context());
-      }
-    });
-    throw CbThrowables.propagate(t);
   }
 
   public CompletableFuture<Map<String, byte[]>> getAllBuckets(CoreCommonOptions options) {

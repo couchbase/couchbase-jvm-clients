@@ -20,6 +20,7 @@ import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QuotaLimitedException;
 import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.SearchErrorContext;
@@ -105,6 +106,8 @@ public class SearchChunkResponseParser
         || errorDecoded.contains("egress_mib_per_min")) {
         return new RateLimitedException(errorContext);
       }
+    } else if (statusCode == 400) {
+      return new InvalidArgumentException("Search service reported an invalid argument: " + errorDecoded, null, errorContext);
     }
     return new CouchbaseException("Unknown search error: " + errorDecoded, errorContext);
   }

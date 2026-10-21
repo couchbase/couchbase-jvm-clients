@@ -29,6 +29,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
@@ -208,6 +209,9 @@ public class QueryChunkResponseParser
         }
         return FeatureNotAvailableException.communityEdition(feature);
       }
+    }
+    if (httpStatus == 400) {
+      return new InvalidArgumentException("Query service reported an invalid argument", null, errorContext);
     }
     return new CouchbaseException("Unknown query error", errorContext);
   }

@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseSt
 import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QuotaLimitedException;
 import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.ManagerErrorContext;
@@ -65,7 +66,13 @@ class NonChunkedManagerMessageHandler extends NonChunkedHttpMessageHandler {
       }
     }
 
-    return new HttpStatusCodeException(status, content, request, errorContext);
+    HttpStatusCodeException httpStatusCodeException = new HttpStatusCodeException(status, content, request, errorContext);
+    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      // Keep the HttpStatusCodeException as the cause, so higher layers can still
+      // inspect the response body and map it to a more specific exception.
+      return new InvalidArgumentException(httpStatusCodeException.getMessage(), httpStatusCodeException, errorContext);
+    }
+    return httpStatusCodeException;
   }
 
 }

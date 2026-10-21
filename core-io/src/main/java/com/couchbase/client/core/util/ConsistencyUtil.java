@@ -25,6 +25,7 @@ import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -33,6 +34,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.transaction.util.TriFunction;
 import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -330,6 +332,17 @@ public class ConsistencyUtil {
     }
   }
 
+  /**
+   * Returns the HttpStatusCodeException if the given throwable is one,
+   * or is an InvalidArgumentException caused by one (as for HTTP 400 responses).
+   */
+  private static @Nullable HttpStatusCodeException httpStatusCodeException(@Nullable Throwable t) {
+    if (t instanceof InvalidArgumentException) {
+      t = t.getCause();
+    }
+    return t instanceof HttpStatusCodeException ? (HttpStatusCodeException) t : null;
+  }
+
   @NullUnmarked
   private static void waitUntilAllNodesMatchPredicate(Core core,
                                                       TriFunction<Integer, CoreHttpResponse, RuntimeException, Boolean> onResult,
@@ -372,8 +385,8 @@ public class ConsistencyUtil {
               return;
             }
           }
-          else if (e.getCause() instanceof HttpStatusCodeException) {
-            int statusCode = ((HttpStatusCodeException) e.getCause()).httpStatusCode();
+          else if (httpStatusCodeException(e.getCause()) != null) {
+            int statusCode = httpStatusCodeException(e.getCause()).httpStatusCode();
             logger.debug("Querying {}: {}", debug, statusCode);
 
             done = onResult.apply(statusCode, null, null);

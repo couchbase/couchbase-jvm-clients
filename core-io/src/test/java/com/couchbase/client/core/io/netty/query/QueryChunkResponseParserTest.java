@@ -31,6 +31,7 @@ import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexFailureException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.PlanningFailureException;
 import com.couchbase.client.core.error.PreparedStatementFailureException;
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 
 import static com.couchbase.client.test.Util.readResource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -102,11 +104,21 @@ class QueryChunkResponseParserTest {
     assertThrows(RateLimitedException.class, () -> runAndThrow("rate_limited_1193"));
     assertThrows(RateLimitedException.class, () -> runAndThrow("rate_limited_1194"));
 
-    assertThrows(CouchbaseException.class, () -> runAndThrow("empty_list"));
-    assertThrows(CouchbaseException.class, () -> runAndThrow("unknown"));
+    assertExactlyCouchbaseException(() -> runAndThrow("empty_list", HttpResponseStatus.INTERNAL_SERVER_ERROR));
+    assertExactlyCouchbaseException(() -> runAndThrow("unknown", HttpResponseStatus.INTERNAL_SERVER_ERROR));
 
     assertThrows(DocumentNotFoundException.class, () -> runAndThrow("kv_notfound"));
     assertThrows(DocumentExistsException.class, () -> runAndThrow("kv_exists"));
+  }
+
+  @Test
+  void unmappedErrorWithHttp400IsInvalidArgument() {
+    assertThrows(InvalidArgumentException.class, () -> runAndThrow("empty_list"));
+    assertThrows(InvalidArgumentException.class, () -> runAndThrow("unknown"));
+
+    // A more specific mapping takes precedence
+    assertThrows(PlanningFailureException.class, () -> runAndThrow("planning_4000"));
+    assertThrows(InternalServerFailureException.class, () -> runAndThrow("internal_5000"));
   }
 
   @Test
@@ -125,11 +137,17 @@ class QueryChunkResponseParserTest {
    * @param file the relative filepath without the .json ending and the failure prefix.
    */
   private static void runAndThrow(final String file) {
+    runAndThrow(file, HttpResponseStatus.BAD_REQUEST);
+  }
+
+  private static void runAndThrow(final String file, final HttpResponseStatus status) {
     String input = readResource("failure_" + file + ".json", QueryChunkResponseParserTest.class);
-    // At the moment the query chunk response parser does not care about the http status code and only
-    // prints it as part of the error context, so we can pick whatever we want here.
-    HttpResponse header = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST);
+    HttpResponse header = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
     throw QueryChunkResponseParser.errorsToThrowable(input.getBytes(StandardCharsets.UTF_8), header, null);
+  }
+
+  private static void assertExactlyCouchbaseException(final Runnable r) {
+    assertEquals(CouchbaseException.class, assertThrows(CouchbaseException.class, r::run).getClass());
   }
 
 }

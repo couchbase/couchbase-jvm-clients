@@ -21,6 +21,7 @@ import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.QuotaLimitedException;
 import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.SearchErrorContext;
@@ -45,25 +46,25 @@ class NonChunkedSearchMessageHandler extends NonChunkedHttpMessageHandler {
       content
     );
 
-    if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index missing for update")) {
+    if (status.equals(HttpResponseStatus.BAD_REQUEST) && content.contains("index missing for update")) {
       return IndexNotFoundException.withMessageAndErrorContext("The index has not been found during an update on upsert. " +
         "If you did not intend to perform an index update, remove (or null out) the UUID property on the index.", errorContext);
-    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index not found")) {
+    } else if (status.equals(HttpResponseStatus.BAD_REQUEST) && content.contains("index not found")) {
       return IndexNotFoundException.withMessageAndErrorContext("Index not found", errorContext);
-    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("index with the same name already exists")) {
+    } else if (status.equals(HttpResponseStatus.BAD_REQUEST) && content.contains("index with the same name already exists")) {
       return new IndexExistsException("The index already exists. If you meant to replace/update it, make sure " +
         "that the UUID property is set.", errorContext);
-    } else if (status == HttpResponseStatus.BAD_REQUEST && content.contains("num_fts_indexes")) {
+    } else if (status.equals(HttpResponseStatus.BAD_REQUEST) && content.contains("num_fts_indexes")) {
       return new QuotaLimitedException(errorContext);
-    } else if (status == HttpResponseStatus.TOO_MANY_REQUESTS) {
+    } else if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
       if (content.contains("num_concurrent_requests")
         || content.contains("num_queries_per_min")
         || content.contains("ingress_mib_per_min")
         || content.contains("egress_mib_per_min")) {
         return new RateLimitedException(errorContext);
       }
-    } else if (content.contains("Page not found")) {
-
+    } else if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      return new InvalidArgumentException("Search service reported an invalid argument: " + content, null, errorContext);
     }
 
     return new CouchbaseException("Unknown search error: " + content, errorContext);
