@@ -155,11 +155,16 @@ public class ClusterConfig {
 
   /**
    * Returns the current cluster capabilities.
-   *
-   * <p>Right now this needs at least one bucket open, and it grabs the capabilities from the first bucket
-   * config available. If needed, in the future this can be made more intelligent (caching?).</p>
+   * <p>
+   * Takes the capabilities from the global config if present,
+   * otherwise from the first bucket config available.
+   * Returns an empty map if there are no configs.
    */
   public Map<ServiceType, Set<ClusterCapabilities>> clusterCapabilities() {
+    GlobalConfig gc = globalConfig();
+    if (gc != null) {
+      return gc.clusterCapabilities();
+    }
     for (BucketConfig bc : bucketConfigs().values()) {
       return bc.clusterCapabilities();
     }

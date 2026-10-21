@@ -17,6 +17,7 @@
 package com.couchbase.client.core.config;
 
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.topology.ClusterCapability;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyBuilder;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
@@ -27,6 +28,7 @@ import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -100,6 +102,37 @@ class ClusterConfigTest {
     );
 
     assertEquals(expected, allHosts(config));
+  }
+
+  @Test
+  void clusterCapabilitiesEmptyWithoutConfigs() {
+    assertEquals(emptyMap(), new ClusterConfig().clusterCapabilities());
+  }
+
+  @Test
+  void clusterCapabilitiesWithOnlyGlobalConfig() {
+    ClusterConfig config = new ClusterConfig();
+    config.setGlobalConfig(minimalTopology("hostname1")
+      .capabilities(setOf(ClusterCapability.N1QL_ENHANCED_PREPARED_STATEMENTS))
+      .build());
+
+    assertEquals(
+      setOf(ClusterCapabilities.ENHANCED_PREPARED_STATEMENTS),
+      config.clusterCapabilities().get(ServiceType.QUERY)
+    );
+  }
+
+  @Test
+  void clusterCapabilitiesWithOnlyBucketConfig() {
+    ClusterConfig config = new ClusterConfig();
+    config.setBucketConfig(minimalTopology("hostname1")
+      .capabilities(setOf(ClusterCapability.N1QL_ENHANCED_PREPARED_STATEMENTS))
+      .couchbaseBucket("bucket-name").build());
+
+    assertEquals(
+      setOf(ClusterCapabilities.ENHANCED_PREPARED_STATEMENTS),
+      config.clusterCapabilities().get(ServiceType.QUERY)
+    );
   }
 
   static ClusterTopologyBuilder minimalTopology(String... hosts) {
