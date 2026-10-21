@@ -98,7 +98,7 @@ jobs:
 
       - name: Configure tests
         run: |
-          cat <<EOF > integration.properties.template
+          cat <<EOF > integration.local.properties
           cluster.type=unmanaged
           cluster.adminUsername=Administrator
           cluster.adminPassword=password
@@ -107,12 +107,12 @@ jobs:
           EOF
 
           if [ -f "${{ steps.cbdc.outputs.ca-certs-file }}" ]; then
-          cat <<'EOF' >> integration.properties.template
+          cat <<'EOF' >> integration.local.properties
           cluster.unmanaged.certsFile=${{ steps.cbdc.outputs.ca-certs-file }}
           EOF
           fi
 
-          find . -type f -name "integration.properties" -exec cp -v ./integration.properties.template {} \;
+          cat integration.local.properties
 
       - name: Run tests
         timeout-minutes: 40
