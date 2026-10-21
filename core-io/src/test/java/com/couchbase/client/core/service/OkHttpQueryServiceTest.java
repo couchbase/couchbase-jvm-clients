@@ -46,6 +46,7 @@ import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -53,6 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
@@ -60,8 +62,10 @@ import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -575,5 +579,74 @@ class OkHttpQueryServiceTest {
     InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
     assertEquals(1, interrupted.getSuppressed().length, "should report what the interrupt caused");
     assertFalse(Thread.currentThread().isInterrupted());
+  }
+
+  // ---- Blocking caller with a row action ----
+
+  @Test
+  void blockingCallerWithARowActionTakesTheRowsAsTheyAreRead() {
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1},{\"a\":2}],\"status\":\"success\"}");
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    List<String> taken = new ArrayList<>();
+    List<Thread> takenOn = new ArrayList<>();
+    caller.rowAction((QueryChunkRow row) -> {
+      taken.add(new String(row.data(), UTF_8));
+      takenOn.add(Thread.currentThread());
+    });
+    request.blockingCaller(caller);
+
+    service.send(request);
+
+    // Taken by the time send returns, on this thread.
+    assertEquals(asList("{\"a\":1}", "{\"a\":2}"), taken);
+    assertEquals(asList(Thread.currentThread(), Thread.currentThread()), takenOn);
+
+    // The response's rows end without any.
+    QueryResponse response = caller.await(request.response());
+    assertEquals(emptyList(), rows(response));
+    assertEquals("success", requireNonNull(response.trailer().block()).status());
+    assertNull(caller.rowActionFailure());
+  }
+
+  @Test
+  void rowActionThatThrowsStopsReadingTheResponse() {
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1},{\"a\":2},{\"a\":3}],\"status\":\"success\"}");
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    AtomicInteger calls = new AtomicInteger();
+    RuntimeException failure = new RuntimeException("row action failed");
+    caller.rowAction(row -> {
+      calls.incrementAndGet();
+      throw failure;
+    });
+    request.blockingCaller(caller);
+
+    service.send(request);
+
+    assertEquals(1, calls.get());
+    assertSame(failure, caller.rowActionFailure());
+
+    // The request succeeded when the header arrived. The rows and trailer end with the failure.
+    QueryResponse response = caller.await(request.response());
+    StepVerifier.create(response.rows()).expectError(BlockingCaller.RowActionException.class).verify();
+    StepVerifier.create(response.trailer()).expectError(BlockingCaller.RowActionException.class).verify();
+  }
+
+  @Test
+  void rowsArriveTheUsualWayWhenAnotherThreadReadsTheResponse() throws Exception {
+    // For example, a prepared query retried on another thread: the row action only runs on the caller's thread.
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1}],\"status\":\"success\"}");
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    AtomicInteger calls = new AtomicInteger();
+    caller.rowAction(row -> calls.incrementAndGet());
+    request.blockingCaller(caller);
+
+    CompletableFuture.runAsync(() -> service.send(request)).get(); // not the caller's thread, so the call is enqueued
+
+    QueryResponse response = request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    assertEquals(singletonList("{\"a\":1}"), rows(response));
+    assertEquals(0, calls.get());
   }
 }

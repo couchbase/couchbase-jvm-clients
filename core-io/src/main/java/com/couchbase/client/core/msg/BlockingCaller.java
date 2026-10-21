@@ -28,7 +28,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A thread blocked waiting for a request's result, which does the request's work itself
@@ -63,6 +66,12 @@ import java.util.function.Supplier;
  * Nothing carries on after the caller stops waiting: the current request is done by then (if it isn't, for example
  * because the caller is leaving with an {@link Error}, it's cancelled), a retry still pending is dropped, and a request
  * attached afterwards (for example, by a retry of a prepared query running on another thread) is cancelled.
+ * <p>
+ * A caller that processes a streamed result's rows as they arrive can also give the service a
+ * {@linkplain #rowAction row action}. A service reading the response on the caller's thread passes each row
+ * straight to it, instead of handing the rows to the caller through a stream (which, with the caller as the only
+ * thread, would wait forever for the caller to take them). So the action runs while the response is being read:
+ * reading pauses while it runs.
  */
 @Stability.Internal
 @NullMarked
@@ -84,6 +93,16 @@ public final class BlockingCaller {
     void drop();
   }
 
+  /**
+   * Thrown by {@link #acceptRow} when the row action throws, to stop reading the response.
+   * The action's exception is {@linkplain #rowActionFailure kept by the caller}.
+   */
+  public static final class RowActionException extends RuntimeException {
+    private RowActionException() {
+      super("The row action threw an exception", null, false, false);
+    }
+  }
+
   private final Thread thread = Thread.currentThread();
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition changed = lock.newCondition();
@@ -103,6 +122,51 @@ public final class BlockingCaller {
   // Guarded by lock.
   private @Nullable Retry retry;
   private long retryAtNanos;
+
+  // Set before the request is sent, and otherwise only used on the caller's thread.
+  private @Nullable Consumer<Object> rowAction;
+  private @Nullable Throwable rowActionFailure;
+
+  /**
+   * Sets the action a service reading a streamed response on the caller's thread passes the rows to.
+   * Call before sending the request.
+   *
+   * @param action accepts rows of the type the request's response streams
+   */
+  @SuppressWarnings("unchecked")
+  public void rowAction(Consumer<?> action) {
+    this.rowAction = (Consumer<Object>) action;
+  }
+
+  /**
+   * Returns true if a service reading a streamed response on this thread should pass the rows to
+   * {@link #acceptRow}: there's a row action, this is the caller's thread, and the caller is still waiting.
+   */
+  public boolean takesRowsOnCurrentThread() {
+    return rowAction != null && isCurrentThread();
+  }
+
+  /**
+   * Passes a row to the row action. Only call if {@link #takesRowsOnCurrentThread} returned true.
+   *
+   * @throws RowActionException if the action threw (which the caller keeps; see {@link #rowActionFailure}).
+   * Stop reading the response, and end the rows with this exception.
+   */
+  public void acceptRow(Object row) {
+    try {
+      requireNonNull(rowAction).accept(row);
+    } catch (Throwable t) {
+      rowActionFailure = t;
+      throw new RowActionException();
+    }
+  }
+
+  /**
+   * Returns the exception the row action threw, if it threw one.
+   */
+  public @Nullable Throwable rowActionFailure() {
+    return rowActionFailure;
+  }
 
   /**
    * Makes the request this caller's current request: the one whose work it does
