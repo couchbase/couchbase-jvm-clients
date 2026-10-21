@@ -61,22 +61,26 @@ import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
 import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.Golang;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
 import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
-import static com.couchbase.client.core.util.CbThrowables.reinterruptAndWrap;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -168,6 +172,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
    * implementation, as do single-query transactions.
    */
   @Override
+  @SuppressWarnings("deprecation") // clearInterruptAndWrap, until JVMCBC-1555
   public CoreQueryResult queryBlocking(String statement,
                                        CoreQueryOptions options,
                                        @Nullable CoreQueryContext queryContext,
@@ -177,17 +182,19 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       return CoreQueryOps.super.queryBlocking(statement, options, queryContext, target, errorConverter);
     }
 
-    BlockingCaller caller = new BlockingCaller();
-    QueryRequest request = queryRequest(statement, options, queryContext, target);
-    request.blockingCaller(caller);
-    return caller.sendAndAwait(() -> bufferedResult(request, options.adhoc(), errorConverter));
+    // Unlike queryBlockingStreaming, leaves an interrupted thread's interrupted flag cleared, as this method always has
+    // (like an interrupted Future.get()). Todo: set it instead (JVMCBC-1555).
+    List<QueryChunkRow> rows = new ArrayList<>();
+    ClassicCoreReactiveQueryResult result = queryOnCallerThread(
+        statement, options, queryContext, target, errorConverter, rows::add, CbThrowables::clearInterruptAndWrap);
+
+    QueryResponse response = result.internal();
+    return new ClassicCoreQueryResult(response.header(), rows, requireNonNull(response.trailer().block()), result.lastDispatchedTo());
   }
 
   /**
    * Like the default implementation, but the calling thread does the work itself, as in {@link #queryBlocking},
-   * and the service passes each row to the callback as it reads the response (see {@link BlockingCaller#rowAction}),
-   * instead of another thread passing the rows to the calling thread. If another thread reads the response anyway
-   * (for example, a prepared query retried on another thread), the rows arrive the usual way.
+   * and the service passes each row to the callback as it reads the response (see {@link #queryOnCallerThread}).
    */
   @Override
   public CoreQueryMetaData queryBlockingStreaming(String statement,
@@ -200,42 +207,105 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       return CoreQueryOps.super.queryBlockingStreaming(statement, options, queryContext, target, errorConverter, callback);
     }
 
+    ClassicCoreReactiveQueryResult result = queryOnCallerThread(
+        statement, options, queryContext, target, errorConverter, callback, CbThrowables::reinterruptAndWrap);
+    return requireNonNull(result.metaData().block());
+  }
+
+  /**
+   * Does a blocking query's work on the calling thread (see {@link BlockingCaller}), and passes each row
+   * to the given action, on the calling thread. Returns the result once every row has been passed to the action
+   * and the trailer has arrived.
+   * <p>
+   * The service passes each row to the action as it reads the response (see {@link BlockingCaller#rowAction}).
+   * If another thread reads the response anyway (for example, a prepared query retried on another thread),
+   * the rows arrive through the response's stream of rows, and this passes them to the action.
+   * <p>
+   * If the thread is interrupted, the query stops (at the next row, if it's reading the rows), and this throws
+   * the exception {@code onInterrupt} returns, given an {@code InterruptedException} with what the interruption
+   * caused (if anything) as a suppressed exception. Unless the result is already complete: then this returns it,
+   * and leaves the thread interrupted, like the blocking caller.
+   *
+   * @param onInterrupt returns the exception to throw if the thread is interrupted
+   */
+  private ClassicCoreReactiveQueryResult queryOnCallerThread(String statement,
+                                                             CoreQueryOptions options,
+                                                             @Nullable CoreQueryContext queryContext,
+                                                             @Nullable NodeIdentifier target,
+                                                             @Nullable Function<Throwable, RuntimeException> errorConverter,
+                                                             Consumer<QueryChunkRow> rowAction,
+                                                             Function<InterruptedException, RuntimeException> onInterrupt) {
     BlockingCaller caller = new BlockingCaller();
     caller.rowAction((QueryChunkRow row) -> {
-      // Like the default implementation, which stops (and says why) once it notices the thread was interrupted.
+      // Like reading the rows from a stream, which stops (and says why) once it notices the thread was interrupted.
       if (Thread.currentThread().isInterrupted()) {
-        throw reinterruptAndWrap(new InterruptedException());
+        throw onInterrupt.apply(new InterruptedException());
       }
-      callback.accept(row);
+      rowAction.accept(row);
     });
     QueryRequest request = queryRequest(statement, options, queryContext, target);
     request.blockingCaller(caller);
 
     try {
-      CoreReactiveQueryResult result = caller.sendAndAwait(() ->
+      ClassicCoreReactiveQueryResult result = (ClassicCoreReactiveQueryResult) caller.sendAndAwait(() ->
           reactiveResult(request, options.adhoc(), errorConverter).toFuture());
 
-      Throwable rowActionFailure = caller.rowActionFailure();
-      if (rowActionFailure != null) {
-        throw CbThrowables.propagate(rowActionFailure);
+      if (caller.rowsWentToAction()) {
+        Throwable rowActionFailure = caller.rowActionFailure();
+        if (rowActionFailure != null) {
+          throw CbThrowables.propagate(rowActionFailure);
+        }
+        // The rows already ended. Checks how, without waiting: an interrupt now doesn't stop a result that's complete.
+        Throwable rowsFailure = endOfRows(result.rows());
+        if (rowsFailure != null) {
+          throw CbThrowables.propagate(convertError(rowsFailure, errorConverter));
+        }
+      } else {
+        forEachBlocking(result.rows().onErrorMap(err -> convertError(err, errorConverter)), 16, rowAction, onInterrupt);
       }
 
-      // No rows, unless another thread read the response; then this waits for them. Ends the way the rows ended.
-      forEachBlocking(result.rows(), 16, callback, CbThrowables::reinterruptAndWrap);
-      return requireNonNull(result.metaData().block());
+      // Arrives after the rows. Already here if this thread read the response.
+      result.internal().trailer().block();
+      return result;
 
     } catch (RuntimeException e) {
       // The caller was interrupted while it waited (or while it read the response, which made reading fail).
       CbThrowables.findCause(e, InterruptedException.class)
-          .ifPresent(it -> { throw reinterruptAndWrap(it); });
+          .ifPresent(it -> { throw onInterrupt.apply(it); });
       if (Thread.currentThread().isInterrupted()) {
         // Reading failed because of the interrupt. Like the blocking caller, report what it caused as a suppressed exception.
         InterruptedException cause = new InterruptedException();
         cause.addSuppressed(e);
-        throw reinterruptAndWrap(cause);
+        throw onInterrupt.apply(cause);
       }
       throw e;
     }
+  }
+
+  /**
+   * Returns how a stream of rows that already ended ended: null if successfully, otherwise the failure.
+   */
+  private static @Nullable Throwable endOfRows(Flux<QueryChunkRow> rows) {
+    AtomicBoolean ended = new AtomicBoolean();
+    AtomicReference<Throwable> failure = new AtomicReference<>();
+    rows.subscribe(
+        row -> {
+          // None: they went to the row action.
+        },
+        error -> {
+          failure.set(error);
+          ended.set(true);
+        },
+        () -> ended.set(true)
+    );
+    if (!ended.get()) {
+      throw new IllegalStateException("Expected the rows to have ended already");
+    }
+    return failure.get();
+  }
+
+  private static Throwable convertError(Throwable err, @Nullable Function<Throwable, RuntimeException> errorConverter) {
+    return errorConverter == null ? err : errorConverter.apply(err);
   }
 
   /**

@@ -123,6 +123,9 @@ final class StreamingJsonResponseHandler {
           header -> {
             headerArrived.set(true);
             R r = format.newResponse(request, header, rowBridge.rows(), trailerSink.asMono());
+            if (caller != null) {
+              caller.rowsWentToAction(rowTaker != null);
+            }
             request.succeed(r);
             attempt.recordOutcome(r, null);
 
