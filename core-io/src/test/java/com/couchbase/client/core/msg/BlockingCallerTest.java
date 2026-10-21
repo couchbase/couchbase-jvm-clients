@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -53,6 +54,15 @@ class BlockingCallerTest {
   BlockingCallerTest() {
     // A real request is done by the time its caller stops waiting.
     when(request.completed()).thenReturn(true);
+  }
+
+  /**
+   * Returns a caller doing the work of the mock request.
+   */
+  private BlockingCaller newCaller() {
+    BlockingCaller caller = new BlockingCaller();
+    caller.attach(request);
+    return caller;
   }
 
   @AfterEach
@@ -87,26 +97,26 @@ class BlockingCallerTest {
 
   @Test
   void returnsTheResultCompletedByAnotherThread() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     otherThread.schedule(() -> result.complete("done"), 50, TimeUnit.MILLISECONDS);
 
-    assertEquals("done", caller.await(request, result));
+    assertEquals("done", caller.await(result));
   }
 
   @Test
   void throwsTheFailureLikeABlockingCall() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     otherThread.schedule(() -> result.completeExceptionally(new IllegalStateException("oops")), 50, TimeUnit.MILLISECONDS);
 
-    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.await(request, result));
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.await(result));
     assertEquals("oops", e.getMessage());
   }
 
   @Test
   void runsARetryFromAnotherThreadOnTheCallersThreadOnceItsDelayHasElapsed() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry retry = new RecordingRetry(() -> result.complete("retried"));
     AtomicBoolean accepted = new AtomicBoolean();
@@ -114,7 +124,7 @@ class BlockingCallerTest {
     long start = System.nanoTime();
     otherThread.execute(() -> accepted.set(caller.offerRetry(retry, Duration.ofMillis(50))));
 
-    assertEquals("retried", caller.await(request, result));
+    assertEquals("retried", caller.await(result));
     assertTrue(System.nanoTime() - start >= TimeUnit.MILLISECONDS.toNanos(50));
     assertTrue(accepted.get());
     assertEquals(singletonList(Thread.currentThread()), retry.ranOn);
@@ -124,20 +134,20 @@ class BlockingCallerTest {
   @Test
   void runsRetriesTheCallerOffersItself() {
     // Like a request sent on the caller's thread that has to be retried, twice.
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry second = new RecordingRetry(() -> result.complete("retried twice"));
     RecordingRetry first = new RecordingRetry(() -> assertTrue(caller.offerRetry(second, Duration.ofMillis(1))));
     assertTrue(caller.offerRetry(first, Duration.ofMillis(1)));
 
-    assertEquals("retried twice", caller.await(request, result));
+    assertEquals("retried twice", caller.await(result));
     assertEquals(singletonList(Thread.currentThread()), first.ranOn);
     assertEquals(singletonList(Thread.currentThread()), second.ranOn);
   }
 
   @Test
   void takesOneRetryAtATime() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     assertTrue(caller.offerRetry(new RecordingRetry(() -> {
     }), Duration.ofSeconds(1)));
     assertFalse(caller.offerRetry(new RecordingRetry(() -> {
@@ -146,14 +156,14 @@ class BlockingCallerTest {
 
   @Test
   void dropsAPendingRetryIfTheResultArrivesFirst() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry retry = new RecordingRetry(() -> {
     });
     assertTrue(caller.offerRetry(retry, Duration.ofSeconds(30)));
     otherThread.schedule(() -> result.complete("done"), 50, TimeUnit.MILLISECONDS);
 
-    assertEquals("done", caller.await(request, result));
+    assertEquals("done", caller.await(result));
     assertTrue(retry.ranOn.isEmpty());
     assertTrue(retry.dropped);
 
@@ -164,7 +174,7 @@ class BlockingCallerTest {
 
   @Test
   void interruptWhileWaitingCancelsTheRequest() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry retry = new RecordingRetry(() -> {
     });
@@ -172,7 +182,7 @@ class BlockingCallerTest {
     Thread callerThread = Thread.currentThread();
     otherThread.schedule(callerThread::interrupt, 50, TimeUnit.MILLISECONDS);
 
-    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, result));
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(result));
 
     // Like CoreAsyncUtils.block, which also consumes the interrupt.
     InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
@@ -187,12 +197,12 @@ class BlockingCallerTest {
   @Test
   void interruptDuringTheRequestsWorkCancelsTheRequestAndReportsTheFailureItCaused() {
     // For example, the interrupt closed the connection a virtual thread was reading the response from.
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     Thread.currentThread().interrupt();
     result.completeExceptionally(new IllegalStateException("connection closed"));
 
-    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, result));
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(result));
 
     InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
     assertEquals(1, interrupted.getSuppressed().length);
@@ -203,12 +213,12 @@ class BlockingCallerTest {
 
   @Test
   void interruptDuringARetryCancelsTheRequest() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry retry = new RecordingRetry(() -> Thread.currentThread().interrupt()); // the result is still pending
     assertTrue(caller.offerRetry(retry, Duration.ofMillis(1)));
 
-    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, result));
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(result));
 
     assertInstanceOf(InterruptedException.class, e.getCause());
     assertEquals(singletonList(Thread.currentThread()), retry.ranOn);
@@ -217,10 +227,10 @@ class BlockingCallerTest {
 
   @Test
   void interruptAfterTheResultSucceededReturnsTheResult() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     Thread.currentThread().interrupt();
 
-    assertEquals("done", caller.await(request, CompletableFuture.completedFuture("done")));
+    assertEquals("done", caller.await(CompletableFuture.completedFuture("done")));
 
     // Like future.get() on a completed future.
     assertTrue(Thread.interrupted(), "should leave the thread interrupted");
@@ -229,7 +239,7 @@ class BlockingCallerTest {
 
   @Test
   void isCurrentThreadOnlyOnTheCallersThreadWhileItsWaiting() throws Exception {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     assertTrue(caller.isCurrentThread());
 
     ExecutorService another = Executors.newSingleThreadExecutor();
@@ -239,17 +249,17 @@ class BlockingCallerTest {
       another.shutdownNow();
     }
 
-    caller.await(request, CompletableFuture.completedFuture("done"));
+    caller.await(CompletableFuture.completedFuture("done"));
     assertFalse(caller.isCurrentThread());
   }
 
   @Test
   void awaitMustBeCalledOnTheCallersThread() throws Exception {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     ExecutorService another = Executors.newSingleThreadExecutor();
     try {
       Throwable t = assertThrows(Exception.class,
-        () -> another.submit(() -> caller.await(request, CompletableFuture.completedFuture("done"))).get()).getCause();
+        () -> another.submit(() -> caller.await(CompletableFuture.completedFuture("done"))).get()).getCause();
       assertInstanceOf(IllegalStateException.class, t);
     } finally {
       another.shutdownNow();
@@ -259,7 +269,7 @@ class BlockingCallerTest {
   @Test
   void retryThatThrowsFailsTheRequest() {
     // Sending a request reports failures by completing it, not by throwing; throwing is a bug.
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     CompletableFuture<String> result = new CompletableFuture<>();
     doAnswer(invocation -> result.completeExceptionally(invocation.getArgument(0))).when(request).fail(any());
     IllegalStateException bug = new IllegalStateException("bug");
@@ -267,26 +277,26 @@ class BlockingCallerTest {
       throw bug;
     }), Duration.ofMillis(1)));
 
-    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.await(request, result));
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.await(result));
     assertEquals("bug", e.getMessage());
     verify(request).fail(bug);
   }
 
   @Test
   void sendAndAwaitReturnsTheResult() {
-    BlockingCaller caller = new BlockingCaller();
-    assertEquals("done", caller.sendAndAwait(request, () -> CompletableFuture.completedFuture("done")));
+    BlockingCaller caller = newCaller();
+    assertEquals("done", caller.sendAndAwait(() -> CompletableFuture.completedFuture("done")));
     assertFalse(caller.isCurrentThread());
   }
 
   @Test
   void sendThatThrowsFailsTheRequestAndDropsARetry() {
-    BlockingCaller caller = new BlockingCaller();
+    BlockingCaller caller = newCaller();
     RecordingRetry retry = new RecordingRetry(() -> {
     });
     IllegalStateException bug = new IllegalStateException("bug");
 
-    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.sendAndAwait(request, () -> {
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> caller.sendAndAwait(() -> {
       assertTrue(caller.offerRetry(retry, Duration.ofSeconds(30))); // like a request that had to be retried
       throw bug;
     }));
@@ -302,6 +312,7 @@ class BlockingCallerTest {
   void stopsWaitingWithAnErrorByCancellingTheRequestAndDroppingAPendingRetry() {
     Request<?> unfinished = mock(Request.class);
     BlockingCaller caller = new BlockingCaller();
+    caller.attach(unfinished);
     CompletableFuture<String> result = new CompletableFuture<>();
     RecordingRetry pending = new RecordingRetry(() -> {
     });
@@ -311,11 +322,53 @@ class BlockingCallerTest {
     });
     assertTrue(caller.offerRetry(fatal, Duration.ofMillis(1)));
 
-    assertThrows(StackOverflowError.class, () -> caller.await(unfinished, result));
+    assertThrows(StackOverflowError.class, () -> caller.await(result));
 
     // Nothing carries on: no one would see what became of it.
     verify(unfinished).cancel(CancellationReason.STOPPED_LISTENING);
     assertTrue(pending.ranOn.isEmpty());
     assertTrue(pending.dropped);
+  }
+
+  @Test
+  void interruptCancelsTheCurrentRequest() {
+    // For example, a request to execute a prepared statement, made from the original request (which isn't sent).
+    Request<?> original = mock(Request.class);
+    Request<?> execute = mock(Request.class);
+    BlockingCaller caller = new BlockingCaller();
+    caller.attach(original);
+    caller.attach(execute);
+
+    Thread.currentThread().interrupt();
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(new CompletableFuture<>()));
+
+    assertInstanceOf(InterruptedException.class, e.getCause());
+    verify(execute, atLeastOnce()).cancel(CancellationReason.STOPPED_LISTENING);
+    verify(original, never()).cancel(any(CancellationReason.class));
+  }
+
+  @Test
+  void doesNotCancelAnEarlierRequestWhenItStopsWaiting() {
+    // The original request of a prepared query is never sent, so it never completes. Cancelling it would
+    // count as a cancelled request in telemetry.
+    Request<?> original = mock(Request.class);
+    BlockingCaller caller = new BlockingCaller();
+    caller.attach(original);
+    caller.attach(request); // done
+
+    assertEquals("done", caller.await(CompletableFuture.completedFuture("done")));
+    verify(original, never()).cancel(any(CancellationReason.class));
+    verify(request, never()).cancel(any(CancellationReason.class));
+  }
+
+  @Test
+  void cancelsARequestAttachedAfterItStoppedWaiting() {
+    // For example, a retried prepared query making a new request on another thread, after an interrupt.
+    BlockingCaller caller = newCaller();
+    caller.await(CompletableFuture.completedFuture("done"));
+
+    Request<?> late = mock(Request.class);
+    caller.attach(late);
+    verify(late).cancel(CancellationReason.STOPPED_LISTENING);
   }
 }

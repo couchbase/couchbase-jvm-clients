@@ -154,7 +154,8 @@ class TimerTest {
       timer.scheduleForRetry(core, request, Duration.ofMillis(10));
       assertEquals(1, timer.outstandingForRetry()); // still counts towards the limit
 
-      caller.await(request, result);
+      caller.attach(request);
+      caller.await(result);
       assertSame(Thread.currentThread(), retriedOn.get());
       assertEquals(0, timer.outstandingForRetry());
     } finally {
@@ -174,7 +175,8 @@ class TimerTest {
       timer.scheduleForRetry(core, request, Duration.ofMinutes(1));
       assertEquals(1, timer.outstandingForRetry());
 
-      caller.await(request, CompletableFuture.completedFuture(null)); // stops waiting, dropping the retry
+      caller.attach(request);
+      caller.await(CompletableFuture.completedFuture(null)); // stops waiting, dropping the retry
       assertEquals(0, timer.outstandingForRetry(), "should no longer count towards the limit");
       verify(request).cancel(CancellationReason.STOPPED_LISTENING); // since it wasn't done
       verify(core, never()).send(any(), anyBoolean());
