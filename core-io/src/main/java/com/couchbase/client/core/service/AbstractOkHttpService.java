@@ -514,11 +514,12 @@ abstract class AbstractOkHttpService implements Service {
   /**
    * Runs the call and its callback on this thread, as an OkHttp dispatcher thread would for an enqueued call.
    * <p>
-   * If this is a platform thread, and it's interrupted, the {@link InterruptWatcher} cancels the request,
-   * which stops the call. (Interrupting a virtual thread stops the call by closing its socket.)
+   * If this is a platform thread, and it's interrupted, the {@link InterruptWatcher} cancels the request and the call
+   * (the call too, because a streamed result's request is already complete while the rest of the result is read).
+   * (Interrupting a virtual thread stops the call by closing its socket.)
    */
   private void runOnThisThread(Request<?> request, Call call, okhttp3.Callback callback) {
-    try (InterruptWatcher.Registration ignored = InterruptWatcher.INSTANCE.watchCurrentThread(request)) {
+    try (InterruptWatcher.Registration ignored = InterruptWatcher.INSTANCE.watchCurrentThread(request, call)) {
       okhttp3.Response response;
       try {
         response = call.execute();

@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.kv.CoreAsyncResponse;
 import com.couchbase.client.core.api.query.CoreQueryContext;
+import com.couchbase.client.core.api.query.CoreQueryMetaData;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOptions;
 import com.couchbase.client.core.api.query.CoreQueryOptionsTransactions;
@@ -46,6 +47,7 @@ import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpir
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.kv.MutationToken;
+import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.RetryReason;
@@ -57,6 +59,7 @@ import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOp
 import com.couchbase.client.core.transaction.config.CoreTransactionsConfig;
 import com.couchbase.client.core.transaction.support.SpanWrapper;
 import com.couchbase.client.core.transaction.support.SpanWrapperUtil;
+import com.couchbase.client.core.util.CbThrowables;
 import com.couchbase.client.core.util.Golang;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.Nullable;
@@ -67,10 +70,14 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
+import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
+import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -159,10 +166,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                        @Nullable CoreQueryContext queryContext,
                                        @Nullable NodeIdentifier target,
                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (!BLOCKING_QUERY_ON_CALLER_THREAD
-        || options.asTransaction()
-        // The strategy only ever changes from legacy to enhanced, so the query uses enhanced if this sees it.
-        || (!options.adhoc() && !(strategy instanceof EnhancedPreparedStatementStrategy))) {
+    if (!worksOnCallerThread(options)) {
       return CoreQueryOps.super.queryBlocking(statement, options, queryContext, target, errorConverter);
     }
 
@@ -170,6 +174,71 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     QueryRequest request = queryRequest(statement, options, queryContext, target);
     request.blockingCaller(caller);
     return caller.sendAndAwait(() -> bufferedResult(request, options.adhoc(), errorConverter));
+  }
+
+  /**
+   * Like the default implementation, but the calling thread does the work itself, as in {@link #queryBlocking},
+   * and the service passes each row to the callback as it reads the response (see {@link BlockingCaller#rowAction}),
+   * instead of another thread passing the rows to the calling thread. If another thread reads the response anyway
+   * (for example, a prepared query retried on another thread), the rows arrive the usual way.
+   */
+  @Override
+  public CoreQueryMetaData queryBlockingStreaming(String statement,
+                                                  CoreQueryOptions options,
+                                                  @Nullable CoreQueryContext queryContext,
+                                                  @Nullable NodeIdentifier target,
+                                                  @Nullable Function<Throwable, RuntimeException> errorConverter,
+                                                  Consumer<QueryChunkRow> callback) {
+    if (!worksOnCallerThread(options)) {
+      return CoreQueryOps.super.queryBlockingStreaming(statement, options, queryContext, target, errorConverter, callback);
+    }
+
+    BlockingCaller caller = new BlockingCaller();
+    caller.rowAction((QueryChunkRow row) -> {
+      // Like the default implementation, which stops (and says why) once it notices the thread was interrupted.
+      if (Thread.currentThread().isInterrupted()) {
+        throw propagateAsCancellation(new InterruptedException());
+      }
+      callback.accept(row);
+    });
+    QueryRequest request = queryRequest(statement, options, queryContext, target);
+    request.blockingCaller(caller);
+
+    try {
+      CoreReactiveQueryResult result = caller.sendAndAwait(() ->
+          reactiveResult(request, options.adhoc(), errorConverter).toFuture());
+
+      Throwable rowActionFailure = caller.rowActionFailure();
+      if (rowActionFailure != null) {
+        throw CbThrowables.propagate(rowActionFailure);
+      }
+
+      // No rows, unless another thread read the response; then this waits for them. Ends the way the rows ended.
+      forEachBlocking(result.rows(), 16, callback);
+      return requireNonNull(result.metaData().block());
+
+    } catch (RuntimeException e) {
+      // The caller interrupted while it waited (or while it read the response, which made reading fail).
+      if (CbThrowables.hasCause(e, InterruptedException.class) || Thread.currentThread().isInterrupted()) {
+        if (e instanceof CancellationException) {
+          throw e;
+        }
+        CancellationException cancelled = propagateAsCancellation(new InterruptedException());
+        cancelled.addSuppressed(e);
+        throw cancelled;
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Whether a blocking query can do its work on the calling thread (see {@link #queryBlocking}).
+   */
+  private boolean worksOnCallerThread(CoreQueryOptions options) {
+    return BLOCKING_QUERY_ON_CALLER_THREAD
+        && !options.asTransaction()
+        // The strategy only ever changes from legacy to enhanced, so the query uses enhanced if this sees it.
+        && (options.adhoc() || strategy instanceof EnhancedPreparedStatementStrategy);
   }
 
   /**
@@ -210,15 +279,24 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       return singleQueryTransactionReactive(statement, options, queryContext, errorConverter);
     } else {
       QueryRequest request = queryRequest(statement, options, queryContext, target);
-      return query(request, options.adhoc())
-          .map(v -> (CoreReactiveQueryResult) new ClassicCoreReactiveQueryResult(v, request.context().lastDispatchedToNode()))
-          .onErrorMap(err -> {
-            if (errorConverter != null) {
-              return errorConverter.apply(err);
-            }
-            return err;
-          });
+      return reactiveResult(request, options.adhoc(), errorConverter);
     }
+  }
+
+  /**
+   * Sends the request, and returns the result, whose rows arrive later.
+   */
+  private Mono<CoreReactiveQueryResult> reactiveResult(QueryRequest request,
+                                                       boolean adhoc,
+                                                       @Nullable Function<Throwable, RuntimeException> errorConverter) {
+    return query(request, adhoc)
+        .map(v -> (CoreReactiveQueryResult) new ClassicCoreReactiveQueryResult(v, request.context().lastDispatchedToNode()))
+        .onErrorMap(err -> {
+          if (errorConverter != null) {
+            return errorConverter.apply(err);
+          }
+          return err;
+        });
   }
 
 

@@ -22,6 +22,8 @@ import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
+import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -43,7 +45,9 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
  * <p>
  * For a successful (2xx) response, completes the request as soon as the header has arrived, with a response whose rows and trailer
  * arrive later, as the body is parsed. Rows are passed to the subscriber with backpressure: if
- * the subscriber falls behind, parsing (and reading from the connection) pauses.
+ * the subscriber falls behind, parsing (and reading from the connection) pauses. Unless the request's
+ * {@link BlockingCaller} is reading the response on its own thread and has a row action: then each row is passed
+ * to the action as it's parsed, and the response's rows end without any.
  * <p>
  * If the body isn't JSON (for example, an HTML page from a proxy), the request fails with an exception
  * whose message includes the start of the body (the first {@value #BODY_HEAD_LIMIT} bytes, redacted
@@ -102,6 +106,11 @@ final class StreamingJsonResponseHandler {
     BlockingStreamBridge<ROW> rowBridge = new BlockingStreamBridge<>(ROW_BUFFER_HIGH_WATER_MARK);
     AtomicBoolean headerArrived = new AtomicBoolean();
 
+    // A blocking caller reading the response on its own thread takes the rows directly. The bridge still ends
+    // the rows (with no rows), so the caller sees whether they ended successfully.
+    BlockingCaller caller = request instanceof BaseHttpRequest ? ((BaseHttpRequest<?>) request).blockingCaller() : null;
+    BlockingCaller rowTaker = caller != null && caller.takesRowsOnCurrentThread() ? caller : null;
+
     try (
       ResponseBody responseBody = httpResponse.body();
       // Remember the start of the body in case we need to report an unexpected server response.
@@ -128,6 +137,10 @@ final class StreamingJsonResponseHandler {
             // a longer pause means the connection is dead.
           },
           row -> {
+            if (rowTaker != null) {
+              rowTaker.acceptRow(format.newRow(row));
+              return;
+            }
             try {
               rowBridge.emitNext(format.newRow(row));
 
@@ -137,6 +150,13 @@ final class StreamingJsonResponseHandler {
             }
           }
         );
+      } catch (BlockingCaller.RowActionException rowActionFailure) {
+        // The caller's row action threw (the caller keeps the exception), so stop reading. Closing the body
+        // discards the rest of the response, or closes the connection. Not a failure of the attempt.
+        rowBridge.fail(rowActionFailure);
+        trailerSink.tryEmitError(rowActionFailure);
+        return;
+
       } catch (RuntimeException parseFailure) {
         // Handled here, while the body stream is still open, so the start of the body can be reported.
         attempt.recordFailure(parseFailure);
