@@ -66,6 +66,8 @@ public class QueryErrorContext extends ErrorContext {
       err.put("retry", error.retry());
       if (error.reason() != null) {
         err.put("reason", error.reason());
+      } else if (error.reasonText() != null) {
+        err.put("reason", error.reasonText());
       }
       if (error.context() != null && !error.context().isEmpty()) {
         err.put("additional", error.context());
