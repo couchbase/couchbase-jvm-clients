@@ -45,7 +45,7 @@ public class ClassicCoreReactiveQueryResult extends CoreReactiveQueryResult {
   }
 
   public Mono<CoreQueryMetaData> metaData() {
-    return response.trailer().map(t -> ClassicCoreQueryMetaData.from(response.header(), t));
+    return response.trailer().map(t -> ClassicCoreQueryMetaData.from(response.header(), t, lastDispatchedTo));
   }
 
   @Override
