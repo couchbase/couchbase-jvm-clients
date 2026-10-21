@@ -22,7 +22,11 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.RequestCanceledException;
+import com.couchbase.client.core.error.UnambiguousTimeoutException;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
+import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
 import com.couchbase.client.core.msg.query.QueryRequest;
@@ -30,6 +34,7 @@ import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.TestHttpServer.RecordedRequest;
+import com.couchbase.client.core.util.CbThreads;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -42,8 +47,13 @@ import reactor.test.StepVerifier;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
@@ -51,13 +61,18 @@ import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 /**
@@ -439,5 +454,126 @@ class OkHttpQueryServiceTest {
     assertNotNull(trailer);
     assertEquals("errors", trailer.status());
     assertTrue(trailer.errors().isPresent());
+  }
+
+  // ---- Blocking caller ----
+
+  @Test
+  void blockingCallerRunsTheCallOnItsOwnThread() {
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1}],\"status\":\"success\"}");
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    request.blockingCaller(caller);
+    AtomicReference<Thread> completedOn = new AtomicReference<>();
+    request.response().whenComplete((response, error) -> completedOn.set(Thread.currentThread()));
+
+    service.send(request);
+
+    // Done by the time send returns, on this thread.
+    assertTrue(request.completed());
+    assertSame(Thread.currentThread(), completedOn.get());
+    assertEquals(singletonList("{\"a\":1}"), rows(caller.await(request, request.response())));
+  }
+
+  @Test
+  void blockingCallerWaitsOutTheRetryDelayAndRetriesOnItsOwnThread() {
+    server.enqueue(503, "{" +
+      "\"requestID\":\"abc-123\"," +
+      "\"errors\":[{\"code\":12345,\"msg\":\"try again\",\"retry\":true}]," +
+      "\"status\":\"errors\"" +
+      "}", Duration.ZERO);
+    server.enqueue("{\"requestID\":\"abc-124\",\"results\":[{\"a\":1}],\"status\":\"success\"}");
+
+    // Like the real core, which sends the retry to a node's service (here, the only one).
+    List<Thread> retriedOn = new CopyOnWriteArrayList<>();
+    doAnswer(invocation -> {
+      retriedOn.add(Thread.currentThread());
+      service.send(invocation.<Request<? extends Response>>getArgument(0));
+      return null;
+    }).when(core).send(any(), anyBoolean());
+
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    request.blockingCaller(caller);
+    service.send(request); // fails, and hands the retry to the caller
+    assertFalse(request.completed());
+
+    QueryResponse response = caller.await(request, request.response());
+    assertEquals("abc-124", response.header().requestId());
+    assertEquals(singletonList(Thread.currentThread()), retriedOn);
+    assertEquals(singleton(RetryReason.QUERY_ERROR_RETRYABLE), request.context().retryReasons());
+    assertEquals(2, server.requests().size());
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void timeoutCancelsACallRunningOnTheBlockingCallersThread() {
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[],\"status\":\"success\"}", Duration.ofSeconds(5));
+    QueryRequest request = newQueryRequest(Duration.ofMillis(200));
+    BlockingCaller caller = new BlockingCaller();
+    request.blockingCaller(caller);
+    env.timer().register((Request<Response>) (Request<?>) request); // as the core does when it first sends a request
+
+    long start = System.nanoTime();
+    service.send(request); // returns once the timeout cancels the call
+
+    assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(3), "should stop waiting for the response");
+    assertEquals(CancellationReason.TIMEOUT, request.cancellationReason());
+    assertThrows(UnambiguousTimeoutException.class, () -> caller.await(request, request.response()));
+  }
+
+  @Test
+  void interruptingAPlatformThreadWaitingForTheResponseCancelsTheRequest() {
+    // A platform thread's socket read can't be interrupted, so the interrupt watcher cancels the request.
+    assertFalse(CbThreads.isVirtual(Thread.currentThread()));
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[],\"status\":\"success\"}", Duration.ofSeconds(5));
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    request.blockingCaller(caller);
+
+    ScheduledExecutorService interrupter = Executors.newSingleThreadScheduledExecutor();
+    try {
+      Thread callerThread = Thread.currentThread();
+      interrupter.schedule(callerThread::interrupt, 200, TimeUnit.MILLISECONDS);
+
+      long start = System.nanoTime();
+      service.send(request); // returns once the watcher cancels the call
+      assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(3), "should stop waiting for the response");
+      assertEquals(CancellationReason.STOPPED_LISTENING, request.cancellationReason());
+
+      RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, request.response()));
+      InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
+      assertInstanceOf(RequestCanceledException.class, interrupted.getSuppressed()[0]);
+      assertFalse(Thread.currentThread().isInterrupted());
+
+    } finally {
+      interrupter.shutdownNow();
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void interruptingTheBlockingCallerWhileItReadsTheRowsReportsTheInterrupt() {
+    // The interrupt makes reading the rows fail. The caller reports the interrupt, not that failure.
+    server.enqueue("{\"requestID\":\"abc-123\",\"results\":[{\"a\":1},{\"a\":2},{\"a\":3}],\"status\":\"success\"}");
+    QueryRequest request = newQueryRequest();
+    BlockingCaller caller = new BlockingCaller();
+    request.blockingCaller(caller);
+
+    // Like the blocking query API, collects the rows as they arrive (on this thread). Interrupted by the first one.
+    CompletableFuture<List<String>> rows = request.response().thenCompose(response -> response.rows()
+      .map(row -> {
+        Thread.currentThread().interrupt();
+        return new String(row.data(), UTF_8);
+      })
+      .collectList()
+      .toFuture());
+
+    service.send(request);
+
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, rows));
+    InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
+    assertEquals(1, interrupted.getSuppressed().length, "should report what the interrupt caused");
+    assertFalse(Thread.currentThread().isInterrupted());
   }
 }

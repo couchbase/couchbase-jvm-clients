@@ -21,6 +21,9 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -30,7 +33,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CbThreads {
   private static final Logger log = LoggerFactory.getLogger(CbThreads.class);
 
+  /**
+   * {@code Thread.isVirtual()}, or null if the JVM doesn't have virtual threads.
+   */
+  private static final @Nullable MethodHandle IS_VIRTUAL = isVirtualHandleOrNull();
+
   private CbThreads() {
+  }
+
+  /**
+   * Returns true if the thread is a virtual thread. Always false prior to Java 21.
+   */
+  public static boolean isVirtual(Thread thread) {
+    if (IS_VIRTUAL == null) {
+      return false;
+    }
+    try {
+      return (boolean) IS_VIRTUAL.invokeExact(thread);
+    } catch (Throwable t) {
+      throw CbThrowables.propagate(t); // Thread.isVirtual() doesn't throw
+    }
+  }
+
+  private static @Nullable MethodHandle isVirtualHandleOrNull() {
+    try {
+      return MethodHandles.publicLookup().findVirtual(Thread.class, "isVirtual", MethodType.methodType(boolean.class));
+    } catch (NoSuchMethodException | IllegalAccessException e) {
+      return null; // prior to Java 21
+    }
   }
 
   /**

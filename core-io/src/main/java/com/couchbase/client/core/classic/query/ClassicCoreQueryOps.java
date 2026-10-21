@@ -44,6 +44,7 @@ import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.ReducedQueryErrorContext;
 import com.couchbase.client.core.error.transaction.internal.CoreTransactionExpiredException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
@@ -83,6 +84,13 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
    * The maximum number of entries in the prepared statement cache.
    */
   private static final int PREPARED_STATEMENT_CACHE_SIZE = 5000;
+
+  /**
+   * Whether blocking adhoc queries do their work on the calling thread (see {@link #queryBlocking}).
+   * True unless the {@code com.couchbase.blockingQueryOnCallerThread} system property is false.
+   */
+  private static final boolean BLOCKING_QUERY_ON_CALLER_THREAD =
+      Boolean.parseBoolean(System.getProperty("com.couchbase.blockingQueryOnCallerThread", "true"));
 
   private volatile PreparedStatementStrategy strategy;
 
@@ -134,32 +142,61 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       });
     } else {
       QueryRequest request = queryRequest(statement, options, queryContext, target);
-      Mono<QueryResponse> result = query(request, options.adhoc());
-
-      CompletableFuture<CoreQueryResult> out = result
-          .onErrorMap(err -> {
-            if (errorConverter != null) {
-              return errorConverter.apply(err);
-            }
-            return err;
-          })
-          .flatMap(response -> response
-              .rows()
-              .collectList()
-              .onErrorMap(err -> {
-                if (errorConverter != null) {
-                  return errorConverter.apply(err);
-                }
-                return err;
-              })
-              .flatMap(rows -> response
-                  .trailer()
-                  .map(trailer -> (CoreQueryResult) new ClassicCoreQueryResult(response.header(), rows, trailer, request.context().lastDispatchedToNode()))))
-          .toFuture();
+      CompletableFuture<CoreQueryResult> out = bufferedResult(request, options.adhoc(), errorConverter);
 
       return new CoreAsyncResponse<>(out, () -> {
       });
     }
+  }
+
+  /**
+   * Like the default implementation, but for an adhoc query, the calling thread does the work itself
+   * (see {@link BlockingCaller}): sends the request, reads the response, and waits out retry delays.
+   * Not for prepared statements (non-adhoc queries), whose prepare and execute requests are copies
+   * of the original request; they use the default implementation, as do single-query transactions.
+   */
+  @Override
+  public CoreQueryResult queryBlocking(String statement,
+                                       CoreQueryOptions options,
+                                       @Nullable CoreQueryContext queryContext,
+                                       @Nullable NodeIdentifier target,
+                                       @Nullable Function<Throwable, RuntimeException> errorConverter) {
+    if (!BLOCKING_QUERY_ON_CALLER_THREAD || options.asTransaction() || !options.adhoc()) {
+      return CoreQueryOps.super.queryBlocking(statement, options, queryContext, target, errorConverter);
+    }
+
+    BlockingCaller caller = new BlockingCaller();
+    QueryRequest request = queryRequest(statement, options, queryContext, target);
+    request.blockingCaller(caller);
+    return caller.sendAndAwait(request, () -> bufferedResult(request, true, errorConverter));
+  }
+
+  /**
+   * Sends the request, and returns the result with all its rows.
+   */
+  private CompletableFuture<CoreQueryResult> bufferedResult(QueryRequest request,
+                                                            boolean adhoc,
+                                                            @Nullable Function<Throwable, RuntimeException> errorConverter) {
+    return query(request, adhoc)
+        .onErrorMap(err -> {
+          if (errorConverter != null) {
+            return errorConverter.apply(err);
+          }
+          return err;
+        })
+        .flatMap(response -> response
+            .rows()
+            .collectList()
+            .onErrorMap(err -> {
+              if (errorConverter != null) {
+                return errorConverter.apply(err);
+              }
+              return err;
+            })
+            .flatMap(rows -> response
+                .trailer()
+                .map(trailer -> (CoreQueryResult) new ClassicCoreQueryResult(response.header(), rows, trailer, request.context().lastDispatchedToNode()))))
+        .toFuture();
   }
 
   @Override

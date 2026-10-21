@@ -43,6 +43,11 @@ public abstract class BaseHttpRequest<R extends Response> extends BaseRequest<R>
    */
   private volatile @Nullable Runnable cancellationHook;
 
+  /**
+   * The thread blocked waiting for this request, if it does the request's work itself.
+   */
+  private volatile @Nullable BlockingCaller blockingCaller;
+
   public BaseHttpRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy) {
     super(timeout, ctx, retryStrategy);
   }
@@ -76,5 +81,19 @@ public abstract class BaseHttpRequest<R extends Response> extends BaseRequest<R>
     if (cancelled()) {
       hook.run();
     }
+  }
+
+  /**
+   * Returns the thread blocked waiting for this request, if it does the request's work itself, or null.
+   */
+  public @Nullable BlockingCaller blockingCaller() {
+    return blockingCaller;
+  }
+
+  /**
+   * Has the given caller do this request's work. Call before sending the request.
+   */
+  public void blockingCaller(BlockingCaller caller) {
+    this.blockingCaller = requireNonNull(caller);
   }
 }
