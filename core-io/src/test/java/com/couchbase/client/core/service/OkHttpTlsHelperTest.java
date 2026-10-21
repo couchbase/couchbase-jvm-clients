@@ -93,6 +93,33 @@ class OkHttpTlsHelperTest {
   }
 
   @Test
+  void alertWithNameBeforeTheMessage() {
+    // Newer JDKs put the alert's name before the message.
+    assertEquals(NO_COMMON_PARAMETERS_HINT, permanentTlsFailureHint(new SSLHandshakeException("(handshake_failure) Received fatal alert: handshake_failure")));
+    assertEquals(CLIENT_CERTIFICATE_HINT, permanentTlsFailureHint(new SSLHandshakeException("(bad_certificate) Received fatal alert: bad_certificate")));
+    assertEquals(CLIENT_CERTIFICATE_REQUIRED_HINT, permanentTlsFailureHint(new SSLHandshakeException("(certificate_required) Received fatal alert: certificate_required")));
+  }
+
+  @Test
+  void alertWithOtherWording() {
+    assertEquals(NO_COMMON_PARAMETERS_HINT, permanentTlsFailureHint(new SSLHandshakeException("handshake_failure(40)")));
+    assertEquals(CLIENT_CERTIFICATE_HINT, permanentTlsFailureHint(new SSLHandshakeException("The server sent alert unknown_ca.")));
+  }
+
+  @Test
+  void unknownAlertIsTemporary() {
+    assertNull(permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: internal_error")));
+    assertNull(permanentTlsFailureHint(new SSLHandshakeException("(internal_error) Received fatal alert: internal_error")));
+  }
+
+  @Test
+  void alertNamesMatchWholeWords() {
+    // Not "bad_certificate"
+    assertNull(permanentTlsFailureHint(new SSLHandshakeException("Received fatal alert: bad_certificate_status_response")));
+    assertNull(permanentTlsFailureHint(new SSLHandshakeException("(bad_certificate_hash_value) Received fatal alert: bad_certificate_hash_value")));
+  }
+
+  @Test
   void alertCanBeSuppressed() {
     // With TLS 1.3, the server can reject the client's certificate after the client has sent the request.
     // Writing the request fails, and OkHttp adds the alert as a suppressed exception.

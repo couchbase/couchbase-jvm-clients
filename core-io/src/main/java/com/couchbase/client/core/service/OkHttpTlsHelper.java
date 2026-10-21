@@ -53,6 +53,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -257,6 +258,14 @@ class OkHttpTlsHelper {
   }
 
   /**
+   * Splits a message into words that could be alert names, which are lowercase with underscores.
+   * Matching whole words, not wording around them, works with the JDK's messages for an alert from the server,
+   * both "Received fatal alert: handshake_failure" from older JDKs and
+   * "(handshake_failure) Received fatal alert: handshake_failure" from newer ones.
+   */
+  private static final Pattern NOT_ALERT_NAME_CHARACTERS = Pattern.compile("[^a-z_]+");
+
+  /**
    * Hints for the JDK's own TLS failures, by part of their message.
    */
   private static final Map<String, String> MESSAGE_HINTS = mapOf(
@@ -354,11 +363,16 @@ class OkHttpTlsHelper {
       return CERTIFICATE_HINT;
     }
 
-    // The JDK reports an alert from the server as "Received fatal alert: handshake_failure".
+    // Newer JDKs also name alerts the client raises, as in "(certificate_unknown) PKIX path building failed",
+    // so this comes after the certificate checks above.
     String message = String.valueOf(e.getMessage());
-    String alertPrefix = "Received fatal alert: ";
-    if (message.startsWith(alertPrefix)) {
-      return ALERT_HINTS.get(message.substring(alertPrefix.length()).trim());
+    String alertHint = Arrays.stream(NOT_ALERT_NAME_CHARACTERS.split(message))
+      .map(ALERT_HINTS::get)
+      .filter(Objects::nonNull)
+      .findFirst()
+      .orElse(null);
+    if (alertHint != null) {
+      return alertHint;
     }
 
     return MESSAGE_HINTS.entrySet().stream()
