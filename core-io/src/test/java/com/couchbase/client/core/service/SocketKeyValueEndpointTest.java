@@ -122,6 +122,7 @@ import static com.couchbase.client.core.service.FakeKeyValueServer.USERNAME;
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -1181,6 +1182,7 @@ class SocketKeyValueEndpointTest {
     start(env -> env.securityConfig(it -> it.enableTls(true).trustCertificates(listOf(serverCert.certificate()))));
     // Like a server that requires a client certificate. With TLS 1.3, the client finishes its side of the TLS
     // handshake before the server rejects its (missing) certificate, so the alert arrives during the KV handshake.
+    // (Newer JDKs send "certificate_required", and older ones "bad_certificate".)
     SSLServerSocket serverSocket = (SSLServerSocket) serverCerts.sslContext().getServerSocketFactory()
       .createServerSocket(0, 50, InetAddress.getByName(HOST));
     serverSocket.setEnabledProtocols(new String[]{"TLSv1.3"});
@@ -1193,7 +1195,8 @@ class SocketKeyValueEndpointTest {
 
     waitForEvent(SecureConnectionFailedEvent.class);
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
-    assertTrue(failed.cause().getMessage().contains(CLIENT_CERTIFICATE_HINT), failed.cause().getMessage());
+    String message = failed.cause().getMessage();
+    assertTrue(message.contains(CLIENT_CERTIFICATE_REQUIRED_HINT) || message.contains(CLIENT_CERTIFICATE_HINT), message);
     assertNotNull(endpoint.internalDiagnostics().tlsHandshakeFailure);
     assertEquals(AuthenticationStatus.FAILED, endpoint.internalDiagnostics().authenticationStatus);
     assertFalse(endpoint.state() == EndpointState.CONNECTED);
