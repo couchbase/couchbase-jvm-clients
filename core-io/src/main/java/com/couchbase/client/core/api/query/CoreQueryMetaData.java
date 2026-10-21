@@ -18,6 +18,8 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.topology.NodeIdentifier;
+import reactor.util.annotation.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -73,4 +75,11 @@ public abstract class CoreQueryMetaData {
    * @throws DecodingFailureException when the warnings cannot be decoded successfully
    */
   public abstract List<CoreQueryWarning> warnings();
+
+  /**
+   * Returns the node the query was last sent to, or null if unknown.
+   */
+  public @Nullable NodeIdentifier lastDispatchedTo() {
+    return null;
+  }
 }
