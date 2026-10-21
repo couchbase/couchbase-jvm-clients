@@ -302,21 +302,11 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                                             boolean adhoc,
                                                             @Nullable Function<Throwable, RuntimeException> errorConverter) {
     return query(request, adhoc)
-        .onErrorMap(err -> {
-          if (errorConverter != null) {
-            return errorConverter.apply(err);
-          }
-          return err;
-        })
+        .onErrorMap(err -> convertError(err, errorConverter))
         .flatMap(response -> response
             .rows()
             .collectList()
-            .onErrorMap(err -> {
-              if (errorConverter != null) {
-                return errorConverter.apply(err);
-              }
-              return err;
-            })
+            .onErrorMap(err -> convertError(err, errorConverter))
             .flatMap(rows -> response
                 .trailer()
                 .map(trailer -> (CoreQueryResult) new ClassicCoreQueryResult(response.header(), rows, trailer, request.context().lastDispatchedToNode()))))
@@ -345,12 +335,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
     return query(request, adhoc)
         .map(v -> (CoreReactiveQueryResult) new ClassicCoreReactiveQueryResult(v, request.context().lastDispatchedToNode()))
-        .onErrorMap(err -> {
-          if (errorConverter != null) {
-            return errorConverter.apply(err);
-          }
-          return err;
-        });
+        .onErrorMap(err -> convertError(err, errorConverter));
   }
 
 
@@ -423,10 +408,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
           if (ex instanceof CoreTransactionExpiredException) {
             return Mono.error(new UnambiguousTimeoutException(ex.getMessage(), null));
           }
-          if (errorConverter != null) {
-            ex = errorConverter.apply(ex);
-          }
-          return Mono.error(ex);
+          return Mono.error(convertError(ex, errorConverter));
         })
         .doOnError(err -> span.finish(err))
         .doOnTerminate(() -> span.finish());
