@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core;
 
-import com.couchbase.client.core.deps.io.netty.util.Timeout;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
@@ -86,7 +85,7 @@ class TimerTest {
     try {
       Request<Response> request = mock(Request.class);
       timer.register(request);
-      verify(request, times(1)).timeoutRegistration(any(Timeout.class));
+      verify(request, times(1)).timeoutRegistration(any(Timer.Registration.class));
     } finally {
       timer.stop();
     }

@@ -18,7 +18,7 @@ package com.couchbase.client.core.msg;
 
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.util.Timeout;
+import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.NodeIdentifier;
@@ -85,7 +85,7 @@ public interface Request<R extends Response> {
    *
    * @param registration the registration for the timeout timer.
    */
-  void timeoutRegistration(Timeout registration);
+  void timeoutRegistration(Timer.Registration registration);
 
   /**
    * If attached, returns the context for this request.
