@@ -604,6 +604,7 @@ class OkHttpQueryServiceTest {
 
     // The response's rows end without any.
     QueryResponse response = caller.await(request.response());
+    assertTrue(caller.rowsWentToAction());
     assertEquals(emptyList(), rows(response));
     assertEquals("success", requireNonNull(response.trailer().block()).status());
     assertNull(caller.rowActionFailure());
@@ -646,6 +647,7 @@ class OkHttpQueryServiceTest {
     CompletableFuture.runAsync(() -> service.send(request)).get(); // not the caller's thread, so the call is enqueued
 
     QueryResponse response = request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    assertFalse(caller.rowsWentToAction());
     assertEquals(singletonList("{\"a\":1}"), rows(response));
     assertEquals(0, calls.get());
   }
