@@ -128,6 +128,12 @@ public final class BlockingCaller {
   private @Nullable Throwable rowActionFailure;
 
   /**
+   * Whether the rows of the latest response that arrived went to the row action. Set by whichever thread reads
+   * the response, before it completes the request, so the caller sees it once it has the result.
+   */
+  private volatile boolean rowsWentToAction;
+
+  /**
    * Sets the action a service reading a streamed response on the caller's thread passes the rows to.
    * Call before sending the request.
    *
@@ -166,6 +172,24 @@ public final class BlockingCaller {
    */
   public @Nullable Throwable rowActionFailure() {
     return rowActionFailure;
+  }
+
+  /**
+   * Records whether a response's rows go to the row action (true), or arrive through the response's stream of rows
+   * (false, because another thread is reading the response). A service reading a streamed response calls this
+   * when the response arrives, before completing the request with it.
+   */
+  public void rowsWentToAction(boolean wentToAction) {
+    this.rowsWentToAction = wentToAction;
+  }
+
+  /**
+   * Returns true if the rows of the response the caller got went to the row action. Then the response's stream
+   * of rows had already ended (without any rows) when the caller stopped waiting, since the caller's thread
+   * read the whole response first. Call once the caller stopped waiting.
+   */
+  public boolean rowsWentToAction() {
+    return rowsWentToAction;
   }
 
   /**

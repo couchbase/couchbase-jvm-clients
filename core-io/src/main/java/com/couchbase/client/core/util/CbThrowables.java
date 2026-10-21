@@ -110,6 +110,20 @@ public class CbThrowables {
     return new RuntimeException(e);
   }
 
+  /**
+   * Clears the thread's interrupted flag, and returns a {@code RuntimeException} caused by the given exception,
+   * for the caller to throw. Like an interrupted {@code Future.get()}, whose {@code InterruptedException}
+   * leaves the flag cleared.
+   *
+   * @deprecated Use {@link #reinterruptAndWrap} instead, which preserves the interruption.
+   * This exists only for blocking APIs that have always cleared the flag, until they stop doing so (JVMCBC-1555).
+   */
+  @Deprecated
+  public static RuntimeException clearInterruptAndWrap(InterruptedException e) {
+    Thread.interrupted();
+    return new RuntimeException(e);
+  }
+
   public static String getStackTraceAsString(Throwable t) {
     StringWriter w = new StringWriter();
     t.printStackTrace(new PrintWriter(w));
