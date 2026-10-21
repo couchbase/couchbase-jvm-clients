@@ -42,6 +42,13 @@ public class ClassicCoreQueryResult extends CoreQueryResult {
     this.lastDispatchedToNode = lastDispatchedToNode;
   }
 
+  /**
+   * Creates a result with the given rows and the header, trailer, and node (if known) of the given metadata.
+   */
+  ClassicCoreQueryResult(List<QueryChunkRow> rows, ClassicCoreQueryMetaData metaData) {
+    this(metaData.header(), rows, metaData.trailer(), metaData.lastDispatchedTo());
+  }
+
   @Override
   public Stream<QueryChunkRow> rows() {
     return rows.stream();
@@ -52,7 +59,7 @@ public class ClassicCoreQueryResult extends CoreQueryResult {
   }
 
   public CoreQueryMetaData metaData() {
-    return ClassicCoreQueryMetaData.from(header, trailer);
+    return ClassicCoreQueryMetaData.from(header, trailer, lastDispatchedToNode);
   }
 
   @Override

@@ -24,6 +24,8 @@ import com.couchbase.client.core.api.query.CoreQueryWarning;
 import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
+import com.couchbase.client.core.topology.NodeIdentifier;
+import reactor.util.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,16 +37,45 @@ public class ClassicCoreQueryMetaData extends CoreQueryMetaData {
 
   private final QueryChunkHeader header;
   private final QueryChunkTrailer trailer;
+  private final @Nullable NodeIdentifier lastDispatchedTo;
 
   @Stability.Internal
   public ClassicCoreQueryMetaData(QueryChunkHeader header, QueryChunkTrailer trailer) {
+    this(header, trailer, null);
+  }
+
+  @Stability.Internal
+  public ClassicCoreQueryMetaData(QueryChunkHeader header, QueryChunkTrailer trailer, @Nullable NodeIdentifier lastDispatchedTo) {
     this.header = header;
     this.trailer = trailer;
+    this.lastDispatchedTo = lastDispatchedTo;
   }
 
   @Stability.Internal
   public static ClassicCoreQueryMetaData from(final QueryChunkHeader header, final QueryChunkTrailer trailer) {
     return new ClassicCoreQueryMetaData(header, trailer);
+  }
+
+  @Stability.Internal
+  public static ClassicCoreQueryMetaData from(
+      final QueryChunkHeader header,
+      final QueryChunkTrailer trailer,
+      final @Nullable NodeIdentifier lastDispatchedTo
+  ) {
+    return new ClassicCoreQueryMetaData(header, trailer, lastDispatchedTo);
+  }
+
+  QueryChunkHeader header() {
+    return header;
+  }
+
+  QueryChunkTrailer trailer() {
+    return trailer;
+  }
+
+  @Override
+  public @Nullable NodeIdentifier lastDispatchedTo() {
+    return lastDispatchedTo;
   }
 
   public String requestId() {
@@ -82,6 +113,7 @@ public class ClassicCoreQueryMetaData extends CoreQueryMetaData {
     return "CoreQueryMetaDataClassic{" +
         "header=" + header +
         ", trailer=" + trailer +
+        ", lastDispatchedTo=" + lastDispatchedTo +
         '}';
   }
 }
