@@ -110,6 +110,14 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       return strategy.executeAdhoc(request);
     }
 
+    // The original request is never dispatched; the strategy sends copies of it.
+    // End the original's span here, after any prepared statement retries.
+    return executePrepared(request)
+        .doOnNext(ignored -> request.context().endSpan(null))
+        .doOnError(err -> request.context().endSpan(err));
+  }
+
+  private Mono<QueryResponse> executePrepared(QueryRequest request) {
     return strategy.execute(request)
         .onErrorResume(PreparedStatementFailureException.class, new PreparedRetryFunction(request));
   }
@@ -447,7 +455,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
             );
             return Mono
                 .delay(cappedDuration, env.scheduler())
-                .flatMap(l -> query(request, false));
+                .flatMap(l -> executePrepared(request));
           });
     }
   }
