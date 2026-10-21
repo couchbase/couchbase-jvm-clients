@@ -42,7 +42,6 @@ import com.couchbase.client.java.search.result.SearchResult;
 import com.couchbase.client.java.search.vector.VectorSearch;
 
 import java.util.Map;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -195,12 +194,13 @@ public class Scope {
    * an exception, the query is cancelled and the exception is re-thrown
    * by this method.
    * <p>
-   * If the calling thread is interrupted, this method throws
-   * {@link CancellationException} and sets the thread's interrupted flag.
+   * If the calling thread is interrupted, this method throws a
+   * {@code RuntimeException} caused by {@link InterruptedException},
+   * and sets the thread's interrupted flag.
    *
    * @param statement The SQL++ statement to execute.
    * @return Query metadata.
-   * @throws CancellationException if the calling thread is interrupted.
+   * @throws RuntimeException caused by {@link InterruptedException} if the calling thread is interrupted.
    * @throws TimeoutException if the query does not complete before the timeout expires.
    * @throws RuntimeException if the row action callback throws an exception.
    */
@@ -219,13 +219,14 @@ public class Scope {
    * an exception, the query is cancelled and the exception is re-thrown
    * by this method.
    * <p>
-   * If the calling thread is interrupted, this method throws
-   * {@link CancellationException} and sets the thread's interrupted flag.
+   * If the calling thread is interrupted, this method throws a
+   * {@code RuntimeException} caused by {@link InterruptedException},
+   * and sets the thread's interrupted flag.
    *
    * @param statement The SQL++ statement to execute.
    * @param options Custom query options.
    * @return Query metadata.
-   * @throws CancellationException if the calling thread is interrupted.
+   * @throws RuntimeException caused by {@link InterruptedException} if the calling thread is interrupted.
    * @throws TimeoutException if the query does not complete before the timeout expires.
    * @throws RuntimeException if the row action callback throws an exception.
    */

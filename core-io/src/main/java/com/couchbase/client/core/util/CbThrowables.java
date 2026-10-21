@@ -95,6 +95,21 @@ public class CbThrowables {
     throw new CouchbaseException(t.getMessage(), t);
   }
 
+  /**
+   * Sets the thread's interrupted flag, and returns a {@code RuntimeException} caused by the given exception,
+   * for the caller to throw.
+   */
+  public static RuntimeException reinterruptAndWrap(InterruptedException e) {
+    // We don't own the thread's interruption policy, so preserve the "interrupted" flag per
+    // Java Concurrency In Practice section 7.1.13:
+    // """
+    // Only code that implements a thread's interruption policy may swallow an interruption request.
+    // General-purpose task and library code should never swallow interruption requests.
+    // """
+    Thread.currentThread().interrupt();
+    return new RuntimeException(e);
+  }
+
   public static String getStackTraceAsString(Throwable t) {
     StringWriter w = new StringWriter();
     t.printStackTrace(new PrintWriter(w));
