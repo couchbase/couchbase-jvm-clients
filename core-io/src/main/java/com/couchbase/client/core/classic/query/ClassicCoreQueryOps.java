@@ -70,14 +70,13 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.retry.RetryOrchestrator.capDuration;
 import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
-import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
+import static com.couchbase.client.core.util.CbThrowables.reinterruptAndWrap;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
@@ -197,7 +196,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
     caller.rowAction((QueryChunkRow row) -> {
       // Like the default implementation, which stops (and says why) once it notices the thread was interrupted.
       if (Thread.currentThread().isInterrupted()) {
-        throw propagateAsCancellation(new InterruptedException());
+        throw reinterruptAndWrap(new InterruptedException());
       }
       callback.accept(row);
     });
@@ -214,18 +213,18 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
       }
 
       // No rows, unless another thread read the response; then this waits for them. Ends the way the rows ended.
-      forEachBlocking(result.rows(), 16, callback);
+      forEachBlocking(result.rows(), 16, callback, CbThrowables::reinterruptAndWrap);
       return requireNonNull(result.metaData().block());
 
     } catch (RuntimeException e) {
-      // The caller interrupted while it waited (or while it read the response, which made reading fail).
-      if (CbThrowables.hasCause(e, InterruptedException.class) || Thread.currentThread().isInterrupted()) {
-        if (e instanceof CancellationException) {
-          throw e;
-        }
-        CancellationException cancelled = propagateAsCancellation(new InterruptedException());
-        cancelled.addSuppressed(e);
-        throw cancelled;
+      // The caller was interrupted while it waited (or while it read the response, which made reading fail).
+      CbThrowables.findCause(e, InterruptedException.class)
+          .ifPresent(it -> { throw reinterruptAndWrap(it); });
+      if (Thread.currentThread().isInterrupted()) {
+        // Reading failed because of the interrupt. Like the blocking caller, report what it caused as a suppressed exception.
+        InterruptedException cause = new InterruptedException();
+        cause.addSuppressed(e);
+        throw reinterruptAndWrap(cause);
       }
       throw e;
     }

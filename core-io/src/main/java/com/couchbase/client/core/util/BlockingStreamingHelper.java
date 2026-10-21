@@ -29,6 +29,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Stability.Internal
 public class BlockingStreamingHelper {
@@ -38,20 +39,6 @@ public class BlockingStreamingHelper {
   }
 
   private static final Object STREAM_END_SENTINEL = new Object();
-
-  public static CancellationException propagateAsCancellation(InterruptedException e) {
-    // We don't own the thread's interruption policy, so preserve the "interrupted" flag per
-    // Java Concurrency In Practice section 7.1.13:
-    // """
-    // Only code that implements a thread's interruption policy may swallow an interruption request.
-    // General-purpose task and library code should never swallow interruption requests.
-    // """
-    Thread.currentThread().interrupt();
-
-    CancellationException t = new CancellationException("Thread was interrupted.");
-    t.initCause(e);
-    return t;
-  }
 
   private static <T> void putUninterruptibly(BlockingQueue<T> queue, T value) {
     boolean wasInterrupted = Thread.interrupted();
@@ -80,13 +67,14 @@ public class BlockingStreamingHelper {
    * Larger values might improve performance by reducing scheduler context switches.
    * @param callback a callback invoked once for every item in the flux.
    * It is guaranteed to be invoked by the same thread that called this method.
-   * @throws CancellationException if the calling thread is interrupted while
-   * processing the items.
+   * @param onInterrupt returns the exception to throw if the calling thread is interrupted
+   * while processing the items (for example, {@link CbThrowables#reinterruptAndWrap}).
    */
   public static <T> void forEachBlocking(
     Flux<T> flux,
     int buffer,
-    Consumer<T> callback
+    Consumer<T> callback,
+    Function<InterruptedException, RuntimeException> onInterrupt
   ) {
     // Instead of limiting the queue's capacity, use an external semaphore.
     // This lets us enqueue control signals without blocking.
@@ -136,7 +124,7 @@ public class BlockingStreamingHelper {
           semaphore.release();
 
         } catch (InterruptedException e) {
-          throw propagateAsCancellation(e);
+          throw onInterrupt.apply(e);
         }
 
         if (item instanceof List) {

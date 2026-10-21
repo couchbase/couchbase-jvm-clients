@@ -51,6 +51,7 @@ import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -61,7 +62,6 @@ import static com.couchbase.client.core.retry.RetryReason.AUTHENTICATION_ERROR;
 import static com.couchbase.client.core.retry.RetryReason.ENDPOINT_NOT_AVAILABLE;
 import static com.couchbase.client.core.retry.RetryReason.GLOBAL_CONFIG_LOAD_IN_PROGRESS;
 import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
-import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static com.couchbase.client.core.util.Golang.encodeDurationToMs;
 import static java.util.Objects.requireNonNull;
@@ -359,7 +359,7 @@ class QueryExecutor {
       .map(r -> new Row(r.data(), deserializer))
       .takeUntilOther(wholeStreamDeadlineAsMono);
 
-    forEachBlocking(rows, DEFAULT_STREAM_BUFFER_ROWS, callback);
+    forEachBlocking(rows, DEFAULT_STREAM_BUFFER_ROWS, callback, QueryExecutor::propagateAsCancellation);
 
     try {
       return new QueryMetadata(response.header(), response.trailer().blockOptional().get());
@@ -561,5 +561,23 @@ class QueryExecutor {
     suppressed.setStackTrace(t.getStackTrace());
     t.fillInStackTrace();
     t.addSuppressed(suppressed);
+  }
+
+  /**
+   * Sets the thread's interrupted flag, and returns a {@link CancellationException}
+   * caused by the given exception, for the caller to throw.
+   */
+  private static CancellationException propagateAsCancellation(InterruptedException e) {
+    // We don't own the thread's interruption policy, so preserve the "interrupted" flag per
+    // Java Concurrency In Practice section 7.1.13:
+    // """
+    // Only code that implements a thread's interruption policy may swallow an interruption request.
+    // General-purpose task and library code should never swallow interruption requests.
+    // """
+    Thread.currentThread().interrupt();
+
+    CancellationException t = new CancellationException("Thread was interrupted.");
+    t.initCause(e);
+    return t;
   }
 }

@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.util.BlockingStreamingHelper.forEachBlocking;
-import static com.couchbase.client.core.util.BlockingStreamingHelper.propagateAsCancellation;
+import static com.couchbase.client.core.util.CbThrowables.reinterruptAndWrap;
 
 @Stability.Internal
 public interface CoreQueryOps {
@@ -65,13 +65,13 @@ public interface CoreQueryOps {
           .blockOptional()
           .orElseThrow(NoSuchElementException::new);
 
-      forEachBlocking(response.rows(), 16, callback);
+      forEachBlocking(response.rows(), 16, callback, CbThrowables::reinterruptAndWrap);
       return response.metaData().block();
 
     } catch (Exception e) {
       // in case the thread was interrupted in a reactor "block" operator
       CbThrowables.findCause(e, InterruptedException.class)
-          .ifPresent(it -> { throw propagateAsCancellation(it); });
+          .ifPresent(it -> { throw reinterruptAndWrap(it); });
       throw e;
     }
   }

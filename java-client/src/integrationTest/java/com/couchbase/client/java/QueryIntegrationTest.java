@@ -55,7 +55,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
@@ -275,10 +274,10 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    void blockingStreamingThrowsCancellationWhenThreadAlreadyInterrupted() {
+    void blockingStreamingReportsInterruptionWhenThreadAlreadyInterrupted() {
         Thread.currentThread().interrupt();
-        CancellationException e = assertThrows(
-            CancellationException.class,
+        RuntimeException e = assertThrows(
+            RuntimeException.class,
             () -> cluster.queryStreaming(
                 "SELECT 1",
                 row -> fail("Did not expect to receive result row")
@@ -301,9 +300,9 @@ class QueryIntegrationTest extends JavaIntegrationTest {
     }
 
     @Test
-    void blockingStreamingThrowsCancellationWhenInterruptedInCallback() {
-      CancellationException e = assertThrows(
-            CancellationException.class,
+    void blockingStreamingReportsInterruptionWhenInterruptedInCallback() {
+      RuntimeException e = assertThrows(
+            RuntimeException.class,
             () -> cluster.queryStreaming(
                 "SELECT 1",
                 row -> Thread.currentThread().interrupt()
