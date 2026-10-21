@@ -19,9 +19,12 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.util.CbThreads;
+import okhttp3.Call;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.InOrder;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -80,9 +84,14 @@ class InterruptWatcherTest {
 
   private Thread startWatchedThread(InterruptWatcher watcher, Request<?> request, boolean stopWatchingFirst)
     throws InterruptedException {
+    return startWatchedThread(watcher, request, null, stopWatchingFirst);
+  }
+
+  private Thread startWatchedThread(InterruptWatcher watcher, Request<?> request, @Nullable Call call, boolean stopWatchingFirst)
+    throws InterruptedException {
     CountDownLatch ready = new CountDownLatch(1);
     Thread t = new Thread(() -> {
-      InterruptWatcher.Registration registration = watcher.watchCurrentThread(request);
+      InterruptWatcher.Registration registration = watcher.watchCurrentThread(request, call);
       if (stopWatchingFirst) {
         registration.close();
       }
@@ -104,6 +113,17 @@ class InterruptWatcherTest {
   void cancelsTheRequestOfAWatchedThreadThatIsInterrupted() throws Exception {
     startWatchedThread(false).interrupt();
     verify(request, timeout(5000)).cancel(CancellationReason.STOPPED_LISTENING);
+  }
+
+  @Test
+  void alsoCancelsTheCallIfGivenOne() throws Exception {
+    // A streamed result's request is complete while the rest of the result is read, so cancelling it does nothing.
+    Call call = mock(Call.class);
+    startWatchedThread(watcher, request, call, false).interrupt();
+    verify(call, timeout(5000)).cancel();
+    InOrder inOrder = inOrder(request, call);
+    inOrder.verify(request).cancel(CancellationReason.STOPPED_LISTENING);
+    inOrder.verify(call).cancel();
   }
 
   @Test

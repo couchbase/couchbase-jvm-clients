@@ -20,6 +20,7 @@ import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.util.CbThreads;
+import okhttp3.Call;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -42,7 +43,9 @@ import static java.util.Objects.requireNonNull;
  * so without this, the thread wouldn't notice it was interrupted until the response arrived or the request timed out.
  * Instead, this checks the threads it watches every so often, and cancels the request of one that was interrupted.
  * That cancels the HTTP call, which closes the connection, so the read fails, and the thread
- * finds out it was interrupted (see {@link BlockingCaller}).
+ * finds out it was interrupted (see {@link BlockingCaller}). It also cancels the call itself, if it was given one:
+ * a streamed result's request completes when the header arrives, so cancelling the request has no effect
+ * while the rest of the result is being read.
  * <p>
  * One thread does the checking for every call. It's started when first needed, and costs little when there's
  * nothing to watch:
@@ -83,15 +86,17 @@ final class InterruptWatcher {
   private final class Watched implements Registration {
     final Thread thread;
     final Request<?> request;
+    final @Nullable Call call;
 
     /**
      * Only the watched thread closes its registration, so this doesn't need to be volatile.
      */
     private boolean closed;
 
-    Watched(Thread thread, Request<?> request) {
+    Watched(Thread thread, Request<?> request, @Nullable Call call) {
       this.thread = thread;
       this.request = request;
+      this.call = call;
     }
 
     @Override
@@ -166,12 +171,19 @@ final class InterruptWatcher {
    * if the thread is interrupted, cancels the request ({@link CancellationReason#STOPPED_LISTENING}).
    */
   Registration watchCurrentThread(Request<?> request) {
+    return watchCurrentThread(request, null);
+  }
+
+  /**
+   * Like {@link #watchCurrentThread(Request)}, but also cancels the call (after the request).
+   */
+  Registration watchCurrentThread(Request<?> request, @Nullable Call call) {
     Thread current = Thread.currentThread();
     if (CbThreads.isVirtual(current)) {
       return NOT_WATCHED;
     }
 
-    Watched w = new Watched(current, request);
+    Watched w = new Watched(current, request, call);
     watched.add(w);
     count.incrementAndGet();
     if (parked || checker == null) {
@@ -265,6 +277,9 @@ final class InterruptWatcher {
             w.request.cancel(CancellationReason.STOPPED_LISTENING);
           } catch (RuntimeException e) {
             log.warn("Failed to cancel {} after its thread was interrupted", w.request.getClass().getSimpleName(), e);
+          }
+          if (w.call != null) {
+            w.call.cancel();
           }
         }
       }
