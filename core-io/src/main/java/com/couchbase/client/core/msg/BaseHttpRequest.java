@@ -91,9 +91,11 @@ public abstract class BaseHttpRequest<R extends Response> extends BaseRequest<R>
   }
 
   /**
-   * Has the given caller do this request's work. Call before sending the request.
+   * Has the given caller do this request's work, making this its current request
+   * (see {@link BlockingCaller#attach}). Call before sending the request.
    */
   public void blockingCaller(BlockingCaller caller) {
     this.blockingCaller = requireNonNull(caller);
+    caller.attach(this);
   }
 }

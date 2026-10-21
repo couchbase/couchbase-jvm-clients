@@ -86,7 +86,7 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
   private static final int PREPARED_STATEMENT_CACHE_SIZE = 5000;
 
   /**
-   * Whether blocking adhoc queries do their work on the calling thread (see {@link #queryBlocking}).
+   * Whether blocking queries do their work on the calling thread (see {@link #queryBlocking}).
    * True unless the {@code com.couchbase.blockingQueryOnCallerThread} system property is false.
    */
   private static final boolean BLOCKING_QUERY_ON_CALLER_THREAD =
@@ -150,10 +150,16 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
   }
 
   /**
-   * Like the default implementation, but for an adhoc query, the calling thread does the work itself
-   * (see {@link BlockingCaller}): sends the request, reads the response, and waits out retry delays.
-   * Not for prepared statements (non-adhoc queries), whose prepare and execute requests are copies
-   * of the original request; they use the default implementation, as do single-query transactions.
+   * Like the default implementation, but the calling thread does the work itself (see {@link BlockingCaller}):
+   * sends the request, reads the response, and waits out retry delays.
+   * <p>
+   * For a prepared statement (a query that isn't adhoc), the request that's sent is a copy of the original request,
+   * to prepare the statement (and execute it), or to execute it if it's already prepared; the copy has the same
+   * blocking caller. Only with enhanced prepared statements, though, which send one request per query.
+   * Otherwise (with servers that don't support them), a query that isn't prepared yet sends a request to prepare it,
+   * then, while reading that response, a request to execute it, which on the same thread would mean sending the second
+   * request before the first one's done. So prepared statements without enhanced prepared statements use the default
+   * implementation, as do single-query transactions.
    */
   @Override
   public CoreQueryResult queryBlocking(String statement,
@@ -161,14 +167,17 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                        @Nullable CoreQueryContext queryContext,
                                        @Nullable NodeIdentifier target,
                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (!BLOCKING_QUERY_ON_CALLER_THREAD || options.asTransaction() || !options.adhoc()) {
+    if (!BLOCKING_QUERY_ON_CALLER_THREAD
+        || options.asTransaction()
+        // The strategy only ever changes from legacy to enhanced, so the query uses enhanced if this sees it.
+        || (!options.adhoc() && !(strategy instanceof EnhancedPreparedStatementStrategy))) {
       return CoreQueryOps.super.queryBlocking(statement, options, queryContext, target, errorConverter);
     }
 
     BlockingCaller caller = new BlockingCaller();
     QueryRequest request = queryRequest(statement, options, queryContext, target);
     request.blockingCaller(caller);
-    return caller.sendAndAwait(request, () -> bufferedResult(request, true, errorConverter));
+    return caller.sendAndAwait(() -> bufferedResult(request, options.adhoc(), errorConverter));
   }
 
   /**

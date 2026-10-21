@@ -36,6 +36,7 @@ import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.BlockingCaller;
 import com.couchbase.client.core.msg.HttpRequest;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -235,8 +236,11 @@ public class QueryRequest
     return copy(statement(), newQuery, idempotent(), newSpan);
   }
 
+  /**
+   * If this request's work is done by a blocking caller, so is the copy's (which becomes the caller's current request).
+   */
   private QueryRequest copy(String newStatement, byte[] newQuery, boolean newIdempotent, RequestSpan newSpan) {
-    return new QueryRequest(
+    QueryRequest copy = new QueryRequest(
         timeout(),
         context(),
         retryStrategy(),
@@ -251,6 +255,12 @@ public class QueryRequest
         target(),
         parametersUsed
     );
+
+    BlockingCaller caller = blockingCaller();
+    if (caller != null) {
+      copy.blockingCaller(caller);
+    }
+    return copy;
   }
 
   private byte[] transformQuery(Consumer<ObjectNode> editor) {
