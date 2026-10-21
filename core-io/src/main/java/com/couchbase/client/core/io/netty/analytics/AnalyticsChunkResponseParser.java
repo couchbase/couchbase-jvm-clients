@@ -30,6 +30,7 @@ import com.couchbase.client.core.error.ErrorCodeAndMessage;
 import com.couchbase.client.core.error.IndexExistsException;
 import com.couchbase.client.core.error.IndexNotFoundException;
 import com.couchbase.client.core.error.InternalServerFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.JobQueueFullException;
 import com.couchbase.client.core.error.LinkExistsException;
 import com.couchbase.client.core.error.LinkNotFoundException;
@@ -161,9 +162,14 @@ public class AnalyticsChunkResponseParser
         return new IndexExistsException(errorContext);
       } else if (code > 24000 && code < 25000) {
         return new CompilationFailureException(errorContext);
+      } else if (httpCode == 400) {
+        return new InvalidArgumentException("Analytics service reported an invalid argument: " + error, null, errorContext);
       } else {
         return new CouchbaseException("Unknown analytics error: " + error, errorContext);
       }
+    }
+    if (httpCode == 400) {
+      return new InvalidArgumentException("Analytics service reported an invalid argument", null, errorContext);
     }
     return new CouchbaseException("Unknown analytics error", errorContext);
   }

@@ -28,8 +28,6 @@ import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.BucketExistsException;
 import com.couchbase.client.core.error.BucketNotFlushableException;
 import com.couchbase.client.core.error.BucketNotFoundException;
-import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.manager.CoreBucketManagerOps;
 import com.couchbase.client.core.manager.bucket.CoreBucketSettings;
@@ -98,12 +96,6 @@ public class ClassicCoreBucketManager implements CoreBucketManagerOps {
   private static Throwable wrap(Throwable t) {
     if (t instanceof CompletionException) {
       return wrap(t.getCause());
-    }
-    if (t instanceof HttpStatusCodeException) {
-      HttpStatusCodeException err = (HttpStatusCodeException) t;
-      if (err.httpStatusCode() == 400) {
-        return new InvalidArgumentException(t.getMessage(), t, err.context());
-      }
     }
     return t;
   }

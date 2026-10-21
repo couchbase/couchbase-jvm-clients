@@ -33,7 +33,15 @@ class NonChunkedViewMessageHandler extends NonChunkedHttpMessageHandler {
 
   @Override
   protected Exception failRequestWith(HttpResponseStatus status, String content, NonChunkedHttpRequest<Response> request) {
-    return new ViewServiceException(content, new HttpStatusCodeException(status, content, request, null));
+    HttpStatusCodeException cause = new HttpStatusCodeException(status, content, request, null);
+
+    // SDK-46 wants HTTP status code 400 to be an InvalidArgumentException instead of CouchbaseException,
+    // but that might break user code that catches ViewServiceException.
+    // Views are deprecated anyway, so let's leave this one alone.
+//    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+//      return new InvalidArgumentException("View service reported an invalid argument: " + content, cause, null);
+//    }
+    return new ViewServiceException(content, cause);
   }
 
 }

@@ -73,6 +73,10 @@ public class NonChunkedEventingMessageHandler extends NonChunkedHttpMessageHandl
       }
     }
 
+    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      return new InvalidArgumentException("Eventing service reported an invalid argument: " + content, null, errorContext);
+    }
+
     return new CouchbaseException("Unknown eventing error: " + content, errorContext);
   }
 

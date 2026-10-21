@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.view;
 
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ViewErrorContext;
 import com.couchbase.client.core.error.ViewNotFoundException;
 import com.couchbase.client.core.io.netty.HttpProtocol;
@@ -102,6 +103,9 @@ public class ViewChunkResponseParser
       ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext(), e, httpStatus);
       if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
         return new ViewNotFoundException(errorContext);
+      }
+      if (httpStatus == 400) {
+        return new InvalidArgumentException("View service reported an invalid argument: " + e, null, errorContext);
       }
       return new CouchbaseException("Unknown view error: " + e.toString(), errorContext);
     });
