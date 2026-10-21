@@ -139,17 +139,12 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
                                                        @Nullable CoreQueryContext queryContext,
                                                        @Nullable NodeIdentifier target,
                                                        @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    if (options.asTransaction()) {
-      CompletableFuture<CoreQueryResult> out = singleQueryTransactionBuffered(core, statement, options, queryContext, errorConverter).toFuture();
-      return new CoreAsyncResponse(out, () -> {
-      });
-    } else {
-      QueryRequest request = queryRequest(statement, options, queryContext, target);
-      CompletableFuture<CoreQueryResult> out = bufferedResult(request, options.adhoc(), errorConverter);
+    CompletableFuture<CoreQueryResult> out = options.asTransaction()
+        ? singleQueryTransactionBuffered(core, statement, options, queryContext, errorConverter).toFuture()
+        : bufferedResult(queryRequest(statement, options, queryContext, target), options.adhoc(), errorConverter);
 
-      return new CoreAsyncResponse<>(out, () -> {
-      });
-    }
+    return new CoreAsyncResponse<>(out, () -> {
+    });
   }
 
   /**
@@ -296,20 +291,20 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
   }
 
   /**
-   * Sends the request, and returns the result with all its rows.
+   * Sends the request, and returns the result with all its rows (the {@linkplain #reactiveResult reactive result},
+   * with its rows collected).
    */
   private CompletableFuture<CoreQueryResult> bufferedResult(QueryRequest request,
                                                             boolean adhoc,
                                                             @Nullable Function<Throwable, RuntimeException> errorConverter) {
-    return query(request, adhoc)
-        .onErrorMap(err -> convertError(err, errorConverter))
-        .flatMap(response -> response
+    return reactiveResult(request, adhoc, errorConverter)
+        .flatMap(result -> result
             .rows()
             .collectList()
             .onErrorMap(err -> convertError(err, errorConverter))
-            .flatMap(rows -> response
-                .trailer()
-                .map(trailer -> (CoreQueryResult) new ClassicCoreQueryResult(response.header(), rows, trailer, request.context().lastDispatchedToNode()))))
+            .flatMap(rows -> result
+                .metaData()
+                .map(metaData -> (CoreQueryResult) new ClassicCoreQueryResult(rows, (ClassicCoreQueryMetaData) metaData))))
         .toFuture();
   }
 
