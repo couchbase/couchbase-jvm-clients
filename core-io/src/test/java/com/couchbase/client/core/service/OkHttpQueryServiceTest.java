@@ -472,7 +472,7 @@ class OkHttpQueryServiceTest {
     // Done by the time send returns, on this thread.
     assertTrue(request.completed());
     assertSame(Thread.currentThread(), completedOn.get());
-    assertEquals(singletonList("{\"a\":1}"), rows(caller.await(request, request.response())));
+    assertEquals(singletonList("{\"a\":1}"), rows(caller.await(request.response())));
   }
 
   @Test
@@ -498,7 +498,7 @@ class OkHttpQueryServiceTest {
     service.send(request); // fails, and hands the retry to the caller
     assertFalse(request.completed());
 
-    QueryResponse response = caller.await(request, request.response());
+    QueryResponse response = caller.await(request.response());
     assertEquals("abc-124", response.header().requestId());
     assertEquals(singletonList(Thread.currentThread()), retriedOn);
     assertEquals(singleton(RetryReason.QUERY_ERROR_RETRYABLE), request.context().retryReasons());
@@ -519,7 +519,7 @@ class OkHttpQueryServiceTest {
 
     assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(3), "should stop waiting for the response");
     assertEquals(CancellationReason.TIMEOUT, request.cancellationReason());
-    assertThrows(UnambiguousTimeoutException.class, () -> caller.await(request, request.response()));
+    assertThrows(UnambiguousTimeoutException.class, () -> caller.await(request.response()));
   }
 
   @Test
@@ -541,7 +541,7 @@ class OkHttpQueryServiceTest {
       assertTrue(System.nanoTime() - start < TimeUnit.SECONDS.toNanos(3), "should stop waiting for the response");
       assertEquals(CancellationReason.STOPPED_LISTENING, request.cancellationReason());
 
-      RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, request.response()));
+      RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request.response()));
       InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
       assertInstanceOf(RequestCanceledException.class, interrupted.getSuppressed()[0]);
       assertFalse(Thread.currentThread().isInterrupted());
@@ -571,7 +571,7 @@ class OkHttpQueryServiceTest {
 
     service.send(request);
 
-    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(request, rows));
+    RuntimeException e = assertThrows(RuntimeException.class, () -> caller.await(rows));
     InterruptedException interrupted = assertInstanceOf(InterruptedException.class, e.getCause());
     assertEquals(1, interrupted.getSuppressed().length, "should report what the interrupt caused");
     assertFalse(Thread.currentThread().isInterrupted());
