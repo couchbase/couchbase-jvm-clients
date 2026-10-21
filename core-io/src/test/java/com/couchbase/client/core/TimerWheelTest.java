@@ -20,6 +20,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,12 +33,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @Timeout(30)
 class TimerWheelTest {
@@ -102,6 +106,27 @@ class TimerWheelTest {
   }
 
   @Test
+  void hugeDelaysNeverRun() throws Exception {
+    TimerWheel wheel = newWheel(Duration.ofMillis(5), 8);
+    AtomicInteger runs = new AtomicInteger();
+    Thread.sleep(10); // so the wheel's age, added to these delays, overflows
+    // These would overflow the deadline, and look overdue.
+    Runnable saturated = runs::incrementAndGet;
+    Runnable maxNanos = runs::incrementAndGet;
+    wheel.newTimeout(saturated, Long.MAX_VALUE, TimeUnit.MILLISECONDS); // toNanos saturates at Long.MAX_VALUE
+    wheel.newTimeout(maxNanos, Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+
+    // A later task runs, so the others had their chance.
+    CountDownLatch later = new CountDownLatch(1);
+    wheel.newTimeout(later::countDown, 20, TimeUnit.MILLISECONDS);
+    assertTrue(later.await(5, TimeUnit.SECONDS));
+    assertEquals(0, runs.get());
+
+    Set<Runnable> unprocessed = wheel.stop().stream().map(TimerWheel.Entry::task).collect(Collectors.toSet());
+    assertTrue(unprocessed.contains(saturated) && unprocessed.contains(maxNanos), "still scheduled");
+  }
+
+  @Test
   void runsTasksInDeadlineOrder() throws Exception {
     TimerWheel wheel = newWheel(Duration.ofMillis(5), 16);
     List<Integer> order = new ArrayList<>(); // only touched by the wheel's thread
@@ -138,6 +163,20 @@ class TimerWheelTest {
     Timer.Registration registration = wheel.newTimeout(ran::countDown, 5, TimeUnit.MILLISECONDS);
     assertTrue(ran.await(5, TimeUnit.SECONDS));
     assertFalse(registration.cancel());
+  }
+
+  @Test
+  void entryReleasesItsTaskOnceItRunsOrIsCancelled() throws Exception {
+    TimerWheel wheel = newWheel(Duration.ofMillis(5), 8);
+    CountDownLatch ran = new CountDownLatch(1);
+    TimerWheel.Entry ranEntry = (TimerWheel.Entry) wheel.newTimeout(ran::countDown, 5, TimeUnit.MILLISECONDS);
+    assertTrue(ran.await(5, TimeUnit.SECONDS));
+    assertEquals(null, ranEntry.task());
+
+    TimerWheel.Entry cancelledEntry = (TimerWheel.Entry) wheel.newTimeout(() -> { }, 1, TimeUnit.MINUTES);
+    assertTrue(cancelledEntry.task() != null, "not yet run or cancelled");
+    cancelledEntry.cancel();
+    assertEquals(null, cancelledEntry.task());
   }
 
   @Test
@@ -255,6 +294,183 @@ class TimerWheelTest {
     } finally {
       executor.shutdownNow();
     }
+  }
+
+  private static final class Node {
+    static final AtomicReferenceFieldUpdater<Node, Node> NEXT = AtomicReferenceFieldUpdater.newUpdater(Node.class, Node.class, "next");
+
+    final int producer;
+    final int sequence;
+    volatile Node next;
+
+    Node(int producer, int sequence) {
+      this.producer = producer;
+      this.sequence = sequence;
+    }
+  }
+
+  @Test
+  void linkedQueuePollsEveryItemOnceInTheOrderEachThreadAddedThem() throws Exception {
+    TimerWheel.LinkedQueue<Node> queue = new TimerWheel.LinkedQueue<>(Node.NEXT, new Node(-1, -1));
+    int threads = 8;
+    int perThread = 100_000;
+    CountDownLatch go = new CountDownLatch(1);
+
+    ExecutorService executor = Executors.newFixedThreadPool(threads);
+    try {
+      for (int t = 0; t < threads; t++) {
+        int producer = t;
+        executor.execute(() -> {
+          try {
+            go.await();
+          } catch (InterruptedException e) {
+            return;
+          }
+          for (int i = 0; i < perThread; i++) {
+            queue.add(new Node(producer, i));
+          }
+        });
+      }
+      go.countDown();
+
+      int[] nextExpected = new int[threads];
+      Node previous = null;
+      for (int polled = 0; polled < threads * perThread; ) {
+        Node node = queue.poll();
+        if (node == null) {
+          Thread.yield();
+          continue;
+        }
+        assertEquals(nextExpected[node.producer]++, node.sequence, "producer " + node.producer);
+        if (previous != null) {
+          assertEquals(null, previous.next, "a polled item no longer links to the next");
+        }
+        previous = node;
+        polled++;
+      }
+      assertEquals(null, queue.poll());
+    } finally {
+      executor.shutdownNow();
+    }
+  }
+
+  /**
+   * Links nodes like {@link Node#NEXT}, but the add() of one node pauses between its two steps until released.
+   */
+  private static final class PausingLink extends AtomicReferenceFieldUpdater<Node, Node> {
+    final Node pauseOn;
+    final CountDownLatch paused = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+
+    PausingLink(Node pauseOn) {
+      this.pauseOn = pauseOn;
+    }
+
+    @Override
+    public void lazySet(Node obj, Node newValue) {
+      if (newValue == pauseOn) {
+        paused.countDown();
+        try {
+          release.await();
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      Node.NEXT.lazySet(obj, newValue);
+    }
+
+    @Override
+    public boolean compareAndSet(Node obj, Node expect, Node update) {
+      return Node.NEXT.compareAndSet(obj, expect, update);
+    }
+
+    @Override
+    public boolean weakCompareAndSet(Node obj, Node expect, Node update) {
+      return Node.NEXT.weakCompareAndSet(obj, expect, update);
+    }
+
+    @Override
+    public void set(Node obj, Node newValue) {
+      Node.NEXT.set(obj, newValue);
+    }
+
+    @Override
+    public Node get(Node obj) {
+      return Node.NEXT.get(obj);
+    }
+  }
+
+  @Test
+  void linkedQueuePollWaitingForAddsWaitsOutAnAddInProgress() throws Exception {
+    Node first = new Node(0, 0);
+    Node second = new Node(1, 0);
+    PausingLink link = new PausingLink(first);
+    TimerWheel.LinkedQueue<Node> queue = new TimerWheel.LinkedQueue<>(link, new Node(-1, -1));
+
+    Thread adder = new Thread(() -> queue.add(first));
+    adder.start();
+    assertTrue(link.paused.await(5, TimeUnit.SECONDS));
+    queue.add(second); // returns, but is behind the add() in progress
+
+    assertEquals(null, queue.poll(), "poll() stops at the add() in progress");
+
+    Thread releaser = new Thread(() -> {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        return;
+      }
+      link.release.countDown();
+    });
+    releaser.start();
+
+    assertEquals(first, queue.pollWaitingForAdds());
+    assertEquals(second, queue.pollWaitingForAdds());
+    assertEquals(null, queue.pollWaitingForAdds(), "empty");
+    adder.join();
+    releaser.join();
+  }
+
+  @Test
+  void taskThatLeavesItsThreadInterruptedDoesNotAffectTheNextTask() throws Exception {
+    TimerWheel wheel = newWheel(Duration.ofMillis(5), 8);
+    CountDownLatch ran = new CountDownLatch(1);
+    AtomicReference<Boolean> nextSawInterrupt = new AtomicReference<>();
+    // Due at the same tick, so they run one after the other, in the order scheduled.
+    wheel.newTimeout(() -> Thread.currentThread().interrupt(), 5, TimeUnit.MILLISECONDS);
+    wheel.newTimeout(() -> {
+      nextSawInterrupt.set(Thread.currentThread().isInterrupted());
+      ran.countDown();
+    }, 5, TimeUnit.MILLISECONDS);
+
+    assertTrue(ran.await(5, TimeUnit.SECONDS));
+    assertEquals(false, nextSawInterrupt.get());
+  }
+
+  @Test
+  void interruptingTheTimerThreadDoesNotMakeItSpin() throws Exception {
+    ThreadMXBean threads = ManagementFactory.getThreadMXBean();
+    assumeTrue(threads.isThreadCpuTimeSupported());
+
+    TimerWheel wheel = newWheel(Duration.ofMillis(10), 8);
+    AtomicReference<Thread> timerThread = new AtomicReference<>();
+    CountDownLatch ran = new CountDownLatch(1);
+    wheel.newTimeout(() -> {
+      timerThread.set(Thread.currentThread());
+      ran.countDown();
+    }, 1, TimeUnit.MILLISECONDS);
+    assertTrue(ran.await(5, TimeUnit.SECONDS));
+
+    timerThread.get().interrupt();
+    long cpuBefore = threads.getThreadCpuTime(timerThread.get().getId());
+    Thread.sleep(500);
+    long cpuMillis = TimeUnit.NANOSECONDS.toMillis(threads.getThreadCpuTime(timerThread.get().getId()) - cpuBefore);
+    assertTrue(cpuMillis < 250, "timer thread used " + cpuMillis + " ms of CPU in 500 ms");
+
+    // And it still runs tasks.
+    CountDownLatch ranAgain = new CountDownLatch(1);
+    wheel.newTimeout(ranAgain::countDown, 1, TimeUnit.MILLISECONDS);
+    assertTrue(ranAgain.await(5, TimeUnit.SECONDS));
   }
 
   @SafeVarargs

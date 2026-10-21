@@ -251,8 +251,9 @@ public class Timer {
     stopped = true;
     for (TimerWheel wheelTimer : wheelTimers) {
       for (TimerWheel.Entry unprocessed : wheelTimer.stop()) {
-        if (unprocessed.task() instanceof RequestTask) {
-          ((RequestTask) unprocessed.task()).request().cancel(CancellationReason.SHUTDOWN);
+        Runnable task = unprocessed.task(); // null if cancelled since the wheel stopped
+        if (task instanceof RequestTask) {
+          ((RequestTask) task).request().cancel(CancellationReason.SHUTDOWN);
         }
       }
     }
