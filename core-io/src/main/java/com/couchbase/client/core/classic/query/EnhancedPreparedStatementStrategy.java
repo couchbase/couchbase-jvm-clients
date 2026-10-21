@@ -37,9 +37,12 @@ public class EnhancedPreparedStatementStrategy extends PreparedStatementStrategy
 
   @Override
   public Mono<QueryResponse> execute(QueryRequest request) {
-    return Mono.fromCallable(() -> cache.get(request.statement()))
-        .flatMap(preparedStatement -> executeAlreadyPrepared(request, preparedStatement))
-        .switchIfEmpty(prepareAndExecute(request));
+    return Mono.defer(() -> {
+      PreparedStatement prepared = cache.get(request.statement());
+      return prepared != null
+          ? executeAlreadyPrepared(request, prepared)
+          : prepareAndExecute(request);
+    });
   }
 
   private Mono<QueryResponse> prepareAndExecute(QueryRequest request) {
