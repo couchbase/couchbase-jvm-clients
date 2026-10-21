@@ -25,7 +25,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URL;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -280,28 +283,24 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
   }
 
   /**
-   * Load properties from the defaults file and then override with sys properties.
+   * Load properties from the config file in the project root directory,
+   * and then override with sys properties.
    */
   private static Properties loadProperties() {
+    Path rootDir = findProjectRootDir();
+
+    // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
+    Path configFile = rootDir.resolve("integration.local.properties");
+    if (!Files.exists(configFile)) {
+      configFile = rootDir.resolve("integration.properties");
+    }
+    LOGGER.info("Reading integration test properties from: {}", configFile);
+
     Properties defaults = new Properties();
-    try {
-      try {
-        // This file is unversioned.  Good practice is to copy integration.properties to this and make changes to this.
-        URL url = TestCluster.class.getResource("/integration.local.properties");
-        if (url != null) {
-          LOGGER.info("Found test config file {}", url.getPath());
-        }
-        defaults.load(url.openStream());
-      }
-      catch (Exception ex) {
-        URL url = TestCluster.class.getResource("/integration.properties");
-        if (url != null) {
-          LOGGER.info("Found test config file {}", url.getPath());
-        }
-        defaults.load(url.openStream());
-      }
+    try (InputStream is = Files.newInputStream(configFile)) {
+      defaults.load(is);
     } catch (Exception ex) {
-      throw new RuntimeException("Could not load properties", ex);
+      throw new RuntimeException("Could not load properties from " + configFile, ex);
     }
 
     Properties all = new Properties(System.getProperties());
@@ -311,6 +310,20 @@ abstract class TestCluster implements ExtensionContext.Store.CloseableResource {
       }
     }
     return all;
+  }
+
+  /**
+   * Returns the nearest directory containing a ".mvn" directory,
+   * starting from the working directory and walking up.
+   */
+  private static Path findProjectRootDir() {
+    Path workingDir = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+    for (Path dir = workingDir; dir != null; dir = dir.getParent()) {
+      if (Files.isDirectory(dir.resolve(".mvn"))) {
+        return dir;
+      }
+    }
+    throw new RuntimeException("Could not find project root directory (one containing '.mvn') starting from " + workingDir);
   }
 
   /**
