@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.deps.io.netty.util.Timeout;
+import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.Test;
@@ -34,7 +34,7 @@ class BaseRequestTest {
   void cancelsTimeoutRegistrationOnSuccess() {
     DummyRequest request = new DummyRequest();
 
-    Timeout registration = mock(Timeout.class);
+    Timer.Registration registration = mock(Timer.Registration.class);
     request.timeoutRegistration(registration);
 
     request.succeed(mock(Response.class));
@@ -45,7 +45,7 @@ class BaseRequestTest {
   void cancelsTimeoutRegistrationOnFailure() {
     DummyRequest request = new DummyRequest();
 
-    Timeout registration = mock(Timeout.class);
+    Timer.Registration registration = mock(Timer.Registration.class);
     request.timeoutRegistration(registration);
 
     request.fail(new RuntimeException());
@@ -56,7 +56,7 @@ class BaseRequestTest {
   void cancelsTimeoutRegistrationOnCancel() {
     DummyRequest request = new DummyRequest();
 
-    Timeout registration = mock(Timeout.class);
+    Timer.Registration registration = mock(Timer.Registration.class);
     request.timeoutRegistration(registration);
 
     request.cancel(CancellationReason.TOO_MANY_REQUESTS_IN_RETRY);

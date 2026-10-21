@@ -19,7 +19,7 @@ package com.couchbase.client.core.msg;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCounterType;
-import com.couchbase.client.core.deps.io.netty.util.Timeout;
+import com.couchbase.client.core.Timer;
 import com.couchbase.client.core.error.AmbiguousTimeoutException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
@@ -107,7 +107,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   /**
    * Holds the timer timeout registration.
    */
-  private volatile Timeout timeoutRegistration;
+  private volatile Timer.Registration timeoutRegistration;
 
   public BaseRequest(final Duration timeout, final CoreContext ctx,
                      final RetryStrategy retryStrategy) {
@@ -195,7 +195,7 @@ public abstract class BaseRequest<R extends Response> implements Request<R> {
   }
 
   @Override
-  public void timeoutRegistration(final Timeout registration) {
+  public void timeoutRegistration(final Timer.Registration registration) {
     this.timeoutRegistration = registration;
   }
 
