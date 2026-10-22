@@ -226,17 +226,7 @@ public class RequestContext extends CoreContext {
   public RequestContext logicallyComplete(@Nullable Throwable err) {
     this.logicallyCompletedAt = System.nanoTime();
 
-    RequestSpan span = request.requestSpan();
-    if (span != null) {
-      if (!CbTracing.isInternalSpan(span)) {
-        coreResources().tracingDecorator().provideAttr(TracingAttribute.RETRIES, span, retryAttempts());
-        if (err != null) {
-          span.recordException(err);
-          span.status(RequestSpan.StatusCode.ERROR);
-        }
-      }
-      span.end();
-    }
+    endSpan(err);
 
     if (!(core().coreResources().meter().isNoopMeter())) {
       long latency = logicalRequestLatency();
@@ -255,6 +245,30 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext logicallyComplete() {
     return logicallyComplete(null);
+  }
+
+  /**
+   * Ends the request span (if present) without recording the latency metric.
+   * <p>
+   * For requests that are never dispatched themselves, because the work is done by
+   * sub-requests that record their own metrics (e.g. prepared statement execution).
+   *
+   * @param err if non-null, will be recorded onto the span.
+   */
+  @Stability.Internal
+  public RequestContext endSpan(@Nullable Throwable err) {
+    RequestSpan span = request.requestSpan();
+    if (span != null) {
+      if (!CbTracing.isInternalSpan(span)) {
+        coreResources().tracingDecorator().provideAttr(TracingAttribute.RETRIES, span, retryAttempts());
+        if (err != null) {
+          span.recordException(err);
+          span.status(RequestSpan.StatusCode.ERROR);
+        }
+      }
+      span.end();
+    }
+    return this;
   }
 
   public int retryAttempts() {
