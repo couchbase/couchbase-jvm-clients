@@ -851,16 +851,24 @@ public class Cluster internal constructor(
             env: ClusterEnvironment,
         ): Cluster = doConnect(connectionString, authenticator, env, ownsEnv = false)
 
-        private fun doConnect(
+        internal fun doConnect(
             connectionString: String,
             authenticator: Authenticator,
             env: ClusterEnvironment,
             ownsEnv: Boolean,
         ): Cluster {
-            val connStr = ConnectionString.create(connectionString);
-            checkConnectionString(env, ownsEnv, connStr)
+            try {
+                val connStr = ConnectionString.create(connectionString);
+                checkConnectionString(env, ownsEnv, connStr)
 
-            return Cluster(env, ownsEnv, authenticator, connStr)
+                return Cluster(env, ownsEnv, authenticator, connStr)
+            } catch (t: Throwable) {
+                // Nobody else can shut down an environment the SDK created, so do it here.
+                if (ownsEnv) {
+                    runCatching { env.shutdown() }.onFailure { t.addSuppressed(it) }
+                }
+                throw t
+            }
         }
     }
 }
