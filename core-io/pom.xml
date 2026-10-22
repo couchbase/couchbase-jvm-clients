@@ -25,6 +25,11 @@
     <name>Couchbase JVM Core IO</name>
     <description>The official Couchbase JVM Core IO Library</description>
 
+    <properties>
+        <!-- see "Embedded POMs" in the parent POM (JVMCBC-1792) -->
+        <flatten.phase>package</flatten.phase>
+    </properties>
+
     <dependencies>
         <!-- External, Required Dependencies -->
         <dependency>
@@ -146,6 +151,12 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- must come after flatten; see "Embedded POMs" in the parent POM (JVMCBC-1792) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
             </plugin>
 
             <plugin>
