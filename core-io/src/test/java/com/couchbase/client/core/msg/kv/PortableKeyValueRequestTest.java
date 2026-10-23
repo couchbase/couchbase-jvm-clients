@@ -147,7 +147,7 @@ class PortableKeyValueRequestTest {
     GetRequest request = new GetRequest("key", TIMEOUT, CORE_CONTEXT,
       new CollectionIdentifier("b", Optional.of("s"), Optional.of("unknown")), BestEffortRetryStrategy.INSTANCE, null);
 
-    assertThrows(CollectionNotFoundException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(CollectionNotFoundException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
     assertThrows(CollectionNotFoundException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -201,8 +201,8 @@ class PortableKeyValueRequestTest {
       expected.write(referenceUpsert(request, content, false, Optional.empty(), ctx));
 
       writer.makeRoomForRequest();
-      request.encodeTo(writer, OPAQUE, ctx);
-      writer.completeRequestHead();
+      request.encodeTo(writer, ctx);
+      writer.completeRequestHead(OPAQUE);
       writer.finishRequest();
     }
     writer.flush();
@@ -215,7 +215,7 @@ class PortableKeyValueRequestTest {
     UpsertRequest request = upsert(SHORT_CONTENT, true, Optional.empty());
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
 
-    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
     assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -258,7 +258,7 @@ class PortableKeyValueRequestTest {
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
     SubdocGetRequest request = subdocGet((byte) 0, new Spec(SubdocCommandType.GET, "$bogus", true, false));
 
-    assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
     assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -335,11 +335,11 @@ class PortableKeyValueRequestTest {
     createAsDeleted.upsert = true;
     createAsDeleted.createAsDeleted = true;
     SubdocMutateRequest request = subdocMutate(createAsDeleted, new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
-    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
     assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
 
     SubdocMutateRequest binary = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1").binary());
-    assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
     assertThrows(FeatureNotAvailableException.class, () -> binary.encode(ALLOC, 1, ctx));
   }
 
@@ -535,8 +535,8 @@ class PortableKeyValueRequestTest {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     KeyValueRequestWriter writer = newWriter(out);
     writer.makeRoomForRequest();
-    request.encodeTo(writer, OPAQUE, ctx);
-    writer.completeRequestHead();
+    request.encodeTo(writer, ctx);
+    writer.completeRequestHead(OPAQUE);
     assertArrayEquals(expected, writer.requestBytes());
     writer.finishRequest();
     writer.flush();

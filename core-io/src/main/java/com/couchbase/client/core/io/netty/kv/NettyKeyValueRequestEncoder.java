@@ -32,9 +32,8 @@ import static java.util.Objects.requireNonNull;
 /**
  * Encodes requests into {@link ByteBuf}s, for the Netty KV implementation.
  * <p>
- * The request builds its head in a reusable array; {@link #finish} copies the head and the value into a buffer
- * of exactly the packet's size. That's the same allocation, and the same copy of the value, as encoding
- * straight into a {@code ByteBuf}.
+ * The request's head is put together in a reusable array; {@link #finish} copies the head and the value into
+ * a {@code ByteBuf} of exactly the packet's size, which is the only allocation per request.
  * <p>
  * Reusable, so a channel can keep one (and reuse its arrays). Not thread-safe.
  */
@@ -52,18 +51,20 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   private final ByteBuffer head = ByteBuffer.allocate(MAX_REQUEST_HEAD_SIZE);
   private final ByteBufferKeyValueRequestBuilder request = new ByteBufferKeyValueRequestBuilder();
   private byte[] scratch = NO_VALUE;
+  private boolean scratchTaken; // whether scratch() was called for the current request
 
   public NettyKeyValueRequestEncoder(ByteBufAllocator alloc) {
     this.alloc = requireNonNull(alloc);
   }
 
   /**
-   * Encodes the request.
+   * Encodes the request with the given opaque: {@link PortableKeyValueRequest#encodeTo}, then {@link #finish}.
+   * If either throws, forgets the request, so the encoder is ready for the next one.
    */
   public ByteBuf encode(PortableKeyValueRequest<?> request, int opaque, KeyValueChannelContext ctx) {
     try {
-      request.encodeTo(this, opaque, ctx);
-      return finish();
+      request.encodeTo(this, ctx);
+      return finish(opaque);
     } finally {
       abort(); // does nothing if the request was finished
     }
@@ -72,6 +73,10 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   @Override
   public byte[] scratch(int minLength) {
     checkNoRequest();
+    if (scratchTaken) {
+      throw new IllegalStateException("scratch() was already called for this request (it returns the same array each time)");
+    }
+    scratchTaken = true;
     if (minLength > MAX_REUSED_SCRATCH_SIZE) {
       return new byte[minLength];
     }
@@ -82,35 +87,38 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   }
 
   @Override
-  public KeyValueRequestBuilder.HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
+  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode) {
     checkNoRequest(); // before clearing the head buffer, which holds the request in progress
     head.clear();
-    request.begin(head, opcode, opaque);
+    request.begin(head, opcode);
     return request;
   }
 
   /**
    * Checks the request, and returns it encoded.
    *
+   * @param opaque the request's opaque.
    * @throws IllegalStateException if no request was begun, or it can't be encoded
    * (see {@link ByteBufferKeyValueRequestBuilder#complete}).
    */
-  public ByteBuf finish() {
-    request.complete();
+  public ByteBuf finish(int opaque) {
+    request.complete(opaque);
     int headSize = head.position();
     int valueLength = request.valueLength();
     ByteBuf encoded = alloc.buffer(headSize + valueLength)
       .writeBytes(head.array(), 0, headSize)
       .writeBytes(request.value(), 0, valueLength);
     request.reset();
+    scratchTaken = false;
     return encoded;
   }
 
   /**
-   * Forgets the request being encoded (if any).
+   * Forgets the request being encoded (if any), and ends its use of {@link #scratch}.
    */
   public void abort() {
     request.reset();
+    scratchTaken = false;
   }
 
   private void checkNoRequest() {

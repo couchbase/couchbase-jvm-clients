@@ -17,16 +17,14 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 
 /**
  * What a KV request encodes itself with (see {@link com.couchbase.client.core.msg.kv.PortableKeyValueRequest}).
  * <p>
- * The request calls {@link #beginRequest}, and builds its packet through the stages that returns
- * (see {@link KeyValueRequestBuilder}).
- * Whoever called the request finishes the packet (or abandons it).
+ * The request calls {@link #beginRequest}, and builds its packet with the {@link KeyValueRequestBuilder} that returns.
+ * Whoever called {@code encodeTo} then finishes the packet, or abandons it.
  * <p>
  * Implementations: {@link KeyValueRequestWriter} (the socket KV connection's writer, which encodes straight into
  * its write buffer), and {@link com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder}
@@ -42,17 +40,19 @@ public interface KeyValueRequestEncoder {
 
   /**
    * Returns an array of at least the given length, for a request to encode its value into (for example,
-   * a sub-document lookup's specs) before {@link #beginRequest}. The encoder may reuse it for later requests, so its contents
-   * last only until the request is finished.
+   * a sub-document lookup's specs) before {@link #beginRequest}. The encoder reuses the array (for later requests,
+   * and for later calls), so its contents last only until the request is finished, and a request may call this
+   * only once.
    *
-   * @throws IllegalStateException if called after {@link #beginRequest}.
+   * @throws IllegalStateException if a request is being built, or this was already called for this request.
    */
   byte[] scratch(int minLength);
 
   /**
-   * Starts a request.
+   * Starts a request, and returns the builder for it. The builder is valid until the request is finished
+   * or abandoned. (Whoever finishes the request gives its opaque.)
    *
-   * @throws IllegalStateException if a request was already begun.
+   * @throws IllegalStateException if a request is already being built.
    */
-  HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque);
+  KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode);
 }

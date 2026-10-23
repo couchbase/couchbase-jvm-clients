@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import org.junit.jupiter.api.Test;
 
 
@@ -35,14 +35,13 @@ class NettyKeyValueRequestEncoderTest {
   private final NettyKeyValueRequestEncoder encoder = new NettyKeyValueRequestEncoder(UnpooledByteBufAllocator.DEFAULT);
 
   private ByteBuf encodeSet(byte[] value, int valueLength) {
-    HeaderStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, 99)
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET)
       .datatype(1)
       .partition(7)
       .cas(5);
-    request.startExtras().putInt(0xcafe);
-    request.startKey().putBytes(KEY);
-    request.value(value, valueLength);
-    return encoder.finish();
+    request.key(KEY).value(value, valueLength);
+    request.extras().putInt(0xcafe);
+    return encoder.finish(99);
   }
 
   @Test
@@ -58,7 +57,7 @@ class NettyKeyValueRequestEncoderTest {
   @Test
   void isReusable() {
     byte[] first = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).startKey().putBytes("abandoned".getBytes(UTF_8));
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET).extras().putBytes("abandoned".getBytes(UTF_8));
     encoder.abort();
     byte[] again = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
     assertArrayEquals(first, again);
@@ -66,27 +65,41 @@ class NettyKeyValueRequestEncoderTest {
 
   @Test
   void refusesToFinishWhatWasNotBegun() {
-    assertThrows(IllegalStateException.class, encoder::finish);
+    assertThrows(IllegalStateException.class, () -> encoder.finish(1));
   }
 
   @Test
   void refusesScratchOrSecondRequestAfterBegin() {
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1);
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET);
     assertThrows(IllegalStateException.class, () -> encoder.scratch(1));
-    assertThrows(IllegalStateException.class, () -> encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1));
+    assertThrows(IllegalStateException.class, () -> encoder.beginRequest(MemcacheProtocol.Opcode.GET));
   }
 
   @Test
   void refusesSectionTooLongForHeader() {
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).startExtras().putBytes(new byte[256]);
-    assertThrows(IllegalStateException.class, encoder::finish);
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET).extras().putBytes(new byte[256]);
+    assertThrows(IllegalStateException.class, () -> encoder.finish(1));
   }
 
   @Test
   void reusesScratchUpToLimit() {
-    byte[] scratch = encoder.scratch(100);
-    assertSame(scratch, encoder.scratch(50));
-    byte[] huge = encoder.scratch(1024 * 1024);
-    assertNotSame(huge, encoder.scratch(1024 * 1024));
+    byte[] scratch = scratchForNextRequest(100);
+    assertSame(scratch, scratchForNextRequest(50));
+    byte[] huge = scratchForNextRequest(1024 * 1024);
+    assertNotSame(huge, scratchForNextRequest(1024 * 1024));
+  }
+
+  private byte[] scratchForNextRequest(int minLength) {
+    byte[] scratch = encoder.scratch(minLength);
+    encoder.abort();
+    return scratch;
+  }
+
+  @Test
+  void refusesSecondScratchForSameRequest() {
+    encoder.scratch(10);
+    assertThrows(IllegalStateException.class, () -> encoder.scratch(10));
+    encoder.abort();
+    encoder.scratch(10);
   }
 }

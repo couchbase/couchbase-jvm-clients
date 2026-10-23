@@ -30,8 +30,9 @@ import java.nio.ByteBuffer;
 /**
  * A KV request that's portable between KV implementations: it encodes with a {@link KeyValueRequestEncoder},
  * and decodes from a {@link KeyValuePacket}, so it doesn't depend on Netty's {@link ByteBuf}. The socket KV
- * connection encodes it straight into its write buffer, and decodes it from a view of its read buffer;
- * the Netty implementation uses the {@code ByteBuf} bridges below.
+ * connection encodes it straight into its write buffer, and decodes it from a view of its read buffer.
+ * The Netty implementation encodes it with a {@link NettyKeyValueRequestEncoder}, and decodes it through
+ * the {@code ByteBuf} decode bridge below.
  * <p>
  * Transitional: once every KV request is converted, these methods move to {@link KeyValueRequest},
  * and the {@code ByteBuf} methods (which here are bridges, for the Netty KV implementation and for tests) go away.
@@ -39,12 +40,12 @@ import java.nio.ByteBuffer;
 @Stability.Internal
 public interface PortableKeyValueRequest<R extends Response> extends KeyValueRequest<R> {
   /**
-   * Builds the request with {@link KeyValueRequestEncoder#beginRequest}. The caller finishes it.
+   * Builds the request with {@link KeyValueRequestEncoder#beginRequest}. The caller finishes it, and gives its opaque.
    * <p>
    * Throws (before beginning the request, ideally) if the request can't be encoded; for example,
    * a {@link com.couchbase.client.core.error.CollectionNotFoundException}.
    */
-  void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx);
+  void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx);
 
   /**
    * Decodes the response. The packet is valid only during the call: copy out whatever the response keeps.

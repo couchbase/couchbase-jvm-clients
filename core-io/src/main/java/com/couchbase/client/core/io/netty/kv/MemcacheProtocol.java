@@ -47,7 +47,7 @@ import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.FramingExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -681,13 +681,11 @@ public enum MemcacheProtocol {
   }
 
   /**
-   * Writes the flexible extras {@link #mutationFlexibleExtras} would return (if any), after checking the server
-   * supports them, like it.
-   *
-   * @return the given stage, so the request can carry on.
+   * Writes the flexible extras {@link #mutationFlexibleExtras} would return (if any) into the request's framing
+   * extras, after checking the server supports them, like it.
    */
-  public static FramingExtrasStage putMutationFlexibleExtras(
-    FramingExtrasStage framingExtras,
+  public static void putMutationFlexibleExtras(
+    KeyValueRequestBuilder builder,
     KeyValueRequest<?> request,
     KeyValueChannelContext ctx,
     Optional<DurabilityLevel> durabilityLevel,
@@ -703,15 +701,14 @@ public enum MemcacheProtocol {
     }
 
     if (preserveExpiry) {
-      framingExtras.putByte(PRESERVE_TTL_FLEXIBLE_IDENT);
+      builder.framingExtras().putByte(PRESERVE_TTL_FLEXIBLE_IDENT);
     }
     if (durability != DurabilityLevel.NONE) {
-      framingExtras
+      builder.framingExtras()
         .putByte(SYNC_REPLICATION_FLEXIBLE_IDENT | 0x03)
         .putByte(durability.code())
         .putShort(syncReplicationDeadline(request.timeout(), request.context()));
     }
-    return framingExtras;
   }
 
   /**

@@ -31,7 +31,8 @@ import java.time.Duration;
 /**
  * The base of the {@link PortableKeyValueRequest}s. Makes the {@code ByteBuf} bridges final, so a subclass
  * can't override them: the socket KV implementation doesn't call them, so it would quietly ignore the override.
- * A subclass overrides {@link #encodeTo} and {@link #decode(com.couchbase.client.core.io.KeyValuePacket, KeyValueChannelContext)} instead.
+ * A subclass overrides {@link #encodeTo} and
+ * {@link #decode(com.couchbase.client.core.io.KeyValuePacket, KeyValueChannelContext)} instead.
  * <p>
  * Transitional, like {@link PortableKeyValueRequest}.
  */
