@@ -36,7 +36,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
@@ -177,18 +176,9 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * Returns the collection prefix to put before the key set during construction (empty if collections aren't enabled),
    * for {@link PortableKeyValueRequest#encodeTo}. Throws, like {@link #encodedKeyWithCollection}, if the collection
    * isn't known or the key is too long.
-   *
-   * @see #putKeyWithCollection(ByteBuffer, byte[])
    */
   protected byte[] collectionPrefix(final KeyValueChannelContext ctx) {
     return collectionPrefix(ctx, key);
-  }
-
-  /**
-   * Writes the key set during construction, with the given collection prefix.
-   */
-  protected void putKeyWithCollection(final ByteBuffer buffer, final byte[] collectionPrefix) {
-    buffer.put(collectionPrefix).put(key);
   }
 
   private byte[] collectionPrefix(final KeyValueChannelContext ctx, final byte[] key) {

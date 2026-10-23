@@ -20,6 +20,9 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.KeyStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.junit.jupiter.api.Test;
 
@@ -69,9 +72,9 @@ class KeyValueRequestWriterTest {
    * Builds a SET with 4 bytes of extras, the key, and the value.
    */
   private void build(byte[] value) {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 99).partition((short) 7);
-    request.extras().putInt(0xcafe);
-    request.key().put(KEY);
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 99).partition((short) 7);
+    request.startExtras().putInt(0xcafe);
+    request.startKey().putBytes(KEY);
     request.value(value, value.length);
   }
 
@@ -118,13 +121,13 @@ class KeyValueRequestWriterTest {
     byte[] framingExtras = {0x10, 0x01, 0x00, 0x05};
     byte[] value = "value-and-garbage".getBytes(UTF_8);
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE, 99)
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE, 99)
       .datatype((byte) 3)
       .partition((short) 7)
       .cas(0x0102030405060708L);
-    request.framingExtras().put(framingExtras);
-    request.extras().putInt(0xcafe);
-    request.key().put(KEY);
+    request.startFramingExtras().putBytes(framingExtras);
+    request.startExtras().putInt(0xcafe);
+    request.startKey().putBytes(KEY);
     request.value(value, 5);
     writer.completeRequestHead();
     writer.finishRequest();
@@ -138,9 +141,9 @@ class KeyValueRequestWriterTest {
   @Test
   void emptyFramingExtrasMeansNotFlexible() throws IOException {
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
-    request.framingExtras(); // writes nothing
-    request.key().put(KEY);
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
+    request.startFramingExtras(); // writes nothing
+    request.startKey().putBytes(KEY);
     writer.completeRequestHead();
     writer.finishRequest();
 
@@ -176,29 +179,72 @@ class KeyValueRequestWriterTest {
   }
 
   @Test
-  void refusesSectionsOutOfOrder() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
-    request.key();
-    assertThrows(IllegalStateException.class, request::extras);
-    assertThrows(IllegalStateException.class, request::key);
-    request.value(new byte[0], 0);
-    assertThrows(IllegalStateException.class, request::key);
-    assertThrows(IllegalStateException.class, () -> request.value(new byte[0], 0));
+  void refusesSectionsOutOfOrderThroughStagesLeftBehind() {
+    // The types allow only legal steps from the stage just returned; a stage kept from earlier is checked at run time.
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
+    ExtrasStage extras = request.startExtras();
+    KeyStage key = extras.startKey();
+
+    IllegalStateException e = assertThrows(IllegalStateException.class, request::startExtras);
+    assertTrue(e.getMessage().startsWith("startExtras() called after startKey()"), e.getMessage());
+    assertThrows(IllegalStateException.class, request::startFramingExtras);
+    assertThrows(IllegalStateException.class, extras::startKey);
+
+    key.value(new byte[0]);
+    assertThrows(IllegalStateException.class, request::startKey);
+    assertThrows(IllegalStateException.class, () -> request.value(new byte[0]));
+  }
+
+  @Test
+  void putByteAndPutShortTakeSignedOrUnsigned() throws IOException {
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.SET, 1)
+      .startExtras().putByte(-128).putByte(255).putShort(-32768).putShort(65535)
+      .value(new byte[0]);
+    writer.completeRequestHead();
+    writer.finishRequest();
+
+    byte[] packet = flushed();
+    assertArrayEquals(new byte[]{(byte) 0x80, (byte) 0xff, (byte) 0x80, 0, (byte) 0xff, (byte) 0xff},
+      Arrays.copyOfRange(packet, MemcacheProtocol.HEADER_SIZE, packet.length));
+  }
+
+  @Test
+  void refusesValuesOutOfRangeInsteadOfTruncating() {
+    ExtrasStage extras = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).startExtras();
+    assertThrows(IllegalArgumentException.class, () -> extras.putByte(256));
+    assertThrows(IllegalArgumentException.class, () -> extras.putByte(-129));
+    assertThrows(IllegalArgumentException.class, () -> extras.putShort(65536));
+    assertThrows(IllegalArgumentException.class, () -> extras.putShort(-32769));
   }
 
   @Test
   void refusesWritingAfterValue() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
-    ByteBuffer key = request.key().put(KEY);
-    request.value(new byte[0], 0);
-    key.put((byte) 0);
-    assertThrows(IllegalStateException.class, writer::completeRequestHead);
+    KeyStage key = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).startKey().putBytes(KEY);
+    key.value(new byte[0]);
+    assertThrows(IllegalStateException.class, () -> key.putBytes(new byte[1]));
+  }
+
+  @Test
+  void emptySectionIsLikeNoSection() throws IOException {
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.GET, 1)
+      .startFramingExtras()
+      .startExtras()
+      .startKey().putBytes(KEY)
+      .value(new byte[0]);
+    writer.completeRequestHead();
+    writer.finishRequest();
+
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.GET, (byte) 0,
+      (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(KEY), Unpooled.EMPTY_BUFFER);
+    assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
 
   @Test
   void refusesSectionTooLongForHeader() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
-    request.extras().put(new byte[256]);
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1);
+    request.startExtras().putBytes(new byte[256]);
     assertThrows(IllegalStateException.class, writer::completeRequestHead);
     // Reported as far as it goes.
     assertEquals(MemcacheProtocol.HEADER_SIZE + 256, writer.requestBytes().length);
@@ -206,9 +252,9 @@ class KeyValueRequestWriterTest {
 
   @Test
   void refusesHeadLongerThanTheMost() {
-    ByteBuffer key = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).key();
-    key.put(new byte[KeyValueRequestEncoder.MAX_REQUEST_HEAD_SIZE - MemcacheProtocol.HEADER_SIZE]);
-    assertThrows(BufferOverflowException.class, () -> key.put((byte) 0));
+    KeyStage key = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).startKey();
+    key.putBytes(new byte[KeyValueRequestEncoder.MAX_REQUEST_HEAD_SIZE - MemcacheProtocol.HEADER_SIZE]);
+    assertThrows(BufferOverflowException.class, () -> key.putBytes(new byte[1]));
   }
 
   @Test

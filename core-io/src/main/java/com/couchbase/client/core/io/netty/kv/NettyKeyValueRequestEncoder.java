@@ -82,7 +82,7 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   }
 
   @Override
-  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
+  public KeyValueRequestBuilder.HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
     checkNoRequest(); // before clearing the head buffer, which holds the request in progress
     head.clear();
     request.begin(head, opcode, opaque);
