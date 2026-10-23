@@ -32,18 +32,15 @@ import static java.util.Objects.requireNonNull;
  * {@link KeyValueRequestEncoder}s, which own the buffer and write the value.
  * <p>
  * Reserves room for the header when the request begins, and writes the header in {@link #complete}, once the
- * sections' lengths are known. Implements every stage of {@link KeyValueRequestBuilder}: each step returns this,
- * so building allocates nothing. Reusable: {@link #begin} starts another request after {@link #reset}.
+ * sections' lengths are known. Is the {@link KeyValueRequestBuilder.HeaderStage}, and has one object for each
+ * section's stage, created with the builder, so building allocates nothing. Each section's stage writes only while
+ * its section is the current one. Reusable: {@link #begin} starts another request after {@link #reset}.
  * <p>
  * Not thread-safe.
  */
 @Stability.Internal
 @NullMarked
-public final class ByteBufferKeyValueRequestBuilder implements
-  KeyValueRequestBuilder.HeaderStage,
-  KeyValueRequestBuilder.FramingExtrasStage,
-  KeyValueRequestBuilder.ExtrasStage,
-  KeyValueRequestBuilder.KeyStage {
+public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBuilder.HeaderStage {
 
   private static final byte[] NO_VALUE = new byte[0];
 
@@ -51,7 +48,13 @@ public final class ByteBufferKeyValueRequestBuilder implements
   private static final int EXTRAS = 1;
   private static final int KEY = 2;
   private static final int SECTIONS = 3;
-  private static final String[] SECTION_NAMES = {"startFramingExtras()", "startExtras()", "startKey()"};
+  private static final String[] START_METHODS = {"startFramingExtras()", "startExtras()", "startKey()"};
+  private static final String[] SECTION_NAMES = {"framing extras", "extras", "key"};
+
+  private final FramingExtras
+    framingExtras = new FramingExtras();
+  private final Extras extras = new Extras();
+  private final Key key = new Key();
 
   private @Nullable ByteBuffer buffer;
   private int start = -1; // where the header goes; -1 if no request is being built
@@ -147,78 +150,147 @@ public final class ByteBufferKeyValueRequestBuilder implements
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder startFramingExtras() {
-    return startSection(FRAMING_EXTRAS);
+  public KeyValueRequestBuilder.FramingExtrasStage startFramingExtras() {
+    startSection(FRAMING_EXTRAS);
+    return framingExtras;
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder startExtras() {
-    return startSection(EXTRAS);
+  public KeyValueRequestBuilder.ExtrasStage startExtras() {
+    startSection(EXTRAS);
+    return extras;
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder startKey() {
-    return startSection(KEY);
+  public KeyValueRequestBuilder.KeyStage startKey() {
+    startSection(KEY);
+    return key;
   }
 
-  private ByteBufferKeyValueRequestBuilder startSection(int section) {
+  private void startSection(int section) {
     ByteBuffer buffer = checkBuilding();
     if (section <= lastSection) {
-      throw new IllegalStateException(SECTION_NAMES[section] + " called after " + SECTION_NAMES[lastSection]
+      throw new IllegalStateException(START_METHODS[section] + " called after " + START_METHODS[lastSection]
         + "; sections go in this order, once each: framing extras, extras, key, value");
     }
     sectionStarts[section] = buffer.position();
     lastSection = section;
-    return this;
-  }
-
-  // Writing the current section. (The stages' put methods; one implementation each, since every stage is this.)
-
-  @Override
-  public ByteBufferKeyValueRequestBuilder putByte(int b) {
-    if (b < Byte.MIN_VALUE || b > 0xff) {
-      throw new IllegalArgumentException("Not a byte (signed or unsigned): " + b);
-    }
-    checkWriting().put((byte) b);
-    return this;
-  }
-
-  @Override
-  public ByteBufferKeyValueRequestBuilder putShort(int s) {
-    if (s < Short.MIN_VALUE || s > 0xffff) {
-      throw new IllegalArgumentException("Not a short (signed or unsigned): " + s);
-    }
-    checkWriting().putShort((short) s);
-    return this;
-  }
-
-  @Override
-  public ByteBufferKeyValueRequestBuilder putInt(int i) {
-    checkWriting().putInt(i);
-    return this;
-  }
-
-  @Override
-  public ByteBufferKeyValueRequestBuilder putLong(long l) {
-    checkWriting().putLong(l);
-    return this;
-  }
-
-  @Override
-  public ByteBufferKeyValueRequestBuilder putBytes(byte[] bytes) {
-    checkWriting().put(bytes);
-    return this;
   }
 
   /**
-   * Returns the buffer, if a section has been started (and the value hasn't been given).
+   * Returns the buffer to write the given section into, if that section is the current one
+   * (and the value hasn't been given).
    */
-  private ByteBuffer checkWriting() {
+  private ByteBuffer writableBuffer(int section) {
     ByteBuffer buffer = checkBuilding();
-    if (lastSection == -1) {
-      throw new IllegalStateException("No section was started");
+    if (section != lastSection) {
+      throw new IllegalStateException("Can't write to the " + SECTION_NAMES[section]
+        + (lastSection > section ? " after " + START_METHODS[lastSection] : " before " + START_METHODS[section])
+        + "; write each section through the stage that started it, before starting the next");
     }
     return buffer;
+  }
+
+  /**
+   * A section's stage: writes into its section, if it's the current one.
+   *
+   * @param <S> the stage itself, which each put method returns.
+   */
+  private abstract class Section<S extends Section<S>> {
+    private final int section;
+
+    Section(int section) {
+      this.section = section;
+    }
+
+    abstract S self();
+
+    public S putByte(int b) {
+      if (b < Byte.MIN_VALUE || b > 0xff) {
+        throw new IllegalArgumentException("Not a byte (signed or unsigned): " + b);
+      }
+      writableBuffer(section).put((byte) b);
+      return self();
+    }
+
+    public S putShort(int s) {
+      if (s < Short.MIN_VALUE || s > 0xffff) {
+        throw new IllegalArgumentException("Not a short (signed or unsigned): " + s);
+      }
+      writableBuffer(section).putShort((short) s);
+      return self();
+    }
+
+    public S putInt(int i) {
+      writableBuffer(section).putInt(i);
+      return self();
+    }
+
+    public S putLong(long l) {
+      writableBuffer(section).putLong(l);
+      return self();
+    }
+
+    public S putBytes(byte[] bytes) {
+      writableBuffer(section).put(bytes);
+      return self();
+    }
+
+    public void value(byte[] value, int length) {
+      ByteBufferKeyValueRequestBuilder.this.value(value, length);
+    }
+
+    public void value(byte[] value) {
+      ByteBufferKeyValueRequestBuilder.this.value(value);
+    }
+  }
+
+  private final class FramingExtras extends Section<FramingExtras> implements KeyValueRequestBuilder.FramingExtrasStage {
+    FramingExtras() {
+      super(FRAMING_EXTRAS);
+    }
+
+    @Override
+    FramingExtras self() {
+      return this;
+    }
+
+    @Override
+    public KeyValueRequestBuilder.ExtrasStage startExtras() {
+      return ByteBufferKeyValueRequestBuilder.this.startExtras();
+    }
+
+    @Override
+    public KeyValueRequestBuilder.KeyStage startKey() {
+      return ByteBufferKeyValueRequestBuilder.this.startKey();
+    }
+  }
+
+  private final class Extras extends Section<Extras> implements KeyValueRequestBuilder.ExtrasStage {
+    Extras() {
+      super(EXTRAS);
+    }
+
+    @Override
+    Extras self() {
+      return this;
+    }
+
+    @Override
+    public KeyValueRequestBuilder.KeyStage startKey() {
+      return ByteBufferKeyValueRequestBuilder.this.startKey();
+    }
+  }
+
+  private final class Key extends Section<Key> implements KeyValueRequestBuilder.KeyStage {
+    Key() {
+      super(KEY);
+    }
+
+    @Override
+    Key self() {
+      return this;
+    }
   }
 
   @Override

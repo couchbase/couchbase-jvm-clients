@@ -36,9 +36,10 @@ import org.jspecify.annotations.NullMarked;
  *   .startKey().putBytes(collection).putBytes(key)
  *   .value(content);
  * </pre>
- * The stages are views of one object (so building allocates nothing). Keep using the stage the last step
- * returned: calling a stage that was left behind is caught at run time, not compile time, if at all. For example,
- * writing through an earlier section's stage writes into the current section.
+ * Keep using the stage the last step returned. A stage that was left behind is caught at run time, not compile
+ * time: writing to an earlier section, or starting a section out of order, throws {@link IllegalStateException}.
+ * (The stages are created once per encoder and reused, so building allocates nothing. So a stage kept from an
+ * earlier request isn't caught if the current request happens to be writing the same section.)
  * <p>
  * {@code putByte} and {@code putShort} take an int, for convenience, and accept a signed or unsigned value
  * (-128 to 255, and -32768 to 65535); anything else is rejected, rather than truncated.

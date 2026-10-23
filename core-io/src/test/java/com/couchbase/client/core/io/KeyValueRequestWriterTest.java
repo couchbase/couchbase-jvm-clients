@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.FramingExtrasStage;
 import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import com.couchbase.client.core.io.KeyValueRequestBuilder.KeyStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -243,6 +244,43 @@ class KeyValueRequestWriterTest {
     assertThrows(IllegalArgumentException.class, () -> extras.putByte(-129));
     assertThrows(IllegalArgumentException.class, () -> extras.putShort(65536));
     assertThrows(IllegalArgumentException.class, () -> extras.putShort(-32769));
+  }
+
+  @Test
+  void refusesWritingToAnEarlierSectionThroughItsStage() {
+    HeaderStage header = writer.beginRequest(MemcacheProtocol.Opcode.GET, 123).partition(3);
+    ExtrasStage extras = header.startExtras().putInt(3);
+    extras.startKey().putBytes("asd".getBytes(UTF_8));
+
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> extras.putByte(3));
+    assertTrue(e.getMessage().startsWith("Can't write to the extras after startKey()"), e.getMessage());
+  }
+
+  @Test
+  void refusesWritingToFramingExtrasAfterExtrasStarted() {
+    FramingExtrasStage framingExtras = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).startFramingExtras().putByte(0x50);
+    framingExtras.startExtras().putInt(1);
+    assertThrows(IllegalStateException.class, () -> framingExtras.putByte(0));
+    assertThrows(IllegalStateException.class, () -> framingExtras.putBytes(new byte[1]));
+  }
+
+  @Test
+  void refusesStageKeptFromEarlierRequest() throws IOException {
+    writer.makeRoomForRequest();
+    ExtrasStage extras = writer.beginRequest(MemcacheProtocol.Opcode.SET, 1).startExtras().putInt(1);
+    extras.startKey().putBytes(KEY).value(new byte[0]);
+    writer.completeRequestHead();
+    writer.finishRequest();
+
+    // Between requests.
+    IllegalStateException e = assertThrows(IllegalStateException.class, () -> extras.putInt(2));
+    assertEquals("No request was begun", e.getMessage());
+
+    // In the next request, before its extras.
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.SET, 2);
+    e = assertThrows(IllegalStateException.class, () -> extras.putInt(2));
+    assertTrue(e.getMessage().startsWith("Can't write to the extras before startExtras()"), e.getMessage());
   }
 
   @Test
