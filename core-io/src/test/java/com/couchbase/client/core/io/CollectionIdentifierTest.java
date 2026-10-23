@@ -18,6 +18,11 @@ package com.couchbase.client.core.io;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,4 +69,12 @@ class CollectionIdentifierTest {
     );
   }
 
+  @Test
+  void hashCodeMatchesFieldsAndIsStable() {
+    CollectionIdentifier id = new CollectionIdentifier("foo", Optional.of("scope"), Optional.empty());
+    int expected = Objects.hash("foo", "scope", null);
+    assertEquals(expected, id.hashCode());
+    assertEquals(expected, id.hashCode()); // the cached one
+    assertEquals(id.hashCode(), new CollectionIdentifier("foo", Optional.of("scope"), Optional.empty()).hashCode());
+  }
 }

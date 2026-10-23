@@ -44,6 +44,15 @@ public class CollectionIdentifier implements Serializable {
   private final @Nullable String scope;
   private final @Nullable String collection;
 
+  /**
+   * The hash code, once it's computed (0 until then). The collection map looks up every KV request's collection ID
+   * by this class, so caching it saves rehashing three strings each time.
+   * <p>
+   * Like {@link String}'s: computed at most once per thread (a race just computes it again), and transient,
+   * so it's computed again after deserialization.
+   */
+  private transient int hash;
+
   public static CollectionIdentifier fromDefault(String bucket) {
     return new CollectionIdentifier(bucket, Optional.of(DEFAULT_SCOPE), Optional.of(DEFAULT_COLLECTION));
   }
@@ -87,7 +96,13 @@ public class CollectionIdentifier implements Serializable {
 
   @Override
   public int hashCode() {
-    return Objects.hash(bucket, scope, collection);
+    int h = hash;
+    // A hash code of zero is recomputed every time, but that's extremely unlikely, and generally harmless.
+    if (h == 0) {
+      h = Objects.hash(bucket, scope, collection);
+      hash = h;
+    }
+    return h;
   }
 
   @Override
