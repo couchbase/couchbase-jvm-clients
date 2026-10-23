@@ -21,6 +21,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class KeyValuePacketTest {
 
     assertEquals(MemcacheProtocol.Magic.RESPONSE.magic(), packet.magic());
     assertFalse(packet.isFlexible());
-    assertEquals(MemcacheProtocol.Opcode.GET.opcode(), packet.opcode());
+    assertEquals(Opcode.GET.opcode(), packet.opcode());
     assertEquals(MemcacheProtocol.Status.NOT_FOUND.status(), packet.status());
     assertEquals(ResponseStatus.NOT_FOUND, packet.responseStatus());
     assertEquals(99, packet.opaque());
@@ -216,7 +217,7 @@ class KeyValuePacketTest {
   }
 
   private static byte[] response(byte datatype, byte[] extras, byte[] key, byte[] body) {
-    ByteBuf packet = MemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.GET, datatype,
+    ByteBuf packet = MemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, datatype,
       MemcacheProtocol.Status.NOT_FOUND.status(), 99, 0x0102030405060708L,
       Unpooled.wrappedBuffer(extras), Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(body));
     return ByteBufUtil.getBytes(packet);
@@ -225,7 +226,7 @@ class KeyValuePacketTest {
   private static byte[] flexibleResponse(byte[] framingExtras, byte[] extras, byte[] key, byte[] body) {
     ByteBuf packet = Unpooled.buffer()
       .writeByte(MemcacheProtocol.Magic.FLEXIBLE_RESPONSE.magic())
-      .writeByte(MemcacheProtocol.Opcode.GET.opcode())
+      .writeByte(Opcode.GET.opcode())
       .writeByte(framingExtras.length)
       .writeByte(key.length)
       .writeByte(extras.length)

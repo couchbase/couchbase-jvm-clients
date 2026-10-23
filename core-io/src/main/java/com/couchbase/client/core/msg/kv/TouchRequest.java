@@ -26,7 +26,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -48,11 +48,8 @@ public class TouchRequest extends BasePortableKeyValueRequest<TouchResponse> {
   }
 
   @Override
-  public void encodeTo(
-    KeyValueRequestEncoder encoder,
-    KeyValueChannelContext ctx
-  ) {
-    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.TOUCH, ctx)
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    beginDocumentRequest(encoder, Opcode.TOUCH)
       .extras().putInt((int) expiry);
   }
 

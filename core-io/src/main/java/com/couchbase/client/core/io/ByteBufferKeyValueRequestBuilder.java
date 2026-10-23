@@ -17,6 +17,8 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -49,6 +51,7 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
    */
   private static final int MAX_SECTION_SIZE = MAX_REQUEST_HEAD_SIZE - HEADER_SIZE;
 
+  private final KeyValueChannelContext context;
   private final Section framingExtras = new Section();
   private final Section extras = new Section();
 
@@ -68,6 +71,15 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   private boolean complete;
   private int headLength; // once complete
 
+  public ByteBufferKeyValueRequestBuilder(KeyValueChannelContext context) {
+    this.context = requireNonNull(context);
+  }
+
+  @Override
+  public KeyValueChannelContext context() {
+    return context;
+  }
+
   /**
    * Starts a request at the buffer's position. The buffer must have a backing array, and room for a head
    * ({@link KeyValueRequestEncoder#MAX_REQUEST_HEAD_SIZE}). Nothing is written into the buffer until
@@ -76,7 +88,7 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
    * @throws IllegalStateException if a request is being built, or the buffer doesn't have room.
    * @throws IllegalArgumentException if the buffer has no backing array.
    */
-  public void begin(ByteBuffer buffer, MemcacheProtocol.Opcode opcode) {
+  public void begin(ByteBuffer buffer, Opcode opcode) {
     if (inProgress()) {
       throw new IllegalStateException("The previous request wasn't finished or aborted");
     }

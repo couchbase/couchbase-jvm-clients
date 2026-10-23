@@ -180,11 +180,11 @@ class PortableDocumentRequestTest {
   @Test
   void rejectsDurabilityAndPreserveExpiryTheServerLacks() {
     InsertRequest insert = insert(CONTENT, MAJORITY);
-    assertThrows(DurabilityLevelNotAvailableException.class, () -> insert.encodeTo(newWriter(new ByteArrayOutputStream()), COLLECTIONS));
+    assertThrows(DurabilityLevelNotAvailableException.class, () -> insert.encodeTo(newWriter(new ByteArrayOutputStream(), COLLECTIONS)));
     assertThrows(DurabilityLevelNotAvailableException.class, () -> insert.encode(ALLOC, OPAQUE, COLLECTIONS));
 
     ReplaceRequest replace = replace(CONTENT, true, NO_DURABILITY);
-    assertThrows(FeatureNotAvailableException.class, () -> replace.encodeTo(newWriter(new ByteArrayOutputStream()), COLLECTIONS));
+    assertThrows(FeatureNotAvailableException.class, () -> replace.encodeTo(newWriter(new ByteArrayOutputStream(), COLLECTIONS)));
     assertThrows(FeatureNotAvailableException.class, () -> replace.encode(ALLOC, OPAQUE, COLLECTIONS));
   }
 

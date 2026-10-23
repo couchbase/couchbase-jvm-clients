@@ -35,6 +35,7 @@ import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
@@ -117,7 +118,7 @@ class PortableKeyValueRequestTest {
     ReplicaGetRequest request = new ReplicaGetRequest("some-key", TIMEOUT, CORE_CONTEXT, CUSTOM_COLLECTION,
       BestEffortRetryStrategy.INSTANCE, (short) 1, null);
     ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
-    byte[] expected = bytes(MemcacheProtocol.request(ALLOC, MemcacheProtocol.Opcode.GET_REPLICA, noDatatype(),
+    byte[] expected = bytes(MemcacheProtocol.request(ALLOC, Opcode.GET_REPLICA, noDatatype(),
       PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
     key.release();
     assertEncoding(request, ctx, expected);
@@ -140,7 +141,7 @@ class PortableKeyValueRequestTest {
     GetRequest request = new GetRequest("key", TIMEOUT, CORE_CONTEXT,
       new CollectionIdentifier("b", Optional.of("s"), Optional.of("unknown")), BestEffortRetryStrategy.INSTANCE, null);
 
-    assertThrows(CollectionNotFoundException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
+    assertThrows(CollectionNotFoundException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
     assertThrows(CollectionNotFoundException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -187,14 +188,14 @@ class PortableKeyValueRequestTest {
 
     ByteArrayOutputStream expected = new ByteArrayOutputStream();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    KeyValueRequestWriter writer = newWriter(out);
+    KeyValueRequestWriter writer = newWriter(out, ctx);
     for (byte[] content : contents) {
       UpsertRequest request = upsert(content, false, Optional.empty());
       request.partition(PARTITION);
       expected.write(referenceUpsert(request, content, false, Optional.empty(), ctx));
 
       writer.makeRoomForRequest();
-      request.encodeTo(writer, ctx);
+      request.encodeTo(writer);
       writer.completeRequestHead(OPAQUE);
       writer.finishRequest();
     }
@@ -208,7 +209,7 @@ class PortableKeyValueRequestTest {
     UpsertRequest request = upsert(SHORT_CONTENT, true, Optional.empty());
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
 
-    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
     assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -251,7 +252,7 @@ class PortableKeyValueRequestTest {
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
     SubdocGetRequest request = subdocGet((byte) 0, new Spec(SubdocCommandType.GET, "$bogus", true, false));
 
-    assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
+    assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
     assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
@@ -328,11 +329,11 @@ class PortableKeyValueRequestTest {
     createAsDeleted.upsert = true;
     createAsDeleted.createAsDeleted = true;
     SubdocMutateRequest request = subdocMutate(createAsDeleted, new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
-    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
     assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
 
     SubdocMutateRequest binary = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1").binary());
-    assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream()), ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
     assertThrows(FeatureNotAvailableException.class, () -> binary.encode(ALLOC, 1, ctx));
   }
 
@@ -341,7 +342,7 @@ class PortableKeyValueRequestTest {
   @Test
   void decodesGet() {
     GetRequest request = get(DEFAULT_COLLECTION);
-    byte[] packet = response(MemcacheProtocol.Opcode.GET, MemcacheProtocol.Datatype.JSON.datatype(), (short) 0, 1234,
+    byte[] packet = response(Opcode.GET, MemcacheProtocol.Datatype.JSON.datatype(), (short) 0, 1234,
       ints(0x02000006), new byte[0], SHORT_CONTENT);
 
     for (GetResponse response : decodeEveryWay(request, packet)) {
@@ -357,7 +358,7 @@ class PortableKeyValueRequestTest {
     GetRequest request = get(DEFAULT_COLLECTION);
     byte[] compressed = SnappyCodec.instance().compress(LONG_CONTENT);
     byte datatype = (byte) (MemcacheProtocol.Datatype.JSON.datatype() | MemcacheProtocol.Datatype.SNAPPY.datatype());
-    byte[] packet = response(MemcacheProtocol.Opcode.GET, datatype, (short) 0, 1, ints(7), new byte[0], compressed);
+    byte[] packet = response(Opcode.GET, datatype, (short) 0, 1, ints(7), new byte[0], compressed);
 
     for (GetResponse response : decodeEveryWay(request, packet)) {
       assertArrayEquals(LONG_CONTENT, response.content());
@@ -368,7 +369,7 @@ class PortableKeyValueRequestTest {
   @Test
   void decodesGetNotFound() {
     GetRequest request = get(DEFAULT_COLLECTION);
-    byte[] packet = response(MemcacheProtocol.Opcode.GET, (byte) 0, MemcacheProtocol.Status.NOT_FOUND.status(), 0,
+    byte[] packet = response(Opcode.GET, (byte) 0, MemcacheProtocol.Status.NOT_FOUND.status(), 0,
       new byte[0], new byte[0], "Not found".getBytes(UTF_8));
 
     for (GetResponse response : decodeEveryWay(request, packet)) {
@@ -383,7 +384,7 @@ class PortableKeyValueRequestTest {
     request.partition(PARTITION);
     byte[] extras = new byte[16];
     Unpooled.wrappedBuffer(extras).setLong(0, 0xabcdefL).setLong(8, 99);
-    byte[] packet = response(MemcacheProtocol.Opcode.SET, (byte) 0, (short) 0, 555, extras, new byte[0], new byte[0]);
+    byte[] packet = response(Opcode.SET, (byte) 0, (short) 0, 555, extras, new byte[0], new byte[0]);
 
     KeyValueChannelContext tokens = ctx(null, EnumSet.of(ServerFeature.MUTATION_SEQNO));
     for (UpsertResponse response : decodeEveryWay(request, packet, tokens)) {
@@ -418,9 +419,9 @@ class PortableKeyValueRequestTest {
       .writeShort(MemcacheProtocol.Status.SUBDOC_PATH_NOT_FOUND.status()).writeInt(0);
     byte[] bodyBytes = ByteBufUtil.getBytes(body);
 
-    byte[] plain = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, (byte) 0,
+    byte[] plain = response(Opcode.SUBDOC_MULTI_LOOKUP, (byte) 0,
       MemcacheProtocol.Status.SUBDOC_MULTI_PATH_FAILURE.status(), 77, new byte[0], new byte[0], bodyBytes);
-    byte[] compressed = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, MemcacheProtocol.Datatype.SNAPPY.datatype(),
+    byte[] compressed = response(Opcode.SUBDOC_MULTI_LOOKUP, MemcacheProtocol.Datatype.SNAPPY.datatype(),
       MemcacheProtocol.Status.SUBDOC_MULTI_PATH_FAILURE.status(), 77, new byte[0], new byte[0], SnappyCodec.instance().compress(bodyBytes));
 
     for (byte[] packet : Arrays.asList(plain, compressed)) {
@@ -442,7 +443,7 @@ class PortableKeyValueRequestTest {
   @Test
   void decodesSubdocGetErrorMessage() {
     SubdocGetRequest request = subdocGet((byte) 0, new Spec(SubdocCommandType.GET, "a", false, false));
-    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, MemcacheProtocol.Datatype.JSON.datatype(),
+    byte[] packet = response(Opcode.SUBDOC_MULTI_LOOKUP, MemcacheProtocol.Datatype.JSON.datatype(),
       MemcacheProtocol.Status.INVALID_REQUEST.status(), 0, new byte[0], new byte[0],
       "{\"error\":{\"context\":\"bad path\"}}".getBytes(UTF_8));
 
@@ -463,7 +464,7 @@ class PortableKeyValueRequestTest {
     Unpooled.wrappedBuffer(extras).setLong(0, 0xabcdefL).setLong(8, 99);
     // Only the counter returns a value.
     byte[] body = ByteBufUtil.getBytes(Unpooled.buffer().writeByte(1).writeShort(0).writeInt(2).writeBytes("42".getBytes(UTF_8)));
-    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, (byte) 0, (short) 0, 555, extras, new byte[0], body);
+    byte[] packet = response(Opcode.SUBDOC_MULTI_MUTATE, (byte) 0, (short) 0, 555, extras, new byte[0], body);
 
     KeyValueChannelContext tokens = ctx(null, EnumSet.of(ServerFeature.MUTATION_SEQNO));
     for (SubdocMutateResponse response : decodeEveryWay(request, packet, tokens)) {
@@ -485,7 +486,7 @@ class PortableKeyValueRequestTest {
       new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"),
       new MutateSpec(SubdocCommandType.REPLACE, "missing", "2"));
     byte[] body = ByteBufUtil.getBytes(Unpooled.buffer().writeByte(1).writeShort(MemcacheProtocol.Status.SUBDOC_PATH_NOT_FOUND.status()));
-    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, (byte) 0,
+    byte[] packet = response(Opcode.SUBDOC_MULTI_MUTATE, (byte) 0,
       MemcacheProtocol.Status.SUBDOC_MULTI_PATH_FAILURE.status(), 0, new byte[0], new byte[0], body);
 
     for (SubdocMutateResponse response : decodeEveryWay(request, packet)) {
@@ -498,7 +499,7 @@ class PortableKeyValueRequestTest {
   @Test
   void decodesSubdocMutateErrorMessage() {
     SubdocMutateRequest request = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
-    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, MemcacheProtocol.Datatype.JSON.datatype(),
+    byte[] packet = response(Opcode.SUBDOC_MULTI_MUTATE, MemcacheProtocol.Datatype.JSON.datatype(),
       MemcacheProtocol.Status.INVALID_REQUEST.status(), 0, new byte[0], new byte[0],
       "{\"error\":{\"context\":\"bad path\"}}".getBytes(UTF_8));
 
@@ -561,7 +562,7 @@ class PortableKeyValueRequestTest {
   private static byte[] referenceGet(GetRequest request, KeyValueChannelContext ctx) {
     ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
     try {
-      return bytes(MemcacheProtocol.request(ALLOC, MemcacheProtocol.Opcode.GET, noDatatype(),
+      return bytes(MemcacheProtocol.request(ALLOC, Opcode.GET, noDatatype(),
         PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
     } finally {
       key.release();
@@ -596,7 +597,7 @@ class PortableKeyValueRequestTest {
       extras.writeInt(UPSERT_FLAGS);
       extras.writeInt((int) UPSERT_EXPIRY);
 
-      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, MemcacheProtocol.Opcode.SET, datatype,
+      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, Opcode.SET, datatype,
         PARTITION, OPAQUE, noCas(), flexibleExtras, extras, key, content));
     } finally {
       ReferenceCountUtil.release(key);
@@ -627,7 +628,7 @@ class PortableKeyValueRequestTest {
           .writeBytes(path);
         body.addComponent(true, buffer);
       }
-      return bytes(MemcacheProtocol.request(ALLOC, MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, noDatatype(),
+      return bytes(MemcacheProtocol.request(ALLOC, Opcode.SUBDOC_MULTI_LOOKUP, noDatatype(),
         PARTITION, OPAQUE, noCas(), extras, key, body));
     } finally {
       key.release();
@@ -782,7 +783,7 @@ class PortableKeyValueRequestTest {
           .writeBytes(fragment));
       }
 
-      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, noDatatype(),
+      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(),
         PARTITION, OPAQUE, options.cas, flexibleExtras, extras, key, content));
     } finally {
       flexibleExtras.release();

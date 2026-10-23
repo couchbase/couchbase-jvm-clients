@@ -20,9 +20,13 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import org.junit.jupiter.api.Test;
 
+import java.util.EnumSet;
+import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -32,10 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NettyKeyValueRequestEncoderTest {
   private static final byte[] KEY = "key".getBytes(UTF_8);
-  private final NettyKeyValueRequestEncoder encoder = new NettyKeyValueRequestEncoder(UnpooledByteBufAllocator.DEFAULT);
+  private final NettyKeyValueRequestEncoder encoder = new NettyKeyValueRequestEncoder(
+    UnpooledByteBufAllocator.DEFAULT,
+    new KeyValueChannelContext(null, Optional.empty(), new CollectionMap(), null, EnumSet.noneOf(ServerFeature.class))
+  );
 
   private ByteBuf encodeSet(byte[] value, int valueLength) {
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET)
+    KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SET)
       .addDatatype(1)
       .partition(7)
       .cas(5);
@@ -49,7 +56,7 @@ class NettyKeyValueRequestEncoderTest {
     byte[] value = "value-and-garbage".getBytes(UTF_8);
     ByteBuf actual = encodeSet(value, 5);
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.SET, (byte) 1,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SET, (byte) 1,
       (short) 7, 99, 5, Unpooled.buffer().writeInt(0xcafe), Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value, 0, 5));
     assertArrayEquals(ByteBufUtil.getBytes(expected), ByteBufUtil.getBytes(actual));
   }
@@ -57,7 +64,7 @@ class NettyKeyValueRequestEncoderTest {
   @Test
   void isReusable() {
     byte[] first = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET).extras().putBytes("abandoned".getBytes(UTF_8));
+    encoder.beginRequest(Opcode.GET).extras().putBytes("abandoned".getBytes(UTF_8));
     encoder.abort();
     byte[] again = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
     assertArrayEquals(first, again);
@@ -70,14 +77,14 @@ class NettyKeyValueRequestEncoderTest {
 
   @Test
   void refusesScratchOrSecondRequestAfterBegin() {
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET);
+    encoder.beginRequest(Opcode.GET);
     assertThrows(IllegalStateException.class, () -> encoder.scratch(1));
-    assertThrows(IllegalStateException.class, () -> encoder.beginRequest(MemcacheProtocol.Opcode.GET));
+    assertThrows(IllegalStateException.class, () -> encoder.beginRequest(Opcode.GET));
   }
 
   @Test
   void refusesSectionTooLongForHeader() {
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET).extras().putBytes(new byte[256]);
+    encoder.beginRequest(Opcode.GET).extras().putBytes(new byte[256]);
     assertThrows(IllegalStateException.class, () -> encoder.finish(1));
   }
 

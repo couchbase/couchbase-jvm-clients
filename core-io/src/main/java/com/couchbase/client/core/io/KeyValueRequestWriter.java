@@ -17,7 +17,8 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import org.jspecify.annotations.NullMarked;
 
 import java.io.IOException;
@@ -54,7 +55,7 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
   /**
    * Builds the request being written (between beginRequest and finishRequest or abortRequest), if any.
    */
-  private final ByteBufferKeyValueRequestBuilder request = new ByteBufferKeyValueRequestBuilder();
+  private final ByteBufferKeyValueRequestBuilder request;
 
   /**
    * See {@link #scratch}.
@@ -68,13 +69,23 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
 
   private static final byte[] NO_VALUE = new byte[0];
 
-  public KeyValueRequestWriter(OutputStream out, int bufferSize) {
+  public KeyValueRequestWriter(
+    OutputStream out,
+    int bufferSize,
+    KeyValueChannelContext context
+  ) {
     if (bufferSize < MAX_REQUEST_HEAD_SIZE) {
       throw new IllegalArgumentException("Buffer size must be at least " + MAX_REQUEST_HEAD_SIZE + ", but was " + bufferSize);
     }
     this.out = requireNonNull(out);
+    this.request = new ByteBufferKeyValueRequestBuilder(context);
     this.buffer = ByteBuffer.allocate(bufferSize);
     this.directWriteMinSize = bufferSize / 2;
+  }
+
+  @Override
+  public KeyValueChannelContext context() {
+    return request.context();
   }
 
   /**
@@ -116,7 +127,7 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
    * (see {@link #makeRoomForRequest}).
    */
   @Override
-  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode) {
+  public KeyValueRequestBuilder beginRequest(Opcode opcode) {
     request.begin(buffer, opcode);
     return request;
   }
