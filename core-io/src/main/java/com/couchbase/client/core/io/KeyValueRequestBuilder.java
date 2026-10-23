@@ -19,66 +19,147 @@ package com.couchbase.client.core.io;
 import com.couchbase.client.core.annotation.Stability;
 import org.jspecify.annotations.NullMarked;
 
-import java.nio.ByteBuffer;
-
 /**
- * Builds one KV request packet (see {@link KeyValueRequestEncoder#beginRequest}).
+ * The stages of building one KV request packet (see {@link KeyValueRequestEncoder#beginRequest},
+ * which returns the first, {@link HeaderStage}).
  * <p>
  * Set the header fields the request needs (each defaults to 0), then write its sections, in protocol order:
- * {@link #framingExtras}, {@link #extras}, {@link #key}, and {@link #value}. Each is optional. A section's length
- * is however much the request writes before starting the next section (or finishing), so the request never
- * states a length; the header is filled in when the request is finished.
+ * {@link HeaderStage#startFramingExtras}, {@link HeaderStage#startExtras}, {@link HeaderStage#startKey},
+ * and {@link HeaderStage#value}. Each is optional. A section's length is however much the request writes into it,
+ * so the request never states a length; the header is filled in when the request is finished. A section that's
+ * started but left empty is the same as one that's skipped.
  * <p>
- * For example:
+ * Each step returns the next stage, which offers only what may follow, so a request is one chain:
  * <pre>
- * KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SET, opaque).partition(partition());
- * putMutationFlexibleExtras(request.framingExtras(), ...);
- * request.extras().putInt(flags).putInt(expiry);
- * putKeyWithCollection(request.key(), collection);
- * request.value(content, content.length);
+ * encoder.beginRequest(Opcode.SET, opaque).partition(partition())
+ *   .startExtras().putInt(flags).putInt(expiry)
+ *   .startKey().putBytes(collection).putBytes(key)
+ *   .value(content);
  * </pre>
- * Each section method returns the same buffer, positioned where the section starts. It holds at most
- * {@link KeyValueRequestEncoder#MAX_REQUEST_HEAD_SIZE} bytes of header, framing extras, extras and key.
+ * The stages are views of one object (so building allocates nothing). Keep using the stage the last step
+ * returned: calling a stage that was left behind is caught at run time, not compile time, if at all. For example,
+ * writing through an earlier section's stage writes into the current section.
  * <p>
- * The request is flexible ("alternative" framing) if it has framing extras.
+ * {@code putByte} and {@code putShort} take an int, for convenience, and accept a signed or unsigned value
+ * (-128 to 255, and -32768 to 65535); anything else is rejected, rather than truncated.
+ * <p>
+ * The header, framing extras, extras and key may take at most {@link KeyValueRequestEncoder#MAX_REQUEST_HEAD_SIZE}
+ * bytes. The request is flexible ("alternative" framing) if it has framing extras.
  */
 @Stability.Internal
 @NullMarked
-public interface KeyValueRequestBuilder {
-  KeyValueRequestBuilder datatype(byte datatype);
-
-  KeyValueRequestBuilder partition(short partition);
-
-  KeyValueRequestBuilder cas(long cas);
+public final class KeyValueRequestBuilder {
+  private KeyValueRequestBuilder() {
+    throw new AssertionError("not instantiable");
+  }
 
   /**
-   * Starts the framing extras, and returns the buffer to write them into.
-   *
-   * @throws IllegalStateException if a later section was already started.
+   * Sets the header fields; then any section, or the value, may follow.
    */
-  ByteBuffer framingExtras();
+  public interface HeaderStage {
+    HeaderStage datatype(byte datatype);
+
+    HeaderStage partition(short partition);
+
+    HeaderStage cas(long cas);
+
+    /**
+     * Starts the framing extras.
+     */
+    FramingExtrasStage startFramingExtras();
+
+    /**
+     * Starts the extras.
+     */
+    ExtrasStage startExtras();
+
+    /**
+     * Starts the key.
+     */
+    KeyStage startKey();
+
+    /**
+     * Gives the value (body): the last section, so nothing can be written after it. The array isn't copied now;
+     * it's written when the caller finishes the request, so it must not change until then.
+     *
+     * @param length how much of {@code value} (from the start) is the value.
+     */
+    void value(byte[] value, int length);
+
+    /**
+     * Gives all of {@code value} as the value. See {@link #value(byte[], int)}.
+     */
+    void value(byte[] value);
+  }
 
   /**
-   * Starts the extras, and returns the buffer to write them into.
-   *
-   * @throws IllegalStateException if a later section was already started.
+   * Writes the framing extras; then the extras, key or value may follow.
    */
-  ByteBuffer extras();
+  public interface FramingExtrasStage {
+    FramingExtrasStage putByte(int b);
+
+    FramingExtrasStage putShort(int s);
+
+    FramingExtrasStage putInt(int i);
+
+    FramingExtrasStage putBytes(byte[] bytes);
+
+    ExtrasStage startExtras();
+
+    KeyStage startKey();
+
+    /**
+     * See {@link HeaderStage#value(byte[], int)}.
+     */
+    void value(byte[] value, int length);
+
+    /**
+     * See {@link HeaderStage#value(byte[])}.
+     */
+    void value(byte[] value);
+  }
 
   /**
-   * Starts the key, and returns the buffer to write it into.
-   *
-   * @throws IllegalStateException if the value was already given.
+   * Writes the extras; then the key or value may follow.
    */
-  ByteBuffer key();
+  public interface ExtrasStage {
+    ExtrasStage putByte(int b);
+
+    ExtrasStage putShort(int s);
+
+    ExtrasStage putInt(int i);
+
+    ExtrasStage putLong(long l);
+
+    ExtrasStage putBytes(byte[] bytes);
+
+    KeyStage startKey();
+
+    /**
+     * See {@link HeaderStage#value(byte[], int)}.
+     */
+    void value(byte[] value, int length);
+
+    /**
+     * See {@link HeaderStage#value(byte[])}.
+     */
+    void value(byte[] value);
+  }
 
   /**
-   * Sets the value (body), which is written when the request is finished. Ends the request: nothing more may be
-   * written into the buffer.
-   *
-   * @param value must not change until the request is finished.
-   * @param length how much of {@code value} (from the start) is the value.
-   * @throws IllegalStateException if the value was already given.
+   * Writes the key; then the value may follow.
    */
-  void value(byte[] value, int length);
+  public interface KeyStage {
+    KeyStage putBytes(byte[] bytes);
+
+    /**
+     * See {@link HeaderStage#value(byte[], int)}.
+     */
+    void value(byte[] value, int length);
+
+    /**
+     * See {@link HeaderStage#value(byte[])}.
+     */
+    void value(byte[] value);
+  }
 }

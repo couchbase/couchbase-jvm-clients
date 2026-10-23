@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import org.junit.jupiter.api.Test;
 
 
@@ -35,12 +35,12 @@ class NettyKeyValueRequestEncoderTest {
   private final NettyKeyValueRequestEncoder encoder = new NettyKeyValueRequestEncoder(UnpooledByteBufAllocator.DEFAULT);
 
   private ByteBuf encodeSet(byte[] value, int valueLength) {
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, 99)
+    HeaderStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, 99)
       .datatype((byte) 1)
       .partition((short) 7)
       .cas(5);
-    request.extras().putInt(0xcafe);
-    request.key().put(KEY);
+    request.startExtras().putInt(0xcafe);
+    request.startKey().putBytes(KEY);
     request.value(value, valueLength);
     return encoder.finish();
   }
@@ -58,7 +58,7 @@ class NettyKeyValueRequestEncoderTest {
   @Test
   void isReusable() {
     byte[] first = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).key().put("abandoned".getBytes(UTF_8));
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).startKey().putBytes("abandoned".getBytes(UTF_8));
     encoder.abort();
     byte[] again = ByteBufUtil.getBytes(encodeSet("one".getBytes(UTF_8), 3));
     assertArrayEquals(first, again);
@@ -78,7 +78,7 @@ class NettyKeyValueRequestEncoderTest {
 
   @Test
   void refusesSectionTooLongForHeader() {
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).extras().put(new byte[256]);
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET, 1).startExtras().putBytes(new byte[256]);
     assertThrows(IllegalStateException.class, encoder::finish);
   }
 

@@ -25,7 +25,7 @@ import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.FramingExtrasStage;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -84,13 +84,14 @@ public class UpsertRequest extends BasePortableKeyValueRequest<UpsertResponse> i
       }
     }
 
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, opaque)
+    FramingExtrasStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, opaque)
       .partition(partition())
-      .datatype(datatype);
-    putMutationFlexibleExtras(request.framingExtras(), this, ctx, syncReplicationType, preserveExpiry);
-    request.extras().putInt(flags).putInt((int) expiration);
-    putKeyWithCollection(request.key(), collection);
-    request.value(value, value.length);
+      .datatype(datatype)
+      .startFramingExtras();
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
+    request.startExtras().putInt(flags).putInt((int) expiration)
+      .startKey().putBytes(collection).putBytes(key())
+      .value(value);
   }
 
   @Override

@@ -47,6 +47,7 @@ import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.FramingExtrasStage;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -56,7 +57,6 @@ import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.IntMap;
 import reactor.util.annotation.Nullable;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -684,7 +684,7 @@ public enum MemcacheProtocol {
    * Writes the flexible extras {@link #mutationFlexibleExtras} would return (if any), after checking the server
    * supports them, like it.
    */
-  public static void putMutationFlexibleExtras(ByteBuffer buffer,
+  public static void putMutationFlexibleExtras(FramingExtrasStage framingExtras,
                                                KeyValueRequest<?> request,
                                                KeyValueChannelContext ctx,
                                                Optional<DurabilityLevel> durabilityLevel,
@@ -699,13 +699,13 @@ public enum MemcacheProtocol {
     }
 
     if (preserveExpiry) {
-      buffer.put(PRESERVE_TTL_FLEXIBLE_IDENT);
+      framingExtras.putByte(PRESERVE_TTL_FLEXIBLE_IDENT);
     }
     if (durability != DurabilityLevel.NONE) {
-      buffer
-        .put((byte) (SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03))
-        .put(durability.code())
-        .putShort((short) syncReplicationDeadline(request.timeout(), request.context()));
+      framingExtras
+        .putByte(SYNC_REPLICATION_FLEXIBLE_IDENT | 0x03)
+        .putByte(durability.code())
+        .putShort(syncReplicationDeadline(request.timeout(), request.context()));
     }
   }
 
