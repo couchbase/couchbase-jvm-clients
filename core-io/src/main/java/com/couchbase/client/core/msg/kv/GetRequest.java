@@ -26,7 +26,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
@@ -62,8 +62,8 @@ public class GetRequest extends BasePortableKeyValueRequest<GetResponse> {
   }
 
   @Override
-  public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
-    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.GET, ctx);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    beginDocumentRequest(encoder, Opcode.GET);
   }
 
   @Override

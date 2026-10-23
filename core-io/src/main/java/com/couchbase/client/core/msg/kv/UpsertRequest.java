@@ -27,7 +27,7 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -70,10 +70,10 @@ public class UpsertRequest extends BasePortableKeyValueRequest<UpsertResponse> i
   }
 
   @Override
-  public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
-    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.SET, ctx);
-    putValueMaybeCompressed(request, content, ctx);
-    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SET);
+    putValueMaybeCompressed(request, content);
+    putMutationFlexibleExtras(request, this, syncReplicationType, preserveExpiry);
     request.extras().putInt(flags).putInt((int) expiration);
   }
 

@@ -688,10 +688,10 @@ public enum MemcacheProtocol {
   public static void putMutationFlexibleExtras(
     KeyValueRequestBuilder builder,
     KeyValueRequest<?> request,
-    KeyValueChannelContext ctx,
     Optional<DurabilityLevel> durabilityLevel,
     boolean preserveExpiry
   ) {
+    KeyValueChannelContext ctx = builder.context();
     DurabilityLevel durability = durabilityLevel.orElse(DurabilityLevel.NONE);
     if (preserveExpiry && !ctx.preserveTtl()) {
       throw new FeatureNotAvailableException(
@@ -718,10 +718,9 @@ public enum MemcacheProtocol {
    */
   public static void putValueMaybeCompressed(
     KeyValueRequestBuilder builder,
-    byte[] content,
-    KeyValueChannelContext ctx
+    byte[] content
   ) {
-    CompressionConfig config = ctx.compressionConfig();
+    CompressionConfig config = builder.context().compressionConfig();
     if (config != null && config.enabled() && content.length >= config.minSize()) {
       byte[] compressed = tryCompressionToArray(content, config.minRatio());
       if (compressed != null) {

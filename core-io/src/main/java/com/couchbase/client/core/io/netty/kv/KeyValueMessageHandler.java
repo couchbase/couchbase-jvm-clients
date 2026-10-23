@@ -290,7 +290,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ctx.channel().id().asShortText(),
       features
     );
-    requestEncoder = new NettyKeyValueRequestEncoder(ctx.alloc());
+    requestEncoder = new NettyKeyValueRequestEncoder(ctx.alloc(), channelContext);
 
     ctx.fireChannelActive();
   }
@@ -305,7 +305,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       writtenRequests.put(opaque, request);
       try {
         ByteBuf encoded = request instanceof PortableKeyValueRequest
-          ? requestEncoder.encode((PortableKeyValueRequest<?>) request, opaque, channelContext)
+          ? requestEncoder.encode((PortableKeyValueRequest<?>) request, opaque)
           : request.encode(ctx.alloc(), opaque, channelContext);
         ctx.write(encoded, promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());

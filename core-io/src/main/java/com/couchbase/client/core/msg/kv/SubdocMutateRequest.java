@@ -218,10 +218,8 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
   }
 
   @Override
-  public void encodeTo(
-    KeyValueRequestEncoder encoder,
-    KeyValueChannelContext ctx
-  ) {
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    KeyValueChannelContext ctx = encoder.context();
     if (createAsDeleted && !ctx.createAsDeleted()) {
       // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
       // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
@@ -248,10 +246,10 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       commands.get(i).encodeTo(bodyBuffer, paths[i]);
     }
 
-    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_MUTATE, ctx)
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_MUTATE)
       .cas(cas)
       .value(body, bodyLength);
-    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
+    putMutationFlexibleExtras(request, this, syncReplicationType, preserveExpiry);
     SectionWriter extras = request.extras();
     if (userFlags != 0 && ctx.subdocBinaryXattr()) {
       // If we are sending userFlags, have to send expiration also, so server can disambiguate between permutations of optional fields.

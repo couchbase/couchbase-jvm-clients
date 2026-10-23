@@ -27,7 +27,7 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -62,13 +62,10 @@ public class RemoveRequest extends BasePortableKeyValueRequest<RemoveResponse> i
   }
 
   @Override
-  public void encodeTo(
-    KeyValueRequestEncoder encoder,
-    KeyValueChannelContext ctx
-  ) {
-    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.DELETE, ctx)
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.DELETE)
       .cas(cas);
-    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
+    putMutationFlexibleExtras(request, this, syncReplicationType, false);
   }
 
   @Override

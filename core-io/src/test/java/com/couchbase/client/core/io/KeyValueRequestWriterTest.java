@@ -21,7 +21,10 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -30,7 +33,9 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -43,6 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class KeyValueRequestWriterTest {
   private static final int BUFFER_SIZE = 4096;
   private static final byte[] KEY = "key".getBytes(UTF_8);
+  private static final KeyValueChannelContext CONTEXT =
+    new KeyValueChannelContext(null, Optional.empty(), new CollectionMap(), null, EnumSet.noneOf(ServerFeature.class));
 
   /**
    * Records each write, so tests can tell what was buffered and what was written straight through.
@@ -64,13 +71,19 @@ class KeyValueRequestWriterTest {
   }
 
   private final RecordingStream out = new RecordingStream();
-  private final KeyValueRequestWriter writer = new KeyValueRequestWriter(out, BUFFER_SIZE);
+  private final KeyValueRequestWriter writer = new KeyValueRequestWriter(out, BUFFER_SIZE, CONTEXT);
+
+  @Test
+  void writerAndBuilderHaveTheContext() {
+    assertSame(CONTEXT, writer.context());
+    assertSame(CONTEXT, writer.beginRequest(Opcode.GET).context());
+  }
 
   /**
    * Builds a SET with 4 bytes of extras, the key, and the value.
    */
   private void build(byte[] value) {
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).partition(7).key(KEY).value(value)
+    writer.beginRequest(Opcode.SET).partition(7).key(KEY).value(value)
       .extras().putInt(0xcafe);
   }
 
@@ -107,7 +120,7 @@ class KeyValueRequestWriterTest {
     byte[] value = "value".getBytes(UTF_8);
     writeRequest(value);
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.SET, (byte) 0,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SET, (byte) 0,
       (short) 7, 99, 0, Unpooled.buffer().writeInt(0xcafe), Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value));
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
@@ -117,7 +130,7 @@ class KeyValueRequestWriterTest {
     byte[] framingExtras = {0x10, 0x01, 0x00, 0x05};
     byte[] value = "value-and-garbage".getBytes(UTF_8);
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE)
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.REPLACE)
       .addDatatype(3)
       .partition(7)
       .cas(0x0102030405060708L);
@@ -128,7 +141,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(99);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.REPLACE,
+    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
       (byte) 3, (short) 7, 99, 0x0102030405060708L, Unpooled.wrappedBuffer(framingExtras), Unpooled.buffer().writeInt(0xcafe),
       Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value, 0, 5));
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
@@ -137,7 +150,7 @@ class KeyValueRequestWriterTest {
   @Test
   void emptyFramingExtrasMeansNotFlexible() throws IOException {
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.SET);
     request.framingExtras(); // writes nothing
     request.key(KEY);
     writer.completeRequestHead(1);
@@ -151,11 +164,11 @@ class KeyValueRequestWriterTest {
   @Test
   void requestWithNoSections() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.NOOP);
+    writer.beginRequest(Opcode.NOOP);
     writer.completeRequestHead(5);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.NOOP, (byte) 0,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.NOOP, (byte) 0,
       (short) 0, 5, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
@@ -178,7 +191,7 @@ class KeyValueRequestWriterTest {
   void partsMayBeGivenInAnyOrder() throws IOException {
     byte[] value = "value".getBytes(UTF_8);
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE).value(value);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.REPLACE).value(value);
     SectionWriter extras = request.extras().putShort(0xca);
     request.key(KEY);
     SectionWriter framingExtras = request.framingExtras().putByte(0x10);
@@ -188,7 +201,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(99);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.REPLACE,
+    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
       (byte) 0, (short) 7, 99, 5, Unpooled.wrappedBuffer(new byte[]{0x10, 0x01, 0x00, 0x05}),
       Unpooled.buffer().writeShort(0xca).writeShort(0xfe),
       Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value));
@@ -197,7 +210,7 @@ class KeyValueRequestWriterTest {
 
   @Test
   void returnsTheSameSectionWriterEachTime() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.SET);
     assertSame(request.extras(), request.extras());
     assertSame(request.framingExtras(), request.framingExtras());
   }
@@ -205,7 +218,7 @@ class KeyValueRequestWriterTest {
   @Test
   void putByteAndPutShortTakeSignedOrUnsigned() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.SET)
+    writer.beginRequest(Opcode.SET)
       .extras().putByte(-128).putByte(255).putShort(-32768).putShort(65535);
     writer.completeRequestHead(1);
     writer.finishRequest();
@@ -218,11 +231,11 @@ class KeyValueRequestWriterTest {
   @Test
   void addDatatypeOrsIntoTheDatatypeAndEachRequestStartsAtZero() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).addDatatype(0x02).addDatatype(0x01).addDatatype(0x02);
+    writer.beginRequest(Opcode.SET).addDatatype(0x02).addDatatype(0x01).addDatatype(0x02);
     writer.completeRequestHead(1);
     writer.finishRequest();
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).addDatatype(0x04);
+    writer.beginRequest(Opcode.SET).addDatatype(0x04);
     writer.completeRequestHead(2);
     writer.finishRequest();
 
@@ -234,11 +247,11 @@ class KeyValueRequestWriterTest {
   @Test
   void datatypeTakesSignedOrUnsignedAndPartitionTakesUnsigned() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.GET).addDatatype(255).partition(65535).value(new byte[0]);
+    writer.beginRequest(Opcode.GET).addDatatype(255).partition(65535).value(new byte[0]);
     writer.completeRequestHead(1);
     writer.finishRequest();
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.GET).addDatatype(-128).partition(0).value(new byte[0]);
+    writer.beginRequest(Opcode.GET).addDatatype(-128).partition(0).value(new byte[0]);
     writer.completeRequestHead(1);
     writer.finishRequest();
 
@@ -251,7 +264,7 @@ class KeyValueRequestWriterTest {
 
   @Test
   void refusesDatatypeOrPartitionOutOfRange() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.GET);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.GET);
     assertThrows(IllegalArgumentException.class, () -> request.addDatatype(256));
     assertThrows(IllegalArgumentException.class, () -> request.addDatatype(-129));
     assertThrows(IllegalArgumentException.class, () -> request.partition(65536));
@@ -260,7 +273,7 @@ class KeyValueRequestWriterTest {
 
   @Test
   void refusesValuesOutOfRangeInsteadOfTruncating() {
-    SectionWriter extras = writer.beginRequest(MemcacheProtocol.Opcode.SET).extras();
+    SectionWriter extras = writer.beginRequest(Opcode.SET).extras();
     assertThrows(IllegalArgumentException.class, () -> extras.putByte(256));
     assertThrows(IllegalArgumentException.class, () -> extras.putByte(-129));
     assertThrows(IllegalArgumentException.class, () -> extras.putShort(65536));
@@ -270,14 +283,14 @@ class KeyValueRequestWriterTest {
   @Test
   void keyMayBeSetAnyTimeAndGoesAfterTheExtras() throws IOException {
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder header = writer.beginRequest(MemcacheProtocol.Opcode.GET).partition(3);
+    KeyValueRequestBuilder header = writer.beginRequest(Opcode.GET).partition(3);
     SectionWriter extras = header.extras().putInt(3);
     header.key("asd".getBytes(UTF_8));
     extras.putByte(3);
     writer.completeRequestHead(123);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.GET, (byte) 0,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 3, 123, 0, Unpooled.buffer().writeInt(3).writeByte(3), Unpooled.wrappedBuffer("asd".getBytes(UTF_8)),
       Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
@@ -286,24 +299,24 @@ class KeyValueRequestWriterTest {
   @Test
   void writesCollectionPrefixBeforeKey() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.GET).key(new byte[]{0x09}, KEY);
+    writer.beginRequest(Opcode.GET).key(new byte[]{0x09}, KEY);
     writer.completeRequestHead(1);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.GET, (byte) 0,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.buffer().writeByte(0x09).writeBytes(KEY), Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
 
   @Test
   void refusesKeyTooLongForFlexibleHeader() {
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).key(new byte[256]).framingExtras().putByte(0x50);
+    writer.beginRequest(Opcode.SET).key(new byte[256]).framingExtras().putByte(0x50);
     assertThrows(IllegalStateException.class, () -> writer.completeRequestHead(1));
   }
 
   @Test
   void refusesKeyThatMakesTheHeadTooBig() {
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).key(new byte[900]).extras().putBytes(new byte[200]);
+    writer.beginRequest(Opcode.SET).key(new byte[900]).extras().putBytes(new byte[200]);
     IllegalStateException e = assertThrows(IllegalStateException.class, () -> writer.completeRequestHead(1));
     assertTrue(e.getMessage().contains("the most is " + KeyValueRequestEncoder.MAX_REQUEST_HEAD_SIZE), e.getMessage());
     // The request is as it was, and can be reported.
@@ -313,7 +326,7 @@ class KeyValueRequestWriterTest {
   @Test
   void refusesWriterKeptAfterTheHeadIsComplete() throws IOException {
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.SET);
     SectionWriter extras = request.extras().putInt(1);
     writer.completeRequestHead(1);
     IllegalStateException e = assertThrows(IllegalStateException.class, () -> extras.putInt(2));
@@ -328,20 +341,20 @@ class KeyValueRequestWriterTest {
   @Test
   void emptySectionIsLikeNoSection() throws IOException {
     writer.makeRoomForRequest();
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.GET).key(KEY);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.GET).key(KEY);
     request.framingExtras();
     request.extras();
     writer.completeRequestHead(1);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.GET, (byte) 0,
+    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(KEY), Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
 
   @Test
   void refusesSectionTooLongForHeader() {
-    KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    KeyValueRequestBuilder request = writer.beginRequest(Opcode.SET);
     request.extras().putBytes(new byte[256]);
     assertThrows(IllegalStateException.class, () -> writer.completeRequestHead(1));
     // Reported as far as it goes.
@@ -350,7 +363,7 @@ class KeyValueRequestWriterTest {
 
   @Test
   void refusesHeadLongerThanTheMost() {
-    SectionWriter extras = writer.beginRequest(MemcacheProtocol.Opcode.SET).extras();
+    SectionWriter extras = writer.beginRequest(Opcode.SET).extras();
     extras.putBytes(new byte[KeyValueRequestEncoder.MAX_REQUEST_HEAD_SIZE - MemcacheProtocol.HEADER_SIZE]);
     assertThrows(BufferOverflowException.class, () -> extras.putBytes(new byte[1]));
   }
@@ -371,9 +384,9 @@ class KeyValueRequestWriterTest {
     // Buffered (each is smaller than what's written straight through), leaving less room than a head may take.
     writer.write(new byte[2000], 0, 2000);
     writer.write(new byte[1100], 0, 1100);
-    assertThrows(IllegalStateException.class, () -> writer.beginRequest(MemcacheProtocol.Opcode.SET));
+    assertThrows(IllegalStateException.class, () -> writer.beginRequest(Opcode.SET));
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    writer.beginRequest(Opcode.SET);
   }
 
   @Test
@@ -458,7 +471,7 @@ class KeyValueRequestWriterTest {
 
   @Test
   void refusesScratchWhileWritingRequest() {
-    writer.beginRequest(MemcacheProtocol.Opcode.SET);
+    writer.beginRequest(Opcode.SET);
     assertThrows(IllegalStateException.class, () -> writer.scratch(1));
   }
 
@@ -473,7 +486,7 @@ class KeyValueRequestWriterTest {
   void scratchIsAvailableAgainOnceTheRequestIsFinished() throws IOException {
     byte[] body = writer.scratch(3);
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.SET).value(body, 3);
+    writer.beginRequest(Opcode.SET).value(body, 3);
     writer.completeRequestHead(1);
     writer.finishRequest();
 

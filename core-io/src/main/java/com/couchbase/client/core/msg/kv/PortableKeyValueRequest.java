@@ -40,12 +40,13 @@ import java.nio.ByteBuffer;
 @Stability.Internal
 public interface PortableKeyValueRequest<R extends Response> extends KeyValueRequest<R> {
   /**
-   * Builds the request with {@link KeyValueRequestEncoder#beginRequest}. The caller finishes it, and gives its opaque.
+   * Builds the request with {@link KeyValueRequestEncoder#beginRequest}, for the connection the encoder belongs to
+   * (see {@link KeyValueRequestEncoder#context()}). The caller finishes it, and gives its opaque.
    * <p>
    * Throws (before beginning the request, ideally) if the request can't be encoded; for example,
    * a {@link com.couchbase.client.core.error.CollectionNotFoundException}.
    */
-  void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx);
+  void encodeTo(KeyValueRequestEncoder encoder);
 
   /**
    * Decodes the response. The packet is valid only during the call: copy out whatever the response keeps.
@@ -58,7 +59,7 @@ public interface PortableKeyValueRequest<R extends Response> extends KeyValueReq
    */
   @Override
   default ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    return new NettyKeyValueRequestEncoder(alloc).encode(this, opaque, ctx);
+    return new NettyKeyValueRequestEncoder(alloc, ctx).encode(this, opaque);
   }
 
   /**

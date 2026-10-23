@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.ByteBufferKeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import org.jspecify.annotations.NullMarked;
 
@@ -35,7 +36,7 @@ import static java.util.Objects.requireNonNull;
  * The request's head is put together in a reusable array; {@link #finish} copies the head and the value into
  * a {@code ByteBuf} of exactly the packet's size, which is the only allocation per request.
  * <p>
- * Reusable, so a channel can keep one (and reuse its arrays). Not thread-safe.
+ * Reusable, so a channel can keep one (and reuse its arrays), with the channel's context. Not thread-safe.
  */
 @Stability.Internal
 @NullMarked
@@ -49,21 +50,30 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
 
   private final ByteBufAllocator alloc;
   private final ByteBuffer head = ByteBuffer.allocate(MAX_REQUEST_HEAD_SIZE);
-  private final ByteBufferKeyValueRequestBuilder request = new ByteBufferKeyValueRequestBuilder();
+  private final ByteBufferKeyValueRequestBuilder request;
   private byte[] scratch = NO_VALUE;
   private boolean scratchTaken; // whether scratch() was called for the current request
 
-  public NettyKeyValueRequestEncoder(ByteBufAllocator alloc) {
+  public NettyKeyValueRequestEncoder(
+    ByteBufAllocator alloc,
+    KeyValueChannelContext context
+  ) {
     this.alloc = requireNonNull(alloc);
+    this.request = new ByteBufferKeyValueRequestBuilder(context);
+  }
+
+  @Override
+  public KeyValueChannelContext context() {
+    return request.context();
   }
 
   /**
    * Encodes the request with the given opaque: {@link PortableKeyValueRequest#encodeTo}, then {@link #finish}.
    * If either throws, forgets the request, so the encoder is ready for the next one.
    */
-  public ByteBuf encode(PortableKeyValueRequest<?> request, int opaque, KeyValueChannelContext ctx) {
+  public ByteBuf encode(PortableKeyValueRequest<?> request, int opaque) {
     try {
-      request.encodeTo(this, ctx);
+      request.encodeTo(this);
       return finish(opaque);
     } finally {
       abort(); // does nothing if the request was finished
@@ -87,7 +97,7 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   }
 
   @Override
-  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode) {
+  public KeyValueRequestBuilder beginRequest(Opcode opcode) {
     checkNoRequest(); // before clearing the head buffer, which holds the request in progress
     head.clear();
     request.begin(head, opcode);

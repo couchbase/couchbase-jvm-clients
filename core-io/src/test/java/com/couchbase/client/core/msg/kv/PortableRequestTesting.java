@@ -28,6 +28,7 @@ import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
@@ -58,11 +59,6 @@ final class PortableRequestTesting {
   static final int OPAQUE = 0x12345678;
   static final short PARTITION = 42;
 
-  /**
-   * Like a Netty channel's encoder: reused by every test.
-   */
-  private static final NettyKeyValueRequestEncoder NETTY_ENCODER = new NettyKeyValueRequestEncoder(ALLOC);
-
   private PortableRequestTesting() {
     throw new AssertionError("not instantiable");
   }
@@ -72,17 +68,23 @@ final class PortableRequestTesting {
 
     // The socket connection's writer.
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    KeyValueRequestWriter writer = newWriter(out);
+    KeyValueRequestWriter writer = newWriter(out, ctx);
     writer.makeRoomForRequest();
-    request.encodeTo(writer, ctx);
+    request.encodeTo(writer);
     writer.completeRequestHead(OPAQUE);
     assertArrayEquals(expected, writer.requestBytes());
     writer.finishRequest();
     writer.flush();
     assertArrayEquals(expected, out.toByteArray());
 
-    // The Netty implementation's encoder: the channel's (reused by every test), and a new one (the ByteBuf bridge).
-    for (ByteBuf encoded : Arrays.asList(NETTY_ENCODER.encode(request, OPAQUE, ctx), request.encode(ALLOC, OPAQUE, ctx))) {
+    // The Netty implementation's encoder: a channel's, used twice (so the second time it's reused),
+    // and a new one (the ByteBuf bridge).
+    NettyKeyValueRequestEncoder channelEncoder = new NettyKeyValueRequestEncoder(ALLOC, ctx);
+    for (ByteBuf encoded : Arrays.asList(
+      channelEncoder.encode(request, OPAQUE),
+      channelEncoder.encode(request, OPAQUE),
+      request.encode(ALLOC, OPAQUE, ctx)
+    )) {
       try {
         assertTrue(MemcacheProtocol.verifyRequest(encoded));
         assertArrayEquals(expected, ByteBufUtil.getBytes(encoded));
@@ -131,7 +133,7 @@ final class PortableRequestTesting {
     return decodeEveryWay(request, packet, ctx(null, EnumSet.noneOf(ServerFeature.class)));
   }
 
-  static byte[] response(MemcacheProtocol.Opcode opcode, byte datatype, short status, long cas,
+  static byte[] response(Opcode opcode, byte datatype, short status, long cas,
                                  byte[] extras, byte[] key, byte[] body) {
     ByteBuf packet = MemcacheProtocol.response(ALLOC, opcode, datatype, status, OPAQUE, cas,
       Unpooled.wrappedBuffer(extras), Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(body));
@@ -148,8 +150,11 @@ final class PortableRequestTesting {
     return bytes;
   }
 
-  static KeyValueRequestWriter newWriter(ByteArrayOutputStream out) {
-    return new KeyValueRequestWriter(out, 64 * 1024);
+  static KeyValueRequestWriter newWriter(
+    ByteArrayOutputStream out,
+    KeyValueChannelContext ctx
+  ) {
+    return new KeyValueRequestWriter(out, 64 * 1024, ctx);
   }
 
   static KeyValueChannelContext compressingCtx() {

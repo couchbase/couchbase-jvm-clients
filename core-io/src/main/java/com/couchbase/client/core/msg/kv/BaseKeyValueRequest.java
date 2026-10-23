@@ -32,7 +32,7 @@ import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -191,10 +191,9 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   protected KeyValueRequestBuilder beginDocumentRequest(
     KeyValueRequestEncoder encoder,
-    MemcacheProtocol.Opcode opcode,
-    KeyValueChannelContext ctx
+    Opcode opcode
   ) {
-    byte[] collection = collectionPrefix(ctx);
+    byte[] collection = collectionPrefix(encoder.context());
     return encoder.beginRequest(opcode)
       .partition(partition())
       .key(collection, key);
