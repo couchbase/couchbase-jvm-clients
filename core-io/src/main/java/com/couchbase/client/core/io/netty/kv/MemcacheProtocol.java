@@ -683,12 +683,16 @@ public enum MemcacheProtocol {
   /**
    * Writes the flexible extras {@link #mutationFlexibleExtras} would return (if any), after checking the server
    * supports them, like it.
+   *
+   * @return the given stage, so the request can carry on.
    */
-  public static void putMutationFlexibleExtras(FramingExtrasStage framingExtras,
-                                               KeyValueRequest<?> request,
-                                               KeyValueChannelContext ctx,
-                                               Optional<DurabilityLevel> durabilityLevel,
-                                               boolean preserveExpiry) {
+  public static FramingExtrasStage putMutationFlexibleExtras(
+    FramingExtrasStage framingExtras,
+    KeyValueRequest<?> request,
+    KeyValueChannelContext ctx,
+    Optional<DurabilityLevel> durabilityLevel,
+    boolean preserveExpiry
+  ) {
     DurabilityLevel durability = durabilityLevel.orElse(DurabilityLevel.NONE);
     if (preserveExpiry && !ctx.preserveTtl()) {
       throw new FeatureNotAvailableException(
@@ -707,6 +711,7 @@ public enum MemcacheProtocol {
         .putByte(durability.code())
         .putShort(syncReplicationDeadline(request.timeout(), request.context()));
     }
+    return framingExtras;
   }
 
   /**
