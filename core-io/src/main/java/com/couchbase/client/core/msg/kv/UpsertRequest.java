@@ -73,7 +73,7 @@ public class UpsertRequest extends BasePortableKeyValueRequest<UpsertResponse> i
   public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
     byte[] collection = collectionPrefix(ctx);
 
-    byte datatype = 0;
+    int datatype = 0;
     byte[] value = this.content;
     CompressionConfig config = ctx.compressionConfig();
     if (config != null && config.enabled() && this.content.length >= config.minSize()) {
