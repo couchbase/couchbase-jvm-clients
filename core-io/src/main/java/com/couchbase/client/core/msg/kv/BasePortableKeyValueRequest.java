@@ -41,8 +41,14 @@ public abstract class BasePortableKeyValueRequest<R extends Response>
   extends BaseKeyValueRequest<R>
   implements PortableKeyValueRequest<R> {
 
-  protected BasePortableKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                           final String key, final CollectionIdentifier collectionIdentifier, final RequestSpan span) {
+  protected BasePortableKeyValueRequest(
+    Duration timeout,
+    CoreContext ctx,
+    RetryStrategy retryStrategy,
+    String key,
+    CollectionIdentifier collectionIdentifier,
+    RequestSpan span
+  ) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
   }
 

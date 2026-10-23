@@ -66,17 +66,14 @@ public class RemoveRequest extends BasePortableKeyValueRequest<RemoveResponse> i
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.DELETE)
-      .partition(partition())
-      .cas(cas)
-      .key(collection, key());
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.DELETE, ctx)
+      .cas(cas);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
   }
 
   @Override
   public RemoveResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new RemoveResponse(

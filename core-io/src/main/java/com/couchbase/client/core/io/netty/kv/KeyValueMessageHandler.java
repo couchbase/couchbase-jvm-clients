@@ -260,7 +260,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * @param ctx the channel context.
    */
   @Override
-  public void channelActive(final ChannelHandlerContext ctx) {
+  public void channelActive(ChannelHandlerContext ctx) {
     // Defer adding the idle state handler until the channel is active, because we don't want it to run
     // until the connection handshake is complete and the KV handler is ready to dispatch requests.
     // Prior to this point, connection timeouts are handled at a higher layer.
@@ -297,7 +297,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   @Override
   @SuppressWarnings({"unchecked"})
-  public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+  public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
     if (msg instanceof KeyValueRequest) {
       KeyValueRequest<Response> request = (KeyValueRequest<Response>) msg;
 

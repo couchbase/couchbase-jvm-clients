@@ -53,16 +53,13 @@ public class GetMetaRequest extends BasePortableKeyValueRequest<GetMetaResponse>
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET_META)
-      .partition(partition())
-      .key(collection, key())
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.GET_META, ctx)
       .extras().putByte(2);
   }
 
   @Override
   public GetMetaResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     boolean deleted = response.extrasAsInt(0, 0) != 0;

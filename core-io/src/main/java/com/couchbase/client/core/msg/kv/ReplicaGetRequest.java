@@ -55,10 +55,7 @@ public class ReplicaGetRequest extends GetRequest {
 
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET_REPLICA)
-      .partition(partition())
-      .key(collection, key());
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.GET_REPLICA, ctx);
   }
 
   @Override

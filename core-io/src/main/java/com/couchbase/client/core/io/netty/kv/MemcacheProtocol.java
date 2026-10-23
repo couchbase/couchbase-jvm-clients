@@ -26,6 +26,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -712,6 +713,28 @@ public enum MemcacheProtocol {
   }
 
   /**
+   * Sets the request's value: the content, compressed if compression is enabled, the content is big enough,
+   * and it compresses well enough, in which case this also adds {@link Datatype#SNAPPY} to the datatype.
+   */
+  public static void putValueMaybeCompressed(
+    KeyValueRequestBuilder builder,
+    byte[] content,
+    KeyValueChannelContext ctx
+  ) {
+    CompressionConfig config = ctx.compressionConfig();
+    if (config != null && config.enabled() && content.length >= config.minSize()) {
+      byte[] compressed = tryCompressionToArray(content, config.minRatio());
+      if (compressed != null) {
+        builder
+          .value(compressed)
+          .addDatatype(Datatype.SNAPPY.datatype());
+        return;
+      }
+    }
+    builder.value(content);
+  }
+
+  /**
    * Helper method to write the flexible extras for sync replication.
    * <p>
    * Note that this method writes a short value from an integer deadline. The netty method will make sure to
@@ -723,8 +746,8 @@ public enum MemcacheProtocol {
    * @param ctx the core context to use.
    * @return the same buffer
    */
-  static ByteBuf flexibleSyncReplication(final ByteBuf buffer, final DurabilityLevel type,
-                                         final Duration timeout, final CoreContext ctx) {
+  static ByteBuf flexibleSyncReplication(ByteBuf buffer, DurabilityLevel type,
+                                         Duration timeout, CoreContext ctx) {
     return buffer
       .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
       .writeByte(type.code())
@@ -735,7 +758,7 @@ public enum MemcacheProtocol {
    * The sync replication deadline (in milliseconds) to send for the given request timeout.
    * Publishes an event if it had to be coerced.
    */
-  private static int syncReplicationDeadline(final Duration timeout, final CoreContext ctx) {
+  private static int syncReplicationDeadline(Duration timeout, CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
     int deadline;

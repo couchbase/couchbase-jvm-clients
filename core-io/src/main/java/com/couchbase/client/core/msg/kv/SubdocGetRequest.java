@@ -124,8 +124,6 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
       }
     }
 
-    byte[] collection = collectionPrefix(ctx);
-
     // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
     // add the others if do the single lookup optimisation.
     // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
@@ -142,9 +140,7 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
       commands.get(i).encodeTo(bodyBuffer, paths[i], ctx.subdocBinaryXattr());
     }
 
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP)
-      .partition(partition())
-      .key(collection, key())
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, ctx)
       .value(body, bodyLength);
     if (flags != 0) {
       request.extras().putByte(flags);
@@ -152,7 +148,7 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
   }
 
   @Override
-  public SubdocGetResponse decode(final KeyValuePacket response, KeyValueChannelContext ctx) {
+  public SubdocGetResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
     short rawStatus = response.status();
     boolean isJson = (response.datatype() & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
     MemcacheProtocol.FlexibleExtras flexibleExtras = response.flexibleExtras();

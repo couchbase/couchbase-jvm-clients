@@ -52,16 +52,13 @@ public class UnlockRequest extends BasePortableKeyValueRequest<UnlockResponse> {
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.UNLOCK)
-      .partition(partition())
-      .cas(cas)
-      .key(collection, key());
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.UNLOCK, ctx)
+      .cas(cas);
   }
 
   @Override
   public UnlockResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new UnlockResponse(

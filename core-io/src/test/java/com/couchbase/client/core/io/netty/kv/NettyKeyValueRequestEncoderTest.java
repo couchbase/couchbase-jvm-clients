@@ -36,7 +36,7 @@ class NettyKeyValueRequestEncoderTest {
 
   private ByteBuf encodeSet(byte[] value, int valueLength) {
     KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET)
-      .datatype(1)
+      .addDatatype(1)
       .partition(7)
       .cas(5);
     request.key(KEY).value(value, valueLength);

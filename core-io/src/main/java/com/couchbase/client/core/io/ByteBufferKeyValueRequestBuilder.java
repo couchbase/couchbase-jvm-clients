@@ -57,7 +57,7 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
 
   private MemcacheProtocol.@Nullable Opcode opcode;
   private int opaque;
-  private int datatype; // checked to fit a byte (signed or unsigned)
+  private int datatype; // 0 to 255
   private int partition; // checked to fit an unsigned short
   private long cas;
   private byte[] keyPrefix = NO_VALUE; // written before the key; for example, a collection ID
@@ -118,12 +118,12 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder datatype(int datatype) {
+  public ByteBufferKeyValueRequestBuilder addDatatype(int datatype) {
     if (datatype < Byte.MIN_VALUE || datatype > 0xff) {
       throw new IllegalArgumentException("Datatype isn't a byte (signed or unsigned): " + datatype);
     }
     checkBuilding();
-    this.datatype = datatype;
+    this.datatype |= datatype & 0xff;
     return this;
   }
 

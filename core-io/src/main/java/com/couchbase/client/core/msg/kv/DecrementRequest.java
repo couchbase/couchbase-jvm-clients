@@ -69,10 +69,7 @@ public class DecrementRequest extends BasePortableKeyValueRequest<DecrementRespo
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.DECREMENT)
-      .partition(partition())
-      .key(collection, key());
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.DECREMENT, ctx);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
     SectionWriter extras = request.extras().putLong(delta);
     if (initial.isPresent()) {
@@ -84,7 +81,7 @@ public class DecrementRequest extends BasePortableKeyValueRequest<DecrementRespo
 
   @Override
   public DecrementResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new DecrementResponse(

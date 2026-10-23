@@ -22,7 +22,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
@@ -35,6 +34,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putValueMaybeCompressed;
 
 
 public class PrependRequest extends BasePortableKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
@@ -63,31 +63,15 @@ public class PrependRequest extends BasePortableKeyValueRequest<PrependResponse>
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-
-    int datatype = 0;
-    byte[] value = this.content;
-    CompressionConfig config = ctx.compressionConfig();
-    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-      byte[] compressed = MemcacheProtocol.tryCompressionToArray(this.content, config.minRatio());
-      if (compressed != null) {
-        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-        value = compressed;
-      }
-    }
-
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.PREPEND)
-      .partition(partition())
-      .datatype(datatype)
-      .cas(cas)
-      .key(collection, key())
-      .value(value);
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.PREPEND, ctx)
+      .cas(cas);
+    putValueMaybeCompressed(request, content, ctx);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
   }
 
   @Override
   public PrependResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new PrependResponse(

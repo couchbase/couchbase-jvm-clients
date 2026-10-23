@@ -22,7 +22,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
@@ -36,6 +35,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putValueMaybeCompressed;
 
 /**
  * Uses the KV replace command to replace a document if it exists.
@@ -81,32 +81,16 @@ public class ReplaceRequest extends BasePortableKeyValueRequest<ReplaceResponse>
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-
-    int datatype = 0;
-    byte[] value = this.content;
-    CompressionConfig config = ctx.compressionConfig();
-    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-      byte[] compressed = MemcacheProtocol.tryCompressionToArray(this.content, config.minRatio());
-      if (compressed != null) {
-        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-        value = compressed;
-      }
-    }
-
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.REPLACE)
-      .partition(partition())
-      .datatype(datatype)
-      .cas(cas)
-      .key(collection, key())
-      .value(value);
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.REPLACE, ctx)
+      .cas(cas);
+    putValueMaybeCompressed(request, content, ctx);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
     request.extras().putInt(flags).putInt((int) expiration);
   }
 
   @Override
   public ReplaceResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new ReplaceResponse(
