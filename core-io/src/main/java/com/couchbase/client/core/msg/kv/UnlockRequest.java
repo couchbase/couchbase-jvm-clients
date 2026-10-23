@@ -22,24 +22,18 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 
-public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
+public class UnlockRequest extends BasePortableKeyValueRequest<UnlockResponse> {
   private final long cas;
 
   public UnlockRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,
@@ -54,20 +48,27 @@ public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.UNLOCK, noDatatype(),
-        partition(), opaque, cas, noExtras(), key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    encoder.beginRequest(MemcacheProtocol.Opcode.UNLOCK)
+      .partition(partition())
+      .cas(cas)
+      .key(collection, key());
   }
 
   @Override
-  public UnlockResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
-    return new UnlockResponse(decodeStatus(response), cas(response), Optional.empty());
+  public UnlockResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    return new UnlockResponse(
+      response.responseStatus(),
+      response.cas(),
+      Optional.empty()
+    );
   }
 
   @Override

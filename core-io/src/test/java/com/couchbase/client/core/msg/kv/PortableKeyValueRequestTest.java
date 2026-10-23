@@ -56,6 +56,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.msg.kv.PortableRequestTesting.*;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -82,14 +83,6 @@ import static org.mockito.Mockito.mock;
  * </ul>
  */
 class PortableKeyValueRequestTest {
-  private static final Duration TIMEOUT = Duration.ofMillis(2500);
-  private static final CoreContext CORE_CONTEXT = mock(CoreContext.class);
-  private static final CollectionIdentifier DEFAULT_COLLECTION = CollectionIdentifier.fromDefault("b");
-  private static final CollectionIdentifier CUSTOM_COLLECTION = new CollectionIdentifier("b", Optional.of("s"), Optional.of("c"));
-  private static final UnpooledByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
-  private static final int OPAQUE = 0x12345678;
-  private static final NettyKeyValueRequestEncoder NETTY_ENCODER = new NettyKeyValueRequestEncoder(ALLOC);
-  private static final short PARTITION = 42;
   private static final int UPSERT_FLAGS = 0x02000006;
   private static final long UPSERT_EXPIRY = 3600;
   private static final byte ACCESS_DELETED = 0x04;
@@ -528,91 +521,6 @@ class PortableKeyValueRequestTest {
     assertEncoding(request, ctx, referenceSubdocGet(request, flags, specs, ctx));
   }
 
-  private static void assertEncoding(PortableKeyValueRequest<?> request, KeyValueChannelContext ctx, byte[] expected) throws IOException {
-    request.partition(PARTITION);
-
-    // The socket connection's writer.
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    KeyValueRequestWriter writer = newWriter(out);
-    writer.makeRoomForRequest();
-    request.encodeTo(writer, ctx);
-    writer.completeRequestHead(OPAQUE);
-    assertArrayEquals(expected, writer.requestBytes());
-    writer.finishRequest();
-    writer.flush();
-    assertArrayEquals(expected, out.toByteArray());
-
-    // The Netty implementation's encoder: the channel's (reused by every test), and a new one (the ByteBuf bridge).
-    for (ByteBuf encoded : Arrays.asList(NETTY_ENCODER.encode(request, OPAQUE, ctx), request.encode(ALLOC, OPAQUE, ctx))) {
-      try {
-        assertTrue(MemcacheProtocol.verifyRequest(encoded));
-        assertArrayEquals(expected, ByteBufUtil.getBytes(encoded));
-      } finally {
-        encoded.release();
-      }
-    }
-  }
-
-  /**
-   * Decodes the response directly from a packet, and through the ByteBuf bridge from a heap buffer
-   * (like the socket connection's), from direct buffers (like Netty's), and from a composite buffer.
-   */
-  private static <R extends Response> List<R> decodeEveryWay(
-    PortableKeyValueRequest<R> request,
-    byte[] packet,
-    KeyValueChannelContext ctx
-  ) {
-    byte[] padded = new byte[packet.length + 10];
-    System.arraycopy(packet, 0, padded, 3, packet.length);
-    R fromPacket = request.decode(KeyValuePacket.wrap(padded, 3, packet.length), ctx);
-
-    R fromHeap = request.decode(Unpooled.wrappedBuffer(packet), ctx);
-
-    ByteBuf direct = Unpooled.directBuffer(packet.length).writeBytes(packet);
-    ByteBuf pooled = PooledByteBufAllocator.DEFAULT.directBuffer(packet.length).writeBytes(packet);
-    pooled.readerIndex(5); // ignored, like MemcacheProtocol's readers
-    try {
-      R fromDirect = request.decode(direct, ctx);
-      R fromPooled = request.decode(pooled, ctx);
-      // Several components (no single internal NIO buffer).
-      int half = packet.length / 2;
-      R fromComposite = request.decode(Unpooled.wrappedBuffer(
-        Unpooled.wrappedBuffer(packet, 0, half), Unpooled.wrappedBuffer(packet, half, packet.length - half)), ctx);
-      return Arrays.asList(fromPacket, fromHeap, fromDirect, fromPooled, fromComposite);
-    } finally {
-      direct.release();
-      pooled.release();
-    }
-  }
-
-  private static <R extends Response> List<R> decodeEveryWay(
-    PortableKeyValueRequest<R> request,
-    byte[] packet
-  ) {
-    return decodeEveryWay(request, packet, ctx(null, EnumSet.noneOf(ServerFeature.class)));
-  }
-
-  private static byte[] response(MemcacheProtocol.Opcode opcode, byte datatype, short status, long cas,
-                                 byte[] extras, byte[] key, byte[] body) {
-    ByteBuf packet = MemcacheProtocol.response(ALLOC, opcode, datatype, status, OPAQUE, cas,
-      Unpooled.wrappedBuffer(extras), Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(body));
-    try {
-      return ByteBufUtil.getBytes(packet);
-    } finally {
-      packet.release();
-    }
-  }
-
-  private static byte[] ints(int value) {
-    byte[] bytes = new byte[4];
-    Unpooled.wrappedBuffer(bytes).setInt(0, value);
-    return bytes;
-  }
-
-  private static KeyValueRequestWriter newWriter(ByteArrayOutputStream out) {
-    return new KeyValueRequestWriter(out, 64 * 1024);
-  }
-
   private static GetRequest get(CollectionIdentifier collection) {
     return new GetRequest("some-key", TIMEOUT, CORE_CONTEXT, collection, BestEffortRetryStrategy.INSTANCE, null);
   }
@@ -646,16 +554,6 @@ class PortableKeyValueRequestTest {
     }
     return new SubdocGetRequest(TIMEOUT, CORE_CONTEXT, CUSTOM_COLLECTION, BestEffortRetryStrategy.INSTANCE,
       "some-key", flags, commands, null);
-  }
-
-  private static KeyValueChannelContext compressingCtx() {
-    return ctx(CompressionConfig.builder().enable(true).build(), EnumSet.of(ServerFeature.COLLECTIONS));
-  }
-
-  private static KeyValueChannelContext ctx(CompressionConfig compression, Set<ServerFeature> features) {
-    CollectionMap collectionMap = new CollectionMap();
-    collectionMap.put(CUSTOM_COLLECTION, new byte[]{0x09});
-    return new KeyValueChannelContext(compression, Optional.of("b"), collectionMap, null, features);
   }
 
   // The requests' ByteBuf encoders, from before they were converted: the reference.
@@ -894,11 +792,4 @@ class PortableKeyValueRequestTest {
     }
   }
 
-  private static byte[] bytes(ByteBuf buf) {
-    try {
-      return ByteBufUtil.getBytes(buf);
-    } finally {
-      buf.release();
-    }
-  }
 }

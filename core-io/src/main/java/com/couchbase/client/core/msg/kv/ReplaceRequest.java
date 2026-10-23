@@ -22,32 +22,27 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
 /**
  * Uses the KV replace command to replace a document if it exists.
  *
  * @since 2.0.0
  */
-public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> implements SyncDurabilityRequest {
+public class ReplaceRequest extends BasePortableKeyValueRequest<ReplaceResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;
@@ -82,51 +77,43 @@ public class ReplaceRequest extends BaseKeyValueRequest<ReplaceResponse> impleme
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf content = null;
-    ByteBuf extras = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType, preserveExpiry);
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
 
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      byte datatype = 0;
-      CompressionConfig config = ctx.compressionConfig();
-      if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
-        if (maybeCompressed != null) {
-          datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-          content = maybeCompressed;
-        } else {
-          content = Unpooled.wrappedBuffer(this.content);
-        }
-      } else {
-        content = Unpooled.wrappedBuffer(this.content);
+    int datatype = 0;
+    byte[] value = this.content;
+    CompressionConfig config = ctx.compressionConfig();
+    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
+      byte[] compressed = MemcacheProtocol.tryCompressionToArray(this.content, config.minRatio());
+      if (compressed != null) {
+        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
+        value = compressed;
       }
-
-      extras = alloc.buffer(Integer.BYTES * 2);
-      extras.writeInt(flags);
-      extras.writeInt((int) expiration);
-
-      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.REPLACE, datatype, partition(),
-          opaque, cas, flexibleExtras, extras, key, content);
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-      ReferenceCountUtil.release(flexibleExtras);
-      ReferenceCountUtil.release(content);
     }
+
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.REPLACE)
+      .partition(partition())
+      .datatype(datatype)
+      .cas(cas)
+      .key(collection, key())
+      .value(value);
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
+    request.extras().putInt(flags).putInt((int) expiration);
   }
 
   @Override
-  public ReplaceResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+  public ReplaceResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
     return new ReplaceResponse(
-      status,
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get()),
-      flexibleExtras(response)
+      response.responseStatus(),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get()),
+      response.flexibleExtras()
     );
   }
 

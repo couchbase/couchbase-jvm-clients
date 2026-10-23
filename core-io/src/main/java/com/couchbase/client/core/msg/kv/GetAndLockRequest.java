@@ -22,14 +22,12 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.util.CbDurations;
 
 import java.time.Duration;
@@ -41,7 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
+public class GetAndLockRequest extends BasePortableKeyValueRequest<GetAndLockResponse> {
 
   private final Duration lockFor;
 
@@ -58,31 +56,28 @@ public class GetAndLockRequest extends BaseKeyValueRequest<GetAndLockResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      long secondsToLock = CbDurations.getSecondsCeil(lockFor);
-      extras = alloc.buffer(Integer.BYTES).writeInt(Math.toIntExact(secondsToLock));
-
-      return MemcacheProtocol.request(alloc, Opcode.GET_AND_LOCK, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    long secondsToLock = CbDurations.getSecondsCeil(lockFor);
+    encoder.beginRequest(Opcode.GET_AND_LOCK)
+      .partition(partition())
+      .key(collection, key())
+      .extras().putInt(Math.toIntExact(secondsToLock));
   }
 
   @Override
-  public GetAndLockResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    long cas = cas(response);
-
+  public GetAndLockResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    ResponseStatus status = response.responseStatus();
+    long cas = response.cas();
     if (status.success()) {
-      byte[] content = bodyAsBytes(response);
-      int flags = extrasAsInt(response, 0, 0);
+      byte[] content = response.bodyAsBytes();
+      int flags = response.extrasAsInt(0, 0);
       return new GetAndLockResponse(status, content, cas, flags);
     } else {
       return new GetAndLockResponse(status, null, cas, 0);

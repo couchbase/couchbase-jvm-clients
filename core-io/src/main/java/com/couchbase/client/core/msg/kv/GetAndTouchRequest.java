@@ -22,14 +22,13 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 
@@ -40,7 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse> {
+public class GetAndTouchRequest extends BasePortableKeyValueRequest<GetAndTouchResponse> {
 
   private final long expiration;
 
@@ -57,29 +56,27 @@ public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse>
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      extras = alloc.buffer(Integer.BYTES).writeInt((int) expiration);
-
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_AND_TOUCH, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET_AND_TOUCH)
+      .partition(partition())
+      .key(collection, key())
+      .extras().putInt((int) expiration);
   }
 
   @Override
-  public GetAndTouchResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    long cas = cas(response);
+  public GetAndTouchResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    ResponseStatus status = response.responseStatus();
+    long cas = response.cas();
     if (status.success()) {
-      byte[] content = bodyAsBytes(response);
-      int flags = extrasAsInt(response, 0, 0);
+      byte[] content = response.bodyAsBytes();
+      int flags = response.extrasAsInt(0, 0);
       return new GetAndTouchResponse(status, content, cas, flags);
     } else {
       return new GetAndTouchResponse(status, null, cas, 0);
