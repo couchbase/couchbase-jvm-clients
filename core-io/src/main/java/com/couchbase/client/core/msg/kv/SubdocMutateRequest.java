@@ -33,7 +33,8 @@ import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -219,7 +220,6 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
   @Override
   public void encodeTo(
     KeyValueRequestEncoder encoder,
-    int opaque,
     KeyValueChannelContext ctx
   ) {
     if (createAsDeleted && !ctx.createAsDeleted()) {
@@ -250,13 +250,13 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       commands.get(i).encodeTo(bodyBuffer, paths[i]);
     }
 
-    ExtrasStage extras = putMutationFlexibleExtras(
-      encoder.beginRequest(Opcode.SUBDOC_MULTI_MUTATE, opaque)
-        .partition(partition())
-        .cas(cas)
-        .startFramingExtras(),
-      this, ctx, syncReplicationType, preserveExpiry
-    ).startExtras();
+    KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SUBDOC_MULTI_MUTATE)
+      .partition(partition())
+      .cas(cas)
+      .key(collection, key())
+      .value(body, bodyLength);
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
+    SectionWriter extras = request.extras();
     if (userFlags != 0 && ctx.subdocBinaryXattr()) {
       // If we are sending userFlags, have to send expiration also, so server can disambiguate between permutations of optional fields.
       extras.putInt((int) expiration).putInt(userFlags);
@@ -266,8 +266,6 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
     if (flags != 0) {
       extras.putByte(flags);
     }
-    extras.startKey().putBytes(collection).putBytes(key())
-      .value(body, bodyLength);
   }
 
   @Override

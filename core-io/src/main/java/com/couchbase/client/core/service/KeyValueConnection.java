@@ -212,7 +212,7 @@ final class KeyValueConnection {
   private final String remoteHostname;
   private final int remotePort;
 
-  private final KeyValueRequestWriter writer;
+  private final KeyValueRequestWriter requestWriter;
   private final KeyValuePacketReader packets;
   private final IoContext ioContext;
   private final KeyValueChannelContext channelContext;
@@ -288,7 +288,7 @@ final class KeyValueConnection {
     this.listener = requireNonNull(listener);
     this.tcpSocket = requireNonNull(tcpSocket);
     this.socket = requireNonNull(socket);
-    this.writer = new KeyValueRequestWriter(out, BUFFER_SIZE);
+    this.requestWriter = new KeyValueRequestWriter(out, BUFFER_SIZE);
     this.packets = requireNonNull(packets);
     this.ioContext = requireNonNull(ioContext);
     this.channelContext = requireNonNull(channelContext);
@@ -517,7 +517,7 @@ final class KeyValueConnection {
         Outbound outbound;
         while (written < FLUSH_CONSOLIDATION_LIMIT && (outbound = queue.poll()) != null) {
           if (outbound == KeyValueOutboundQueue.CLOSE) {
-            writer.flush();
+            requestWriter.flush();
             return;
           }
           try {
@@ -528,7 +528,7 @@ final class KeyValueConnection {
           written++;
         }
         if (written > 0) {
-          writer.flush();
+          requestWriter.flush();
         }
 
         if (written == 0) {
@@ -566,10 +566,10 @@ final class KeyValueConnection {
       }
       capture.written(encoded);
       if (encoded.hasArray()) {
-        writer.write(encoded.array(), encoded.arrayOffset() + encoded.readerIndex(), encoded.readableBytes());
+        requestWriter.write(encoded.array(), encoded.arrayOffset() + encoded.readerIndex(), encoded.readableBytes());
       } else {
         byte[] bytes = ByteBufUtil.getBytes(encoded);
-        writer.write(bytes, 0, bytes.length);
+        requestWriter.write(bytes, 0, bytes.length);
       }
     } finally {
       encoded.release();
@@ -577,12 +577,12 @@ final class KeyValueConnection {
   }
 
   /**
-   * Encodes the request straight into the writer's buffer (see {@link KeyValueRequestWriter}).
+   * Encodes the request straight into the request writer's buffer (see {@link KeyValueRequestWriter}).
    * Nothing of the request reaches the socket until it's in flight, so its response can't arrive first.
    */
   private void writeDirectly(KeyValueRequest<Response> request, PortableKeyValueRequest<?> portable) throws IOException {
     try {
-      writer.makeRoomForRequest();
+      requestWriter.makeRoomForRequest();
     } catch (IOException e) {
       // The request is neither queued nor in flight, so closing the connection wouldn't retry it.
       listener.writeFailed(request, e);
@@ -591,19 +591,19 @@ final class KeyValueConnection {
 
     try {
       try {
-        portable.encodeTo(writer, request.opaque(), channelContext);
+        portable.encodeTo(requestWriter, channelContext);
       } catch (Throwable err) {
-        writer.abortRequest();
+        requestWriter.abortRequest();
         handleEncodeFailure(request, err);
         return;
       }
 
       try {
-        writer.completeRequestHead();
+        requestWriter.completeRequestHead(request.opaque());
       } catch (IllegalStateException e) {
         // Like encode(), when an encoded request fails verification.
-        byte[] packet = writer.requestBytes();
-        writer.abortRequest();
+        byte[] packet = requestWriter.requestBytes();
+        requestWriter.abortRequest();
         eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));
         request.fail(new EncodingFailureException("Outgoing packet failed structure verification", e));
         return;
@@ -613,11 +613,11 @@ final class KeyValueConnection {
         return;
       }
       if (capture.enabled()) {
-        capture.written(Unpooled.wrappedBuffer(writer.requestBytes()));
+        capture.written(Unpooled.wrappedBuffer(requestWriter.requestBytes()));
       }
-      writer.finishRequest();
+      requestWriter.finishRequest();
     } finally {
-      writer.abortRequest(); // does nothing if the request was finished
+      requestWriter.abortRequest(); // does nothing if the request was finished
     }
   }
 
