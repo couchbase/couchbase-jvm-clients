@@ -194,7 +194,9 @@ final class KeyValueConnectionOpener {
 
     IoContext ioContext = new IoContext(endpointContext, s.getLocalSocketAddress(), s.getRemoteSocketAddress(), endpointContext.bucket());
     InputStream input = s.getInputStream(); // the packet reader does the buffering
-    OutputStream output = new BufferedOutputStream(s.getOutputStream(), KeyValueConnection.BUFFER_SIZE);
+    OutputStream rawOutput = s.getOutputStream();
+    // Only for the handshake: the connection does its own buffering (see KeyValueRequestWriter).
+    OutputStream output = new BufferedOutputStream(rawOutput, KeyValueConnection.BUFFER_SIZE);
     KeyValuePacketReader packets = new KeyValuePacketReader(input, ioContext);
     TrafficCapture capture = new TrafficCapture(ioContext);
 
@@ -262,7 +264,7 @@ final class KeyValueConnectionOpener {
       listener,
       requireNonNull(tcpSocket),
       s,
-      output,
+      rawOutput, // the handshake flushed everything it wrote
       packets,
       ioContext,
       channelContext,

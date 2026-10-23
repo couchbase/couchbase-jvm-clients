@@ -36,6 +36,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Map;
 import java.util.TreeMap;
@@ -165,22 +166,43 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   protected ByteBuf encodedExternalKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx,
                                                      final byte[] key) {
+    byte[] collection = collectionPrefix(ctx, key);
+    return alloc
+      .buffer(collection.length + key.length)
+      .writeBytes(collection)
+      .writeBytes(key);
+  }
+
+  /**
+   * Returns the collection prefix to put before the key set during construction (empty if collections aren't enabled),
+   * for {@link PortableKeyValueRequest#encodeTo}. Throws, like {@link #encodedKeyWithCollection}, if the collection
+   * isn't known or the key is too long.
+   *
+   * @see #putKeyWithCollection(ByteBuffer, byte[])
+   */
+  protected byte[] collectionPrefix(final KeyValueChannelContext ctx) {
+    return collectionPrefix(ctx, key);
+  }
+
+  /**
+   * Writes the key set during construction, with the given collection prefix.
+   */
+  protected void putKeyWithCollection(final ByteBuffer buffer, final byte[] collectionPrefix) {
+    buffer.put(collectionPrefix).put(key);
+  }
+
+  private byte[] collectionPrefix(final KeyValueChannelContext ctx, final byte[] key) {
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {
         throw CollectionNotFoundException.forCollection(collectionIdentifier.collection().orElse(""));
       }
-
-      int totalLength = key.length + collection.length;
-      checkKeyLength(totalLength);
-      return alloc
-        .buffer(totalLength)
-        .writeBytes(collection)
-        .writeBytes(key);
+      checkKeyLength(key.length + collection.length);
+      return collection;
     } else {
       if (collectionIdentifier.isDefault()) {
         checkKeyLength(key.length);
-        return alloc.buffer(key.length).writeBytes(key);
+        return Bytes.EMPTY_BYTE_ARRAY;
       } else {
         throw new FeatureNotAvailableException("Collections are not supported (or enabled) on the cluster");
       }

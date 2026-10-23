@@ -17,7 +17,6 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
@@ -26,6 +25,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -137,7 +137,7 @@ class CircuitBreakerIntegrationTest extends JavaIntegrationTest {
     }
 
     @Override
-    public GetResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
+    public GetResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
       this.cancel(CancellationReason.TIMEOUT);
       return super.decode(response, ctx);
     }

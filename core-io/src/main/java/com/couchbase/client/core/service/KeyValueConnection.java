@@ -30,6 +30,7 @@ import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -38,6 +39,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
@@ -47,6 +49,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
@@ -209,7 +212,7 @@ final class KeyValueConnection {
   private final String remoteHostname;
   private final int remotePort;
 
-  private final OutputStream out;
+  private final KeyValueRequestWriter writer;
   private final KeyValuePacketReader packets;
   private final IoContext ioContext;
   private final KeyValueChannelContext channelContext;
@@ -261,6 +264,7 @@ final class KeyValueConnection {
    * @param endpointContext the endpoint's context (at the start of this connect attempt).
    * @param tcpSocket the TCP socket (the same as {@code socket} unless TLS is enabled).
    * @param socket the socket to read and write.
+   * @param out the socket's output stream (unbuffered: the connection buffers what it writes).
    * @param timings how long each connect step took.
    * @param authenticationRefresh this connection's subscription to reauthentication signals; it takes it over.
    */
@@ -284,7 +288,7 @@ final class KeyValueConnection {
     this.listener = requireNonNull(listener);
     this.tcpSocket = requireNonNull(tcpSocket);
     this.socket = requireNonNull(socket);
-    this.out = requireNonNull(out);
+    this.writer = new KeyValueRequestWriter(out, BUFFER_SIZE);
     this.packets = requireNonNull(packets);
     this.ioContext = requireNonNull(ioContext);
     this.channelContext = requireNonNull(channelContext);
@@ -508,24 +512,23 @@ final class KeyValueConnection {
     queue.writerStarted();
     Throwable failure = null;
     try {
-      OutputStream output = out;
       while (!closed.get()) {
         int written = 0;
         Outbound outbound;
         while (written < FLUSH_CONSOLIDATION_LIMIT && (outbound = queue.poll()) != null) {
           if (outbound == KeyValueOutboundQueue.CLOSE) {
-            output.flush();
+            writer.flush();
             return;
           }
           try {
-            write(output, outbound);
+            write(outbound);
           } finally {
             queue.written(outbound);
           }
           written++;
         }
         if (written > 0) {
-          output.flush();
+          writer.flush();
         }
 
         if (written == 0) {
@@ -542,41 +545,107 @@ final class KeyValueConnection {
     }
   }
 
-  private void write(OutputStream output, Outbound outbound) throws IOException {
+  private void write(Outbound outbound) throws IOException {
     KeyValueRequest<Response> request = outbound.request();
     if (request.completed()) {
       // For example, it timed out while it was queued. The server needn't do it (and it needn't be encoded).
       return;
     }
+    if (request instanceof PortableKeyValueRequest) {
+      writeDirectly(request, (PortableKeyValueRequest<?>) request);
+      return;
+    }
+
     ByteBuf encoded = encode(request);
     if (encoded == null) {
       return;
     }
     try {
-      RequestSpan dispatchSpan;
-      try {
-        dispatchSpan = newKeyValueDispatchSpan(
-          request,
-          endpointContext,
-          isInternalTracer,
-          channelId,
-          ioContext,
-          remoteHostname,
-          remotePort
-        );
-      } catch (Throwable t) {
-        // A broken tracer. Like the Netty implementation, fails the request. (Unlike it, doesn't write the request,
-        // since nothing would read its response: the Netty implementation closes the connection when it arrives.)
-        request.fail(t);
+      if (!dispatch(request)) {
         return;
       }
-      int opaque = request.opaque();
-      inFlight.put(opaque, new InFlight(request, System.nanoTime(), dispatchSpan));
       capture.written(encoded);
-      encoded.readBytes(output, encoded.readableBytes());
+      if (encoded.hasArray()) {
+        writer.write(encoded.array(), encoded.arrayOffset() + encoded.readerIndex(), encoded.readableBytes());
+      } else {
+        byte[] bytes = ByteBufUtil.getBytes(encoded);
+        writer.write(bytes, 0, bytes.length);
+      }
     } finally {
       encoded.release();
     }
+  }
+
+  /**
+   * Encodes the request straight into the writer's buffer (see {@link KeyValueRequestWriter}).
+   * Nothing of the request reaches the socket until it's in flight, so its response can't arrive first.
+   */
+  private void writeDirectly(KeyValueRequest<Response> request, PortableKeyValueRequest<?> portable) throws IOException {
+    try {
+      writer.makeRoomForRequest();
+    } catch (IOException e) {
+      // The request is neither queued nor in flight, so closing the connection wouldn't retry it.
+      listener.writeFailed(request, e);
+      throw e;
+    }
+
+    try {
+      try {
+        portable.encodeTo(writer, request.opaque(), channelContext);
+      } catch (Throwable err) {
+        writer.abortRequest();
+        handleEncodeFailure(request, err);
+        return;
+      }
+
+      try {
+        writer.completeRequestHead();
+      } catch (IllegalStateException e) {
+        // Like encode(), when an encoded request fails verification.
+        byte[] packet = writer.requestBytes();
+        writer.abortRequest();
+        eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));
+        request.fail(new EncodingFailureException("Outgoing packet failed structure verification", e));
+        return;
+      }
+
+      if (!dispatch(request)) {
+        return;
+      }
+      if (capture.enabled()) {
+        capture.written(Unpooled.wrappedBuffer(writer.requestBytes()));
+      }
+      writer.finishRequest();
+    } finally {
+      writer.abortRequest(); // does nothing if the request was finished
+    }
+  }
+
+  /**
+   * Starts the request's dispatch span, and puts it in flight. Call just before writing it.
+   *
+   * @return false if the request failed instead (because the tracer threw), so it mustn't be written.
+   */
+  private boolean dispatch(KeyValueRequest<Response> request) {
+    RequestSpan dispatchSpan;
+    try {
+      dispatchSpan = newKeyValueDispatchSpan(
+        request,
+        endpointContext,
+        isInternalTracer,
+        channelId,
+        ioContext,
+        remoteHostname,
+        remotePort
+      );
+    } catch (Throwable t) {
+      // A broken tracer. Like the Netty implementation, fails the request. (Unlike it, doesn't write the request,
+      // since nothing would read its response: the Netty implementation closes the connection when it arrives.)
+      request.fail(t);
+      return false;
+    }
+    inFlight.put(request.opaque(), new InFlight(request, System.nanoTime(), dispatchSpan));
+    return true;
   }
 
   private void closeBecauseIdle(String reason) {
@@ -737,6 +806,10 @@ final class KeyValueConnection {
     TrafficCapture(IoContext ioContext) {
       this.ioContext = requireNonNull(ioContext);
       this.enabled = ioContext.environment().ioConfig().servicesToCapture().contains(ServiceType.KV);
+    }
+
+    boolean enabled() {
+      return enabled;
     }
 
     /**

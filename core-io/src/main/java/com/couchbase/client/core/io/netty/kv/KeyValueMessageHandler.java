@@ -59,6 +59,7 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
+import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -150,6 +151,11 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    * Once connected/active, holds the channel context.
    */
   private KeyValueChannelContext channelContext;
+
+  /**
+   * Once connected/active, encodes the {@link PortableKeyValueRequest}s (reusing its arrays).
+   */
+  private NettyKeyValueRequestEncoder requestEncoder;
 
   /**
    * If present, holds the error map negotiated on this connection.
@@ -284,6 +290,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       ctx.channel().id().asShortText(),
       features
     );
+    requestEncoder = new NettyKeyValueRequestEncoder(ctx.alloc());
 
     ctx.fireChannelActive();
   }
@@ -297,7 +304,10 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       int opaque = request.opaque();
       writtenRequests.put(opaque, request);
       try {
-        ctx.write(request.encode(ctx.alloc(), opaque, channelContext), promise);
+        ByteBuf encoded = request instanceof PortableKeyValueRequest
+          ? requestEncoder.encode((PortableKeyValueRequest<?>) request, opaque, channelContext)
+          : request.encode(ctx.alloc(), opaque, channelContext);
+        ctx.write(encoded, promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.requestSpan() != null) {
           RequestSpan dispatchSpan = newKeyValueDispatchSpan(
