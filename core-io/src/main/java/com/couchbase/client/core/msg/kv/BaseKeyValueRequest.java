@@ -28,8 +28,11 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ReducedKeyValueErrorContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.BaseRequest;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -163,8 +166,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * @param key the key to encode with collection id.
    * @return the encoded ID, maybe with the collection prefix in place.
    */
-  protected ByteBuf encodedExternalKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx,
-                                                     final byte[] key) {
+  protected ByteBuf encodedExternalKeyWithCollection(ByteBufAllocator alloc, KeyValueChannelContext ctx,
+                                                     byte[] key) {
     byte[] collection = collectionPrefix(ctx, key);
     return alloc
       .buffer(collection.length + key.length)
@@ -177,11 +180,27 @@ public abstract class BaseKeyValueRequest<R extends Response>
    * for {@link PortableKeyValueRequest#encodeTo}. Throws, like {@link #encodedKeyWithCollection}, if the collection
    * isn't known or the key is too long.
    */
-  protected byte[] collectionPrefix(final KeyValueChannelContext ctx) {
+  protected byte[] collectionPrefix(KeyValueChannelContext ctx) {
     return collectionPrefix(ctx, key);
   }
 
-  private byte[] collectionPrefix(final KeyValueChannelContext ctx, final byte[] key) {
+  /**
+   * Begins a request for the document: sets its opcode, its partition, and its key (after its collection prefix).
+   * Looks up the collection prefix first, so it throws, like {@link #collectionPrefix(KeyValueChannelContext)},
+   * before the request is begun.
+   */
+  protected KeyValueRequestBuilder beginDocumentRequest(
+    KeyValueRequestEncoder encoder,
+    MemcacheProtocol.Opcode opcode,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    return encoder.beginRequest(opcode)
+      .partition(partition())
+      .key(collection, key);
+  }
+
+  private byte[] collectionPrefix(KeyValueChannelContext ctx, byte[] key) {
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {

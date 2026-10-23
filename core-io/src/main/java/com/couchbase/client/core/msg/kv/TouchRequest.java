@@ -52,16 +52,13 @@ public class TouchRequest extends BasePortableKeyValueRequest<TouchResponse> {
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.TOUCH)
-      .partition(partition())
-      .key(collection, key())
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.TOUCH, ctx)
       .extras().putInt((int) expiry);
   }
 
   @Override
   public TouchResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new TouchResponse(

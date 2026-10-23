@@ -60,16 +60,13 @@ public class GetAndTouchRequest extends BasePortableKeyValueRequest<GetAndTouchR
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET_AND_TOUCH)
-      .partition(partition())
-      .key(collection, key())
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.GET_AND_TOUCH, ctx)
       .extras().putInt((int) expiration);
   }
 
   @Override
   public GetAndTouchResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     ResponseStatus status = response.responseStatus();

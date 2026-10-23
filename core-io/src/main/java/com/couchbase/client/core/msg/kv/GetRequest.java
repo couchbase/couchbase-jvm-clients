@@ -63,14 +63,11 @@ public class GetRequest extends BasePortableKeyValueRequest<GetResponse> {
 
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
-    byte[] collection = collectionPrefix(ctx);
-    encoder.beginRequest(MemcacheProtocol.Opcode.GET)
-      .partition(partition())
-      .key(collection, key());
+    beginDocumentRequest(encoder, MemcacheProtocol.Opcode.GET, ctx);
   }
 
   @Override
-  public GetResponse decode(final KeyValuePacket response, KeyValueChannelContext ctx) {
+  public GetResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
     ResponseStatus status = response.responseStatus();
     long cas = response.cas();
 
