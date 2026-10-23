@@ -56,6 +56,7 @@ import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.IntMap;
 import reactor.util.annotation.Nullable;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -680,6 +681,35 @@ public enum MemcacheProtocol {
   }
 
   /**
+   * Writes the flexible extras {@link #mutationFlexibleExtras} would return (if any), after checking the server
+   * supports them, like it.
+   */
+  public static void putMutationFlexibleExtras(ByteBuffer buffer,
+                                               KeyValueRequest<?> request,
+                                               KeyValueChannelContext ctx,
+                                               Optional<DurabilityLevel> durabilityLevel,
+                                               boolean preserveExpiry) {
+    DurabilityLevel durability = durabilityLevel.orElse(DurabilityLevel.NONE);
+    if (preserveExpiry && !ctx.preserveTtl()) {
+      throw new FeatureNotAvailableException(
+          "This version of Couchbase Server does not support preserving expiry when modifying documents.");
+    }
+    if (durability != DurabilityLevel.NONE && !ctx.syncReplicationEnabled()) {
+      throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(request));
+    }
+
+    if (preserveExpiry) {
+      buffer.put(PRESERVE_TTL_FLEXIBLE_IDENT);
+    }
+    if (durability != DurabilityLevel.NONE) {
+      buffer
+        .put((byte) (SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03))
+        .put(durability.code())
+        .putShort((short) syncReplicationDeadline(request.timeout(), request.context()));
+    }
+  }
+
+  /**
    * Helper method to write the flexible extras for sync replication.
    * <p>
    * Note that this method writes a short value from an integer deadline. The netty method will make sure to
@@ -693,6 +723,17 @@ public enum MemcacheProtocol {
    */
   static ByteBuf flexibleSyncReplication(final ByteBuf buffer, final DurabilityLevel type,
                                          final Duration timeout, final CoreContext ctx) {
+    return buffer
+      .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
+      .writeByte(type.code())
+      .writeShort(syncReplicationDeadline(timeout, ctx));
+  }
+
+  /**
+   * The sync replication deadline (in milliseconds) to send for the given request timeout.
+   * Publishes an event if it had to be coerced.
+   */
+  private static int syncReplicationDeadline(final Duration timeout, final CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
     int deadline;
@@ -709,11 +750,7 @@ public enum MemcacheProtocol {
       deadline = SYNC_REPLICATION_TIMEOUT_FLOOR_MS;
       ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
     }
-
-    return buffer
-      .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
-      .writeByte(type.code())
-      .writeShort(deadline);
+    return deadline;
   }
 
   /**
@@ -980,11 +1017,22 @@ public enum MemcacheProtocol {
    * @return a {@link ByteBuf} if compressed, or null if below the min ratio.
    */
   public static ByteBuf tryCompression(byte[] input, double minRatio) {
+    byte[] compressed = tryCompressionToArray(input, minRatio);
+    return compressed == null ? null : Unpooled.wrappedBuffer(compressed);
+  }
+
+  /**
+   * Like {@link #tryCompression(byte[], double)}, but returns an array.
+   *
+   * @return the compressed input, or null if it didn't compress enough (the ratio is above {@code minRatio}).
+   */
+  @Nullable
+  public static byte[] tryCompressionToArray(byte[] input, double minRatio) {
     byte[] compressed = snappy.compress(input);
     if (((double) compressed.length / input.length) > minRatio) {
       return null;
     }
-    return Unpooled.wrappedBuffer(compressed);
+    return compressed;
   }
 
   /**

@@ -22,10 +22,10 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -34,21 +34,13 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 
 import static com.couchbase.client.core.api.kv.AbsentDocumentStrategy.THROW_EXCEPTION;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extrasAsInt;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 
 /**
  * Represents a KV Get (full document) operation.
  *
  * @since 2.0.0
  */
-public class GetRequest extends BaseKeyValueRequest<GetResponse> {
+public class GetRequest extends BasePortableKeyValueRequest<GetResponse> {
 
   private final AbsentDocumentStrategy absentDocumentStrategy;
 
@@ -71,25 +63,20 @@ public class GetRequest extends BaseKeyValueRequest<GetResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET, noDatatype(),
-        partition(), opaque, noCas(), noExtras(), key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-    }
+  public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+    byte[] collection = collectionPrefix(ctx);
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.GET, opaque).partition(partition());
+    putKeyWithCollection(request.key(), collection);
   }
 
   @Override
-  public GetResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    long cas = cas(response);
+  public GetResponse decode(final KeyValuePacket response, KeyValueChannelContext ctx) {
+    ResponseStatus status = response.responseStatus();
+    long cas = response.cas();
 
     if (status.success()) {
-      byte[] content = bodyAsBytes(response);
-      int flags = extrasAsInt(response, 0, 0);
+      byte[] content = response.bodyAsBytes();
+      int flags = response.extrasAsInt(0, 0);
       return new GetResponse(status, content, cas, flags);
     } else {
       return new GetResponse(status, null, cas, 0);
