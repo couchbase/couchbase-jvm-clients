@@ -27,7 +27,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -142,13 +142,14 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
       commands.get(i).encodeTo(bodyBuffer, paths[i], ctx.subdocBinaryXattr());
     }
 
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, opaque)
-      .partition(partition());
+    ExtrasStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, opaque)
+      .partition(partition())
+      .startExtras();
     if (flags != 0) {
-      request.extras().put(flags);
+      request.putByte(flags);
     }
-    putKeyWithCollection(request.key(), collection);
-    request.value(body, bodyLength);
+    request.startKey().putBytes(collection).putBytes(key())
+      .value(body, bodyLength);
   }
 
   @Override

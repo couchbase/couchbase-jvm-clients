@@ -32,19 +32,26 @@ import static java.util.Objects.requireNonNull;
  * {@link KeyValueRequestEncoder}s, which own the buffer and write the value.
  * <p>
  * Reserves room for the header when the request begins, and writes the header in {@link #complete}, once the
- * sections' lengths are known. Reusable: {@link #begin} starts another request after {@link #reset}.
+ * sections' lengths are known. Implements every stage of {@link KeyValueRequestBuilder}: each step returns this,
+ * so building allocates nothing. Reusable: {@link #begin} starts another request after {@link #reset}.
  * <p>
  * Not thread-safe.
  */
 @Stability.Internal
 @NullMarked
-public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBuilder {
+public final class ByteBufferKeyValueRequestBuilder implements
+  KeyValueRequestBuilder.HeaderStage,
+  KeyValueRequestBuilder.FramingExtrasStage,
+  KeyValueRequestBuilder.ExtrasStage,
+  KeyValueRequestBuilder.KeyStage {
+
   private static final byte[] NO_VALUE = new byte[0];
 
   private static final int FRAMING_EXTRAS = 0;
   private static final int EXTRAS = 1;
   private static final int KEY = 2;
   private static final int SECTIONS = 3;
+  private static final String[] SECTION_NAMES = {"startFramingExtras()", "startExtras()", "startKey()"};
 
   private @Nullable ByteBuffer buffer;
   private int start = -1; // where the header goes; -1 if no request is being built
@@ -113,49 +120,104 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   }
 
   @Override
-  public KeyValueRequestBuilder datatype(byte datatype) {
+  public ByteBufferKeyValueRequestBuilder datatype(byte datatype) {
     checkNotComplete();
     this.datatype = datatype;
     return this;
   }
 
   @Override
-  public KeyValueRequestBuilder partition(short partition) {
+  public ByteBufferKeyValueRequestBuilder partition(short partition) {
     checkNotComplete();
     this.partition = partition;
     return this;
   }
 
   @Override
-  public KeyValueRequestBuilder cas(long cas) {
+  public ByteBufferKeyValueRequestBuilder cas(long cas) {
     checkNotComplete();
     this.cas = cas;
     return this;
   }
 
   @Override
-  public ByteBuffer framingExtras() {
+  public ByteBufferKeyValueRequestBuilder startFramingExtras() {
     return startSection(FRAMING_EXTRAS);
   }
 
   @Override
-  public ByteBuffer extras() {
+  public ByteBufferKeyValueRequestBuilder startExtras() {
     return startSection(EXTRAS);
   }
 
   @Override
-  public ByteBuffer key() {
+  public ByteBufferKeyValueRequestBuilder startKey() {
     return startSection(KEY);
   }
 
-  private ByteBuffer startSection(int section) {
+  private ByteBufferKeyValueRequestBuilder startSection(int section) {
     ByteBuffer buffer = checkBuilding();
     if (section <= lastSection) {
-      throw new IllegalStateException("Sections must be written once each, in order: framing extras, extras, key, value");
+      throw new IllegalStateException(SECTION_NAMES[section] + " called after " + SECTION_NAMES[lastSection]
+        + "; sections go in this order, once each: framing extras, extras, key, value");
     }
     sectionStarts[section] = buffer.position();
     lastSection = section;
+    return this;
+  }
+
+  // Writing the current section. (The stages' put methods; one implementation each, since every stage is this.)
+
+  @Override
+  public ByteBufferKeyValueRequestBuilder putByte(int b) {
+    if (b < Byte.MIN_VALUE || b > 0xff) {
+      throw new IllegalArgumentException("Not a byte (signed or unsigned): " + b);
+    }
+    checkWriting().put((byte) b);
+    return this;
+  }
+
+  @Override
+  public ByteBufferKeyValueRequestBuilder putShort(int s) {
+    if (s < Short.MIN_VALUE || s > 0xffff) {
+      throw new IllegalArgumentException("Not a short (signed or unsigned): " + s);
+    }
+    checkWriting().putShort((short) s);
+    return this;
+  }
+
+  @Override
+  public ByteBufferKeyValueRequestBuilder putInt(int i) {
+    checkWriting().putInt(i);
+    return this;
+  }
+
+  @Override
+  public ByteBufferKeyValueRequestBuilder putLong(long l) {
+    checkWriting().putLong(l);
+    return this;
+  }
+
+  @Override
+  public ByteBufferKeyValueRequestBuilder putBytes(byte[] bytes) {
+    checkWriting().put(bytes);
+    return this;
+  }
+
+  /**
+   * Returns the buffer, if a section has been started (and the value hasn't been given).
+   */
+  private ByteBuffer checkWriting() {
+    ByteBuffer buffer = checkBuilding();
+    if (lastSection == -1) {
+      throw new IllegalStateException("No section was started");
+    }
     return buffer;
+  }
+
+  @Override
+  public void value(byte[] value) {
+    value(value, value.length);
   }
 
   @Override
@@ -221,9 +283,6 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
       throw new IllegalStateException("No request was begun");
     }
     checkNotComplete();
-    if (hasValue && buffer.position() != headEnd) {
-      throw new IllegalStateException("The request wrote " + (buffer.position() - headEnd) + " bytes after giving its value");
-    }
     int framingExtrasLength = sectionLength(FRAMING_EXTRAS);
     int extrasLength = sectionLength(EXTRAS);
     int keyLength = sectionLength(KEY);

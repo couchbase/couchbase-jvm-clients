@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 
@@ -107,7 +108,7 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
    * (see {@link #makeRoomForRequest}).
    */
   @Override
-  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
+  public HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
     request.begin(buffer, opcode, opaque);
     return request;
   }

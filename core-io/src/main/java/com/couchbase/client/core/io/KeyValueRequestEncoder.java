@@ -17,13 +17,15 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 
 /**
  * What a KV request encodes itself with (see {@link com.couchbase.client.core.msg.kv.PortableKeyValueRequest}).
  * <p>
- * The request calls {@link #beginRequest}, and builds its packet with the {@link KeyValueRequestBuilder} that returns.
+ * The request calls {@link #beginRequest}, and builds its packet through the stages that returns
+ * (see {@link KeyValueRequestBuilder}).
  * Whoever called the request finishes the packet (or abandons it).
  * <p>
  * Implementations: {@link KeyValueRequestWriter} (the socket KV connection's writer, which encodes straight into
@@ -52,5 +54,5 @@ public interface KeyValueRequestEncoder {
    *
    * @throws IllegalStateException if a request was already begun.
    */
-  KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode, int opaque);
+  HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque);
 }

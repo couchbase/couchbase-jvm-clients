@@ -24,7 +24,6 @@ import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -65,8 +64,9 @@ public class GetRequest extends BasePortableKeyValueRequest<GetResponse> {
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
     byte[] collection = collectionPrefix(ctx);
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.GET, opaque).partition(partition());
-    putKeyWithCollection(request.key(), collection);
+    encoder
+      .beginRequest(MemcacheProtocol.Opcode.GET, opaque).partition(partition())
+      .startKey().putBytes(collection).putBytes(key());
   }
 
   @Override
