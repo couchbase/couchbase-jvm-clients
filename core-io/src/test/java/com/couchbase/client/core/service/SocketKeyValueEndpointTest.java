@@ -1271,9 +1271,9 @@ class SocketKeyValueEndpointTest {
     start();
     GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
       @Override
-      public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+      public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
         // Extras too long for the header's length field.
-        encoder.beginRequest(MemcacheProtocol.Opcode.GET, opaque).partition(partition()).startExtras().putBytes(new byte[256]);
+        encoder.beginRequest(MemcacheProtocol.Opcode.GET).partition(partition()).extras().putBytes(new byte[256]);
       }
     };
     assertFailsOnlyTheRequestWhenItFailsVerification(malformed);

@@ -17,7 +17,6 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.HeaderStage;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 
@@ -32,12 +31,12 @@ import static java.util.Objects.requireNonNull;
  * Buffers KV request packets on their way to a stream, and lets a request encode itself straight into the buffer
  * (see {@link KeyValueRequestEncoder}), so encoding doesn't allocate a buffer per request.
  * <p>
- * A request is written in steps. {@link #beginRequest} reserves room for the header, and returns a builder that writes
- * the request's framing extras, extras and key (its "head") into the buffer, and takes its value.
- * {@link #completeRequestHead} checks the request and writes the header. Nothing of the request reaches the stream
- * until {@link #finishRequest}, which writes the value: copied into the buffer if it's small, or written straight
- * to the stream if it's big. So the caller can register the request as in flight (before the server could possibly
- * answer it), or abandon it with {@link #abortRequest}, after encoding.
+ * A request is written in steps. {@link #beginRequest} returns a builder for the request.
+ * {@link #completeRequestHead} checks the request, and writes its head (header, framing extras, extras and key)
+ * into the buffer. Nothing of the request reaches the stream until {@link #finishRequest}, which writes the value:
+ * copied into the buffer if it's small, or written straight to the stream if it's big. So the caller can register
+ * the request as in flight (before the server could possibly answer it), or abandon it with {@link #abortRequest},
+ * after encoding.
  * <p>
  * Not thread-safe: used by the connection's writer thread.
  */
@@ -61,6 +60,11 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
    * See {@link #scratch}.
    */
   private byte[] scratch = NO_VALUE;
+
+  /**
+   * Whether {@link #scratch} was called for the current request (cleared when it's finished or aborted).
+   */
+  private boolean scratchTaken;
 
   private static final byte[] NO_VALUE = new byte[0];
 
@@ -92,6 +96,10 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
   @Override
   public byte[] scratch(int minLength) {
     checkNoRequest();
+    if (scratchTaken) {
+      throw new IllegalStateException("scratch() was already called for this request (it returns the same array each time)");
+    }
+    scratchTaken = true;
     if (minLength > buffer.capacity()) {
       return new byte[minLength];
     }
@@ -108,43 +116,47 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
    * (see {@link #makeRoomForRequest}).
    */
   @Override
-  public HeaderStage beginRequest(MemcacheProtocol.Opcode opcode, int opaque) {
-    request.begin(buffer, opcode, opaque);
+  public KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode) {
+    request.begin(buffer, opcode);
     return request;
   }
 
   /**
-   * Checks the request being written, and writes its header.
+   * Checks the request being written, and writes its head (header, framing extras, extras and key) into the buffer.
    *
+   * @param opaque the request's opaque.
    * @throws IllegalStateException if no request was begun, or it can't be encoded (see
-   * {@link ByteBufferKeyValueRequestBuilder#complete}). Then {@link #requestBytes} reports it, as far as it goes,
-   * and the caller aborts it.
+   * {@link ByteBufferKeyValueRequestBuilder#complete}). Then nothing was written; {@link #requestBytes} can still
+   * report the request, and the caller aborts it.
    */
-  public void completeRequestHead() {
-    request.complete();
+  public void completeRequestHead(int opaque) {
+    request.complete(opaque);
   }
 
   /**
-   * Returns a copy of the request being written, as far as it's written, followed by its value.
+   * Returns a copy of the request being written: its head, followed by its value. Once the head is complete,
+   * that's the packet as it will be sent; before that (for example, after {@link #completeRequestHead} failed),
+   * it's the packet as it would be, unchecked. Empty if no request is being written.
    * For traffic capture and error reports.
    */
   public byte[] requestBytes() {
     if (!request.inProgress()) {
       return NO_VALUE;
     }
-    request.putHeaderUnchecked();
-    int start = request.start();
-    int headLength = buffer.position() - start;
+    byte[] head = request.headBytes();
     int valueLength = request.valueLength();
-    byte[] result = Arrays.copyOfRange(buffer.array(), buffer.arrayOffset() + start, buffer.arrayOffset() + start + headLength + valueLength);
-    System.arraycopy(request.value(), 0, result, headLength, valueLength);
+    byte[] result = Arrays.copyOf(head, head.length + valueLength);
+    System.arraycopy(request.value(), 0, result, head.length, valueLength);
     return result;
   }
 
+
   /**
-   * Forgets the request being written (if any), as if it had never begun.
+   * Forgets the request being written (if any), as if it had never begun. Also ends the request's use of
+   * {@link #scratch}, even if it was never begun.
    */
   public void abortRequest() {
+    scratchTaken = false; // even if the request wasn't begun (for example, encoding failed first)
     if (!request.inProgress()) {
       return;
     }
@@ -165,6 +177,7 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
     byte[] value = request.value();
     int valueLength = request.valueLength();
     request.reset();
+    scratchTaken = false;
     write(value, 0, valueLength);
   }
 

@@ -27,7 +27,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -111,7 +111,7 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
   }
 
   @Override
-  public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+  public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
     if (!ctx.vattrEnabled()) {
       // Server will not handle all vattrs perfectly: it will reject those it doesn't know by breaking the connection.
       // Do a check to see if all vattr commands meet a whitelist of vattrs.
@@ -142,14 +142,13 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
       commands.get(i).encodeTo(bodyBuffer, paths[i], ctx.subdocBinaryXattr());
     }
 
-    ExtrasStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, opaque)
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP)
       .partition(partition())
-      .startExtras();
-    if (flags != 0) {
-      request.putByte(flags);
-    }
-    request.startKey().putBytes(collection).putBytes(key())
+      .key(collection, key())
       .value(body, bodyLength);
+    if (flags != 0) {
+      request.extras().putByte(flags);
+    }
   }
 
   @Override
