@@ -72,10 +72,7 @@ public class IncrementRequest extends BasePortableKeyValueRequest<IncrementRespo
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
-    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.INCREMENT)
-      .partition(partition())
-      .key(collection, key());
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.INCREMENT, ctx);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
     SectionWriter extras = request.extras().putLong(delta);
     if (initial.isPresent()) {
@@ -87,7 +84,7 @@ public class IncrementRequest extends BasePortableKeyValueRequest<IncrementRespo
 
   @Override
   public IncrementResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     return new IncrementResponse(

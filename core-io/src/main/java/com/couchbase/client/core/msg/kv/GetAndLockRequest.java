@@ -60,17 +60,14 @@ public class GetAndLockRequest extends BasePortableKeyValueRequest<GetAndLockRes
     KeyValueRequestEncoder encoder,
     KeyValueChannelContext ctx
   ) {
-    byte[] collection = collectionPrefix(ctx);
     long secondsToLock = CbDurations.getSecondsCeil(lockFor);
-    encoder.beginRequest(Opcode.GET_AND_LOCK)
-      .partition(partition())
-      .key(collection, key())
+    beginDocumentRequest(encoder, Opcode.GET_AND_LOCK, ctx)
       .extras().putInt(Math.toIntExact(secondsToLock));
   }
 
   @Override
   public GetAndLockResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     ResponseStatus status = response.responseStatus();

@@ -48,11 +48,12 @@ import org.jspecify.annotations.NullMarked;
 @NullMarked
 public interface KeyValueRequestBuilder {
   /**
-   * Sets the datatype bits; -128 to 255, so a signed or unsigned byte.
+   * Adds datatype bits: ORs them into the datatype (which starts at 0), so parts of a request (its value's
+   * compression, say) can each add their own, in any order. -128 to 255, so a signed or unsigned byte.
    *
    * @throws IllegalArgumentException if it's out of that range.
    */
-  KeyValueRequestBuilder datatype(int datatype);
+  KeyValueRequestBuilder addDatatype(int datatype);
 
   /**
    * Sets the partition (vbucket); 0 to 65535.

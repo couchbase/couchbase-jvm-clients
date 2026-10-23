@@ -235,8 +235,6 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       }
     }
 
-    byte[] collection = collectionPrefix(ctx);
-
     // The body: every command, in the encoder's scratch array.
     byte[][] paths = new byte[commands.size()][];
     int bodyLength = 0;
@@ -250,10 +248,8 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       commands.get(i).encodeTo(bodyBuffer, paths[i]);
     }
 
-    KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SUBDOC_MULTI_MUTATE)
-      .partition(partition())
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_MUTATE, ctx)
       .cas(cas)
-      .key(collection, key())
       .value(body, bodyLength);
     putMutationFlexibleExtras(request, this, ctx, syncReplicationType, preserveExpiry);
     SectionWriter extras = request.extras();
@@ -270,7 +266,7 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
 
   @Override
   public SubdocMutateResponse decode(
-    final KeyValuePacket response,
+    KeyValuePacket response,
     KeyValueChannelContext ctx
   ) {
     boolean isJson = (response.datatype() & MemcacheProtocol.Datatype.JSON.datatype()) != 0;

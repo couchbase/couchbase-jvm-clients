@@ -118,7 +118,7 @@ class KeyValueRequestWriterTest {
     byte[] value = "value-and-garbage".getBytes(UTF_8);
     writer.makeRoomForRequest();
     KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE)
-      .datatype(3)
+      .addDatatype(3)
       .partition(7)
       .cas(0x0102030405060708L);
     request.framingExtras().putBytes(framingExtras);
@@ -216,13 +216,29 @@ class KeyValueRequestWriterTest {
   }
 
   @Test
-  void datatypeTakesSignedOrUnsignedAndPartitionTakesUnsigned() throws IOException {
+  void addDatatypeOrsIntoTheDatatypeAndEachRequestStartsAtZero() throws IOException {
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.GET).datatype(255).partition(65535).value(new byte[0]);
+    writer.beginRequest(MemcacheProtocol.Opcode.SET).addDatatype(0x02).addDatatype(0x01).addDatatype(0x02);
     writer.completeRequestHead(1);
     writer.finishRequest();
     writer.makeRoomForRequest();
-    writer.beginRequest(MemcacheProtocol.Opcode.GET).datatype(-128).partition(0).value(new byte[0]);
+    writer.beginRequest(MemcacheProtocol.Opcode.SET).addDatatype(0x04);
+    writer.completeRequestHead(2);
+    writer.finishRequest();
+
+    ByteBuffer packets = ByteBuffer.wrap(flushed());
+    assertEquals(0x03, packets.get(5));
+    assertEquals(0x04, packets.get(MemcacheProtocol.HEADER_SIZE + 5));
+  }
+
+  @Test
+  void datatypeTakesSignedOrUnsignedAndPartitionTakesUnsigned() throws IOException {
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.GET).addDatatype(255).partition(65535).value(new byte[0]);
+    writer.completeRequestHead(1);
+    writer.finishRequest();
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.GET).addDatatype(-128).partition(0).value(new byte[0]);
     writer.completeRequestHead(1);
     writer.finishRequest();
 
@@ -236,8 +252,8 @@ class KeyValueRequestWriterTest {
   @Test
   void refusesDatatypeOrPartitionOutOfRange() {
     KeyValueRequestBuilder request = writer.beginRequest(MemcacheProtocol.Opcode.GET);
-    assertThrows(IllegalArgumentException.class, () -> request.datatype(256));
-    assertThrows(IllegalArgumentException.class, () -> request.datatype(-129));
+    assertThrows(IllegalArgumentException.class, () -> request.addDatatype(256));
+    assertThrows(IllegalArgumentException.class, () -> request.addDatatype(-129));
     assertThrows(IllegalArgumentException.class, () -> request.partition(65536));
     assertThrows(IllegalArgumentException.class, () -> request.partition(-1));
   }
