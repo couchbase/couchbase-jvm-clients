@@ -20,9 +20,12 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.Arrays;
 
 import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static com.couchbase.client.test.Util.readResource;
@@ -51,6 +54,35 @@ class DecompressionTest {
       readResource("dummy.json", DecompressionTest.class),
       new String(decoded.content(), UTF_8)
     );
+  }
+
+  @Test
+  void decompressesGetFromViewOfLargerArray() {
+    // Like the socket KV connection's packets: views of a shared read buffer, at an offset.
+    byte[] packet = ByteBufUtil.getBytes(decodeHexDump(readResource("compressed_get_response.txt", DecompressionTest.class)));
+    byte[] readBuffer = new byte[packet.length + 100];
+    Arrays.fill(readBuffer, (byte) 0x7f);
+    System.arraycopy(packet, 0, readBuffer, 37, packet.length);
+    ByteBuf response = Unpooled.wrappedBuffer(readBuffer, 37, packet.length);
+
+    assertEquals(readResource("dummy.json", DecompressionTest.class), new String(decodeGet(response).content(), UTF_8));
+  }
+
+  @Test
+  void decompressesGetFromDirectBuffer() {
+    ByteBuf heap = decodeHexDump(readResource("compressed_get_response.txt", DecompressionTest.class));
+    ByteBuf response = Unpooled.directBuffer(heap.readableBytes()).writeBytes(heap);
+    try {
+      assertEquals(readResource("dummy.json", DecompressionTest.class), new String(decodeGet(response).content(), UTF_8));
+    } finally {
+      response.release();
+    }
+  }
+
+  private static GetResponse decodeGet(ByteBuf response) {
+    GetRequest request = new GetRequest("mydoc", Duration.ofSeconds(1),
+      mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, null);
+    return request.decode(response, null);
   }
 
   @Test

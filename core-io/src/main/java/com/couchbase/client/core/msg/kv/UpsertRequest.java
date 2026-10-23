@@ -22,24 +22,19 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
 /**
  * Uses the KV "set" command to unconditionally replace or insert documents regardless if they
@@ -47,7 +42,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
  *
  * @since 2.0.0
  */
-public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implements SyncDurabilityRequest {
+public class UpsertRequest extends BasePortableKeyValueRequest<UpsertResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;
@@ -75,51 +70,35 @@ public class UpsertRequest extends BaseKeyValueRequest<UpsertResponse> implement
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf content = null;
-    ByteBuf extras = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType, preserveExpiry);
+  public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+    byte[] collection = collectionPrefix(ctx);
 
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-
-      byte datatype = 0;
-      CompressionConfig config = ctx.compressionConfig();
-      if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
-        if (maybeCompressed != null) {
-          datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-          content = maybeCompressed;
-        } else {
-          content = Unpooled.wrappedBuffer(this.content);
-        }
-      } else {
-        content = Unpooled.wrappedBuffer(this.content);
+    byte datatype = 0;
+    byte[] value = this.content;
+    CompressionConfig config = ctx.compressionConfig();
+    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
+      byte[] compressed = MemcacheProtocol.tryCompressionToArray(this.content, config.minRatio());
+      if (compressed != null) {
+        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
+        value = compressed;
       }
-
-      extras = alloc.buffer(Integer.BYTES * 2);
-      extras.writeInt(flags);
-      extras.writeInt((int) expiration);
-
-      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.SET, datatype,
-          partition(), opaque, noCas(), flexibleExtras, extras, key, content);
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-      ReferenceCountUtil.release(flexibleExtras);
-      ReferenceCountUtil.release(content);
     }
+
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, opaque)
+      .partition(partition())
+      .datatype(datatype);
+    putMutationFlexibleExtras(request.framingExtras(), this, ctx, syncReplicationType, preserveExpiry);
+    request.extras().putInt(flags).putInt((int) expiration);
+    putKeyWithCollection(request.key(), collection);
+    request.value(value, value.length);
   }
 
   @Override
-  public UpsertResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+  public UpsertResponse decode(final KeyValuePacket response, KeyValueChannelContext ctx) {
     return new UpsertResponse(
-      status,
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      response.responseStatus(),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get())
     );
   }
 

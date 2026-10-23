@@ -55,12 +55,14 @@ import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
@@ -1255,16 +1257,33 @@ class SocketKeyValueEndpointTest {
   @Test
   void failsOnlyTheRequestWhenItFailsVerification() throws Exception {
     start();
-    startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
-    String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
-
-    GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
+    NoopRequest malformed = new NoopRequest(TIMEOUT, core.context(), BestEffortRetryStrategy.INSTANCE, DEFAULT_COLLECTION) {
       @Override
       public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
         return super.encode(alloc, opaque, ctx).writeByte(0); // longer than its total length says
       }
     };
+    assertFailsOnlyTheRequestWhenItFailsVerification(malformed);
+  }
+
+  @Test
+  void failsOnlyThePortableRequestWhenItFailsVerification() throws Exception {
+    start();
+    GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
+      @Override
+      public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+        // Extras too long for the header's length field.
+        encoder.beginRequest(MemcacheProtocol.Opcode.GET, opaque).partition(partition()).extras().put(new byte[256]);
+      }
+    };
+    assertFailsOnlyTheRequestWhenItFailsVerification(malformed);
+  }
+
+  private void assertFailsOnlyTheRequestWhenItFailsVerification(KeyValueRequest<?> malformed) throws Exception {
+    startServer();
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
+
     endpoint.send(malformed);
     ExecutionException e = assertThrows(ExecutionException.class, () -> malformed.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
     assertInstanceOf(EncodingFailureException.class, e.getCause());

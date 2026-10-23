@@ -26,13 +26,13 @@ import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
@@ -41,6 +41,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -56,7 +57,6 @@ import java.util.Map;
 
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -122,18 +122,20 @@ final class KeyValueResponseHandler {
    * Handles a response (not a server push).
    */
   void handle(ByteBuf response) {
-    int opaque = MemcacheProtocol.opaque(response);
+    // The same bytes. (The ByteBuf is for requests that still decode from one.)
+    KeyValuePacket packet = PortableKeyValueRequest.packet(response);
+    int opaque = packet.opaque();
     InFlight written = inFlight.remove(opaque);
 
     if (written == null) {
-      handleUnknownResponseReceived(response);
+      handleUnknownResponseReceived(packet);
       return;
     }
     KeyValueRequest<Response> request = written.request;
 
-    completeRequestTimings(written, response);
+    completeRequestTimings(written, packet);
 
-    short statusCode = MemcacheProtocol.status(response);
+    short statusCode = packet.status();
     ResponseStatus status = MemcacheProtocol.decodeStatus(statusCode);
     ErrorMap.ErrorCode errorCode = status != ResponseStatus.SUCCESS ? decodeErrorCode(statusCode) : null;
 
@@ -165,7 +167,7 @@ final class KeyValueResponseHandler {
     }
 
     if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {
-      handleNotMyVbucket(request, response);
+      handleNotMyVbucket(request, packet);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
       handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
     } else if (errorUnknown && KeyValueMessageHandler.errorMapIndicatesRetry(errorCode)) {
@@ -176,11 +178,11 @@ final class KeyValueResponseHandler {
       // the ones in flight, so it times out), retry it like the other requests in flight.
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     } else {
-      retryOrComplete(written, response, status, isRangeScanContinue);
+      retryOrComplete(written, response, packet, status, isRangeScanContinue);
     }
   }
 
-  private void retryOrComplete(InFlight written, ByteBuf response, ResponseStatus status, boolean isRangeScanContinue) {
+  private void retryOrComplete(InFlight written, ByteBuf response, KeyValuePacket packet, ResponseStatus status, boolean isRangeScanContinue) {
     KeyValueRequest<Response> request = written.request;
     RetryReason retryReason = KeyValueMessageHandler.statusCodeIndicatesRetry(status, request);
     if (retryReason != null) {
@@ -188,15 +190,15 @@ final class KeyValueResponseHandler {
     } else if (isRangeScanContinue) {
       decodeAndCompleteRangeScanContinue(written, response);
     } else if (!request.completed()) {
-      decodeAndComplete(request, response);
+      decodeAndComplete(request, response, packet);
     } else {
       ioContext.environment().orphanReporter().report(request);
     }
   }
 
-  private void completeRequestTimings(InFlight written, ByteBuf response) {
+  private void completeRequestTimings(InFlight written, KeyValuePacket response) {
     KeyValueRequest<Response> request = written.request;
-    long serverTime = MemcacheProtocol.parseServerDurationFromResponse(response);
+    long serverTime = response.serverDuration();
     request.context().serverLatency(serverTime);
     request.context().dispatchLatency(System.nanoTime() - written.dispatchStartNanos);
 
@@ -209,9 +211,11 @@ final class KeyValueResponseHandler {
     }
   }
 
-  private void decodeAndComplete(KeyValueRequest<Response> request, ByteBuf response) {
+  private void decodeAndComplete(KeyValueRequest<Response> request, ByteBuf response, KeyValuePacket packet) {
     try {
-      Response decoded = request.decode(response, channelContext);
+      Response decoded = request instanceof PortableKeyValueRequest
+        ? ((PortableKeyValueRequest<Response>) request).decode(packet, channelContext)
+        : request.decode(response, channelContext);
       request.succeed(decoded);
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
@@ -248,8 +252,8 @@ final class KeyValueResponseHandler {
     }
   }
 
-  private void handleUnknownResponseReceived(ByteBuf response) {
-    eventBus.publish(new UnknownResponseReceivedEvent(ioContext, ByteBufUtil.getBytes(response)));
+  private void handleUnknownResponseReceived(KeyValuePacket response) {
+    eventBus.publish(new UnknownResponseReceivedEvent(ioContext, response.toByteArray()));
     // We got a response with an opaque value that we know nothing about. There is clearly something weird
     // going on so to be sure we close the connection to avoid any further weird situations.
     // Unlike the Netty implementation, doesn't handle the rest of the responses already read: they might
@@ -262,7 +266,7 @@ final class KeyValueResponseHandler {
     return map != null ? map.errors().get(statusCode) : null;
   }
 
-  private void handleNotMyVbucket(KeyValueRequest<? extends Response> request, ByteBuf response) {
+  private void handleNotMyVbucket(KeyValueRequest<? extends Response> request, KeyValuePacket response) {
     request.indicateRejectedWithNotMyVbucket();
 
     eventBus.publish(new NotMyVbucketReceivedEvent(ioContext, request.partition()));
@@ -270,7 +274,7 @@ final class KeyValueResponseHandler {
     String origin = request.context().lastDispatchedTo() != null ? request.context().lastDispatchedTo().host() : null;
     RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_NOT_MY_VBUCKET);
 
-    String body = bodyAsString(response).trim();
+    String body = response.bodyAsString().trim();
     if (body.startsWith("{")) {
       ioContext.core().configurationProvider().proposeBucketConfig(
         new ProposedBucketConfigContext(request.bucket(), body, origin)

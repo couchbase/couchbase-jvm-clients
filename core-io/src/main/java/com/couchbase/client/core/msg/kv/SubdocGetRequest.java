@@ -23,17 +23,18 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
+import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,22 +42,13 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeSubDocumentStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.msg.kv.SubdocUtil.handleNonFieldLevelErrors;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 
-public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
+public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetResponse> {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_BINARY_VALUE = (byte) 0x20;
@@ -119,75 +111,52 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-    ByteBuf body = null;
-
-    try {
-      if (!ctx.vattrEnabled()) {
-        // Server will not handle all vattrs perfectly: it will reject those it doesn't know by breaking the connection.
-        // Do a check to see if all vattr commands meet a whitelist of vattrs.
-        for (Command c: commands) {
-          if (c.xattr()
-                  && (c.path.length() > 0 && c.path.charAt(0) == '$')
-                  && !(c.path.startsWith("$document") || c.path.startsWith("$XTOC"))) {
-            throw mapSubDocumentError(this, SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR, c.path, c.originalIndex(), null);
-          }
+  public void encodeTo(KeyValueRequestEncoder encoder, int opaque, KeyValueChannelContext ctx) {
+    if (!ctx.vattrEnabled()) {
+      // Server will not handle all vattrs perfectly: it will reject those it doesn't know by breaking the connection.
+      // Do a check to see if all vattr commands meet a whitelist of vattrs.
+      for (Command c: commands) {
+        if (c.xattr()
+                && (c.path.length() > 0 && c.path.charAt(0) == '$')
+                && !(c.path.startsWith("$document") || c.path.startsWith("$XTOC"))) {
+          throw mapSubDocumentError(this, SubDocumentOpResponseStatus.XATTR_UNKNOWN_VATTR, c.path, c.originalIndex(), null);
         }
       }
-
-      key = encodedKeyWithCollection(alloc, ctx);
-
-      if (flags != 0) {
-        extras = alloc.buffer(Byte.BYTES).writeByte(flags);
-      }
-
-      if (commands.size() == 1) {
-        // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
-        // add the others if do the single lookup optimisation.
-        // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
-        // minimal performance gains, in return for additional client complexity.
-        body = commands.get(0).encode(alloc, ctx.subdocBinaryXattr());
-      } else {
-        body = alloc.compositeBuffer(commands.size());
-        for (Command command : commands) {
-          ByteBuf commandBuffer = command.encode(alloc, ctx.subdocBinaryXattr());
-          try {
-            ((CompositeByteBuf) body).addComponent(commandBuffer);
-            body.writerIndex(body.writerIndex() + commandBuffer.readableBytes());
-          } catch (Exception ex) {
-            ReferenceCountUtil.release(commandBuffer);
-            throw ex;
-          }
-        }
-      }
-
-      return request(
-        alloc,
-        MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP,
-        noDatatype(),
-        partition(),
-        opaque,
-        noCas(),
-        extras == null ? noExtras() : extras,
-        key,
-        body
-      );
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(body);
-      ReferenceCountUtil.release(extras);
     }
+
+    byte[] collection = collectionPrefix(ctx);
+
+    // Note currently the only subdoc error response handled is ERR_SUBDOC_MULTI_PATH_FAILURE.  Make sure to
+    // add the others if do the single lookup optimisation.
+    // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
+    // minimal performance gains, in return for additional client complexity.
+    byte[][] paths = new byte[commands.size()][];
+    int bodyLength = 0;
+    for (int i = 0; i < paths.length; i++) {
+      paths[i] = commands.get(i).path.getBytes(UTF_8);
+      bodyLength += Command.HEADER_SIZE + paths[i].length;
+    }
+    byte[] body = encoder.scratch(bodyLength);
+    ByteBuffer bodyBuffer = ByteBuffer.wrap(body, 0, bodyLength);
+    for (int i = 0; i < paths.length; i++) {
+      commands.get(i).encodeTo(bodyBuffer, paths[i], ctx.subdocBinaryXattr());
+    }
+
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.SUBDOC_MULTI_LOOKUP, opaque)
+      .partition(partition());
+    if (flags != 0) {
+      request.extras().put(flags);
+    }
+    putKeyWithCollection(request.key(), collection);
+    request.value(body, bodyLength);
   }
 
   @Override
-  public SubdocGetResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    short rawStatus = status(response);
-    boolean isJson = (datatype(response) & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
-    Optional<ByteBuf> maybeBody = body(response);
-    MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
-    ResponseStatus status = decodeStatus(response);
+  public SubdocGetResponse decode(final KeyValuePacket response, KeyValueChannelContext ctx) {
+    short rawStatus = response.status();
+    boolean isJson = (response.datatype() & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
+    MemcacheProtocol.FlexibleExtras flexibleExtras = response.flexibleExtras();
+    ResponseStatus status = response.responseStatus();
 
     SubDocumentField[] values = null;
     List<CouchbaseException> errors = null;
@@ -204,8 +173,8 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
       || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status();
 
-    if (maybeBody.isPresent()) {
-      ByteBuf body = maybeBody.get();
+    if (response.hasBody()) {
+      BodyReader body = response.body();
       if (isSuccess) {
         values = new SubDocumentField[commands.size()];
         for (Command command : commands) {
@@ -219,16 +188,13 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
             fieldError = Optional.of(err);
           }
           int valueLength = body.readInt();
-          byte[] value = new byte[valueLength];
-          body.readBytes(value, 0, valueLength);
+          byte[] value = body.readBytes(valueLength);
           SubDocumentField op = new SubDocumentField(fieldStatus, fieldError, value, command.path, command.type);
           values[command.originalIndex] = op;
         }
       } else if (isJson) {
         // Body contains an error message
-        byte[] value = new byte[body.readableBytes()];
-        body.readBytes(value, 0, body.readableBytes());
-        bodyErrorMessage = new String(value, UTF_8);
+        bodyErrorMessage = new String(body.readRemaining(), UTF_8);
       }
     }
 
@@ -252,10 +218,15 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       error = Optional.of(nonFieldError);
     }
 
-    return new SubdocGetResponse(status, error, values, cas(response), isDeleted, flexibleExtras);
+    return new SubdocGetResponse(status, error, values, response.cas(), isDeleted, flexibleExtras);
   }
 
   public static class Command {
+    /**
+     * Opcode, flags and path length.
+     */
+    private static final int HEADER_SIZE = 4;
+
     private final SubdocCommandType type;
     private final String path;
     private final boolean xattr;
@@ -274,12 +245,10 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       this.binary = binary;
     }
 
-    public ByteBuf encode(ByteBufAllocator alloc, boolean binarySupported) {
-      byte[] path = this.path.getBytes(UTF_8);
-      int pathLength = path.length;
-
-      ByteBuf buffer = alloc.buffer(4 + pathLength);
-      buffer.writeByte(type.opcode());
+    /**
+     * Writes the command (its header, then the path) into the buffer.
+     */
+    void encodeTo(ByteBuffer body, byte[] path, boolean binarySupported) {
       byte flags = 0;
       if (xattr) {
         flags |= SUBDOC_FLAG_XATTR_PATH;
@@ -287,10 +256,11 @@ public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
       if (binary && binarySupported) {
         flags |= SUBDOC_FLAG_BINARY_VALUE;
       }
-      buffer.writeByte(flags);
-      buffer.writeShort(pathLength);
-      buffer.writeBytes(path);
-      return buffer;
+      body
+        .put(type.opcode())
+        .put(flags)
+        .putShort((short) path.length)
+        .put(path);
     }
 
     public int originalIndex() {
