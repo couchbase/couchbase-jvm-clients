@@ -22,11 +22,12 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -34,16 +35,9 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
-public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
+public class DecrementRequest extends BasePortableKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
 
   private final long delta;
   private final Optional<Long> initial;
@@ -71,40 +65,33 @@ public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> imp
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
-
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      extras = alloc.buffer((Long.BYTES * 2) + Integer.BYTES);
-      extras.writeLong(delta);
-      if (initial.isPresent()) {
-        extras.writeLong(initial.get());
-        extras.writeInt((int) expiry);
-      } else {
-        extras.writeLong(0); // no initial present, will lead to doc not found
-        extras.writeInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY);
-      }
-
-      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DECREMENT, noDatatype(),
-          partition(), opaque, noCas(), flexibleExtras, extras, key, noBody());
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-      ReferenceCountUtil.release(flexibleExtras);
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.DECREMENT)
+      .partition(partition())
+      .key(collection, key());
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
+    SectionWriter extras = request.extras().putLong(delta);
+    if (initial.isPresent()) {
+      extras.putLong(initial.get()).putInt((int) expiry);
+    } else {
+      extras.putLong(0).putInt(IncrementRequest.COUNTER_NOT_EXISTS_EXPIRY); // no initial present, will lead to doc not found
     }
   }
 
   @Override
-  public DecrementResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
+  public DecrementResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
     return new DecrementResponse(
-      decodeStatus(response),
-      body(response).map(ByteBuf::readLong).orElse(0L),
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      response.responseStatus(),
+      response.hasBody() ? response.body().readLong() : 0,
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get())
     );
   }
 

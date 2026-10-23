@@ -22,12 +22,11 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
@@ -35,13 +34,10 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
-public class PrependRequest extends BaseKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
+
+public class PrependRequest extends BasePortableKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long cas;
@@ -63,44 +59,41 @@ public class PrependRequest extends BaseKeyValueRequest<PrependResponse> impleme
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf content = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
 
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-
-      byte datatype = 0;
-      CompressionConfig config = ctx.compressionConfig();
-      if (config != null && config.enabled() && this.content.length >= config.minSize()) {
-        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(this.content, config.minRatio());
-        if (maybeCompressed != null) {
-          datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-          content = maybeCompressed;
-        } else {
-          content = Unpooled.wrappedBuffer(this.content);
-        }
-      } else {
-        content = Unpooled.wrappedBuffer(this.content);
+    int datatype = 0;
+    byte[] value = this.content;
+    CompressionConfig config = ctx.compressionConfig();
+    if (config != null && config.enabled() && this.content.length >= config.minSize()) {
+      byte[] compressed = MemcacheProtocol.tryCompressionToArray(this.content, config.minRatio());
+      if (compressed != null) {
+        datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
+        value = compressed;
       }
-
-      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.PREPEND, datatype, partition(),
-          opaque, cas, flexibleExtras, noExtras(), key, content);
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(content);
-      ReferenceCountUtil.release(flexibleExtras);
     }
+
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.PREPEND)
+      .partition(partition())
+      .datatype(datatype)
+      .cas(cas)
+      .key(collection, key())
+      .value(value);
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
   }
 
   @Override
-  public PrependResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
+  public PrependResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
     return new PrependResponse(
-      decodeStatus(response),
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      response.responseStatus(),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get())
     );
   }
 

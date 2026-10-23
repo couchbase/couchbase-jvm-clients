@@ -22,26 +22,26 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
 /**
  * Represents a KV delete operation.
  *
  * @since 2.0.0
  */
-public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
+public class RemoveRequest extends BasePortableKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
 
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;
@@ -62,32 +62,29 @@ public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implement
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType);
-
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-
-      return MemcacheProtocol.flexibleRequest(alloc, MemcacheProtocol.Opcode.DELETE, noDatatype(),
-            partition(), opaque, cas, flexibleExtras, noExtras(), key, noBody());
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(flexibleExtras);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    KeyValueRequestBuilder request = encoder.beginRequest(MemcacheProtocol.Opcode.DELETE)
+      .partition(partition())
+      .cas(cas)
+      .key(collection, key());
+    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
   }
 
   @Override
-  public RemoveResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    Optional<MutationToken> mutationToken = extractToken(
-      ctx.mutationTokensEnabled(),
-      partition(),
-      response,
-      ctx.bucket().get()
+  public RemoveResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    return new RemoveResponse(
+      response.responseStatus(),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get()),
+      response.flexibleExtras()
     );
-    return new RemoveResponse(status, cas(response), mutationToken, flexibleExtras(response));
   }
 
   @Override

@@ -22,29 +22,21 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extrasAsInt;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-
 /**
  * Represents a kv get meta operation.
  *
  * @since 2.0.0
  */
-public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
+public class GetMetaRequest extends BasePortableKeyValueRequest<GetMetaResponse> {
 
   public GetMetaRequest(final String key, final Duration timeout, final CoreContext ctx,
                         final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final RequestSpan span) {
@@ -57,27 +49,24 @@ public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-
-    try {
-      extras = alloc.buffer(Byte.BYTES);
-      extras.writeByte(2);
-
-      key = encodedKeyWithCollection(alloc, ctx);
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.GET_META, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    encoder.beginRequest(MemcacheProtocol.Opcode.GET_META)
+      .partition(partition())
+      .key(collection, key())
+      .extras().putByte(2);
   }
 
   @Override
-  public GetMetaResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    boolean deleted = extrasAsInt(response, 0, 0) != 0;
-    return new GetMetaResponse(decodeStatus(response), cas(response), deleted);
+  public GetMetaResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    boolean deleted = response.extrasAsInt(0, 0) != 0;
+    return new GetMetaResponse(response.responseStatus(), response.cas(), deleted);
   }
 
   @Override

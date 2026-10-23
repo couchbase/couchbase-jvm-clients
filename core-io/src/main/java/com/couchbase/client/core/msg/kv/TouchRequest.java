@@ -22,24 +22,17 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 
 import java.time.Duration;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
 
-public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
+public class TouchRequest extends BasePortableKeyValueRequest<TouchResponse> {
 
   private final long expiry;
 
@@ -55,29 +48,26 @@ public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-
-    try {
-      key = encodedKeyWithCollection(alloc, ctx);
-      extras = alloc.buffer(Integer.BYTES);
-      extras.writeInt((int) expiry);
-
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.TOUCH, noDatatype(),
-        partition(), opaque, noCas(), extras, key, noBody());
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-    }
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    KeyValueChannelContext ctx
+  ) {
+    byte[] collection = collectionPrefix(ctx);
+    encoder.beginRequest(MemcacheProtocol.Opcode.TOUCH)
+      .partition(partition())
+      .key(collection, key())
+      .extras().putInt((int) expiry);
   }
 
   @Override
-  public TouchResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
+  public TouchResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
     return new TouchResponse(
-      decodeStatus(response),
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get())
+      response.responseStatus(),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get())
     );
   }
 
