@@ -36,8 +36,8 @@ class NettyKeyValueRequestEncoderTest {
 
   private ByteBuf encodeSet(byte[] value, int valueLength) {
     HeaderStage request = encoder.beginRequest(MemcacheProtocol.Opcode.SET, 99)
-      .datatype((byte) 1)
-      .partition((short) 7)
+      .datatype(1)
+      .partition(7)
       .cas(5);
     request.startExtras().putInt(0xcafe);
     request.startKey().putBytes(KEY);

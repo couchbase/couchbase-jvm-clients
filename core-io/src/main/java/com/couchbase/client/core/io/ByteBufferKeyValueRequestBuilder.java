@@ -58,8 +58,8 @@ public final class ByteBufferKeyValueRequestBuilder implements
 
   private MemcacheProtocol.@Nullable Opcode opcode;
   private int opaque;
-  private byte datatype;
-  private short partition;
+  private int datatype; // checked to fit a byte (signed or unsigned)
+  private int partition; // checked to fit an unsigned short
   private long cas;
 
   // Where each section starts (-1 if the request didn't write it), and which was started last.
@@ -120,14 +120,20 @@ public final class ByteBufferKeyValueRequestBuilder implements
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder datatype(byte datatype) {
+  public ByteBufferKeyValueRequestBuilder datatype(int datatype) {
+    if (datatype < Byte.MIN_VALUE || datatype > 0xff) {
+      throw new IllegalArgumentException("Datatype isn't a byte (signed or unsigned): " + datatype);
+    }
     checkNotComplete();
     this.datatype = datatype;
     return this;
   }
 
   @Override
-  public ByteBufferKeyValueRequestBuilder partition(short partition) {
+  public ByteBufferKeyValueRequestBuilder partition(int partition) {
+    if (partition < 0 || partition > 0xffff) {
+      throw new IllegalArgumentException("Partition must be 0 to 65535, but was " + partition);
+    }
     checkNotComplete();
     this.partition = partition;
     return this;
@@ -328,8 +334,8 @@ public final class ByteBufferKeyValueRequestBuilder implements
     buffer
       .put(i + 1, requireNonNull(opcode).opcode())
       .put(i + 4, (byte) extrasLength)
-      .put(i + 5, datatype)
-      .putShort(i + 6, partition)
+      .put(i + 5, (byte) datatype)
+      .putShort(i + 6, (short) partition)
       .putInt(i + 8, framingExtrasLength + extrasLength + keyLength + valueLength())
       .putInt(i + 12, opaque)
       .putLong(i + 16, cas);

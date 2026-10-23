@@ -41,6 +41,7 @@ import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -261,6 +262,87 @@ class PortableKeyValueRequestTest {
     assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encode(ALLOC, 1, ctx));
   }
 
+  @Test
+  void subdocMutateOneCommand() throws IOException {
+    assertSubdocMutateEncoding(ctx(null, EnumSet.of(ServerFeature.COLLECTIONS)), new MutateRequestSpec(),
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
+  }
+
+  @Test
+  void subdocMutateSeveralCommandsWithInsertExpiryAndCommandFlags() throws IOException {
+    MutateRequestSpec request = new MutateRequestSpec();
+    request.insert = true;
+    request.expiration = 3600;
+    assertSubdocMutateEncoding(ctx(null, EnumSet.of(ServerFeature.COLLECTIONS)), request,
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "txn.id", "\"${Mutation.CAS}\"").xattr().createParent().expandMacro(),
+      new MutateSpec(SubdocCommandType.DELETE, "old", null),
+      new MutateSpec(SubdocCommandType.COUNTER, "count", "5"),
+      new MutateSpec(SubdocCommandType.ARRAY_PUSH_LAST, "ünïcödé", "\"x\""));
+  }
+
+  @Test
+  void subdocMutateWithUserFlagsBinaryAndDocumentFlags() throws IOException {
+    MutateRequestSpec request = new MutateRequestSpec();
+    request.upsert = true;
+    request.accessDeleted = true;
+    request.createAsDeleted = true;
+    request.userFlags = 0x02000006;
+    KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS, ServerFeature.SUBDOC_BINARY_XATTR, ServerFeature.CREATE_AS_DELETED));
+    assertSubdocMutateEncoding(ctx, request,
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "bin", "\u0001\u0002").xattr().binary());
+  }
+
+  @Test
+  void subdocMutateSendsUserFlagsOnlyWhenSupported() throws IOException {
+    MutateRequestSpec request = new MutateRequestSpec();
+    request.upsert = true;
+    request.userFlags = 0x02000006;
+    request.expiration = 60;
+    assertSubdocMutateEncoding(ctx(null, EnumSet.of(ServerFeature.COLLECTIONS)), request,
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
+
+    request.expiration = 0;
+    assertSubdocMutateEncoding(ctx(null, EnumSet.of(ServerFeature.COLLECTIONS)), request,
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
+  }
+
+  @Test
+  void subdocMutateWithCasDurabilityAndPreserveExpiry() throws IOException {
+    MutateRequestSpec request = new MutateRequestSpec();
+    request.cas = 0x1234_5678_9abcL;
+    request.preserveExpiry = true;
+    request.durability = Optional.of(DurabilityLevel.MAJORITY);
+    KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS, ServerFeature.SYNC_REPLICATION, ServerFeature.ALT_REQUEST, ServerFeature.PRESERVE_TTL));
+    assertSubdocMutateEncoding(ctx, request,
+      new MutateSpec(SubdocCommandType.REPLACE, "a.b", "{\"c\":true}"));
+  }
+
+  @Test
+  void subdocMutateBodyBiggerThanWriteBuffer() throws IOException {
+    char[] fragment = new char[100_000];
+    Arrays.fill(fragment, 'f');
+    String big = "\"" + new String(fragment) + "\"";
+    assertSubdocMutateEncoding(ctx(null, EnumSet.of(ServerFeature.COLLECTIONS)), new MutateRequestSpec(),
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", big),
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "b", big));
+  }
+
+  @Test
+  void subdocMutateRejectsFeaturesTheServerLacks() {
+    KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
+
+    MutateRequestSpec createAsDeleted = new MutateRequestSpec();
+    createAsDeleted.upsert = true;
+    createAsDeleted.createAsDeleted = true;
+    SubdocMutateRequest request = subdocMutate(createAsDeleted, new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
+
+    SubdocMutateRequest binary = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1").binary());
+    assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream()), 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> binary.encode(ALLOC, 1, ctx));
+  }
+
   // Decoding
 
   @Test
@@ -373,6 +455,61 @@ class PortableKeyValueRequestTest {
 
     for (SubdocGetResponse response : decodeEveryWay(request, packet)) {
       assertEquals(0, response.values().length);
+      String message = response.error().orElseThrow(AssertionError::new).getMessage();
+      assertTrue(message.contains("bad path"), message);
+    }
+  }
+
+  @Test
+  void decodesSubdocMutateResultsAndMutationToken() {
+    SubdocMutateRequest request = subdocMutate(new MutateRequestSpec(),
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"),
+      new MutateSpec(SubdocCommandType.COUNTER, "count", "5"));
+    request.partition(PARTITION);
+    byte[] extras = new byte[16];
+    Unpooled.wrappedBuffer(extras).setLong(0, 0xabcdefL).setLong(8, 99);
+    // Only the counter returns a value.
+    byte[] body = ByteBufUtil.getBytes(Unpooled.buffer().writeByte(1).writeShort(0).writeInt(2).writeBytes("42".getBytes(UTF_8)));
+    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, (byte) 0, (short) 0, 555, extras, new byte[0], body);
+
+    KeyValueChannelContext tokens = ctx(null, EnumSet.of(ServerFeature.MUTATION_SEQNO));
+    for (SubdocMutateResponse response : decodeEveryWay(request, packet, tokens)) {
+      assertEquals(ResponseStatus.SUCCESS, response.status());
+      assertEquals(555, response.cas());
+      assertFalse(response.error().isPresent());
+      assertNull(response.values()[0]);
+      assertArrayEquals("42".getBytes(UTF_8), response.values()[1].value());
+      MutationToken token = response.mutationToken().orElseThrow(AssertionError::new);
+      assertEquals(PARTITION, token.partitionID());
+      assertEquals(0xabcdefL, token.partitionUUID());
+      assertEquals(99, token.sequenceNumber());
+    }
+  }
+
+  @Test
+  void decodesSubdocMutateFirstFailure() {
+    SubdocMutateRequest request = subdocMutate(new MutateRequestSpec(),
+      new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"),
+      new MutateSpec(SubdocCommandType.REPLACE, "missing", "2"));
+    byte[] body = ByteBufUtil.getBytes(Unpooled.buffer().writeByte(1).writeShort(MemcacheProtocol.Status.SUBDOC_PATH_NOT_FOUND.status()));
+    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, (byte) 0,
+      MemcacheProtocol.Status.SUBDOC_MULTI_PATH_FAILURE.status(), 0, new byte[0], new byte[0], body);
+
+    for (SubdocMutateResponse response : decodeEveryWay(request, packet)) {
+      assertEquals(0, response.values().length);
+      String message = response.error().orElseThrow(AssertionError::new).getMessage();
+      assertTrue(message.contains("missing"), message);
+    }
+  }
+
+  @Test
+  void decodesSubdocMutateErrorMessage() {
+    SubdocMutateRequest request = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
+    byte[] packet = response(MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, MemcacheProtocol.Datatype.JSON.datatype(),
+      MemcacheProtocol.Status.INVALID_REQUEST.status(), 0, new byte[0], new byte[0],
+      "{\"error\":{\"context\":\"bad path\"}}".getBytes(UTF_8));
+
+    for (SubdocMutateResponse response : decodeEveryWay(request, packet)) {
       String message = response.error().orElseThrow(AssertionError::new).getMessage();
       assertTrue(message.contains("bad path"), message);
     }
@@ -598,6 +735,162 @@ class PortableKeyValueRequestTest {
       key.release();
       extras.release();
       body.release();
+    }
+  }
+
+  /**
+   * A sub-document mutation's options (which the request doesn't expose).
+   */
+  private static final class MutateRequestSpec {
+    boolean insert;
+    boolean upsert;
+    boolean accessDeleted;
+    boolean createAsDeleted;
+    long expiration;
+    boolean preserveExpiry;
+    long cas;
+    int userFlags;
+    Optional<DurabilityLevel> durability = Optional.empty();
+
+    byte docFlags() {
+      byte flags = 0;
+      if (upsert) {
+        flags |= 0x01;
+      }
+      if (insert) {
+        flags |= 0x02;
+      }
+      if (accessDeleted) {
+        flags |= 0x04;
+      }
+      if (createAsDeleted) {
+        flags |= 0x08;
+      }
+      return flags;
+    }
+  }
+
+  /**
+   * A sub-document mutation command (whose fields the request doesn't expose).
+   */
+  private static final class MutateSpec {
+    final SubdocCommandType type;
+    final String path;
+    final byte @Nullable [] fragment;
+    boolean xattr;
+    boolean createParent;
+    boolean expandMacro;
+    boolean binary;
+
+    MutateSpec(
+      SubdocCommandType type,
+      String path,
+      @Nullable String fragment
+    ) {
+      this.type = type;
+      this.path = path;
+      this.fragment = fragment == null ? null : fragment.getBytes(UTF_8);
+    }
+
+    MutateSpec xattr() {
+      xattr = true;
+      return this;
+    }
+
+    MutateSpec createParent() {
+      createParent = true;
+      return this;
+    }
+
+    MutateSpec expandMacro() {
+      expandMacro = true;
+      return this;
+    }
+
+    MutateSpec binary() {
+      binary = true;
+      return this;
+    }
+  }
+
+  @SuppressWarnings("deprecation") // the constructor that takes commands and user flags
+  private static SubdocMutateRequest subdocMutate(
+    MutateRequestSpec options,
+    MutateSpec... specs
+  ) {
+    List<SubdocMutateRequest.Command> commands = new ArrayList<>();
+    for (int i = 0; i < specs.length; i++) {
+      MutateSpec spec = specs[i];
+      commands.add(new SubdocMutateRequest.Command(spec.type, spec.path, spec.fragment, spec.createParent, spec.xattr,
+        spec.expandMacro, spec.binary, i));
+    }
+    return new SubdocMutateRequest(TIMEOUT, CORE_CONTEXT, CUSTOM_COLLECTION, null, BestEffortRetryStrategy.INSTANCE,
+      "some-key", options.insert, options.upsert, false, options.accessDeleted, options.createAsDeleted, commands,
+      options.expiration, options.preserveExpiry, options.cas, options.userFlags, options.durability, null);
+  }
+
+  private static void assertSubdocMutateEncoding(
+    KeyValueChannelContext ctx,
+    MutateRequestSpec options,
+    MutateSpec... specs
+  ) throws IOException {
+    SubdocMutateRequest request = subdocMutate(options, specs);
+    assertEncoding(request, ctx, referenceSubdocMutate(request, options, specs, ctx));
+  }
+
+  private static byte[] referenceSubdocMutate(
+    SubdocMutateRequest request,
+    MutateRequestSpec options,
+    MutateSpec[] specs,
+    KeyValueChannelContext ctx
+  ) {
+    ByteBuf flexibleExtras = mutationFlexibleExtras(request, ctx, ALLOC, options.durability, options.preserveExpiry);
+    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf extras = ALLOC.buffer();
+    CompositeByteBuf content = ALLOC.compositeBuffer();
+    try {
+      if (options.userFlags != 0 && ctx.subdocBinaryXattr()) {
+        extras.writeInt((int) options.expiration);
+        extras.writeInt(options.userFlags);
+      } else if (options.expiration != 0) {
+        extras.writeInt((int) options.expiration);
+      }
+      if (options.docFlags() != 0) {
+        extras.writeByte(options.docFlags());
+      }
+
+      for (MutateSpec spec : specs) {
+        byte[] path = spec.path.getBytes(UTF_8);
+        byte[] fragment = spec.fragment == null ? new byte[0] : spec.fragment;
+        byte flags = 0;
+        if (spec.xattr) {
+          flags |= 0x04;
+        }
+        if (spec.createParent) {
+          flags |= 0x01;
+        }
+        if (spec.expandMacro) {
+          flags |= 0x10;
+        }
+        if (spec.binary) {
+          flags |= 0x20;
+        }
+        content.addComponent(true, ALLOC.buffer(8 + path.length + fragment.length)
+          .writeByte(spec.type.opcode())
+          .writeByte(flags)
+          .writeShort(path.length)
+          .writeInt(fragment.length)
+          .writeBytes(path)
+          .writeBytes(fragment));
+      }
+
+      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, MemcacheProtocol.Opcode.SUBDOC_MULTI_MUTATE, noDatatype(),
+        PARTITION, OPAQUE, options.cas, flexibleExtras, extras, key, content));
+    } finally {
+      flexibleExtras.release();
+      key.release();
+      extras.release();
+      content.release();
     }
   }
 

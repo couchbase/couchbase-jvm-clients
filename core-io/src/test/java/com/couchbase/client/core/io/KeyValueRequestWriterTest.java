@@ -72,7 +72,7 @@ class KeyValueRequestWriterTest {
    * Builds a SET with 4 bytes of extras, the key, and the value.
    */
   private void build(byte[] value) {
-    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 99).partition((short) 7);
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.SET, 99).partition(7);
     request.startExtras().putInt(0xcafe);
     request.startKey().putBytes(KEY);
     request.value(value, value.length);
@@ -122,8 +122,8 @@ class KeyValueRequestWriterTest {
     byte[] value = "value-and-garbage".getBytes(UTF_8);
     writer.makeRoomForRequest();
     HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.REPLACE, 99)
-      .datatype((byte) 3)
-      .partition((short) 7)
+      .datatype(3)
+      .partition(7)
       .cas(0x0102030405060708L);
     request.startFramingExtras().putBytes(framingExtras);
     request.startExtras().putInt(0xcafe);
@@ -207,6 +207,33 @@ class KeyValueRequestWriterTest {
     byte[] packet = flushed();
     assertArrayEquals(new byte[]{(byte) 0x80, (byte) 0xff, (byte) 0x80, 0, (byte) 0xff, (byte) 0xff},
       Arrays.copyOfRange(packet, MemcacheProtocol.HEADER_SIZE, packet.length));
+  }
+
+  @Test
+  void datatypeTakesSignedOrUnsignedAndPartitionTakesUnsigned() throws IOException {
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.GET, 1).datatype(255).partition(65535).value(new byte[0]);
+    writer.completeRequestHead();
+    writer.finishRequest();
+    writer.makeRoomForRequest();
+    writer.beginRequest(MemcacheProtocol.Opcode.GET, 1).datatype(-128).partition(0).value(new byte[0]);
+    writer.completeRequestHead();
+    writer.finishRequest();
+
+    ByteBuffer packets = ByteBuffer.wrap(flushed());
+    assertEquals((byte) 0xff, packets.get(5));
+    assertEquals((short) 0xffff, packets.getShort(6));
+    assertEquals((byte) 0x80, packets.get(MemcacheProtocol.HEADER_SIZE + 5));
+    assertEquals(0, packets.getShort(MemcacheProtocol.HEADER_SIZE + 6));
+  }
+
+  @Test
+  void refusesDatatypeOrPartitionOutOfRange() {
+    HeaderStage request = writer.beginRequest(MemcacheProtocol.Opcode.GET, 1);
+    assertThrows(IllegalArgumentException.class, () -> request.datatype(256));
+    assertThrows(IllegalArgumentException.class, () -> request.datatype(-129));
+    assertThrows(IllegalArgumentException.class, () -> request.partition(65536));
+    assertThrows(IllegalArgumentException.class, () -> request.partition(-1));
   }
 
   @Test

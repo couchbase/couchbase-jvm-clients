@@ -26,15 +26,15 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.config.BucketCapabilities;
 import com.couchbase.client.core.config.BucketConfig;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
+import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.ExtrasStage;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -42,6 +42,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
 import reactor.util.annotation.Nullable;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -53,22 +54,14 @@ import static com.couchbase.client.core.api.kv.CoreStoreSemantics.REVIVE;
 import static com.couchbase.client.core.api.kv.CoreStoreSemantics.UPSERT;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Status;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.cas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeSubDocumentStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extractToken;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.flexibleRequest;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mapSubDocumentError;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 import static com.couchbase.client.core.msg.kv.SubdocUtil.handleNonFieldLevelErrors;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 
-public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
+public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;
@@ -224,77 +217,69 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf key = null;
-    ByteBuf extras = null;
-    ByteBuf content = null;
-    ByteBuf flexibleExtras = mutationFlexibleExtras(this, ctx, alloc, syncReplicationType, preserveExpiry);
-
-    try {
-      if (createAsDeleted && !ctx.createAsDeleted()) {
-        // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
-        // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
-        // It is left purely as an additional safety measure.
-        throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
-      }
-
-      key = encodedKeyWithCollection(alloc, ctx);
-
-      extras = alloc.buffer();
-      if (userFlags != 0 && ctx.subdocBinaryXattr()) {
-        // If we are sending userFlags, have to send expiration also, so server can disambiguate between permutations of optional fields.
-        extras.writeInt((int) expiration);
-        extras.writeInt(userFlags);
-      } else {
-        if (expiration != 0) {
-          extras.writeInt((int) expiration);
-        }
-      }
-      if (flags != 0) {
-        extras.writeByte(flags);
-      }
-
-      for (Command command : commands) {
-        if (command.binary && !ctx.subdocBinaryXattr()) {
-          throw new FeatureNotAvailableException("Binary documents are only supported when using Couchbase Server 7.6.2 or above");
-        }
-      }
-
-      if (commands.size() == 1) {
-        content = commands.get(0).encode(alloc);
-      } else {
-        content = alloc.compositeBuffer(commands.size());
-        for (Command command : commands) {
-          ByteBuf commandBuffer = command.encode(alloc);
-          try {
-            ((CompositeByteBuf) content).addComponent(commandBuffer);
-            content.writerIndex(content.writerIndex() + commandBuffer.readableBytes());
-          } catch (Exception ex) {
-            ReferenceCountUtil.release(commandBuffer);
-            throw ex;
-          }
-        }
-      }
-
-      return flexibleRequest(alloc, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(), partition(), opaque,
-          cas, flexibleExtras, extras, key, content);
-
-    } finally {
-      ReferenceCountUtil.release(key);
-      ReferenceCountUtil.release(extras);
-      ReferenceCountUtil.release(flexibleExtras);
-      ReferenceCountUtil.release(content);
+  public void encodeTo(
+    KeyValueRequestEncoder encoder,
+    int opaque,
+    KeyValueChannelContext ctx
+  ) {
+    if (createAsDeleted && !ctx.createAsDeleted()) {
+      // Memcached 6.5.0 and below will reset the connection if this flag is sent, hence checking the createAsDeleted HELO
+      // This should never trigger, it should be preempted by the BucketCapabilities.CREATE_AS_DELETED check above.
+      // It is left purely as an additional safety measure.
+      throw new FeatureNotAvailableException("Cannot use createAsDeleted Sub-Document flag, as it is not supported by this version of the cluster");
     }
+
+    for (Command command : commands) {
+      if (command.binary && !ctx.subdocBinaryXattr()) {
+        throw new FeatureNotAvailableException("Binary documents are only supported when using Couchbase Server 7.6.2 or above");
+      }
+    }
+
+    byte[] collection = collectionPrefix(ctx);
+
+    // The body: every command, in the encoder's scratch array.
+    byte[][] paths = new byte[commands.size()][];
+    int bodyLength = 0;
+    for (int i = 0; i < paths.length; i++) {
+      paths[i] = commands.get(i).path.getBytes(UTF_8);
+      bodyLength += Command.HEADER_SIZE + paths[i].length + commands.get(i).fragment.length;
+    }
+    byte[] body = encoder.scratch(bodyLength);
+    ByteBuffer bodyBuffer = ByteBuffer.wrap(body, 0, bodyLength);
+    for (int i = 0; i < paths.length; i++) {
+      commands.get(i).encodeTo(bodyBuffer, paths[i]);
+    }
+
+    ExtrasStage extras = putMutationFlexibleExtras(
+      encoder.beginRequest(Opcode.SUBDOC_MULTI_MUTATE, opaque)
+        .partition(partition())
+        .cas(cas)
+        .startFramingExtras(),
+      this, ctx, syncReplicationType, preserveExpiry
+    ).startExtras();
+    if (userFlags != 0 && ctx.subdocBinaryXattr()) {
+      // If we are sending userFlags, have to send expiration also, so server can disambiguate between permutations of optional fields.
+      extras.putInt((int) expiration).putInt(userFlags);
+    } else if (expiration != 0) {
+      extras.putInt((int) expiration);
+    }
+    if (flags != 0) {
+      extras.putByte(flags);
+    }
+    extras.startKey().putBytes(collection).putBytes(key())
+      .value(body, bodyLength);
   }
 
   @Override
-  public SubdocMutateResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    boolean isJson = (datatype(response) & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
-    Optional<ByteBuf> maybeBody = body(response);
-    short rawOverallStatus = status(response);
-    ResponseStatus overallStatus = decodeStatus(response);
+  public SubdocMutateResponse decode(
+    final KeyValuePacket response,
+    KeyValueChannelContext ctx
+  ) {
+    boolean isJson = (response.datatype() & MemcacheProtocol.Datatype.JSON.datatype()) != 0;
+    short rawOverallStatus = response.status();
+    ResponseStatus overallStatus = response.responseStatus();
     Optional<CouchbaseException> error = Optional.empty();
-    MemcacheProtocol.FlexibleExtras flexibleExtras = MemcacheProtocol.flexibleExtras(response);
+    MemcacheProtocol.FlexibleExtras flexibleExtras = response.flexibleExtras();
     String bodyErrorMessage = null;
 
     SubDocumentField[] values = null;
@@ -304,8 +289,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
     boolean isSuccess = rawOverallStatus == Status.SUCCESS.status()
       || rawOverallStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status();
 
-    if (maybeBody.isPresent()) {
-      ByteBuf body = maybeBody.get();
+    if (response.hasBody()) {
+      BodyReader body = response.body();
 
       // If there's a multi-mutation failure we only get the first failure back
       if (rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()
@@ -322,7 +307,7 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
         // Check we can read index (1 byte) and status (2 bytes), else we're done
         int INDEX_PLUS_STATUS_FIELDS_BYTES = 3;
-        while (body.isReadable(INDEX_PLUS_STATUS_FIELDS_BYTES)) {
+        while (body.remaining() >= INDEX_PLUS_STATUS_FIELDS_BYTES) {
           byte index = body.readByte();
           Command command = commands.get(index);
 
@@ -338,17 +323,14 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
             values[command.originalIndex] = op;
           } else {
             int valueLength = body.readInt();
-            byte[] value = new byte[valueLength];
-            body.readBytes(value, 0, valueLength);
+            byte[] value = body.readBytes(valueLength);
             SubDocumentField op = new SubDocumentField(status, Optional.empty(), value, command.path, command.type);
             values[command.originalIndex] = op;
           }
         }
       } else if (isJson) {
         // Body contains an error message
-        byte[] value = new byte[body.readableBytes()];
-        body.readBytes(value, 0, body.readableBytes());
-        bodyErrorMessage = new String(value, UTF_8);
+        bodyErrorMessage = new String(body.readRemaining(), UTF_8);
       }
     }
 
@@ -362,8 +344,8 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       overallStatus,
       error,
       values,
-      cas(response),
-      extractToken(ctx.mutationTokensEnabled(), partition(), response, ctx.bucket().get()),
+      response.cas(),
+      response.mutationToken(ctx.mutationTokensEnabled(), partition(), ctx.bucket().get()),
       flexibleExtras
     );
   }
@@ -382,6 +364,11 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public static class Command {
     private final static byte[] EMPTY_ARRAY = new byte[] {};
+
+    /**
+     * Opcode, flags, path length and fragment length.
+     */
+    private static final int HEADER_SIZE = 8;
 
     private final SubdocCommandType type;
     private final String path;
@@ -409,32 +396,33 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
       this.binary = binary;
     }
 
-    public ByteBuf encode(final ByteBufAllocator alloc) {
-      byte[] path = this.path.getBytes(UTF_8);
-      int pathLength = path.length;
-
-      ByteBuf buffer = alloc.buffer(8 + pathLength + fragment.length);
-      buffer.writeByte(type.opcode());
+    /**
+     * Writes the command (its header, then the path and fragment) into the buffer.
+     */
+    void encodeTo(
+      ByteBuffer body,
+      byte[] path
+    ) {
       byte flags = 0;
       if (xattr) {
         flags |= SUBDOC_FLAG_XATTR_PATH;
       }
-      if(createParent) {
+      if (createParent) {
         flags |= SUBDOC_FLAG_CREATE_PATH;
       }
-      if(expandMacro) {
+      if (expandMacro) {
         flags |= SUBDOC_FLAG_EXPAND_MACRO;
       }
-      if(binary) {
+      if (binary) {
         flags |= SUBDOC_FLAG_BINARY_VALUE;
       }
-      buffer.writeByte(flags);
-      buffer.writeShort(pathLength);
-      buffer.writeInt(fragment.length);
-      buffer.writeBytes(path);
-      buffer.writeBytes(fragment);
-
-      return buffer;
+      body
+        .put(type.opcode())
+        .put(flags)
+        .putShort((short) path.length)
+        .putInt(fragment.length)
+        .put(path)
+        .put(fragment);
     }
 
     public int originalIndex() {

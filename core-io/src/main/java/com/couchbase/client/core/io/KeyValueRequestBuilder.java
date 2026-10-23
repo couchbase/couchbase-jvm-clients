@@ -57,9 +57,19 @@ public final class KeyValueRequestBuilder {
    * Sets the header fields; then any section, or the value, may follow.
    */
   public interface HeaderStage {
-    HeaderStage datatype(byte datatype);
+    /**
+     * Sets the datatype bits; -128 to 255, so a signed or unsigned byte.
+     *
+     * @throws IllegalArgumentException if it's out of that range.
+     */
+    HeaderStage datatype(int datatype);
 
-    HeaderStage partition(short partition);
+    /**
+     * Sets the partition (vbucket); 0 to 65535.
+     *
+     * @throws IllegalArgumentException if it's out of that range.
+     */
+    HeaderStage partition(int partition);
 
     HeaderStage cas(long cas);
 
