@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import org.jspecify.annotations.NullMarked;
 
 /**
@@ -47,6 +48,12 @@ import org.jspecify.annotations.NullMarked;
 @Stability.Internal
 @NullMarked
 public interface KeyValueRequestBuilder {
+  /**
+   * Returns the context of the connection the request is for (the encoder's {@link KeyValueRequestEncoder#context()}),
+   * for helpers that build part of a request from the builder alone.
+   */
+  KeyValueChannelContext context();
+
   /**
    * Adds datatype bits: ORs them into the datatype (which starts at 0), so parts of a request (its value's
    * compression, say) can each add their own, in any order. -128 to 255, so a signed or unsigned byte.

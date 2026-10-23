@@ -29,7 +29,7 @@ import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
@@ -68,12 +68,9 @@ public class IncrementRequest extends BasePortableKeyValueRequest<IncrementRespo
   }
 
   @Override
-  public void encodeTo(
-    KeyValueRequestEncoder encoder,
-    KeyValueChannelContext ctx
-  ) {
-    KeyValueRequestBuilder request = beginDocumentRequest(encoder, MemcacheProtocol.Opcode.INCREMENT, ctx);
-    putMutationFlexibleExtras(request, this, ctx, syncReplicationType, false);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.INCREMENT);
+    putMutationFlexibleExtras(request, this, syncReplicationType, false);
     SectionWriter extras = request.extras().putLong(delta);
     if (initial.isPresent()) {
       extras.putLong(initial.get()).putInt((int) expiry);

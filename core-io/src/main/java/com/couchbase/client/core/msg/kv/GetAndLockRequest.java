@@ -56,12 +56,9 @@ public class GetAndLockRequest extends BasePortableKeyValueRequest<GetAndLockRes
   }
 
   @Override
-  public void encodeTo(
-    KeyValueRequestEncoder encoder,
-    KeyValueChannelContext ctx
-  ) {
+  public void encodeTo(KeyValueRequestEncoder encoder) {
     long secondsToLock = CbDurations.getSecondsCeil(lockFor);
-    beginDocumentRequest(encoder, Opcode.GET_AND_LOCK, ctx)
+    beginDocumentRequest(encoder, Opcode.GET_AND_LOCK)
       .extras().putInt(Math.toIntExact(secondsToLock));
   }
 

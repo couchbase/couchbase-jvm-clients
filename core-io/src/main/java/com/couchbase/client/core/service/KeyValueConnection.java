@@ -288,10 +288,10 @@ final class KeyValueConnection {
     this.listener = requireNonNull(listener);
     this.tcpSocket = requireNonNull(tcpSocket);
     this.socket = requireNonNull(socket);
-    this.requestWriter = new KeyValueRequestWriter(out, BUFFER_SIZE);
     this.packets = requireNonNull(packets);
     this.ioContext = requireNonNull(ioContext);
     this.channelContext = requireNonNull(channelContext);
+    this.requestWriter = new KeyValueRequestWriter(out, BUFFER_SIZE, channelContext);
     this.shortChannelId = requireNonNull(shortChannelId);
     this.channelId = requireNonNull(channelId);
     this.timings = requireNonNull(timings);
@@ -591,7 +591,7 @@ final class KeyValueConnection {
 
     try {
       try {
-        portable.encodeTo(requestWriter, channelContext);
+        portable.encodeTo(requestWriter);
       } catch (Throwable err) {
         requestWriter.abortRequest();
         handleEncodeFailure(request, err);

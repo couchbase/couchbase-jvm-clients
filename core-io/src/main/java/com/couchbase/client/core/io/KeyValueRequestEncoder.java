@@ -17,7 +17,8 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import org.jspecify.annotations.NullMarked;
 
 /**
@@ -25,6 +26,9 @@ import org.jspecify.annotations.NullMarked;
  * <p>
  * The request calls {@link #beginRequest}, and builds its packet with the {@link KeyValueRequestBuilder} that returns.
  * Whoever called {@code encodeTo} then finishes the packet, or abandons it.
+ * <p>
+ * An encoder belongs to one connection, and has its {@link #context()}: what the request needs to know about
+ * the connection (for example, its collections, and the features the server negotiated).
  * <p>
  * Implementations: {@link KeyValueRequestWriter} (the socket KV connection's writer, which encodes straight into
  * its write buffer), and {@link com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder}
@@ -37,6 +41,11 @@ public interface KeyValueRequestEncoder {
    * The most a request's head (header, framing extras, extras and key) may take.
    */
   int MAX_REQUEST_HEAD_SIZE = 1024;
+
+  /**
+   * Returns the context of the connection the encoder belongs to.
+   */
+  KeyValueChannelContext context();
 
   /**
    * Returns an array of at least the given length, for a request to encode its value into (for example,
@@ -54,5 +63,5 @@ public interface KeyValueRequestEncoder {
    *
    * @throws IllegalStateException if a request is already being built.
    */
-  KeyValueRequestBuilder beginRequest(MemcacheProtocol.Opcode opcode);
+  KeyValueRequestBuilder beginRequest(Opcode opcode);
 }

@@ -56,8 +56,8 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetRequest;
@@ -279,21 +279,21 @@ class SocketKeyValueEndpointTest {
     SocketKeyValueEndpoint endpoint = connectedEndpoint();
 
     // In the order the Netty implementation sends them: SELECT_BUCKET is pipelined with SASL_AUTH, since PLAIN has one round trip.
-    List<MemcacheProtocol.Opcode> handshake = server.receivedSoFar().stream()
-      .map(it -> MemcacheProtocol.Opcode.of(it.opcode()))
+    List<Opcode> handshake = server.receivedSoFar().stream()
+      .map(it -> Opcode.of(it.opcode()))
       .collect(Collectors.toList());
     assertEquals(
       listOf(
-        MemcacheProtocol.Opcode.HELLO,
-        MemcacheProtocol.Opcode.ERROR_MAP,
-        MemcacheProtocol.Opcode.SASL_LIST_MECHS,
-        MemcacheProtocol.Opcode.SASL_AUTH,
-        MemcacheProtocol.Opcode.SELECT_BUCKET
+        Opcode.HELLO,
+        Opcode.ERROR_MAP,
+        Opcode.SASL_LIST_MECHS,
+        Opcode.SASL_AUTH,
+        Opcode.SELECT_BUCKET
       ),
       handshake
     );
 
-    FakeKeyValueServer.Packet hello = server.nextReceived(MemcacheProtocol.Opcode.HELLO, TIMEOUT);
+    FakeKeyValueServer.Packet hello = server.nextReceived(Opcode.HELLO, TIMEOUT);
     String helloKey = hello.key();
     assertTrue(helloKey.contains("\"i\":\"" + endpoint.context().channelId().orElseThrow(AssertionError::new) + "\""), helloKey);
 
@@ -317,7 +317,7 @@ class SocketKeyValueEndpointTest {
     startServer();
     List<FakeKeyValueServer.Packet> gets = new ArrayList<>();
     server.handler((connection, request) -> {
-      if (!request.is(MemcacheProtocol.Opcode.GET)) {
+      if (!request.is(Opcode.GET)) {
         connection.respond(request, STATUS_SUCCESS);
         return;
       }
@@ -354,7 +354,7 @@ class SocketKeyValueEndpointTest {
     startServer();
     List<FakeKeyValueServer.Packet> gets = new ArrayList<>();
     server.handler((connection, request) -> {
-      if (!request.is(MemcacheProtocol.Opcode.GET)) {
+      if (!request.is(Opcode.GET)) {
         connection.respond(request, STATUS_SUCCESS);
         return;
       }
@@ -410,7 +410,7 @@ class SocketKeyValueEndpointTest {
     List<FakeKeyValueServer.Packet> held = new CopyOnWriteArrayList<>();
     AtomicReference<byte[]> restOfSecond = new AtomicReference<>();
     server.handler((connection, request) -> {
-      if (!request.is(MemcacheProtocol.Opcode.GET)) {
+      if (!request.is(Opcode.GET)) {
         connection.respond(request, STATUS_SUCCESS);
         return;
       }
@@ -520,7 +520,7 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.handler((connection, request) -> {
-      if (request.is(MemcacheProtocol.Opcode.GET)) {
+      if (request.is(Opcode.GET)) {
         connection.close(); // instead of answering
       } else {
         connection.respond(request, STATUS_SUCCESS);
@@ -552,7 +552,7 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.handler((connection, request) -> {
-      if (request.is(MemcacheProtocol.Opcode.GET)) {
+      if (request.is(Opcode.GET)) {
         connection.socket.setSoLinger(true, 0); // so closing resets the connection
         connection.close();
       } else {
@@ -575,7 +575,7 @@ class SocketKeyValueEndpointTest {
     startServer();
     String config = "{\"rev\":1234}";
     server.handler((connection, request) -> {
-      if (request.is(MemcacheProtocol.Opcode.GET)) {
+      if (request.is(Opcode.GET)) {
         connection.respond(request, STATUS_NOT_MY_VBUCKET, config.getBytes(UTF_8));
       } else {
         connection.respond(request, STATUS_SUCCESS);
@@ -627,7 +627,7 @@ class SocketKeyValueEndpointTest {
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED);
 
     List<String> mechanisms = server.receivedSoFar().stream()
-      .filter(it -> it.is(MemcacheProtocol.Opcode.SASL_AUTH))
+      .filter(it -> it.is(Opcode.SASL_AUTH))
       .map(FakeKeyValueServer.Packet::key)
       .collect(Collectors.toList());
     assertEquals(listOf("SCRAM-SHA512", "PLAIN"), mechanisms);
@@ -852,13 +852,13 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.handler((connection, request) -> {
-      if (!request.is(MemcacheProtocol.Opcode.GET)) {
+      if (!request.is(Opcode.GET)) {
         connection.respond(request, STATUS_SUCCESS);
         return;
       }
       // In one write, so the client reads them together.
       connection.send(concat(
-        connection.response(MemcacheProtocol.Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]),
+        connection.response(Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]),
         connection.response(request, STATUS_SUCCESS, "value".getBytes(UTF_8))
       ));
     });
@@ -888,7 +888,7 @@ class SocketKeyValueEndpointTest {
       }
     };
 
-    connection.respond(MemcacheProtocol.Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
+    connection.respond(Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
 
     GenericFailureDetectedEvent failure = waitForEvent(GenericFailureDetectedEvent.class);
     assertSame(error, failure.cause());
@@ -904,7 +904,7 @@ class SocketKeyValueEndpointTest {
     SocketKeyValueEndpoint endpoint = connectedEndpoint();
     FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
 
-    connection.respond(MemcacheProtocol.Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
+    connection.respond(Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
 
     waitForEvent(UnknownResponseReceivedEvent.class);
     ChannelClosedProactivelyEvent closed = waitForEvent(ChannelClosedProactivelyEvent.class);
@@ -923,8 +923,8 @@ class SocketKeyValueEndpointTest {
     connectedEndpoint();
 
     // Two unanswered NOOPs (see KeyValueIdleDetectorTest for the exact timing).
-    server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
-    server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
+    server.nextReceived(Opcode.NOOP, TIMEOUT);
+    server.nextReceived(Opcode.NOOP, TIMEOUT);
     waitForEvent(UnexpectedEndpointDisconnectedEvent.class);
   }
 
@@ -977,7 +977,7 @@ class SocketKeyValueEndpointTest {
     CountDownLatch released = new CountDownLatch(1);
     cleanup.add(0, released::countDown);
     server.handler((connection, request) -> {
-      if (request.is(MemcacheProtocol.Opcode.GET)) {
+      if (request.is(Opcode.GET)) {
         // Stops reading (and answering), so the client's writer blocks.
         try {
           released.await();
@@ -1011,7 +1011,7 @@ class SocketKeyValueEndpointTest {
     Thread.sleep(300);
 
     assertTrue(
-      server.receivedSoFar().stream().noneMatch(it -> it.is(MemcacheProtocol.Opcode.NOOP)),
+      server.receivedSoFar().stream().noneMatch(it -> it.is(Opcode.NOOP)),
       "should not send NOOPs"
     );
     assertTrue(events(UnexpectedEndpointDisconnectedEvent.class).isEmpty());
@@ -1031,7 +1031,7 @@ class SocketKeyValueEndpointTest {
 
     // Well past the idle timeout.
     for (int i = 0; i < 5; i++) {
-      server.nextReceived(MemcacheProtocol.Opcode.NOOP, TIMEOUT);
+      server.nextReceived(Opcode.NOOP, TIMEOUT);
     }
     assertTrue(events(UnexpectedEndpointDisconnectedEvent.class).isEmpty());
     assertEquals(channelId, endpoint.context().channelId().orElse(null));
@@ -1050,9 +1050,9 @@ class SocketKeyValueEndpointTest {
       }
     };
     connectedEndpoint();
-    server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT); // the handshake's
+    server.nextReceived(Opcode.SASL_AUTH, TIMEOUT); // the handshake's
 
-    FakeKeyValueServer.Packet auth = server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT);
+    FakeKeyValueServer.Packet auth = server.nextReceived(Opcode.SASL_AUTH, TIMEOUT);
     assertEquals("OAUTHBEARER", auth.key());
   }
 
@@ -1064,11 +1064,11 @@ class SocketKeyValueEndpointTest {
     String jwt = base64Url("{}") + "." + base64Url("{}") + "." + base64Url("signature");
     when(core.context().authenticator()).thenReturn(JwtAuthenticator.create(jwt));
     connectedEndpoint();
-    server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT); // the handshake's
+    server.nextReceived(Opcode.SASL_AUTH, TIMEOUT); // the handshake's
 
     authenticationRefreshTriggers.publish(Core.AuthenticationRefreshTrigger.INSTANCE);
 
-    FakeKeyValueServer.Packet auth = server.nextReceived(MemcacheProtocol.Opcode.SASL_AUTH, TIMEOUT);
+    FakeKeyValueServer.Packet auth = server.nextReceived(Opcode.SASL_AUTH, TIMEOUT);
     assertEquals("OAUTHBEARER", auth.key());
     assertTrue(new String(auth.body(), UTF_8).contains("auth=Bearer " + jwt));
 
@@ -1085,7 +1085,7 @@ class SocketKeyValueEndpointTest {
     CountDownLatch released = new CountDownLatch(1);
     cleanup.add(0, released::countDown);
     server.handler((connection, request) -> {
-      if (request.is(MemcacheProtocol.Opcode.GET)) {
+      if (request.is(Opcode.GET)) {
         // Stops reading, so the client's writes back up.
         try {
           released.await();
@@ -1271,9 +1271,9 @@ class SocketKeyValueEndpointTest {
     start();
     GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
       @Override
-      public void encodeTo(KeyValueRequestEncoder encoder, KeyValueChannelContext ctx) {
+      public void encodeTo(KeyValueRequestEncoder encoder) {
         // Extras too long for the header's length field.
-        encoder.beginRequest(MemcacheProtocol.Opcode.GET).partition(partition()).extras().putBytes(new byte[256]);
+        encoder.beginRequest(Opcode.GET).partition(partition()).extras().putBytes(new byte[256]);
       }
     };
     assertFailsOnlyTheRequestWhenItFailsVerification(malformed);
