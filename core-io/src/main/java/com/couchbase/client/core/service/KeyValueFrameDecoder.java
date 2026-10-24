@@ -23,6 +23,8 @@ import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
 
 /**
@@ -45,11 +47,26 @@ final class KeyValueFrameDecoder {
   static final int DEFAULT_CAPACITY = 64 * 1024;
 
   /**
-   * The least room {@link #fill} makes for a read, so reads aren't tiny.
+   * The least room {@link #fill} makes for a read by default, so reads aren't tiny.
    */
-  private static final int MIN_READ = 8 * 1024;
+  static final int DEFAULT_MIN_READ = 8 * 1024;
+
+  /**
+   * The least room {@link #fill} makes for a read.
+   */
+  private final int minRead;
 
   private byte[] buffer = new byte[DEFAULT_CAPACITY];
+
+  /**
+   * Wraps {@link #buffer}, for reading from a channel. Replaced when the buffer is.
+   */
+  private ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+
+  /**
+   * See {@link #lastFillFilledRoom}.
+   */
+  private boolean lastFillFilledRoom;
 
   /**
    * Where the next packet to hand out starts.
@@ -60,6 +77,21 @@ final class KeyValueFrameDecoder {
    * Where the next read goes: the end of what's been read.
    */
   private int writeIndex;
+
+  KeyValueFrameDecoder() {
+    this(DEFAULT_MIN_READ);
+  }
+
+  /**
+   * @param minRead the least room to make for a read. For example, a TLS channel reads a whole record at a time,
+   * and copies it if there isn't room for it.
+   */
+  KeyValueFrameDecoder(int minRead) {
+    if (minRead < 1 || minRead > DEFAULT_CAPACITY) {
+      throw new IllegalArgumentException("minRead must be between 1 and " + DEFAULT_CAPACITY + ", but was " + minRead);
+    }
+    this.minRead = minRead;
+  }
 
   /**
    * Reads what the stream has (blocking until it has something) into the buffer.
@@ -77,7 +109,32 @@ final class KeyValueFrameDecoder {
   }
 
   /**
-   * Makes sure there's room to read: at least {@link #MIN_READ} bytes, or the rest of a partly read packet,
+   * Reads what the channel has into the buffer. Doesn't wait if the channel is non-blocking.
+   *
+   * @return how many bytes were read (0 if the channel had none), or -1 if the channel ended.
+   */
+  int fill(ReadableByteChannel in) throws IOException {
+    makeRoom();
+    int room = buffer.length - writeIndex;
+    byteBuffer.limit(buffer.length).position(writeIndex);
+    int read = in.read(byteBuffer);
+    if (read > 0) {
+      writeIndex += read;
+    }
+    lastFillFilledRoom = read == room;
+    return read;
+  }
+
+  /**
+   * Returns true if the last {@link #fill(ReadableByteChannel)} filled all the room it had, so the channel
+   * probably has more.
+   */
+  boolean lastFillFilledRoom() {
+    return lastFillFilledRoom;
+  }
+
+  /**
+   * Makes sure there's room to read: at least {@link #minRead} bytes, or the rest of a partly read packet,
    * whichever is more. Moves bytes (the unread part of a packet) only when the room after them runs out,
    * like {@link java.io.BufferedInputStream}, so most reads copy nothing.
    */
@@ -89,7 +146,7 @@ final class KeyValueFrameDecoder {
     }
 
     int unread = writeIndex - readIndex;
-    int needed = Math.max(MIN_READ, remainingOfPartialPacket());
+    int needed = Math.max(minRead, remainingOfPartialPacket());
 
     if (buffer.length > DEFAULT_CAPACITY && unread + needed <= DEFAULT_CAPACITY) {
       // Done with the big packet that made the buffer grow: go back to the usual size.
@@ -122,7 +179,10 @@ final class KeyValueFrameDecoder {
   private void moveUnreadTo(byte[] destination) {
     int unread = writeIndex - readIndex;
     System.arraycopy(buffer, readIndex, destination, 0, unread);
-    buffer = destination;
+    if (destination != buffer) {
+      buffer = destination;
+      byteBuffer = ByteBuffer.wrap(destination);
+    }
     readIndex = 0;
     writeIndex = unread;
   }

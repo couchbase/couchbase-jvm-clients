@@ -76,14 +76,15 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Like {@link KeyValueEndpoint}, but without Netty: each connection is a plain socket (with TLS, if enabled),
- * read and written by threads of its own (see {@link KeyValueConnection}).
+ * read and written by threads of its own (see {@link KeyValueConnection}), or by a shared NIO event loop
+ * (see {@link NioKeyValueConnection}).
  * <p>
  * Does what {@link BaseEndpoint} does for a KV endpoint, with the same states, events, circuit breaker,
  * and reconnect backoff.
  */
 @NullMarked
 @Stability.Internal
-public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.Listener {
+public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnection.Listener {
   private static final Logger log = LoggerFactory.getLogger(SocketKeyValueEndpoint.class);
 
   private static final Duration TARGET_ABSENT_BEFORE_DISCONNECT = Duration.ofSeconds(
@@ -106,6 +107,12 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
   private final KeyValueSocketConnector connector;
   private final Set<ServerFeature> features;
 
+  /**
+   * Whether connections use NIO on a shared event loop ({@link NioKeyValueConnection}), or a reader thread and
+   * a writer thread each ({@link KeyValueConnection}).
+   */
+  private final boolean nio;
+
   private final AtomicBoolean disconnect = new AtomicBoolean();
   private final CountDownLatch disconnectSignal = new CountDownLatch(1);
 
@@ -117,13 +124,13 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
   /**
    * The connect attempt in progress, if any. Guarded by {@link #lock}.
    */
-  private @Nullable KeyValueConnectionOpener connecting;
+  private KeyValueEndpointConnection.@Nullable Opener connecting;
 
   /**
    * The current connection, once connected. Like BaseEndpoint's channel, it's kept after it closes
    * (until the next one connects), for diagnostics.
    */
-  private volatile @Nullable KeyValueConnection connection;
+  private volatile @Nullable KeyValueEndpointConnection connection;
 
   /**
    * Whether {@link #closed} was called for {@link #connection}. Guarded by {@link #lock}.
@@ -146,6 +153,23 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     Authenticator authenticator,
     KeyValueSocketConnector connector
   ) {
+    // The com.couchbase.kvNio system property (false by default), read when the endpoint is created.
+    this(serviceContext, hostname, port, bucketName, authenticator, connector, Boolean.getBoolean("com.couchbase.kvNio"));
+  }
+
+  /**
+   * @param nio whether connections use NIO (see {@link NioKeyValueConnection}).
+   */
+  SocketKeyValueEndpoint(
+    ServiceContext serviceContext,
+    String hostname,
+    int port,
+    Optional<String> bucketName,
+    Authenticator authenticator,
+    KeyValueSocketConnector connector,
+    boolean nio
+  ) {
+    this.nio = nio;
     this.hostname = requireNonNull(hostname);
     this.port = port;
     this.bucketName = requireNonNull(bucketName);
@@ -208,11 +232,13 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
       EndpointContext ctx = endpointContext.get();
       Duration connectTimeout = ctx.environment().timeoutConfig().connectTimeout();
       long start = System.nanoTime();
-      KeyValueConnectionOpener opener = null;
-      KeyValueConnection conn = null;
+      KeyValueEndpointConnection.Opener opener = null;
+      KeyValueEndpointConnection conn = null;
 
       try {
-        opener = new KeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
+        opener = nio
+          ? new NioKeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector)
+          : new KeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
         synchronized (lock) {
           if (disconnect.get()) {
             throw new IllegalStateException("Endpoint was told to disconnect.");
@@ -295,7 +321,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     }
   }
 
-  private void connected(EndpointContext ctx, KeyValueConnection conn, long start) {
+  private void connected(EndpointContext ctx, KeyValueEndpointConnection conn, long start) {
     long now = System.nanoTime();
     Duration elapsed = Duration.ofNanos(now - start);
 
@@ -344,7 +370,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     }
   }
 
-  private static TreeMap<String, Duration> timings(@Nullable KeyValueConnectionOpener opener) {
+  private static TreeMap<String, Duration> timings(KeyValueEndpointConnection.@Nullable Opener opener) {
     return opener == null ? new TreeMap<>() : new TreeMap<>(opener.timings());
   }
 
@@ -389,7 +415,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
 
   @Override
   public void disconnect() {
-    KeyValueConnection conn;
+    KeyValueEndpointConnection conn;
     synchronized (lock) {
       if (!disconnect.compareAndSet(false, true)) {
         return;
@@ -420,7 +446,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     return disconnect.get();
   }
 
-  // ---- KeyValueConnection.Listener
+  // ---- KeyValueEndpointConnection.Listener
 
   @Override
   public void responseReceived() {
@@ -439,7 +465,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
    * Like BaseEndpoint's notifyChannelInactive() (and its closeChannel(), when told to disconnect).
    */
   @Override
-  public void closed(KeyValueConnection conn, int requestsInFlight) {
+  public void closed(KeyValueEndpointConnection conn, int requestsInFlight) {
     // Under the lock, so disconnect() either happens first (and leaves the rest to us),
     // or after we reconnect (and stops the connect loop).
     synchronized (lock) {
@@ -489,7 +515,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
       return;
     }
 
-    KeyValueConnection conn = connection;
+    KeyValueEndpointConnection conn = connection;
     if (conn != null && canWrite(conn)) {
       request.context()
         .lastDispatchedFrom(ctx.localSocket().orElse(null))
@@ -519,7 +545,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
     }
   }
 
-  private boolean canWrite(KeyValueConnection conn) {
+  private boolean canWrite(KeyValueEndpointConnection conn) {
     return state.state() == EndpointState.CONNECTED
       && conn.isWritable()
       && circuitBreaker.allowsRequest();
@@ -532,7 +558,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
 
   @Override
   public long outstandingRequests() {
-    KeyValueConnection conn = connection;
+    KeyValueEndpointConnection conn = connection;
     return conn == null || conn.isClosed() ? 0 : conn.inFlightCount();
   }
 
@@ -575,7 +601,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueConnection.List
 
   @Override
   public EndpointDiagnostics diagnostics() {
-    KeyValueConnection conn = connection;
+    KeyValueEndpointConnection conn = connection;
     String remote = conn == null ? null : format(conn.remoteAddress());
     String local = conn == null ? null : format(conn.localAddress());
 

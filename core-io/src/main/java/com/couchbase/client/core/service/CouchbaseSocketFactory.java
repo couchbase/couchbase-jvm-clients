@@ -37,6 +37,9 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketOption;
+import java.net.StandardSocketOptions;
+import java.nio.channels.NetworkChannel;
+import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.StringJoiner;
@@ -54,6 +57,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>SO_SNDBUF and SO_RCVBUF, if configured. Unlike the others, they're set before the socket connects:
  *   the receive buffer size affects the TCP window scale, which is agreed when connecting.
  * </ul>
+ * Also opens the channels for KV connections that use NIO (see {@link #openChannel}), with the same options,
+ * except TCP_USER_TIMEOUT (the native code can't find a channel's file descriptor yet).
+ * <p>
  * The options are set as soon as each socket connects (before {@code connect} returns, so before the TLS handshake),
  * and each one is best-effort: if it can't be set, the OS default applies. Each socket's options (and any that
  * couldn't be set) are logged at debug level.
@@ -100,6 +106,11 @@ final class CouchbaseSocketFactory extends SocketFactory {
    * Whether a socket has already failed to get TCP_USER_TIMEOUT (and that's been logged at warning level).
    */
   private final AtomicBoolean warnedAboutUserTimeoutFailure = new AtomicBoolean();
+
+  /**
+   * Whether it's been logged that NIO channels don't get TCP_USER_TIMEOUT.
+   */
+  private final AtomicBoolean warnedAboutChannelUserTimeout = new AtomicBoolean();
 
   CouchbaseSocketFactory(IoConfig ioConfig, boolean nativeIoEnabled) {
     keepAlive = ioConfig.tcpKeepAlivesEnabled();
@@ -164,6 +175,52 @@ final class CouchbaseSocketFactory extends SocketFactory {
         log.debug("Failed to set SO_RCVBUF={} on a new socket", receive, e);
       }
     }
+  }
+
+  /**
+   * Opens an unconnected, non-blocking channel, with the configured buffer sizes (like {@link #createSocket()}).
+   * Call {@link #configure(SocketChannel)} once it's connected.
+   */
+  SocketChannel openChannel() throws IOException {
+    SocketChannel channel = SocketChannel.open();
+    try {
+      channel.configureBlocking(false);
+      setBufferSizes(channel.socket());
+      return channel;
+    } catch (IOException | RuntimeException e) {
+      channel.close();
+      throw e;
+    }
+  }
+
+  /**
+   * Sets the options on a newly connected channel from {@link #openChannel}, best-effort, and logs them.
+   * Like {@link #configure(Socket)}, except TCP_USER_TIMEOUT, which isn't set.
+   */
+  void configure(SocketChannel channel) {
+    StringJoiner options = new StringJoiner(", ");
+    set(options, "TCP_NODELAY", true, () -> channel.setOption(StandardSocketOptions.TCP_NODELAY, true));
+    if (keepAlive) {
+      set(options, "SO_KEEPALIVE", true, () -> channel.setOption(StandardSocketOptions.SO_KEEPALIVE, true));
+      if (keepAliveIdleSeconds != 0) set(options, "TCP_KEEPIDLE", keepAliveIdleSeconds, () -> setChannelOption(channel, TCP_KEEPIDLE, keepAliveIdleSeconds));
+      if (keepAliveIntervalSeconds != 0) set(options, "TCP_KEEPINTERVAL", keepAliveIntervalSeconds, () -> setChannelOption(channel, TCP_KEEPINTERVAL, keepAliveIntervalSeconds));
+      if (keepAliveCount != 0) set(options, "TCP_KEEPCOUNT", keepAliveCount, () -> setChannelOption(channel, TCP_KEEPCOUNT, keepAliveCount));
+    }
+    Duration userTimeout = tcpUserTimeout;
+    if (userTimeout != null) {
+      options.add("TCP_USER_TIMEOUT=" + userTimeout.toMillis() + "ms (not set: not supported for NIO channels yet)");
+      if (!warnedAboutChannelUserTimeout.getAndSet(true)) {
+        log.warn("Can't set TCP_USER_TIMEOUT on NIO KV connections yet, so the OS default applies to them.");
+      }
+    }
+    Socket socket = channel.socket();
+    if (sendBufferBytes != null) {
+      options.add("SO_SNDBUF=" + bufferSize(socket::getSendBufferSize) + " (requested " + sendBufferBytes + ")");
+    }
+    if (receiveBufferBytes != null) {
+      options.add("SO_RCVBUF=" + bufferSize(socket::getReceiveBufferSize) + " (requested " + receiveBufferBytes + ")");
+    }
+    log.debug("Socket options for {}: {}", channel, options);
   }
 
   @Override
@@ -289,6 +346,14 @@ final class CouchbaseSocketFactory extends SocketFactory {
     } else {
       throw new UnsupportedOperationException("this JDK can't set extended socket options");
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void setChannelOption(NetworkChannel channel, @Nullable SocketOption<?> option, int value) throws IOException {
+    if (option == null) {
+      throw new UnsupportedOperationException("this JDK doesn't have it (it needs Java 11 or later)");
+    }
+    channel.setOption((SocketOption<Integer>) option, value);
   }
 
   private static @Nullable SocketOption<?> jdkExtendedOption(String name) {

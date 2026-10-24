@@ -116,7 +116,7 @@ import static java.util.Objects.requireNonNull;
  * Thread-safe.
  */
 @NullMarked
-final class KeyValueConnection {
+final class KeyValueConnection implements KeyValueEndpointConnection {
   private static final Logger log = LoggerFactory.getLogger(KeyValueConnection.class);
 
   /**
@@ -151,28 +151,6 @@ final class KeyValueConnection {
    * {@code FlushConsolidationHandler} (which uses the same default for both).
    */
   private static final int FLUSH_CONSOLIDATION_LIMIT = 256;
-
-  /**
-   * What the connection tells its endpoint.
-   */
-  interface Listener {
-    /**
-     * Called for every response the connection reads.
-     */
-    void responseReceived();
-
-    /**
-     * Called for each request that was queued, but never written, when the connection closed.
-     */
-    void writeFailed(KeyValueRequest<? extends Response> request, Throwable cause);
-
-    /**
-     * Called once, after a connection that was {@linkplain #start started} closes, and its requests were retried.
-     *
-     * @param requestsInFlight how many requests were written, and waiting for their responses, when it closed.
-     */
-    void closed(KeyValueConnection connection, int requestsInFlight);
-  }
 
   /**
    * A request that was written, and is waiting for its response.
@@ -343,35 +321,41 @@ final class KeyValueConnection {
   /**
    * The connection's ID, as sent in the HELLO request.
    */
-  String channelId() {
+  @Override
+  public String channelId() {
     return channelId;
   }
 
   /**
    * The connection's ID in short form (hex digits, without a "0x" prefix), like a Netty channel ID's short form.
    */
-  String shortChannelId() {
+  @Override
+  public String shortChannelId() {
     return shortChannelId;
   }
 
   /**
    * How long each connect step took, keyed like the Netty implementation's connect timings.
    */
-  SortedMap<String, Duration> timings() {
+  @Override
+  public SortedMap<String, Duration> timings() {
     synchronized (timings) {
       return new TreeMap<>(timings);
     }
   }
 
-  SocketAddress localAddress() {
+  @Override
+  public SocketAddress localAddress() {
     return localAddress;
   }
 
-  SocketAddress remoteAddress() {
+  @Override
+  public SocketAddress remoteAddress() {
     return remoteAddress;
   }
 
-  boolean isClosed() {
+  @Override
+  public boolean isClosed() {
     return closed.get();
   }
 
@@ -379,14 +363,16 @@ final class KeyValueConnection {
    * Returns false if the connection has too many bytes waiting to be written (like Netty's channel writability,
    * with the same high and low water marks).
    */
-  boolean isWritable() {
+  @Override
+  public boolean isWritable() {
     return queue.isWritable() && !closed.get();
   }
 
   /**
    * The number of requests written that are waiting for their responses.
    */
-  int inFlightCount() {
+  @Override
+  public int inFlightCount() {
     return inFlight.size();
   }
 
@@ -395,7 +381,8 @@ final class KeyValueConnection {
   /**
    * Starts the reader and writer. Call once.
    */
-  void start() {
+  @Override
+  public void start() {
     idle.start();
     startThread(this::runReader);
     startThread(this::runWriter);
@@ -439,7 +426,8 @@ final class KeyValueConnection {
    * @return false if the connection is closed, so the request wasn't sent (the caller should retry it).
    */
   @SuppressWarnings("unchecked")
-  boolean send(KeyValueRequest<? extends Response> req) {
+  @Override
+  public boolean send(KeyValueRequest<? extends Response> req) {
     if (closed.get()) {
       return false;
     }
@@ -897,7 +885,8 @@ final class KeyValueConnection {
   /**
    * Closes the connection (if it isn't already). The requests it was sending are retried once its threads finish.
    */
-  void close() {
+  @Override
+  public void close() {
     close(null);
   }
 

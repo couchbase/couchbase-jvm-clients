@@ -29,6 +29,8 @@ import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
+import com.couchbase.client.core.service.KeyValueEventLoopGroup;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -101,6 +103,13 @@ public class IoEnvironment {
   private final OwnedOrExternal<EventLoopGroupAndType> viewEventLoopGroup;
   private final OwnedOrExternal<EventLoopGroupAndType> eventingEventLoopGroup;
   private final OwnedOrExternal<EventLoopGroupAndType> backupEventLoopGroup;
+
+  /**
+   * The event loops for KV connections that use NIO instead of Netty, once the first one opens
+   * (see {@link #nioKeyValueEventLoopGroup}). Guarded by "this".
+   */
+  private @Nullable KeyValueEventLoopGroup nioKeyValueEventLoopGroup;
+  private boolean nioKeyValueEventLoopGroupShutDown;
 
   /**
    * Creates the {@link IoEnvironment} with default settings.
@@ -569,6 +578,24 @@ public class IoEnvironment {
   }
 
   /**
+   * Returns the event loops for KV connections that use NIO instead of Netty
+   * (see {@code com.couchbase.client.core.service.NioKeyValueConnection}), with {@link #eventLoopThreadCount} threads,
+   * like the Netty KV event loop group. Created when first asked for, so it has no threads unless they're used.
+   *
+   * @throws IllegalStateException if the environment is shut down.
+   */
+  @Stability.Internal
+  public synchronized KeyValueEventLoopGroup nioKeyValueEventLoopGroup() {
+    if (nioKeyValueEventLoopGroup == null) {
+      if (nioKeyValueEventLoopGroupShutDown) {
+        throw new IllegalStateException("The IoEnvironment is shut down");
+      }
+      nioKeyValueEventLoopGroup = new KeyValueEventLoopGroup(eventLoopThreadCount);
+    }
+    return nioKeyValueEventLoopGroup;
+  }
+
+  /**
    * Instructs all the owned event loops to shut down.
    *
    * @param timeout the maximum amount of time to wait before returning back control.
@@ -583,8 +610,20 @@ public class IoEnvironment {
       shutdownGroup(searchEventLoopGroup, timeout),
       shutdownGroup(viewEventLoopGroup, timeout),
       shutdownGroup(eventingEventLoopGroup, timeout),
-      shutdownGroup(backupEventLoopGroup, timeout)
+      shutdownGroup(backupEventLoopGroup, timeout),
+      shutdownNioKeyValueEventLoopGroup(timeout)
     ).then();
+  }
+
+  private Mono<Void> shutdownNioKeyValueEventLoopGroup(final Duration timeout) {
+    return Mono.defer(() -> {
+      KeyValueEventLoopGroup group;
+      synchronized (this) {
+        nioKeyValueEventLoopGroupShutDown = true;
+        group = nioKeyValueEventLoopGroup;
+      }
+      return group == null ? Mono.empty() : group.shutdown(timeout);
+    });
   }
 
   /**

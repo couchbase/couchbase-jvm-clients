@@ -1,0 +1,96 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) all contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ *
+ * The original came from https://github.com/marianobarrios/tls-channel/ at tag "1.0.0".
+ *
+ * It was relocated into a different package to avoid conflicts with
+ * the original.
+ */
+
+package com.couchbase.client.core.io.repackaged.tlschannel;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAccumulator;
+import java.util.concurrent.atomic.LongAdder;
+
+/** A decorating {@link BufferAllocator} that keeps statistics. */
+public class TrackingAllocator implements BufferAllocator {
+
+    private final BufferAllocator impl;
+
+    private final LongAdder bytesAllocatedAdder = new LongAdder();
+    private final LongAdder bytesDeallocatedAdder = new LongAdder();
+    private final AtomicLong currentAllocationSize = new AtomicLong();
+    private final LongAccumulator maxAllocationSizeAcc = new LongAccumulator(Math::max, 0);
+
+    private final LongAdder buffersAllocatedAdder = new LongAdder();
+    private final LongAdder buffersDeallocatedAdder = new LongAdder();
+
+    public TrackingAllocator(BufferAllocator impl) {
+        this.impl = impl;
+    }
+
+    public ByteBuffer allocate(int size) {
+        bytesAllocatedAdder.add(size);
+        maxAllocationSizeAcc.accumulate(currentAllocationSize.addAndGet(size));
+        buffersAllocatedAdder.increment();
+        return impl.allocate(size);
+    }
+
+    public void free(ByteBuffer buffer) {
+        int size = buffer.capacity();
+        bytesDeallocatedAdder.add(size);
+        currentAllocationSize.addAndGet(-size);
+        buffersDeallocatedAdder.increment();
+        impl.free(buffer);
+    }
+
+    public long bytesAllocated() {
+        return bytesAllocatedAdder.longValue();
+    }
+
+    public long bytesDeallocated() {
+        return bytesDeallocatedAdder.longValue();
+    }
+
+    public long currentAllocation() {
+        return currentAllocationSize.longValue();
+    }
+
+    public long maxAllocation() {
+        return maxAllocationSizeAcc.longValue();
+    }
+
+    public long buffersAllocated() {
+        return buffersAllocatedAdder.longValue();
+    }
+
+    public long buffersDeallocated() {
+        return buffersDeallocatedAdder.longValue();
+    }
+}

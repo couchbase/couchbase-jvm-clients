@@ -20,12 +20,15 @@ import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
+import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.ReadableByteChannel;
 
 import static java.util.Objects.requireNonNull;
 
@@ -33,14 +36,16 @@ import static java.util.Objects.requireNonNull;
  * Reads a KV connection's packets: splits what it reads into packets (see {@link KeyValueFrameDecoder}), and checks
  * each one, like the Netty implementation's MemcacheProtocolVerificationHandler.
  * <p>
- * Used by the connecting thread during the handshake, then by the connection's reader thread, so anything read ahead
- * during the handshake isn't lost. Not thread-safe.
+ * Used by the connecting thread during the handshake, then by the connection's reader thread (or event loop),
+ * so anything read ahead during the handshake isn't lost. Reads from a stream (blocking), or from a channel
+ * (non-blocking, if the channel is). Not thread-safe.
  */
 @NullMarked
 final class KeyValuePacketReader {
-  private final InputStream input;
+  private final @Nullable InputStream input;
+  private final @Nullable ReadableByteChannel channel;
   private final IoContext ioContext;
-  private final KeyValueFrameDecoder frames = new KeyValueFrameDecoder();
+  private final KeyValueFrameDecoder frames;
 
   /**
    * @param input the socket's input stream. Unbuffered: the frame decoder does the buffering.
@@ -48,7 +53,21 @@ final class KeyValuePacketReader {
    */
   KeyValuePacketReader(InputStream input, IoContext ioContext) {
     this.input = requireNonNull(input);
+    this.channel = null;
     this.ioContext = requireNonNull(ioContext);
+    this.frames = new KeyValueFrameDecoder();
+  }
+
+  /**
+   * @param channel the channel to read (see {@link #fillAvailable}).
+   * @param minRead the least room to make for each read (see {@link KeyValueFrameDecoder#KeyValueFrameDecoder(int)}).
+   * @param ioContext for reporting invalid packets.
+   */
+  KeyValuePacketReader(ReadableByteChannel channel, int minRead, IoContext ioContext) {
+    this.input = null;
+    this.channel = requireNonNull(channel);
+    this.ioContext = requireNonNull(ioContext);
+    this.frames = new KeyValueFrameDecoder(minRead);
   }
 
   /**
@@ -101,9 +120,43 @@ final class KeyValuePacketReader {
    * @throws EOFException if the server closed the connection.
    */
   void fill() throws IOException {
+    if (input == null) {
+      throw new IllegalStateException("Reads a channel; use fillAvailable()");
+    }
     if (!frames.fill(input)) {
       throw new EOFException("The server closed the connection.");
     }
+  }
+
+  /**
+   * Reads what the channel has. Doesn't wait if the channel is non-blocking.
+   *
+   * @return how many bytes were read (0 if the channel had none).
+   * @throws EOFException if the server closed the connection.
+   * @throws NeedsWriteException if the channel is a TLS channel that must write before it can read more
+   * (for example, to answer a TLS 1.3 key update). Try again once the socket is writable.
+   */
+  int fillAvailable() throws IOException {
+    if (channel == null) {
+      throw new IllegalStateException("Reads a stream; use fill()");
+    }
+    int read;
+    try {
+      read = frames.fill(channel);
+    } catch (NeedsReadException e) {
+      return 0; // a TLS channel with nothing to read
+    }
+    if (read < 0) {
+      throw new EOFException("The server closed the connection.");
+    }
+    return read;
+  }
+
+  /**
+   * Returns true if the last {@link #fillAvailable} filled all the room it had, so the channel probably has more.
+   */
+  boolean lastFillFilledRoom() {
+    return frames.lastFillFilledRoom();
   }
 
   /**

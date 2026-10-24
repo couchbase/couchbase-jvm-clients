@@ -19,13 +19,20 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.SecurityConfig;
+import com.couchbase.client.core.io.repackaged.tlschannel.ClientTlsChannel;
+import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
+import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import com.couchbase.client.core.util.CbThreads;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
@@ -34,6 +41,10 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.ByteChannel;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -123,6 +134,140 @@ public final class KeyValueSocketConnector {
 
   public boolean tlsEnabled() {
     return tlsSocketFactory != null;
+  }
+
+  /**
+   * A connected channel for a KV connection that uses NIO (see {@link #connectChannel}).
+   */
+  static final class ConnectedChannel {
+    final SocketChannel tcp;
+    final @Nullable ClientTlsChannel tls;
+
+    /**
+     * Waits for the channel until the deadline, until the caller hands the channel over to an event loop.
+     */
+    final KeyValueChannelWaiter waiter;
+
+    ConnectedChannel(SocketChannel tcp, @Nullable ClientTlsChannel tls, KeyValueChannelWaiter waiter) {
+      this.tcp = requireNonNull(tcp);
+      this.tls = tls;
+      this.waiter = requireNonNull(waiter);
+    }
+
+    /**
+     * The channel to read and write: the TLS channel, if TLS is enabled.
+     */
+    ByteChannel io() {
+      return tls != null ? tls : tcp;
+    }
+  }
+
+  /**
+   * Like {@link #connect}, but for a KV connection that uses NIO: connects a non-blocking channel,
+   * and does the TLS handshake (with an {@link SSLEngine}) if TLS is enabled. Blocks until it's done,
+   * or the deadline passes.
+   *
+   * @param onChannel called with the channel as soon as it's created, so the caller can close it to stop the attempt.
+   * @param onWaiter called with the waiter as soon as it's created, so the caller can wake it after closing the channel.
+   * @throws UnknownHostException if the host name can't be resolved, or the deadline passes first.
+   * @throws ConnectException if the deadline passes before the TCP connection is open.
+   * @throws SocketTimeoutException if the deadline passes during the TLS handshake.
+   * @throws IOException if connecting fails. If the TLS handshake fails, it's (or it's caused by)
+   * an {@link javax.net.ssl.SSLException}.
+   */
+  ConnectedChannel connectChannel(
+    String host,
+    int port,
+    long deadlineNanos,
+    Consumer<SocketChannel> onChannel,
+    Consumer<KeyValueChannelWaiter> onWaiter,
+    Runnable onTcpConnected
+  ) throws IOException {
+    CouchbaseSocketFactory couchbaseSocketFactory = socketFactory instanceof CouchbaseSocketFactory ? (CouchbaseSocketFactory) socketFactory : null;
+    SocketChannel channel = couchbaseSocketFactory != null ? couchbaseSocketFactory.openChannel() : openPlainChannel();
+    KeyValueChannelWaiter waiter = null;
+    ClientTlsChannel tls = null;
+    try {
+      onChannel.accept(channel);
+      waiter = new KeyValueChannelWaiter(channel);
+      onWaiter.accept(waiter);
+      InetSocketAddress address = resolve(host, port, deadlineNanos);
+      connectTcp(channel, waiter, address, deadlineNanos);
+      if (couchbaseSocketFactory != null) {
+        couchbaseSocketFactory.configure(channel);
+      }
+      onTcpConnected.run();
+
+      if (tlsSocketFactory == null) {
+        return new ConnectedChannel(channel, null, waiter);
+      }
+
+      // Uses the host name we were given (not the resolved address) for SNI and host name verification.
+      SSLEngine engine = ((PerConnectionSslSocketFactory) tlsSocketFactory).newEngine(host, port);
+      OkHttpTlsHelper.configureTlsEngine(engine, securityConfig);
+      tls = ClientTlsChannel.newBuilder(channel, engine)
+        .withReleaseBuffers(false) // kept for the connection's life, instead of allocated for each read and write
+        .build();
+      while (true) {
+        try {
+          tls.handshake();
+          return new ConnectedChannel(channel, tls, waiter);
+        } catch (NeedsReadException e) {
+          waiter.await(SelectionKey.OP_READ, deadlineNanos);
+        } catch (NeedsWriteException e) {
+          waiter.await(SelectionKey.OP_WRITE, deadlineNanos);
+        } catch (ClosedChannelException e) {
+          if (!channel.isOpen()) {
+            throw e; // closed to stop the attempt
+          }
+          // The TLS channel's way of saying the server closed the connection. Like the JDK's TLS socket.
+          SSLHandshakeException failure = new SSLHandshakeException("Remote host terminated the handshake");
+          failure.initCause(new EOFException("SSL peer shut down incorrectly"));
+          throw failure;
+        }
+      }
+
+    } catch (IOException | RuntimeException e) {
+      closeQuietly(tls != null ? tls : channel);
+      if (waiter != null) {
+        closeQuietly(waiter);
+      }
+      throw e;
+    }
+  }
+
+  private static SocketChannel openPlainChannel() throws IOException {
+    SocketChannel channel = SocketChannel.open();
+    try {
+      channel.configureBlocking(false);
+      return channel;
+    } catch (IOException | RuntimeException e) {
+      channel.close();
+      throw e;
+    }
+  }
+
+  /**
+   * Like {@link #connectTcp(Socket, InetSocketAddress, long)}, for a non-blocking channel.
+   */
+  private static void connectTcp(SocketChannel channel, KeyValueChannelWaiter waiter, InetSocketAddress address, long deadlineNanos) throws IOException {
+    long timeoutMillis = 0;
+    try {
+      timeoutMillis = remainingMillis(deadlineNanos);
+      if (channel.connect(address)) {
+        return;
+      }
+      while (true) {
+        waiter.await(SelectionKey.OP_CONNECT, deadlineNanos);
+        if (channel.finishConnect()) {
+          return;
+        }
+      }
+    } catch (SocketTimeoutException e) {
+      ConnectException timedOut = new ConnectException("connection timed out after " + timeoutMillis + " ms: " + address);
+      timedOut.initCause(e);
+      throw timedOut;
+    }
   }
 
   /**
@@ -258,10 +403,10 @@ public final class KeyValueSocketConnector {
     return (int) Math.max(1, Math.min(Integer.MAX_VALUE, Duration.ofNanos(remainingNanos).toMillis()));
   }
 
-  static void closeQuietly(@Nullable Socket socket) {
-    if (socket != null) {
+  static void closeQuietly(@Nullable Closeable closeable) {
+    if (closeable != null) {
       try {
-        socket.close();
+        closeable.close();
       } catch (IOException ignore) {
         // nothing to do
       }

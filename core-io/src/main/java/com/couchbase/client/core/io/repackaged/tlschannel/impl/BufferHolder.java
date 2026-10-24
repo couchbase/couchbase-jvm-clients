@@ -1,0 +1,180 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) all contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/*
+ * THIS FILE HAS BEEN MODIFIED FROM THE ORIGINAL VERSION.
+ *
+ * The original came from https://github.com/marianobarrios/tls-channel/ at tag "1.0.0".
+ *
+ * It was relocated into a different package to avoid conflicts with
+ * the original.
+ */
+
+package com.couchbase.client.core.io.repackaged.tlschannel.impl;
+
+import java.nio.ByteBuffer;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import com.couchbase.client.core.io.repackaged.tlschannel.BufferAllocator;
+
+public class BufferHolder {
+
+    private static final Logger logger = Logger.getLogger(BufferHolder.class.getName());
+    private static final byte[] zeros = new byte[TlsChannelImpl.maxTlsPacketSize];
+
+    public final String name;
+    public final BufferAllocator allocator;
+    public final boolean plainData;
+    public final int maxSize;
+    public final boolean opportunisticDispose;
+
+    public ByteBuffer buffer;
+    public int lastSize;
+
+    public BufferHolder(
+            String name,
+            Optional<ByteBuffer> buffer,
+            BufferAllocator allocator,
+            int initialSize,
+            int maxSize,
+            boolean plainData,
+            boolean opportunisticDispose) {
+        this.name = name;
+        this.allocator = allocator;
+        this.buffer = buffer.orElse(null);
+        this.maxSize = maxSize;
+        this.plainData = plainData;
+        this.opportunisticDispose = opportunisticDispose;
+        this.lastSize = buffer.map(b -> b.capacity()).orElse(initialSize);
+    }
+
+    public void prepare() {
+        if (buffer == null) {
+            buffer = allocator.allocate(lastSize);
+        }
+    }
+
+    public boolean release() {
+        if (opportunisticDispose && buffer.position() == 0) {
+            return dispose();
+        } else {
+            return false;
+        }
+    }
+
+    public boolean dispose() {
+        if (buffer != null) {
+            allocator.free(buffer);
+            buffer = null;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void enlarge() {
+        if (buffer.capacity() >= maxSize) {
+            throw new IllegalStateException(
+                    String.format("%s buffer insufficient despite having capacity of %d", name, buffer.capacity()));
+        }
+        int newCapacity = Math.min(buffer.capacity() * 2, maxSize);
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.log(Level.FINEST, "enlarging buffer {0}, increasing from {1} to {2}", new Object[] {
+                name, buffer.capacity(), newCapacity
+            });
+        }
+        resize(newCapacity);
+    }
+
+    private void resize(int newCapacity) {
+        ByteBuffer newBuffer = allocator.allocate(newCapacity);
+        buffer.flip();
+        newBuffer.put(buffer);
+        if (plainData) {
+            zero();
+        }
+        allocator.free(buffer);
+        buffer = newBuffer;
+        lastSize = newCapacity;
+    }
+
+    /**
+     * Fill with zeros the remainder of the supplied buffer. This method does not change the buffer
+     * position.
+     *
+     * <p>Typically used for security reasons, with buffers that contain now-unused plaintext.
+     */
+    public void zeroRemaining() {
+        zero(buffer.position());
+    }
+
+    /**
+     * Fill the buffer with zeros. This method does not change the buffer position.
+     *
+     * <p>Typically used for security reasons, with buffers that contain now-unused plaintext.
+     */
+    public void zero() {
+        zero(0);
+    }
+
+    private void zero(final int position) {
+        buffer.mark();
+        buffer.position(position);
+        int size = buffer.remaining();
+        int length = Math.min(size, zeros.length);
+        int offset = 0;
+        while (length > 0) {
+            buffer.put(zeros, 0, length);
+            offset = offset + length;
+            length = Math.min(size - offset, zeros.length);
+        }
+        buffer.reset();
+    }
+
+    public boolean nullOrEmpty() {
+        return buffer == null || buffer.position() == 0;
+    }
+
+    @Override
+    public String toString() {
+        return "BufferHolder{"
+                + "name='"
+                + name
+                + '\''
+                + ", allocator="
+                + allocator
+                + ", plainData="
+                + plainData
+                + ", maxSize="
+                + maxSize
+                + ", opportunisticDispose="
+                + opportunisticDispose
+                + ", buffer="
+                + buffer
+                + ", lastSize="
+                + lastSize
+                + '}';
+    }
+}
