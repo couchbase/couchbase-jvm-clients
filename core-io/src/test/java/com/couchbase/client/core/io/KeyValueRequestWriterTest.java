@@ -439,57 +439,83 @@ class KeyValueRequestWriterTest {
   }
 
   @Test
-  void reusesScratchUpToBufferSize() {
-    byte[] small = scratchForNextRequest(10);
-    assertSame(small, scratchForNextRequest(5));
+  void valueWriterBuildsTheSameValueAsGivingIt() throws IOException {
+    byte[] value = {1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 5, 6};
 
-    byte[] bigger = scratchForNextRequest(small.length + 1);
-    assertTrue(bigger.length <= BUFFER_SIZE);
-    assertSame(bigger, scratchForNextRequest(bigger.length));
-
-    byte[] full = scratchForNextRequest(BUFFER_SIZE);
-    assertEquals(BUFFER_SIZE, full.length);
-    assertSame(full, scratchForNextRequest(1));
-  }
-
-  /**
-   * Like a request that fails before it begins: takes the scratch array, then lets it go.
-   */
-  private byte[] scratchForNextRequest(int minLength) {
-    byte[] scratch = writer.scratch(minLength);
-    writer.abortRequest();
-    return scratch;
-  }
-
-  @Test
-  void doesNotKeepScratchBiggerThanBuffer() {
-    byte[] huge = scratchForNextRequest(BUFFER_SIZE + 1);
-    assertEquals(BUFFER_SIZE + 1, huge.length);
-    assertNotSame(huge, scratchForNextRequest(BUFFER_SIZE + 1));
-    assertTrue(scratchForNextRequest(1).length < BUFFER_SIZE);
-  }
-
-  @Test
-  void refusesScratchWhileWritingRequest() {
-    writer.beginRequest(Opcode.SET);
-    assertThrows(IllegalStateException.class, () -> writer.scratch(1));
-  }
-
-  @Test
-  void refusesSecondScratchForSameRequest() {
-    writer.scratch(10);
-    IllegalStateException e = assertThrows(IllegalStateException.class, () -> writer.scratch(10));
-    assertTrue(e.getMessage().startsWith("scratch() was already called for this request"), e.getMessage());
-  }
-
-  @Test
-  void scratchIsAvailableAgainOnceTheRequestIsFinished() throws IOException {
-    byte[] body = writer.scratch(3);
     writer.makeRoomForRequest();
-    writer.beginRequest(Opcode.SET).value(body, 3);
+    writer.beginRequest(Opcode.SET).partition(7).key(KEY).value(value);
+    writer.completeRequestHead(1);
+    writer.finishRequest();
+    byte[] given = flushed();
+    out.reset(); // flushed() returns everything written so far
+    writer.makeRoomForRequest();
+    writer.beginRequest(Opcode.SET).partition(7).key(KEY)
+      .valueWriter().putByte(1).putShort(2).putInt(3).putLong(4).putBytes(new byte[]{5, 6});
+    writer.completeRequestHead(1);
+    writer.finishRequest();
+    assertArrayEquals(given, flushed());
+  }
+
+  @Test
+  void valueWriterGrowsAsNeeded() throws IOException {
+    byte[] chunk = new byte[1000];
+    Arrays.fill(chunk, (byte) 'x');
+    byte[] expected = new byte[100 * chunk.length]; // bigger than the write buffer, and than what's kept
+    Arrays.fill(expected, (byte) 'x');
+
+    writer.makeRoomForRequest();
+    SectionWriter body = writer.beginRequest(Opcode.SET).key(KEY).valueWriter();
+    for (int i = 0; i < 100; i++) {
+      body.putBytes(chunk);
+    }
     writer.completeRequestHead(1);
     writer.finishRequest();
 
-    assertSame(body, writer.scratch(3));
+    byte[] packet = flushed();
+    assertArrayEquals(expected, Arrays.copyOfRange(packet, packet.length - expected.length, packet.length));
+    assertEquals(expected.length + KEY.length, ByteBuffer.wrap(packet).getInt(8)); // total body length
+  }
+
+  @Test
+  void keepsValueWriterArrayUnlessItGrewTooBig() {
+    ByteBufferKeyValueRequestBuilder builder = new ByteBufferKeyValueRequestBuilder(CONTEXT);
+    byte[] small = writtenValueArray(builder, 10);
+    assertSame(small, writtenValueArray(builder, 5));
+
+    byte[] big = writtenValueArray(builder, 64 * 1024 + 1);
+    assertNotSame(big, writtenValueArray(builder, 5));
+  }
+
+  /**
+   * Builds a request whose value writer gets the given number of bytes, and returns the array behind the value.
+   */
+  private static byte[] writtenValueArray(
+    ByteBufferKeyValueRequestBuilder builder,
+    int length
+  ) {
+    builder.begin(ByteBuffer.allocate(BUFFER_SIZE), Opcode.SET);
+    builder.valueWriter().putBytes(new byte[length]);
+    byte[] array = builder.value();
+    assertEquals(length, builder.valueLength());
+    builder.reset();
+    return array;
+  }
+
+  @Test
+  void valueWriterAndValueAreAlternatives() {
+    KeyValueRequestBuilder given = writer.beginRequest(Opcode.SET).value(new byte[1]);
+    assertThrows(IllegalStateException.class, given::valueWriter);
+    writer.abortRequest();
+
+    KeyValueRequestBuilder written = writer.beginRequest(Opcode.SET);
+    written.valueWriter().putByte(1);
+    assertThrows(IllegalStateException.class, () -> written.value(new byte[1]));
+  }
+
+  @Test
+  void refusesValueWriterOnceTheHeadIsComplete() {
+    SectionWriter body = writer.beginRequest(Opcode.SET).valueWriter();
+    writer.completeRequestHead(1);
+    assertThrows(IllegalStateException.class, () -> body.putByte(1));
   }
 }

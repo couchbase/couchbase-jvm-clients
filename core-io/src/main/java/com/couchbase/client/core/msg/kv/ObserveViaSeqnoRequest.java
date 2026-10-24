@@ -31,7 +31,6 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -66,11 +65,9 @@ public class ObserveViaSeqnoRequest extends BasePortableKeyValueRequest<ObserveV
 
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder) {
-    byte[] body = encoder.scratch(Long.BYTES);
-    ByteBuffer.wrap(body).putLong(0, vbucketUUID);
     encoder.beginRequest(Opcode.OBSERVE_SEQ)
       .partition(partition())
-      .value(body, Long.BYTES);
+      .valueWriter().putLong(vbucketUUID);
   }
 
   @Override

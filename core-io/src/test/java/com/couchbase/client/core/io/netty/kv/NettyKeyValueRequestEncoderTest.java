@@ -25,13 +25,12 @@ import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NettyKeyValueRequestEncoderTest {
@@ -76,9 +75,8 @@ class NettyKeyValueRequestEncoderTest {
   }
 
   @Test
-  void refusesScratchOrSecondRequestAfterBegin() {
+  void refusesSecondRequestAfterBegin() {
     encoder.beginRequest(Opcode.GET);
-    assertThrows(IllegalStateException.class, () -> encoder.scratch(1));
     assertThrows(IllegalStateException.class, () -> encoder.beginRequest(Opcode.GET));
   }
 
@@ -89,24 +87,23 @@ class NettyKeyValueRequestEncoderTest {
   }
 
   @Test
-  void reusesScratchUpToLimit() {
-    byte[] scratch = scratchForNextRequest(100);
-    assertSame(scratch, scratchForNextRequest(50));
-    byte[] huge = scratchForNextRequest(1024 * 1024);
-    assertNotSame(huge, scratchForNextRequest(1024 * 1024));
+  void valueWriterBuildsTheSameValueAsGivingIt() {
+    byte[] value = new byte[100_000]; // bigger than the value writer array that's kept
+    Arrays.fill(value, (byte) 'v');
+
+    encoder.beginRequest(Opcode.SET).partition(7).key(KEY).value(value);
+    byte[] given = bytes(encoder.finish(1));
+
+    KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SET).partition(7).key(KEY);
+    request.valueWriter().putBytes(Arrays.copyOf(value, 40_000)).putBytes(Arrays.copyOfRange(value, 40_000, value.length));
+    assertArrayEquals(given, bytes(encoder.finish(1)));
   }
 
-  private byte[] scratchForNextRequest(int minLength) {
-    byte[] scratch = encoder.scratch(minLength);
-    encoder.abort();
-    return scratch;
-  }
-
-  @Test
-  void refusesSecondScratchForSameRequest() {
-    encoder.scratch(10);
-    assertThrows(IllegalStateException.class, () -> encoder.scratch(10));
-    encoder.abort();
-    encoder.scratch(10);
+  private static byte[] bytes(ByteBuf encoded) {
+    try {
+      return ByteBufUtil.getBytes(encoded);
+    } finally {
+      encoded.release();
+    }
   }
 }

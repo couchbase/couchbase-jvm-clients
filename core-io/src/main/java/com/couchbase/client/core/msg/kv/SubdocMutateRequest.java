@@ -43,7 +43,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.util.Bytes;
 import reactor.util.annotation.Nullable;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -233,22 +232,12 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       }
     }
 
-    // The body: every command, in the encoder's scratch array.
-    byte[][] paths = new byte[commands.size()][];
-    int bodyLength = 0;
-    for (int i = 0; i < paths.length; i++) {
-      paths[i] = commands.get(i).path.getBytes(UTF_8);
-      bodyLength += Command.HEADER_SIZE + paths[i].length + commands.get(i).fragment.length;
-    }
-    byte[] body = encoder.scratch(bodyLength);
-    ByteBuffer bodyBuffer = ByteBuffer.wrap(body, 0, bodyLength);
-    for (int i = 0; i < paths.length; i++) {
-      commands.get(i).encodeTo(bodyBuffer, paths[i]);
-    }
-
     KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_MUTATE)
-      .cas(cas)
-      .value(body, bodyLength);
+      .cas(cas);
+    SectionWriter body = request.valueWriter();
+    for (Command command : commands) {
+      command.encodeTo(body);
+    }
     putMutationFlexibleExtras(request, this, syncReplicationType, preserveExpiry);
     SectionWriter extras = request.extras();
     if (userFlags != 0 && ctx.subdocBinaryXattr()) {
@@ -357,11 +346,6 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
   public static class Command {
     private final static byte[] EMPTY_ARRAY = new byte[] {};
 
-    /**
-     * Opcode, flags, path length and fragment length.
-     */
-    private static final int HEADER_SIZE = 8;
-
     private final SubdocCommandType type;
     private final String path;
     @Nullable private final byte[] fragment;
@@ -391,10 +375,8 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
     /**
      * Writes the command (its header, then the path and fragment) into the buffer.
      */
-    void encodeTo(
-      ByteBuffer body,
-      byte[] path
-    ) {
+    void encodeTo(SectionWriter body) {
+      byte[] path = this.path.getBytes(UTF_8);
       byte flags = 0;
       if (xattr) {
         flags |= SUBDOC_FLAG_XATTR_PATH;
@@ -409,12 +391,12 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
         flags |= SUBDOC_FLAG_BINARY_VALUE;
       }
       body
-        .put(type.opcode())
-        .put(flags)
-        .putShort((short) path.length)
+        .putByte(type.opcode())
+        .putByte(flags)
+        .putShort(path.length)
         .putInt(fragment.length)
-        .put(path)
-        .put(fragment);
+        .putBytes(path)
+        .putBytes(fragment);
     }
 
     public int originalIndex() {
