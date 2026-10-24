@@ -33,6 +33,15 @@ public class CoreRangeScanId {
     body.readBytes(bytes);
   }
 
+  /**
+   * Takes the ID from the start of the array (copying it).
+   *
+   * @throws IndexOutOfBoundsException if the array is shorter than an ID.
+   */
+  public CoreRangeScanId(byte[] body) {
+    System.arraycopy(body, 0, bytes, 0, bytes.length);
+  }
+
   public byte[] bytes() {
     return bytes.clone();
   }

@@ -17,64 +17,52 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.extras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Fetches the collection ID from the cluster based on a {@link CollectionIdentifier}.
  */
-public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
+public class GetCollectionIdRequest extends BasePortableKeyValueRequest<GetCollectionIdResponse> {
 
   public GetCollectionIdRequest(final Duration timeout, final CoreContext ctx,
                                 final RetryStrategy retryStrategy,
                                 final CollectionIdentifier collectionIdentifier) {
-    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier, null);
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf body = null;
-    try {
-      CollectionIdentifier ci = collectionIdentifier();
-      if (!ci.collection().isPresent()) {
-        throw InvalidArgumentException.fromMessage("A collection name needs to be present");
-      }
-
-      // Note that the scope can be empty, according to spec it is the same as _default scope
-      body = Unpooled.copiedBuffer(ci.scope().orElse("") + "." + ci.collection().get(), UTF_8);
-      return request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, noDatatype(),
-        noPartition(), opaque, noCas(), noExtras(), noKey(), body);
-    } finally {
-      ReferenceCountUtil.release(body);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    CollectionIdentifier ci = collectionIdentifier();
+    if (!ci.collection().isPresent()) {
+      throw InvalidArgumentException.fromMessage("A collection name needs to be present");
     }
+
+    // Note that the scope can be empty, according to spec it is the same as _default scope
+    byte[] body = (ci.scope().orElse("") + "." + ci.collection().get()).getBytes(UTF_8);
+    encoder.beginRequest(Opcode.COLLECTIONS_GET_CID).value(body);
   }
 
   @Override
-  public GetCollectionIdResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+  public GetCollectionIdResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    ResponseStatus status = response.responseStatus();
     Optional<Long> cid = Optional.empty();
     if (status.success()) {
-      cid = Optional.of(extras(response).get().getUnsignedInt(8));
+      if (response.extrasLength() < 12) {
+        throw new RuntimeException("Successful GET_CID response has no collection ID in its extras");
+      }
+      cid = Optional.of(Integer.toUnsignedLong(response.extrasAsInt(8, 0)));
     }
     return new GetCollectionIdResponse(status, cid);
   }

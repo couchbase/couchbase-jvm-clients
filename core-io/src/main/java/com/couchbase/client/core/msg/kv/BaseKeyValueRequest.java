@@ -199,7 +199,12 @@ public abstract class BaseKeyValueRequest<R extends Response>
       .key(collection, key);
   }
 
-  private byte[] collectionPrefix(KeyValueChannelContext ctx, byte[] key) {
+  /**
+   * Returns the collection prefix to put before the given key (empty if collections aren't enabled); for a request
+   * whose keys aren't the one set during construction (for example, in its body). Throws like
+   * {@link #collectionPrefix(KeyValueChannelContext)}.
+   */
+  protected byte[] collectionPrefix(KeyValueChannelContext ctx, byte[] key) {
     if (ctx.collectionsEnabled()) {
       byte[] collection = ctx.collectionMap().get(collectionIdentifier);
       if (collection == null) {

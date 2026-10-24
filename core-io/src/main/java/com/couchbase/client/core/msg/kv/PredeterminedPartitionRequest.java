@@ -26,7 +26,7 @@ import java.time.Duration;
 /**
  * Parent class for requests which have their partition already set at creation time.
  */
-public abstract class PredeterminedPartitionRequest<R extends Response> extends BaseKeyValueRequest<R> {
+public abstract class PredeterminedPartitionRequest<R extends Response> extends BasePortableKeyValueRequest<R> {
   private final short partition;
 
   public PredeterminedPartitionRequest(short partition, Duration timeout, CoreContext ctx, RetryStrategy retryStrategy,
