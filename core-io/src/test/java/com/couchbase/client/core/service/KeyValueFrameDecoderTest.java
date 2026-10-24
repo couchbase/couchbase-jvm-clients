@@ -18,6 +18,7 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.junit.jupiter.api.Test;
 
@@ -92,12 +93,9 @@ class KeyValueFrameDecoderTest {
   private static List<byte[]> readAll(KeyValueFrameDecoder decoder, InputStream in) throws Exception {
     List<byte[]> packets = new ArrayList<>();
     while (true) {
-      ByteBuf packet;
+      KeyValuePacket packet;
       while ((packet = decoder.next()) != null) {
-        byte[] bytes = new byte[packet.readableBytes()];
-        packet.readBytes(bytes);
-        packet.release(); // like the reader; must not affect the decoder
-        packets.add(bytes);
+        packets.add(packet.toByteArray());
       }
       if (!decoder.fill(in)) {
         return packets;
@@ -142,6 +140,19 @@ class KeyValueFrameDecoderTest {
   }
 
   @Test
+  void growsToFitPacketThatStartsPartWayThroughTheBuffer() throws Exception {
+    byte[] small = packet(1, 10);
+    byte[] big = packet(2, 3 * KeyValueFrameDecoder.DEFAULT_CAPACITY);
+    for (int readSize : new int[]{7, 1000, 16 * 1024, Integer.MAX_VALUE}) {
+      List<byte[]> packets = readAll(new KeyValueFrameDecoder(), chunked(concat(small, big, small), readSize));
+      assertEquals(3, packets.size(), "read size " + readSize);
+      assertArrayEquals(small, packets.get(0), "read size " + readSize);
+      assertArrayEquals(big, packets.get(1), "read size " + readSize);
+      assertArrayEquals(small, packets.get(2), "read size " + readSize);
+    }
+  }
+
+  @Test
   void returnsNullUntilPacketIsComplete() throws Exception {
     byte[] a = packet(1, 100);
     KeyValueFrameDecoder decoder = new KeyValueFrameDecoder();
@@ -152,8 +163,8 @@ class KeyValueFrameDecoderTest {
     assertTrue(decoder.fill(in));
     assertNull(decoder.next()); // 100 of 124 bytes
     assertTrue(decoder.fill(in));
-    ByteBuf packet = decoder.next();
-    assertEquals(a.length, packet.readableBytes());
+    KeyValuePacket packet = decoder.next();
+    assertEquals(a.length, packet.size());
     assertNull(decoder.next());
     assertFalse(decoder.fill(in));
   }
@@ -166,7 +177,7 @@ class KeyValueFrameDecoderTest {
     KeyValueFrameDecoder decoder = new KeyValueFrameDecoder();
     assertTrue(decoder.fill(chunked(header, Integer.MAX_VALUE)));
     KeyValueFrameDecoder.InvalidSizeException e = assertThrows(KeyValueFrameDecoder.InvalidSizeException.class, decoder::next);
-    assertEquals(MemcacheProtocol.HEADER_SIZE, e.header.readableBytes());
+    assertEquals(MemcacheProtocol.HEADER_SIZE, e.header.length);
   }
 
   @Test

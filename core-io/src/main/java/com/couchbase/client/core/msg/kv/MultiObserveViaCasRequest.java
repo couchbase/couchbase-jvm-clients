@@ -17,7 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
@@ -82,7 +82,7 @@ public class MultiObserveViaCasRequest
 
     final Map<byte[], ObserveViaCasResponse.ObserveStatus> observed = new HashMap<>();
     if (status.success()) {
-      BodyReader content = response.body();
+      SectionReader content = response.body();
       while (content.remaining() > 0) {
         content.skip(Short.BYTES); // skip the vbid
         int keyLength = content.readUnsignedShort();

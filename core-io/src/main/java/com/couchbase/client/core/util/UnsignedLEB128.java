@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.util;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
@@ -111,7 +112,13 @@ public class UnsignedLEB128 {
     return read(Unpooled.wrappedBuffer(bytes));
   }
 
-  private static long read(IntSupplier byteSource) {
+  /**
+   * Reads an unsigned LEB128 value, one byte at a time, from the source.
+   *
+   * @throws ArithmeticException if the decoded value is larger than 64 bits.
+   */
+  @Stability.Internal
+  public static long read(IntSupplier byteSource) {
     long result = 0;
 
     for (int i = 0; ; i++) {

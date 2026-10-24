@@ -17,24 +17,29 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import org.jspecify.annotations.NullMarked;
 
 import java.nio.ByteBuffer;
 
 /**
- * Reads a packet's body piece by piece (see {@link KeyValuePacket#body}), for bodies made of several parts,
- * like a sub-document lookup's results. Big-endian, like the rest of the protocol.
+ * Reads one section of a packet piece by piece: its framing extras, extras or body (see {@link KeyValuePacket#body}
+ * and the like), for sections made of several parts, like a sub-document lookup's results.
+ * Big-endian, like the rest of the protocol. The reading counterpart of
+ * {@link KeyValueRequestBuilder.SectionWriter}.
+ * <p>
+ * Each read throws {@link IndexOutOfBoundsException} if the section ends first.
  * <p>
  * Valid only as long as the packet is; {@link #readBytes} copies.
  */
 @Stability.Internal
 @NullMarked
-public final class BodyReader {
+public final class SectionReader {
   private final ByteBuffer buffer; // read by absolute index, except in readBytes
   private final int end;
   private int index;
 
-  BodyReader(ByteBuffer buffer, int start, int end) {
+  SectionReader(ByteBuffer buffer, int start, int end) {
     this.buffer = buffer;
     this.index = start;
     this.end = end;
@@ -66,9 +71,24 @@ public final class BodyReader {
     return buffer.getInt(i);
   }
 
+  public long readUnsignedInt() {
+    return Integer.toUnsignedLong(readInt());
+  }
+
   public long readLong() {
     int i = advance(Long.BYTES);
     return buffer.getLong(i);
+  }
+
+  /**
+   * Reads an unsigned LEB128 value (see {@link UnsignedLEB128}).
+   *
+   * @throws ArithmeticException if the value is larger than 64 bits.
+   * @throws IndexOutOfBoundsException if the section ends before the value does.
+   * (Either way, the reader is left part way through the value.)
+   */
+  public long readUleb128() {
+    return UnsignedLEB128.read(this::readByte);
   }
 
   /**
@@ -96,7 +116,7 @@ public final class BodyReader {
   }
 
   /**
-   * Returns a copy of the rest of the body.
+   * Returns a copy of the rest of the section.
    */
   public byte[] readRemaining() {
     return readBytes(remaining());
@@ -123,6 +143,6 @@ public final class BodyReader {
 
   @Override
   public String toString() {
-    return "BodyReader{remaining=" + remaining() + "}";
+    return "SectionReader{remaining=" + remaining() + "}";
   }
 }

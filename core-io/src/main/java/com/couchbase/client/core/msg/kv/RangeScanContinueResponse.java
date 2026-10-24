@@ -16,13 +16,12 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.LastCoreRangeScanItem;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.util.UnsignedLEB128;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
@@ -67,17 +66,17 @@ public class RangeScanContinueResponse extends BaseResponse {
   }
 
   /**
-   * Feeds the items from the buffer into the sink and completes it if needed.
+   * Feeds the items from the response's body into the sink and completes it if needed.
    *
-   * @param itemsBuf the buffer with the items to feed.
+   * @param body the response's body (the items to feed).
    * @param completeFeed if the sink needs to be completed at the end.
    */
-  public void feedItems(final ByteBuf itemsBuf, final boolean signalLastItem, final boolean completeFeed) {
+  public void feedItems(SectionReader body, boolean signalLastItem, boolean completeFeed) {
     try {
       if (keysOnly) {
-        feedKeysOnly(itemsBuf);
+        feedKeysOnly(body);
       } else {
-        feedKeysAndBody(itemsBuf);
+        feedKeysAndBody(body);
       }
 
       if (signalLastItem) {
@@ -95,37 +94,32 @@ public class RangeScanContinueResponse extends BaseResponse {
     items.tryEmitError(cause);
   }
 
-  private void feedKeysOnly(final ByteBuf itemsBuf) {
-    while (itemsBuf.isReadable()) {
-      int keyLength = (int) UnsignedLEB128.read(itemsBuf);
-      byte[] key = new byte[(int) keyLength];
-      itemsBuf.readBytes(key, 0, keyLength);
+  private void feedKeysOnly(SectionReader body) {
+    while (body.remaining() > 0) {
+      byte[] key = readLengthPrefixedBytes(body);
       items.tryEmitNext(CoreRangeScanItem.keyOnly(key));
     }
   }
 
-  private void feedKeysAndBody(final ByteBuf itemsBuf) {
-    while (itemsBuf.isReadable()) {
-      int flags = itemsBuf.readInt();
-      long expiry = itemsBuf.readUnsignedInt();
+  private void feedKeysAndBody(SectionReader body) {
+    while (body.remaining() > 0) {
+      int flags = body.readInt();
+      long expiry = body.readUnsignedInt();
       Instant expiryInstant = expiry == 0 ? null : Instant.ofEpochSecond(expiry);
-      long seqno = itemsBuf.readLong();
-      long cas = itemsBuf.readLong();
-      byte dataType = itemsBuf.readByte();
+      long seqno = body.readLong();
+      long cas = body.readLong();
+      byte dataType = body.readByte();
 
-      byte[] key = readLengthPrefixedBytes(itemsBuf);
-      byte[] rawValue = readLengthPrefixedBytes(itemsBuf);
+      byte[] key = readLengthPrefixedBytes(body);
+      byte[] rawValue = readLengthPrefixedBytes(body);
       byte[] value = MemcacheProtocol.tryDecompression(rawValue, dataType);
 
       items.tryEmitNext(CoreRangeScanItem.keyAndBody(flags, expiryInstant, seqno, cas, key, value));
     }
   }
 
-  private static byte[] readLengthPrefixedBytes(ByteBuf buf) {
-    int len = Math.toIntExact(UnsignedLEB128.read(buf));
-    byte[] result = new byte[(int) len];
-    buf.readBytes(result);
-    return result;
+  private static byte[] readLengthPrefixedBytes(SectionReader body) {
+    return body.readBytes(Math.toIntExact(body.readUleb128()));
   }
 
 }

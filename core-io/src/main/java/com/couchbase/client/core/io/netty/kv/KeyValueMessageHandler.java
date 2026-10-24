@@ -79,7 +79,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static com.couchbase.client.core.io.netty.HandlerUtils.closeChannelWithReason;
 import static com.couchbase.client.core.io.netty.TracingUtils.newKeyValueDispatchSpan;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
@@ -529,7 +528,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     boolean hasLastItem = status == ResponseStatus.COMPLETE;
     boolean completeStream = hasLastItem || status == ResponseStatus.CONTINUE;
-    decoded.feedItems(MemcacheProtocol.body(response).orElse(EMPTY_BUFFER), hasLastItem, completeStream);
+    decoded.feedItems(PortableKeyValueRequest.packet(response).body(), hasLastItem, completeStream);
 
     if (decoded.status() == ResponseStatus.SUCCESS) {
       writtenRequests.put(request.opaque(), request);

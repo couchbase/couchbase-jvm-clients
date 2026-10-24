@@ -17,9 +17,8 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.cnc.events.io.InvalidPacketDetectedEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -53,14 +52,14 @@ final class KeyValuePacketReader {
   }
 
   /**
-   * Returns the next packet, reading from the socket as needed. Its buffer has exactly the packet's bytes,
-   * and is only valid until the next read (see {@link KeyValueFrameDecoder}).
+   * Returns the next packet, reading from the socket as needed. It shares the read buffer's bytes,
+   * so it's only valid until the next read (see {@link KeyValueFrameDecoder}).
    *
    * @throws InvalidPacketException if the packet failed verification
    * (like the Netty implementation's MemcacheProtocolVerificationHandler, it's reported, and the connection closed).
    */
-  ByteBuf read() throws IOException {
-    ByteBuf packet;
+  KeyValuePacket read() throws IOException {
+    KeyValuePacket packet;
     while ((packet = next()) == null) {
       fill();
     }
@@ -72,17 +71,28 @@ final class KeyValuePacketReader {
    *
    * @throws InvalidPacketException if the packet failed verification.
    */
-  @Nullable ByteBuf next() throws InvalidPacketException {
-    ByteBuf packet;
+  @Nullable KeyValuePacket next() throws InvalidPacketException {
+    KeyValuePacket packet;
     try {
       packet = frames.next();
     } catch (KeyValueFrameDecoder.InvalidSizeException e) {
       throw invalidPacket(e.header);
     }
-    if (packet != null && !MemcacheProtocol.verifyResponse(packet)) {
-      throw invalidPacket(packet);
+    if (packet != null && !isResponseOrServerPush(packet)) {
+      throw invalidPacket(packet.toByteArray());
     }
     return packet;
+  }
+
+  /**
+   * Like {@link MemcacheProtocol#verifyResponse}. (The frame decoder already made sure the packet's size
+   * is the size its header gives.)
+   */
+  private static boolean isResponseOrServerPush(KeyValuePacket packet) {
+    byte magic = packet.magic();
+    return magic == MemcacheProtocol.Magic.RESPONSE.magic()
+      || magic == MemcacheProtocol.Magic.FLEXIBLE_RESPONSE.magic()
+      || magic == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic();
   }
 
   /**
@@ -103,8 +113,8 @@ final class KeyValuePacketReader {
     return frames.hasUnreadBytes();
   }
 
-  private InvalidPacketException invalidPacket(ByteBuf packet) {
-    ioContext.environment().eventBus().publish(new InvalidPacketDetectedEvent(ioContext, ByteBufUtil.getBytes(packet)));
+  private InvalidPacketException invalidPacket(byte[] packet) {
+    ioContext.environment().eventBus().publish(new InvalidPacketDetectedEvent(ioContext, packet));
     return new InvalidPacketException();
   }
 
