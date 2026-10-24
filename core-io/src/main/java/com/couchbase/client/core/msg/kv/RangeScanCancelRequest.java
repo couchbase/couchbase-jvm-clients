@@ -19,22 +19,14 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanId;
 import com.couchbase.client.core.kv.CoreScanOptions;
-import com.couchbase.client.core.msg.ResponseStatus;
-
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode.RANGE_SCAN_CANCEL;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 
 @Stability.Internal
 public class RangeScanCancelRequest extends PredeterminedPartitionRequest<RangeScanCancelResponse> {
@@ -60,21 +52,15 @@ public class RangeScanCancelRequest extends PredeterminedPartitionRequest<RangeS
 
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
-    ByteBuf extras = alloc.buffer(id.bytes().length);
-    try {
-      extras.writeBytes(id.bytes());
-      return MemcacheProtocol.request(alloc, RANGE_SCAN_CANCEL, noDatatype(), partition(), opaque,
-        noCas(), extras, noKey(), noBody());
-    } finally {
-      extras.release();
-    }
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    encoder.beginRequest(RANGE_SCAN_CANCEL)
+      .partition(partition())
+      .extras().putBytes(id.bytes());
   }
 
   @Override
-  public RangeScanCancelResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    return new RangeScanCancelResponse(status);
+  public RangeScanCancelResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    return new RangeScanCancelResponse(response.responseStatus());
   }
 
 }

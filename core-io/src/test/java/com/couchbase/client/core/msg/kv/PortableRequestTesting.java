@@ -65,7 +65,18 @@ final class PortableRequestTesting {
 
   static void assertEncoding(PortableKeyValueRequest<?> request, KeyValueChannelContext ctx, byte[] expected) throws IOException {
     request.partition(PARTITION);
+    assertEncodingAsConstructed(request, ctx, expected);
+  }
 
+  /**
+   * Like {@link #assertEncoding}, but leaves the request's partition alone (for a request that's constructed with
+   * its partition, and can't be given another).
+   */
+  static void assertEncodingAsConstructed(
+    PortableKeyValueRequest<?> request,
+    KeyValueChannelContext ctx,
+    byte[] expected
+  ) throws IOException {
     // The socket connection's writer.
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     KeyValueRequestWriter writer = newWriter(out, ctx);

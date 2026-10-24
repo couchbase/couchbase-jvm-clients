@@ -18,11 +18,10 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ConfigVersion;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
 import com.couchbase.client.core.topology.NodeIdentifier;
@@ -34,14 +33,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 
 /**
@@ -51,7 +42,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
  * that it is not tied to a bucket (and as a result does not accept one when being constructed).</p>
  */
 public class CarrierGlobalConfigRequest
-  extends BaseKeyValueRequest<CarrierGlobalConfigResponse>
+  extends BasePortableKeyValueRequest<CarrierGlobalConfigResponse>
   implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
@@ -64,7 +55,7 @@ public class CarrierGlobalConfigRequest
     final NodeIdentifier target,
     @Nullable final ConfigVersion ifNewerThan
   ) {
-    super(timeout, ctx, retryStrategy, null, null);
+    super(timeout, ctx, retryStrategy, null, null, null);
     this.target = target;
     this.ifNewerThan = Optional.ofNullable(ifNewerThan).orElse(ConfigVersion.ZERO);
   }
@@ -75,50 +66,25 @@ public class CarrierGlobalConfigRequest
   }
 
   @Override
-  public ByteBuf encode(
-    final ByteBufAllocator alloc,
-    final int opaque,
-    final KeyValueChannelContext ctx
-  ) {
-    return encodeConfigRequest(alloc, opaque, ctx, ifNewerThan);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    encodeConfigRequest(encoder, ifNewerThan);
   }
 
-  static ByteBuf encodeConfigRequest(
-    final ByteBufAllocator alloc,
-    final int opaque,
-    final KeyValueChannelContext ctx,
-    final ConfigVersion ifNewerThan
+  static void encodeConfigRequest(
+    KeyValueRequestEncoder encoder,
+    ConfigVersion ifNewerThan
   ) {
-    return MemcacheProtocol.request(
-      alloc,
-      Opcode.GET_CONFIG,
-      noDatatype(),
-      noPartition(),
-      opaque,
-      noCas(),
-      requestExtras(ifNewerThan, ctx),
-      noKey(),
-      noBody()
-    );
-  }
-
-  private static ByteBuf requestExtras(
-    final ConfigVersion ifNewerThan,
-    final KeyValueChannelContext ctx
-  ) {
-    if (!ctx.getClusterConfigWithKnownVersion() || ifNewerThan.isLessThanOrEqualTo(ConfigVersion.ZERO)) {
-      return noExtras();
+    KeyValueRequestBuilder request = encoder.beginRequest(Opcode.GET_CONFIG);
+    if (encoder.context().getClusterConfigWithKnownVersion() && !ifNewerThan.isLessThanOrEqualTo(ConfigVersion.ZERO)) {
+      request.extras()
+        .putLong(ifNewerThan.epoch())
+        .putLong(ifNewerThan.rev());
     }
-
-    return Unpooled.buffer(16)
-      .writeLong(ifNewerThan.epoch())
-      .writeLong(ifNewerThan.rev());
   }
 
   @Override
-  public CarrierGlobalConfigResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    byte[] content = bodyAsBytes(response);
-    return new CarrierGlobalConfigResponse(decodeStatus(response), content);
+  public CarrierGlobalConfigResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    return new CarrierGlobalConfigResponse(response.responseStatus(), response.bodyAsBytes());
   }
 
   @Override

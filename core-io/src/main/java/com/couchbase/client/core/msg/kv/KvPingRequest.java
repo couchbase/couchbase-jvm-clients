@@ -17,10 +17,9 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.topology.NodeIdentifier;
@@ -41,8 +40,8 @@ public class KvPingRequest extends NoopRequest implements TargetedRequest {
   }
 
   @Override
-  public KvPingResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    return new KvPingResponse(MemcacheProtocol.decodeStatus(response), ctx.channelId());
+  public KvPingResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    return new KvPingResponse(response.responseStatus(), ctx.channelId());
   }
 
   @Override

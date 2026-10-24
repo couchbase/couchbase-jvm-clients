@@ -17,43 +17,34 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-
-public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollectionManifestResponse> {
+public class GetCollectionManifestRequest extends BasePortableKeyValueRequest<GetCollectionManifestResponse> {
 
   public GetCollectionManifestRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                                       final CollectionIdentifier collectionIdentifier) {
-    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier, null);
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
-    return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.COLLECTIONS_GET_MANIFEST, noDatatype(),
-      noPartition(), opaque, noCas(), noExtras(), noKey(), noBody());
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    encoder.beginRequest(Opcode.COLLECTIONS_GET_MANIFEST);
   }
 
   @Override
-  public GetCollectionManifestResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    ResponseStatus status = MemcacheProtocol.decodeStatus(response);
+  public GetCollectionManifestResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    ResponseStatus status = response.responseStatus();
     Optional<String> manifest = status.success()
-      ? Optional.of(bodyAsString(response))
+      ? Optional.of(response.bodyAsString())
       : Optional.empty();
     return new GetCollectionManifestResponse(status, manifest);
   }

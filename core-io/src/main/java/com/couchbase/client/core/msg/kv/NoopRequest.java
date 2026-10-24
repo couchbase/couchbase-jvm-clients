@@ -19,41 +19,33 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 
 import java.time.Duration;
-
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
 
 /**
  * Represents a NOOP KV Request, doing nothing. really.
  *
  * @since 2.0.0
  */
-public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
+public class NoopRequest extends BasePortableKeyValueRequest<NoopResponse> {
 
   public NoopRequest(final Duration timeout, final CoreContext ctx,
                      final RetryStrategy retryStrategy, CollectionIdentifier collectionIdentifier) {
-    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier, null);
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.NOOP, noDatatype(), noPartition(),
-      opaque, noCas(), noExtras(), noKey(), noBody());
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    encoder.beginRequest(Opcode.NOOP);
   }
 
   @Override
-  public NoopResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    return new NoopResponse(MemcacheProtocol.decodeStatus(response));
+  public NoopResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    return new NoopResponse(response.responseStatus());
   }
 
   @Override

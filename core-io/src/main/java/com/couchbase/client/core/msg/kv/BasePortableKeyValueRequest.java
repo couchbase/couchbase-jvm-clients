@@ -25,6 +25,8 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 
@@ -34,9 +36,13 @@ import java.time.Duration;
  * A subclass overrides {@link #encodeTo} and
  * {@link #decode(com.couchbase.client.core.io.KeyValuePacket, KeyValueChannelContext)} instead.
  * <p>
+ * The constructor takes no key (an empty one) and no collection for a request that isn't for a document; no retry
+ * strategy for the environment's; and no span for an untraced request.
+ * <p>
  * Transitional, like {@link PortableKeyValueRequest}.
  */
 @Stability.Internal
+@NullMarked
 public abstract class BasePortableKeyValueRequest<R extends Response>
   extends BaseKeyValueRequest<R>
   implements PortableKeyValueRequest<R> {
@@ -44,10 +50,10 @@ public abstract class BasePortableKeyValueRequest<R extends Response>
   protected BasePortableKeyValueRequest(
     Duration timeout,
     CoreContext ctx,
-    RetryStrategy retryStrategy,
-    String key,
-    CollectionIdentifier collectionIdentifier,
-    RequestSpan span
+    @Nullable RetryStrategy retryStrategy,
+    @Nullable String key,
+    @Nullable CollectionIdentifier collectionIdentifier,
+    @Nullable RequestSpan span
   ) {
     super(timeout, ctx, retryStrategy, key, collectionIdentifier, span);
   }

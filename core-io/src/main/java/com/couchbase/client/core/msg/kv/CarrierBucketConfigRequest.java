@@ -18,9 +18,9 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ConfigVersion;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
@@ -32,14 +32,12 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest.encodeConfigRequest;
 
 public class CarrierBucketConfigRequest
-  extends BaseKeyValueRequest<CarrierBucketConfigResponse>
+  extends BasePortableKeyValueRequest<CarrierBucketConfigResponse>
   implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;
@@ -53,24 +51,19 @@ public class CarrierBucketConfigRequest
     final NodeIdentifier target,
     @Nullable final ConfigVersion ifNewerThan
   ) {
-    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier, null);
     this.target = target;
     this.ifNewerThan = Optional.ofNullable(ifNewerThan).orElse(ConfigVersion.ZERO);
   }
 
   @Override
-  public ByteBuf encode(
-    final ByteBufAllocator alloc,
-    final int opaque,
-    final KeyValueChannelContext ctx
-  ) {
-    return encodeConfigRequest(alloc, opaque, ctx, ifNewerThan);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    encodeConfigRequest(encoder, ifNewerThan);
   }
 
   @Override
-  public CarrierBucketConfigResponse decode(final ByteBuf response, KeyValueChannelContext ctx) {
-    byte[] content = bodyAsBytes(response);
-    return new CarrierBucketConfigResponse(decodeStatus(response), content);
+  public CarrierBucketConfigResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    return new CarrierBucketConfigResponse(response.responseStatus(), response.bodyAsBytes());
   }
 
   @Override

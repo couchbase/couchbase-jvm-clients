@@ -22,21 +22,20 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
-
-public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoResponse> {
+public class ObserveViaSeqnoRequest extends BasePortableKeyValueRequest<ObserveViaSeqnoResponse> {
 
   private final int replica;
   private final boolean active;
@@ -66,22 +65,19 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
-    ByteBuf body = null;
-    try {
-      body = alloc.buffer(Long.BYTES).writeLong(vbucketUUID);
-      return MemcacheProtocol.request(alloc, MemcacheProtocol.Opcode.OBSERVE_SEQ, noDatatype(), partition(),
-        opaque, noCas(), noExtras(), noKey(), body);
-    } finally {
-      ReferenceCountUtil.release(body);
-    }
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    byte[] body = encoder.scratch(Long.BYTES);
+    ByteBuffer.wrap(body).putLong(0, vbucketUUID);
+    encoder.beginRequest(Opcode.OBSERVE_SEQ)
+      .partition(partition())
+      .value(body, Long.BYTES);
   }
 
   @Override
-  public ObserveViaSeqnoResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
+  public ObserveViaSeqnoResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    ResponseStatus status = response.responseStatus();
     if (status.success()) {
-      ByteBuf content = body(response).get();
+      BodyReader content = response.body();
       byte format = content.readByte();
       short vbucketId = content.readShort();
       long vbucketUUID = content.readLong();
@@ -95,7 +91,7 @@ public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoR
           return new ObserveViaSeqnoResponse(status, active, vbucketId,vbucketUUID, lastPersistedSeqno, currentSeqno,
             Optional.of(content.readLong()), Optional.of(content.readLong()));
         default:
-          throw new IllegalStateException("Unsupported format 0x" + Integer.toHexString(format));
+          throw new RuntimeException("Unsupported format 0x" + Integer.toHexString(format));
       }
     } else {
       return new ObserveViaSeqnoResponse(status, active, (short) 0, 0L, 0L, 0L,
