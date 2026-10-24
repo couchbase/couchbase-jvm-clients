@@ -25,7 +25,6 @@ import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.DecodingFailureException;
@@ -121,9 +120,7 @@ final class KeyValueResponseHandler {
   /**
    * Handles a response (not a server push).
    */
-  void handle(ByteBuf response) {
-    // The same bytes. (The ByteBuf is for requests that still decode from one.)
-    KeyValuePacket packet = PortableKeyValueRequest.packet(response);
+  void handle(KeyValuePacket packet) {
     int opaque = packet.opaque();
     InFlight written = inFlight.remove(opaque);
 
@@ -178,19 +175,24 @@ final class KeyValueResponseHandler {
       // the ones in flight, so it times out), retry it like the other requests in flight.
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     } else {
-      retryOrComplete(written, response, packet, status, isRangeScanContinue);
+      retryOrComplete(written, packet, status, isRangeScanContinue);
     }
   }
 
-  private void retryOrComplete(InFlight written, ByteBuf response, KeyValuePacket packet, ResponseStatus status, boolean isRangeScanContinue) {
+  private void retryOrComplete(
+    InFlight written,
+    KeyValuePacket packet,
+    ResponseStatus status,
+    boolean isRangeScanContinue
+  ) {
     KeyValueRequest<Response> request = written.request;
     RetryReason retryReason = KeyValueMessageHandler.statusCodeIndicatesRetry(status, request);
     if (retryReason != null) {
       RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
     } else if (isRangeScanContinue) {
-      decodeAndCompleteRangeScanContinue(written, response);
+      decodeAndCompleteRangeScanContinue(written, packet);
     } else if (!request.completed()) {
-      decodeAndComplete(request, response, packet);
+      decodeAndComplete(request, packet);
     } else {
       ioContext.environment().orphanReporter().report(request);
     }
@@ -211,20 +213,21 @@ final class KeyValueResponseHandler {
     }
   }
 
-  private void decodeAndComplete(KeyValueRequest<Response> request, ByteBuf response, KeyValuePacket packet) {
+  private void decodeAndComplete(KeyValueRequest<Response> request, KeyValuePacket packet) {
     try {
+      // Only reauthentication's request still decodes from a ByteBuf; it's rare enough that copying doesn't matter.
       Response decoded = request instanceof PortableKeyValueRequest
         ? ((PortableKeyValueRequest<Response>) request).decode(packet, channelContext)
-        : request.decode(response, channelContext);
+        : request.decode(Unpooled.wrappedBuffer(packet.toByteArray()), channelContext);
       request.succeed(decoded);
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
     }
   }
 
-  private void decodeAndCompleteRangeScanContinue(InFlight written, ByteBuf response) {
+  private void decodeAndCompleteRangeScanContinue(InFlight written, KeyValuePacket packet) {
     KeyValueRequest<Response> request = written.request;
-    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(response, channelContext);
+    RangeScanContinueResponse decoded = ((RangeScanContinueRequest) (Request<?>) request).decode(packet, channelContext);
     if (!request.completed()) {
       request.succeed(decoded);
     }
@@ -244,7 +247,7 @@ final class KeyValueResponseHandler {
 
     boolean hasLastItem = status == ResponseStatus.COMPLETE;
     boolean completeStream = hasLastItem || status == ResponseStatus.CONTINUE;
-    decoded.feedItems(MemcacheProtocol.body(response).orElse(Unpooled.EMPTY_BUFFER), hasLastItem, completeStream);
+    decoded.feedItems(packet.body(), hasLastItem, completeStream);
 
     if (decoded.status() == ResponseStatus.SUCCESS) {
       // More responses are coming for this request.

@@ -24,6 +24,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -118,7 +119,7 @@ class KeyValuePacketTest {
   }
 
   @Test
-  void bodyReaderLeavesDirectBufferAsItFoundIt() {
+  void sectionReaderLeavesDirectBufferAsItFoundIt() {
     byte[] body = ByteBufUtil.getBytes(Unpooled.buffer().writeInt(3).writeBytes("xyz".getBytes(UTF_8)));
     byte[] packet = response((byte) 0, EXTRAS, KEY, body);
     ByteBuffer direct = ByteBuffer.allocateDirect(packet.length + 6);
@@ -126,7 +127,7 @@ class KeyValuePacketTest {
     direct.put(packet);
     direct.position(6);
 
-    BodyReader reader = KeyValuePacket.wrap(direct).body();
+    SectionReader reader = KeyValuePacket.wrap(direct).body();
     assertEquals(3, reader.readInt());
     assertArrayEquals("xyz".getBytes(UTF_8), reader.readBytes(3));
     assertEquals(6, direct.position());
@@ -134,7 +135,7 @@ class KeyValuePacketTest {
   }
 
   @Test
-  void bodyReaderStartsAtBufferPosition() {
+  void sectionReaderStartsAtBufferPosition() {
     byte[] packet = response((byte) 0, EXTRAS, KEY, BODY);
     byte[] array = new byte[packet.length + 11];
     System.arraycopy(packet, 0, array, 11, packet.length);
@@ -198,15 +199,16 @@ class KeyValuePacketTest {
   }
 
   @Test
-  void bodyReaderReadsPiecesAndStopsAtTheEnd() {
+  void sectionReaderReadsPiecesAndStopsAtTheEnd() {
     byte[] body = ByteBufUtil.getBytes(Unpooled.buffer()
-      .writeByte(1).writeShort(-2).writeInt(3).writeLong(4).writeBytes("xyz".getBytes(UTF_8)));
-    BodyReader reader = KeyValuePacket.wrap(ByteBuffer.wrap(response((byte) 0, EXTRAS, KEY, body))).body();
+      .writeByte(1).writeShort(-2).writeInt(3).writeInt(-3).writeLong(4).writeBytes("xyz".getBytes(UTF_8)));
+    SectionReader reader = KeyValuePacket.wrap(ByteBuffer.wrap(response((byte) 0, EXTRAS, KEY, body))).body();
 
     assertEquals(body.length, reader.remaining());
     assertEquals(1, reader.readByte());
     assertEquals(0xfffe, reader.readUnsignedShort());
     assertEquals(3, reader.readInt());
+    assertEquals(0xfffffffdL, reader.readUnsignedInt());
     assertEquals(4, reader.readLong());
     reader.skip(1);
     assertArrayEquals("yz".getBytes(UTF_8), reader.readBytes(2));
@@ -214,6 +216,46 @@ class KeyValuePacketTest {
     assertEquals(0, reader.readRemaining().length);
     assertThrows(IndexOutOfBoundsException.class, reader::readByte);
     assertThrows(IllegalArgumentException.class, () -> reader.readBytes(-1));
+  }
+
+  @Test
+  void readsEachSectionWithItsOwnReader() {
+    byte[] framingExtras = {0x02, 0x00, 0x05}; // server duration
+    byte[] extras = ByteBufUtil.getBytes(Unpooled.buffer().writeLong(-5).writeInt(6));
+    KeyValuePacket packet = KeyValuePacket.wrap(ByteBuffer.wrap(flexibleResponse(framingExtras, extras, KEY, BODY)));
+
+    SectionReader framing = packet.framingExtras();
+    assertArrayEquals(framingExtras, framing.readRemaining());
+
+    SectionReader extrasReader = packet.extras();
+    assertEquals(extras.length, extrasReader.remaining());
+    assertEquals(-5, extrasReader.readLong());
+    assertEquals(6, extrasReader.readInt());
+    assertThrows(IndexOutOfBoundsException.class, extrasReader::readByte); // stops at the end of the extras
+
+    assertArrayEquals(BODY, packet.body().readRemaining());
+  }
+
+  @Test
+  void sectionReadersAreEmptyWhenThereIsNoSuchSection() {
+    KeyValuePacket packet = KeyValuePacket.wrap(ByteBuffer.wrap(response((byte) 0, new byte[0], KEY, BODY)));
+    assertEquals(0, packet.framingExtras().remaining());
+    assertEquals(0, packet.extras().remaining());
+  }
+
+  @Test
+  void sectionReaderReadsUleb128() {
+    ByteBuf buf = Unpooled.buffer();
+    UnsignedLEB128.write(buf, 0);
+    UnsignedLEB128.write(buf, 300);
+    UnsignedLEB128.write(buf, -1L); // the largest unsigned 64-bit value
+    buf.writeByte(0x80); // starts a value that never ends
+    SectionReader reader = KeyValuePacket.wrap(ByteBuffer.wrap(response((byte) 0, EXTRAS, KEY, ByteBufUtil.getBytes(buf)))).body();
+
+    assertEquals(0, reader.readUleb128());
+    assertEquals(300, reader.readUleb128());
+    assertEquals(-1L, reader.readUleb128());
+    assertThrows(IndexOutOfBoundsException.class, reader::readUleb128);
   }
 
   private static byte[] response(byte datatype, byte[] extras, byte[] key, byte[] body) {

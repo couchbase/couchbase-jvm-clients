@@ -19,16 +19,17 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.UnknownServerPushRequestReceivedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdapter;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.SectionReader;
+import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.topology.TopologyRevision;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.couchbase.client.core.deps.io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static com.couchbase.client.core.util.CbStrings.emptyToNull;
 import static java.util.Objects.requireNonNull;
 
@@ -41,15 +42,15 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
     this.endpointContext = requireNonNull(endpointContext);
   }
 
-  private static @Nullable TopologyRevision parseTopologyRevision(ByteBuf packet) {
-    ByteBuf extras = MemcacheProtocol.extras(packet).orElse(EMPTY_BUFFER);
-    switch (extras.readableBytes()) {
+  private static @Nullable TopologyRevision parseTopologyRevision(KeyValuePacket packet) {
+    SectionReader extras = packet.extras();
+    switch (extras.remaining()) {
       case 4:
         return new TopologyRevision(0, extras.readUnsignedInt());
       case 16:
         return new TopologyRevision(extras.readLong(), extras.readLong());
       default:
-        log.debug("Unexpected CLUSTERMAP_CHANGE_NOTIFICATION extras length: {}", extras.readableBytes());
+        log.debug("Unexpected CLUSTERMAP_CHANGE_NOTIFICATION extras length: {}", extras.remaining());
         return null;
     }
   }
@@ -73,7 +74,7 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
 
   /**
    * Returns true if the packet is a request from the server (which {@link #handleServerPush} handles), not a response.
-   * Also used by the KV endpoint that doesn't use Netty.
+   * Also used by the KV endpoint that doesn't use Netty, during its handshake.
    */
   @Stability.Internal
   public static boolean isServerPush(ByteBuf packet) {
@@ -81,15 +82,32 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
   }
 
   /**
+   * Like {@link #isServerPush(ByteBuf)}. Used by the KV endpoint that doesn't use Netty, once it's connected.
+   */
+  @Stability.Internal
+  public static boolean isServerPush(KeyValuePacket packet) {
+    return packet.magic() == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic();
+  }
+
+  /**
    * Handles a request from the server. Doesn't release the packet.
-   * Also used by the KV endpoint that doesn't use Netty.
+   * Also used by the KV endpoint that doesn't use Netty, during its handshake.
    */
   @Stability.Internal
   public static void handleServerPush(EndpointContext endpointContext, ByteBuf packet) {
-    byte opcodeByte = MemcacheProtocol.opcode(packet);
+    handleServerPush(endpointContext, PortableKeyValueRequest.packet(packet));
+  }
+
+  /**
+   * Like {@link #handleServerPush(EndpointContext, ByteBuf)}. Used by the KV endpoint that doesn't use Netty,
+   * once it's connected.
+   */
+  @Stability.Internal
+  public static void handleServerPush(EndpointContext endpointContext, KeyValuePacket packet) {
+    byte opcodeByte = packet.opcode();
     MemcacheProtocol.ServerPushOpcode opcode = MemcacheProtocol.ServerPushOpcode.of(opcodeByte);
     if (opcode == MemcacheProtocol.ServerPushOpcode.CLUSTERMAP_CHANGE_NOTIFICATION) {
-      String bucketOrNullIfGlobal = emptyToNull(MemcacheProtocol.keyAsString(packet));
+      String bucketOrNullIfGlobal = emptyToNull(packet.keyAsString());
       TopologyRevision newRevision = parseTopologyRevision(packet);
       endpointContext.core().configurationProvider().signalNewTopologyAvailable(
         bucketOrNullIfGlobal,
@@ -100,7 +118,7 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
     }
 
     endpointContext.core().environment().eventBus().publish(
-      new UnknownServerPushRequestReceivedEvent(null, ByteBufUtil.getBytes(packet))
+      new UnknownServerPushRequestReceivedEvent(null, packet.toByteArray())
     );
   }
 }

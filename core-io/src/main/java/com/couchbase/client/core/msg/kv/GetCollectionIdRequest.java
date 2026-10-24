@@ -21,6 +21,7 @@ import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -59,10 +60,12 @@ public class GetCollectionIdRequest extends BasePortableKeyValueRequest<GetColle
     ResponseStatus status = response.responseStatus();
     Optional<Long> cid = Optional.empty();
     if (status.success()) {
-      if (response.extrasLength() < 12) {
+      SectionReader extras = response.extras();
+      if (extras.remaining() < Long.BYTES + Integer.BYTES) {
         throw new RuntimeException("Successful GET_CID response has no collection ID in its extras");
       }
-      cid = Optional.of(Integer.toUnsignedLong(response.extrasAsInt(8, 0)));
+      extras.skip(Long.BYTES); // the manifest UID
+      cid = Optional.of(extras.readUnsignedInt());
     }
     return new GetCollectionIdResponse(status, cid);
   }

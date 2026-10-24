@@ -39,6 +39,7 @@ import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.EncodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
 import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
@@ -696,7 +697,7 @@ final class KeyValueConnection {
     Throwable failure = null;
     try {
       while (!closed.get()) {
-        ByteBuf packet = packets.next();
+        KeyValuePacket packet = packets.next();
         if (packet == null) {
           if (!packets.hasUnreadBytes()) {
             // Handled everything already read; the next read may wait for the server.
@@ -716,7 +717,7 @@ final class KeyValueConnection {
       // Closed while handling what was read (for example, because a response said to close the connection).
       // Like the Netty implementation, handles the rest of the responses already read (but doesn't read more),
       // so their requests complete, instead of being retried (or canceled, if they're not idempotent).
-      ByteBuf packet;
+      KeyValuePacket packet;
       while (!discardUnreadResponses && (packet = packets.next()) != null) {
         handle(packet);
       }
@@ -730,19 +731,17 @@ final class KeyValueConnection {
     }
   }
 
-  private void handle(ByteBuf packet) {
+  private void handle(KeyValuePacket packet) {
     try {
       capture.read(packet);
       handleInbound(packet);
     } catch (RuntimeException e) {
       // Like Netty's pipeline, which reports a handler's exception, and carries on.
       eventBus.publish(new GenericFailureDetectedEvent(ioContext, e));
-    } finally {
-      packet.release();
     }
   }
 
-  private void handleInbound(ByteBuf packet) {
+  private void handleInbound(KeyValuePacket packet) {
     if (ServerPushHandler.isServerPush(packet)) {
       ServerPushHandler.handleServerPush(endpointContext, packet);
       return;
@@ -822,11 +821,13 @@ final class KeyValueConnection {
     }
 
     /**
-     * Publishes the packet just read. Doesn't change the buffer.
+     * Publishes the packet just read.
      */
-    void read(ByteBuf packet) {
+    void read(KeyValuePacket packet) {
       if (enabled) {
-        ioContext.environment().eventBus().publish(new ReadTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+        // A copy, but only when capturing.
+        String description = TrafficCaptureHandler.memcacheToString(Unpooled.wrappedBuffer(packet.toByteArray()));
+        ioContext.environment().eventBus().publish(new ReadTrafficCapturedEvent(ioContext, description));
       }
     }
   }

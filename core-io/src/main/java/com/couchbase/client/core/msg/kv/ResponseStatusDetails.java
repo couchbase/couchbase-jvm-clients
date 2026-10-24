@@ -19,7 +19,6 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 
 import java.util.HashMap;
 import java.util.Objects;
@@ -39,9 +38,7 @@ public class ResponseStatusDetails {
   private final String context;
 
   /**
-   * Helper method to convert a {@link ByteBuf} input into the details.
-   *
-   * It will NOT release the buffer.
+   * Converts an error response's body (JSON) into the details, or returns null if it has none.
    */
   public static ResponseStatusDetails convert(final byte[] input) {
     if (input.length == 0) {

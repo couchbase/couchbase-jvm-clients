@@ -20,9 +20,11 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
@@ -231,9 +233,10 @@ final class KeyValueConnectionOpener {
           @Override
           public ByteBuf read() throws IOException {
             s.setSoTimeout(remainingMillis(deadlineNanos));
-            ByteBuf packet = packets.read();
+            KeyValuePacket packet = packets.read();
             capture.read(packet);
-            return packet;
+            // A copy, since the packet is valid only until the next read. (The handshake's packets are few.)
+            return Unpooled.wrappedBuffer(packet.toByteArray());
           }
         },
         requestedFeatures,

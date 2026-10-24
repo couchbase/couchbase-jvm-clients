@@ -30,7 +30,7 @@ import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.context.ErrorContext;
-import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
@@ -271,7 +271,7 @@ public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutat
       || rawOverallStatus == Status.SUBDOC_SUCCESS_DELETED_DOCUMENT.status();
 
     if (response.hasBody()) {
-      BodyReader body = response.body();
+      SectionReader body = response.body();
 
       // If there's a multi-mutation failure we only get the first failure back
       if (rawOverallStatus == Status.SUBDOC_MULTI_PATH_FAILURE.status()

@@ -41,7 +41,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * (see {@link com.couchbase.client.core.msg.kv.PortableKeyValueRequest#decode(KeyValuePacket, com.couchbase.client.core.io.netty.kv.KeyValueChannelContext)}).
  * <p>
  * The packet shares its bytes with whatever it was read into (it isn't a copy), so it's valid only while the response
- * is being handled: a decoder must copy out whatever it keeps (as {@link #bodyAsBytes} and {@link BodyReader#readBytes} do).
+ * is being handled: a decoder must copy out whatever it keeps (as {@link #bodyAsBytes} and {@link SectionReader#readBytes} do).
  * <p>
  * Reads by absolute index (except while copying bytes out, when it moves the buffer's position and then puts it back),
  * so readers can't disturb each other.
@@ -215,14 +215,29 @@ public final class KeyValuePacket {
   }
 
   /**
+   * Returns a reader of the framing extras (empty if there are none).
+   */
+  public SectionReader framingExtras() {
+    return new SectionReader(buffer, start + HEADER_SIZE, start + extrasOffset());
+  }
+
+  /**
+   * Returns a reader of the extras (empty if there are none), for extras made of several parts.
+   * (For one int, {@link #extrasAsInt} allocates nothing.)
+   */
+  public SectionReader extras() {
+    return new SectionReader(buffer, start + extrasOffset(), start + keyOffset());
+  }
+
+  /**
    * Returns a reader of the body (decompressed), for a body made of several parts.
    */
-  public BodyReader body() {
+  public SectionReader body() {
     if (isSnappyCompressed() && hasBody()) {
       byte[] decompressed = bodyAsBytes();
-      return new BodyReader(ByteBuffer.wrap(decompressed), 0, decompressed.length);
+      return new SectionReader(ByteBuffer.wrap(decompressed), 0, decompressed.length);
     }
-    return new BodyReader(buffer, start + bodyOffset(), start + size);
+    return new SectionReader(buffer, start + bodyOffset(), start + size);
   }
 
   /**

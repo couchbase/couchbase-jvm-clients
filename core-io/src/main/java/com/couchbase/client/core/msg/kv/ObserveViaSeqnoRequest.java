@@ -26,7 +26,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
@@ -74,7 +74,7 @@ public class ObserveViaSeqnoRequest extends BasePortableKeyValueRequest<ObserveV
   public ObserveViaSeqnoResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
     ResponseStatus status = response.responseStatus();
     if (status.success()) {
-      BodyReader content = response.body();
+      SectionReader content = response.body();
       byte format = content.readByte();
       short vbucketId = content.readShort();
       long vbucketUUID = content.readLong();

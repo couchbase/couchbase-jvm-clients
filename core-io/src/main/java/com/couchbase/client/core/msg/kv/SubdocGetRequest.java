@@ -24,7 +24,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
@@ -163,7 +163,7 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
       || rawStatus == Status.SUBDOC_MULTI_PATH_FAILURE_DELETED.status();
 
     if (response.hasBody()) {
-      BodyReader body = response.body();
+      SectionReader body = response.body();
       if (isSuccess) {
         values = new SubDocumentField[commands.size()];
         for (Command command : commands) {

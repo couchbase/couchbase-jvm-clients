@@ -16,14 +16,14 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 /**
  * Splits what a KV connection reads into packets (frames): reads as much as the socket has into one buffer,
@@ -49,7 +49,17 @@ final class KeyValueFrameDecoder {
    */
   private static final int MIN_READ = 8 * 1024;
 
-  private ByteBuf buffer = Unpooled.buffer(DEFAULT_CAPACITY);
+  private byte[] buffer = new byte[DEFAULT_CAPACITY];
+
+  /**
+   * Where the next packet to hand out starts.
+   */
+  private int readIndex;
+
+  /**
+   * Where the next read goes: the end of what's been read.
+   */
+  private int writeIndex;
 
   /**
    * Reads what the stream has (blocking until it has something) into the buffer.
@@ -58,12 +68,11 @@ final class KeyValueFrameDecoder {
    */
   boolean fill(InputStream in) throws IOException {
     makeRoom();
-    int writerIndex = buffer.writerIndex();
-    int read = in.read(buffer.array(), buffer.arrayOffset() + writerIndex, buffer.writableBytes());
+    int read = in.read(buffer, writeIndex, buffer.length - writeIndex);
     if (read < 0) {
       return false;
     }
-    buffer.writerIndex(writerIndex + read);
+    writeIndex += read;
     return true;
   }
 
@@ -73,47 +82,74 @@ final class KeyValueFrameDecoder {
    * like {@link java.io.BufferedInputStream}, so most reads copy nothing.
    */
   private void makeRoom() {
-    if (!buffer.isReadable()) {
-      buffer.clear(); // everything was handed out, so start over at the beginning (no copy)
+    if (!hasUnreadBytes()) {
+      // everything was handed out, so start over at the beginning (no copy)
+      readIndex = 0;
+      writeIndex = 0;
     }
 
+    int unread = writeIndex - readIndex;
     int needed = Math.max(MIN_READ, remainingOfPartialPacket());
 
-    if (buffer.capacity() > DEFAULT_CAPACITY && buffer.readableBytes() + needed <= DEFAULT_CAPACITY) {
+    if (buffer.length > DEFAULT_CAPACITY && unread + needed <= DEFAULT_CAPACITY) {
       // Done with the big packet that made the buffer grow: go back to the usual size.
-      ByteBuf smaller = Unpooled.buffer(DEFAULT_CAPACITY);
-      smaller.writeBytes(buffer);
-      buffer = smaller;
+      moveUnreadTo(new byte[DEFAULT_CAPACITY]);
       return;
     }
 
-    if (buffer.writableBytes() >= needed) {
+    if (buffer.length - writeIndex >= needed) {
       return; // enough room after what's unread
     }
 
     // Move what's unread (part of one packet) to the start, then grow only if the packet doesn't fit at all.
-    buffer.discardReadBytes();
-    buffer.ensureWritable(needed);
+    moveUnreadTo(unread + needed > buffer.length ? new byte[newCapacity(unread + needed)] : buffer);
   }
 
   /**
-   * The bytes still to read of the packet at the start of the buffer, or 0 if there isn't a partial packet
+   * Doubles the capacity until it's enough (or as big as an array can be).
+   */
+  private int newCapacity(int minCapacity) {
+    long capacity = buffer.length;
+    while (capacity < minCapacity) {
+      capacity *= 2;
+    }
+    return (int) Math.min(capacity, Integer.MAX_VALUE - 8);
+  }
+
+  /**
+   * Moves the unread bytes to the start of the given buffer (which may be the current one), and uses it from now on.
+   */
+  private void moveUnreadTo(byte[] destination) {
+    int unread = writeIndex - readIndex;
+    System.arraycopy(buffer, readIndex, destination, 0, unread);
+    buffer = destination;
+    readIndex = 0;
+    writeIndex = unread;
+  }
+
+  /**
+   * The bytes still to read of the packet at {@link #readIndex}, or 0 if there isn't a partial packet
    * whose size is known.
    */
   private int remainingOfPartialPacket() {
-    if (buffer.readableBytes() < MemcacheProtocol.HEADER_SIZE) {
+    int unread = writeIndex - readIndex;
+    if (unread < MemcacheProtocol.HEADER_SIZE) {
       return 0;
     }
     long size = packetSize();
-    return size > buffer.readableBytes() && size <= Integer.MAX_VALUE ? (int) (size - buffer.readableBytes()) : 0;
+    return size > unread && size <= Integer.MAX_VALUE ? (int) (size - unread) : 0;
   }
 
   /**
-   * The size of the packet at the start of the buffer (header and body), from its header.
-   * Negative or too big if the header is invalid.
+   * The size of the packet at {@link #readIndex} (header and body), from its header.
+   * Too big to be real if the header is invalid.
    */
   private long packetSize() {
-    long bodyLength = buffer.getUnsignedInt(buffer.readerIndex() + 8);
+    int i = readIndex + 8; // the total body length
+    long bodyLength = ((buffer[i] & 0xffL) << 24)
+      | ((buffer[i + 1] & 0xffL) << 16)
+      | ((buffer[i + 2] & 0xffL) << 8)
+      | (buffer[i + 3] & 0xffL);
     return MemcacheProtocol.HEADER_SIZE + bodyLength;
   }
 
@@ -121,7 +157,7 @@ final class KeyValueFrameDecoder {
    * Returns true if the buffer holds bytes not handed out yet (for example, the start of a packet).
    */
   boolean hasUnreadBytes() {
-    return buffer.isReadable();
+    return readIndex < writeIndex;
   }
 
   /**
@@ -130,21 +166,20 @@ final class KeyValueFrameDecoder {
    *
    * @throws InvalidSizeException if the packet's header gives an impossible size.
    */
-  @Nullable ByteBuf next() throws InvalidSizeException {
-    if (buffer.readableBytes() < MemcacheProtocol.HEADER_SIZE) {
+  @Nullable KeyValuePacket next() throws InvalidSizeException {
+    int unread = writeIndex - readIndex;
+    if (unread < MemcacheProtocol.HEADER_SIZE) {
       return null;
     }
     long size = packetSize();
     if (size > Integer.MAX_VALUE) {
-      throw new InvalidSizeException(buffer.copy(buffer.readerIndex(), MemcacheProtocol.HEADER_SIZE));
+      throw new InvalidSizeException(Arrays.copyOfRange(buffer, readIndex, readIndex + MemcacheProtocol.HEADER_SIZE));
     }
-    if (buffer.readableBytes() < size) {
+    if (unread < size) {
       return null;
     }
-    // Shares the buffer's bytes (no copy), but has a reference count of its own, so releasing it
-    // (as callers do when they're done with a packet) doesn't release this decoder's buffer.
-    ByteBuf packet = Unpooled.wrappedBuffer(buffer.array(), buffer.arrayOffset() + buffer.readerIndex(), (int) size);
-    buffer.skipBytes((int) size);
+    KeyValuePacket packet = KeyValuePacket.wrap(buffer, readIndex, (int) size); // shares the buffer's bytes (no copy)
+    readIndex += (int) size;
     return packet;
   }
 
@@ -152,9 +187,9 @@ final class KeyValueFrameDecoder {
    * Thrown when a packet's header gives a size too big to be real.
    */
   static final class InvalidSizeException extends Exception {
-    final ByteBuf header;
+    final byte[] header;
 
-    InvalidSizeException(ByteBuf header) {
+    InvalidSizeException(byte[] header) {
       super("Invalid packet size", null, false, false);
       this.header = header;
     }

@@ -21,7 +21,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.io.BodyReader;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
@@ -69,7 +69,7 @@ public class ObserveViaCasRequest extends BasePortableKeyValueRequest<ObserveVia
     long observedCas = 0;
     ResponseStatusDetails statusDetails = null;
     if (status.success()) {
-      BodyReader content = response.body();
+      SectionReader content = response.body();
       content.skip(Short.BYTES); // the partition
       int keyLength = content.readUnsignedShort();
       content.skip(keyLength);
