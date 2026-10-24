@@ -186,11 +186,27 @@ class OkHttpTlsHelper {
    * Call before the handshake starts.
    */
   static void configureTlsSocket(SSLSocket socket, SecurityConfig securityConfig) {
+    socket.setSSLParameters(tlsParameters(socket.getSSLParameters(), socket.getSupportedProtocols(), socket.getSupportedCipherSuites(), securityConfig));
+  }
+
+  /**
+   * Like {@link #configureTlsSocket}, for an engine (for example, from {@link PerConnectionSslSocketFactory#newEngine}).
+   * Call before the handshake starts.
+   */
+  static void configureTlsEngine(SSLEngine engine, SecurityConfig securityConfig) {
+    engine.setSSLParameters(tlsParameters(engine.getSSLParameters(), engine.getSupportedProtocols(), engine.getSupportedCipherSuites(), securityConfig));
+  }
+
+  private static SSLParameters tlsParameters(
+    SSLParameters params,
+    String[] supportedProtocolNames,
+    String[] supportedCipherSuites,
+    SecurityConfig securityConfig
+  ) {
     ConnectionSpec spec = secureConnectionSpec(securityConfig);
-    SSLParameters params = socket.getSSLParameters();
 
     // Only the versions and cipher suites the socket supports, like OkHttp does.
-    List<String> supportedProtocols = Arrays.asList(socket.getSupportedProtocols());
+    List<String> supportedProtocols = Arrays.asList(supportedProtocolNames);
     params.setProtocols(requireNonNull(spec.tlsVersions()).stream()
       .map(TlsVersion::javaName)
       .filter(supportedProtocols::contains)
@@ -198,7 +214,7 @@ class OkHttpTlsHelper {
 
     List<CipherSuite> cipherSuites = spec.cipherSuites();
     if (cipherSuites != null) {
-      params.setCipherSuites(supportedCipherSuites(cipherSuites, socket.getSupportedCipherSuites()).toArray(new String[0]));
+      params.setCipherSuites(supportedCipherSuites(cipherSuites, supportedCipherSuites).toArray(new String[0]));
     }
 
     // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake,
@@ -206,8 +222,7 @@ class OkHttpTlsHelper {
     if (!certificateVerificationDisabled(securityConfig) && securityConfig.hostnameVerificationEnabled()) {
       params.setEndpointIdentificationAlgorithm("HTTPS");
     }
-
-    socket.setSSLParameters(params);
+    return params;
   }
 
   static final String CERTIFICATE_HINT =

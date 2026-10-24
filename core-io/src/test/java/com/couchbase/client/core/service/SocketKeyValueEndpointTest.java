@@ -225,6 +225,13 @@ class SocketKeyValueEndpointTest {
       .build();
   }
 
+  /**
+   * Whether the endpoint's connections use NIO (see {@link NioSocketKeyValueEndpointTest}).
+   */
+  boolean nio() {
+    return false;
+  }
+
   private SocketKeyValueEndpoint newEndpoint() {
     return newEndpoint(plainAuthenticator(PASSWORD), server.port());
   }
@@ -234,7 +241,7 @@ class SocketKeyValueEndpointTest {
     KeyValueSocketConnector connector = KeyValueSocketConnector.create(
       okHttpClient, env.securityConfig(), authenticator, env.timeoutConfig().connectTimeout()
     );
-    SocketKeyValueEndpoint endpoint = new SocketKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector);
+    SocketKeyValueEndpoint endpoint = new SocketKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector, nio());
     cleanup.add(0, endpoint::disconnect);
     return endpoint;
   }
@@ -1135,6 +1142,47 @@ class SocketKeyValueEndpointTest {
     assertEquals(ResponseStatus.SUCCESS, response.status());
     assertArrayEquals("hello".getBytes(UTF_8), response.content());
     assertEquals(null, endpoint.internalDiagnostics().tlsHandshakeFailure);
+  }
+
+  /**
+   * Many small responses (a TLS record each), so one read from the socket gets several records. A TLS channel
+   * decrypts a record at a time, and holds the rest of what it read from the socket, which the selector doesn't
+   * know about.
+   */
+  @Test
+  void completesManyPipelinedRequestsWithTls() throws Exception {
+    HeldCertificate serverCert = new HeldCertificate.Builder().addSubjectAlternativeName(HOST).build();
+    HandshakeCertificates serverCerts = new HandshakeCertificates.Builder().heldCertificate(serverCert).build();
+    start(env -> env.securityConfig(it -> it.enableTls(true).trustCertificates(listOf(serverCert.certificate()))));
+    server = FakeKeyValueServer.start(serverCerts.sslContext().getServerSocketFactory());
+    cleanup.add(0, server);
+    byte[] value = new byte[100];
+    int count = 2000;
+    // Holds the responses until it has every request, then sends them back to back, a record each,
+    // so they arrive together.
+    List<FakeKeyValueServer.Packet> received = new ArrayList<>();
+    server.handler((connection, request) -> {
+      received.add(request);
+      if (received.size() == count) {
+        for (FakeKeyValueServer.Packet it : received) {
+          connection.respond(it, STATUS_SUCCESS, value);
+        }
+      }
+    });
+
+    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    List<GetRequest> requests = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      GetRequest request = newGetRequest("foo" + i);
+      requests.add(request);
+      endpoint.send(request);
+    }
+
+    for (GetRequest request : requests) {
+      GetResponse response = request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+      assertEquals(ResponseStatus.SUCCESS, response.status());
+      assertEquals(value.length, response.content().length);
+    }
   }
 
   @Test

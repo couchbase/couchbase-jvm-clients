@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
@@ -108,7 +109,24 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
     }
   }
 
+  /**
+   * Returns a client-mode TLS engine for a new connection (for example, a KV connection that uses NIO),
+   * with a new {@link SSLContext}, like the sockets this factory creates.
+   *
+   * @param host for SNI, and host name verification (if enabled).
+   * @throws CertificatesUnavailableException if a supplier threw.
+   */
+  SSLEngine newEngine(String host, int port) throws SSLException {
+    SSLEngine engine = newContext().createSSLEngine(host, port);
+    engine.setUseClientMode(true);
+    return engine;
+  }
+
   private SSLSocketFactory newFactory() throws SSLException {
+    return newContext().getSocketFactory();
+  }
+
+  private SSLContext newContext() throws SSLException {
     KeyManager[] keyManagers;
     X509TrustManager trustManager;
     try {
@@ -123,7 +141,7 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
       // For example, the authenticator couldn't provide the client certificate.
       throw new CertificatesUnavailableException(e);
     }
-    return newSslContext(keyManagers, trustManager).getSocketFactory();
+    return newSslContext(keyManagers, trustManager);
   }
 
   private static SSLContext newSslContext(KeyManager @Nullable [] keyManagers, X509TrustManager trustManager) {

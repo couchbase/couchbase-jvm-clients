@@ -64,7 +64,7 @@ import static java.util.Objects.requireNonNull;
  * {@link #open} blocks the caller; {@link #close} (from another thread) stops the attempt.
  */
 @NullMarked
-final class KeyValueConnectionOpener {
+final class KeyValueConnectionOpener implements KeyValueEndpointConnection.Opener {
   private static final Logger log = LoggerFactory.getLogger(KeyValueConnectionOpener.class);
 
   /**
@@ -127,7 +127,8 @@ final class KeyValueConnectionOpener {
   /**
    * How long each connect step took so far, keyed like the Netty implementation's connect timings.
    */
-  SortedMap<String, Duration> timings() {
+  @Override
+  public SortedMap<String, Duration> timings() {
     synchronized (timings) {
       return new TreeMap<>(timings);
     }
@@ -141,7 +142,8 @@ final class KeyValueConnectionOpener {
    * @return the open connection, ready to {@linkplain KeyValueConnection#start start}.
    * @throws TimeoutException if the deadline passes.
    */
-  KeyValueConnection open(long deadlineNanos, KeyValueConnection.Listener listener) throws IOException, TimeoutException {
+  @Override
+  public KeyValueConnection open(long deadlineNanos, KeyValueEndpointConnection.Listener listener) throws IOException, TimeoutException {
     if (closed.get()) {
       throw new IOException("Connection closed before it opened");
     }
@@ -160,7 +162,7 @@ final class KeyValueConnectionOpener {
 
   private KeyValueConnection doOpen(
     long deadlineNanos,
-    KeyValueConnection.Listener listener,
+    KeyValueEndpointConnection.Listener listener,
     AuthenticationRefresh authenticationRefresh
   ) throws IOException, TimeoutException {
     List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
@@ -305,7 +307,8 @@ final class KeyValueConnectionOpener {
    * Stops the attempt (if it's still going), by closing its sockets. Once {@link #open} has returned the connection,
    * this closes the connection's sockets too, but not the connection; close that instead.
    */
-  void close() {
+  @Override
+  public void close() {
     if (closed.compareAndSet(false, true)) {
       // Close the TCP socket first: closing a TLS socket might wait to send close_notify.
       closeQuietly(tcpSocket);
