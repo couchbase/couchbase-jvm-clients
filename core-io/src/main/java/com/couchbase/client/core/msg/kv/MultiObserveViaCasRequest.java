@@ -17,37 +17,33 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
+import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Predicate;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 
 /**
  * Special observe request implementation to handle more than one key at the same time.
  */
 public class MultiObserveViaCasRequest
-  extends BaseKeyValueRequest<MultiObserveViaCasResponse>
+  extends BasePortableKeyValueRequest<MultiObserveViaCasResponse>
   implements TargetedRequest {
 
   private final NodeIdentifier target;
@@ -58,59 +54,54 @@ public class MultiObserveViaCasRequest
                                    CollectionIdentifier collectionIdentifier, NodeIdentifier target,
                                    Map<byte[], Short> keys,
                                    Predicate<ObserveViaCasResponse.ObserveStatus> responsePredicate) {
-    super(timeout, ctx, retryStrategy, null, collectionIdentifier);
+    super(timeout, ctx, retryStrategy, null, collectionIdentifier, null);
     this.target = target;
     this.keys = keys;
     this.responsePredicate = responsePredicate;
   }
 
   @Override
-  public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-    ByteBuf content = null;
-
-    try {
-      content = alloc.buffer(keys.size() * (Short.BYTES * 2));
-      for (Map.Entry<byte[], Short> key : keys.entrySet()) {
-        ByteBuf keyWithCollection = encodedExternalKeyWithCollection(alloc, ctx, key.getKey());
-        try {
-          content.writeShort(key.getValue());
-          content.writeShort(keyWithCollection.readableBytes());
-          content.writeBytes(keyWithCollection);
-        } finally {
-          ReferenceCountUtil.release(keyWithCollection);
-        }
-      }
-      return request(alloc, MemcacheProtocol.Opcode.OBSERVE_CAS, noDatatype(),
-        partition(), opaque, noCas(), noExtras(), noKey(), content);
-    } finally {
-      ReferenceCountUtil.release(content);
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    KeyValueChannelContext ctx = encoder.context();
+    int bodyLength = 0;
+    for (byte[] key : keys.keySet()) {
+      bodyLength += Short.BYTES * 2 + collectionPrefix(ctx, key).length + key.length;
     }
+
+    byte[] body = encoder.scratch(bodyLength);
+    ByteBuffer content = ByteBuffer.wrap(body);
+    for (Map.Entry<byte[], Short> key : keys.entrySet()) {
+      byte[] collection = collectionPrefix(ctx, key.getKey());
+      content.putShort(key.getValue());
+      content.putShort((short) (collection.length + key.getKey().length));
+      content.put(collection);
+      content.put(key.getKey());
+    }
+    encoder.beginRequest(Opcode.OBSERVE_CAS)
+      .partition(partition())
+      .value(body, bodyLength);
   }
 
   @Override
-  public MultiObserveViaCasResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    final ResponseStatus status = decodeStatus(response);
+  public MultiObserveViaCasResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    final ResponseStatus status = response.responseStatus();
 
     final Map<byte[], ObserveViaCasResponse.ObserveStatus> observed = new HashMap<>();
     if (status.success()) {
-      Optional<ByteBuf> maybeContent = body(response);
-      if (maybeContent.isPresent()) {
-        ByteBuf content = maybeContent.get();
-        while (content.isReadable()) {
-          content.skipBytes(Short.BYTES); // skip the vbid
-          short keyLength = content.readShort();
-          if (ctx.collectionsEnabled()) {
-            int skipped = UnsignedLEB128.skip(content);
-            keyLength = (short) (keyLength - skipped);
-          }
-          byte[] keyEncoded = new byte[keyLength];
-          content.readBytes(keyEncoded, 0, keyLength);
-          byte obs = content.readByte();
-          content.skipBytes(Long.BYTES); // skip reading the cas
-          ObserveViaCasResponse.ObserveStatus decoded = ObserveViaCasResponse.ObserveStatus.valueOf(obs);
-          if (responsePredicate.test(decoded)) {
-            observed.put(keyEncoded, decoded);
-          }
+      BodyReader content = response.body();
+      while (content.remaining() > 0) {
+        content.skip(Short.BYTES); // skip the vbid
+        int keyLength = content.readUnsignedShort();
+        byte[] keyEncoded = content.readBytes(keyLength);
+        if (ctx.collectionsEnabled()) {
+          int collectionIdLength = UnsignedLEB128.encodedLength(keyEncoded);
+          keyEncoded = Arrays.copyOfRange(keyEncoded, collectionIdLength, keyEncoded.length);
+        }
+        byte obs = content.readByte();
+        content.skip(Long.BYTES); // skip reading the cas
+        ObserveViaCasResponse.ObserveStatus decoded = ObserveViaCasResponse.ObserveStatus.valueOf(obs);
+        if (responsePredicate.test(decoded)) {
+          observed.put(keyEncoded, decoded);
         }
       }
     }

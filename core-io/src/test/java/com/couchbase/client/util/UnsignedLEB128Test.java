@@ -60,6 +60,15 @@ class UnsignedLEB128Test {
   }
 
   @Test
+  void encodedLengthIsTheLengthOfTheLeadingValue() {
+    assertEquals(1, UnsignedLEB128.encodedLength(hexDecode("00")));
+    assertEquals(1, UnsignedLEB128.encodedLength(hexDecode("7fff"))); // followed by other bytes
+    assertEquals(2, UnsignedLEB128.encodedLength(hexDecode("d50a6b")));
+    assertEquals(10, UnsignedLEB128.encodedLength(hexDecode("ffffffffffffffffff01")));
+    assertThrows(IndexOutOfBoundsException.class, () -> UnsignedLEB128.encodedLength(hexDecode("8080")));
+  }
+
+  @Test
   void throwsOnOverflow() {
     // One greater than max unsigned long, 2^64 == 18446744073709551616 (overflows unsigned long)
     byte[] tooBig = hexDecode("80808080808080808002");

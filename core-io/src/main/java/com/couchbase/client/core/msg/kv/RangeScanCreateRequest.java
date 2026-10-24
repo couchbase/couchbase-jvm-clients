@@ -19,14 +19,11 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreRangeScanId;
@@ -46,10 +43,6 @@ import java.util.Random;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Datatype.JSON;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode.RANGE_SCAN_CREATE;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
@@ -139,8 +132,8 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
   }
 
   @Override
-  public ByteBuf encode(final ByteBufAllocator alloc, final int opaque, final KeyValueChannelContext ctx) {
-    byte[] encodedCollectionId = ctx.collectionMap().get(collectionIdentifier());
+  public void encodeTo(KeyValueRequestEncoder encoder) {
+    byte[] encodedCollectionId = encoder.context().collectionMap().get(collectionIdentifier());
     if (encodedCollectionId == null) {
       throw CollectionNotFoundException.forCollection(collectionIdentifier().collection().orElse(""));
     }
@@ -172,20 +165,16 @@ public class RangeScanCreateRequest extends PredeterminedPartitionRequest<RangeS
       ));
     }
 
-    ByteBuf body = Unpooled.wrappedBuffer(Mapper.encodeAsBytes(payload));
-    try {
-      return MemcacheProtocol.request(alloc, RANGE_SCAN_CREATE, JSON.datatype(), partition(), opaque,
-        noCas(), noExtras(), noKey(), body);
-    } finally {
-      body.release();
-    }
+    encoder.beginRequest(RANGE_SCAN_CREATE)
+      .partition(partition())
+      .addDatatype(JSON.datatype())
+      .value(Mapper.encodeAsBytes(payload));
   }
 
   @Override
-  public RangeScanCreateResponse decode(final ByteBuf response, final KeyValueChannelContext ctx) {
-    ResponseStatus status = decodeStatus(response);
-    ByteBuf body = MemcacheProtocol.body(response).orElse(Unpooled.EMPTY_BUFFER);
-    CoreRangeScanId scanId = status.success() ? new CoreRangeScanId(body) : null;
+  public RangeScanCreateResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+    ResponseStatus status = response.responseStatus();
+    CoreRangeScanId scanId = status.success() ? new CoreRangeScanId(response.bodyAsBytes()) : null;
     return new RangeScanCreateResponse(status, scanId);
   }
 

@@ -72,6 +72,19 @@ public class UnsignedLEB128 {
   }
 
   /**
+   * Returns the length of the unsigned LEB128 value at the start of the array.
+   *
+   * @throws IndexOutOfBoundsException if the array does not contain a complete value.
+   */
+  public static int encodedLength(byte[] bytes) {
+    int length = 0;
+    while ((bytes[length++] & 0x80) != 0) {
+      // keep going until the last byte of the value (high bit clear)
+    }
+    return length;
+  }
+
+  /**
    * Writes the unsigned LEB128 representation of the value to the buffer.
    */
   public static void write(ByteBuf buf, long value) {
