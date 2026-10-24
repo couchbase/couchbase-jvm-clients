@@ -74,15 +74,13 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
 
   /**
    * Returns true if the packet is a request from the server (which {@link #handleServerPush} handles), not a response.
-   * Also used by the KV endpoint that doesn't use Netty, during its handshake.
    */
-  @Stability.Internal
-  public static boolean isServerPush(ByteBuf packet) {
+  private static boolean isServerPush(ByteBuf packet) {
     return MemcacheProtocol.magic(packet) == MemcacheProtocol.Magic.SERVER_PUSH_REQUEST.magic();
   }
 
   /**
-   * Like {@link #isServerPush(ByteBuf)}. Used by the KV endpoint that doesn't use Netty, once it's connected.
+   * Like {@link #isServerPush(ByteBuf)}. Used by the KV endpoint that doesn't use Netty.
    */
   @Stability.Internal
   public static boolean isServerPush(KeyValuePacket packet) {
@@ -91,16 +89,13 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
 
   /**
    * Handles a request from the server. Doesn't release the packet.
-   * Also used by the KV endpoint that doesn't use Netty, during its handshake.
    */
-  @Stability.Internal
-  public static void handleServerPush(EndpointContext endpointContext, ByteBuf packet) {
+  private static void handleServerPush(EndpointContext endpointContext, ByteBuf packet) {
     handleServerPush(endpointContext, PortableKeyValueRequest.packet(packet));
   }
 
   /**
-   * Like {@link #handleServerPush(EndpointContext, ByteBuf)}. Used by the KV endpoint that doesn't use Netty,
-   * once it's connected.
+   * Like {@link #handleServerPush(EndpointContext, ByteBuf)}. Used by the KV endpoint that doesn't use Netty.
    */
   @Stability.Internal
   public static void handleServerPush(EndpointContext endpointContext, KeyValuePacket packet) {

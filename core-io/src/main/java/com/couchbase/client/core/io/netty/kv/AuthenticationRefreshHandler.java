@@ -18,17 +18,16 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdapter;
 import com.couchbase.client.core.endpoint.EndpointContext;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
+import com.couchbase.client.core.msg.kv.BasePortableKeyValueRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.util.SynchronousEventBus;
 import org.slf4j.Logger;
@@ -37,12 +36,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.decodeStatus;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbThrowables.propagate;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -163,41 +156,27 @@ public class AuthenticationRefreshHandler extends ChannelInboundHandlerAdapter {
    * Also used by the KV endpoint that doesn't use Netty.
    */
   @Stability.Internal
-  public static class SingleStepAuthRequest extends BaseKeyValueRequest<SingleStepAuthResponse> {
+  public static class SingleStepAuthRequest extends BasePortableKeyValueRequest<SingleStepAuthResponse> {
     private final SingleStepSaslAuthParameters params;
 
     public SingleStepAuthRequest(CoreContext ctx, SingleStepSaslAuthParameters params) {
       // We're sending this request at a low layer that bypasses timeout and retry handling,
       // so those arguments don't really matter -- but superclass requires us to pass _something_.
-      super(Duration.ZERO, ctx, FailFastRetryStrategy.INSTANCE, null, null);
+      super(Duration.ZERO, ctx, FailFastRetryStrategy.INSTANCE, null, null, null);
 
       this.params = requireNonNull(params);
     }
 
     @Override
-    public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-      ByteBuf key = Unpooled.copiedBuffer(params.mechanism().mech(), UTF_8);
-      ByteBuf body = Unpooled.copiedBuffer(params.payload(), UTF_8);
-
-      return request(
-        UnpooledByteBufAllocator.DEFAULT,
-        MemcacheProtocol.Opcode.SASL_AUTH,
-        noDatatype(),
-        noPartition(),
-        opaque,
-        noCas(),
-        noExtras(),
-        key,
-        body
-      );
+    public void encodeTo(KeyValueRequestEncoder encoder) {
+      encoder.beginRequest(Opcode.SASL_AUTH)
+        .key(params.mechanism().mech().getBytes(UTF_8))
+        .value(params.payload().getBytes(UTF_8));
     }
 
     @Override
-    public SingleStepAuthResponse decode(
-      ByteBuf response,
-      KeyValueChannelContext ctx
-    ) {
-      short statusCode = status(response);
+    public SingleStepAuthResponse decode(KeyValuePacket response, KeyValueChannelContext ctx) {
+      short statusCode = response.status();
       ResponseStatus status = statusCode == MemcacheProtocol.Status.AUTH_ERROR.status()
         ? ResponseStatus.NO_ACCESS // abusing this to mean "not authenticated"
         : decodeStatus(statusCode);

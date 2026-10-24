@@ -202,6 +202,14 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
     return this;
   }
 
+  /**
+   * Whether the request is a SASL request (SASL_AUTH or SASL_STEP), which carries credentials, so its owner
+   * keeps it out of buffers that are reused or pooled.
+   */
+  public boolean isSasl() {
+    return opcode == Opcode.SASL_AUTH || opcode == Opcode.SASL_STEP;
+  }
+
   @Override
   public SectionWriter framingExtras() {
     checkBuilding();

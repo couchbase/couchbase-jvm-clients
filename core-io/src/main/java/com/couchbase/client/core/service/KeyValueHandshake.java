@@ -34,9 +34,6 @@ import com.couchbase.client.core.cnc.events.io.UnknownSaslMechanismDetectedEvent
 import com.couchbase.client.core.cnc.events.io.UnsolicitedFeaturesReturnedEvent;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SaslMechanism;
@@ -45,10 +42,14 @@ import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
 import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
@@ -85,19 +86,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsBytes;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.bodyAsString;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noPartition;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.opcode;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.status;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.successful;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.util.CbCollections.setOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -123,18 +114,20 @@ final class KeyValueHandshake implements CallbackHandler {
    */
   interface PacketIo {
     /**
-     * Buffers the packet to send, and releases it.
+     * Buffers a request: begins it, lets {@code build} build it (see {@link KeyValueRequestBuilder}),
+     * and finishes it with the given opaque.
      */
-    void write(ByteBuf packet) throws IOException;
+    void write(Opcode opcode, int opaque, Consumer<KeyValueRequestBuilder> build) throws IOException;
 
     void flush() throws IOException;
 
     /**
      * Reads the next packet from the server (a response, or a request the server pushes).
+     * The packet is valid only until the next read.
      *
      * @throws SocketTimeoutException if the connect deadline passes first.
      */
-    ByteBuf read() throws IOException;
+    KeyValuePacket read() throws IOException;
   }
 
   /**
@@ -161,7 +154,6 @@ final class KeyValueHandshake implements CallbackHandler {
   private final EndpointContext endpointContext;
   private final IoContext ioContext;
   private final EventBus eventBus;
-  private final ByteBufAllocator alloc;
   private final PacketIo io;
   private final Duration connectTimeout;
   private final Set<ServerFeature> requestedFeatures;
@@ -202,7 +194,6 @@ final class KeyValueHandshake implements CallbackHandler {
   KeyValueHandshake(
     EndpointContext endpointContext,
     IoContext ioContext,
-    ByteBufAllocator alloc,
     PacketIo io,
     Set<ServerFeature> requestedFeatures,
     @Nullable SaslCredentials credentials,
@@ -213,7 +204,6 @@ final class KeyValueHandshake implements CallbackHandler {
     this.endpointContext = requireNonNull(endpointContext);
     this.ioContext = requireNonNull(ioContext);
     this.eventBus = endpointContext.environment().eventBus();
-    this.alloc = requireNonNull(alloc);
     this.io = requireNonNull(io);
     this.connectTimeout = endpointContext.environment().timeoutConfig().connectTimeout();
     this.requestedFeatures = requireNonNull(requestedFeatures);
@@ -243,15 +233,23 @@ final class KeyValueHandshake implements CallbackHandler {
 
   private Result doRun() throws IOException {
     // Feature negotiation is never empty here (the endpoint always asks for some), so it's always sent.
-    int helloOpaque = write(MemcacheProtocol.Opcode.HELLO, helloKey(), helloBody());
+    int helloOpaque = write(Opcode.HELLO, request -> {
+      request.key(helloKey());
+      KeyValueRequestBuilder.SectionWriter body = request.valueWriter();
+      for (ServerFeature feature : requestedFeatures) {
+        body.putShort(feature.value());
+      }
+    });
     startTiming(FeatureNegotiatingHandler.class);
 
-    int errorMapOpaque = write(MemcacheProtocol.Opcode.ERROR_MAP, noKey(), alloc.buffer(Short.BYTES).writeShort(ERROR_MAP_VERSION));
+    int errorMapOpaque = write(Opcode.ERROR_MAP, request -> request.valueWriter().putShort(ERROR_MAP_VERSION));
     startTiming(ErrorMapLoadingHandler.class);
 
     int listMechanismsOpaque = 0;
     if (credentials != null) {
-      listMechanismsOpaque = write(MemcacheProtocol.Opcode.SASL_LIST_MECHS, noKey(), noBody());
+      listMechanismsOpaque = write(Opcode.SASL_LIST_MECHS, request -> {
+        // no key or value
+      });
       startTiming(SaslListMechanismsHandler.class);
       startTiming(SaslAuthenticationHandler.class);
       startAuthentication(credentials.allowedMechanisms());
@@ -281,7 +279,7 @@ final class KeyValueHandshake implements CallbackHandler {
 
   // ---- HELLO (like FeatureNegotiatingHandler)
 
-  private ByteBuf helloKey() {
+  private byte[] helloKey() {
     TreeMap<String, String> result = new TreeMap<>();
 
     String agent = endpointContext.environment().userAgent().formattedShort();
@@ -293,82 +291,64 @@ final class KeyValueHandshake implements CallbackHandler {
     result.put("a", agent);
     result.put("i", channelId);
 
-    return alloc.buffer().writeBytes(Mapper.encodeAsBytes(result));
-  }
-
-  private ByteBuf helloBody() {
-    ByteBuf body = alloc.buffer(requestedFeatures.size() * 2);
-    for (ServerFeature feature : requestedFeatures) {
-      body.writeShort(feature.value());
-    }
-    return body;
+    return Mapper.encodeAsBytes(result);
   }
 
   private Set<ServerFeature> readHello(int opaque) throws IOException {
-    ByteBuf response = read(opaque);
-    try {
-      Duration latency = stopTiming(FeatureNegotiatingHandler.class);
+    KeyValuePacket response = read(opaque);
+    Duration latency = stopTiming(FeatureNegotiatingHandler.class);
 
-      if (!successful(response)) {
-        eventBus.publish(new FeaturesNegotiationFailedEvent(ioContext, status(response)));
-        // Like FeatureNegotiatingHandler, which fails the connect attempt.
-        throw new CouchbaseException(
-          "Error while parsing negotiated server features.",
-          new CouchbaseException(
-            "HELO failed with status " + MemcacheProtocol.decodeStatus(response) +
-              " and body: " + bodyAsString(response)
-          )
-        );
-      }
-
-      Set<ServerFeature> negotiated = EnumSet.noneOf(ServerFeature.class);
-      List<ServerFeature> unsolicited = new ArrayList<>();
-      Optional<ByteBuf> body = MemcacheProtocol.body(response);
-      try {
-        while (body.isPresent() && body.get().isReadable()) {
-          ServerFeature feature = ServerFeature.from(body.get().readUnsignedShort());
-          if (requestedFeatures.contains(feature)) {
-            negotiated.add(feature);
-          } else {
-            unsolicited.add(feature);
-          }
-        }
-      } catch (Exception e) {
-        throw new CouchbaseException("Error while parsing negotiated server features.", e);
-      }
-
-      if (!unsolicited.isEmpty()) {
-        eventBus.publish(new UnsolicitedFeaturesReturnedEvent(ioContext, unsolicited));
-      }
-      eventBus.publish(new FeaturesNegotiatedEvent(ioContext, latency, new ArrayList<>(negotiated)));
-      waitingFor = "KV Error Map loading";
-      return negotiated;
-
-    } finally {
-      response.release();
+    if (!successful(response)) {
+      eventBus.publish(new FeaturesNegotiationFailedEvent(ioContext, response.status()));
+      // Like FeatureNegotiatingHandler, which fails the connect attempt.
+      throw new CouchbaseException(
+        "Error while parsing negotiated server features.",
+        new CouchbaseException(
+          "HELO failed with status " + response.responseStatus() +
+            " and body: " + response.bodyAsString()
+        )
+      );
     }
+
+    Set<ServerFeature> negotiated = EnumSet.noneOf(ServerFeature.class);
+    List<ServerFeature> unsolicited = new ArrayList<>();
+    try {
+      SectionReader body = response.body();
+      while (body.remaining() > 0) {
+        ServerFeature feature = ServerFeature.from(body.readUnsignedShort());
+        if (requestedFeatures.contains(feature)) {
+          negotiated.add(feature);
+        } else {
+          unsolicited.add(feature);
+        }
+      }
+    } catch (Exception e) {
+      throw new CouchbaseException("Error while parsing negotiated server features.", e);
+    }
+
+    if (!unsolicited.isEmpty()) {
+      eventBus.publish(new UnsolicitedFeaturesReturnedEvent(ioContext, unsolicited));
+    }
+    eventBus.publish(new FeaturesNegotiatedEvent(ioContext, latency, new ArrayList<>(negotiated)));
+    waitingFor = "KV Error Map loading";
+    return negotiated;
   }
 
   // ---- GET_ERROR_MAP (like ErrorMapLoadingHandler)
 
   private @Nullable ErrorMap readErrorMap(int opaque) throws IOException {
-    ByteBuf response = read(opaque);
-    try {
-      Duration latency = stopTiming(ErrorMapLoadingHandler.class);
-      waitingFor = credentials != null ? "SASL Mechanism listing" : "KV Select Bucket loading";
+    KeyValuePacket response = read(opaque);
+    Duration latency = stopTiming(ErrorMapLoadingHandler.class);
+    waitingFor = credentials != null ? "SASL Mechanism listing" : "KV Select Bucket loading";
 
-      if (!successful(response)) {
-        eventBus.publish(new ErrorMapLoadingFailedEvent(ioContext, latency, status(response)));
-        return null;
-      }
-
-      Optional<ErrorMap> errorMap = parseErrorMap(bodyAsBytes(response));
-      eventBus.publish(new ErrorMapLoadedEvent(ioContext, latency, errorMap));
-      return errorMap.orElse(null);
-
-    } finally {
-      response.release();
+    if (!successful(response)) {
+      eventBus.publish(new ErrorMapLoadingFailedEvent(ioContext, latency, response.status()));
+      return null;
     }
+
+    Optional<ErrorMap> errorMap = parseErrorMap(response.bodyAsBytes());
+    eventBus.publish(new ErrorMapLoadedEvent(ioContext, latency, errorMap));
+    return errorMap.orElse(null);
   }
 
   private Optional<ErrorMap> parseErrorMap(byte[] input) {
@@ -387,36 +367,31 @@ final class KeyValueHandshake implements CallbackHandler {
   // ---- SASL_LIST_MECHS (like SaslListMechanismsHandler)
 
   private void readMechanisms(int opaque) throws IOException {
-    ByteBuf response = read(opaque);
-    try {
-      Duration latency = stopTiming(SaslListMechanismsHandler.class);
-      waitingFor = "KV SASL Negotiation";
+    KeyValuePacket response = read(opaque);
+    Duration latency = stopTiming(SaslListMechanismsHandler.class);
+    waitingFor = "KV SASL Negotiation";
 
-      if (!successful(response)) {
-        throw failListingMechanisms("Received non-success status from server", status(response), latency);
-      }
-
-      String[] rawMechanisms = bodyAsString(response).split(" ");
-      boolean isEmpty = rawMechanisms.length == 1 && rawMechanisms[0].isEmpty();
-      if (rawMechanisms.length == 0 || isEmpty) {
-        throw failListingMechanisms("Received empty mechanism list from server", status(response), latency);
-      }
-
-      serverMechanisms = Arrays.stream(rawMechanisms)
-        .map(it -> {
-          SaslMechanism mechanism = SaslMechanism.from(it);
-          if (mechanism == null) {
-            eventBus.publish(new UnknownSaslMechanismDetectedEvent(ioContext, it));
-          }
-          return mechanism;
-        })
-        .filter(Objects::nonNull)
-        .collect(Collectors.toSet());
-      eventBus.publish(new SaslMechanismsListedEvent(ioContext, serverMechanisms, latency));
-
-    } finally {
-      response.release();
+    if (!successful(response)) {
+      throw failListingMechanisms("Received non-success status from server", response.status(), latency);
     }
+
+    String[] rawMechanisms = response.bodyAsString().split(" ");
+    boolean isEmpty = rawMechanisms.length == 1 && rawMechanisms[0].isEmpty();
+    if (rawMechanisms.length == 0 || isEmpty) {
+      throw failListingMechanisms("Received empty mechanism list from server", response.status(), latency);
+    }
+
+    serverMechanisms = Arrays.stream(rawMechanisms)
+      .map(it -> {
+        SaslMechanism mechanism = SaslMechanism.from(it);
+        if (mechanism == null) {
+          eventBus.publish(new UnknownSaslMechanismDetectedEvent(ioContext, it));
+        }
+        return mechanism;
+      })
+      .filter(Objects::nonNull)
+      .collect(Collectors.toSet());
+    eventBus.publish(new SaslMechanismsListedEvent(ioContext, serverMechanisms, latency));
   }
 
   private AuthenticationFailureException failListingMechanisms(String message, short status, Duration latency) {
@@ -448,11 +423,7 @@ final class KeyValueHandshake implements CallbackHandler {
       throw failAuthentication("SASL Client could not be constructed", null, e, (short) 0);
     }
 
-    saslOpaque = write(
-      MemcacheProtocol.Opcode.SASL_AUTH,
-      Unpooled.copiedBuffer(client.getMechanismName(), UTF_8),
-      payload == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(payload)
-    );
+    saslOpaque = writeSasl(Opcode.SASL_AUTH, client.getMechanismName(), payload);
     maybeSelectBucketAfterLastSaslRequest();
   }
 
@@ -476,25 +447,21 @@ final class KeyValueHandshake implements CallbackHandler {
    */
   private void authenticate() throws IOException {
     while (true) {
-      ByteBuf response = read(saslOpaque);
-      try {
-        roundtripsToGo--;
-        short status = status(response);
-        if (successful(response) || status == STATUS_AUTH_CONTINUE) {
-          if (handleSaslResponse(response)) {
-            return;
-          }
-        } else if (status == STATUS_AUTH_ERROR) {
-          String message = "User authentication failed; check username and password.";
-          if (!requireNonNull(credentials).allowedMechanisms().equals(setOf(SaslMechanism.PLAIN))) {
-            message += " " + SaslAuthenticationHandler.LDAP_ADMONITION;
-          }
-          restartAuthenticationOrFail(message, response, status);
-        } else {
-          throw failAuthentication("Unexpected Status 0x" + Integer.toHexString(status) + " during SASL auth", response, null, status);
+      KeyValuePacket response = read(saslOpaque);
+      roundtripsToGo--;
+      short status = response.status();
+      if (successful(response) || status == STATUS_AUTH_CONTINUE) {
+        if (handleSaslResponse(response)) {
+          return;
         }
-      } finally {
-        response.release();
+      } else if (status == STATUS_AUTH_ERROR) {
+        String message = "User authentication failed; check username and password.";
+        if (!requireNonNull(credentials).allowedMechanisms().equals(setOf(SaslMechanism.PLAIN))) {
+          message += " " + SaslAuthenticationHandler.LDAP_ADMONITION;
+        }
+        restartAuthenticationOrFail(message, response, status);
+      } else {
+        throw failAuthentication("Unexpected Status 0x" + Integer.toHexString(status) + " during SASL auth", response, null, status);
       }
     }
   }
@@ -502,33 +469,29 @@ final class KeyValueHandshake implements CallbackHandler {
   /**
    * @return true if authentication is complete, or false if another SASL request was sent.
    */
-  private boolean handleSaslResponse(ByteBuf response) throws IOException {
+  private boolean handleSaslResponse(KeyValuePacket response) throws IOException {
     SaslClient client = requireNonNull(saslClient);
     try {
-      byte opcode = opcode(response);
-      if (opcode == MemcacheProtocol.Opcode.SASL_STEP.opcode() || client.isComplete()) {
+      byte opcode = response.opcode();
+      if (opcode == Opcode.SASL_STEP.opcode() || client.isComplete()) {
         completeAuthentication(response);
         return true;
       }
-      if (opcode != MemcacheProtocol.Opcode.SASL_AUTH.opcode()) {
+      if (opcode != Opcode.SASL_AUTH.opcode()) {
         throw new CouchbaseException("Unexpected opcode 0x" + Integer.toHexString(opcode & 0xff) + " in SASL response");
       }
 
       byte[] evaluated;
       try {
-        evaluated = client.evaluateChallenge(bodyAsBytes(response));
+        evaluated = client.evaluateChallenge(response.bodyAsBytes());
         if (evaluated == null || evaluated.length == 0) {
           throw new SaslException("Evaluation returned empty payload, this is unexpected!");
         }
       } catch (SaslException e) {
-        throw failAuthentication("Failure while evaluating SASL Auth Response.", response, e, status(response));
+        throw failAuthentication("Failure while evaluating SASL Auth Response.", response, e, response.status());
       }
 
-      saslOpaque = write(
-        MemcacheProtocol.Opcode.SASL_STEP,
-        Unpooled.copiedBuffer(client.getMechanismName(), UTF_8),
-        Unpooled.wrappedBuffer(evaluated)
-      );
+      saslOpaque = writeSasl(Opcode.SASL_STEP, client.getMechanismName(), evaluated);
       maybeSelectBucketAfterLastSaslRequest();
       io.flush();
       return false;
@@ -536,19 +499,19 @@ final class KeyValueHandshake implements CallbackHandler {
     } catch (AuthenticationFailureException e) {
       throw e;
     } catch (SaslException e) {
-      throw failAuthentication("Unexpected error during SASL auth", response, e, status(response));
+      throw failAuthentication("Unexpected error during SASL auth", response, e, response.status());
     } catch (IOException e) {
       throw e; // from writing the next request
     } catch (Exception e) {
-      throw failAuthentication("Unexpected error during SASL auth", response, e, status(response));
+      throw failAuthentication("Unexpected error during SASL auth", response, e, response.status());
     }
   }
 
-  private void completeAuthentication(ByteBuf response) throws SaslException {
+  private void completeAuthentication(KeyValuePacket response) throws SaslException {
     SaslClient client = requireNonNull(saslClient);
     if (!client.isComplete()) {
       // validate final server response
-      client.evaluateChallenge(bodyAsBytes(response));
+      client.evaluateChallenge(response.bodyAsBytes());
       if (!client.isComplete()) {
         throw new SaslException("Incomplete SASL exchange");
       }
@@ -566,7 +529,7 @@ final class KeyValueHandshake implements CallbackHandler {
    * the server doesn't support (for example, the server uses LDAP, which needs PLAIN). If so, tries again with
    * the mechanisms both support. Otherwise, fails.
    */
-  private void restartAuthenticationOrFail(String message, ByteBuf response, short status) throws IOException {
+  private void restartAuthenticationOrFail(String message, KeyValuePacket response, short status) throws IOException {
     SaslMechanism currentMechanism = SaslMechanism.from(requireNonNull(saslClient).getMechanismName());
     if (serverMechanisms.contains(currentMechanism)) {
       throw failAuthentication(message, response, null, status);
@@ -598,7 +561,7 @@ final class KeyValueHandshake implements CallbackHandler {
    */
   private AuthenticationFailureException failAuthentication(
     String message,
-    @Nullable ByteBuf lastPacket,
+    @Nullable KeyValuePacket lastPacket,
     @Nullable Throwable cause,
     short status
   ) {
@@ -608,7 +571,7 @@ final class KeyValueHandshake implements CallbackHandler {
     byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
     Map<String, Object> serverContext = null;
     if (lastPacket != null) {
-      byte[] content = bodyAsBytes(lastPacket);
+      byte[] content = lastPacket.bodyAsBytes();
       if (content.length != 0) {
         try {
           serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {
@@ -660,95 +623,91 @@ final class KeyValueHandshake implements CallbackHandler {
     if (!bucketName.isPresent() || selectBucketSent) {
       return;
     }
-    selectBucketOpaque = write(MemcacheProtocol.Opcode.SELECT_BUCKET, Unpooled.copiedBuffer(bucketName.get(), UTF_8), noBody());
+    byte[] bucket = bucketName.get().getBytes(UTF_8);
+    selectBucketOpaque = write(Opcode.SELECT_BUCKET, request -> request.key(bucket));
     selectBucketSent = true;
     startTiming(SelectBucketHandler.class);
   }
 
   private void readSelectBucket() throws IOException {
     String bucket = bucketName.orElseThrow(IllegalStateException::new);
-    ByteBuf response = read(selectBucketOpaque);
-    try {
-      Duration latency = stopTiming(SelectBucketHandler.class);
+    KeyValuePacket response = read(selectBucketOpaque);
+    Duration latency = stopTiming(SelectBucketHandler.class);
 
-      short status = status(response);
-      if (status == MemcacheProtocol.Status.SUCCESS.status()) {
-        eventBus.publish(new SelectBucketCompletedEvent(latency, ioContext, bucket));
+    short status = response.status();
+    if (status == MemcacheProtocol.Status.SUCCESS.status()) {
+      eventBus.publish(new SelectBucketCompletedEvent(latency, ioContext, bucket));
 
-      } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
-        eventBus.publish(new SelectBucketFailedEvent(Event.Severity.WARN, ioContext, status));
-        // We don't set AuthenticationStatus.FAILED here, as it's not unambiguously that.
-        throw new AuthenticationFailureException(
-          "Either the bucket with name \"" + redactMeta(bucket) + "\" is not present, the user does not have " +
-            "the right privileges to access it, or the bucket is hibernated",
-          new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext, null),
-          null
-        );
+    } else if (status == MemcacheProtocol.Status.ACCESS_ERROR.status()) {
+      eventBus.publish(new SelectBucketFailedEvent(Event.Severity.WARN, ioContext, status));
+      // We don't set AuthenticationStatus.FAILED here, as it's not unambiguously that.
+      throw new AuthenticationFailureException(
+        "Either the bucket with name \"" + redactMeta(bucket) + "\" is not present, the user does not have " +
+          "the right privileges to access it, or the bucket is hibernated",
+        new KeyValueIoErrorContext(MemcacheProtocol.decodeStatus(status), endpointContext, null),
+        null
+      );
 
-      } else if (status == MemcacheProtocol.Status.NOT_FOUND.status()) {
-        // NOT_FOUND severity is lowered to debug because it shows up when bootstrapping against
-        // a node in a MDS setup without the kv service / bucket enabled.
-        eventBus.publish(new SelectBucketFailedEvent(Event.Severity.DEBUG, ioContext, status));
-        throw BucketNotFoundException.forBucket(bucket);
+    } else if (status == MemcacheProtocol.Status.NOT_FOUND.status()) {
+      // NOT_FOUND severity is lowered to debug because it shows up when bootstrapping against
+      // a node in a MDS setup without the kv service / bucket enabled.
+      eventBus.publish(new SelectBucketFailedEvent(Event.Severity.DEBUG, ioContext, status));
+      throw BucketNotFoundException.forBucket(bucket);
 
-      } else {
-        eventBus.publish(new SelectBucketFailedEvent(Event.Severity.ERROR, ioContext, status));
-        throw new CouchbaseException("Select bucket failed with unexpected status code 0x" + Integer.toHexString(status));
-      }
-
-    } finally {
-      response.release();
+    } else {
+      eventBus.publish(new SelectBucketFailedEvent(Event.Severity.ERROR, ioContext, status));
+      throw new CouchbaseException("Select bucket failed with unexpected status code 0x" + Integer.toHexString(status));
     }
   }
 
   // ---- helpers
 
   /**
-   * Buffers a request, and returns its opaque. Releases the key and body.
+   * Buffers a request (see {@link PacketIo#write}), and returns its opaque.
    */
-  private int write(MemcacheProtocol.Opcode opcode, ByteBuf key, ByteBuf body) throws IOException {
+  private int write(Opcode opcode, Consumer<KeyValueRequestBuilder> build) throws IOException {
     int opaque = BaseKeyValueRequest.nextOpaque();
-    ByteBuf request;
-    try {
-      request = MemcacheProtocol.request(alloc, opcode, noDatatype(), noPartition(), opaque, noCas(), noExtras(), key, body);
-    } finally {
-      key.release();
-      body.release();
-    }
-    io.write(request);
+    io.write(opcode, opaque, build);
     return opaque;
+  }
+
+  /**
+   * Buffers a SASL request, and returns its opaque.
+   *
+   * @param payload null for none.
+   */
+  private int writeSasl(Opcode opcode, String mechanism, byte @Nullable [] payload) throws IOException {
+    byte[] key = mechanism.getBytes(UTF_8);
+    byte[] value = payload == null ? Bytes.EMPTY_BYTE_ARRAY : payload;
+    return write(opcode, request -> request.key(key).value(value));
+  }
+
+  private static boolean successful(KeyValuePacket response) {
+    return response.status() == MemcacheProtocol.Status.SUCCESS.status();
   }
 
   /**
    * Returns the response with the given opaque, handling any requests the server pushes, and skipping
    * the responses to discarded requests.
    */
-  private ByteBuf read(int opaque) throws IOException {
+  private KeyValuePacket read(int opaque) throws IOException {
     while (true) {
-      ByteBuf packet = io.read();
+      KeyValuePacket packet = io.read();
 
       if (ServerPushHandler.isServerPush(packet)) {
-        try {
-          ServerPushHandler.handleServerPush(endpointContext, packet);
-        } finally {
-          packet.release();
-        }
+        ServerPushHandler.handleServerPush(endpointContext, packet);
         continue;
       }
 
-      int actual = MemcacheProtocol.opaque(packet);
+      int actual = packet.opaque();
       if (actual == opaque) {
         return packet;
       }
 
-      try {
-        if (!discardedOpaques.remove(actual)) {
-          // The server answers handshake requests in order, so this is a protocol error.
-          throw new CouchbaseException("Unexpected response during KV connection handshake (expected opaque "
-            + opaque + ", got " + actual + "): " + MemcacheProtocol.messageToString(packet));
-        }
-      } finally {
-        packet.release();
+      if (!discardedOpaques.remove(actual)) {
+        // The server answers handshake requests in order, so this is a protocol error.
+        throw new CouchbaseException("Unexpected response during KV connection handshake (expected opaque "
+          + opaque + ", got " + actual + "): " + packet);
       }
     }
   }

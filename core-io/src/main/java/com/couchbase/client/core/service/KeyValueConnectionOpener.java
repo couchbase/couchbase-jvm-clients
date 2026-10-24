@@ -19,13 +19,15 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.io.CustomTlsCiphersEnabledEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.service.KeyValueConnection.AuthenticationRefresh;
@@ -36,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLException;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,9 +52,11 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.remainingMillis;
+import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -63,6 +66,11 @@ import static java.util.Objects.requireNonNull;
 @NullMarked
 final class KeyValueConnectionOpener {
   private static final Logger log = LoggerFactory.getLogger(KeyValueConnectionOpener.class);
+
+  /**
+   * The handshake's requests are few and small (a SASL payload, at most, besides HELLO's features).
+   */
+  private static final int HANDSHAKE_BUFFER_SIZE = 4 * KeyValueRequestEncoder.MAX_REQUEST_HEAD_SIZE;
 
   private final EndpointContext endpointContext;
   private final String remoteHostname;
@@ -197,8 +205,18 @@ final class KeyValueConnectionOpener {
     IoContext ioContext = new IoContext(endpointContext, s.getLocalSocketAddress(), s.getRemoteSocketAddress(), endpointContext.bucket());
     InputStream input = s.getInputStream(); // the packet reader does the buffering
     OutputStream rawOutput = s.getOutputStream();
-    // Only for the handshake: the connection does its own buffering (see KeyValueRequestWriter).
-    OutputStream output = new BufferedOutputStream(rawOutput, KeyValueConnection.BUFFER_SIZE);
+    // Only for the handshake (the connection has a writer of its own), so it's small, and nothing negotiated yet.
+    KeyValueRequestWriter output = new KeyValueRequestWriter(
+      rawOutput,
+      HANDSHAKE_BUFFER_SIZE,
+      new KeyValueChannelContext(
+        null,
+        bucketName,
+        endpointContext.core().configurationProvider().collectionMap(),
+        shortChannelId,
+        emptySet()
+      )
+    );
     KeyValuePacketReader packets = new KeyValuePacketReader(input, ioContext);
     TrafficCapture capture = new TrafficCapture(ioContext);
 
@@ -207,17 +225,21 @@ final class KeyValueConnectionOpener {
       result = new KeyValueHandshake(
         endpointContext,
         ioContext,
-        KeyValueConnection.ALLOC,
         new KeyValueHandshake.PacketIo() {
           @Override
-          public void write(ByteBuf packet) throws IOException {
+          public void write(Opcode opcode, int opaque, Consumer<KeyValueRequestBuilder> build) throws IOException {
             try {
-              capture.written(packet);
-              packet.readBytes(output, packet.readableBytes());
+              output.makeRoomForRequest();
+              build.accept(output.beginRequest(opcode));
+              output.completeRequestHead(opaque);
+              if (capture.enabled()) {
+                capture.written(output.requestBytes());
+              }
+              output.finishRequest();
             } catch (IOException e) {
               throw withPendingTlsAlert(e, input);
             } finally {
-              packet.release();
+              output.abortRequest(); // does nothing if the request was finished
             }
           }
 
@@ -231,12 +253,11 @@ final class KeyValueConnectionOpener {
           }
 
           @Override
-          public ByteBuf read() throws IOException {
+          public KeyValuePacket read() throws IOException {
             s.setSoTimeout(remainingMillis(deadlineNanos));
             KeyValuePacket packet = packets.read();
             capture.read(packet);
-            // A copy, since the packet is valid only until the next read. (The handshake's packets are few.)
-            return Unpooled.wrappedBuffer(packet.toByteArray());
+            return packet;
           }
         },
         requestedFeatures,

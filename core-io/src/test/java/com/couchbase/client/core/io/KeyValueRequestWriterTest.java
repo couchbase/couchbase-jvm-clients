@@ -40,6 +40,7 @@ import java.util.Optional;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,10 +58,12 @@ class KeyValueRequestWriterTest {
   private static final class RecordingStream extends ByteArrayOutputStream {
     final List<Integer> writes = new ArrayList<>();
     int flushes;
+    byte[] lastWrittenFrom = new byte[0]; // the array of the last write (the writer's buffer, if it was buffered)
 
     @Override
     public synchronized void write(byte[] b, int off, int len) {
       writes.add(len);
+      lastWrittenFrom = b;
       super.write(b, off, len);
     }
 
@@ -101,6 +104,43 @@ class KeyValueRequestWriterTest {
   private byte[] flushed() throws IOException {
     writer.flush();
     return out.toByteArray();
+  }
+
+  private void writeRequest(Opcode opcode, byte[] value) throws IOException {
+    writer.makeRoomForRequest();
+    writer.beginRequest(opcode).key(KEY).value(value);
+    writer.completeRequestHead(99);
+    writer.finishRequest();
+  }
+
+  private static boolean allZeros(byte[] array, int length) {
+    for (int i = 0; i < length; i++) {
+      if (array[i] != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Test
+  void clearsTheBufferOnceSaslRequestsAreWritten() throws IOException {
+    for (Opcode opcode : new Opcode[]{Opcode.SASL_AUTH, Opcode.SASL_STEP}) {
+      out.reset();
+      writeRequest(opcode, "password".getBytes(UTF_8));
+
+      byte[] packet = flushed();
+      ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, opcode, (byte) 0, (short) 0, 99, 0,
+        Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer("password".getBytes(UTF_8)));
+      assertArrayEquals(ByteBufUtil.getBytes(expected), packet, opcode + " is sent");
+      assertTrue(allZeros(out.lastWrittenFrom, packet.length), "the buffer is cleared once " + opcode + " is written");
+    }
+  }
+
+  @Test
+  void leavesTheBufferAsItIsWithoutSaslRequests() throws IOException {
+    writeRequest(Opcode.SET, "value".getBytes(UTF_8));
+    byte[] packet = flushed();
+    assertFalse(allZeros(out.lastWrittenFrom, packet.length));
   }
 
   @Test
