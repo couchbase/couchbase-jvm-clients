@@ -21,8 +21,10 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 
 import java.time.Duration;
+import java.util.Arrays;
 
 /**
  * This event is created if somewhere in the IO layer an invalid packet
@@ -44,7 +46,27 @@ public class InvalidPacketDetectedEvent extends AbstractEvent {
 
   public InvalidPacketDetectedEvent(final IoContext context, final byte[] packet) {
     super(Severity.ERROR, Category.IO, Duration.ZERO, context);
-    this.packet = packet;
+    this.packet = withoutSaslSecrets(packet);
+  }
+
+  /**
+   * Returns a SASL packet's header, without its body (which may hold credentials) or the body's length
+   * (a PLAIN body's length gives away the password's). Returns any other packet as it is.
+   */
+  private static byte[] withoutSaslSecrets(final byte[] packet) {
+    if (packet.length < 2) {
+      return packet;
+    }
+    MemcacheProtocol.Magic magic = MemcacheProtocol.Magic.of(packet[0]);
+    byte opcode = packet[1];
+    boolean sasl = magic != null && !magic.isServerPush()
+      && (opcode == MemcacheProtocol.Opcode.SASL_AUTH.opcode() || opcode == MemcacheProtocol.Opcode.SASL_STEP.opcode());
+    if (!sasl) {
+      return packet;
+    }
+    byte[] header = Arrays.copyOf(packet, Math.min(packet.length, MemcacheProtocol.HEADER_SIZE));
+    Arrays.fill(header, Math.min(header.length, 8), Math.min(header.length, 12), (byte) 0); // total body length
+    return header;
   }
 
   @Override
@@ -55,7 +77,8 @@ public class InvalidPacketDetectedEvent extends AbstractEvent {
   }
 
   /**
-   * Returns the invalid/malformed packet in its entirety.
+   * Returns the invalid/malformed packet in its entirety, except for a SASL packet: then only its header,
+   * without the body's length, since the body may hold credentials.
    *
    * @return the malformed packet.
    */

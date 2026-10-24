@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
@@ -31,6 +32,7 @@ import java.util.Optional;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NettyKeyValueRequestEncoderTest {
@@ -97,6 +99,31 @@ class NettyKeyValueRequestEncoderTest {
     KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SET).partition(7).key(KEY);
     request.valueWriter().putBytes(Arrays.copyOf(value, 40_000)).putBytes(Arrays.copyOfRange(value, 40_000, value.length));
     assertArrayEquals(given, bytes(encoder.finish(1)));
+  }
+
+  @Test
+  void putsSaslRequestsInUnpooledBuffers() {
+    NettyKeyValueRequestEncoder pooled = new NettyKeyValueRequestEncoder(
+      PooledByteBufAllocator.DEFAULT,
+      new KeyValueChannelContext(null, Optional.empty(), new CollectionMap(), null, EnumSet.noneOf(ServerFeature.class))
+    );
+    for (Opcode opcode : new Opcode[]{Opcode.SASL_AUTH, Opcode.SASL_STEP}) {
+      pooled.beginRequest(opcode).key(KEY).value("password".getBytes(UTF_8));
+      ByteBuf encoded = pooled.finish(1);
+      try {
+        assertSame(UnpooledByteBufAllocator.DEFAULT, encoded.alloc(), opcode.toString());
+      } finally {
+        encoded.release();
+      }
+    }
+
+    pooled.beginRequest(Opcode.GET).key(KEY);
+    ByteBuf encoded = pooled.finish(1);
+    try {
+      assertSame(PooledByteBufAllocator.DEFAULT, encoded.alloc());
+    } finally {
+      encoded.release();
+    }
   }
 
   private static byte[] bytes(ByteBuf encoded) {

@@ -19,6 +19,7 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
+import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.ByteBufferKeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
@@ -90,7 +91,9 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
     request.complete(opaque);
     int headSize = head.position();
     int valueLength = request.valueLength();
-    ByteBuf encoded = alloc.buffer(headSize + valueLength)
+    // A SASL request (which carries credentials) goes in an unpooled buffer, so they aren't left behind
+    // in one the pool hands out again.
+    ByteBuf encoded = (request.isSasl() ? UnpooledByteBufAllocator.DEFAULT : alloc).buffer(headSize + valueLength)
       .writeBytes(head.array(), 0, headSize)
       .writeBytes(request.value(), 0, valueLength);
     request.reset();

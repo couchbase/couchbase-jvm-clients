@@ -25,10 +25,13 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler.SingleStepAuthRequest;
+import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler.SingleStepAuthResponse;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
+import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.kv.CoreRangeScan;
 import com.couchbase.client.core.kv.CoreRangeScanId;
@@ -376,6 +379,28 @@ class PortableNonDocumentRequestTest {
   /**
    * Encodes the packet with {@link MemcacheProtocol#request}, like the old {@code ByteBuf} encoders.
    */
+  // Reauthentication
+
+  @Test
+  void singleStepAuth() throws IOException {
+    SingleStepAuthRequest request = new SingleStepAuthRequest(CORE_CONTEXT, SingleStepSaslAuthParameters.plain(null, "user", "pass"));
+    byte[] expected = bytes(MemcacheProtocol.request(ALLOC, Opcode.SASL_AUTH, (byte) 0, (short) 0, OPAQUE, 0,
+      Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer("PLAIN", UTF_8), Unpooled.copiedBuffer("\0user\0pass", UTF_8)));
+    assertEncodingAsConstructed(request, NO_FEATURES, expected);
+  }
+
+  @Test
+  void decodesSingleStepAuth() {
+    SingleStepAuthRequest request = new SingleStepAuthRequest(CORE_CONTEXT, SingleStepSaslAuthParameters.plain(null, "user", "pass"));
+    for (SingleStepAuthResponse decoded : decodeEveryWay(request, response(Opcode.SASL_AUTH, (byte) 0, SUCCESS, 0, NONE, NONE, NONE))) {
+      assertEquals(ResponseStatus.SUCCESS, decoded.status());
+    }
+    short authError = MemcacheProtocol.Status.AUTH_ERROR.status();
+    for (SingleStepAuthResponse decoded : decodeEveryWay(request, response(Opcode.SASL_AUTH, (byte) 0, authError, 0, NONE, NONE, NONE))) {
+      assertEquals(ResponseStatus.NO_ACCESS, decoded.status());
+    }
+  }
+
   private static byte[] reference(
     Opcode opcode,
     int datatype,

@@ -614,7 +614,7 @@ final class KeyValueConnection {
         return;
       }
       if (capture.enabled()) {
-        capture.written(Unpooled.wrappedBuffer(requestWriter.requestBytes()));
+        capture.written(requestWriter.requestBytes());
       }
       requestWriter.finishRequest();
     } finally {
@@ -817,6 +817,15 @@ final class KeyValueConnection {
     void written(ByteBuf packet) {
       if (enabled) {
         ioContext.environment().eventBus().publish(new WriteTrafficCapturedEvent(ioContext, TrafficCaptureHandler.memcacheToString(packet)));
+      }
+    }
+
+    /**
+     * Like {@link #written(ByteBuf)}, for a packet in an array.
+     */
+    void written(byte[] packet) {
+      if (enabled) {
+        written(Unpooled.wrappedBuffer(packet));
       }
     }
 

@@ -215,7 +215,7 @@ final class KeyValueResponseHandler {
 
   private void decodeAndComplete(KeyValueRequest<Response> request, KeyValuePacket packet) {
     try {
-      // Only reauthentication's request still decodes from a ByteBuf; it's rare enough that copying doesn't matter.
+      // No request in the SDK still decodes from a ByteBuf (only tests' do), so copying doesn't matter.
       Response decoded = request instanceof PortableKeyValueRequest
         ? ((PortableKeyValueRequest<Response>) request).decode(packet, channelContext)
         : request.decode(Unpooled.wrappedBuffer(packet.toByteArray()), channelContext);
