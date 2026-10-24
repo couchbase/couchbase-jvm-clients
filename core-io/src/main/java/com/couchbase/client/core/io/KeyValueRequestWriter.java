@@ -57,16 +57,6 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
    */
   private final ByteBufferKeyValueRequestBuilder request;
 
-  /**
-   * See {@link #scratch}.
-   */
-  private byte[] scratch = NO_VALUE;
-
-  /**
-   * Whether {@link #scratch} was called for the current request (cleared when it's finished or aborted).
-   */
-  private boolean scratchTaken;
-
   private static final byte[] NO_VALUE = new byte[0];
 
   public KeyValueRequestWriter(
@@ -96,28 +86,6 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
     if (buffer.remaining() < MAX_REQUEST_HEAD_SIZE) {
       writeBuffer();
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   * <p>
-   * The writer reuses it for later requests, except an array bigger than the write buffer
-   * (so one big value doesn't leave the connection holding a big array).
-   */
-  @Override
-  public byte[] scratch(int minLength) {
-    checkNoRequest();
-    if (scratchTaken) {
-      throw new IllegalStateException("scratch() was already called for this request (it returns the same array each time)");
-    }
-    scratchTaken = true;
-    if (minLength > buffer.capacity()) {
-      return new byte[minLength];
-    }
-    if (scratch.length < minLength) {
-      scratch = new byte[Math.min(buffer.capacity(), Math.max(minLength, scratch.length * 2))];
-    }
-    return scratch;
   }
 
   /**
@@ -163,11 +131,9 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
 
 
   /**
-   * Forgets the request being written (if any), as if it had never begun. Also ends the request's use of
-   * {@link #scratch}, even if it was never begun.
+   * Forgets the request being written (if any), as if it had never begun.
    */
   public void abortRequest() {
-    scratchTaken = false; // even if the request wasn't begun (for example, encoding failed first)
     if (!request.inProgress()) {
       return;
     }
@@ -188,7 +154,6 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
     byte[] value = request.value();
     int valueLength = request.valueLength();
     request.reset();
-    scratchTaken = false;
     write(value, 0, valueLength);
   }
 

@@ -34,7 +34,8 @@ import static java.util.Objects.requireNonNull;
  * {@link KeyValueRequestEncoder}s, which own the buffer and write the value.
  * <p>
  * The framing extras and extras are written into arrays of their own (one each, allocated with the builder),
- * and the key and value are kept by reference, so a request can give them in any order. {@link #complete} checks
+ * and the key and value are kept by reference (or the value is written into a growable array of the builder's,
+ * with {@link #valueWriter()}), so a request can give them in any order. {@link #complete} checks
  * the request, and writes the head into the buffer: header, framing extras, extras and key. The value isn't copied
  * here; the encoder writes it after the head.
  * <p>
@@ -51,9 +52,16 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
    */
   private static final int MAX_SECTION_SIZE = MAX_REQUEST_HEAD_SIZE - HEADER_SIZE;
 
+  /**
+   * The biggest value writer array kept for later requests. (A bigger one is dropped when its request is done,
+   * so one big value doesn't leave the builder holding a big array.)
+   */
+  private static final int MAX_RETAINED_VALUE_SIZE = 64 * 1024;
+
   private final KeyValueChannelContext context;
   private final Section framingExtras = new Section();
   private final Section extras = new Section();
+  private final ValueWriter valueWriter = new ValueWriter();
 
   private @Nullable ByteBuffer buffer;
   private int start = -1; // where the head goes; -1 if no request is being built
@@ -67,6 +75,8 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   private byte[] key = NO_VALUE;
   private byte[] value = NO_VALUE;
   private int valueLength;
+  private boolean valueGiven; // with value()
+  private boolean valueWritten; // with valueWriter()
 
   private boolean complete;
   private int headLength; // once complete
@@ -110,8 +120,11 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
     this.key = NO_VALUE;
     this.value = NO_VALUE;
     this.valueLength = 0;
+    this.valueGiven = false;
+    this.valueWritten = false;
     this.framingExtras.clear();
     this.extras.clear();
+    this.valueWriter.clear();
     this.complete = false;
   }
 
@@ -180,8 +193,12 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
       throw new IllegalArgumentException("Value length " + length + " is out of range; the array is " + value.length + " bytes");
     }
     checkBuilding();
+    if (valueWritten) {
+      throw new IllegalStateException("The value is being written with valueWriter()");
+    }
     this.value = value;
     this.valueLength = length;
+    this.valueGiven = true;
     return this;
   }
 
@@ -197,6 +214,16 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
     return extras;
   }
 
+  @Override
+  public SectionWriter valueWriter() {
+    checkBuilding();
+    if (valueGiven) {
+      throw new IllegalStateException("The value was already given with value()");
+    }
+    valueWritten = true;
+    return valueWriter;
+  }
+
   private void checkBuilding() {
     if (!inProgress()) {
       throw new IllegalStateException("No request was begun");
@@ -207,9 +234,55 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   }
 
   /**
-   * One section (framing extras or extras), written into an array of its own.
+   * Writes into a section of the request: the framing extras, the extras, or the value.
    */
-  private final class Section implements SectionWriter {
+  private abstract class Writer implements SectionWriter {
+    /**
+     * Returns the buffer to write the given number of bytes into, if the request is being built.
+     */
+    abstract ByteBuffer writable(int bytes);
+
+    @Override
+    public SectionWriter putByte(int b) {
+      if (b < Byte.MIN_VALUE || b > 0xff) {
+        throw new IllegalArgumentException("Not a byte (signed or unsigned): " + b);
+      }
+      writable(Byte.BYTES).put((byte) b);
+      return this;
+    }
+
+    @Override
+    public SectionWriter putShort(int s) {
+      if (s < Short.MIN_VALUE || s > 0xffff) {
+        throw new IllegalArgumentException("Not a short (signed or unsigned): " + s);
+      }
+      writable(Short.BYTES).putShort((short) s);
+      return this;
+    }
+
+    @Override
+    public SectionWriter putInt(int i) {
+      writable(Integer.BYTES).putInt(i);
+      return this;
+    }
+
+    @Override
+    public SectionWriter putLong(long l) {
+      writable(Long.BYTES).putLong(l);
+      return this;
+    }
+
+    @Override
+    public SectionWriter putBytes(byte[] bytes) {
+      writable(bytes.length).put(bytes);
+      return this;
+    }
+  }
+
+  /**
+   * One section of the head (framing extras or extras), written into an array of its own.
+   */
+  private final class Section extends Writer {
     private final ByteBuffer bytes = ByteBuffer.allocate(MAX_SECTION_SIZE);
 
     void clear() {
@@ -224,48 +297,57 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
       return bytes.array();
     }
 
-    /**
-     * Returns the array to write into, if the request is being built.
-     */
-    private ByteBuffer writable() {
+    @Override
+    ByteBuffer writable(int bytes) {
       checkBuilding();
-      return bytes;
+      return this.bytes; // throws BufferOverflowException if the section is full
+    }
+  }
+
+  /**
+   * The value, when the request writes it (see {@link #valueWriter()}): written into an array that grows as needed,
+   * and is kept for later requests (unless it's grown too big).
+   */
+  private final class ValueWriter extends Writer {
+    private ByteBuffer bytes = ByteBuffer.wrap(NO_VALUE);
+
+    void clear() {
+      bytes.clear();
     }
 
-    @Override
-    public SectionWriter putByte(int b) {
-      if (b < Byte.MIN_VALUE || b > 0xff) {
-        throw new IllegalArgumentException("Not a byte (signed or unsigned): " + b);
+    /**
+     * Drops the array if it's too big to keep.
+     */
+    void trim() {
+      if (bytes.capacity() > MAX_RETAINED_VALUE_SIZE) {
+        bytes = ByteBuffer.wrap(NO_VALUE);
       }
-      writable().put((byte) b);
-      return this;
+    }
+
+    int length() {
+      return bytes.position();
+    }
+
+    byte[] array() {
+      return bytes.array();
     }
 
     @Override
-    public SectionWriter putShort(int s) {
-      if (s < Short.MIN_VALUE || s > 0xffff) {
-        throw new IllegalArgumentException("Not a short (signed or unsigned): " + s);
+    ByteBuffer writable(int bytes) {
+      checkBuilding();
+      if (this.bytes.remaining() < bytes) {
+        grow(bytes);
       }
-      writable().putShort((short) s);
-      return this;
+      return this.bytes;
     }
 
-    @Override
-    public SectionWriter putInt(int i) {
-      writable().putInt(i);
-      return this;
-    }
-
-    @Override
-    public SectionWriter putLong(long l) {
-      writable().putLong(l);
-      return this;
-    }
-
-    @Override
-    public SectionWriter putBytes(byte[] bytes) {
-      writable().put(bytes);
-      return this;
+    private void grow(int more) {
+      int length = bytes.position();
+      long needed = (long) length + more;
+      long doubled = Math.max(256, 2L * bytes.capacity());
+      ByteBuffer grown = ByteBuffer.allocate(Math.toIntExact(Math.max(needed, Math.min(doubled, Integer.MAX_VALUE - 8))));
+      grown.put(bytes.array(), 0, length);
+      bytes = grown;
     }
   }
 
@@ -353,7 +435,7 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
       .put(i + 4, (byte) extrasLength)
       .put(i + 5, (byte) datatype)
       .putShort(i + 6, (short) partition)
-      .putInt(i + 8, framingExtrasLength + extrasLength + keyLength + valueLength)
+      .putInt(i + 8, framingExtrasLength + extrasLength + keyLength + valueLength())
       .putInt(i + 12, opaque)
       .putLong(i + 16, cas);
 
@@ -372,12 +454,16 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
     target.position(i + HEADER_SIZE + framingExtrasLength + extrasLength + keyLength);
   }
 
+  /**
+   * The value: the array given with {@link #value(byte[], int)}, or the value writer's. Only the first
+   * {@link #valueLength()} bytes are the value.
+   */
   public byte[] value() {
-    return value;
+    return valueWritten ? valueWriter.array() : value;
   }
 
   public int valueLength() {
-    return valueLength;
+    return valueWritten ? valueWriter.length() : valueLength;
   }
 
   /**
@@ -392,6 +478,9 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
     this.key = NO_VALUE;
     this.value = NO_VALUE;
     this.valueLength = 0;
+    this.valueGiven = false;
+    this.valueWritten = false;
+    this.valueWriter.trim(); // the owner already took the value; the array's contents stay as they are
     this.complete = false;
   }
 

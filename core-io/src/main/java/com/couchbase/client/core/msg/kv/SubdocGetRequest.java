@@ -28,6 +28,7 @@ import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
@@ -35,7 +36,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -130,20 +130,11 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
     // add the others if do the single lookup optimisation.
     // Update: single subdoc optimization will not be supported.  It adds just 3 bytes to the package size and gives
     // minimal performance gains, in return for additional client complexity.
-    byte[][] paths = new byte[commands.size()][];
-    int bodyLength = 0;
-    for (int i = 0; i < paths.length; i++) {
-      paths[i] = commands.get(i).path.getBytes(UTF_8);
-      bodyLength += Command.HEADER_SIZE + paths[i].length;
+    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_LOOKUP);
+    SectionWriter body = request.valueWriter();
+    for (Command command : commands) {
+      command.encodeTo(body, ctx.subdocBinaryXattr());
     }
-    byte[] body = encoder.scratch(bodyLength);
-    ByteBuffer bodyBuffer = ByteBuffer.wrap(body, 0, bodyLength);
-    for (int i = 0; i < paths.length; i++) {
-      commands.get(i).encodeTo(bodyBuffer, paths[i], ctx.subdocBinaryXattr());
-    }
-
-    KeyValueRequestBuilder request = beginDocumentRequest(encoder, Opcode.SUBDOC_MULTI_LOOKUP)
-      .value(body, bodyLength);
     if (flags != 0) {
       request.extras().putByte(flags);
     }
@@ -220,11 +211,6 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
   }
 
   public static class Command {
-    /**
-     * Opcode, flags and path length.
-     */
-    private static final int HEADER_SIZE = 4;
-
     private final SubdocCommandType type;
     private final String path;
     private final boolean xattr;
@@ -246,7 +232,11 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
     /**
      * Writes the command (its header, then the path) into the buffer.
      */
-    void encodeTo(ByteBuffer body, byte[] path, boolean binarySupported) {
+    void encodeTo(
+      SectionWriter body,
+      boolean binarySupported
+    ) {
+      byte[] path = this.path.getBytes(UTF_8);
       byte flags = 0;
       if (xattr) {
         flags |= SUBDOC_FLAG_XATTR_PATH;
@@ -255,10 +245,10 @@ public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetRespo
         flags |= SUBDOC_FLAG_BINARY_VALUE;
       }
       body
-        .put(type.opcode())
-        .put(flags)
-        .putShort((short) path.length)
-        .put(path);
+        .putByte(type.opcode())
+        .putByte(flags)
+        .putShort(path.length)
+        .putBytes(path);
     }
 
     public int originalIndex() {

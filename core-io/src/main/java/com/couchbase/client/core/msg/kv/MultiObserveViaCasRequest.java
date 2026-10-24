@@ -20,6 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.BodyReader;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
@@ -29,7 +30,6 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.UnsignedLEB128;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -63,23 +63,17 @@ public class MultiObserveViaCasRequest
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder) {
     KeyValueChannelContext ctx = encoder.context();
-    int bodyLength = 0;
-    for (byte[] key : keys.keySet()) {
-      bodyLength += Short.BYTES * 2 + collectionPrefix(ctx, key).length + key.length;
-    }
-
-    byte[] body = encoder.scratch(bodyLength);
-    ByteBuffer content = ByteBuffer.wrap(body);
+    SectionWriter content = encoder.beginRequest(Opcode.OBSERVE_CAS)
+      .partition(partition())
+      .valueWriter();
     for (Map.Entry<byte[], Short> key : keys.entrySet()) {
       byte[] collection = collectionPrefix(ctx, key.getKey());
-      content.putShort(key.getValue());
-      content.putShort((short) (collection.length + key.getKey().length));
-      content.put(collection);
-      content.put(key.getKey());
+      content
+        .putShort(key.getValue())
+        .putShort(collection.length + key.getKey().length)
+        .putBytes(collection)
+        .putBytes(key.getKey());
     }
-    encoder.beginRequest(Opcode.OBSERVE_CAS)
-      .partition(partition())
-      .value(body, bodyLength);
   }
 
   @Override

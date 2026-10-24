@@ -48,16 +48,6 @@ public interface KeyValueRequestEncoder {
   KeyValueChannelContext context();
 
   /**
-   * Returns an array of at least the given length, for a request to encode its value into (for example,
-   * a sub-document lookup's specs) before {@link #beginRequest}. The encoder reuses the array (for later requests,
-   * and for later calls), so its contents last only until the request is finished, and a request may call this
-   * only once.
-   *
-   * @throws IllegalStateException if a request is being built, or this was already called for this request.
-   */
-  byte[] scratch(int minLength);
-
-  /**
    * Starts a request, and returns the builder for it. The builder is valid until the request is finished
    * or abandoned. (Whoever finishes the request gives its opaque.)
    *

@@ -24,10 +24,11 @@ import org.jspecify.annotations.NullMarked;
  * Builds one KV request packet (see {@link KeyValueRequestEncoder#beginRequest}).
  * <p>
  * A request sets the header fields it needs (each defaults to 0), its key and value (if it has them), and writes
- * its framing extras and extras with {@link #framingExtras()} and {@link #extras()}. All of it may be done
- * in any order: each part has its own place, and the packet is put together, in protocol order, when the request
- * is finished. A section's length is however much the request writes into it, so the request never states
- * a length. For example:
+ * its framing extras and extras with {@link #framingExtras()} and {@link #extras()}. A request that builds its
+ * value (for example, from several parts) writes it with {@link #valueWriter()} instead of giving an array.
+ * All of it may be done in any order: each part has its own place, and the packet is put together, in protocol
+ * order, when the request is finished. A section's length is however much the request writes into it, so the
+ * request never states a length. For example:
  * <pre>
  * KeyValueRequestBuilder request = encoder.beginRequest(Opcode.SET)
  *   .partition(partition())
@@ -97,6 +98,16 @@ public interface KeyValueRequestBuilder {
   KeyValueRequestBuilder value(byte[] value);
 
   /**
+   * Returns the writer of the value, for a request that builds its value instead of giving an array with
+   * {@link #value(byte[], int)}. The value is however much is written; the array behind it grows as needed, and
+   * the builder reuses it for later requests. (The same writer each time.)
+   *
+   * @throws IllegalStateException if the value was already given with {@code value(...)}; likewise,
+   * {@code value(...)} throws once this was called.
+   */
+  SectionWriter valueWriter();
+
+  /**
    * Returns the writer of the framing extras. (The same writer each time.)
    */
   SectionWriter framingExtras();
@@ -107,7 +118,7 @@ public interface KeyValueRequestBuilder {
   SectionWriter extras();
 
   /**
-   * Appends to one section of the request: its framing extras, or its extras. Each method returns this writer.
+   * Appends to one section of the request: its framing extras, its extras, or its value. Each method returns this writer.
    * <p>
    * {@code putByte} and {@code putShort} throw {@link IllegalArgumentException} if the value doesn't fit
    * (see {@link KeyValueRequestBuilder}). Every method throws {@link IllegalStateException} if no request

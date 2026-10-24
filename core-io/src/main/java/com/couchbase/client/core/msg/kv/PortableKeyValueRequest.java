@@ -43,8 +43,9 @@ public interface PortableKeyValueRequest<R extends Response> extends KeyValueReq
    * Builds the request with {@link KeyValueRequestEncoder#beginRequest}, for the connection the encoder belongs to
    * (see {@link KeyValueRequestEncoder#context()}). The caller finishes it, and gives its opaque.
    * <p>
-   * Throws (before beginning the request, ideally) if the request can't be encoded; for example,
-   * a {@link com.couchbase.client.core.error.CollectionNotFoundException}.
+   * Throws if the request can't be encoded; for example, a
+   * {@link com.couchbase.client.core.error.CollectionNotFoundException}. It may throw at any point (the caller
+   * abandons the request), but throwing before {@link KeyValueRequestEncoder#beginRequest} avoids wasted work.
    */
   void encodeTo(KeyValueRequestEncoder encoder);
 

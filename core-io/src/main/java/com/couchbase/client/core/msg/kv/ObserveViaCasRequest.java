@@ -26,7 +26,6 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 
 public class ObserveViaCasRequest extends BasePortableKeyValueRequest<ObserveViaCasResponse> {
@@ -54,17 +53,13 @@ public class ObserveViaCasRequest extends BasePortableKeyValueRequest<ObserveVia
   @Override
   public void encodeTo(KeyValueRequestEncoder encoder) {
     byte[] collection = collectionPrefix(encoder.context());
-    int keyLength = collection.length + key().length;
-    int bodyLength = Short.BYTES * 2 + keyLength;
-    byte[] body = encoder.scratch(bodyLength);
-    ByteBuffer.wrap(body)
-      .putShort(partition())
-      .putShort((short) keyLength)
-      .put(collection)
-      .put(key());
     encoder.beginRequest(Opcode.OBSERVE_CAS)
       .partition(partition())
-      .value(body, bodyLength);
+      .valueWriter()
+      .putShort(partition())
+      .putShort(collection.length + key().length)
+      .putBytes(collection)
+      .putBytes(key());
   }
 
   @Override
