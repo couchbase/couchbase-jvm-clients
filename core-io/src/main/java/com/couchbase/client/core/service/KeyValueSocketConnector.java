@@ -184,7 +184,8 @@ public final class KeyValueSocketConnector {
     Runnable onTcpConnected
   ) throws IOException {
     CouchbaseSocketFactory couchbaseSocketFactory = socketFactory instanceof CouchbaseSocketFactory ? (CouchbaseSocketFactory) socketFactory : null;
-    SocketChannel channel = couchbaseSocketFactory != null ? couchbaseSocketFactory.openChannel() : openPlainChannel();
+    CouchbaseSocketFactory.OpenedChannel opened = couchbaseSocketFactory != null ? couchbaseSocketFactory.openChannel() : null;
+    SocketChannel channel = opened != null ? opened.channel() : openPlainChannel();
     KeyValueChannelWaiter waiter = null;
     ClientTlsChannel tls = null;
     try {
@@ -193,8 +194,8 @@ public final class KeyValueSocketConnector {
       onWaiter.accept(waiter);
       InetSocketAddress address = resolve(host, port, deadlineNanos);
       connectTcp(channel, waiter, address, deadlineNanos);
-      if (couchbaseSocketFactory != null) {
-        couchbaseSocketFactory.configure(channel);
+      if (couchbaseSocketFactory != null && opened != null) {
+        couchbaseSocketFactory.configure(opened);
       }
       onTcpConnected.run();
 

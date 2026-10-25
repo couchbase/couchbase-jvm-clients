@@ -34,6 +34,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketOption;
+import java.net.StandardSocketOptions;
+import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +43,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.mock;
@@ -89,6 +93,41 @@ class CouchbaseSocketFactoryTest {
       assertEquals(30, getExtendedOption(socket, "TCP_KEEPIDLE"));
       assertEquals(5, getExtendedOption(socket, "TCP_KEEPINTERVAL"));
       assertEquals(3, getExtendedOption(socket, "TCP_KEEPCOUNT"));
+    }
+  }
+
+  @Test
+  void setsConfiguredOptionsOnChannelOnceConnected() throws Exception {
+    CouchbaseSocketFactory factory = new CouchbaseSocketFactory(IoConfig.builder()
+      .tcpUserTimeout(Duration.ofSeconds(12))
+      .build(), true);
+    CouchbaseSocketFactory.OpenedChannel opened = factory.openChannel();
+    try (SocketChannel channel = opened.channel()) {
+      assertFalse(channel.isBlocking());
+      channel.configureBlocking(true);
+      channel.connect(server.getLocalSocketAddress());
+      factory.configure(opened);
+      assertTrue(channel.getOption(StandardSocketOptions.TCP_NODELAY));
+      assertTrue(channel.getOption(StandardSocketOptions.SO_KEEPALIVE));
+
+      if (LinuxSocketOptions.isAvailable()) {
+        assertNotNull(opened.extended);
+        LinuxSocketOptions linuxOptions = opened.extended.linuxOptions().orElseThrow(AssertionError::new);
+        assertEquals(Duration.ofSeconds(12), linuxOptions.getTcpUserTimeout());
+      } else {
+        assertNull(opened.extended);
+      }
+    }
+  }
+
+  @Test
+  void nativeIoDisabledMeansPlainChannel() throws Exception {
+    CouchbaseSocketFactory factory = new CouchbaseSocketFactory(IoConfig.builder()
+      .tcpUserTimeout(Duration.ofSeconds(12))
+      .build(), false);
+    CouchbaseSocketFactory.OpenedChannel opened = factory.openChannel();
+    try (SocketChannel channel = opened.channel()) {
+      assertNull(opened.extended);
     }
   }
 
