@@ -95,6 +95,13 @@ final class KeyValueChannelWaiter implements Closeable {
   }
 
   /**
+   * Returns true if the waiter's selector is closed. For tests.
+   */
+  boolean isClosed() {
+    return !selector.isOpen();
+  }
+
+  /**
    * Stops using the channel with this waiter's selector (so it can be registered with an event loop).
    */
   @Override

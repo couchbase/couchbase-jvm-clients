@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import javax.net.SocketFactory;
 import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
@@ -31,6 +32,7 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -157,6 +159,30 @@ class KeyValueSocketConnectorTest {
     ));
     assertEquals(lookupFailure.getMessage(), e.getMessage());
     assertSame(lookupFailure, e.getCause());
+  }
+
+  @Test
+  void connectChannelClosesTheWaiterWhenItFailsWithAnError() throws Exception {
+    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> InetAddress.getLoopbackAddress());
+    AtomicReference<KeyValueChannelWaiter> waiter = new AtomicReference<>();
+    // For example, an AssertionError from the TLS channel.
+    AssertionError failure = new AssertionError("failed after connecting");
+
+    // The server socket's backlog accepts the connection, so connecting succeeds.
+    try (ServerSocket server = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+      AssertionError e = assertThrows(AssertionError.class, () -> connector.connectChannel(
+        "node1.example",
+        server.getLocalPort(),
+        System.nanoTime() + Duration.ofSeconds(10).toNanos(),
+        channel -> {},
+        waiter::set,
+        () -> {
+          throw failure;
+        }
+      ));
+      assertSame(failure, e);
+    }
+    assertTrue(waiter.get().isClosed());
   }
 
   private static KeyValueSocketConnector newConnector(SocketFactory socketFactory, KeyValueSocketConnector.HostResolver hostResolver) {

@@ -44,6 +44,7 @@ import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
+import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -620,6 +621,36 @@ class SocketKeyValueEndpointTest {
     // Keeps trying, and connects once it can.
     server.expectedPassword = "wrong password";
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED);
+  }
+
+  @Test
+  void failedHandshakeClosesTheChannelWaiter() throws Exception {
+    assumeTrue(nio(), "only NIO connections have a channel waiter");
+    start();
+    startServer();
+    Authenticator authenticator = plainAuthenticator("wrong password");
+    EndpointContext ctx = newEndpoint(authenticator, server.port()).context(); // not connected; just for its context
+    KeyValueSocketConnector connector = KeyValueSocketConnector.create(
+      okHttpClient, env.securityConfig(), authenticator, env.timeoutConfig().connectTimeout()
+    );
+    NioKeyValueConnectionOpener opener = new NioKeyValueConnectionOpener(
+      ctx,
+      HOST,
+      server.port(),
+      Optional.of(BUCKET),
+      authenticator.keyValueSaslCredentials(ctx),
+      EnumSet.noneOf(ServerFeature.class),
+      connector
+    );
+
+    // Fails after connecting (so after the waiter is created), when the server rejects the password.
+    assertThrows(AuthenticationFailureException.class, () -> opener.open(
+      System.nanoTime() + TIMEOUT.toNanos(),
+      mock(KeyValueEndpointConnection.Listener.class)
+    ));
+    KeyValueChannelWaiter waiter = opener.waiter();
+    assertNotNull(waiter);
+    assertTrue(waiter.isClosed());
   }
 
   @Test
