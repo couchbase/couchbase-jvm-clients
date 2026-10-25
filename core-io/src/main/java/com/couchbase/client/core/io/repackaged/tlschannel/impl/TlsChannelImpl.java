@@ -32,6 +32,8 @@
  *
  * A failed write to the underlying channel no longer stops reads (see writeFailed),
  * so a TLS alert the peer sent before closing the connection can still be read.
+ *
+ * Logs with SLF4J instead of java.util.logging.
  */
 
 package com.couchbase.client.core.io.repackaged.tlschannel.impl;
@@ -46,8 +48,6 @@ import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -56,10 +56,12 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 import com.couchbase.client.core.io.repackaged.tlschannel.*;
 import com.couchbase.client.core.io.repackaged.tlschannel.util.Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TlsChannelImpl implements ByteChannel {
 
-    private static final Logger logger = Logger.getLogger(TlsChannelImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(TlsChannelImpl.class);
 
     public static final int buffersInitialSize = 4096;
 
@@ -267,10 +269,10 @@ public class TlsChannelImpl implements ByteChannel {
     private void handleTask() throws NeedsTaskException {
         Runnable task = engine.getDelegatedTask();
         if (runTasks) {
-            logger.log(Level.FINEST, "delegating in task: {0}", task);
+            logger.trace("delegating in task: {}", task);
             task.run();
         } else {
-            logger.log(Level.FINEST, "task needed, throwing exception: {0}", task);
+            logger.trace("task needed, throwing exception: {}", task);
             throw new NeedsTaskException(task);
         }
     }
@@ -345,11 +347,10 @@ public class TlsChannelImpl implements ByteChannel {
         inEncrypted.buffer.flip();
         try {
             SSLEngineResult result = engine.unwrap(inEncrypted.buffer, dest.array, dest.offset, dest.length);
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(
-                        Level.FINEST,
-                        "engine.unwrap() result [{0}]. engine status: {1}; inEncrypted {2}; inPlain: {3}",
-                        new Object[] {Util.resultToString(result), engine.getHandshakeStatus(), inEncrypted, dest});
+            if (logger.isTraceEnabled()) {
+                logger.trace(
+                        "engine.unwrap() result [{}]. engine status: {}; inEncrypted {}; inPlain: {}",
+                        Util.resultToString(result), engine.getHandshakeStatus(), inEncrypted, dest);
             }
             return result;
         } catch (SSLException e) {
@@ -376,10 +377,10 @@ public class TlsChannelImpl implements ByteChannel {
     public static void callChannelRead(ReadableByteChannel readChannel, ByteBuffer buffer)
             throws IOException, EofException {
         Util.assertTrue(buffer.hasRemaining());
-        logger.log(Level.FINEST, "Reading from channel");
+        logger.trace("Reading from channel");
         int c = readChannel.read(buffer); // IO block
-        if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "Read from channel; response: {0}, buffer: {1}", new Object[] {c, buffer});
+        if (logger.isTraceEnabled()) {
+            logger.trace("Read from channel; response: {}, buffer: {}", c, buffer);
         }
         if (c == -1) {
             throw new EofException();
@@ -449,11 +450,10 @@ public class TlsChannelImpl implements ByteChannel {
     private SSLEngineResult callEngineWrap(ByteBufferSet source) throws SSLException {
         try {
             SSLEngineResult result = engine.wrap(source.array, source.offset, source.length, outEncrypted.buffer);
-            if (logger.isLoggable(Level.FINEST)) {
-                logger.log(
-                        Level.FINEST,
-                        "engine.wrap() result: [{0}]; engine status: {1}; srcBuffer: {2}, outEncrypted: {3}",
-                        new Object[] {Util.resultToString(result), result.getHandshakeStatus(), source, outEncrypted});
+            if (logger.isTraceEnabled()) {
+                logger.trace(
+                        "engine.wrap() result: [{}]; engine status: {}; srcBuffer: {}, outEncrypted: {}",
+                        Util.resultToString(result), result.getHandshakeStatus(), source, outEncrypted);
             }
             return result;
         } catch (SSLException e) {
@@ -483,7 +483,7 @@ public class TlsChannelImpl implements ByteChannel {
 
     private static void callChannelWrite(WritableByteChannel channel, ByteBuffer src) throws IOException {
         while (src.hasRemaining()) {
-            logger.log(Level.FINEST, "calling channel.write({0})", src);
+            logger.trace("calling channel.write({})", src);
             int c = channel.write(src); // IO block
             if (c == 0) {
                 /*
@@ -545,7 +545,7 @@ public class TlsChannelImpl implements ByteChannel {
             if (force || !handshakeCompleted) {
 
                 if (!handshakeStarted) {
-                    logger.log(Level.FINEST, "Calling SSLEngine.beginHandshake()");
+                    logger.trace("Calling SSLEngine.beginHandshake()");
                     engine.beginHandshake();
 
                     // Some engines that do not support renegotiations may be sensitive to calling
@@ -566,7 +566,7 @@ public class TlsChannelImpl implements ByteChannel {
                 try {
                     initSessionCallback.accept(engine.getSession());
                 } catch (Exception e) {
-                    logger.log(Level.FINEST, "client code threw exception in session initialization callback", e);
+                    logger.trace("client code threw exception in session initialization callback", e);
                     throw new TlsChannelCallbackException("session initialization callback failed", e);
                 }
             }
@@ -689,8 +689,7 @@ public class TlsChannelImpl implements ByteChannel {
                             shutdown();
                         }
                     } catch (Throwable e) {
-                        logger.log(
-                                Level.FINEST, "error doing TLS shutdown on close(), continuing: {0}", e.getMessage());
+                        logger.trace("error doing TLS shutdown on close(), continuing: {}", e.getMessage());
                     }
                 }
             } finally {
