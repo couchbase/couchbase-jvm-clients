@@ -228,12 +228,10 @@ public final class KeyValueSocketConnector {
         }
       }
 
-    } catch (IOException | RuntimeException e) {
+    } catch (Throwable t) { // including an Error (for example, from the TLS channel), so the waiter's selector is closed
       closeQuietly(tls != null ? tls : channel);
-      if (waiter != null) {
-        closeQuietly(waiter);
-      }
-      throw e;
+      closeQuietly(waiter);
+      throw t;
     }
   }
 

@@ -162,6 +162,8 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
       log.debug("Failed to open KV connection 0x{} to {}:{} because: {}", shortChannelId, remoteHostname, remotePort, t.toString());
       authenticationRefresh.unsubscribe();
       close();
+      // Its selector, if the attempt failed after connecting (once open() returns, the event loop has the channel).
+      closeQuietly(waiter);
       throw t;
     }
   }
@@ -321,6 +323,13 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
       authenticationRefresh,
       capture
     );
+  }
+
+  /**
+   * Returns the waiter for the attempt's channel, or null if it hasn't been created yet. For tests.
+   */
+  @Nullable KeyValueChannelWaiter waiter() {
+    return waiter;
   }
 
   /**
