@@ -29,9 +29,43 @@ public interface SnappyCodec {
 
   byte[] compress(byte[] uncompressed);
 
+  /**
+   * Returns a compressor that reuses its working memory from one call to the next,
+   * instead of allocating it each time like {@link #compress(byte[])} might.
+   * <p>
+   * The compressor is not thread-safe.
+   */
+  Compressor newCompressor();
+
+  /**
+   * Returns the most {@link Compressor#compress} can write when compressing {@code uncompressedLength} bytes.
+   */
+  int maxCompressedLength(int uncompressedLength);
+
   default byte[] decompress(byte[] compressed) {
     return decompress(compressed, 0, compressed.length);
   }
 
   byte[] decompress(byte[] compressed, int offset, int len);
+
+  /**
+   * Not thread-safe.
+   *
+   * @see #newCompressor()
+   */
+  interface Compressor {
+    /**
+     * Compresses {@code inputLength} bytes of {@code input} (from {@code inputOffset}) into {@code output}
+     * (from {@code outputOffset}), which must have room for {@link SnappyCodec#maxCompressedLength}.
+     *
+     * @return the compressed length
+     */
+    int compress(
+      byte[] input,
+      int inputOffset,
+      int inputLength,
+      byte[] output,
+      int outputOffset
+    );
+  }
 }

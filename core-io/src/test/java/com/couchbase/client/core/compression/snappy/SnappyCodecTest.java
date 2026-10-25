@@ -19,7 +19,10 @@ package com.couchbase.client.core.compression.snappy;
 import com.couchbase.client.core.deps.org.iq80.snappy.Snappy;
 import org.junit.jupiter.api.Test;
 
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Random;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,6 +91,74 @@ class SnappyCodecTest {
     assertArrayEquals(uncompressed, slowCodec.decompress(fastCompressed));
     assertArrayEquals(uncompressed, fastCodec.decompress(slowCompressed));
     assertArrayEquals(uncompressed, fastCodec.decompress(fastCompressed));
+  }
+
+  @Test
+  void slowCompressorMatchesCodec() {
+    checkCompressorMatchesCodec(slowCodec());
+  }
+
+  @Test
+  void fastCompressorMatchesCodec() {
+    assumeCanUseFastCodec();
+    checkCompressorMatchesCodec(fastCodec());
+  }
+
+  /**
+   * A reused compressor must give the same output as a fresh one, whatever it compressed before
+   * (bigger or smaller, one block or several), and must honor the offsets.
+   */
+  private static void checkCompressorMatchesCodec(SnappyCodec codec) {
+    SnappyCodec.Compressor compressor = codec.newCompressor();
+    Random random = new Random(0);
+
+    for (int length : new int[]{200_000, 128, 0, 5_000, 1, 70_000, 300, 65_536, 65_537}) {
+      int inputOffset = random.nextInt(10);
+      int outputOffset = random.nextInt(10);
+      byte[] uncompressed = compressibleBytes(random, length);
+      byte[] input = new byte[inputOffset + length + 7];
+      System.arraycopy(uncompressed, 0, input, inputOffset, length);
+      byte[] output = new byte[outputOffset + codec.maxCompressedLength(length)];
+
+      int compressedLength = compressor.compress(input, inputOffset, length, output, outputOffset);
+      byte[] compressed = Arrays.copyOfRange(output, outputOffset, outputOffset + compressedLength);
+
+      String message = "length " + length;
+      assertArrayEquals(codec.compress(uncompressed), compressed, message);
+      assertArrayEquals(uncompressed, codec.decompress(compressed), message);
+    }
+  }
+
+  @Test
+  void fastCompressorReusesWorkingMemory() {
+    assumeCanUseFastCodec();
+    assumeTrue(ManagementFactory.getThreadMXBean() instanceof com.sun.management.ThreadMXBean);
+    com.sun.management.ThreadMXBean threads = (com.sun.management.ThreadMXBean) ManagementFactory.getThreadMXBean();
+    long threadId = Thread.currentThread().getId();
+
+    SnappyCodec.Compressor compressor = fastCodec().newCompressor();
+    byte[] input = compressibleBytes(new Random(0), 128);
+    byte[] output = new byte[fastCodec().maxCompressedLength(input.length)];
+    compressor.compress(input, 0, input.length, output, 0); // allocates the working memory
+
+    int iterations = 100;
+    long before = threads.getThreadAllocatedBytes(threadId);
+    for (int i = 0; i < iterations; i++) {
+      compressor.compress(input, 0, input.length, output, 0);
+    }
+    long allocated = threads.getThreadAllocatedBytes(threadId) - before;
+
+    // Without reuse, each call allocates a 32 KiB hash table.
+    assertThat(allocated).isLessThan(iterations * 1024L);
+  }
+
+  private static byte[] compressibleBytes(Random random, int length) {
+    String alphabet = "{}\":,abcdefgh";
+    byte[] result = new byte[length];
+    for (int i = 0; i < length; i++) {
+      result[i] = (byte) alphabet.charAt(random.nextInt(alphabet.length()));
+    }
+    return result;
   }
 
   @Test

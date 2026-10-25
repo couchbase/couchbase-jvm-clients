@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.compression.snappy.SnappyCodec;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -78,6 +79,8 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   private boolean valueGiven; // with value()
   private boolean valueWritten; // with valueWriter()
 
+  private SnappyCodec.@Nullable Compressor compressor; // created on first use
+
   private boolean complete;
   private int headLength; // once complete
 
@@ -88,6 +91,14 @@ public final class ByteBufferKeyValueRequestBuilder implements KeyValueRequestBu
   @Override
   public KeyValueChannelContext context() {
     return context;
+  }
+
+  @Override
+  public SnappyCodec.Compressor compressor() {
+    if (compressor == null) {
+      compressor = SnappyCodec.instance().newCompressor();
+    }
+    return compressor;
   }
 
   /**
