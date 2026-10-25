@@ -21,6 +21,7 @@
  * <p>
  * They have been modified so a failed write doesn't stop reads (see {@code TlsChannelImpl}),
  * so the TLS alert that made the server close the connection can still be read.
+ * They also log with SLF4J instead of java.util.logging.
  * <p>
  * Used by the non-blocking KV connections, for TLS over a {@link java.nio.channels.SocketChannel}.
  */

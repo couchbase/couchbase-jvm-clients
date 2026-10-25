@@ -29,16 +29,19 @@
  *
  * It was relocated into a different package to avoid conflicts with
  * the original.
+ *
+ * Logs with SLF4J instead of java.util.logging.
  */
 
 package com.couchbase.client.core.io.repackaged.tlschannel.util;
 
-import java.util.logging.Logger;
 import javax.net.ssl.SSLEngineResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Util {
 
-    private static final Logger logger = Logger.getLogger(Util.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(Util.class);
 
     public static void assertTrue(boolean condition) {
         if (!condition) throw new AssertionError();
