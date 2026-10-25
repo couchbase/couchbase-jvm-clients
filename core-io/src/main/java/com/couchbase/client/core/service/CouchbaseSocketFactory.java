@@ -20,6 +20,7 @@ import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.util.StorageSize;
 import com.couchbase.client.core.util.CbDurations;
 import com.couchbase.client.socketoptions.ExtendedSocket;
+import com.couchbase.client.socketoptions.ExtendedSocketChannel;
 import com.couchbase.client.socketoptions.ExtendedSocketFactory;
 import com.couchbase.client.socketoptions.LinuxSocketOptions;
 import org.jspecify.annotations.NullMarked;
@@ -37,11 +38,11 @@ import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketOption;
-import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -57,8 +58,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>SO_SNDBUF and SO_RCVBUF, if configured. Unlike the others, they're set before the socket connects:
  *   the receive buffer size affects the TCP window scale, which is agreed when connecting.
  * </ul>
- * Also opens the channels for KV connections that use NIO (see {@link #openChannel}), with the same options,
- * except TCP_USER_TIMEOUT (the native code can't find a channel's file descriptor yet).
+ * Also opens the channels for KV connections that use NIO (see {@link #openChannel}), with the same options.
  * <p>
  * The options are set as soon as each socket connects (before {@code connect} returns, so before the TLS handshake),
  * and each one is best-effort: if it can't be set, the OS default applies. Each socket's options (and any that
@@ -106,11 +106,6 @@ final class CouchbaseSocketFactory extends SocketFactory {
    * Whether a socket has already failed to get TCP_USER_TIMEOUT (and that's been logged at warning level).
    */
   private final AtomicBoolean warnedAboutUserTimeoutFailure = new AtomicBoolean();
-
-  /**
-   * Whether it's been logged that NIO channels don't get TCP_USER_TIMEOUT.
-   */
-  private final AtomicBoolean warnedAboutChannelUserTimeout = new AtomicBoolean();
 
   CouchbaseSocketFactory(IoConfig ioConfig, boolean nativeIoEnabled) {
     keepAlive = ioConfig.tcpKeepAlivesEnabled();
@@ -178,15 +173,37 @@ final class CouchbaseSocketFactory extends SocketFactory {
   }
 
   /**
-   * Opens an unconnected, non-blocking channel, with the configured buffer sizes (like {@link #createSocket()}).
-   * Call {@link #configure(SocketChannel)} once it's connected.
+   * A channel from {@link #openChannel}.
    */
-  SocketChannel openChannel() throws IOException {
-    SocketChannel channel = SocketChannel.open();
+  static final class OpenedChannel {
+    private final SocketChannel channel;
+
+    /**
+     * The channel with its Linux options, if TCP_USER_TIMEOUT is set (with the native library), or null.
+     */
+    final @Nullable ExtendedSocketChannel extended;
+
+    private OpenedChannel(SocketChannel channel, @Nullable ExtendedSocketChannel extended) {
+      this.channel = channel;
+      this.extended = extended;
+    }
+
+    SocketChannel channel() {
+      return channel;
+    }
+  }
+
+  /**
+   * Opens an unconnected, non-blocking channel, with the configured buffer sizes (like {@link #createSocket()}).
+   * Call {@link #configure(OpenedChannel)} once it's connected.
+   */
+  OpenedChannel openChannel() throws IOException {
+    ExtendedSocketChannel extended = tcpUserTimeout != null ? ExtendedSocketChannel.open() : null;
+    SocketChannel channel = extended != null ? extended.channel() : SocketChannel.open();
     try {
       channel.configureBlocking(false);
       setBufferSizes(channel.socket());
-      return channel;
+      return new OpenedChannel(channel, extended);
     } catch (IOException | RuntimeException e) {
       channel.close();
       throw e;
@@ -195,32 +212,18 @@ final class CouchbaseSocketFactory extends SocketFactory {
 
   /**
    * Sets the options on a newly connected channel from {@link #openChannel}, best-effort, and logs them.
-   * Like {@link #configure(Socket)}, except TCP_USER_TIMEOUT, which isn't set.
+   * Like {@link #configure(Socket)}. Call it from the thread that connected the channel, before anything is sent,
+   * and not while another thread closes it (see {@link ExtendedSocketChannel}).
    */
-  void configure(SocketChannel channel) {
-    StringJoiner options = new StringJoiner(", ");
-    set(options, "TCP_NODELAY", true, () -> channel.setOption(StandardSocketOptions.TCP_NODELAY, true));
-    if (keepAlive) {
-      set(options, "SO_KEEPALIVE", true, () -> channel.setOption(StandardSocketOptions.SO_KEEPALIVE, true));
-      if (keepAliveIdleSeconds != 0) set(options, "TCP_KEEPIDLE", keepAliveIdleSeconds, () -> setChannelOption(channel, TCP_KEEPIDLE, keepAliveIdleSeconds));
-      if (keepAliveIntervalSeconds != 0) set(options, "TCP_KEEPINTERVAL", keepAliveIntervalSeconds, () -> setChannelOption(channel, TCP_KEEPINTERVAL, keepAliveIntervalSeconds));
-      if (keepAliveCount != 0) set(options, "TCP_KEEPCOUNT", keepAliveCount, () -> setChannelOption(channel, TCP_KEEPCOUNT, keepAliveCount));
-    }
-    Duration userTimeout = tcpUserTimeout;
-    if (userTimeout != null) {
-      options.add("TCP_USER_TIMEOUT=" + userTimeout.toMillis() + "ms (not set: not supported for NIO channels yet)");
-      if (!warnedAboutChannelUserTimeout.getAndSet(true)) {
-        log.warn("Can't set TCP_USER_TIMEOUT on NIO KV connections yet, so the OS default applies to them.");
-      }
-    }
-    Socket socket = channel.socket();
-    if (sendBufferBytes != null) {
-      options.add("SO_SNDBUF=" + bufferSize(socket::getSendBufferSize) + " (requested " + sendBufferBytes + ")");
-    }
-    if (receiveBufferBytes != null) {
-      options.add("SO_RCVBUF=" + bufferSize(socket::getReceiveBufferSize) + " (requested " + receiveBufferBytes + ")");
-    }
-    log.debug("Socket options for {}: {}", channel, options);
+  void configure(OpenedChannel opened) {
+    SocketChannel channel = opened.channel;
+    ExtendedSocketChannel extended = opened.extended;
+    configure(
+      channel,
+      channel.socket(),
+      (option, value) -> setChannelOption(channel, option, value),
+      extended != null ? extended.linuxOptions() : Optional.empty()
+    );
   }
 
   @Override
@@ -272,23 +275,56 @@ final class CouchbaseSocketFactory extends SocketFactory {
    * Sets the options on a newly connected socket, best-effort, and logs them.
    */
   private void configure(Socket socket) {
+    configure(
+      socket,
+      socket,
+      (option, value) -> setJdkOption(socket, option, value),
+      socket instanceof ExtendedSocket ? ((ExtendedSocket) socket).linuxOptions() : Optional.empty()
+    );
+  }
+
+  /**
+   * Sets an extended (jdk.net) socket option on a connection, or throws if it can't.
+   */
+  @FunctionalInterface
+  private interface ExtendedOptionSetter {
+    void set(@Nullable SocketOption<?> option, int value) throws Exception;
+  }
+
+  /**
+   * Sets the options on a newly connected socket or channel, best-effort, and logs them.
+   *
+   * @param connection the socket or channel, for the log messages
+   * @param socket the connection as a socket (for a channel, its socket adaptor): sets the standard options, and
+   * reports the buffer sizes
+   * @param extendedOptions sets the extended keepalive options. Separate because on Java 8 to 12, a channel's socket
+   * adaptor can't set them.
+   * @param linuxOptions sets TCP_USER_TIMEOUT
+   */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private void configure(
+    Object connection,
+    Socket socket,
+    ExtendedOptionSetter extendedOptions,
+    Optional<LinuxSocketOptions> linuxOptions
+  ) {
     StringJoiner options = new StringJoiner(", ");
     set(options, "TCP_NODELAY", true, () -> socket.setTcpNoDelay(true));
     if (keepAlive) {
       set(options, "SO_KEEPALIVE", true, () -> socket.setKeepAlive(true));
-      if (keepAliveIdleSeconds != 0) set(options, "TCP_KEEPIDLE", keepAliveIdleSeconds, () -> setJdkOption(socket, TCP_KEEPIDLE, keepAliveIdleSeconds));
-      if (keepAliveIntervalSeconds != 0) set(options, "TCP_KEEPINTERVAL", keepAliveIntervalSeconds, () -> setJdkOption(socket, TCP_KEEPINTERVAL, keepAliveIntervalSeconds));
-      if (keepAliveCount != 0) set(options, "TCP_KEEPCOUNT", keepAliveCount, () -> setJdkOption(socket, TCP_KEEPCOUNT, keepAliveCount));
+      if (keepAliveIdleSeconds != 0) set(options, "TCP_KEEPIDLE", keepAliveIdleSeconds, () -> extendedOptions.set(TCP_KEEPIDLE, keepAliveIdleSeconds));
+      if (keepAliveIntervalSeconds != 0) set(options, "TCP_KEEPINTERVAL", keepAliveIntervalSeconds, () -> extendedOptions.set(TCP_KEEPINTERVAL, keepAliveIntervalSeconds));
+      if (keepAliveCount != 0) set(options, "TCP_KEEPCOUNT", keepAliveCount, () -> extendedOptions.set(TCP_KEEPCOUNT, keepAliveCount));
     }
     Duration userTimeout = tcpUserTimeout;
-    if (userTimeout != null && socket instanceof ExtendedSocket) {
-      Throwable failure = set(options, "TCP_USER_TIMEOUT", userTimeout.toMillis() + "ms", () -> ((ExtendedSocket) socket).linuxOptions()
+    if (userTimeout != null) {
+      Throwable failure = set(options, "TCP_USER_TIMEOUT", userTimeout.toMillis() + "ms", () -> linuxOptions
         .orElseThrow(() -> new UnsupportedOperationException("not available"))
         .setTcpUserTimeout(userTimeout));
       // Warn once: if the cause is persistent (for example, a SOCKS proxy), every connection fails the same way.
       if (failure != null && !warnedAboutUserTimeoutFailure.getAndSet(true)) {
         log.warn("Can't set TCP_USER_TIMEOUT on {}, so the OS default applies: {} (further failures are logged at debug level)",
-          socket, failure.toString());
+          connection, failure.toString());
       }
     }
     if (sendBufferBytes != null) {
@@ -297,7 +333,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
     if (receiveBufferBytes != null) {
       options.add("SO_RCVBUF=" + bufferSize(socket::getReceiveBufferSize) + " (requested " + receiveBufferBytes + ")");
     }
-    log.debug("Socket options for {}: {}", socket, options);
+    log.debug("Socket options for {}: {}", connection, options);
   }
 
   @FunctionalInterface
