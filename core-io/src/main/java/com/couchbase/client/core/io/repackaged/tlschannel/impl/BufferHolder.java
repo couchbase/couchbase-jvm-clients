@@ -31,6 +31,9 @@
  * the original.
  *
  * Logs with SLF4J instead of java.util.logging.
+ *
+ * zero() saves and restores the position instead of using mark/reset,
+ * so it no longer throws InvalidMarkException when the buffer holds data.
  */
 
 package com.couchbase.client.core.io.repackaged.tlschannel.impl;
@@ -140,7 +143,7 @@ public class BufferHolder {
     }
 
     private void zero(final int position) {
-        buffer.mark();
+        int originalPosition = buffer.position();
         buffer.position(position);
         int size = buffer.remaining();
         int length = Math.min(size, zeros.length);
@@ -150,7 +153,7 @@ public class BufferHolder {
             offset = offset + length;
             length = Math.min(size - offset, zeros.length);
         }
-        buffer.reset();
+        buffer.position(originalPosition);
     }
 
     public boolean nullOrEmpty() {
