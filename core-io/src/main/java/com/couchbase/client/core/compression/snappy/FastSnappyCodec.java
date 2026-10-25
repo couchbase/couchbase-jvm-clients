@@ -30,7 +30,39 @@ class FastSnappyCodec implements SnappyCodec {
   }
 
   @Override
+  public Compressor newCompressor() {
+    return new ReusingCompressor();
+  }
+
+  @Override
+  public int maxCompressedLength(int uncompressedLength) {
+    return Snappy.maxCompressedLength(uncompressedLength);
+  }
+
+  @Override
   public byte[] decompress(byte[] compressed, int offset, int len) {
     return Snappy.uncompress(compressed, offset, len);
+  }
+
+  /**
+   * Reuses the library's hash table, which is 32 KiB regardless of input size.
+   * Without reuse, every call allocates (and zeroes) a new one.
+   */
+  private static class ReusingCompressor implements Compressor {
+    private Snappy.CompressionContext context; // created on first use
+
+    @Override
+    public int compress(
+      byte[] input,
+      int inputOffset,
+      int inputLength,
+      byte[] output,
+      int outputOffset
+    ) {
+      if (context == null) {
+        context = new Snappy.CompressionContext();
+      }
+      return Snappy.compress(context, input, inputOffset, inputLength, output, outputOffset, output.length - outputOffset);
+    }
   }
 }

@@ -31,6 +31,17 @@ class SlowSnappyCodec implements SnappyCodec {
   }
 
   @Override
+  public Compressor newCompressor() {
+    // This version of the library already recycles its working memory, via a thread-local.
+    return SlowSnappy::compress;
+  }
+
+  @Override
+  public int maxCompressedLength(int uncompressedLength) {
+    return SlowSnappy.maxCompressedLength(uncompressedLength);
+  }
+
+  @Override
   public byte[] decompress(byte[] compressed, int offset, int len) {
     return SlowSnappy.uncompress(compressed, offset, len);
   }
