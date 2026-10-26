@@ -27,6 +27,9 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.util.Libc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -39,14 +42,32 @@ import java.util.List;
 @Stability.Internal
 public class SslHandlerFactory {
 
+  private static final Logger log = LoggerFactory.getLogger(SslHandlerFactory.class);
+
   private static class InitOnDemandHolder {
     /**
      * IMPORTANT: Don't access this field unless the user wants native TLS.
      * Otherwise, Netty will load the native library anyway during
-     * {@link OpenSsl}'s static init. This causes a segfault on Alpine Linux
-     * where glibc is not available.
+     * {@link OpenSsl}'s static init.
      */
-    private static final boolean OPENSSL_AVAILABLE = OpenSsl.isAvailable();
+    private static final boolean OPENSSL_AVAILABLE = isOpenSslAvailable();
+
+    private static boolean isOpenSslAvailable() {
+      // Must check *before* calling OpenSsl.isAvailable(). On x86_64 musl (Alpine Linux),
+      // loading the bundled native library hangs forever while spinning a CPU core.
+      // The x86_64 library is built against old glibc headers that turn its
+      // musl fallback for __strdup into an infinite loop. The aarch64 library works on musl.
+      if (Libc.isMusl() && isX86_64()) {
+        log.info("Native TLS is not supported on x86_64 musl libc (for example, Alpine Linux); using JDK TLS instead.");
+        return false;
+      }
+      return OpenSsl.isAvailable();
+    }
+
+    private static boolean isX86_64() {
+      String arch = System.getProperty("os.arch", "");
+      return arch.equals("amd64") || arch.equals("x86_64");
+    }
   }
 
   public static SslHandler get(final ByteBufAllocator allocator, final SecurityConfig config,
