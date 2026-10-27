@@ -153,8 +153,9 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     Authenticator authenticator,
     KeyValueSocketConnector connector
   ) {
-    // The com.couchbase.kvNio system property (false by default), read when the endpoint is created.
-    this(serviceContext, hostname, port, bucketName, authenticator, connector, Boolean.getBoolean("com.couchbase.kvNio"));
+    // The com.couchbase.kvNio system property (true by default), read when the endpoint is created.
+    this(serviceContext, hostname, port, bucketName, authenticator, connector,
+      Boolean.parseBoolean(System.getProperty("com.couchbase.kvNio", "true")));
   }
 
   /**

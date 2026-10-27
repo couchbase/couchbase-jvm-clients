@@ -32,10 +32,11 @@ public class KeyValueService extends PooledService {
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
 
   /**
-   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or plain sockets ({@link SocketKeyValueEndpoint}).
+   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or plain sockets ({@link SocketKeyValueEndpoint});
+   * the {@code com.couchbase.useNettyForKv} system property (false by default).
    * Separate from {@code com.couchbase.useNetty} (for the HTTP-based services), so each can be switched on its own.
    */
-  private static final boolean useNettyForKv = Boolean.parseBoolean(System.getProperty("com.couchbase.useNettyForKv", "true"));
+  private static final boolean useNettyForKv = Boolean.parseBoolean(System.getProperty("com.couchbase.useNettyForKv", "false"));
 
   /**
    * Returns true if KV endpoints use Netty, or false if they use plain sockets.
