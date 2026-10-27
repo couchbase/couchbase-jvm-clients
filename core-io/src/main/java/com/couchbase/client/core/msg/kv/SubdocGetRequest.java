@@ -49,7 +49,7 @@ import static com.couchbase.client.core.msg.kv.SubdocUtil.handleNonFieldLevelErr
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 
-public class SubdocGetRequest extends BasePortableKeyValueRequest<SubdocGetResponse> {
+public class SubdocGetRequest extends BaseKeyValueRequest<SubdocGetResponse> {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_BINARY_VALUE = (byte) 0x20;

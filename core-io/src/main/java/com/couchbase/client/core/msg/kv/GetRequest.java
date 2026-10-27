@@ -39,7 +39,7 @@ import static com.couchbase.client.core.api.kv.AbsentDocumentStrategy.THROW_EXCE
  *
  * @since 2.0.0
  */
-public class GetRequest extends BasePortableKeyValueRequest<GetResponse> {
+public class GetRequest extends BaseKeyValueRequest<GetResponse> {
 
   private final AbsentDocumentStrategy absentDocumentStrategy;
 

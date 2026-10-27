@@ -24,7 +24,7 @@ import com.couchbase.client.core.io.ByteBufferKeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
-import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import org.jspecify.annotations.NullMarked;
 
 import java.nio.ByteBuffer;
@@ -60,10 +60,10 @@ public final class NettyKeyValueRequestEncoder implements KeyValueRequestEncoder
   }
 
   /**
-   * Encodes the request with the given opaque: {@link PortableKeyValueRequest#encodeTo}, then {@link #finish}.
+   * Encodes the request with the given opaque: {@link KeyValueRequest#encodeTo}, then {@link #finish}.
    * If either throws, forgets the request, so the encoder is ready for the next one.
    */
-  public ByteBuf encode(PortableKeyValueRequest<?> request, int opaque) {
+  public ByteBuf encode(KeyValueRequest<?> request, int opaque) {
     try {
       request.encodeTo(this);
       return finish(opaque);

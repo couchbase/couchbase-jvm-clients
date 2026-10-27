@@ -37,7 +37,7 @@ import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
-public class DecrementRequest extends BasePortableKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
+public class DecrementRequest extends BaseKeyValueRequest<DecrementResponse> implements SyncDurabilityRequest {
 
   private final long delta;
   private final Optional<Long> initial;

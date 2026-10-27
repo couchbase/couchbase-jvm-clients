@@ -28,7 +28,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 import java.util.Optional;
 
-public class GetCollectionManifestRequest extends BasePortableKeyValueRequest<GetCollectionManifestResponse> {
+public class GetCollectionManifestRequest extends BaseKeyValueRequest<GetCollectionManifestResponse> {
 
   public GetCollectionManifestRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
                                       final CollectionIdentifier collectionIdentifier) {

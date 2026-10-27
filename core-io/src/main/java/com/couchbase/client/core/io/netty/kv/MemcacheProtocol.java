@@ -48,6 +48,7 @@ import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
@@ -58,6 +59,7 @@ import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.IntMap;
 import reactor.util.annotation.Nullable;
 
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -540,6 +542,22 @@ public enum MemcacheProtocol {
     int bodyPlusHeader = request.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
     return (magic == Magic.REQUEST.magic() || magic == Magic.FLEXIBLE_REQUEST.magic())
       && readableBytes == bodyPlusHeader;
+  }
+
+  /**
+   * Returns a view of the packet in the buffer, from index 0 to the writer index (whatever the reader index),
+   * without copying it, for the Netty KV implementation to decode a response with
+   * {@link com.couchbase.client.core.msg.kv.KeyValueRequest#decode}. Uses the buffer's internal NIO buffer when it
+   * has one, so it usually allocates nothing but the packet. That's safe because the packet is used only while the
+   * response is decoded, and nothing else uses the buffer's internal NIO buffer meanwhile.
+   */
+  @Stability.Internal
+  public static KeyValuePacket packet(ByteBuf packet) {
+    int length = packet.writerIndex();
+    ByteBuffer nio = packet.nioBufferCount() == 1
+      ? packet.internalNioBuffer(0, length)
+      : packet.nioBuffer(0, length); // several components: a copy
+    return KeyValuePacket.wrap(nio);
   }
 
   /**

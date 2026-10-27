@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
@@ -51,7 +52,7 @@ class GetRequestTest {
     ));
 
     GetRequest request = new GetRequest(null, TIMEOUT, CTX, null, RETRY, null);
-    GetResponse decoded = request.decode(response, null);
+    GetResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
 
     byte[] expected = ("{\"callsign\":\"AIRCALIN\",\"country\":\"France\","
       + "\"iata\":\"SB\",\"icao\":\"ACI\",\"id\":139,"
@@ -71,7 +72,7 @@ class GetRequestTest {
     ));
 
     GetRequest request = new GetRequest(null, TIMEOUT, CTX, null, RETRY, null);
-    GetResponse decoded = request.decode(response, null);
+    GetResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
 
     assertEquals(ResponseStatus.NOT_FOUND, decoded.status());
     assertNull(decoded.content());

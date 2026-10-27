@@ -36,7 +36,7 @@ import java.time.Duration;
  *
  * @since 2.0.0
  */
-public class GetMetaRequest extends BasePortableKeyValueRequest<GetMetaResponse> {
+public class GetMetaRequest extends BaseKeyValueRequest<GetMetaResponse> {
 
   public GetMetaRequest(final String key, final Duration timeout, final CoreContext ctx,
                         final CollectionIdentifier collectionIdentifier, final RetryStrategy retryStrategy, final RequestSpan span) {

@@ -39,7 +39,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
  *
  * @since 2.0.0
  */
-public class GetAndTouchRequest extends BasePortableKeyValueRequest<GetAndTouchResponse> {
+public class GetAndTouchRequest extends BaseKeyValueRequest<GetAndTouchResponse> {
 
   private final long expiration;
 

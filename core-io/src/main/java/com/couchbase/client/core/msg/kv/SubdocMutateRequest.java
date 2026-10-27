@@ -61,7 +61,7 @@ import static com.couchbase.client.core.msg.kv.SubdocUtil.handleNonFieldLevelErr
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Comparator.comparing;
 
-public class SubdocMutateRequest extends BasePortableKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
+public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateResponse> implements SyncDurabilityRequest {
 
   private static final byte SUBDOC_FLAG_XATTR_PATH = (byte) 0x04;
   private static final byte SUBDOC_FLAG_CREATE_PATH = (byte) 0x01;

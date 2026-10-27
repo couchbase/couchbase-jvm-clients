@@ -41,7 +41,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutation
  *
  * @since 2.0.0
  */
-public class RemoveRequest extends BasePortableKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
+public class RemoveRequest extends BaseKeyValueRequest<RemoveResponse> implements SyncDurabilityRequest {
 
   private final long cas;
   private final Optional<DurabilityLevel> syncReplicationType;

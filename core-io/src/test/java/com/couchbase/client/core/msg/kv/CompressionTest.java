@@ -18,9 +18,7 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -54,7 +52,6 @@ class CompressionTest {
   private final String key = "key";
   private final RetryStrategy retryStrategy = BestEffortRetryStrategy.INSTANCE;
   private final long cas = 0;
-  private final ByteBufAllocator allocator = UnpooledByteBufAllocator.DEFAULT;
   private final long expiry = 0;
   private final boolean preserveExpiry = false;
   private final int flags = 0;
@@ -71,7 +68,7 @@ class CompressionTest {
   void doesNotCompressIfDisabledAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(false));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(false));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
@@ -82,7 +79,7 @@ class CompressionTest {
   void doesNotCompressIfTooShortAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
@@ -93,7 +90,7 @@ class CompressionTest {
   void doesCompressLongAppend() {
     AppendRequest request = new AppendRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
     assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
@@ -104,7 +101,7 @@ class CompressionTest {
   void doesNotCompressIfDisabledPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(false));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(false));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
@@ -115,7 +112,7 @@ class CompressionTest {
   void doesNotCompressIfTooShortPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, shortContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
@@ -126,7 +123,7 @@ class CompressionTest {
   void doesCompressLongPrepend() {
     PrependRequest request = new PrependRequest(timeout, coreContext, cid, retryStrategy, key, longContent, cas, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
     assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
@@ -138,7 +135,7 @@ class CompressionTest {
     InsertRequest request = new InsertRequest(key, longContent, expiry, flags, timeout,
       coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(false));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(false));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
@@ -150,7 +147,7 @@ class CompressionTest {
     InsertRequest request = new InsertRequest(key, shortContent, expiry, flags, timeout,
       coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
@@ -162,7 +159,7 @@ class CompressionTest {
     InsertRequest request = new InsertRequest(key, longContent, expiry, flags, timeout,
       coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
     assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
@@ -174,7 +171,7 @@ class CompressionTest {
     UpsertRequest request = new UpsertRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(false));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(false));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
@@ -186,7 +183,7 @@ class CompressionTest {
     UpsertRequest request = new UpsertRequest(key, shortContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
@@ -198,7 +195,7 @@ class CompressionTest {
     UpsertRequest request = new UpsertRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       coreContext, cid, retryStrategy, Optional.empty(), null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
     assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 
@@ -210,7 +207,7 @@ class CompressionTest {
     ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(false));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(false));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(longContent), rawBody(encoded).get());
 
@@ -222,7 +219,7 @@ class CompressionTest {
     ReplaceRequest request = new ReplaceRequest(key, shortContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(0, datatype(encoded));
     assertEquals(Unpooled.wrappedBuffer(shortContent), rawBody(encoded).get());
 
@@ -234,7 +231,7 @@ class CompressionTest {
     ReplaceRequest request = new ReplaceRequest(key, longContent, expiry, preserveExpiry, flags, timeout,
       cas, coreContext, cid, retryStrategy, durability, null);
 
-    ByteBuf encoded = request.encode(allocator, 0, ctx(true));
+    ByteBuf encoded = KeyValueRequestTesting.encode(request, ctx(true));
     assertEquals(MemcacheProtocol.Datatype.SNAPPY.datatype(), datatype(encoded));
     assertTrue(rawBody(encoded).get().readableBytes() < longContent.length);
 

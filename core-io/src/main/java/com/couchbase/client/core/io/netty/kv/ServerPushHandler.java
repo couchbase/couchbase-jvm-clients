@@ -24,7 +24,6 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelInboundHandlerAdap
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.SectionReader;
-import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.topology.TopologyRevision;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -91,7 +90,7 @@ public class ServerPushHandler extends ChannelInboundHandlerAdapter {
    * Handles a request from the server. Doesn't release the packet.
    */
   private static void handleServerPush(EndpointContext endpointContext, ByteBuf packet) {
-    handleServerPush(endpointContext, PortableKeyValueRequest.packet(packet));
+    handleServerPush(endpointContext, MemcacheProtocol.packet(packet));
   }
 
   /**

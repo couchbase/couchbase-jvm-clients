@@ -28,7 +28,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 
 import java.time.Duration;
 
-public class ObserveViaCasRequest extends BasePortableKeyValueRequest<ObserveViaCasResponse> {
+public class ObserveViaCasRequest extends BaseKeyValueRequest<ObserveViaCasResponse> {
 
   private final int replica;
   private final boolean active;

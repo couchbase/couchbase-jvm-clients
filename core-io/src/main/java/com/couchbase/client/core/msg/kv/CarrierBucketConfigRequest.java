@@ -37,7 +37,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.msg.kv.CarrierGlobalConfigRequest.encodeConfigRequest;
 
 public class CarrierBucketConfigRequest
-  extends BasePortableKeyValueRequest<CarrierBucketConfigResponse>
+  extends BaseKeyValueRequest<CarrierBucketConfigResponse>
   implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;

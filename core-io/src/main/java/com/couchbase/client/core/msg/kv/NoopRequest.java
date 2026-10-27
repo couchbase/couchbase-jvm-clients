@@ -31,7 +31,7 @@ import java.time.Duration;
  *
  * @since 2.0.0
  */
-public class NoopRequest extends BasePortableKeyValueRequest<NoopResponse> {
+public class NoopRequest extends BaseKeyValueRequest<NoopResponse> {
 
   public NoopRequest(final Duration timeout, final CoreContext ctx,
                      final RetryStrategy retryStrategy, CollectionIdentifier collectionIdentifier) {

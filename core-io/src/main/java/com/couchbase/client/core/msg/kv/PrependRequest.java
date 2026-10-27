@@ -37,7 +37,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutation
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putValueMaybeCompressed;
 
 
-public class PrependRequest extends BasePortableKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
+public class PrependRequest extends BaseKeyValueRequest<PrependResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long cas;

@@ -41,7 +41,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putValueMay
  *
  * @since 2.0.0
  */
-public class InsertRequest extends BasePortableKeyValueRequest<InsertResponse> implements SyncDurabilityRequest {
+public class InsertRequest extends BaseKeyValueRequest<InsertResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long expiration;

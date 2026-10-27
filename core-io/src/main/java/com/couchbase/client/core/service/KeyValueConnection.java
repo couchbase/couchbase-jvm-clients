@@ -28,10 +28,7 @@ import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.MemcachedBucketConfig;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.IoConfig;
@@ -46,11 +43,9 @@ import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.msg.Response;
-import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
@@ -118,11 +113,6 @@ import static java.util.Objects.requireNonNull;
 @NullMarked
 final class KeyValueConnection implements KeyValueEndpointConnection {
   private static final Logger log = LoggerFactory.getLogger(KeyValueConnection.class);
-
-  /**
-   * Heap buffers, since requests are written to (and responses read from) streams. Not pooled, like plain arrays.
-   */
-  static final ByteBufAllocator ALLOC = new UnpooledByteBufAllocator(false);
 
   /**
    * Runs the connect attempts, and each connection's reader and writer. Virtual threads, if available,
@@ -438,31 +428,6 @@ final class KeyValueConnection implements KeyValueEndpointConnection {
   }
 
   /**
-   * Called by the writer. Returns the encoded request, or null if encoding failed (and the request was failed
-   * or retried).
-   */
-  private @Nullable ByteBuf encode(KeyValueRequest<Response> request) {
-    ByteBuf encoded;
-    try {
-      encoded = request.encode(ALLOC, request.opaque(), channelContext);
-    } catch (Throwable err) {
-      handleEncodeFailure(request, err);
-      return null;
-    }
-
-    if (!MemcacheProtocol.verifyRequest(encoded)) {
-      // Reported like MemcacheProtocolVerificationHandler, but the request fails instead of the connection closing.
-      // Nothing was written, so the connection is still good. A retry would encode the same bad packet.
-      byte[] packet = ByteBufUtil.getBytes(encoded);
-      encoded.release();
-      eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));
-      request.fail(new EncodingFailureException("Outgoing packet failed structure verification"));
-      return null;
-    }
-    return encoded;
-  }
-
-  /**
    * Like KeyValueMessageHandler, when encoding fails.
    */
   private void handleEncodeFailure(KeyValueRequest<Response> request, Throwable err) {
@@ -540,36 +505,14 @@ final class KeyValueConnection implements KeyValueEndpointConnection {
       // For example, it timed out while it was queued. The server needn't do it (and it needn't be encoded).
       return;
     }
-    if (request instanceof PortableKeyValueRequest) {
-      writeDirectly(request, (PortableKeyValueRequest<?>) request);
-      return;
-    }
-
-    ByteBuf encoded = encode(request);
-    if (encoded == null) {
-      return;
-    }
-    try {
-      if (!dispatch(request)) {
-        return;
-      }
-      capture.written(encoded);
-      if (encoded.hasArray()) {
-        requestWriter.write(encoded.array(), encoded.arrayOffset() + encoded.readerIndex(), encoded.readableBytes());
-      } else {
-        byte[] bytes = ByteBufUtil.getBytes(encoded);
-        requestWriter.write(bytes, 0, bytes.length);
-      }
-    } finally {
-      encoded.release();
-    }
+    writeDirectly(request);
   }
 
   /**
    * Encodes the request straight into the request writer's buffer (see {@link KeyValueRequestWriter}).
    * Nothing of the request reaches the socket until it's in flight, so its response can't arrive first.
    */
-  private void writeDirectly(KeyValueRequest<Response> request, PortableKeyValueRequest<?> portable) throws IOException {
+  private void writeDirectly(KeyValueRequest<Response> request) throws IOException {
     try {
       requestWriter.makeRoomForRequest();
     } catch (IOException e) {
@@ -580,7 +523,7 @@ final class KeyValueConnection implements KeyValueEndpointConnection {
 
     try {
       try {
-        portable.encodeTo(requestWriter);
+        request.encodeTo(requestWriter);
       } catch (Throwable err) {
         requestWriter.abortRequest();
         handleEncodeFailure(request, err);
@@ -590,7 +533,8 @@ final class KeyValueConnection implements KeyValueEndpointConnection {
       try {
         requestWriter.completeRequestHead(request.opaque());
       } catch (IllegalStateException e) {
-        // Like encode(), when an encoded request fails verification.
+        // Reported like MemcacheProtocolVerificationHandler, but the request fails instead of the connection closing.
+        // Nothing was written, so the connection is still good. A retry would encode the same bad packet.
         byte[] packet = requestWriter.requestBytes();
         requestWriter.abortRequest();
         eventBus.publish(new InvalidPacketDetectedEvent(ioContext, packet));

@@ -22,7 +22,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * What a KV request encodes itself with (see {@link com.couchbase.client.core.msg.kv.PortableKeyValueRequest}).
+ * What a KV request encodes itself with (see {@link com.couchbase.client.core.msg.kv.KeyValueRequest#encodeTo}).
  * <p>
  * The request calls {@link #beginRequest}, and builds its packet with the {@link KeyValueRequestBuilder} that returns.
  * Whoever called {@code encodeTo} then finishes the packet, or abandons it.
