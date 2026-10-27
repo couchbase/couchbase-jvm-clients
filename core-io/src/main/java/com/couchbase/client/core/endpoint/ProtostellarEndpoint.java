@@ -39,6 +39,7 @@ import com.couchbase.client.core.deps.io.grpc.netty.GrpcSslContexts;
 import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContext;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -48,6 +49,7 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
+import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
@@ -232,12 +234,18 @@ public class ProtostellarEndpoint {
     SslContext sslContext;
 
     try {
+      // Don't use GrpcSslContexts.forClient(); it ignores nativeTlsEnabled and always loads the native library.
+      SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
+        SslContextBuilder.forClient(),
+        SslHandlerFactory.sslProvider(securityConfig.nativeTlsEnabled())
+      );
+
       if (securityConfig.trustManagerFactory() != null) {
-        sslContext = GrpcSslContexts.forClient()
+        sslContext = sslContextBuilder
           .trustManager(securityConfig.trustManagerFactory())
           .build();
       } else if (!securityConfig.trustCertificates().isEmpty()) {
-        sslContext = GrpcSslContexts.forClient()
+        sslContext = sslContextBuilder
           .trustManager(securityConfig.trustCertificates())
           .build();
       } else {

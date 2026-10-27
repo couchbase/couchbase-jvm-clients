@@ -79,9 +79,20 @@ public class SslHandlerFactory {
   }
 
   private static SslContextBuilder sslContextBuilder(final boolean nativeTlsEnabled) {
+    return SslContextBuilder.forClient().sslProvider(sslProvider(nativeTlsEnabled));
+  }
+
+  /**
+   * Returns the TLS provider to use: native (OpenSSL) if it's enabled and available, otherwise JDK.
+   * <p>
+   * Doesn't load the native library unless native TLS is enabled.
+   *
+   * @param nativeTlsEnabled if native TLS is enabled on the security configuration.
+   */
+  @Stability.Internal
+  public static SslProvider sslProvider(boolean nativeTlsEnabled) {
     // Must check nativeTlsEnabled *before* OPENSSL_AVAILABLE, to prevent loading the library when not wanted
-    SslProvider provider = nativeTlsEnabled && InitOnDemandHolder.OPENSSL_AVAILABLE ? SslProvider.OPENSSL : SslProvider.JDK;
-    return SslContextBuilder.forClient().sslProvider(provider);
+    return nativeTlsEnabled && InitOnDemandHolder.OPENSSL_AVAILABLE ? SslProvider.OPENSSL : SslProvider.JDK;
   }
 
   /**
