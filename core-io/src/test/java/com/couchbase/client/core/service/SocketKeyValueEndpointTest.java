@@ -17,7 +17,6 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.CoreResources;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.EventBus.PublishResult;
@@ -37,8 +36,6 @@ import com.couchbase.client.core.cnc.events.io.SaslAuthenticationCompletedEvent;
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.cnc.tracing.NoopRequestSpan;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
@@ -58,13 +55,9 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValueRequestEncoder;
-import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
-import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.msg.kv.GetResponse;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
@@ -1338,31 +1331,7 @@ class SocketKeyValueEndpointTest {
   }
 
   @Test
-  void sendsByteBufRequestsToo() throws Exception {
-    start();
-    startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
-
-    ByteBufNoopRequest request = new ByteBufNoopRequest(core.context());
-    endpoint.send(request);
-
-    assertEquals(ResponseStatus.SUCCESS, request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).status());
-  }
-
-  @Test
   void failsOnlyTheRequestWhenItFailsVerification() throws Exception {
-    start();
-    ByteBufNoopRequest malformed = new ByteBufNoopRequest(core.context()) {
-      @Override
-      public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-        return super.encode(alloc, opaque, ctx).writeByte(0); // longer than its total length says
-      }
-    };
-    assertFailsOnlyTheRequestWhenItFailsVerification(malformed);
-  }
-
-  @Test
-  void failsOnlyThePortableRequestWhenItFailsVerification() throws Exception {
     start();
     GetRequest malformed = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, null) {
       @Override
@@ -1405,37 +1374,5 @@ class SocketKeyValueEndpointTest {
       result.add(item);
     }
     return result;
-  }
-
-  /**
-   * A NOOP that encodes and decodes with the ByteBuf API, like a request not converted to the portable request API,
-   * to test the connection's path for those.
-   */
-  private static class ByteBufNoopRequest extends BaseKeyValueRequest<ByteBufNoopResponse> {
-    ByteBufNoopRequest(CoreContext ctx) {
-      super(TIMEOUT, ctx, BestEffortRetryStrategy.INSTANCE, null, DEFAULT_COLLECTION);
-    }
-
-    @Override
-    public ByteBuf encode(ByteBufAllocator alloc, int opaque, KeyValueChannelContext ctx) {
-      return MemcacheProtocol.request(alloc, Opcode.NOOP, MemcacheProtocol.noDatatype(), MemcacheProtocol.noPartition(),
-        opaque, MemcacheProtocol.noCas(), MemcacheProtocol.noExtras(), MemcacheProtocol.noKey(), MemcacheProtocol.noBody());
-    }
-
-    @Override
-    public ByteBufNoopResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
-      return new ByteBufNoopResponse(MemcacheProtocol.decodeStatus(response));
-    }
-
-    @Override
-    public String name() {
-      return "bytebuf_noop";
-    }
-  }
-
-  private static class ByteBufNoopResponse extends BaseResponse {
-    ByteBufNoopResponse(ResponseStatus status) {
-      super(status);
-    }
   }
 }

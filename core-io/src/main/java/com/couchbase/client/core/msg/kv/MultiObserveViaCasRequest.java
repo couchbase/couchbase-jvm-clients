@@ -43,7 +43,7 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
  * Special observe request implementation to handle more than one key at the same time.
  */
 public class MultiObserveViaCasRequest
-  extends BasePortableKeyValueRequest<MultiObserveViaCasResponse>
+  extends BaseKeyValueRequest<MultiObserveViaCasResponse>
   implements TargetedRequest {
 
   private final NodeIdentifier target;

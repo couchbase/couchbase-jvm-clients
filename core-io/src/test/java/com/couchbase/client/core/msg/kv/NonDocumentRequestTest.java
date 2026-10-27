@@ -56,20 +56,20 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Datatype.JSON;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.ALLOC;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.CORE_CONTEXT;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.CUSTOM_COLLECTION;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.DEFAULT_COLLECTION;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.OPAQUE;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.PARTITION;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.TIMEOUT;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.assertEncoding;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.assertEncodingAsConstructed;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.bytes;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.ctx;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.decodeEveryWay;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.newWriter;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.response;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ALLOC;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CORE_CONTEXT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CUSTOM_COLLECTION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.DEFAULT_COLLECTION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.OPAQUE;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.PARTITION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.TIMEOUT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.assertEncoding;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.assertEncodingAsConstructed;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.bytes;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ctx;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.decodeEveryWay;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.newWriter;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.response;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -83,11 +83,11 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 
 /**
- * Verifies the requests without a document key (in the key field) that implement {@link PortableKeyValueRequest}:
- * each encodes, with both encoders, the same packet as its old {@code ByteBuf} encoder (built here with
- * {@link MemcacheProtocol#request}, as the reference), and decodes its response.
+ * Verifies the requests without a document key (in the key field): each encodes, with both encoders, the same
+ * packet as its old {@code ByteBuf} encoder (built here with {@link MemcacheProtocol#request}, as the reference),
+ * and decodes its response.
  */
-class PortableNonDocumentRequestTest {
+class NonDocumentRequestTest {
   private static final String KEY = "some-key";
   private static final short SUCCESS = MemcacheProtocol.Status.SUCCESS.status();
   private static final short NOT_FOUND = MemcacheProtocol.Status.NOT_FOUND.status();

@@ -42,7 +42,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
  * that it is not tied to a bucket (and as a result does not accept one when being constructed).</p>
  */
 public class CarrierGlobalConfigRequest
-  extends BasePortableKeyValueRequest<CarrierGlobalConfigResponse>
+  extends BaseKeyValueRequest<CarrierGlobalConfigResponse>
   implements TargetedRequest, UnmonitoredRequest {
 
   private final NodeIdentifier target;

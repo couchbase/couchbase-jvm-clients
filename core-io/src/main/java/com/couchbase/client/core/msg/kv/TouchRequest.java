@@ -32,7 +32,7 @@ import com.couchbase.client.core.retry.RetryStrategy;
 import java.time.Duration;
 
 
-public class TouchRequest extends BasePortableKeyValueRequest<TouchResponse> {
+public class TouchRequest extends BaseKeyValueRequest<TouchResponse> {
 
   private final long expiry;
 

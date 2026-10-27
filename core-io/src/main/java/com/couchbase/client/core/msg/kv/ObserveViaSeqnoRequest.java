@@ -34,7 +34,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import java.time.Duration;
 import java.util.Optional;
 
-public class ObserveViaSeqnoRequest extends BasePortableKeyValueRequest<ObserveViaSeqnoResponse> {
+public class ObserveViaSeqnoRequest extends BaseKeyValueRequest<ObserveViaSeqnoResponse> {
 
   private final int replica;
   private final boolean active;

@@ -54,12 +54,12 @@ import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -152,7 +152,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
   private KeyValueChannelContext channelContext;
 
   /**
-   * Once connected/active, encodes the {@link PortableKeyValueRequest}s (reusing its arrays).
+   * Once connected/active, encodes the requests (reusing its arrays).
    */
   private NettyKeyValueRequestEncoder requestEncoder;
 
@@ -303,9 +303,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
       int opaque = request.opaque();
       writtenRequests.put(opaque, request);
       try {
-        ByteBuf encoded = request instanceof PortableKeyValueRequest
-          ? requestEncoder.encode((PortableKeyValueRequest<?>) request, opaque)
-          : request.encode(ctx.alloc(), opaque, channelContext);
+        ByteBuf encoded = requestEncoder.encode(request, opaque);
         ctx.write(encoded, promise);
         writtenRequestDispatchTimings.put(opaque, (Long) System.nanoTime());
         if (request.requestSpan() != null) {
@@ -494,7 +492,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    */
   private void decodeAndComplete(final KeyValueRequest<Response> request, final ByteBuf response) {
     try {
-      Response decoded = request.decode(response, channelContext);
+      Response decoded = request.decode(MemcacheProtocol.packet(response), channelContext);
       request.succeed(decoded);
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
@@ -503,7 +501,8 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
   private void decodeAndCompleteRangeScanContinue(final KeyValueRequest<Response> request, final ByteBuf response,
                                                   long originalStart) {
-    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(response, channelContext);
+    KeyValuePacket packet = MemcacheProtocol.packet(response);
+    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(packet, channelContext);
     if (!request.completed()) {
       request.succeed(decoded);
     }
@@ -528,7 +527,7 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     boolean hasLastItem = status == ResponseStatus.COMPLETE;
     boolean completeStream = hasLastItem || status == ResponseStatus.CONTINUE;
-    decoded.feedItems(PortableKeyValueRequest.packet(response).body(), hasLastItem, completeStream);
+    decoded.feedItems(packet.body(), hasLastItem, completeStream);
 
     if (decoded.status() == ResponseStatus.SUCCESS) {
       writtenRequests.put(request.opaque(), request);

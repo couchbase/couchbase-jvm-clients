@@ -48,9 +48,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * Helpers for testing {@link PortableKeyValueRequest}s: encoding with both encoders, and decoding every way.
+ * Helpers for testing KV requests: encoding with both encoders, and decoding every way.
  */
-final class PortableRequestTesting {
+final class KeyValueRequestTesting {
   static final Duration TIMEOUT = Duration.ofMillis(2500);
   static final CoreContext CORE_CONTEXT = mock(CoreContext.class);
   static final CollectionIdentifier DEFAULT_COLLECTION = CollectionIdentifier.fromDefault("b");
@@ -59,11 +59,11 @@ final class PortableRequestTesting {
   static final int OPAQUE = 0x12345678;
   static final short PARTITION = 42;
 
-  private PortableRequestTesting() {
+  private KeyValueRequestTesting() {
     throw new AssertionError("not instantiable");
   }
 
-  static void assertEncoding(PortableKeyValueRequest<?> request, KeyValueChannelContext ctx, byte[] expected) throws IOException {
+  static void assertEncoding(KeyValueRequest<?> request, KeyValueChannelContext ctx, byte[] expected) throws IOException {
     request.partition(PARTITION);
     assertEncodingAsConstructed(request, ctx, expected);
   }
@@ -73,7 +73,7 @@ final class PortableRequestTesting {
    * its partition, and can't be given another).
    */
   static void assertEncodingAsConstructed(
-    PortableKeyValueRequest<?> request,
+    KeyValueRequest<?> request,
     KeyValueChannelContext ctx,
     byte[] expected
   ) throws IOException {
@@ -88,13 +88,11 @@ final class PortableRequestTesting {
     writer.flush();
     assertArrayEquals(expected, out.toByteArray());
 
-    // The Netty implementation's encoder: a channel's, used twice (so the second time it's reused),
-    // and a new one (the ByteBuf bridge).
+    // The Netty implementation's encoder: a channel's, used twice (so the second time it's reused).
     NettyKeyValueRequestEncoder channelEncoder = new NettyKeyValueRequestEncoder(ALLOC, ctx);
     for (ByteBuf encoded : Arrays.asList(
       channelEncoder.encode(request, OPAQUE),
-      channelEncoder.encode(request, OPAQUE),
-      request.encode(ALLOC, OPAQUE, ctx)
+      channelEncoder.encode(request, OPAQUE)
     )) {
       try {
         assertTrue(MemcacheProtocol.verifyRequest(encoded));
@@ -106,11 +104,18 @@ final class PortableRequestTesting {
   }
 
   /**
-   * Decodes the response directly from a packet, and through the ByteBuf bridge from a heap buffer
-   * (like the socket connection's), from direct buffers (like Netty's), and from a composite buffer.
+   * Encodes the request with a new encoder like the Netty implementation's. Throws if the request can't be encoded.
+   */
+  static ByteBuf encode(KeyValueRequest<?> request, KeyValueChannelContext ctx) {
+    return new NettyKeyValueRequestEncoder(ALLOC, ctx).encode(request, OPAQUE);
+  }
+
+  /**
+   * Decodes the response directly from a packet, and from packet views (like the Netty implementation's) of a heap
+   * buffer, of direct buffers (like Netty's), and of a composite buffer.
    */
   static <R extends Response> List<R> decodeEveryWay(
-    PortableKeyValueRequest<R> request,
+    KeyValueRequest<R> request,
     byte[] packet,
     KeyValueChannelContext ctx
   ) {
@@ -118,18 +123,18 @@ final class PortableRequestTesting {
     System.arraycopy(packet, 0, padded, 3, packet.length);
     R fromPacket = request.decode(KeyValuePacket.wrap(padded, 3, packet.length), ctx);
 
-    R fromHeap = request.decode(Unpooled.wrappedBuffer(packet), ctx);
+    R fromHeap = request.decode(MemcacheProtocol.packet(Unpooled.wrappedBuffer(packet)), ctx);
 
     ByteBuf direct = Unpooled.directBuffer(packet.length).writeBytes(packet);
     ByteBuf pooled = PooledByteBufAllocator.DEFAULT.directBuffer(packet.length).writeBytes(packet);
     pooled.readerIndex(5); // ignored, like MemcacheProtocol's readers
     try {
-      R fromDirect = request.decode(direct, ctx);
-      R fromPooled = request.decode(pooled, ctx);
+      R fromDirect = request.decode(MemcacheProtocol.packet(direct), ctx);
+      R fromPooled = request.decode(MemcacheProtocol.packet(pooled), ctx);
       // Several components (no single internal NIO buffer).
       int half = packet.length / 2;
-      R fromComposite = request.decode(Unpooled.wrappedBuffer(
-        Unpooled.wrappedBuffer(packet, 0, half), Unpooled.wrappedBuffer(packet, half, packet.length - half)), ctx);
+      R fromComposite = request.decode(MemcacheProtocol.packet(Unpooled.wrappedBuffer(
+        Unpooled.wrappedBuffer(packet, 0, half), Unpooled.wrappedBuffer(packet, half, packet.length - half))), ctx);
       return Arrays.asList(fromPacket, fromHeap, fromDirect, fromPooled, fromComposite);
     } finally {
       direct.release();
@@ -138,7 +143,7 @@ final class PortableRequestTesting {
   }
 
   static <R extends Response> List<R> decodeEveryWay(
-    PortableKeyValueRequest<R> request,
+    KeyValueRequest<R> request,
     byte[] packet
   ) {
     return decodeEveryWay(request, packet, ctx(null, EnumSet.noneOf(ServerFeature.class)));

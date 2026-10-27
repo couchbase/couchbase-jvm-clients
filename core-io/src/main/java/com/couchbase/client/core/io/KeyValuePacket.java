@@ -38,7 +38,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A read-only view of one KV packet (usually a response), which a request decodes its response from
- * (see {@link com.couchbase.client.core.msg.kv.PortableKeyValueRequest#decode(KeyValuePacket, com.couchbase.client.core.io.netty.kv.KeyValueChannelContext)}).
+ * (see {@link com.couchbase.client.core.msg.kv.KeyValueRequest#decode(KeyValuePacket, com.couchbase.client.core.io.netty.kv.KeyValueChannelContext)}).
  * <p>
  * The packet shares its bytes with whatever it was read into (it isn't a copy), so it's valid only while the response
  * is being handled: a decoder must copy out whatever it keeps (as {@link #bodyAsBytes} and {@link SectionReader#readBytes} do).

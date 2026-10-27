@@ -35,7 +35,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 /**
  * Fetches the collection ID from the cluster based on a {@link CollectionIdentifier}.
  */
-public class GetCollectionIdRequest extends BasePortableKeyValueRequest<GetCollectionIdResponse> {
+public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdResponse> {
 
   public GetCollectionIdRequest(final Duration timeout, final CoreContext ctx,
                                 final RetryStrategy retryStrategy,

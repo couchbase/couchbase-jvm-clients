@@ -27,7 +27,7 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.BasePortableKeyValueRequest;
+import com.couchbase.client.core.msg.kv.BaseKeyValueRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.util.SynchronousEventBus;
 import org.slf4j.Logger;
@@ -156,7 +156,7 @@ public class AuthenticationRefreshHandler extends ChannelInboundHandlerAdapter {
    * Also used by the KV endpoint that doesn't use Netty.
    */
   @Stability.Internal
-  public static class SingleStepAuthRequest extends BasePortableKeyValueRequest<SingleStepAuthResponse> {
+  public static class SingleStepAuthRequest extends BaseKeyValueRequest<SingleStepAuthResponse> {
     private final SingleStepSaslAuthParameters params;
 
     public SingleStepAuthRequest(CoreContext ctx, SingleStepSaslAuthParameters params) {

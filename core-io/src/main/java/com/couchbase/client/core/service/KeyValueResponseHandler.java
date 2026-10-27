@@ -25,7 +25,6 @@ import com.couchbase.client.core.cnc.events.io.NotMyVbucketReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseReceivedEvent;
 import com.couchbase.client.core.cnc.events.io.UnknownResponseStatusReceivedEvent;
 import com.couchbase.client.core.config.ProposedBucketConfigContext;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
@@ -40,7 +39,6 @@ import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
-import com.couchbase.client.core.msg.kv.PortableKeyValueRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
@@ -215,10 +213,7 @@ final class KeyValueResponseHandler {
 
   private void decodeAndComplete(KeyValueRequest<Response> request, KeyValuePacket packet) {
     try {
-      // No request in the SDK still decodes from a ByteBuf (only tests' do), so copying doesn't matter.
-      Response decoded = request instanceof PortableKeyValueRequest
-        ? ((PortableKeyValueRequest<Response>) request).decode(packet, channelContext)
-        : request.decode(Unpooled.wrappedBuffer(packet.toByteArray()), channelContext);
+      Response decoded = request.decode(packet, channelContext);
       request.succeed(decoded);
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
@@ -227,7 +222,7 @@ final class KeyValueResponseHandler {
 
   private void decodeAndCompleteRangeScanContinue(InFlight written, KeyValuePacket packet) {
     KeyValueRequest<Response> request = written.request;
-    RangeScanContinueResponse decoded = ((RangeScanContinueRequest) (Request<?>) request).decode(packet, channelContext);
+    RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(packet, channelContext);
     if (!request.completed()) {
       request.succeed(decoded);
     }

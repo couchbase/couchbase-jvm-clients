@@ -57,7 +57,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.*;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.*;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
@@ -74,22 +74,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * Verifies the requests that implement {@link PortableKeyValueRequest}:
+ * Verifies Get, Upsert and the sub-document requests:
  * <ul>
  *   <li>Both encoders (the socket connection's {@link KeyValueRequestWriter}, and the Netty implementation's
  *   {@link NettyKeyValueRequestEncoder}) write the same packet as the request's old
  *   {@code ByteBuf} encoder (kept here, as the reference).
- *   <li>Decoding from a {@link KeyValuePacket} (directly, or through the {@code ByteBuf} bridge, from a heap
- *   or direct buffer) gives the expected response.
+ *   <li>Decoding from a {@link KeyValuePacket} (directly, or as a view of a heap or direct {@code ByteBuf},
+ *   like the Netty implementation's) gives the expected response.
  * </ul>
  */
-class PortableKeyValueRequestTest {
+class GetUpsertSubdocRequestTest {
   private static final int UPSERT_FLAGS = 0x02000006;
   private static final long UPSERT_EXPIRY = 3600;
   private static final byte ACCESS_DELETED = 0x04;
 
   private static final byte[] SHORT_CONTENT = "{\"hello\":\"world\"}".getBytes(UTF_8);
-  private static final byte[] LONG_CONTENT = readResource("dummy.json", PortableKeyValueRequestTest.class).getBytes(UTF_8);
+  private static final byte[] LONG_CONTENT = readResource("dummy.json", GetUpsertSubdocRequestTest.class).getBytes(UTF_8);
   private static final byte[] HUGE_CONTENT = new byte[200 * 1024];
 
   static {
@@ -117,7 +117,7 @@ class PortableKeyValueRequestTest {
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
     ReplicaGetRequest request = new ReplicaGetRequest("some-key", TIMEOUT, CORE_CONTEXT, CUSTOM_COLLECTION,
       BestEffortRetryStrategy.INSTANCE, (short) 1, null);
-    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     byte[] expected = bytes(MemcacheProtocol.request(ALLOC, Opcode.GET_REPLICA, noDatatype(),
       PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
     key.release();
@@ -142,7 +142,7 @@ class PortableKeyValueRequestTest {
       new CollectionIdentifier("b", Optional.of("s"), Optional.of("unknown")), BestEffortRetryStrategy.INSTANCE, null);
 
     assertThrows(CollectionNotFoundException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
-    assertThrows(CollectionNotFoundException.class, () -> request.encode(ALLOC, 1, ctx));
+    assertThrows(CollectionNotFoundException.class, () -> KeyValueRequestTesting.encode(request, ctx));
   }
 
   @Test
@@ -210,7 +210,7 @@ class PortableKeyValueRequestTest {
     KeyValueChannelContext ctx = ctx(null, EnumSet.of(ServerFeature.COLLECTIONS));
 
     assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
-    assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> KeyValueRequestTesting.encode(request, ctx));
   }
 
   @Test
@@ -253,7 +253,7 @@ class PortableKeyValueRequestTest {
     SubdocGetRequest request = subdocGet((byte) 0, new Spec(SubdocCommandType.GET, "$bogus", true, false));
 
     assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
-    assertThrows(XattrUnknownVirtualAttributeException.class, () -> request.encode(ALLOC, 1, ctx));
+    assertThrows(XattrUnknownVirtualAttributeException.class, () -> KeyValueRequestTesting.encode(request, ctx));
   }
 
   @Test
@@ -330,11 +330,11 @@ class PortableKeyValueRequestTest {
     createAsDeleted.createAsDeleted = true;
     SubdocMutateRequest request = subdocMutate(createAsDeleted, new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1"));
     assertThrows(FeatureNotAvailableException.class, () -> request.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
-    assertThrows(FeatureNotAvailableException.class, () -> request.encode(ALLOC, 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> KeyValueRequestTesting.encode(request, ctx));
 
     SubdocMutateRequest binary = subdocMutate(new MutateRequestSpec(), new MutateSpec(SubdocCommandType.DICT_UPSERT, "a", "1").binary());
     assertThrows(FeatureNotAvailableException.class, () -> binary.encodeTo(newWriter(new ByteArrayOutputStream(), ctx)));
-    assertThrows(FeatureNotAvailableException.class, () -> binary.encode(ALLOC, 1, ctx));
+    assertThrows(FeatureNotAvailableException.class, () -> KeyValueRequestTesting.encode(binary, ctx));
   }
 
   // Decoding
@@ -560,7 +560,7 @@ class PortableKeyValueRequestTest {
   // The requests' ByteBuf encoders, from before they were converted: the reference.
 
   private static byte[] referenceGet(GetRequest request, KeyValueChannelContext ctx) {
-    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     try {
       return bytes(MemcacheProtocol.request(ALLOC, Opcode.GET, noDatatype(),
         PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
@@ -577,7 +577,7 @@ class PortableKeyValueRequestTest {
     ByteBuf flexibleExtras = mutationFlexibleExtras(request, ctx, ALLOC, durability, preserveExpiry);
 
     try {
-      key = request.encodedKeyWithCollection(ALLOC, ctx);
+      key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
 
       byte datatype = 0;
       CompressionConfig config = ctx.compressionConfig();
@@ -608,7 +608,7 @@ class PortableKeyValueRequestTest {
   }
 
   private static byte[] referenceSubdocGet(SubdocGetRequest request, byte docFlags, Spec[] specs, KeyValueChannelContext ctx) {
-    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     ByteBuf extras = docFlags != 0 ? ALLOC.buffer(1).writeByte(docFlags) : noExtras();
     CompositeByteBuf body = ALLOC.compositeBuffer();
     try {
@@ -744,7 +744,7 @@ class PortableKeyValueRequestTest {
     KeyValueChannelContext ctx
   ) {
     ByteBuf flexibleExtras = mutationFlexibleExtras(request, ctx, ALLOC, options.durability, options.preserveExpiry);
-    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     ByteBuf extras = ALLOC.buffer();
     CompositeByteBuf content = ALLOC.compositeBuffer();
     try {

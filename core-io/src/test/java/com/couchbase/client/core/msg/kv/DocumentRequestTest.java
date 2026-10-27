@@ -38,20 +38,20 @@ import java.util.EnumSet;
 import java.util.Optional;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.ALLOC;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.CORE_CONTEXT;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.CUSTOM_COLLECTION;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.OPAQUE;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.PARTITION;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.TIMEOUT;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.assertEncoding;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.bytes;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.compressingCtx;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.ctx;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.decodeEveryWay;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.ints;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.newWriter;
-import static com.couchbase.client.core.msg.kv.PortableRequestTesting.response;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ALLOC;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CORE_CONTEXT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CUSTOM_COLLECTION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.OPAQUE;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.PARTITION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.TIMEOUT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.assertEncoding;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.bytes;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.compressingCtx;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ctx;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.decodeEveryWay;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ints;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.newWriter;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.response;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -62,14 +62,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the document requests (other than Get, Upsert and the sub-document ones) that implement
- * {@link PortableKeyValueRequest}: each encodes, with both encoders, the same packet as its old {@code ByteBuf}
- * encoder (built here with {@link MemcacheProtocol}'s helpers, as the reference), and decodes its response.
+ * Verifies the document requests other than Get, Upsert and the sub-document ones: each encodes, with both
+ * encoders, the same packet as its old {@code ByteBuf} encoder (built here with {@link MemcacheProtocol}'s helpers,
+ * as the reference), and decodes its response.
  */
-class PortableDocumentRequestTest {
+class DocumentRequestTest {
   private static final String KEY = "some-key";
   private static final byte[] CONTENT = "{\"hello\":\"world\"}".getBytes(UTF_8);
-  private static final byte[] LONG_CONTENT = readResource("dummy.json", PortableDocumentRequestTest.class).getBytes(UTF_8);
+  private static final byte[] LONG_CONTENT = readResource("dummy.json", DocumentRequestTest.class).getBytes(UTF_8);
   private static final int FLAGS = 0x02000006;
   private static final long EXPIRY = 3600;
   private static final long CAS = 0x1234_5678_9abcL;
@@ -181,11 +181,11 @@ class PortableDocumentRequestTest {
   void rejectsDurabilityAndPreserveExpiryTheServerLacks() {
     InsertRequest insert = insert(CONTENT, MAJORITY);
     assertThrows(DurabilityLevelNotAvailableException.class, () -> insert.encodeTo(newWriter(new ByteArrayOutputStream(), COLLECTIONS)));
-    assertThrows(DurabilityLevelNotAvailableException.class, () -> insert.encode(ALLOC, OPAQUE, COLLECTIONS));
+    assertThrows(DurabilityLevelNotAvailableException.class, () -> KeyValueRequestTesting.encode(insert, COLLECTIONS));
 
     ReplaceRequest replace = replace(CONTENT, true, NO_DURABILITY);
     assertThrows(FeatureNotAvailableException.class, () -> replace.encodeTo(newWriter(new ByteArrayOutputStream(), COLLECTIONS)));
-    assertThrows(FeatureNotAvailableException.class, () -> replace.encode(ALLOC, OPAQUE, COLLECTIONS));
+    assertThrows(FeatureNotAvailableException.class, () -> KeyValueRequestTesting.encode(replace, COLLECTIONS));
   }
 
   // Decoding
@@ -386,7 +386,7 @@ class PortableDocumentRequestTest {
     byte @Nullable [] value
   ) {
     ByteBuf framingExtras = mutationFlexibleExtras(request, ctx, ALLOC, durability, preserveExpiry);
-    ByteBuf key = request.encodedKeyWithCollection(ALLOC, ctx);
+    ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     ByteBuf extrasOrNone = extras == null ? Unpooled.EMPTY_BUFFER : extras;
     ByteBuf body = value == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(value);
     try {

@@ -33,7 +33,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 
-public class UnlockRequest extends BasePortableKeyValueRequest<UnlockResponse> {
+public class UnlockRequest extends BaseKeyValueRequest<UnlockResponse> {
   private final long cas;
 
   public UnlockRequest(Duration timeout, CoreContext ctx, CollectionIdentifier collectionIdentifier,

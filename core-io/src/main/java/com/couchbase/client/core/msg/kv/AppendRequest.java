@@ -36,7 +36,7 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putValueMaybeCompressed;
 
-public class AppendRequest extends BasePortableKeyValueRequest<AppendResponse> implements SyncDurabilityRequest {
+public class AppendRequest extends BaseKeyValueRequest<AppendResponse> implements SyncDurabilityRequest {
 
   private final byte[] content;
   private final long cas;

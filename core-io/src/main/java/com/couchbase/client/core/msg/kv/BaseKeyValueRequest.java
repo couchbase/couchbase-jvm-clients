@@ -21,8 +21,6 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -38,6 +36,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.Bytes;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Map;
@@ -101,13 +100,14 @@ public abstract class BaseKeyValueRequest<R extends Response>
    */
   private volatile ErrorMap.ErrorCode errorCode;
 
-  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                final String key, final CollectionIdentifier collectionIdentifier) {
+  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final @Nullable RetryStrategy retryStrategy,
+                                final @Nullable String key, final @Nullable CollectionIdentifier collectionIdentifier) {
     this(timeout, ctx, retryStrategy, key, collectionIdentifier, null);
   }
 
-  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final RetryStrategy retryStrategy,
-                                final String key, final CollectionIdentifier collectionIdentifier, final RequestSpan span) {
+  protected BaseKeyValueRequest(final Duration timeout, final CoreContext ctx, final @Nullable RetryStrategy retryStrategy,
+                                final @Nullable String key, final @Nullable CollectionIdentifier collectionIdentifier,
+                                final @Nullable RequestSpan span) {
     super(timeout, ctx, retryStrategy, span);
     this.key = encodeKey(key);
     this.collectionIdentifier = collectionIdentifier;
@@ -144,41 +144,8 @@ public abstract class BaseKeyValueRequest<R extends Response>
   }
 
   /**
-   * This method returns an encoded key with or without the collection prefix, depending on the
-   * context provided.
-   *
-   * <p>Note that it uses the key set during construction, if you want to encode a different key use the
-   * {@link #encodedExternalKeyWithCollection(ByteBufAllocator, KeyValueChannelContext, byte[])} method instead.</p>
-   *
-   * @param alloc the buffer allocator to use.
-   * @param ctx the channel context.
-   * @return the encoded ID, maybe with the collection prefix in place.
-   */
-  protected ByteBuf encodedKeyWithCollection(final ByteBufAllocator alloc, final KeyValueChannelContext ctx) {
-    return encodedExternalKeyWithCollection(alloc, ctx, key);
-  }
-
-  /**
-   * Encodes a given key with the collection prefix if needed.
-   *
-   * @param alloc the buffer allocator to use.
-   * @param ctx the channel context.
-   * @param key the key to encode with collection id.
-   * @return the encoded ID, maybe with the collection prefix in place.
-   */
-  protected ByteBuf encodedExternalKeyWithCollection(ByteBufAllocator alloc, KeyValueChannelContext ctx,
-                                                     byte[] key) {
-    byte[] collection = collectionPrefix(ctx, key);
-    return alloc
-      .buffer(collection.length + key.length)
-      .writeBytes(collection)
-      .writeBytes(key);
-  }
-
-  /**
    * Returns the collection prefix to put before the key set during construction (empty if collections aren't enabled),
-   * for {@link PortableKeyValueRequest#encodeTo}. Throws, like {@link #encodedKeyWithCollection}, if the collection
-   * isn't known or the key is too long.
+   * for {@link #encodeTo}. Throws if the collection isn't known or the key is too long.
    */
   protected byte[] collectionPrefix(KeyValueChannelContext ctx) {
     return collectionPrefix(ctx, key);

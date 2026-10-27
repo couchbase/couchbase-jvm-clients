@@ -38,7 +38,7 @@ import java.util.Optional;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.putMutationFlexibleExtras;
 
 
-public class IncrementRequest extends BasePortableKeyValueRequest<IncrementResponse> implements SyncDurabilityRequest {
+public class IncrementRequest extends BaseKeyValueRequest<IncrementResponse> implements SyncDurabilityRequest {
 
   public static final int COUNTER_NOT_EXISTS_EXPIRY = 0xffffffff;
 
