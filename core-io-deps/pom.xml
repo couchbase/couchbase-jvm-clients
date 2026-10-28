@@ -20,6 +20,9 @@
         <!-- When bumping this, it may be necessary to bump the grpc-netty dependency in protostellar/pom.xml also -->
         <netty.version>4.2.19.Final</netty.version>
         <jackson.version>2.21.7</jackson.version>
+        <!-- Keep these in sync with the root pom, whose versions test-utils uses. -->
+        <okhttp.version>5.5.0</okhttp.version>
+        <okio.version>3.18.2</okio.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
         <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
@@ -61,6 +64,18 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp-bom</artifactId>
+                <version>${okhttp.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>${okio.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -83,6 +98,14 @@
             <artifactId>netty-tcnative-classes</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-tls</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.jctools</groupId>
             <artifactId>jctools-core</artifactId>
             <version>4.0.5</version>
@@ -94,11 +117,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-afterburner</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.couchbase</groupId>
-            <artifactId>json-skiff</artifactId>
-            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>dnsjava</groupId>
@@ -283,6 +301,14 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <artifactSet>
+                        <excludes>
+                            <!-- OkHttp and Okio need the Kotlin standard library. It's not shaded; core-io depends on it.
+                                 (Shading it would add megabytes, and it's designed to be shared.) -->
+                            <exclude>org.jetbrains.kotlin:*</exclude>
+                            <exclude>org.jetbrains:annotations</exclude>
+                        </excludes>
+                    </artifactSet>
                     <relocations>
                         <relocation>
                             <pattern>io.netty</pattern>
@@ -330,6 +356,16 @@
                             <shadedPattern>${shaded.package.prefix}org.jctools</shadedPattern>
                         </relocation>
 
+                        <!-- Also relocates OkHttp's public suffix list (a resource under okhttp3/), and the path it's loaded from. -->
+                        <relocation>
+                            <pattern>okhttp3</pattern>
+                            <shadedPattern>${shaded.package.prefix}okhttp3</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>okio</pattern>
+                            <shadedPattern>${shaded.package.prefix}okio</shadedPattern>
+                        </relocation>
+
                         <!-- gRPC and associated cruft -->
                         <relocation>
                             <pattern>io.grpc</pattern>
@@ -353,7 +389,7 @@
                             <resource>META-INF/${shaded.package.prefix}io.netty.versions.properties</resource>
                         </transformer>
 
-                        <!-- Netty native image metadata -->
+                        <!-- Native image metadata -->
                         <transformer implementation="ac.simons.maven.shade.NativeImagePropertiesTransformer"/>
                         <transformer implementation="ac.simons.maven.shade.ReflectConfigTransformer"/>
 
@@ -396,6 +432,15 @@
                     </transformers>
                     <filters>
                         <filter>
+                            <artifact>com.squareup.okhttp3:okhttp-jvm</artifact>
+                            <excludes>
+                                <!-- Names OkHttp's GraalVM feature by its original class name, which the transformer
+                                     doesn't relocate. The feature does nothing, and the other options aren't needed
+                                     by OkHttp. (Its reflection and resource configs are kept, and relocated.) -->
+                                <exclude>META-INF/native-image/okhttp/okhttp/native-image.properties</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
                             <artifact>dnsjava:dnsjava</artifact>
                             <excludes>
                                 <!-- These localized messages are optional (See R.java) and aren't worth the trouble of relocating. -->
@@ -424,6 +469,10 @@
                                      Assume these classes are just optimizations that take advantage of
                                      features in newer version of Java; exclude them for now. -->
                                 <exclude>META-INF/versions/**</exclude>
+
+                                <!-- Kotlin module metadata for OkHttp and Okio, which names their original packages.
+                                     Not needed by Java, and it could confuse the Kotlin compiler. -->
+                                <exclude>META-INF/*.kotlin_module</exclude>
                             </excludes>
                         </filter>
                     </filters>

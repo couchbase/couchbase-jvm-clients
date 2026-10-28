@@ -18,14 +18,14 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
+import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.tls.HandshakeCertificates;
-import okhttp3.tls.HeldCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

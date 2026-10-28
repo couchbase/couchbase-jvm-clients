@@ -18,11 +18,11 @@ package com.couchbase.client.core.cnc.apptelemetry.reporter;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
-import okhttp3.Response;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
-import okio.Buffer;
-import okio.ByteString;
+import com.couchbase.client.core.deps.okhttp3.Response;
+import com.couchbase.client.core.deps.okhttp3.WebSocket;
+import com.couchbase.client.core.deps.okhttp3.WebSocketListener;
+import com.couchbase.client.core.deps.okio.Buffer;
+import com.couchbase.client.core.deps.okio.ByteString;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,7 +79,7 @@ class OkHttpAppTelemetryWebSocketClient implements AppTelemetryClient {
     CompletableFuture<@Nullable Void> closed = new CompletableFuture<>();
 
     WebSocket webSocket = coreContext.core().okHttpClient().newWebSocket(
-      new okhttp3.Request.Builder().url(remote.toString()), // OkHttp takes the ws and wss schemes here
+      new com.couchbase.client.core.deps.okhttp3.Request.Builder().url(remote.toString()), // OkHttp takes the ws and wss schemes here
       !isUserSpecifiedEndpoint(), // useClusterTlsAndCredentials
       coreContext.environment().timeoutConfig().connectTimeout(),
       pingInterval,

@@ -27,6 +27,9 @@ import com.couchbase.client.core.cnc.events.endpoint.UnexpectedEndpointDisconnec
 import com.couchbase.client.core.cnc.events.io.SecureConnectionFailedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.Connection;
+import com.couchbase.client.core.deps.okhttp3.Request;
 import com.couchbase.client.core.diagnostics.AuthenticationStatus;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
@@ -37,9 +40,6 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.MockUtil;
-import okhttp3.Call;
-import okhttp3.Connection;
-import okhttp3.Request;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 

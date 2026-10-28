@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
 import com.couchbase.client.core.env.SecurityConfig;
-import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.AEADBadTagException;
@@ -32,8 +32,6 @@ import java.net.SocketException;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 
-import static com.couchbase.client.core.util.CbCollections.listOf;
-import static java.util.Collections.emptyList;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
@@ -45,6 +43,8 @@ import static com.couchbase.client.core.service.OkHttpTlsHelper.describeTlsFailu
 import static com.couchbase.client.core.service.OkHttpTlsHelper.newTlsSocketFactory;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.permanentTlsFailureHint;
 import static com.couchbase.client.core.service.OkHttpTlsHelper.unsupportedCipherSuites;
+import static com.couchbase.client.core.util.CbCollections.listOf;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;

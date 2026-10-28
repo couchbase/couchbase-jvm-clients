@@ -19,22 +19,22 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
+import com.couchbase.client.core.deps.okhttp3.Connection;
+import com.couchbase.client.core.deps.okhttp3.Headers;
+import com.couchbase.client.core.deps.okhttp3.Interceptor;
+import com.couchbase.client.core.deps.okhttp3.MediaType;
+import com.couchbase.client.core.deps.okhttp3.Request;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
+import com.couchbase.client.core.deps.okhttp3.Response;
+import com.couchbase.client.core.deps.okhttp3.ResponseBody;
+import com.couchbase.client.core.deps.okio.Buffer;
+import com.couchbase.client.core.deps.okio.ForwardingSource;
+import com.couchbase.client.core.deps.okio.Okio;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.io.TrafficCaptureMasking;
 import com.couchbase.client.core.msg.RequestContext;
-import okhttp3.Connection;
-import okhttp3.Headers;
-import okhttp3.Interceptor;
-import okhttp3.MediaType;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
-import okio.Buffer;
-import okio.ForwardingSource;
-import okio.Okio;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -56,6 +56,7 @@ import static com.couchbase.client.core.io.TrafficCaptureMasking.maskAuthorizati
 import static com.couchbase.client.core.io.TrafficCaptureMasking.maskSecretFields;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * Captures the HTTP traffic of the services in {@link IoConfig#servicesToCapture()}, like the Netty endpoints'
  * {@code TrafficCaptureHandler}: publishes a {@link WriteTrafficCapturedEvent} for each request as it's sent

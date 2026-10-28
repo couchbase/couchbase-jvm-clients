@@ -16,6 +16,8 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.Response;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
@@ -23,8 +25,6 @@ import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.StorageSize;
 import com.couchbase.client.socketoptions.ExtendedSocket;
 import com.couchbase.client.socketoptions.LinuxSocketOptions;
-import okhttp3.OkHttpClient;
-import okhttp3.Response;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -217,7 +217,7 @@ class CouchbaseSocketFactoryTest {
 
       httpServer.enqueue("hello");
       try (Response response = recordingClient.newCall(CouchbaseOkHttpClient.newRequest(
-        new okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + httpServer.port() + "/"),
+        new com.couchbase.client.core.deps.okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + httpServer.port() + "/"),
         mock(RequestContext.class),
         Duration.ofSeconds(5)
       )).execute()) {

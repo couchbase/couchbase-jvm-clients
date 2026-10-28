@@ -18,12 +18,12 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.io.netty.view.NonChunkedViewMessageHandler;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 
 /**
@@ -64,7 +64,7 @@ public class OkHttpViewService extends AbstractOkHttpService {
       .map(keys -> RequestBody.create(keys, APPLICATION_JSON))
       .orElse(null);
 
-    okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder()
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(url(viewRequest.pathAndQuery()))
       .method(requestBody == null ? "GET" : "POST", requestBody);
 

@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.service;
 
-import okhttp3.RequestBody;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import org.junit.jupiter.api.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -46,7 +46,7 @@ class CoreHttpRequestBodyTest {
       RequestBody body = AbstractOkHttpService.requestBody(method, EMPTY);
       assertNotNull(body, method);
       assertEquals(0, body.contentLength(), method);
-      new okhttp3.Request.Builder().url("http://example/").method(method, body).build(); // OkHttp accepts it
+      new com.couchbase.client.core.deps.okhttp3.Request.Builder().url("http://example/").method(method, body).build(); // OkHttp accepts it
     }
   }
 
@@ -54,7 +54,7 @@ class CoreHttpRequestBodyTest {
   void emptyGetHeadAndDeleteHaveNoBody() {
     for (String method : new String[]{"GET", "HEAD", "DELETE"}) {
       assertNull(AbstractOkHttpService.requestBody(method, EMPTY), method);
-      new okhttp3.Request.Builder().url("http://example/").method(method, null).build(); // OkHttp accepts it
+      new com.couchbase.client.core.deps.okhttp3.Request.Builder().url("http://example/").method(method, null).build(); // OkHttp accepts it
     }
   }
 }

@@ -19,6 +19,10 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.IdleStreamingEndpointClosedEvent;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.ResponseBody;
+import com.couchbase.client.core.deps.okio.BufferedSource;
+import com.couchbase.client.core.deps.okio.ByteString;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.manager.NonChunkedManagerMessageHandler;
@@ -30,10 +34,6 @@ import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
 import com.couchbase.client.core.msg.manager.ManagerRequest;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.Call;
-import okhttp3.ResponseBody;
-import okio.BufferedSource;
-import okio.ByteString;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -112,7 +112,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
     ManagerRequest<?> managerRequest = (ManagerRequest<?>) request;
 
     // Manager requests are GET requests with no body.
-    okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder()
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(url(managerRequest.path()));
 
     if (request instanceof BucketConfigStreamingRequest) {
@@ -130,7 +130,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
   private <R extends Response> void sendManagerRequest(
     BaseHttpRequest<R> request,
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     DispatchAttempt attempt
   ) {
     @SuppressWarnings("unchecked")
@@ -158,7 +158,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
    */
   private void sendConfigStreamRequest(
     BucketConfigStreamingRequest request,
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     DispatchAttempt attempt
   ) {
     // OkHttp runs the handler on another thread, possibly before execute() returns the call.
@@ -189,7 +189,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
    * <p>
    * Runs on the thread that received the response, for as long as the stream lasts.
    */
-  private void handleConfigStream(BucketConfigStreamingRequest request, okhttp3.Response httpResponse, DispatchAttempt attempt) {
+  private void handleConfigStream(BucketConfigStreamingRequest request, com.couchbase.client.core.deps.okhttp3.Response httpResponse, DispatchAttempt attempt) {
     BucketConfigStreamingResponse streamingResponse;
     try {
       streamingResponse = request.decode(httpResponse.code(), null);

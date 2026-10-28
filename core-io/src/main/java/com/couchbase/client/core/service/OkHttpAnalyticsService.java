@@ -18,12 +18,12 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.io.netty.analytics.AnalyticsChunkResponseParser;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -61,7 +61,7 @@ public class OkHttpAnalyticsService extends AbstractOkHttpService {
   protected void dispatchServiceRequest(Request<?> request, DispatchAttempt attempt) {
     AnalyticsRequest analyticsRequest = (AnalyticsRequest) request;
 
-    okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder()
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(url(analyticsRequest.httpPath()))
       .method(analyticsRequest.httpMethodName(), requestBody(analyticsRequest));
 

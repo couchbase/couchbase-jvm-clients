@@ -18,12 +18,12 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import com.couchbase.client.core.deps.okhttp3.CipherSuite;
+import com.couchbase.client.core.deps.okhttp3.ConnectionSpec;
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.TlsVersion;
+import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
 import com.couchbase.client.core.env.SecurityConfig;
-import okhttp3.CipherSuite;
-import okhttp3.ConnectionSpec;
-import okhttp3.OkHttpClient;
-import okhttp3.TlsVersion;
-import okhttp3.tls.HandshakeCertificates;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static com.couchbase.client.core.deps.okhttp3.ConnectionSpec.MODERN_TLS;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.causesAndSuppressed;
@@ -63,7 +64,6 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static okhttp3.ConnectionSpec.MODERN_TLS;
 
 @Stability.Internal
 class OkHttpTlsHelper {
