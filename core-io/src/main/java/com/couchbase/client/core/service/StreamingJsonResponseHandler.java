@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.io.netty.HttpProtocol;
@@ -357,12 +358,15 @@ final class StreamingJsonResponseHandler {
 
   /**
    * Returns the exception for a response body that was parsed, but didn't contain what the
-   * service expected (for example, an error response without any errors in it).
+   * service expected (for example, an error response without any errors in it). For HTTP 400,
+   * an {@link InvalidArgumentException}, like the Netty implementation's ChunkedMessageHandler.
    */
   private static CouchbaseException unexpected(okhttp3.Response response, HeadInterceptInputStream body) {
-    return new CouchbaseException(
-      "Request failed. HTTP status code: " + status(response) + ". Response had unexpected structure. Response body: " + describe(body)
-    );
+    String message = "Request failed. HTTP status code: " + status(response) + ". Response had unexpected structure."
+      + " Response body: " + describe(body);
+    return response.code() == 400
+      ? new InvalidArgumentException(message, null, null)
+      : new CouchbaseException(message);
   }
 
   /**

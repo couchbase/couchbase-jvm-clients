@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.search;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexExistsException;
@@ -100,8 +101,14 @@ class SearchErrorTranslationTest {
 
   @Test
   void queryUnknownError() {
-    CouchbaseException e = assertType(CouchbaseException.class, queryError(400, "bad query"));
+    CouchbaseException e = assertType(CouchbaseException.class, queryError(404, "bad query"));
     assertTrue(e.getMessage().contains("Unknown search error: bad query"), e.getMessage());
+  }
+
+  @Test
+  void queryBadRequestIsAnInvalidArgument() {
+    InvalidArgumentException e = assertType(InvalidArgumentException.class, queryError(400, "bad query"));
+    assertTrue(e.getMessage().contains("Search service reported an invalid argument: bad query"), e.getMessage());
   }
 
   @Test
@@ -117,7 +124,7 @@ class SearchErrorTranslationTest {
   @Test
   void queryEmptyOrMissingError() {
     assertType(InternalServerFailureException.class, SearchChunkResponseParser.errorsToThrowable(null, HttpResponseStatus.valueOf(500), ctx));
-    CouchbaseException e = assertType(CouchbaseException.class, SearchChunkResponseParser.errorsToThrowable(new byte[0], HttpResponseStatus.valueOf(400), ctx));
+    CouchbaseException e = assertType(InvalidArgumentException.class, SearchChunkResponseParser.errorsToThrowable(new byte[0], HttpResponseStatus.valueOf(400), ctx));
     assertEquals("", ((SearchErrorContext) e.context()).content());
   }
 
@@ -152,8 +159,8 @@ class SearchErrorTranslationTest {
 
   @Test
   void managementUnknownError() {
-    // Including 500 and auth failures, which the management mapping doesn't single out.
-    for (int status : new int[]{400, 401, 404, 429, 500}) {
+    // Including 500 and auth failures, which the management mapping doesn't single out. (400 is an invalid argument.)
+    for (int status : new int[]{401, 404, 429, 500}) {
       CouchbaseException e = assertType(CouchbaseException.class, managementError(status, "Page not found"));
       assertTrue(e.getMessage().contains("Unknown search error: Page not found"), e.getMessage());
       assertEquals(status, ((SearchErrorContext) e.context()).httpStatus());

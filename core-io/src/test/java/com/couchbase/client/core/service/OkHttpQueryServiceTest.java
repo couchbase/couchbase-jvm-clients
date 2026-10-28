@@ -20,6 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ParsingFailureException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -237,6 +238,33 @@ class OkHttpQueryServiceTest {
     ExecutionException e = assertThrows(ExecutionException.class,
       () -> request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS));
     assertInstanceOf(ParsingFailureException.class, e.getCause());
+  }
+
+  @Test
+  void badRequestWithoutErrorsIsAnInvalidArgument() {
+    // Like the Netty implementation (JVMCBC-1800): a 400 the service can't otherwise explain.
+    server.enqueue(400, "{\"requestID\":\"abc-123\",\"status\":\"fatal\"}", Duration.ZERO);
+
+    QueryRequest request = newQueryRequest();
+    service.send(request);
+
+    ExecutionException e = assertThrows(ExecutionException.class,
+      () -> request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS));
+    assertInstanceOf(InvalidArgumentException.class, e.getCause());
+    assertTrue(e.getCause().getMessage().contains("HTTP status code: 400"), e.getCause().getMessage());
+  }
+
+  @Test
+  void otherErrorStatusWithoutErrorsIsNotAnInvalidArgument() {
+    server.enqueue(500, "{\"requestID\":\"abc-123\",\"status\":\"fatal\"}", Duration.ZERO);
+
+    QueryRequest request = newQueryRequest();
+    service.send(request);
+
+    ExecutionException e = assertThrows(ExecutionException.class,
+      () -> request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS));
+    assertInstanceOf(CouchbaseException.class, e.getCause());
+    assertFalse(e.getCause() instanceof InvalidArgumentException, e.getCause().toString());
   }
 
   @Test
