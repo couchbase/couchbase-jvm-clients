@@ -191,13 +191,6 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>com.squareup.okhttp3</groupId>
-                <artifactId>okhttp-bom</artifactId>
-                <version>5.5.0</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio-jvm</artifactId>
                 <version>3.18.2</version>
