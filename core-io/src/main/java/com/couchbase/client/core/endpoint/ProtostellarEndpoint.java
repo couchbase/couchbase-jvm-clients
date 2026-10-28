@@ -35,11 +35,8 @@ import com.couchbase.client.core.deps.io.grpc.ManagedChannelBuilder;
 import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.grpc.MethodDescriptor;
 import com.couchbase.client.core.deps.io.grpc.Status;
-import com.couchbase.client.core.deps.io.grpc.netty.GrpcSslContexts;
-import com.couchbase.client.core.deps.io.grpc.netty.NettyChannelBuilder;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelOption;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContext;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
+import com.couchbase.client.core.deps.io.grpc.okhttp.OkHttpChannelBuilder;
+import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -49,7 +46,6 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.SecurityException;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
-import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.protostellar.GrpcAwareRequestTracer;
 import com.couchbase.client.core.protostellar.ProtostellarContext;
 import com.couchbase.client.core.protostellar.ProtostellarStatsCollector;
@@ -63,10 +59,21 @@ import com.couchbase.client.protostellar.internal.hooks.v1.HooksServiceGrpc;
 import com.couchbase.client.protostellar.kv.v1.KvServiceGrpc;
 import com.couchbase.client.protostellar.query.v1.QueryServiceGrpc;
 import com.couchbase.client.protostellar.search.v1.SearchServiceGrpc;
+import org.jspecify.annotations.Nullable;
 
-import javax.net.ssl.SSLException;
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketAddress;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -230,36 +237,20 @@ public class ProtostellarEndpoint {
 
   private ManagedChannel channel(ProtostellarContext ctx) {
     SecurityConfig securityConfig = ctx.environment().securityConfig();
+    OkHttpChannelBuilder okHttpBuilder = OkHttpChannelBuilder.forAddress(remote.host(), remote.port())
+      .sslSocketFactory(sslSocketFactory(securityConfig))
+      .socketFactory(new ConnectTimeoutSocketFactory((int) env.timeoutConfig().connectTimeout().toMillis()));
 
-    SslContext sslContext;
-
-    try {
-      // Don't use GrpcSslContexts.forClient(); it ignores nativeTlsEnabled and always loads the native library.
-      SslContextBuilder sslContextBuilder = GrpcSslContexts.configure(
-        SslContextBuilder.forClient(),
-        SslHandlerFactory.sslProvider(securityConfig.nativeTlsEnabled())
-      );
-
-      if (securityConfig.trustManagerFactory() != null) {
-        sslContext = sslContextBuilder
-          .trustManager(securityConfig.trustManagerFactory())
-          .build();
-      } else if (!securityConfig.trustCertificates().isEmpty()) {
-        sslContext = sslContextBuilder
-          .trustManager(securityConfig.trustCertificates())
-          .build();
-      } else {
-        throw new CouchbaseException("Internal bug - should not reach here");
-      }
-    } catch (SSLException e) {
-      throw new SecurityException(e);
+    // Like the HTTP services. (gRPC's OkHttp transport checks the host name itself, whatever the trust manager.
+    // With the Netty transport, the insecure trust manager skipped the check too.)
+    if (securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory
+      || !securityConfig.hostnameVerificationEnabled()) {
+      okHttpBuilder.hostnameVerifier((hostname, session) -> true);
     }
 
-    ManagedChannelBuilder builder = NettyChannelBuilder.forAddress(remote.host(), remote.port())
-      .sslContext(sslContext)
+    ManagedChannelBuilder builder = okHttpBuilder
       .maxInboundMessageSize(25 * 1024 * 1024) // 25Mb per RFC 77
       .executor(env.executor())
-      .withOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) env.timeoutConfig().connectTimeout().toMillis())
       // Retry strategies to be determined, but presumably we will need something custom rather than what GRPC provides
       .disableRetry();
 
@@ -301,6 +292,99 @@ public class ProtostellarEndpoint {
     }
 
     return builder.build();
+  }
+
+  private static SSLSocketFactory sslSocketFactory(SecurityConfig securityConfig) {
+    try {
+      SSLContext sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(null, trustManagers(securityConfig), null);
+      return sslContext.getSocketFactory();
+    } catch (GeneralSecurityException | IOException e) {
+      throw new SecurityException(e);
+    }
+  }
+
+  private static TrustManager[] trustManagers(SecurityConfig securityConfig) throws GeneralSecurityException, IOException {
+    if (securityConfig.trustManagerFactory() != null) {
+      return securityConfig.trustManagerFactory().getTrustManagers();
+    }
+    if (securityConfig.trustCertificates().isEmpty()) {
+      throw new CouchbaseException("Internal bug - should not reach here");
+    }
+
+    KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+    trustStore.load(null, null);
+    int i = 0;
+    for (X509Certificate certificate : securityConfig.trustCertificates()) {
+      trustStore.setCertificateEntry("cert-" + i++, certificate);
+    }
+    TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+    trustManagerFactory.init(trustStore);
+    return trustManagerFactory.getTrustManagers();
+  }
+
+  /**
+   * Connects with a time limit. (gRPC's OkHttp transport has no connect timeout option, and opens its sockets with
+   * {@link SocketFactory#createSocket(InetAddress, int)}.)
+   */
+  private static class ConnectTimeoutSocketFactory extends SocketFactory {
+    private final int connectTimeoutMillis;
+
+    ConnectTimeoutSocketFactory(int connectTimeoutMillis) {
+      this.connectTimeoutMillis = connectTimeoutMillis;
+    }
+
+    @Override
+    public Socket createSocket() {
+      return new Socket();
+    }
+
+    @Override
+    public Socket createSocket(String host, int port) throws IOException {
+      return connect(new InetSocketAddress(host, port), null);
+    }
+
+    @Override
+    public Socket createSocket(
+      String host,
+      int port,
+      InetAddress localHost,
+      int localPort
+    ) throws IOException {
+      return connect(new InetSocketAddress(host, port), new InetSocketAddress(localHost, localPort));
+    }
+
+    @Override
+    public Socket createSocket(InetAddress host, int port) throws IOException {
+      return connect(new InetSocketAddress(host, port), null);
+    }
+
+    @Override
+    public Socket createSocket(
+      InetAddress address,
+      int port,
+      InetAddress localAddress,
+      int localPort
+    ) throws IOException {
+      return connect(new InetSocketAddress(address, port), new InetSocketAddress(localAddress, localPort));
+    }
+
+    private Socket connect(
+      InetSocketAddress remote,
+      @Nullable InetSocketAddress local
+    ) throws IOException {
+      Socket socket = new Socket();
+      try {
+        if (local != null) {
+          socket.bind(local);
+        }
+        socket.connect(remote, connectTimeoutMillis);
+        return socket;
+      } catch (IOException e) {
+        socket.close();
+        throw e;
+      }
+    }
   }
 
   private static InetSocketAddress newInetSocketAddress(HostAndPort hostAndPort) {

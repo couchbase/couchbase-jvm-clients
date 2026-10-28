@@ -51,12 +51,7 @@ public class NettyVersionTest {
         "netty-transport",
         "netty-transport-classes-epoll",
         "netty-transport-classes-kqueue",
-        "netty-transport-native-unix-common",
-
-        // and these via Protostellar's gRPC
-        "netty-codec-http2",
-        "netty-handler-proxy",
-        "netty-codec-socks"
+        "netty-transport-native-unix-common"
       )),
       new TreeSet<>(Version.identify().keySet())
     );
