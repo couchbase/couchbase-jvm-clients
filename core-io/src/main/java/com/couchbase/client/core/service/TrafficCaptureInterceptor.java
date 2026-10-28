@@ -21,6 +21,7 @@ import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.io.TrafficCaptureMasking;
 import com.couchbase.client.core.msg.RequestContext;
 import okhttp3.Connection;
@@ -122,7 +123,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
               String text = decoder.decode(bytes);
               captured = text.isEmpty() ? "" : framedText(text, textOffset, decoder.decodedBytes() - textOffset);
             } else {
-              captured = hexDump(bytes, bodyOffset);
+              captured = TrafficCaptureFormat.hexDump(bytes, bodyOffset);
             }
             bodyOffset += read;
           } else if (read == -1 && textual) {
@@ -186,7 +187,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
       byte[] bytes = buffer.readByteArray();
       sb.append('\n').append(isTextual(request.header("Content-Type"))
         ? maskedText(bytes)
-        : hexDump(withSecretFieldsMasked(bytes), 0));
+        : TrafficCaptureFormat.hexDump(withSecretFieldsMasked(bytes)));
     }
     return sb.toString();
   }
@@ -259,53 +260,6 @@ final class TrafficCaptureInterceptor implements Interceptor {
     return String.format("+---- text: offset 0x%08x, %d bytes ----+%n", offset, byteCount)
       + text
       + String.format("%n+---- end of text ----+");
-  }
-
-  /**
-   * Returns a hex dump of the bytes, in the same format as the Netty endpoints' traffic capture, except that
-   * each row is labelled with its offset in the body: the bytes start at the given offset (for example,
-   * a chunk of a response body after the first). Netty's dumps start at zero for each buffer.
-   */
-  static String hexDump(byte[] bytes, long startOffset) {
-    if (bytes.length == 0) {
-      return "";
-    }
-    String newline = System.lineSeparator(); // like Netty's
-    StringBuilder sb = new StringBuilder()
-      .append("         +-------------------------------------------------+").append(newline)
-      .append("         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |").append(newline)
-      .append("+--------+-------------------------------------------------+----------------+");
-    for (int row = 0; row < bytes.length; row += 16) {
-      sb.append(newline).append('|');
-      appendHex(sb, startOffset + row, 8);
-      sb.append('|');
-      StringBuilder ascii = new StringBuilder();
-      for (int i = row; i < row + 16; i++) {
-        if (i < bytes.length) {
-          int b = bytes[i] & 0xff;
-          sb.append(' ');
-          appendHex(sb, b, 2);
-          ascii.append(b >= 0x20 && b < 0x7f ? (char) b : '.');
-        } else {
-          sb.append("   ");
-          ascii.append(' ');
-        }
-      }
-      sb.append(" |").append(ascii).append('|');
-    }
-    return sb.append(newline).append("+--------+-------------------------------------------------+----------------+").toString();
-  }
-
-  private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
-
-  /**
-   * Appends the value's lowest {@code digits} hex digits, with leading zeros: like String.format("%0<digits>x")
-   * for values that fit, without its cost (hex dumps format every byte).
-   */
-  private static void appendHex(StringBuilder sb, long value, int digits) {
-    for (int shift = (digits - 1) * 4; shift >= 0; shift -= 4) {
-      sb.append(HEX_DIGITS[(int) (value >>> shift) & 0xf]);
-    }
   }
 
   /**

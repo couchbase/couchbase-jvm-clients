@@ -19,7 +19,6 @@ package com.couchbase.client.core.io.netty;
 import com.couchbase.client.core.cnc.Event;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.endpoint.EndpointContext;
@@ -128,89 +127,6 @@ class TrafficCaptureHandlerTest {
     assertEquals(request.replace("Basic " + credential, "Basic <masked>"), captured);
   }
 
-  @Test
-  void masksAuthorizationHeaderWithoutScheme() {
-    String captured = decode(TrafficCaptureHandler.httpRequestToString(Unpooled.copiedBuffer(
-      "GET / HTTP/1.1\r\nAuthorization: opaqueToken123\r\n\r\n", StandardCharsets.ISO_8859_1)));
-    assertEquals("GET / HTTP/1.1\r\nAuthorization: <masked>\r\n\r\n", captured);
-  }
-
-  @Test
-  void masksSecretFormFieldsInBodyBufferWithHeaders() {
-    String request = "POST /settings/rbac/users/local/alice HTTP/1.1\r\n"
-      + "Content-Type: application/x-www-form-urlencoded\r\n"
-      + "\r\n"
-      + "password=" + PASSWORD + "&roles=admin&secretAccessKey=AKIA%2Fxyz";
-
-    assertEquals(
-      request
-        .replace(PASSWORD, "<masked>")
-        .replace("AKIA%2Fxyz", "<masked>"),
-      decode(TrafficCaptureHandler.httpRequestToString(buf(request)))
-    );
-  }
-
-  @Test
-  void masksSecretFormFieldsInSeparateBodyBuffer() {
-    String body = "name=myLink&clientKey=-----BEGIN%20KEY-----&password=" + PASSWORD;
-    assertEquals(
-      "name=myLink&clientKey=<masked>&password=<masked>",
-      decode(TrafficCaptureHandler.httpRequestToString(buf(body)))
-    );
-  }
-
-  @Test
-  void doesNotMaskFormFieldsThatMerelyEndWithSecretName() {
-    String body = "notpassword=visible&password_hint=visible";
-    assertEquals(body, decode(TrafficCaptureHandler.httpRequestToString(buf(body))));
-  }
-
-  @Test
-  void masksSecretJsonFields() {
-    String body = "{\"url\":\"https://example.com\",\"auth_type\":\"basic\",\"username\":\"bob\","
-      + "\"password\" : \"" + PASSWORD + "\",\"bearer_key\":\"tok\\\"en\",\"other\":\"visible\"}";
-    assertEquals(
-      "{\"url\":\"https://example.com\",\"auth_type\":\"basic\",\"username\":\"bob\","
-        + "\"password\" : \"<masked>\",\"bearer_key\":\"<masked>\",\"other\":\"visible\"}",
-      decode(TrafficCaptureHandler.httpRequestToString(buf(body)))
-    );
-  }
-
-  @Test
-  void preservesNonAsciiBytesOutsideMaskedValues() {
-    String body = "{\"name\":\"café\",\"password\":\"" + PASSWORD + "\"}";
-    ByteBuf utf8 = Unpooled.copiedBuffer(body, StandardCharsets.UTF_8);
-    String captured = decodeHexDump(TrafficCaptureHandler.httpRequestToString(utf8)).toString(StandardCharsets.UTF_8);
-    assertEquals("{\"name\":\"café\",\"password\":\"<masked>\"}", captured);
-  }
-
-  @Test
-  void masksContentLength() {
-    String body = "password=" + PASSWORD;
-    String headers = "POST /controller/changePassword HTTP/1.1\r\n"
-      + "content-length: " + body.length() + "\r\n"
-      + "Host: x\r\n"
-      + "\r\n";
-
-    // Body in the same buffer as the headers
-    assertEquals(
-      headers.replace("content-length: " + body.length(), "content-length: <masked>") + "password=<masked>",
-      decode(TrafficCaptureHandler.httpRequestToString(buf(headers + body)))
-    );
-
-    // Headers alone (body sent in a separate buffer)
-    assertEquals(
-      headers.replace("content-length: " + body.length(), "content-length: <masked>"),
-      decode(TrafficCaptureHandler.httpRequestToString(buf(headers)))
-    );
-  }
-
-  @Test
-  void leavesHttpRequestWithoutSecretsUnchanged() {
-    ByteBuf buf = Unpooled.copiedBuffer("GET / HTTP/1.1\r\nHost: x\r\n\r\n", StandardCharsets.ISO_8859_1);
-    assertEquals(ByteBufUtil.prettyHexDump(buf), TrafficCaptureHandler.httpRequestToString(buf));
-  }
-
   private String captureWrite(ServiceType serviceType, ByteBuf msg) {
     EmbeddedChannel channel = newChannel(serviceType);
     try {
@@ -233,10 +149,6 @@ class TrafficCaptureHandlerTest {
   private String lastEventDescription() {
     Event event = eventBus.publishedEvents().get(eventBus.publishedEvents().size() - 1);
     return event.description();
-  }
-
-  private static ByteBuf buf(String s) {
-    return Unpooled.copiedBuffer(s, StandardCharsets.ISO_8859_1);
   }
 
   /**

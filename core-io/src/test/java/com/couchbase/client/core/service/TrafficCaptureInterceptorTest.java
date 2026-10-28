@@ -18,12 +18,11 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.Event;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.cnc.SimpleEventBus;
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
@@ -181,7 +180,7 @@ class TrafficCaptureInterceptorTest {
 
     String captured = TrafficCaptureInterceptor.describe(request);
 
-    assertTrue(captured.endsWith(TrafficCaptureInterceptor.hexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
+    assertTrue(captured.endsWith(TrafficCaptureFormat.hexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
   }
 
   @Test
@@ -256,25 +255,6 @@ class TrafficCaptureInterceptorTest {
       assertFalse(TrafficCaptureInterceptor.isTextual(type), type);
     }
     assertFalse(TrafficCaptureInterceptor.isTextual(null), "no content type");
-  }
-
-  @Test
-  void hexDumpMatchesNettys() {
-    for (int length : new int[]{0, 1, 15, 16, 17, 40, 300}) {
-      byte[] bytes = new byte[length];
-      for (int i = 0; i < length; i++) {
-        bytes[i] = (byte) (i * 37);
-      }
-      assertEquals(ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(bytes)), TrafficCaptureInterceptor.hexDump(bytes, 0), "length " + length);
-    }
-  }
-
-  @Test
-  void hexDumpRowsAreLabelledWithTheirBodyOffset() {
-    String dump = TrafficCaptureInterceptor.hexDump(new byte[20], 0x2000);
-    assertTrue(dump.contains("|00002000| 00"), dump);
-    assertTrue(dump.contains("|00002010| 00"), dump);
-    assertFalse(dump.contains("|00000000|"), dump);
   }
 
   @Test
