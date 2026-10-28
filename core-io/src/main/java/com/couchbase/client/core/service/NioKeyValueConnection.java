@@ -74,7 +74,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.io.netty.TracingUtils.newKeyValueDispatchSpan;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
+import static com.couchbase.client.core.service.NioKeyValueChannelConnector.closeQuietly;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -105,8 +105,30 @@ import static java.util.Objects.requireNonNull;
  * and ask the loop to close the connection.
  */
 @NullMarked
-final class NioKeyValueConnection implements KeyValueEndpointConnection {
+final class NioKeyValueConnection {
   private static final Logger log = LoggerFactory.getLogger(NioKeyValueConnection.class);
+
+  /**
+   * What the connection tells its endpoint.
+   */
+  interface Listener {
+    /**
+     * Called for every response the connection reads.
+     */
+    void responseReceived();
+
+    /**
+     * Called for each request that was queued, but never written, when the connection closed.
+     */
+    void writeFailed(KeyValueRequest<? extends Response> request, Throwable cause);
+
+    /**
+     * Called once, after a connection that was {@linkplain #start started} closes, and its requests were retried.
+     *
+     * @param requestsInFlight how many requests were written, and waiting for their responses, when it closed.
+     */
+    void closed(NioKeyValueConnection connection, int requestsInFlight);
+  }
 
   /**
    * The size of the request writer's buffer.
@@ -296,44 +318,52 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
     );
   }
 
-  @Override
+  /**
+   * The connection's ID, as sent in the HELLO request.
+   */
   public String channelId() {
     return channelId;
   }
 
-  @Override
+  /**
+   * The connection's ID in short form (hex digits, without a "0x" prefix), like a Netty channel ID's short form.
+   */
   public String shortChannelId() {
     return shortChannelId;
   }
 
-  @Override
+  /**
+   * How long each connect step took, keyed like the Netty implementation's connect timings.
+   */
   public SortedMap<String, Duration> timings() {
     synchronized (timings) {
       return new TreeMap<>(timings);
     }
   }
 
-  @Override
   public SocketAddress localAddress() {
     return localAddress;
   }
 
-  @Override
   public SocketAddress remoteAddress() {
     return remoteAddress;
   }
 
-  @Override
   public boolean isClosed() {
     return closed.get();
   }
 
-  @Override
+  /**
+   * Returns false if the connection has too many bytes waiting to be written (like Netty's channel writability,
+   * with the same high and low water marks).
+   */
   public boolean isWritable() {
     return queue.isWritable() && !closed.get();
   }
 
-  @Override
+  /**
+   * The number of requests written that are waiting for their responses.
+   */
   public int inFlightCount() {
     return inFlight.size();
   }
@@ -341,9 +371,8 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
   // ---- starting
 
   /**
-   * Registers the connection with its event loop. Call once.
+   * Registers the connection with its event loop, which reads and writes it from then on. Call once.
    */
-  @Override
   public void start() {
     started = true;
     idle.start();
@@ -375,7 +404,11 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
 
   // ---- sending
 
-  @Override
+  /**
+   * Queues the request to be written.
+   *
+   * @return false if the connection is closed, so the request wasn't sent (the caller should retry it).
+   */
   @SuppressWarnings("unchecked")
   public boolean send(KeyValueRequest<? extends Response> req) {
     if (closed.get()) {
@@ -767,7 +800,9 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
 
   // ---- closing
 
-  @Override
+  /**
+   * Closes the connection (if it isn't already). The requests it was sending are retried, then the listener is told.
+   */
   public void close() {
     close(null);
   }

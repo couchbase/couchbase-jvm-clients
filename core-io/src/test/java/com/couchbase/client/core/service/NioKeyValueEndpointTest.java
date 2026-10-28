@@ -143,10 +143,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Connects {@link SocketKeyValueEndpoint} to a fake KV server, and checks what it sends,
+ * Connects {@link NioKeyValueEndpoint} to a fake KV server, and checks what it sends,
  * and how it handles what the server does.
  */
-class SocketKeyValueEndpointTest {
+class NioKeyValueEndpointTest {
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
   private static final CollectionIdentifier DEFAULT_COLLECTION = CollectionIdentifier.fromDefault(BUCKET);
 
@@ -219,22 +219,22 @@ class SocketKeyValueEndpointTest {
       .build();
   }
 
-  private SocketKeyValueEndpoint newEndpoint() {
+  private NioKeyValueEndpoint newEndpoint() {
     return newEndpoint(plainAuthenticator(PASSWORD), server.port());
   }
 
-  private SocketKeyValueEndpoint newEndpoint(Authenticator authenticator, int port) {
+  private NioKeyValueEndpoint newEndpoint(Authenticator authenticator, int port) {
     ServiceContext serviceContext = new ServiceContext(core.context(), HOST, port, ServiceType.KV, Optional.of(BUCKET));
-    KeyValueSocketConnector connector = KeyValueSocketConnector.create(
+    NioKeyValueChannelConnector connector = NioKeyValueChannelConnector.create(
       okHttpClient, env.securityConfig(), authenticator, env.timeoutConfig().connectTimeout()
     );
-    SocketKeyValueEndpoint endpoint = new SocketKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector);
+    NioKeyValueEndpoint endpoint = new NioKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector);
     cleanup.add(0, endpoint::disconnect);
     return endpoint;
   }
 
-  private SocketKeyValueEndpoint connectedEndpoint() throws Exception {
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+  private NioKeyValueEndpoint connectedEndpoint() throws Exception {
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED);
     return endpoint;
@@ -274,7 +274,7 @@ class SocketKeyValueEndpointTest {
   void connectsAndNegotiates() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     // In the order the Netty implementation sends them: SELECT_BUCKET is pipelined with SASL_AUTH, since PLAIN has one round trip.
     List<Opcode> handshake = server.receivedSoFar().stream()
@@ -331,7 +331,7 @@ class SocketKeyValueEndpointTest {
         }
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     GetRequest first = newGetRequest("first");
     GetRequest second = newGetRequest("second");
@@ -365,7 +365,7 @@ class SocketKeyValueEndpointTest {
         ));
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     // Fail fast, so they're canceled if they're retried (when the connection closes).
     GetRequest first = newGetRequest("first", FailFastRetryStrategy.INSTANCE);
@@ -430,7 +430,7 @@ class SocketKeyValueEndpointTest {
           connection.respond(request, STATUS_SUCCESS);
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     GetRequest third = newGetRequest("baz");
     GetRequest first = newGetRequest("foo");
@@ -447,7 +447,7 @@ class SocketKeyValueEndpointTest {
   void writesRequestsSentFromResponseCallbacks() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     for (int chains : new int[]{1, 64}) {
       int perChain = 200;
@@ -472,7 +472,7 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.handler((connection, request) -> connection.respond(request, STATUS_SUCCESS, "v".getBytes(UTF_8)));
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     int threads = 64;
     int perThread = 200;
@@ -498,7 +498,7 @@ class SocketKeyValueEndpointTest {
     assertTrue(failures.isEmpty(), failures.toString());
   }
 
-  private void sendChain(SocketKeyValueEndpoint endpoint, int remaining, CountDownLatch done, List<Throwable> failures) {
+  private void sendChain(NioKeyValueEndpoint endpoint, int remaining, CountDownLatch done, List<Throwable> failures) {
     GetRequest request = newGetRequest("chain");
     request.response().whenComplete((response, t) -> {
       if (t != null) {
@@ -524,7 +524,7 @@ class SocketKeyValueEndpointTest {
         connection.respond(request, STATUS_SUCCESS);
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String firstChannelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
     GetRequest request = newGetRequest("foo", FailFastRetryStrategy.INSTANCE);
@@ -557,7 +557,7 @@ class SocketKeyValueEndpointTest {
         connection.respond(request, STATUS_SUCCESS);
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     endpoint.send(newGetRequest("foo", FailFastRetryStrategy.INSTANCE));
 
@@ -579,7 +579,7 @@ class SocketKeyValueEndpointTest {
         connection.respond(request, STATUS_SUCCESS);
       }
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     GetRequest request = newGetRequest("foo");
     endpoint.send(request);
@@ -594,7 +594,7 @@ class SocketKeyValueEndpointTest {
   void failsToConnectWhenAuthenticationFails() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator("wrong password"), server.port());
+    NioKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator("wrong password"), server.port());
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -615,7 +615,7 @@ class SocketKeyValueEndpointTest {
     startServer();
     Authenticator authenticator = plainAuthenticator("wrong password");
     EndpointContext ctx = newEndpoint(authenticator, server.port()).context(); // not connected; just for its context
-    KeyValueSocketConnector connector = KeyValueSocketConnector.create(
+    NioKeyValueChannelConnector connector = NioKeyValueChannelConnector.create(
       okHttpClient, env.securityConfig(), authenticator, env.timeoutConfig().connectTimeout()
     );
     NioKeyValueConnectionOpener opener = new NioKeyValueConnectionOpener(
@@ -631,7 +631,7 @@ class SocketKeyValueEndpointTest {
     // Fails after connecting (so after the waiter is created), when the server rejects the password.
     assertThrows(AuthenticationFailureException.class, () -> opener.open(
       System.nanoTime() + TIMEOUT.toNanos(),
-      mock(KeyValueEndpointConnection.Listener.class)
+      mock(NioKeyValueConnection.Listener.class)
     ));
     KeyValueChannelWaiter waiter = opener.waiter();
     assertNotNull(waiter);
@@ -649,7 +649,7 @@ class SocketKeyValueEndpointTest {
     server.saslMechanisms = "PLAIN";
     server.handler((connection, request) -> connection.respond(request, STATUS_SUCCESS));
 
-    SocketKeyValueEndpoint endpoint = newEndpoint(authenticator, server.port());
+    NioKeyValueEndpoint endpoint = newEndpoint(authenticator, server.port());
     endpoint.connect();
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED);
 
@@ -665,7 +665,7 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.selectBucketStatus = STATUS_NOT_FOUND;
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -678,7 +678,7 @@ class SocketKeyValueEndpointTest {
     start(env -> env.timeoutConfig(it -> it.connectTimeout(Duration.ofMillis(300))));
     startServer();
     server.answerHandshake = false;
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -717,7 +717,7 @@ class SocketKeyValueEndpointTest {
       }
     });
 
-    SocketKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), silent.getLocalPort());
+    NioKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), silent.getLocalPort());
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -756,7 +756,7 @@ class SocketKeyValueEndpointTest {
     acceptor.start();
     cleanup.add(0, closing::close);
 
-    SocketKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), closing.getLocalPort());
+    NioKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), closing.getLocalPort());
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -773,7 +773,7 @@ class SocketKeyValueEndpointTest {
     int closedPort = server.port();
     server.close();
 
-    SocketKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), closedPort);
+    NioKeyValueEndpoint endpoint = newEndpoint(plainAuthenticator(PASSWORD), closedPort);
     endpoint.connect();
 
     EndpointConnectionFailedEvent failed = waitForEvent(EndpointConnectionFailedEvent.class);
@@ -784,7 +784,7 @@ class SocketKeyValueEndpointTest {
   void disconnectClosesTheConnection() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
 
     endpoint.disconnect();
@@ -807,7 +807,7 @@ class SocketKeyValueEndpointTest {
         throw failure;
       }
     };
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
 
     // Tries again, instead of being left CONNECTING.
@@ -827,7 +827,7 @@ class SocketKeyValueEndpointTest {
   void disconnectWhileHandlingUnexpectedCloseDoesNotReconnect() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
 
     // Disconnects after the endpoint decides to reconnect, but before it does.
@@ -849,7 +849,7 @@ class SocketKeyValueEndpointTest {
     start();
     startServer();
     server.answerHandshake = false;
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
     server.nextConnection(TIMEOUT);
 
@@ -889,7 +889,7 @@ class SocketKeyValueEndpointTest {
         connection.response(request, STATUS_SUCCESS, "value".getBytes(UTF_8))
       ));
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     // Fail fast, so it's canceled when it's retried (because the connection closed).
     GetRequest request = newGetRequest("foo", FailFastRetryStrategy.INSTANCE);
@@ -904,7 +904,7 @@ class SocketKeyValueEndpointTest {
   void reportsJvmErrorOnTheReaderThreadAndReconnects() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
     FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
     // Thrown on the reader thread, while it handles the response. (Also logged at ERROR.)
@@ -928,7 +928,7 @@ class SocketKeyValueEndpointTest {
   void closesConnectionWhenResponseHasUnknownOpaque() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     FakeKeyValueServer.Connection connection = server.nextConnection(TIMEOUT);
 
     connection.respond(Opcode.GET.opcode(), 0xdead, STATUS_SUCCESS, new byte[0]);
@@ -978,7 +978,7 @@ class SocketKeyValueEndpointTest {
     };
     CoreResources resources = core.coreResources();
     when(core.coreResources()).thenReturn(new CoreResources(brokenTracer, resources.tracingDecorator(), resources.meter()));
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
     GetRequest traced = new GetRequest("foo", TIMEOUT, core.context(), DEFAULT_COLLECTION, BestEffortRetryStrategy.INSTANCE, NoopRequestSpan.INSTANCE);
@@ -1015,7 +1015,7 @@ class SocketKeyValueEndpointTest {
       }
       connection.respond(request, STATUS_SUCCESS);
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     // Far more than the sockets' buffers hold.
     String bigKey = new String(new char[200]).replace('\0', 'x');
@@ -1032,7 +1032,7 @@ class SocketKeyValueEndpointTest {
     // Like the Netty implementation, where a timeout that's not positive turns off its IdleStateHandler.
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(idleTimeoutMillis))));
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
     Thread.sleep(300);
@@ -1053,7 +1053,7 @@ class SocketKeyValueEndpointTest {
   void connectionAnsweringNoopsStaysOpen() throws Exception {
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(400))));
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
     // Well past the idle timeout.
@@ -1123,7 +1123,7 @@ class SocketKeyValueEndpointTest {
       }
       connection.respond(request, STATUS_SUCCESS);
     });
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     // Big keys, so the socket's buffers fill up quickly.
     String bigKey = new String(new char[200]).replace('\0', 'x');
@@ -1150,7 +1150,7 @@ class SocketKeyValueEndpointTest {
     cleanup.add(0, server);
     server.handler((connection, request) -> connection.respond(request, STATUS_SUCCESS, "hello".getBytes(UTF_8)));
 
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     GetRequest request = newGetRequest("foo");
     endpoint.send(request);
 
@@ -1186,7 +1186,7 @@ class SocketKeyValueEndpointTest {
       }
     });
 
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     List<GetRequest> requests = new ArrayList<>();
     for (int i = 0; i < count; i++) {
       GetRequest request = newGetRequest("foo" + i);
@@ -1215,7 +1215,7 @@ class SocketKeyValueEndpointTest {
       connection.respond(request, STATUS_SUCCESS);
     });
 
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     assertEquals(ciphers, waitForEvent(CustomTlsCiphersEnabledEvent.class).ciphers());
     GetRequest request = newGetRequest("foo");
@@ -1233,7 +1233,7 @@ class SocketKeyValueEndpointTest {
     server = FakeKeyValueServer.start(serverCerts.sslContext().getServerSocketFactory());
     cleanup.add(0, server);
 
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
 
     SecureConnectionFailedEvent tlsFailed = waitForEvent(SecureConnectionFailedEvent.class);
@@ -1260,7 +1260,7 @@ class SocketKeyValueEndpointTest {
     server = FakeKeyValueServer.start(serverSocket);
     cleanup.add(0, server);
 
-    SocketKeyValueEndpoint endpoint = newEndpoint();
+    NioKeyValueEndpoint endpoint = newEndpoint();
     endpoint.connect();
 
     waitForEvent(SecureConnectionFailedEvent.class);
@@ -1276,7 +1276,7 @@ class SocketKeyValueEndpointTest {
   void capturesTrafficWhenEnabled() throws Exception {
     start(env -> env.ioConfig(it -> it.captureTraffic(ServiceType.KV)));
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     GetRequest request = newGetRequest("captured-key");
     endpoint.send(request);
@@ -1300,7 +1300,7 @@ class SocketKeyValueEndpointTest {
   void doesNotCaptureTrafficByDefault() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     GetRequest request = newGetRequest("foo");
     endpoint.send(request);
@@ -1314,7 +1314,7 @@ class SocketKeyValueEndpointTest {
   void sendsNoopRequestsToo() throws Exception {
     start();
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
 
     NoopRequest request = new NoopRequest(TIMEOUT, core.context(), BestEffortRetryStrategy.INSTANCE, DEFAULT_COLLECTION);
     endpoint.send(request);
@@ -1337,7 +1337,7 @@ class SocketKeyValueEndpointTest {
 
   private void assertFailsOnlyTheRequestWhenItFailsVerification(KeyValueRequest<?> malformed) throws Exception {
     startServer();
-    SocketKeyValueEndpoint endpoint = connectedEndpoint();
+    NioKeyValueEndpoint endpoint = connectedEndpoint();
     String channelId = endpoint.context().channelId().orElseThrow(AssertionError::new);
 
     endpoint.send(malformed);

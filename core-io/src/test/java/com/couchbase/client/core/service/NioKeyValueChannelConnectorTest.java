@@ -40,11 +40,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-class KeyValueSocketConnectorTest {
+class NioKeyValueChannelConnectorTest {
 
   @Test
   void connectTimeoutIsAConnectExceptionLikeNettys() {
-    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), InetAddress::getByName);
+    NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), InetAddress::getByName);
 
     // 192.0.2.1 is in TEST-NET-1 (RFC 5737). Where the network drops packets to it (rather than rejecting them),
     // connecting times out.
@@ -71,7 +71,7 @@ class KeyValueSocketConnectorTest {
   void hostNameLookupGivesUpWhenTheDeadlinePasses() throws Exception {
     CountDownLatch release = new CountDownLatch(1);
     try {
-      KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
+      NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), host -> {
         // Like a DNS server that doesn't answer.
         try {
           release.await();
@@ -108,7 +108,7 @@ class KeyValueSocketConnectorTest {
       try (ServerSocket socket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
         closedPort = socket.getLocalPort();
       }
-      KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
+      NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), host -> {
         lookups.incrementAndGet();
         try {
           release.await();
@@ -153,7 +153,7 @@ class KeyValueSocketConnectorTest {
   @Test
   void failedHostNameLookupIsReported() {
     UnknownHostException lookupFailure = new UnknownHostException("node1.example: nodename nor servname provided, or not known");
-    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
+    NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), host -> {
       throw lookupFailure;
     });
 
@@ -171,7 +171,7 @@ class KeyValueSocketConnectorTest {
 
   @Test
   void connectChannelClosesTheWaiterWhenItFailsWithAnError() throws Exception {
-    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> InetAddress.getLoopbackAddress());
+    NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), host -> InetAddress.getLoopbackAddress());
     AtomicReference<KeyValueChannelWaiter> waiter = new AtomicReference<>();
     // For example, an AssertionError from the TLS channel.
     AssertionError failure = new AssertionError("failed after connecting");
@@ -193,8 +193,8 @@ class KeyValueSocketConnectorTest {
     assertTrue(waiter.get().isClosed());
   }
 
-  private static KeyValueSocketConnector newConnector(SocketFactory socketFactory, KeyValueSocketConnector.HostResolver hostResolver) {
-    return new KeyValueSocketConnector(
+  private static NioKeyValueChannelConnector newConnector(SocketFactory socketFactory, NioKeyValueChannelConnector.HostResolver hostResolver) {
+    return new NioKeyValueChannelConnector(
       socketFactory,
       SecurityConfig.builder().build(),
       PasswordAuthenticator.create("user", "password"),
