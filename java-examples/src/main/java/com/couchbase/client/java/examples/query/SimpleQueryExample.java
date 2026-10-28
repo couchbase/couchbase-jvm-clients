@@ -23,6 +23,13 @@ import com.couchbase.client.java.query.QueryResult;
 public class SimpleQueryExample {
 
   public static void main(String... args) {
-    System.out.println(Integer.MAX_VALUE & 0x0fffffff);
+    Cluster cluster = Cluster.connect("127.0.0.1", "Administrator", "password");
+    Bucket bucket = cluster.bucket("travel-sample");
+
+    QueryResult result = cluster.query(
+      "select * from `travel-sample` where type = 'airline' limit 5"
+    );
+    System.out.println(result.rowsAsObject());
   }
+
 }
