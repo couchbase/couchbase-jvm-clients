@@ -25,7 +25,7 @@ import java.util.function.LongSupplier;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Decides when a {@link KeyValueConnection} is dead, because the server has gone quiet.
+ * Decides when a {@link NioKeyValueConnection} is dead, because the server has gone quiet.
  * <p>
  * If the server has been quiet for a third of the idle timeout (io.configIdleRedialTimeout), the connection sends
  * a NOOP, so a healthy server answers. If nothing arrives within another third, it sends a second NOOP; if nothing
@@ -125,7 +125,7 @@ final class KeyValueIdleDetector {
   }
 
   /**
-   * Call from the reader thread when it reads something.
+   * Call when the connection reads something.
    */
   void read() {
     lastReadNanos = nanoTime.getAsLong();

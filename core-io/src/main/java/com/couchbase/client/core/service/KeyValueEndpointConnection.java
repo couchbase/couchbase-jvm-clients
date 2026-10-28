@@ -27,8 +27,7 @@ import java.util.SortedMap;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A KV connection, as {@link SocketKeyValueEndpoint} sees it: either a {@link KeyValueConnection} (a reader thread
- * and a writer thread per connection), or a {@link NioKeyValueConnection} (on a shared event loop).
+ * A KV connection, as {@link SocketKeyValueEndpoint} sees it (see {@link NioKeyValueConnection}).
  * <p>
  * Thread-safe.
  */

@@ -48,9 +48,6 @@ import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.service.KeyValueConnection.AuthenticationRefresh;
-import com.couchbase.client.core.service.KeyValueConnection.InFlight;
-import com.couchbase.client.core.service.KeyValueConnection.TrafficCapture;
 import com.couchbase.client.core.service.KeyValueOutboundQueue.Outbound;
 import com.couchbase.client.core.service.KeyValuePacketReader.InvalidPacketException;
 import org.jspecify.annotations.NullMarked;
@@ -77,15 +74,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.io.netty.TracingUtils.newKeyValueDispatchSpan;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
-import static com.couchbase.client.core.service.KeyValueConnection.BUFFER_SIZE;
 import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
 import static java.util.Objects.requireNonNull;
 
 /**
  * One KV connection that doesn't use Netty, read and written by a shared {@link KeyValueEventLoop}: a non-blocking
  * {@link SocketChannel}, with TLS (if enabled) by an {@link javax.net.ssl.SSLEngine} (see {@link ClientTlsChannel}).
- * Does what {@link KeyValueConnection} does (and what the Netty pipeline's KV handlers do), with the same events,
- * retries and errors, but without threads of its own.
+ * Does what the Netty pipeline's KV handlers do, with the same events, retries and errors.
  * <p>
  * Lifecycle: {@link NioKeyValueConnectionOpener} connects and does the handshake (on the connecting thread),
  * then creates the connection. {@link #start} registers it with its event loop, which from then on:
@@ -114,8 +109,13 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
   private static final Logger log = LoggerFactory.getLogger(NioKeyValueConnection.class);
 
   /**
-   * The most requests written before the writer's buffer is written to the channel, like
-   * {@link KeyValueConnection}'s writer (and the Netty implementation's {@code FlushConsolidationHandler}).
+   * The size of the request writer's buffer.
+   */
+  private static final int BUFFER_SIZE = 64 * 1024;
+
+  /**
+   * The most requests written before the writer's buffer is written to the channel, like the Netty
+   * implementation's {@code FlushConsolidationHandler}.
    */
   private static final int FLUSH_CONSOLIDATION_LIMIT = 256;
 
@@ -155,8 +155,8 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
   private final IoContext ioContext;
   private final KeyValueChannelContext channelContext;
   private final KeyValueResponseHandler responses;
-  private final TrafficCapture capture;
-  private final AuthenticationRefresh authenticationRefresh;
+  private final KeyValueTrafficCapture capture;
+  private final KeyValueAuthenticationRefresh authenticationRefresh;
 
   // For toString(), which is often called once the channel is closed.
   private final SocketAddress localAddress;
@@ -170,7 +170,7 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
   /**
    * Written requests waiting for their responses, by opaque.
    */
-  private final Map<Integer, InFlight> inFlight = new ConcurrentHashMap<>();
+  private final Map<Integer, KeyValueInFlight> inFlight = new ConcurrentHashMap<>();
 
   private final KeyValueIdleDetector idle;
 
@@ -241,8 +241,8 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
     String shortChannelId,
     String channelId,
     SortedMap<String, Duration> timings,
-    AuthenticationRefresh authenticationRefresh,
-    TrafficCapture capture
+    KeyValueAuthenticationRefresh authenticationRefresh,
+    KeyValueTrafficCapture capture
   ) {
     this.endpointContext = requireNonNull(endpointContext);
     this.listener = requireNonNull(listener);
@@ -267,11 +267,7 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
     IoConfig ioConfig = endpointContext.environment().ioConfig();
     this.isInternalTracer = CbTracing.isInternalTracer(endpointContext.coreResources().requestTracer());
 
-    this.queue = new KeyValueOutboundQueue(
-      ioConfig.highWaterMark().bytesAsInt(),
-      ioConfig.lowWaterMark().bytesAsInt(),
-      FLUSH_CONSOLIDATION_LIMIT
-    );
+    this.queue = new KeyValueOutboundQueue(ioConfig.highWaterMark().bytesAsInt(), ioConfig.lowWaterMark().bytesAsInt());
     this.idle = new KeyValueIdleDetector(ioConfig.configIdleRedialTimeout(), new KeyValueIdleDetector.Connection() {
       @Override
       public void sendNoop() {
@@ -537,11 +533,11 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
         remotePort
       );
     } catch (Throwable t) {
-      // A broken tracer. Like KeyValueConnection, fails the request, and doesn't write it.
+      // A broken tracer. Fails the request, and doesn't write it.
       request.fail(t);
       return false;
     }
-    inFlight.put(request.opaque(), new InFlight(request, System.nanoTime(), dispatchSpan));
+    inFlight.put(request.opaque(), new KeyValueInFlight(request, System.nanoTime(), dispatchSpan));
     return true;
   }
 
@@ -827,7 +823,7 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
     }
 
     int requestsInFlight = inFlight.size();
-    for (InFlight written : inFlight.values()) {
+    for (KeyValueInFlight written : inFlight.values()) {
       if (written.dispatchSpan != null) {
         written.dispatchSpan.end();
       }
@@ -841,7 +837,7 @@ final class NioKeyValueConnection implements KeyValueEndpointConnection {
   }
 
   /**
-   * Reports why reading or writing failed, when that's what closed the connection. Like {@link KeyValueConnection}.
+   * Reports why reading or writing failed, when that's what closed the connection.
    */
   private void reportFailure(Throwable failure) {
     if (failure instanceof EOFException || failure instanceof InvalidPacketException) {

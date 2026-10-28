@@ -22,7 +22,6 @@ import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Arrays;
@@ -37,7 +36,7 @@ import java.util.Arrays;
  * The buffer grows to fit a packet bigger than it, then shrinks back once that packet is handled,
  * so one large document doesn't keep a large buffer.
  * <p>
- * Not thread-safe: used by one thread at a time (the connecting thread, then the reader).
+ * Not thread-safe: used by one thread at a time (the connecting thread, then the connection's event loop).
  */
 @NullMarked
 final class KeyValueFrameDecoder {
@@ -94,21 +93,6 @@ final class KeyValueFrameDecoder {
   }
 
   /**
-   * Reads what the stream has (blocking until it has something) into the buffer.
-   *
-   * @return false if the stream ended.
-   */
-  boolean fill(InputStream in) throws IOException {
-    makeRoom();
-    int read = in.read(buffer, writeIndex, buffer.length - writeIndex);
-    if (read < 0) {
-      return false;
-    }
-    writeIndex += read;
-    return true;
-  }
-
-  /**
    * Reads what the channel has into the buffer. Doesn't wait if the channel is non-blocking.
    *
    * @return how many bytes were read (0 if the channel had none), or -1 if the channel ended.
@@ -126,7 +110,7 @@ final class KeyValueFrameDecoder {
   }
 
   /**
-   * Returns true if the last {@link #fill(ReadableByteChannel)} filled all the room it had, so the channel
+   * Returns true if the last {@link #fill} filled all the room it had, so the channel
    * probably has more.
    */
   boolean lastFillFilledRoom() {

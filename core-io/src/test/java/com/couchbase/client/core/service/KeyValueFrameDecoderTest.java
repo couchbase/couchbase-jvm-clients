@@ -24,7 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +36,6 @@ import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,24 +65,28 @@ class KeyValueFrameDecoderTest {
   /**
    * Returns the data in reads of at most the given size each.
    */
-  private static InputStream chunked(byte[] data, int maxReadSize) {
-    return new InputStream() {
+  private static ReadableByteChannel chunked(byte[] data, int maxReadSize) {
+    return new ReadableByteChannel() {
       int pos = 0;
 
       @Override
-      public int read() {
-        throw new UnsupportedOperationException();
-      }
-
-      @Override
-      public int read(byte[] b, int off, int len) {
+      public int read(ByteBuffer dst) {
         if (pos == data.length) {
           return -1;
         }
-        int n = Math.min(Math.min(len, maxReadSize), data.length - pos);
-        System.arraycopy(data, pos, b, off, n);
+        int n = Math.min(Math.min(dst.remaining(), maxReadSize), data.length - pos);
+        dst.put(data, pos, n);
         pos += n;
         return n;
+      }
+
+      @Override
+      public boolean isOpen() {
+        return true;
+      }
+
+      @Override
+      public void close() {
       }
     };
   }
@@ -90,14 +94,14 @@ class KeyValueFrameDecoderTest {
   /**
    * Reads every packet, copying each one (since they're only valid until the next fill).
    */
-  private static List<byte[]> readAll(KeyValueFrameDecoder decoder, InputStream in) throws Exception {
+  private static List<byte[]> readAll(KeyValueFrameDecoder decoder, ReadableByteChannel in) throws Exception {
     List<byte[]> packets = new ArrayList<>();
     while (true) {
       KeyValuePacket packet;
       while ((packet = decoder.next()) != null) {
         packets.add(packet.toByteArray());
       }
-      if (!decoder.fill(in)) {
+      if (decoder.fill(in) < 0) {
         return packets;
       }
     }
@@ -156,17 +160,17 @@ class KeyValueFrameDecoderTest {
   void returnsNullUntilPacketIsComplete() throws Exception {
     byte[] a = packet(1, 100);
     KeyValueFrameDecoder decoder = new KeyValueFrameDecoder();
-    InputStream in = chunked(a, 50);
+    ReadableByteChannel in = chunked(a, 50);
     assertNull(decoder.next());
-    assertTrue(decoder.fill(in));
+    assertTrue(decoder.fill(in) > 0);
     assertNull(decoder.next()); // 50 of 124 bytes
-    assertTrue(decoder.fill(in));
+    assertTrue(decoder.fill(in) > 0);
     assertNull(decoder.next()); // 100 of 124 bytes
-    assertTrue(decoder.fill(in));
+    assertTrue(decoder.fill(in) > 0);
     KeyValuePacket packet = decoder.next();
     assertEquals(a.length, packet.size());
     assertNull(decoder.next());
-    assertFalse(decoder.fill(in));
+    assertEquals(-1, decoder.fill(in));
   }
 
   @Test
@@ -175,7 +179,7 @@ class KeyValueFrameDecoderTest {
     // total body length 0xFFFFFFFF: more than fits in a buffer
     header[8] = header[9] = header[10] = header[11] = (byte) 0xff;
     KeyValueFrameDecoder decoder = new KeyValueFrameDecoder();
-    assertTrue(decoder.fill(chunked(header, Integer.MAX_VALUE)));
+    assertTrue(decoder.fill(chunked(header, Integer.MAX_VALUE)) > 0);
     KeyValueFrameDecoder.InvalidSizeException e = assertThrows(KeyValueFrameDecoder.InvalidSizeException.class, decoder::next);
     assertEquals(MemcacheProtocol.HEADER_SIZE, e.header.length);
   }
@@ -184,9 +188,9 @@ class KeyValueFrameDecoderTest {
   void endOfStreamWithPartialPacket() throws IOException, KeyValueFrameDecoder.InvalidSizeException {
     byte[] a = packet(1, 100);
     KeyValueFrameDecoder decoder = new KeyValueFrameDecoder();
-    InputStream in = chunked(Arrays.copyOf(a, 60), Integer.MAX_VALUE);
-    assertTrue(decoder.fill(in));
+    ReadableByteChannel in = chunked(Arrays.copyOf(a, 60), Integer.MAX_VALUE);
+    assertTrue(decoder.fill(in) > 0);
     assertNull(decoder.next());
-    assertFalse(decoder.fill(in));
+    assertEquals(-1, decoder.fill(in));
   }
 }

@@ -35,7 +35,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -127,8 +126,9 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Returns a factory for TLS sockets that don't go through OkHttp (for example, KV connections), with the same
-   * certificates as {@link #configureTls}. Use {@link #configureTlsSocket} on each socket it creates.
+   * Returns a factory for TLS connections that don't go through OkHttp (KV connections), with the same certificates
+   * as {@link #configureTls}. They use its engines (see {@link PerConnectionSslSocketFactory#newEngine}); use
+   * {@link #configureTlsEngine} on each one.
    *
    * @param clientCertificates supplies the client certificate (if any), asked once per new connection.
    * Typically the authenticator's {@code getKeyManagerFactory}.
@@ -181,17 +181,9 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Configures a socket from {@link #newTlsSocketFactory} like {@link #configureTls} configures OkHttp's:
-   * the same TLS versions and cipher suites, and checks the server's host name unless that's disabled.
-   * Call before the handshake starts.
-   */
-  static void configureTlsSocket(SSLSocket socket, SecurityConfig securityConfig) {
-    socket.setSSLParameters(tlsParameters(socket.getSSLParameters(), socket.getSupportedProtocols(), socket.getSupportedCipherSuites(), securityConfig));
-  }
-
-  /**
-   * Like {@link #configureTlsSocket}, for an engine (for example, from {@link PerConnectionSslSocketFactory#newEngine}).
-   * Call before the handshake starts.
+   * Configures an engine (for example, from {@link PerConnectionSslSocketFactory#newEngine}) like
+   * {@link #configureTls} configures OkHttp's sockets: the same TLS versions and cipher suites, and checks
+   * the server's host name unless that's disabled. Call before the handshake starts.
    */
   static void configureTlsEngine(SSLEngine engine, SecurityConfig securityConfig) {
     engine.setSSLParameters(tlsParameters(engine.getSSLParameters(), engine.getSupportedProtocols(), engine.getSupportedCipherSuites(), securityConfig));

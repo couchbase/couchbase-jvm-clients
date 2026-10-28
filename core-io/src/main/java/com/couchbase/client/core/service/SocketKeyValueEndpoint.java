@@ -50,6 +50,7 @@ import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.util.CbThreads;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.SingleStateful;
 import org.jspecify.annotations.NullMarked;
@@ -66,6 +67,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -75,9 +77,8 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Like {@link KeyValueEndpoint}, but without Netty: each connection is a plain socket (with TLS, if enabled),
- * read and written by threads of its own (see {@link KeyValueConnection}), or by a shared NIO event loop
- * (see {@link NioKeyValueConnection}).
+ * Like {@link KeyValueEndpoint}, but without Netty: each connection is a plain socket channel (with TLS, if enabled),
+ * read and written by a shared NIO event loop (see {@link NioKeyValueConnection}).
  * <p>
  * Does what {@link BaseEndpoint} does for a KV endpoint, with the same states, events, circuit breaker,
  * and reconnect backoff.
@@ -89,6 +90,12 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
 
   private static final Duration TARGET_ABSENT_BEFORE_DISCONNECT = Duration.ofSeconds(
     Long.parseLong(System.getProperty("com.couchbase.endpoint.targetAbsentBeforeDisconnectSeconds", "60")));
+
+  /**
+   * Runs the endpoints' connect loops, and their connections' handling of reauthentication signals
+   * (see {@link KeyValueAuthenticationRefresh}). Virtual threads, if available.
+   */
+  static final ExecutorService tasks = CbThreads.unboundedExecutorService("cb-kv-task-");
 
   // Like BaseEndpoint's reconnect backoff.
   private static final Duration FIRST_RECONNECT_DELAY = Duration.ofMillis(32);
@@ -106,12 +113,6 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
   private final Authenticator authenticator;
   private final KeyValueSocketConnector connector;
   private final Set<ServerFeature> features;
-
-  /**
-   * Whether connections use NIO on a shared event loop ({@link NioKeyValueConnection}), or a reader thread and
-   * a writer thread each ({@link KeyValueConnection}).
-   */
-  private final boolean nio;
 
   private final AtomicBoolean disconnect = new AtomicBoolean();
   private final CountDownLatch disconnectSignal = new CountDownLatch(1);
@@ -153,24 +154,6 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     Authenticator authenticator,
     KeyValueSocketConnector connector
   ) {
-    // The com.couchbase.kvNio system property (true by default), read when the endpoint is created.
-    this(serviceContext, hostname, port, bucketName, authenticator, connector,
-      Boolean.parseBoolean(System.getProperty("com.couchbase.kvNio", "true")));
-  }
-
-  /**
-   * @param nio whether connections use NIO (see {@link NioKeyValueConnection}).
-   */
-  SocketKeyValueEndpoint(
-    ServiceContext serviceContext,
-    String hostname,
-    int port,
-    Optional<String> bucketName,
-    Authenticator authenticator,
-    KeyValueSocketConnector connector,
-    boolean nio
-  ) {
-    this.nio = nio;
     this.hostname = requireNonNull(hostname);
     this.port = port;
     this.bucketName = requireNonNull(bucketName);
@@ -211,7 +194,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     // after disconnect() set it to DISCONNECTED (the connect loop would see the disconnect and exit).
     synchronized (lock) {
       if (!disconnect.get() && state.compareAndTransition(EndpointState.DISCONNECTED, EndpointState.CONNECTING)) {
-        KeyValueConnection.ioThreads.execute(this::connectUntilConnectedOrDisconnected);
+        tasks.execute(this::connectUntilConnectedOrDisconnected);
       }
     }
   }
@@ -237,9 +220,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
       KeyValueEndpointConnection conn = null;
 
       try {
-        opener = nio
-          ? new NioKeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector)
-          : new KeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
+        opener = new NioKeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
         synchronized (lock) {
           if (disconnect.get()) {
             throw new IllegalStateException("Endpoint was told to disconnect.");

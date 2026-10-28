@@ -16,34 +16,32 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.service.KeyValueOutboundQueue.Outbound;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BooleanSupplier;
 
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class KeyValueOutboundQueueTest {
   private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
-  private static final int MAX_DEFERRED_WAKES = 3;
-
+  @SuppressWarnings("unchecked")
   private static Outbound outbound(int size) {
-    return new Outbound(null, size);
+    return new Outbound((KeyValueRequest<Response>) mock(KeyValueRequest.class), size);
   }
 
   @Test
   void isNotWritableAboveTheHighWaterMarkUntilBelowTheLowWaterMark() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
     Outbound first = outbound(60);
     Outbound second = outbound(60);
 
@@ -66,7 +64,7 @@ class KeyValueOutboundQueueTest {
   @Test
   void isWritableOnceEverythingIsWrittenEvenWhenSendersRaceTheWriter() throws Exception {
     for (int round = 0; round < 200; round++) {
-      KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
+      KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
       int senders = 4;
       CountDownLatch start = new CountDownLatch(1);
       Thread[] threads = new Thread[senders];
@@ -95,182 +93,14 @@ class KeyValueOutboundQueueTest {
 
   @Test
   void drainReturnsWhatWasNeverWrittenAndThenRefusesRequests() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
+    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50);
     Outbound unwritten = outbound(10);
     queue.add(unwritten);
-    queue.close();
 
-    assertEquals(singletonList(unwritten), queue.drain()); // not CLOSE
+    assertEquals(singletonList(unwritten), queue.drain());
 
     Outbound late = outbound(10);
     assertFalse(queue.add(late));
     assertNull(queue.poll(), "a refused request isn't left in the queue");
-  }
-
-  @Test
-  void writerTakesCloseOnceItHasTakenWhatsAheadOfIt() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    Outbound first = outbound(10);
-    queue.add(first);
-    queue.close();
-
-    assertSame(first, queue.poll());
-    assertSame(KeyValueOutboundQueue.CLOSE, queue.poll());
-  }
-
-  @Test
-  void addingWakesTheParkedWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    Thread writer = startWriter(queue);
-
-    queue.add(outbound(10));
-
-    writer.join(TIMEOUT.toMillis());
-    assertFalse(writer.isAlive(), "writer should have woken");
-  }
-
-  @Test
-  void closingWakesTheParkedWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    Thread writer = startWriter(queue);
-
-    queue.close();
-
-    writer.join(TIMEOUT.toMillis());
-    assertFalse(writer.isAlive(), "writer should have woken");
-  }
-
-  @Test
-  @Timeout(10) // interrupts the test thread, so a park returns (and the test fails)
-  void writerDoesNotWaitWhenThereIsSomethingToWrite() {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    queue.writerStarted();
-    queue.add(outbound(10));
-
-    queue.awaitRequests(); // returns at once: there's a request to write
-  }
-
-  @Test
-  void requestsSentByTheReaderDuringABatchWakeTheWriterWhenTheBatchEnds() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    Thread writer = startWriter(queue);
-
-    CountDownLatch added = new CountDownLatch(1);
-    CountDownLatch endBatch = new CountDownLatch(1);
-    Thread reader = new Thread(() -> {
-      queue.readerStarted();
-      queue.beginReadBatch();
-      queue.add(outbound(10)); // from a response callback, say
-      added.countDown();
-      try {
-        endBatch.await();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      queue.endReadBatch();
-    });
-    reader.start();
-
-    assertTrue(added.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
-    Thread.sleep(100);
-    assertTrue(writer.isAlive(), "writer shouldn't wake until the batch ends");
-
-    endBatch.countDown();
-    writer.join(TIMEOUT.toMillis());
-    assertFalse(writer.isAlive(), "writer should have woken");
-    reader.join(TIMEOUT.toMillis());
-  }
-
-  /**
-   * Like the Netty implementation's FlushConsolidationHandler: a batch that goes on and on (for example, because
-   * each read ends partway through a packet) doesn't keep the requests sent while handling it waiting.
-   */
-  @Test
-  void requestsSentByTheReaderDuringALongBatchWakeTheWriterEverySoOften() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(1_000, 500, MAX_DEFERRED_WAKES);
-    Thread writer = startWriter(queue);
-
-    CountDownLatch addedAllButOne = new CountDownLatch(1);
-    CountDownLatch addLast = new CountDownLatch(1);
-    CountDownLatch done = new CountDownLatch(1);
-    Thread reader = new Thread(() -> {
-      queue.readerStarted();
-      queue.beginReadBatch();
-      for (int i = 0; i < MAX_DEFERRED_WAKES - 1; i++) {
-        queue.add(outbound(10));
-      }
-      addedAllButOne.countDown();
-      try {
-        addLast.await();
-        queue.add(outbound(10));
-        done.await(); // the batch hasn't ended
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      queue.endReadBatch();
-    });
-    reader.start();
-
-    assertTrue(addedAllButOne.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
-    Thread.sleep(100);
-    assertTrue(writer.isAlive(), "writer shouldn't wake before the limit");
-
-    addLast.countDown();
-    writer.join(TIMEOUT.toMillis());
-    assertFalse(writer.isAlive(), "writer should have woken at the limit, before the batch ends");
-    done.countDown();
-    reader.join(TIMEOUT.toMillis());
-  }
-
-  @Test
-  void requestsSentByOtherThreadsDuringTheReadersBatchWakeTheWriter() throws Exception {
-    KeyValueOutboundQueue queue = new KeyValueOutboundQueue(100, 50, MAX_DEFERRED_WAKES);
-    Thread writer = startWriter(queue);
-
-    CountDownLatch inBatch = new CountDownLatch(1);
-    CountDownLatch done = new CountDownLatch(1);
-    Thread reader = new Thread(() -> {
-      queue.readerStarted();
-      queue.beginReadBatch();
-      inBatch.countDown();
-      try {
-        done.await();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    });
-    reader.start();
-    assertTrue(inBatch.await(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
-
-    queue.add(outbound(10)); // not the reader thread
-
-    writer.join(TIMEOUT.toMillis());
-    assertFalse(writer.isAlive(), "writer should have woken");
-    done.countDown();
-    reader.join(TIMEOUT.toMillis());
-  }
-
-  /**
-   * Starts a thread that waits for requests (with no time limit), and returns once it's waiting.
-   */
-  private static Thread startWriter(KeyValueOutboundQueue queue) throws InterruptedException {
-    Thread writer = new Thread(() -> {
-      queue.writerStarted();
-      queue.awaitRequests();
-    });
-    writer.setDaemon(true);
-    writer.start();
-    waitUntil(() -> writer.getState() == Thread.State.WAITING);
-    return writer;
-  }
-
-  private static void waitUntil(BooleanSupplier condition) throws InterruptedException {
-    long deadline = System.nanoTime() + TIMEOUT.toNanos();
-    while (!condition.getAsBoolean()) {
-      if (System.nanoTime() > deadline) {
-        throw new AssertionError("Condition not met within " + TIMEOUT);
-      }
-      Thread.sleep(1);
-    }
   }
 }

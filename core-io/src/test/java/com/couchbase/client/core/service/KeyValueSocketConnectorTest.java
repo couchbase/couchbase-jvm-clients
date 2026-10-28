@@ -22,11 +22,10 @@ import com.couchbase.client.core.env.SecurityConfig;
 import org.junit.jupiter.api.Test;
 
 import javax.net.SocketFactory;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -39,27 +38,28 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class KeyValueSocketConnectorTest {
 
   @Test
   void connectTimeoutIsAConnectExceptionLikeNettys() {
-    KeyValueSocketConnector connector = new KeyValueSocketConnector(
-      new TimingOutSocketFactory(),
-      SecurityConfig.builder().build(),
-      PasswordAuthenticator.create("user", "password"),
-      Duration.ofSeconds(10)
-    );
+    KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), InetAddress::getByName);
 
-    ConnectException e = assertThrows(ConnectException.class, () -> connector.connect(
-      "127.0.0.1",
+    // 192.0.2.1 is in TEST-NET-1 (RFC 5737). Where the network drops packets to it (rather than rejecting them),
+    // connecting times out.
+    IOException e = assertThrows(IOException.class, () -> connector.connectChannel(
+      "192.0.2.1",
       11210,
-      System.nanoTime() + Duration.ofSeconds(10).toNanos(),
-      socket -> {},
+      System.nanoTime() + Duration.ofMillis(300).toNanos(),
+      channel -> {},
+      waiter -> {},
       () -> {}
     ));
+    assumeTrue(e instanceof ConnectException && e.getMessage().startsWith("connection timed out"),
+      "this network rejects 192.0.2.1 instead of dropping it: " + e);
 
-    assertTrue(e.getMessage().matches("connection timed out after \\d+ ms: /127\\.0\\.0\\.1:11210"), e.getMessage());
+    assertTrue(e.getMessage().matches("connection timed out after \\d+ ms: /192\\.0\\.2\\.1:11210"), e.getMessage());
     assertInstanceOf(SocketTimeoutException.class, e.getCause());
     assertEquals(
       e.getMessage() + " - Check server ports and cluster encryption setting.",
@@ -82,11 +82,12 @@ class KeyValueSocketConnectorTest {
       });
 
       long start = System.nanoTime();
-      UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connect(
+      UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connectChannel(
         "node1.example",
         11210,
         System.nanoTime() + Duration.ofMillis(200).toNanos(),
-        socket -> {},
+        channel -> {},
+        waiter -> {},
         () -> {}
       ));
 
@@ -103,7 +104,11 @@ class KeyValueSocketConnectorTest {
     AtomicInteger lookups = new AtomicInteger();
     CountDownLatch release = new CountDownLatch(1);
     try {
-      KeyValueSocketConnector connector = newConnector(new TimingOutSocketFactory(), host -> {
+      int closedPort;
+      try (ServerSocket socket = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
+        closedPort = socket.getLocalPort();
+      }
+      KeyValueSocketConnector connector = newConnector(SocketFactory.getDefault(), host -> {
         lookups.incrementAndGet();
         try {
           release.await();
@@ -115,25 +120,27 @@ class KeyValueSocketConnectorTest {
 
       // Both give up waiting for the same lookup.
       for (int i = 0; i < 2; i++) {
-        assertThrows(UnknownHostException.class, () -> connector.connect(
+        assertThrows(UnknownHostException.class, () -> connector.connectChannel(
           "node1.example",
           11210,
           System.nanoTime() + Duration.ofMillis(100).toNanos(),
-          socket -> {},
+          channel -> {},
+          waiter -> {},
           () -> {}
         ));
       }
       assertEquals(1, lookups.get());
 
-      // Once it's done, the next connect attempt looks up the host again. (The socket factory's connect times out.)
+      // Once it's done, the next connect attempt looks up the host again. (Connecting to the closed port is refused.)
       release.countDown();
       long giveUp = System.nanoTime() + Duration.ofSeconds(5).toNanos();
       while (lookups.get() < 2 && System.nanoTime() < giveUp) {
-        assertThrows(ConnectException.class, () -> connector.connect(
+        assertThrows(ConnectException.class, () -> connector.connectChannel(
           "node1.example",
-          11210,
+          closedPort,
           System.nanoTime() + Duration.ofSeconds(5).toNanos(),
-          socket -> {},
+          channel -> {},
+          waiter -> {},
           () -> {}
         ));
       }
@@ -150,11 +157,12 @@ class KeyValueSocketConnectorTest {
       throw lookupFailure;
     });
 
-    UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connect(
+    UnknownHostException e = assertThrows(UnknownHostException.class, () -> connector.connectChannel(
       "node1.example",
       11210,
       System.nanoTime() + Duration.ofSeconds(10).toNanos(),
-      socket -> {},
+      channel -> {},
+      waiter -> {},
       () -> {}
     ));
     assertEquals(lookupFailure.getMessage(), e.getMessage());
@@ -193,37 +201,5 @@ class KeyValueSocketConnectorTest {
       Duration.ofSeconds(10),
       hostResolver
     );
-  }
-
-  private static class TimingOutSocketFactory extends SocketFactory {
-    @Override
-    public Socket createSocket() {
-      return new Socket() {
-        @Override
-        public void connect(SocketAddress endpoint, int timeout) throws SocketTimeoutException {
-          throw new SocketTimeoutException("Connect timed out");
-        }
-      };
-    }
-
-    @Override
-    public Socket createSocket(String host, int port) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Socket createSocket(String host, int port, InetAddress localHost, int localPort) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Socket createSocket(InetAddress host, int port) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Socket createSocket(InetAddress address, int port, InetAddress localAddress, int localPort) {
-      throw new UnsupportedOperationException();
-    }
   }
 }
