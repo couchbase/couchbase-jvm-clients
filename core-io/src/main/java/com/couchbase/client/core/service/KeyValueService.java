@@ -32,14 +32,14 @@ public class KeyValueService extends PooledService {
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
 
   /**
-   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or plain sockets ({@link SocketKeyValueEndpoint});
+   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or Java NIO ({@link NioKeyValueEndpoint});
    * the {@code com.couchbase.useNettyForKv} system property (false by default).
    * Separate from {@code com.couchbase.useNetty} (for the HTTP-based services), so each can be switched on its own.
    */
   private static final boolean useNettyForKv = Boolean.parseBoolean(System.getProperty("com.couchbase.useNettyForKv", "false"));
 
   /**
-   * Returns true if KV endpoints use Netty, or false if they use plain sockets.
+   * Returns true if KV endpoints use Netty, or false if they use Java NIO.
    */
   @Stability.Internal
   public static boolean useNettyForKv() {
@@ -83,7 +83,7 @@ public class KeyValueService extends PooledService {
   protected Endpoint createEndpoint() {
     return useNettyForKv
       ? new KeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator)
-      : new SocketKeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator, serviceContext().core().kvSocketConnector());
+      : new NioKeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator, serviceContext().core().kvChannelConnector());
   }
 
   @Override

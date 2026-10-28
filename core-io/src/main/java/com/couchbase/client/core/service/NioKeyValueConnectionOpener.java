@@ -35,7 +35,7 @@ import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
 import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import com.couchbase.client.core.io.repackaged.tlschannel.WouldBlockException;
 import com.couchbase.client.core.io.repackaged.tlschannel.impl.TlsChannelImpl;
-import com.couchbase.client.core.service.KeyValueSocketConnector.ConnectedChannel;
+import com.couchbase.client.core.service.NioKeyValueChannelConnector.ConnectedChannel;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -62,7 +62,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import static com.couchbase.client.core.service.KeyValueSocketConnector.closeQuietly;
+import static com.couchbase.client.core.service.NioKeyValueChannelConnector.closeQuietly;
 import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 
@@ -73,7 +73,7 @@ import static java.util.Objects.requireNonNull;
  * {@link #open} blocks the caller; {@link #close} (from another thread) stops the attempt.
  */
 @NullMarked
-final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Opener {
+final class NioKeyValueConnectionOpener {
   private static final Logger log = LoggerFactory.getLogger(NioKeyValueConnectionOpener.class);
 
   /**
@@ -93,7 +93,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
   private final Optional<String> bucketName;
   private final @Nullable SaslCredentials credentials;
   private final Set<ServerFeature> requestedFeatures;
-  private final KeyValueSocketConnector connector;
+  private final NioKeyValueChannelConnector connector;
   private final EventBus eventBus;
 
   /**
@@ -123,7 +123,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
     Optional<String> bucketName,
     @Nullable SaslCredentials credentials,
     Set<ServerFeature> requestedFeatures,
-    KeyValueSocketConnector connector
+    NioKeyValueChannelConnector connector
   ) {
     this.endpointContext = requireNonNull(endpointContext);
     this.remoteHostname = requireNonNull(remoteHostname);
@@ -139,15 +139,23 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
     this.channelId = String.format("%016X", endpointContext.id()) + "/" + String.format("%016X", Integer.toUnsignedLong(id));
   }
 
-  @Override
+  /**
+   * How long each connect step took so far, keyed like the Netty implementation's connect timings.
+   */
   public SortedMap<String, Duration> timings() {
     synchronized (timings) {
       return new TreeMap<>(timings);
     }
   }
 
-  @Override
-  public NioKeyValueConnection open(long deadlineNanos, KeyValueEndpointConnection.Listener listener) throws IOException, TimeoutException {
+  /**
+   * Connects, and does the handshake. Blocks until it's done. Call once.
+   *
+   * @param deadlineNanos when to give up, in {@link System#nanoTime()} terms.
+   * @return the open connection, ready to {@linkplain NioKeyValueConnection#start start}.
+   * @throws TimeoutException if the deadline passes.
+   */
+  public NioKeyValueConnection open(long deadlineNanos, NioKeyValueConnection.Listener listener) throws IOException, TimeoutException {
     if (closed.get()) {
       throw new IOException("Connection closed before it opened");
     }
@@ -168,7 +176,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
 
   private NioKeyValueConnection doOpen(
     long deadlineNanos,
-    KeyValueEndpointConnection.Listener listener,
+    NioKeyValueConnection.Listener listener,
     KeyValueAuthenticationRefresh authenticationRefresh
   ) throws IOException, TimeoutException {
     List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
@@ -334,7 +342,6 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
    * Stops the attempt (if it's still going), by closing its channel. Once {@link #open} has returned the connection,
    * this closes the connection's channel too, but not the connection; close that instead.
    */
-  @Override
   public void close() {
     if (closed.compareAndSet(false, true)) {
       closeQuietly(channel);

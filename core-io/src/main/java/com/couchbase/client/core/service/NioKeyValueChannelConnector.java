@@ -57,14 +57,15 @@ import java.util.function.Consumer;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Opens the sockets for KV connections that don't use Netty: TCP, with the same socket options as the
- * OkHttp-based services, and TLS (if enabled) with the same certificates and TLS settings.
+ * Opens the socket channels for KV connections that don't use Netty (see {@link NioKeyValueConnection}): TCP, with
+ * the same socket options as the OkHttp-based services, and TLS (if enabled) with the same certificates and TLS
+ * settings.
  * <p>
  * One per {@link com.couchbase.client.core.Core}. Thread-safe.
  */
 @NullMarked
 @Stability.Internal
-public final class KeyValueSocketConnector {
+public final class NioKeyValueChannelConnector {
   private final SocketFactory socketFactory;
   private final SecurityConfig securityConfig;
   private final @Nullable SSLSocketFactory tlsSocketFactory;
@@ -94,7 +95,7 @@ public final class KeyValueSocketConnector {
    * @param socketFactory creates unconnected TCP sockets, and sets their options once they connect
    * (see {@link CouchbaseSocketFactory}).
    */
-  KeyValueSocketConnector(
+  NioKeyValueChannelConnector(
     SocketFactory socketFactory,
     SecurityConfig securityConfig,
     Authenticator authenticator,
@@ -103,7 +104,7 @@ public final class KeyValueSocketConnector {
     this(socketFactory, securityConfig, authenticator, handshakeTimeout, InetAddress::getByName);
   }
 
-  KeyValueSocketConnector(
+  NioKeyValueChannelConnector(
     SocketFactory socketFactory,
     SecurityConfig securityConfig,
     Authenticator authenticator,
@@ -121,13 +122,13 @@ public final class KeyValueSocketConnector {
   /**
    * Creates a connector whose sockets have the same options and TLS settings as the OkHttp client's.
    */
-  public static KeyValueSocketConnector create(
+  public static NioKeyValueChannelConnector create(
     CouchbaseOkHttpClient okHttpClient,
     SecurityConfig securityConfig,
     Authenticator authenticator,
     Duration handshakeTimeout
   ) {
-    return new KeyValueSocketConnector(okHttpClient.socketFactory(), securityConfig, authenticator, handshakeTimeout);
+    return new NioKeyValueChannelConnector(okHttpClient.socketFactory(), securityConfig, authenticator, handshakeTimeout);
   }
 
   public boolean tlsEnabled() {

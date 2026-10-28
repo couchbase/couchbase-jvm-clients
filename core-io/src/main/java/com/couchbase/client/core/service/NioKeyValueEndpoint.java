@@ -85,8 +85,8 @@ import static java.util.Objects.requireNonNull;
  */
 @NullMarked
 @Stability.Internal
-public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnection.Listener {
-  private static final Logger log = LoggerFactory.getLogger(SocketKeyValueEndpoint.class);
+public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.Listener {
+  private static final Logger log = LoggerFactory.getLogger(NioKeyValueEndpoint.class);
 
   private static final Duration TARGET_ABSENT_BEFORE_DISCONNECT = Duration.ofSeconds(
     Long.parseLong(System.getProperty("com.couchbase.endpoint.targetAbsentBeforeDisconnectSeconds", "60")));
@@ -111,7 +111,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
   private final int port;
   private final Optional<String> bucketName;
   private final Authenticator authenticator;
-  private final KeyValueSocketConnector connector;
+  private final NioKeyValueChannelConnector connector;
   private final Set<ServerFeature> features;
 
   private final AtomicBoolean disconnect = new AtomicBoolean();
@@ -125,13 +125,13 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
   /**
    * The connect attempt in progress, if any. Guarded by {@link #lock}.
    */
-  private KeyValueEndpointConnection.@Nullable Opener connecting;
+  private @Nullable NioKeyValueConnectionOpener connecting;
 
   /**
    * The current connection, once connected. Like BaseEndpoint's channel, it's kept after it closes
    * (until the next one connects), for diagnostics.
    */
-  private volatile @Nullable KeyValueEndpointConnection connection;
+  private volatile @Nullable NioKeyValueConnection connection;
 
   /**
    * Whether {@link #closed} was called for {@link #connection}. Guarded by {@link #lock}.
@@ -146,13 +146,13 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
   // Only accessed by the connect loop.
   private long firstSawTargetAbsentNanos = 0;
 
-  public SocketKeyValueEndpoint(
+  public NioKeyValueEndpoint(
     ServiceContext serviceContext,
     String hostname,
     int port,
     Optional<String> bucketName,
     Authenticator authenticator,
-    KeyValueSocketConnector connector
+    NioKeyValueChannelConnector connector
   ) {
     this.hostname = requireNonNull(hostname);
     this.port = port;
@@ -216,8 +216,8 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
       EndpointContext ctx = endpointContext.get();
       Duration connectTimeout = ctx.environment().timeoutConfig().connectTimeout();
       long start = System.nanoTime();
-      KeyValueEndpointConnection.Opener opener = null;
-      KeyValueEndpointConnection conn = null;
+      NioKeyValueConnectionOpener opener = null;
+      NioKeyValueConnection conn = null;
 
       try {
         opener = new NioKeyValueConnectionOpener(ctx, hostname, port, bucketName, authenticator.keyValueSaslCredentials(ctx), features, connector);
@@ -303,7 +303,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     }
   }
 
-  private void connected(EndpointContext ctx, KeyValueEndpointConnection conn, long start) {
+  private void connected(EndpointContext ctx, NioKeyValueConnection conn, long start) {
     long now = System.nanoTime();
     Duration elapsed = Duration.ofNanos(now - start);
 
@@ -352,7 +352,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     }
   }
 
-  private static TreeMap<String, Duration> timings(KeyValueEndpointConnection.@Nullable Opener opener) {
+  private static TreeMap<String, Duration> timings(@Nullable NioKeyValueConnectionOpener opener) {
     return opener == null ? new TreeMap<>() : new TreeMap<>(opener.timings());
   }
 
@@ -397,7 +397,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
 
   @Override
   public void disconnect() {
-    KeyValueEndpointConnection conn;
+    NioKeyValueConnection conn;
     synchronized (lock) {
       if (!disconnect.compareAndSet(false, true)) {
         return;
@@ -428,7 +428,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     return disconnect.get();
   }
 
-  // ---- KeyValueEndpointConnection.Listener
+  // ---- NioKeyValueConnection.Listener
 
   @Override
   public void responseReceived() {
@@ -447,7 +447,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
    * Like BaseEndpoint's notifyChannelInactive() (and its closeChannel(), when told to disconnect).
    */
   @Override
-  public void closed(KeyValueEndpointConnection conn, int requestsInFlight) {
+  public void closed(NioKeyValueConnection conn, int requestsInFlight) {
     // Under the lock, so disconnect() either happens first (and leaves the rest to us),
     // or after we reconnect (and stops the connect loop).
     synchronized (lock) {
@@ -497,7 +497,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
       return;
     }
 
-    KeyValueEndpointConnection conn = connection;
+    NioKeyValueConnection conn = connection;
     if (conn != null && canWrite(conn)) {
       request.context()
         .lastDispatchedFrom(ctx.localSocket().orElse(null))
@@ -527,7 +527,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
     }
   }
 
-  private boolean canWrite(KeyValueEndpointConnection conn) {
+  private boolean canWrite(NioKeyValueConnection conn) {
     return state.state() == EndpointState.CONNECTED
       && conn.isWritable()
       && circuitBreaker.allowsRequest();
@@ -540,7 +540,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
 
   @Override
   public long outstandingRequests() {
-    KeyValueEndpointConnection conn = connection;
+    NioKeyValueConnection conn = connection;
     return conn == null || conn.isClosed() ? 0 : conn.inFlightCount();
   }
 
@@ -583,7 +583,7 @@ public class SocketKeyValueEndpoint implements Endpoint, KeyValueEndpointConnect
 
   @Override
   public EndpointDiagnostics diagnostics() {
-    KeyValueEndpointConnection conn = connection;
+    NioKeyValueConnection conn = connection;
     String remote = conn == null ? null : format(conn.remoteAddress());
     String local = conn == null ? null : format(conn.localAddress());
 

@@ -59,7 +59,7 @@ class DecompressionTest {
 
   @Test
   void decompressesGetFromViewOfLargerArray() {
-    // Like the socket KV connection's packets: views of a shared read buffer, at an offset.
+    // Like the NIO KV connection's packets: views of a shared read buffer, at an offset.
     byte[] packet = ByteBufUtil.getBytes(decodeHexDump(readResource("compressed_get_response.txt", DecompressionTest.class)));
     byte[] readBuffer = new byte[packet.length + 100];
     Arrays.fill(readBuffer, (byte) 0x7f);

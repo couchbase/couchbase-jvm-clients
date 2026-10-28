@@ -45,7 +45,7 @@ final class KeyValueAuthenticationRefresh {
     // Handled on another thread (like the Netty implementation, which switches to the channel's event loop),
     // so the publisher isn't held up, and closing the connection can unsubscribe.
     this.subscription = endpointContext.core().authenticationRefreshTriggers.subscribe(
-      signal -> SocketKeyValueEndpoint.tasks.execute(this::signal)
+      signal -> NioKeyValueEndpoint.tasks.execute(this::signal)
     );
   }
 
