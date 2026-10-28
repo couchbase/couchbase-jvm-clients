@@ -18,17 +18,16 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.cnc.events.io.ReadTrafficCapturedEvent;
 import com.couchbase.client.core.cnc.events.io.WriteTrafficCapturedEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.netty.TrafficCaptureHandler;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 import org.jspecify.annotations.NullMarked;
 
 import static java.util.Objects.requireNonNull;
 
 /**
  * Publishes each packet a KV connection that doesn't use Netty writes and reads, if the config asks for KV's
- * (io.servicesToCapture), like the Netty implementation's TrafficCaptureHandler.
+ * (io.servicesToCapture), like the Netty implementation's TrafficCaptureHandler (see {@link TrafficCaptureFormat}).
  */
 @NullMarked
 final class KeyValueTrafficCapture {
@@ -49,7 +48,7 @@ final class KeyValueTrafficCapture {
    */
   void written(byte[] packet) {
     if (enabled) {
-      String description = TrafficCaptureHandler.memcacheToString(Unpooled.wrappedBuffer(packet));
+      String description = TrafficCaptureFormat.memcacheToString(KeyValuePacket.wrap(packet, 0, packet.length));
       ioContext.environment().eventBus().publish(new WriteTrafficCapturedEvent(ioContext, description));
     }
   }
@@ -59,8 +58,7 @@ final class KeyValueTrafficCapture {
    */
   void read(KeyValuePacket packet) {
     if (enabled) {
-      // A copy, but only when capturing.
-      String description = TrafficCaptureHandler.memcacheToString(Unpooled.wrappedBuffer(packet.toByteArray()));
+      String description = TrafficCaptureFormat.memcacheToString(packet);
       ioContext.environment().eventBus().publish(new ReadTrafficCapturedEvent(ioContext, description));
     }
   }
