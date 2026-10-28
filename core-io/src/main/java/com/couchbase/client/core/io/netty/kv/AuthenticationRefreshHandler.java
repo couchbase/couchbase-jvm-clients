@@ -171,8 +171,6 @@ public class AuthenticationRefreshHandler extends ChannelInboundHandlerAdapter {
     public void encodeTo(KeyValueRequestEncoder encoder) {
       encoder.beginRequest(Opcode.SASL_AUTH)
         .key(params.mechanism().mech().getBytes(UTF_8))
-        // value(), not valueWriter(): the valueWriter's array is reused and never cleared;
-        // we want to make absolutely sure credentials can't leak into later requests.
         .value(params.payload().getBytes(UTF_8));
     }
 

@@ -39,9 +39,6 @@ import static java.util.Objects.requireNonNull;
  * the request as in flight (before the server could possibly answer it), or abandon it with {@link #abortRequest},
  * after encoding.
  * <p>
- * The buffer is cleared once a SASL request in it (which carries credentials) is written to the stream,
- * since it's reused for the connection's later requests.
- * <p>
  * Not thread-safe: used by one thread at a time (the connecting thread during the handshake, then the connection's
  * event loop).
  */
@@ -62,11 +59,6 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
   private final ByteBufferKeyValueRequestBuilder request;
 
   private static final byte[] NO_VALUE = new byte[0];
-
-  /**
-   * Whether the buffer holds a SASL request, so it's cleared once it's written to the stream.
-   */
-  private boolean bufferHoldsCredentials;
 
   public KeyValueRequestWriter(
     OutputStream out,
@@ -162,9 +154,6 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
     }
     byte[] value = request.value();
     int valueLength = request.valueLength();
-    if (request.isSasl()) {
-      bufferHoldsCredentials = true; // the head, at least, is there; the value may be too
-    }
     request.reset();
     write(value, 0, valueLength);
   }
@@ -197,14 +186,7 @@ public final class KeyValueRequestWriter implements KeyValueRequestEncoder {
   private void writeBuffer() throws IOException {
     checkNoRequest();
     if (buffer.position() > 0) {
-      try {
-        out.write(buffer.array(), buffer.arrayOffset(), buffer.position());
-      } finally {
-        if (bufferHoldsCredentials) { // even if writing failed
-          Arrays.fill(buffer.array(), buffer.arrayOffset(), buffer.arrayOffset() + buffer.position(), (byte) 0);
-          bufferHoldsCredentials = false;
-        }
-      }
+      out.write(buffer.array(), buffer.arrayOffset(), buffer.position());
       buffer.clear();
     }
   }
