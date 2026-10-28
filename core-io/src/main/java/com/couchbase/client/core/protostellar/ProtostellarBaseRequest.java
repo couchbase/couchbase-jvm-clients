@@ -90,7 +90,13 @@ public class ProtostellarBaseRequest implements Request<ProtostellarBaseRequest.
 
   @Override
   public RequestContext context() {
-    return new RequestContext(null, core.context().id(), core.context().environment(), core.context().authenticator(), this);
+    // Reports the request's retry attempts, so retry strategies back off (a new context would always report zero).
+    return new RequestContext(null, core.context().id(), core.context().environment(), core.context().authenticator(), this) {
+      @Override
+      public int retryAttempts() {
+        return request.retryAttempts();
+      }
+    };
   }
 
   @Override
