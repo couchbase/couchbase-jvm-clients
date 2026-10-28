@@ -47,8 +47,16 @@
 
         <dependency>
             <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty</artifactId>
+            <artifactId>grpc-okhttp</artifactId>
             <version>${grpc.version}</version>
+            <exclusions>
+                <!-- core-io-deps provides Okio (okio-jvm, which this artifact only points to),
+                     and relocates it once for both gRPC and OkHttp. -->
+                <exclusion>
+                    <groupId>com.squareup.okio</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
