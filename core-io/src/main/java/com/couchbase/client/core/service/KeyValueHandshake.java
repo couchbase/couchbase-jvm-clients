@@ -679,6 +679,8 @@ final class KeyValueHandshake implements CallbackHandler {
   private int writeSasl(Opcode opcode, String mechanism, byte @Nullable [] payload) throws IOException {
     byte[] key = mechanism.getBytes(UTF_8);
     byte[] value = payload == null ? Bytes.EMPTY_BYTE_ARRAY : payload;
+    // value(), not valueWriter(): the valueWriter's array is reused and never cleared;
+    // we want to make absolutely sure credentials can't leak into later requests.
     return write(opcode, request -> request.key(key).value(value));
   }
 
