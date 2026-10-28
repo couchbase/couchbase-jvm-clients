@@ -18,8 +18,8 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ViewNotFoundException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.view.ViewChunkRow;
@@ -248,7 +248,8 @@ class OkHttpViewServiceTest {
     server.enqueue(400, "{\"something\":\"unexpected\"}", Duration.ZERO);
 
     Throwable cause = sendExpectingFailure(newViewRequest());
-    assertEquals(CouchbaseException.class, cause.getClass());
+    // A 400 the service can't otherwise explain is an invalid argument, like the Netty implementation (JVMCBC-1800).
+    assertEquals(InvalidArgumentException.class, cause.getClass());
     assertTrue(cause.getMessage().contains("HTTP status code: 400 Bad Request"), cause.getMessage());
     assertTrue(cause.getMessage().contains("{\"something\":\"unexpected\"}"), cause.getMessage());
   }

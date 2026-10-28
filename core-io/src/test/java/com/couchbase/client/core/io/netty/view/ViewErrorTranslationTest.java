@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.view;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.view.ViewError;
 import com.couchbase.client.core.error.ViewNotFoundException;
@@ -56,14 +57,19 @@ class ViewErrorTranslationTest {
   }
 
   @Test
+  void badRequestIsAnInvalidArgument() {
+    assertEquals(InvalidArgumentException.class, error(400, "query_parse_error", "bad stale value").getClass());
+  }
+
+  @Test
   void unknownError() {
-    CouchbaseException e = error(400, "query_parse_error", "bad stale value");
+    CouchbaseException e = error(500, "query_parse_error", "bad stale value");
     assertEquals(CouchbaseException.class, e.getClass());
     assertTrue(e.getMessage().startsWith("Unknown view error: ViewError{error='query_parse_error', reason='bad stale value'}"), e.getMessage());
 
     ViewErrorContext context = (ViewErrorContext) e.context();
-    assertEquals(400, context.httpStatus());
-    assertEquals(ResponseStatus.INVALID_ARGS, context.responseStatus());
+    assertEquals(500, context.httpStatus());
+    assertEquals(ResponseStatus.INTERNAL_SERVER_ERROR, context.responseStatus());
     assertSame(ctx, context.requestContext());
   }
 

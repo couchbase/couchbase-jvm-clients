@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.manager;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.QuotaLimitedException;
@@ -58,8 +59,17 @@ class ManagerErrorTranslationTest {
   }
 
   @Test
+  void badRequestIsAnInvalidArgument() {
+    // JVMCBC-1800: keeps the HttpStatusCodeException as the cause, so callers can still inspect the response.
+    Exception e = error(400, "something else");
+    assertEquals(InvalidArgumentException.class, e.getClass());
+    HttpStatusCodeException cause = (HttpStatusCodeException) e.getCause();
+    assertEquals(400, ((ManagerErrorContext) cause.context()).httpStatus());
+  }
+
+  @Test
   void otherErrors() {
-    for (int status : new int[]{400, 404, 429, 500}) {
+    for (int status : new int[]{404, 429, 500}) {
       Exception e = error(status, "something else");
       assertEquals(HttpStatusCodeException.class, e.getClass());
       ManagerErrorContext context = (ManagerErrorContext) ((HttpStatusCodeException) e).context();

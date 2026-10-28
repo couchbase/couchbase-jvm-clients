@@ -17,6 +17,7 @@
 package com.couchbase.client.core.io.netty.analytics;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InternalServerFailureException;
@@ -58,7 +59,9 @@ class AnalyticsErrorTranslationTest {
     assertEquals(JobQueueFullException.class, error(503, errorWithCode(23007)).getClass());
     assertEquals(CompilationFailureException.class, error(400, errorWithCode(24999)).getClass());
 
-    CouchbaseException unknown = error(400, errorWithCode(99999));
+    // An unknown code is an invalid argument if the status is 400 (JVMCBC-1800), and generic otherwise.
+    assertEquals(InvalidArgumentException.class, error(400, errorWithCode(99999)).getClass());
+    CouchbaseException unknown = error(500, errorWithCode(99999));
     assertEquals(CouchbaseException.class, unknown.getClass());
     assertTrue(unknown.getMessage().startsWith("Unknown analytics error: "), unknown.getMessage());
     assertEquals(99999, ((AnalyticsErrorContext) unknown.context()).errors().get(0).code());
