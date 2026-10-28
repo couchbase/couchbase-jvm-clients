@@ -65,7 +65,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.time.Duration;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -910,8 +909,7 @@ final class NioKeyValueConnection {
   /**
    * Where the request writer writes: the channel (TLS, if enabled), without waiting. What the channel can't take
    * now is kept (copied), and written when the channel is writable again (see {@link #drain}); meanwhile, the
-   * connection writes nothing else (see {@link #blocked}). The copies are zeroed once written, since they might
-   * hold credentials (a SASL request, when reauthenticating).
+   * connection writes nothing else (see {@link #blocked}).
    * <p>
    * Only used by the loop's thread.
    */
@@ -990,7 +988,6 @@ final class NioKeyValueConnection {
           return false;
         }
         pending.poll();
-        Arrays.fill(next.array(), (byte) 0);
       }
       return true;
     }
@@ -999,9 +996,6 @@ final class NioKeyValueConnection {
      * Forgets what's waiting, once the connection is closed.
      */
     void clear() {
-      for (ByteBuffer it : pending) {
-        Arrays.fill(it.array(), (byte) 0);
-      }
       pending.clear();
     }
   }
