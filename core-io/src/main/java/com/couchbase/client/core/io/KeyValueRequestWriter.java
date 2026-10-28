@@ -42,7 +42,8 @@ import static java.util.Objects.requireNonNull;
  * The buffer is cleared once a SASL request in it (which carries credentials) is written to the stream,
  * since it's reused for the connection's later requests.
  * <p>
- * Not thread-safe: used by the connection's writer thread.
+ * Not thread-safe: used by one thread at a time (the connecting thread during the handshake, then the connection's
+ * event loop).
  */
 @Stability.Internal
 @NullMarked

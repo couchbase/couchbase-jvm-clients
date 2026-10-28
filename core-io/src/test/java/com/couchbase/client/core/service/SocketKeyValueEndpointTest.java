@@ -219,13 +219,6 @@ class SocketKeyValueEndpointTest {
       .build();
   }
 
-  /**
-   * Whether the endpoint's connections use NIO (see {@link NioSocketKeyValueEndpointTest}).
-   */
-  boolean nio() {
-    return false;
-  }
-
   private SocketKeyValueEndpoint newEndpoint() {
     return newEndpoint(plainAuthenticator(PASSWORD), server.port());
   }
@@ -235,7 +228,7 @@ class SocketKeyValueEndpointTest {
     KeyValueSocketConnector connector = KeyValueSocketConnector.create(
       okHttpClient, env.securityConfig(), authenticator, env.timeoutConfig().connectTimeout()
     );
-    SocketKeyValueEndpoint endpoint = new SocketKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector, nio());
+    SocketKeyValueEndpoint endpoint = new SocketKeyValueEndpoint(serviceContext, HOST, port, Optional.of(BUCKET), authenticator, connector);
     cleanup.add(0, endpoint::disconnect);
     return endpoint;
   }
@@ -618,7 +611,6 @@ class SocketKeyValueEndpointTest {
 
   @Test
   void failedHandshakeClosesTheChannelWaiter() throws Exception {
-    assumeTrue(nio(), "only NIO connections have a channel waiter");
     start();
     startServer();
     Authenticator authenticator = plainAuthenticator("wrong password");

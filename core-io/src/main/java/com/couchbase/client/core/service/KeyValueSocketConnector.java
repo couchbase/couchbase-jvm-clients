@@ -29,7 +29,6 @@ import org.jspecify.annotations.Nullable;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.Closeable;
 import java.io.EOFException;
@@ -38,7 +37,6 @@ import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.channels.ByteChannel;
@@ -163,9 +161,8 @@ public final class KeyValueSocketConnector {
   }
 
   /**
-   * Like {@link #connect}, but for a KV connection that uses NIO: connects a non-blocking channel,
-   * and does the TLS handshake (with an {@link SSLEngine}) if TLS is enabled. Blocks until it's done,
-   * or the deadline passes.
+   * Connects a non-blocking channel to the host, and does the TLS handshake (with an {@link SSLEngine}) if TLS
+   * is enabled. Blocks until it's done, or the deadline passes.
    *
    * @param onChannel called with the channel as soon as it's created, so the caller can close it to stop the attempt.
    * @param onWaiter called with the waiter as soon as it's created, so the caller can wake it after closing the channel.
@@ -247,7 +244,10 @@ public final class KeyValueSocketConnector {
   }
 
   /**
-   * Like {@link #connectTcp(Socket, InetSocketAddress, long)}, for a non-blocking channel.
+   * Connects the non-blocking channel, waiting with the waiter until it's connected or the deadline passes.
+   *
+   * @throws ConnectException if the deadline passes. Like Netty's ConnectTimeoutException, so it gets the same
+   * hint (see {@code BaseEndpoint.annotateConnectException}).
    */
   private static void connectTcp(SocketChannel channel, KeyValueChannelWaiter waiter, InetSocketAddress address, long deadlineNanos) throws IOException {
     long timeoutMillis = 0;
@@ -266,55 +266,6 @@ public final class KeyValueSocketConnector {
       ConnectException timedOut = new ConnectException("connection timed out after " + timeoutMillis + " ms: " + address);
       timedOut.initCause(e);
       throw timedOut;
-    }
-  }
-
-  /**
-   * Connects to the host, and does the TLS handshake if TLS is enabled. Blocks until it's done,
-   * or the deadline passes.
-   *
-   * @param deadlineNanos when to give up, in {@link System#nanoTime()} terms.
-   * @param onSocket called with each socket as soon as it's created (first the TCP socket, then the TLS socket),
-   * so the caller can close it to stop the attempt.
-   * @param onTcpConnected called once the TCP connection is open, before the TLS handshake (if any).
-   * @return the connected socket. Its read timeout is whatever time is left before the deadline.
-   * @throws UnknownHostException if the host name can't be resolved, or the deadline passes first.
-   * @throws ConnectException if the deadline passes before the TCP connection is open.
-   * @throws SocketTimeoutException if the deadline passes during the TLS handshake.
-   * @throws IOException if connecting fails. If the TLS handshake fails, it's (or it's caused by)
-   * an {@link javax.net.ssl.SSLException}.
-   */
-  public Socket connect(
-    String host,
-    int port,
-    long deadlineNanos,
-    Consumer<Socket> onSocket,
-    Runnable onTcpConnected
-  ) throws IOException {
-    Socket socket = socketFactory.createSocket();
-    try {
-      onSocket.accept(socket);
-      InetSocketAddress address = resolve(host, port, deadlineNanos);
-      connectTcp(socket, address, deadlineNanos);
-      onTcpConnected.run();
-
-      if (tlsSocketFactory == null) {
-        socket.setSoTimeout(remainingMillis(deadlineNanos));
-        return socket;
-      }
-
-      // Uses the host name we were given (not the resolved address) for SNI and host name verification.
-      SSLSocket tlsSocket = (SSLSocket) tlsSocketFactory.createSocket(socket, host, port, true);
-      onSocket.accept(tlsSocket);
-      socket = tlsSocket;
-      OkHttpTlsHelper.configureTlsSocket(tlsSocket, securityConfig);
-      tlsSocket.setSoTimeout(remainingMillis(deadlineNanos));
-      tlsSocket.startHandshake();
-      return tlsSocket;
-
-    } catch (IOException | RuntimeException e) {
-      closeQuietly(socket);
-      throw e;
     }
   }
 
@@ -371,22 +322,6 @@ public final class KeyValueSocketConnector {
       newLookup.completeExceptionally(e);
     }
     return newLookup;
-  }
-
-  /**
-   * @throws ConnectException if the deadline passes. Like Netty's ConnectTimeoutException, so it gets the same
-   * hint (see {@code BaseEndpoint.annotateConnectException}).
-   */
-  private static void connectTcp(Socket socket, InetSocketAddress address, long deadlineNanos) throws IOException {
-    long timeoutMillis = 0;
-    try {
-      timeoutMillis = remainingMillis(deadlineNanos);
-      socket.connect(address, (int) timeoutMillis);
-    } catch (SocketTimeoutException e) {
-      ConnectException timedOut = new ConnectException("connection timed out after " + timeoutMillis + " ms: " + address);
-      timedOut.initCause(e);
-      throw timedOut;
-    }
   }
 
   /**

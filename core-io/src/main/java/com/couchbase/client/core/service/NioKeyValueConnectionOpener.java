@@ -35,8 +35,6 @@ import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
 import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import com.couchbase.client.core.io.repackaged.tlschannel.WouldBlockException;
 import com.couchbase.client.core.io.repackaged.tlschannel.impl.TlsChannelImpl;
-import com.couchbase.client.core.service.KeyValueConnection.AuthenticationRefresh;
-import com.couchbase.client.core.service.KeyValueConnection.TrafficCapture;
 import com.couchbase.client.core.service.KeyValueSocketConnector.ConnectedChannel;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -69,8 +67,8 @@ import static java.util.Collections.emptySet;
 import static java.util.Objects.requireNonNull;
 
 /**
- * One attempt to open a {@link NioKeyValueConnection}: connects (TCP, then TLS if enabled), and does the handshake,
- * like {@link KeyValueConnectionOpener}, but with a non-blocking channel. The attempt blocks the caller
+ * One attempt to open a {@link NioKeyValueConnection}: connects (TCP, then TLS if enabled) with a non-blocking
+ * channel, and does the handshake (see {@link KeyValueHandshake}). The attempt blocks the caller
  * (waiting with a selector of its own, until the connect deadline), then hands the channel to an event loop.
  * {@link #open} blocks the caller; {@link #close} (from another thread) stops the attempt.
  */
@@ -155,7 +153,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
     }
     // Before connecting, so a reauthentication signal during the handshake isn't missed. The connection acts on it
     // once it starts.
-    AuthenticationRefresh authenticationRefresh = new AuthenticationRefresh(endpointContext);
+    KeyValueAuthenticationRefresh authenticationRefresh = new KeyValueAuthenticationRefresh(endpointContext);
     try {
       return doOpen(deadlineNanos, listener, authenticationRefresh);
     } catch (Throwable t) {
@@ -171,7 +169,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
   private NioKeyValueConnection doOpen(
     long deadlineNanos,
     KeyValueEndpointConnection.Listener listener,
-    AuthenticationRefresh authenticationRefresh
+    KeyValueAuthenticationRefresh authenticationRefresh
   ) throws IOException, TimeoutException {
     List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
     if (connector.tlsEnabled() && !ciphers.isEmpty()) {
@@ -231,7 +229,7 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
       )
     );
     KeyValuePacketReader packets = new KeyValuePacketReader(io, tls != null ? TLS_MIN_READ : KeyValueFrameDecoder.DEFAULT_MIN_READ, ioContext);
-    TrafficCapture capture = new TrafficCapture(ioContext);
+    KeyValueTrafficCapture capture = new KeyValueTrafficCapture(ioContext);
 
     KeyValueHandshake.Result result;
     try {
@@ -393,7 +391,6 @@ final class NioKeyValueConnectionOpener implements KeyValueEndpointConnection.Op
   /**
    * If writing failed (for example, with "Broken pipe") because the server sent a TLS alert and closed
    * the connection, adds the alert (if it can be read before the deadline) to the failure as a suppressed exception,
-   * like {@link KeyValueConnectionOpener} does.
    */
   private IOException withPendingTlsAlert(
     IOException e,

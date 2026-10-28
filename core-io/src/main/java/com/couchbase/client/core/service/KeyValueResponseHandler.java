@@ -44,7 +44,6 @@ import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.service.KeyValueConnection.InFlight;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -57,12 +56,11 @@ import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETC
 import static java.util.Objects.requireNonNull;
 
 /**
- * Handles a {@link KeyValueConnection}'s responses, like the Netty implementation's {@link KeyValueMessageHandler}:
+ * Handles a {@link NioKeyValueConnection}'s responses, like the Netty implementation's {@link KeyValueMessageHandler}:
  * completes the requests, or retries them (for example, after NOT_MY_VBUCKET, or an outdated collection),
  * and asks the connection to close when a response says to.
  * <p>
- * Used by the connection's reader thread (and by {@link KeyValueConnection#send}, for
- * {@link #handleOutdatedCollection}). Created once the handshake is done.
+ * Used by the connection's event loop. Created once the handshake is done.
  */
 @NullMarked
 final class KeyValueResponseHandler {
@@ -86,7 +84,7 @@ final class KeyValueResponseHandler {
   private final IoContext ioContext;
   private final KeyValueChannelContext channelContext;
   private final @Nullable ErrorMap errorMap;
-  private final Map<Integer, InFlight> inFlight;
+  private final Map<Integer, KeyValueInFlight> inFlight;
   private final boolean isInternalTracer;
   private final Connection connection;
   private final EventBus eventBus;
@@ -100,7 +98,7 @@ final class KeyValueResponseHandler {
     IoContext ioContext,
     KeyValueChannelContext channelContext,
     @Nullable ErrorMap errorMap,
-    Map<Integer, InFlight> inFlight,
+    Map<Integer, KeyValueInFlight> inFlight,
     boolean isInternalTracer,
     Connection connection
   ) {
@@ -120,7 +118,7 @@ final class KeyValueResponseHandler {
    */
   void handle(KeyValuePacket packet) {
     int opaque = packet.opaque();
-    InFlight written = inFlight.remove(opaque);
+    KeyValueInFlight written = inFlight.remove(opaque);
 
     if (written == null) {
       handleUnknownResponseReceived(packet);
@@ -178,7 +176,7 @@ final class KeyValueResponseHandler {
   }
 
   private void retryOrComplete(
-    InFlight written,
+    KeyValueInFlight written,
     KeyValuePacket packet,
     ResponseStatus status,
     boolean isRangeScanContinue
@@ -196,7 +194,7 @@ final class KeyValueResponseHandler {
     }
   }
 
-  private void completeRequestTimings(InFlight written, KeyValuePacket response) {
+  private void completeRequestTimings(KeyValueInFlight written, KeyValuePacket response) {
     KeyValueRequest<Response> request = written.request;
     long serverTime = response.serverDuration();
     request.context().serverLatency(serverTime);
@@ -220,7 +218,7 @@ final class KeyValueResponseHandler {
     }
   }
 
-  private void decodeAndCompleteRangeScanContinue(InFlight written, KeyValuePacket packet) {
+  private void decodeAndCompleteRangeScanContinue(KeyValueInFlight written, KeyValuePacket packet) {
     KeyValueRequest<Response> request = written.request;
     RangeScanContinueResponse decoded = (RangeScanContinueResponse) request.decode(packet, channelContext);
     if (!request.completed()) {
@@ -246,7 +244,7 @@ final class KeyValueResponseHandler {
 
     if (decoded.status() == ResponseStatus.SUCCESS) {
       // More responses are coming for this request.
-      inFlight.put(request.opaque(), new InFlight(request, written.dispatchStartNanos, null));
+      inFlight.put(request.opaque(), new KeyValueInFlight(request, written.dispatchStartNanos, null));
     }
   }
 

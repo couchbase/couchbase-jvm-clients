@@ -27,7 +27,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.channels.ReadableByteChannel;
 
 import static java.util.Objects.requireNonNull;
@@ -36,27 +35,14 @@ import static java.util.Objects.requireNonNull;
  * Reads a KV connection's packets: splits what it reads into packets (see {@link KeyValueFrameDecoder}), and checks
  * each one, like the Netty implementation's MemcacheProtocolVerificationHandler.
  * <p>
- * Used by the connecting thread during the handshake, then by the connection's reader thread (or event loop),
- * so anything read ahead during the handshake isn't lost. Reads from a stream (blocking), or from a channel
- * (non-blocking, if the channel is). Not thread-safe.
+ * Used by the connecting thread during the handshake, then by the connection's event loop, so anything read ahead
+ * during the handshake isn't lost. Reads from a channel (non-blocking, if the channel is). Not thread-safe.
  */
 @NullMarked
 final class KeyValuePacketReader {
-  private final @Nullable InputStream input;
-  private final @Nullable ReadableByteChannel channel;
+  private final ReadableByteChannel channel;
   private final IoContext ioContext;
   private final KeyValueFrameDecoder frames;
-
-  /**
-   * @param input the socket's input stream. Unbuffered: the frame decoder does the buffering.
-   * @param ioContext for reporting invalid packets.
-   */
-  KeyValuePacketReader(InputStream input, IoContext ioContext) {
-    this.input = requireNonNull(input);
-    this.channel = null;
-    this.ioContext = requireNonNull(ioContext);
-    this.frames = new KeyValueFrameDecoder();
-  }
 
   /**
    * @param channel the channel to read (see {@link #fillAvailable}).
@@ -64,25 +50,9 @@ final class KeyValuePacketReader {
    * @param ioContext for reporting invalid packets.
    */
   KeyValuePacketReader(ReadableByteChannel channel, int minRead, IoContext ioContext) {
-    this.input = null;
     this.channel = requireNonNull(channel);
     this.ioContext = requireNonNull(ioContext);
     this.frames = new KeyValueFrameDecoder(minRead);
-  }
-
-  /**
-   * Returns the next packet, reading from the socket as needed. It shares the read buffer's bytes,
-   * so it's only valid until the next read (see {@link KeyValueFrameDecoder}).
-   *
-   * @throws InvalidPacketException if the packet failed verification
-   * (like the Netty implementation's MemcacheProtocolVerificationHandler, it's reported, and the connection closed).
-   */
-  KeyValuePacket read() throws IOException {
-    KeyValuePacket packet;
-    while ((packet = next()) == null) {
-      fill();
-    }
-    return packet;
   }
 
   /**
@@ -115,20 +85,6 @@ final class KeyValuePacketReader {
   }
 
   /**
-   * Reads more from the socket, waiting until there's something to read.
-   *
-   * @throws EOFException if the server closed the connection.
-   */
-  void fill() throws IOException {
-    if (input == null) {
-      throw new IllegalStateException("Reads a channel; use fillAvailable()");
-    }
-    if (!frames.fill(input)) {
-      throw new EOFException("The server closed the connection.");
-    }
-  }
-
-  /**
    * Reads what the channel has. Doesn't wait if the channel is non-blocking.
    *
    * @return how many bytes were read (0 if the channel had none).
@@ -137,9 +93,6 @@ final class KeyValuePacketReader {
    * (for example, to answer a TLS 1.3 key update). Try again once the socket is writable.
    */
   int fillAvailable() throws IOException {
-    if (channel == null) {
-      throw new IllegalStateException("Reads a stream; use fill()");
-    }
     int read;
     try {
       read = frames.fill(channel);
@@ -157,13 +110,6 @@ final class KeyValuePacketReader {
    */
   boolean lastFillFilledRoom() {
     return frames.lastFillFilledRoom();
-  }
-
-  /**
-   * Returns true if part of a packet has been read (so the rest is presumably on its way).
-   */
-  boolean hasUnreadBytes() {
-    return frames.hasUnreadBytes();
   }
 
   private InvalidPacketException invalidPacket(byte[] packet) {
