@@ -16,20 +16,20 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.Callback;
+import com.couchbase.client.core.deps.okhttp3.HttpUrl;
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.Request;
+import com.couchbase.client.core.deps.okhttp3.Response;
+import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
+import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.tls.HandshakeCertificates;
-import okhttp3.tls.HeldCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

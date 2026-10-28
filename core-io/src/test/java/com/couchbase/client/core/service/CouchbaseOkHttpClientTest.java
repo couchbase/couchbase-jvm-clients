@@ -16,12 +16,12 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.Protocol;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.RequestContext;
-import okhttp3.OkHttpClient;
-import okhttp3.Protocol;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -99,9 +99,9 @@ class CouchbaseOkHttpClientTest {
     );
   }
 
-  private static okhttp3.Response get(OkHttpClient client, TestHttpServer server) throws Exception {
+  private static com.couchbase.client.core.deps.okhttp3.Response get(OkHttpClient client, TestHttpServer server) throws Exception {
     return client.newCall(CouchbaseOkHttpClient.newRequest(
-      new okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + server.port() + "/"),
+      new com.couchbase.client.core.deps.okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + server.port() + "/"),
       mock(RequestContext.class),
       Duration.ofSeconds(5)
     )).execute();
@@ -128,7 +128,7 @@ class CouchbaseOkHttpClientTest {
       try (TestHttpServer server = TestHttpServer.startHttp(); CouchbaseOkHttpClient client = newClient()) {
         assertEquals(Proxy.NO_PROXY, client.getClientForTest().proxy());
         server.enqueue("hello");
-        try (okhttp3.Response response = get(client.getClientForTest(), server)) {
+        try (com.couchbase.client.core.deps.okhttp3.Response response = get(client.getClientForTest(), server)) {
           assertEquals("hello", response.body().string());
         }
       }
@@ -150,7 +150,7 @@ class CouchbaseOkHttpClientTest {
         .build();
 
       server.enqueue("hello");
-      try (okhttp3.Response response = get(recordingClient, server)) {
+      try (com.couchbase.client.core.deps.okhttp3.Response response = get(recordingClient, server)) {
         assertEquals("hello", response.body().string());
       }
       assertEquals(singletonList("identity"), acceptEncodings);

@@ -17,6 +17,8 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.Response;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
@@ -27,8 +29,6 @@ import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.OkHttpClient;
-import okhttp3.Response;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -119,7 +119,7 @@ class OkHttpSocketReadTimeoutTest {
   private Response get(Duration requestTimeout) throws IOException {
     return recordingClient.newCall(
       CouchbaseOkHttpClient.newRequest(
-        new okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + server.port() + "/"),
+        new com.couchbase.client.core.deps.okhttp3.Request.Builder().url("http://" + TestHttpServer.HOST_NAME + ":" + server.port() + "/"),
         mock(RequestContext.class),
         requestTimeout
       )
@@ -147,7 +147,7 @@ class OkHttpSocketReadTimeoutTest {
     server.enqueue("hello");
 
     IllegalStateException e = assertThrows(IllegalStateException.class, () -> okHttpClient.getClientForTest().newCall(
-      new okhttp3.Request.Builder()
+      new com.couchbase.client.core.deps.okhttp3.Request.Builder()
         .url("http://" + TestHttpServer.HOST_NAME + ":" + server.port() + "/")
         .build()
     ).execute().close());
@@ -250,7 +250,7 @@ class OkHttpSocketReadTimeoutTest {
         "test-user-agent"
       );
       try {
-        okhttp3.Request.Builder request = new okhttp3.Request.Builder()
+        com.couchbase.client.core.deps.okhttp3.Request.Builder request = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
           .url("https://127.0.0.1:" + silentServer.getLocalPort() + "/");
 
         long start = System.nanoTime();

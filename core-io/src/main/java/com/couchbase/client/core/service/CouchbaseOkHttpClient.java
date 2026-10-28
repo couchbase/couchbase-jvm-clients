@@ -17,22 +17,22 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.annotation.Stability;
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.Connection;
+import com.couchbase.client.core.deps.okhttp3.ConnectionPool;
+import com.couchbase.client.core.deps.okhttp3.ConnectionSpec;
+import com.couchbase.client.core.deps.okhttp3.Dispatcher;
+import com.couchbase.client.core.deps.okhttp3.EventListener;
+import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
+import com.couchbase.client.core.deps.okhttp3.Protocol;
+import com.couchbase.client.core.deps.okhttp3.Request;
+import com.couchbase.client.core.deps.okhttp3.WebSocket;
+import com.couchbase.client.core.deps.okhttp3.WebSocketListener;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.CbThreads;
-import okhttp3.Call;
-import okhttp3.Connection;
-import okhttp3.ConnectionPool;
-import okhttp3.ConnectionSpec;
-import okhttp3.Dispatcher;
-import okhttp3.EventListener;
-import okhttp3.OkHttpClient;
-import okhttp3.Protocol;
-import okhttp3.Request;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -90,7 +90,7 @@ public class CouchbaseOkHttpClient implements Closeable {
    *
    * @param requestTimeout the SDK's timeout for the request, which the socket read timeout is based on.
    */
-  public Call newCall(okhttp3.Request.Builder requestBuilder, RequestContext requestContext, Duration requestTimeout) {
+  public Call newCall(com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder, RequestContext requestContext, Duration requestTimeout) {
     return client.newCall(newRequest(requestBuilder, requestContext, requestTimeout));
   }
 
@@ -116,7 +116,7 @@ public class CouchbaseOkHttpClient implements Closeable {
    * the WebSocket fails.
    */
   public WebSocket newWebSocket(
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     boolean useClusterTlsAndCredentials,
     Duration handshakeTimeout,
     Duration pingInterval,
@@ -141,7 +141,7 @@ public class CouchbaseOkHttpClient implements Closeable {
    * Builds the request, with the tags {@link #newCall} adds.
    * Package-private only for tests that send requests with {@link #getClientForTest()}.
    */
-  static Request newRequest(okhttp3.Request.Builder requestBuilder, RequestContext requestContext, Duration requestTimeout) {
+  static Request newRequest(com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder, RequestContext requestContext, Duration requestTimeout) {
     return requestBuilder
       .tag(DispatchState.class, new DispatchState(socketReadTimeout(requestTimeout)))
       .tag(RequestContext.class, requestContext) // so the connection tracker can record dispatch details
@@ -246,7 +246,7 @@ public class CouchbaseOkHttpClient implements Closeable {
         keepAlive(ioConfig.idleHttpConnectionTimeout()).toMillis(), TimeUnit.MILLISECONDS
       ))
       .addInterceptor(chain -> {
-        okhttp3.Request.Builder requestBuilder = chain.request().newBuilder()
+        com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = chain.request().newBuilder()
           .header("User-Agent", userAgent);
 
         // Don't ask for compressed responses, like the Netty implementation. Otherwise OkHttp would ask for gzip

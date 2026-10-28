@@ -16,15 +16,15 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.HttpUrl;
+import com.couchbase.client.core.deps.okhttp3.Request;
+import com.couchbase.client.core.deps.okhttp3.Response;
+import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
+import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import com.couchbase.client.core.env.CertificateAuthenticator;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.RequestContext;
-import okhttp3.HttpUrl;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.tls.HandshakeCertificates;
-import okhttp3.tls.HeldCertificate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,8 +47,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static com.couchbase.client.core.util.CbCollections.listOf;
+import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

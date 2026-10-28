@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.service;
 
-import okhttp3.tls.HeldCertificate;
+import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLEngine;

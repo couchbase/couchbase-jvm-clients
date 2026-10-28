@@ -17,13 +17,13 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.okhttp3.HttpUrl;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.io.netty.query.NonChunkedQueryMessageHandler;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.util.HostAndPort;
-import okhttp3.HttpUrl;
-import okhttp3.RequestBody;
 import org.jspecify.annotations.NullMarked;
 
 /**
@@ -65,7 +65,7 @@ public class OkHttpQueryService extends AbstractOkHttpService {
   protected void dispatchServiceRequest(Request<?> request, DispatchAttempt attempt) {
     QueryRequest queryRequest = (QueryRequest) request;
 
-    okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder()
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(queryServiceUrl)
       .post(RequestBody.create(queryRequest.query(), APPLICATION_JSON));
 

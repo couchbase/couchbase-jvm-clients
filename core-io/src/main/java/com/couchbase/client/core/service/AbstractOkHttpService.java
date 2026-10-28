@@ -22,6 +22,12 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.EventListener;
+import com.couchbase.client.core.deps.okhttp3.HttpUrl;
+import com.couchbase.client.core.deps.okhttp3.MediaType;
+import com.couchbase.client.core.deps.okhttp3.RequestBody;
+import com.couchbase.client.core.deps.okhttp3.ResponseBody;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
@@ -46,12 +52,6 @@ import com.couchbase.client.core.util.CbStrings;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.SingleStateful;
-import okhttp3.Call;
-import okhttp3.EventListener;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.RequestBody;
-import okhttp3.ResponseBody;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -134,7 +134,7 @@ abstract class AbstractOkHttpService implements Service {
      * Called with the response (the status and headers have arrived; the body may still be arriving).
      * Must close the response body, and complete or retry the request. Should not throw.
      */
-    void handle(okhttp3.Response response) throws IOException;
+    void handle(com.couchbase.client.core.deps.okhttp3.Response response) throws IOException;
   }
 
   /**
@@ -213,7 +213,7 @@ abstract class AbstractOkHttpService implements Service {
    */
   protected final <R extends Response> void executeStreaming(
     BaseHttpRequest<R> request,
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     DispatchAttempt attempt,
     StreamingResponseFormat<?, ?, ?, R> format
   ) {
@@ -237,15 +237,15 @@ abstract class AbstractOkHttpService implements Service {
    */
   protected final Call execute(
     BaseHttpRequest<?> request,
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     DispatchAttempt attempt,
     ResponseHandler handler
   ) {
     DispatchTimer dispatchTimer = new DispatchTimer(request);
 
-    return start(request, requestBuilder, dispatchTimer, new okhttp3.Callback() {
+    return start(request, requestBuilder, dispatchTimer, new com.couchbase.client.core.deps.okhttp3.Callback() {
       @Override
-      public void onResponse(Call call, okhttp3.Response response) throws IOException {
+      public void onResponse(Call call, com.couchbase.client.core.deps.okhttp3.Response response) throws IOException {
         try {
           try {
             NanoTimestamp dispatchStart = dispatchTimer.start;
@@ -490,9 +490,9 @@ abstract class AbstractOkHttpService implements Service {
 
   private Call start(
     BaseHttpRequest<?> request,
-    okhttp3.Request.Builder requestBuilder,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
     DispatchTimer dispatchTimer,
-    okhttp3.Callback callback
+    com.couchbase.client.core.deps.okhttp3.Callback callback
   ) {
     Call call = context().core().okHttpClient().newCall(requestBuilder, request.context(), request.timeout());
     call.addEventListener(connectionTracker);
@@ -518,9 +518,9 @@ abstract class AbstractOkHttpService implements Service {
    * (the call too, because a streamed result's request is already complete while the rest of the result is read).
    * (Interrupting a virtual thread stops the call by closing its socket.)
    */
-  private void runOnThisThread(Request<?> request, Call call, okhttp3.Callback callback) {
+  private void runOnThisThread(Request<?> request, Call call, com.couchbase.client.core.deps.okhttp3.Callback callback) {
     try (InterruptWatcher.Registration ignored = InterruptWatcher.INSTANCE.watchCurrentThread(request, call)) {
-      okhttp3.Response response;
+      com.couchbase.client.core.deps.okhttp3.Response response;
       try {
         response = call.execute();
       } catch (IOException e) {
@@ -590,7 +590,7 @@ abstract class AbstractOkHttpService implements Service {
   }
 
   private void sendCoreHttpRequest(CoreHttpRequest request, DispatchAttempt attempt) {
-    okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder()
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(url(request.pathAndQueryString()))
       .method(request.method(), requestBody(request.method(), request.contentAsByteArray()));
     request.forEachHeader(requestBuilder::header);

@@ -56,24 +56,18 @@
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- todo shade these (but not kotlin-stdlib) -->
+        <!-- todo shade this -->
         <dependency>
             <groupId>com.couchbase.client</groupId>
             <artifactId>couchbase-socket-options</artifactId>
             <version>0.1.0-SNAPSHOT</version>
         </dependency>
+        <!-- Needed by OkHttp and Okio, which are shaded (see core-io-deps). This is the version OkHttp depends on. -->
         <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp-jvm</artifactId>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>2.1.21</version>
         </dependency>
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp-tls</artifactId>
-        </dependency>
-<!--        <dependency>-->
-<!--            <groupId>com.squareup.okio</groupId>-->
-<!--            <artifactId>okio-jvm</artifactId>-->
-<!--        </dependency>-->
 
         <!-- External, Optional Dependencies -->
         <dependency>
@@ -290,6 +284,28 @@
                             org.slf4j.*,
                             reactor.*,
                             org.reactivestreams.*,
+                            <!-- Used by the shaded OkHttp and Okio. The bundle plugin runs before shading, so it doesn't
+                                 see those references; list each package (a wildcard would match nothing). -->
+                            kotlin,
+                            kotlin.annotation,
+                            kotlin.collections,
+                            kotlin.comparisons,
+                            kotlin.coroutines,
+                            kotlin.coroutines.intrinsics,
+                            kotlin.coroutines.jvm.internal,
+                            kotlin.enums,
+                            kotlin.internal,
+                            kotlin.io,
+                            kotlin.io.path,
+                            kotlin.jvm,
+                            kotlin.jvm.functions,
+                            kotlin.jvm.internal,
+                            kotlin.jvm.internal.markers,
+                            kotlin.ranges,
+                            kotlin.reflect,
+                            kotlin.sequences,
+                            kotlin.text,
+                            kotlin.time,
                             com.google.protobuf;resolution:=optional,
                             com.google.protobuf.nano;resolution:=optional
                         </Import-Package>

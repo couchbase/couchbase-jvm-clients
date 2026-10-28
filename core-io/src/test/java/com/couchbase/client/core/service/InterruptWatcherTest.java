@@ -16,10 +16,10 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.okhttp3.Call;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.util.CbThreads;
-import okhttp3.Call;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

@@ -17,6 +17,7 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.deps.okhttp3.ResponseBody;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -30,7 +31,6 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
-import okhttp3.ResponseBody;
 import org.jspecify.annotations.NullMarked;
 import reactor.core.publisher.Sinks;
 
@@ -85,7 +85,7 @@ final class StreamingJsonResponseHandler {
   static <H, ROW, T, R extends Response> void handle(
     StreamingResponseFormat<H, ROW, T, R> format,
     Request<R> request,
-    okhttp3.Response httpResponse,
+    com.couchbase.client.core.deps.okhttp3.Response httpResponse,
     DispatchAttempt attempt,
     CoreContext retryContext
   ) {
@@ -99,7 +99,7 @@ final class StreamingJsonResponseHandler {
   private static <H, ROW, T, R extends Response> void handleSuccess(
     StreamingResponseFormat<H, ROW, T, R> format,
     Request<R> request,
-    okhttp3.Response httpResponse,
+    com.couchbase.client.core.deps.okhttp3.Response httpResponse,
     DispatchAttempt attempt,
     CoreContext retryContext
   ) {
@@ -250,7 +250,7 @@ final class StreamingJsonResponseHandler {
   private static <H, ROW, T, R extends Response> void handleFailure(
     StreamingResponseFormat<H, ROW, T, R> format,
     Request<R> request,
-    okhttp3.Response httpResponse,
+    com.couchbase.client.core.deps.okhttp3.Response httpResponse,
     DispatchAttempt attempt,
     CoreContext retryContext
   ) {
@@ -348,7 +348,7 @@ final class StreamingJsonResponseHandler {
    * The parser may have given up before reading much of the body, so this first reads the rest
    * of the head from the stream (best effort, since the stream may have failed too).
    */
-  private static DecodingFailureException unparseable(okhttp3.Response response, HeadInterceptInputStream body, Throwable cause) {
+  private static DecodingFailureException unparseable(com.couchbase.client.core.deps.okhttp3.Response response, HeadInterceptInputStream body, Throwable cause) {
     fillHead(body);
     return new DecodingFailureException(
       "Request failed. HTTP status code: " + status(response) + ". Failed to parse response body: " + describe(body),
@@ -361,7 +361,7 @@ final class StreamingJsonResponseHandler {
    * service expected (for example, an error response without any errors in it). For HTTP 400,
    * an {@link InvalidArgumentException}, like the Netty implementation's ChunkedMessageHandler.
    */
-  private static CouchbaseException unexpected(okhttp3.Response response, HeadInterceptInputStream body) {
+  private static CouchbaseException unexpected(com.couchbase.client.core.deps.okhttp3.Response response, HeadInterceptInputStream body) {
     String message = "Request failed. HTTP status code: " + status(response) + ". Response had unexpected structure."
       + " Response body: " + describe(body);
     return response.code() == 400
@@ -373,7 +373,7 @@ final class StreamingJsonResponseHandler {
    * Returns the response's status code and reason phrase (for example, "503 Service Unavailable"),
    * like the Netty implementation's messages.
    */
-  private static String status(okhttp3.Response response) {
+  private static String status(com.couchbase.client.core.deps.okhttp3.Response response) {
     return response.code() + " " + response.message();
   }
 
