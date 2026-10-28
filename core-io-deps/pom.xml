@@ -20,8 +20,8 @@
         <!-- When bumping this, it may be necessary to bump the grpc-netty dependency in protostellar/pom.xml also -->
         <netty.version>4.2.19.Final</netty.version>
         <jackson.version>2.21.7</jackson.version>
-        <!-- Keep these in sync with the root pom, whose versions test-utils uses. -->
-        <okhttp.version>5.5.0</okhttp.version>
+        <!-- Keep these in sync with test-utils' OkHttp version and the root pom's Okio version. -->
+        <okhttp.version>5.5.1</okhttp.version>
         <okio.version>3.18.2</okio.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
