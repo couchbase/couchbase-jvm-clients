@@ -412,10 +412,9 @@ class DocumentRequestTest {
     byte[] value
   ) {
     CompressionConfig config = ctx.compressionConfig();
-    ByteBuf compressed = MemcacheProtocol.tryCompression(value, config.minRatio());
+    byte[] compressed = MemcacheProtocol.tryCompression(value, config.minRatio());
     assertTrue(compressed != null, "the test value should compress");
-    byte[] compressedBytes = bytes(compressed);
     return reference(request, ctx, opcode, MemcacheProtocol.Datatype.SNAPPY.datatype(), cas, durability,
-      preserveExpiry, extras, compressedBytes);
+      preserveExpiry, extras, compressed);
   }
 }

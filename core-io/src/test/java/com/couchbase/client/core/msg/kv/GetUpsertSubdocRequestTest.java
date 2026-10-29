@@ -580,10 +580,10 @@ class GetUpsertSubdocRequestTest {
       byte datatype = 0;
       CompressionConfig config = ctx.compressionConfig();
       if (config != null && config.enabled() && value.length >= config.minSize()) {
-        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(value, config.minRatio());
+        byte[] maybeCompressed = MemcacheProtocol.tryCompression(value, config.minRatio());
         if (maybeCompressed != null) {
           datatype |= MemcacheProtocol.Datatype.SNAPPY.datatype();
-          content = maybeCompressed;
+          content = Unpooled.wrappedBuffer(maybeCompressed);
         } else {
           content = Unpooled.wrappedBuffer(value);
         }
