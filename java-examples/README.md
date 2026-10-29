@@ -95,7 +95,7 @@ karaf@root()>
 ^D
 $
 
-$HOME/log4j.properties - this is the log4j configuration for core-io-deps (netty etc). 
+$HOME/log4j.properties - this is the log4j configuration for the SDK. 
 (Using an xml file requires extra karaf/osgi configuration to access additional xml parsing classes)
 
 # Root logger option

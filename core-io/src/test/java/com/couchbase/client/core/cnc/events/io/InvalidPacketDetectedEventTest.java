@@ -16,13 +16,13 @@
 
 package com.couchbase.client.core.cnc.events.io;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

@@ -17,8 +17,6 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.compression.snappy.SnappyCodec;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -29,6 +27,8 @@ import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 

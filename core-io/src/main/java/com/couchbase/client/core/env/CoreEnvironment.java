@@ -31,8 +31,8 @@ import com.couchbase.client.core.cnc.events.config.HighIdleHttpConnectionTimeout
 import com.couchbase.client.core.cnc.events.config.InsecureSecurityConfigDetectedEvent;
 import com.couchbase.client.core.cnc.metrics.LoggingMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
-import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
+import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -1011,7 +1011,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
      * Specifies the supplier the SDK uses to get the Scheduler for publishing Reactive API results.
      * <p>
      * Defaults to null, which means reactive results are published immediately
-     * in a thread owned by the SDK -- typically the SDK's Netty event loop.
+     * in a thread owned by the SDK -- typically one of the SDK's I/O threads.
      * <p>
      * The supplier is invoked once for every subscription, by the same thread that subscribes to the Mono/Flux.
      *

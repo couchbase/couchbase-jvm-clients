@@ -19,13 +19,10 @@ package com.couchbase.client.core.msg.kv;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.config.ConfigVersion;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
@@ -41,6 +38,7 @@ import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.util.CbStrings;
+import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Sinks;
 

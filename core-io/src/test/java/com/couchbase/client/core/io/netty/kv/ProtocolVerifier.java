@@ -16,9 +16,9 @@
 
 package com.couchbase.client.core.io.netty.kv;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 
 /**
  * Allows to verify certain memcached protocol packets.

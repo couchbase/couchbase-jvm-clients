@@ -16,18 +16,18 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.LastCoreRangeScanItem;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UnsignedLEB128;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Sinks;
 

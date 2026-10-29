@@ -20,7 +20,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.Deserializa
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.SerializationFeature;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.json.JsonMapper;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
 import java.security.MessageDigest;
