@@ -24,6 +24,8 @@
         <okio.version>3.18.2</okio.version>
 
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
+        <!-- Same as shaded.package.prefix, but with slashes. -->
+        <shaded.path.prefix>com/couchbase/client/core/deps/</shaded.path.prefix>
         <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
 
         <native.folder>${project.build.directory}/native</native.folder>
@@ -484,6 +486,56 @@
                         <goals>
                             <goal>shade</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <!-- The Shade plugin doesn't relocate Kotlin sources (OkHttp and Okio).
+                     It only rewrites the contents of *.java files, and Kotlin sources live under
+                     source set directories (like "jvmMain/okio/Buffer.kt") that relocation patterns don't match.
+                     Relocate them here, after shading. Keep the source set directories,
+                     since files in different source sets can have the same name (expect/actual declarations). -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>relocate-kotlin-sources</id>
+                        <!-- Must be declared after maven-shade-plugin, which creates the sources JAR in the same phase. -->
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="sources.jar" value="${project.build.directory}/${project.build.finalName}-sources.jar"/>
+                                <property name="sources.dir" value="${project.build.directory}/relocated-sources"/>
+
+                                <delete dir="${sources.dir}"/>
+                                <unzip src="${sources.jar}" dest="${sources.dir}"/>
+
+                                <move todir="${sources.dir}">
+                                    <fileset dir="${sources.dir}" includes="*/okhttp3/**/*.kt,*/okio/**/*.kt"/>
+                                    <regexpmapper handledirsep="true" from="^([^/]+)/(okhttp3|okio)/(.*)$" to="\1/${shaded.path.prefix}\2/\3"/>
+                                </move>
+
+                                <!-- Match only where a reference starts, so URLs like "square.github.io/okio/" are left alone. -->
+                                <replaceregexp flags="g" byline="true" encoding="UTF-8"
+                                               match="(?&lt;![\w.$/-])(okhttp3|okio)(?=\.\w|;|\s*$)"
+                                               replace="${shaded.package.prefix}\1">
+                                    <fileset dir="${sources.dir}" includes="**/*.kt"/>
+                                </replaceregexp>
+                                <replaceregexp flags="g" byline="true" encoding="UTF-8"
+                                               match="(?&lt;![\w.$/-])(okhttp3|okio)/"
+                                               replace="${shaded.path.prefix}\1/">
+                                    <fileset dir="${sources.dir}" includes="**/*.kt"/>
+                                </replaceregexp>
+
+                                <delete file="${sources.jar}"/>
+                                <jar destfile="${sources.jar}" basedir="${sources.dir}" manifest="${sources.dir}/META-INF/MANIFEST.MF"/>
+                                <delete dir="${sources.dir}"/>
+                            </target>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
