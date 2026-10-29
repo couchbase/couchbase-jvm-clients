@@ -24,10 +24,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.*;
-import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
@@ -50,7 +46,6 @@ public class ServerSearchRequest extends BaseHttpRequest<SearchResponse>
 
     private final String indexName;
     private final byte[] content;
-    private final Authenticator authenticator;
     private final CoreBucketAndScope scope;
 
     public ServerSearchRequest(Duration timeout, CoreContext ctx, RetryStrategy retryStrategy, Authenticator authenticator,
@@ -58,7 +53,6 @@ public class ServerSearchRequest extends BaseHttpRequest<SearchResponse>
         super(timeout, ctx, retryStrategy, span);
         this.indexName = indexName;
         this.content = content;
-        this.authenticator = authenticator;
         this.scope = scope;
 
         if (span != null && !CbTracing.isInternalSpan(span)) {
@@ -66,28 +60,6 @@ public class ServerSearchRequest extends BaseHttpRequest<SearchResponse>
           tip.provideLowCardinalityAttr(TracingAttribute.SERVICE, span, TracingIdentifiers.SERVICE_SEARCH);
           tip.provideLowCardinalityAttr(TracingAttribute.OPERATION, span, indexName);
         }
-    }
-
-    @Override
-    public FullHttpRequest encode() {
-        ByteBuf c = Unpooled.wrappedBuffer(content);
-        String uri;
-        if (scope == null) {
-            uri = CoreHttpPath.formatPath("/api/index/{}/query", indexName);
-        }
-        else {
-            uri = CoreHttpPath.formatPath(
-                    "/api/bucket/{}/scope/{}/index/{}/query",
-                    scope.bucketName(),
-                    scope.scopeName(),
-                    indexName
-            );
-        }
-        FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, uri, c);
-        request.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-        request.headers().set(HttpHeaderNames.CONTENT_LENGTH, c.readableBytes());
-        authenticator.authHttpRequest(serviceType(), request);
-        return request;
     }
 
     @Override

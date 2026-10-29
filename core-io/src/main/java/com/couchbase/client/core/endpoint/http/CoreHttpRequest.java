@@ -26,20 +26,14 @@ import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpHeaders;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.EmptyHttpHeaders;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpResponse;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaders;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.error.HttpStatusCodeException;
-import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseHttpRequest;
-import com.couchbase.client.core.msg.NonChunkedHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
@@ -59,15 +53,13 @@ import java.util.function.Consumer;
 
 import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
 import static com.couchbase.client.core.endpoint.http.CoreHttpTimeoutHelper.resolveTimeout;
-import static com.couchbase.client.core.io.netty.HttpProtocol.decodeStatus;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.util.CbObjects.defaultIfNull;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
-public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
-    implements NonChunkedHttpRequest<CoreHttpResponse> {
+public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
 
   private final RequestTarget target;
   private final HttpMethod method;
@@ -133,20 +125,6 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
   }
 
   @Override
-  public FullHttpRequest encode() {
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method, pathAndQueryString(), content);
-    request.headers().add(headers);
-    context().authenticator().authHttpRequest(serviceType(), request);
-    return request;
-  }
-
-  @Override
-  public CoreHttpResponse decode(FullHttpResponse response, HttpChannelContext channelContext) {
-    byte[] content = ByteBufUtil.getBytes(response.content());
-    return new CoreHttpResponse(decodeStatus(response.status()), content, response.status().code(), channelContext, context());
-  }
-
-  @Override
   public ServiceType serviceType() {
     return target.serviceType();
   }
@@ -204,12 +182,22 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
         '}';
   }
 
-  @Override
+  /**
+   * If true, a non-2xx HTTP status code must be reported as an {@link HttpStatusCodeException}.
+   * This lets users see the raw HTTP response when making their own HTTP requests with CouchbaseHttpClient.
+   * <p>
+   * If false, the service may throw a domain-specific exception instead.
+   */
   public boolean bypassExceptionTranslation() {
     return bypassExceptionTranslation;
   }
 
-  @Override
+  /**
+   * If true (the default), a non-2xx HTTP status code fails the request.
+   * <p>
+   * If false, the request completes with a response whatever the HTTP status code,
+   * and it's up to the caller to check the status.
+   */
   public boolean failOnErrorStatus() {
     return failOnErrorStatus;
   }
@@ -314,11 +302,11 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
 
     /**
      * If true, a non-2xx HTTP status codes is always reported as an {@link HttpStatusCodeException}.
-     * If false, the message handler may throw a domain-specific exception instead.
+     * If false, the service may throw a domain-specific exception instead.
      * <p>
      * Defaults to false.
      *
-     * @see NonChunkedHttpRequest#bypassExceptionTranslation
+     * @see CoreHttpRequest#bypassExceptionTranslation
      */
     public Builder bypassExceptionTranslation(boolean bypass) {
       this.bypassExceptionTranslation = bypass;
@@ -332,7 +320,7 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse>
      * <p>
      * Defaults to true.
      *
-     * @see NonChunkedHttpRequest#failOnErrorStatus
+     * @see CoreHttpRequest#failOnErrorStatus
      */
     public Builder failOnErrorStatus(boolean fail) {
       this.failOnErrorStatus = fail;
