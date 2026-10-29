@@ -16,12 +16,9 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.java.codec.JsonSerializer;
 
+import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
 import java.util.List;
 
@@ -47,20 +44,17 @@ public class MutateInUtil {
     if (docs.size() == 1) {
       return serializer.serialize(docs.get(0));
     } else {
-      final ByteBuf bytes = UnpooledByteBufAllocator.DEFAULT.heapBuffer();
-      try {
-        final Iterator<?> it = docs.iterator();
-        while (it.hasNext()) {
-          Object d = it.next();
-          bytes.writeBytes(serializer.serialize(d));
-          if (it.hasNext()) {
-            bytes.writeByte(',');
-          }
+      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+      Iterator<?> it = docs.iterator();
+      while (it.hasNext()) {
+        Object d = it.next();
+        byte[] serialized = serializer.serialize(d);
+        bytes.write(serialized, 0, serialized.length);
+        if (it.hasNext()) {
+          bytes.write(',');
         }
-        return ByteBufUtil.getBytes(bytes);
-      } finally {
-        bytes.release();
       }
+      return bytes.toByteArray();
     }
   }
 
