@@ -73,7 +73,7 @@ class CouchbaseSocketFactoryTest {
   void setsConfiguredOptionsOnceConnected() throws Exception {
     IoConfig ioConfig = IoConfig.builder()
       .tcpKeepAliveTime(Duration.ofSeconds(30))
-      .tcpKeepAliveInterval(Duration.ofMillis(4500)) // rounded up to whole seconds, like the Netty endpoints
+      .tcpKeepAliveInterval(Duration.ofMillis(4500)) // rounded up to whole seconds
       .tcpKeepAliveCount(3)
       .tcpUserTimeout(Duration.ofSeconds(12))
       .build();

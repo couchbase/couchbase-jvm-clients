@@ -46,15 +46,9 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
-import com.couchbase.client.core.io.netty.kv.ErrorMapLoadingHandler;
-import com.couchbase.client.core.io.netty.kv.FeatureNegotiatingHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
-import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
-import com.couchbase.client.core.io.netty.kv.SelectBucketHandler;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
-import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.CouchbaseSaslClientFactory;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.json.Mapper;
@@ -95,13 +89,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 /**
- * The handshake of a KV connection that doesn't use Netty: what the Netty pipeline's {@link FeatureNegotiatingHandler},
- * {@link ErrorMapLoadingHandler}, {@link SaslListMechanismsHandler}, {@link SaslAuthenticationHandler} and
- * {@link SelectBucketHandler} do, with the same events and errors, but blocking, on the connecting thread.
+ * The handshake of a KV connection: negotiates features (HELLO), loads the error map, authenticates (SASL)
+ * and selects the bucket, blocking, on the connecting thread.
  * <p>
- * Like the Netty handlers, it pipelines requests: it sends HELLO, GET_ERROR_MAP, SASL_LIST_MECHS and the first
+ * It pipelines requests: it sends HELLO, GET_ERROR_MAP, SASL_LIST_MECHS and the first
  * SASL_AUTH together, then SELECT_BUCKET along with the last SASL request (or right away, without SASL).
- * Unlike them, it matches each response to its request by opaque, so it can skip the response to a SELECT_BUCKET
+ * It matches each response to its request by opaque, so it can skip the response to a SELECT_BUCKET
  * it sent before restarting SASL authentication with other mechanisms.
  * <p>
  * Not thread-safe; use once.
@@ -144,9 +137,23 @@ final class KeyValueHandshake implements CallbackHandler {
   }
 
   /**
-   * Version of the error map to ask for (same as ErrorMapLoadingHandler).
+   * Version of the error map to ask for.
    */
   private static final short ERROR_MAP_VERSION = 2;
+
+  /**
+   * Hint added to the message when SASL authentication fails, since a mismatched mechanism is a common reason.
+   */
+  static final String LDAP_ADMONITION = "If you are using LDAP you must either" +
+    " connect via TLS (recommended), or enable _only_ PLAIN in the allowed SASL mechanisms list on the PasswordAuthenticator" +
+    " (without TLS this is insecure and will present the user credentials in plain-text over the wire).";
+
+  // Names of the handshake steps in the connect timings (see EndpointConnectedEvent).
+  private static final String HELLO_STEP = "FeatureNegotiatingHandler";
+  private static final String ERROR_MAP_STEP = "ErrorMapLoadingHandler";
+  private static final String SASL_LIST_MECHS_STEP = "SaslListMechanismsHandler";
+  private static final String SASL_AUTH_STEP = "SaslAuthenticationHandler";
+  private static final String SELECT_BUCKET_STEP = "SelectBucketHandler";
 
   private static final short STATUS_AUTH_ERROR = 0x20;
   private static final short STATUS_AUTH_CONTINUE = 0x21;
@@ -162,13 +169,13 @@ final class KeyValueHandshake implements CallbackHandler {
   private final String channelId;
 
   /**
-   * How long each step took, keyed like the Netty implementation's connect timings (by handler name).
+   * How long each step took, keyed by step name (see {@link #HELLO_STEP} and the others).
    */
   private final SortedMap<String, Duration> timings;
   private final Map<String, Long> timingStarts = new HashMap<>();
 
   /**
-   * What the handshake is waiting for, for the timeout message (worded like the Netty handlers').
+   * What the handshake is waiting for, for the timeout message.
    */
   private String waitingFor = "KV Feature Negotiation";
 
@@ -224,7 +231,6 @@ final class KeyValueHandshake implements CallbackHandler {
     try {
       return doRun();
     } catch (SocketTimeoutException e) {
-      // Like the Netty handlers' timeouts, which fail the connect attempt with a TimeoutException.
       TimeoutException timeout = new TimeoutException(waitingFor + " timed out after " + connectTimeout.toMillis() + "ms");
       timeout.initCause(e);
       throw timeout;
@@ -240,18 +246,18 @@ final class KeyValueHandshake implements CallbackHandler {
         body.putShort(feature.value());
       }
     });
-    startTiming(FeatureNegotiatingHandler.class);
+    startTiming(HELLO_STEP);
 
     int errorMapOpaque = write(Opcode.ERROR_MAP, request -> request.valueWriter().putShort(ERROR_MAP_VERSION));
-    startTiming(ErrorMapLoadingHandler.class);
+    startTiming(ERROR_MAP_STEP);
 
     int listMechanismsOpaque = 0;
     if (credentials != null) {
       listMechanismsOpaque = write(Opcode.SASL_LIST_MECHS, request -> {
         // no key or value
       });
-      startTiming(SaslListMechanismsHandler.class);
-      startTiming(SaslAuthenticationHandler.class);
+      startTiming(SASL_LIST_MECHS_STEP);
+      startTiming(SASL_AUTH_STEP);
       startAuthentication(credentials.allowedMechanisms());
     } else {
       maybeSelectBucket();
@@ -277,7 +283,7 @@ final class KeyValueHandshake implements CallbackHandler {
     return new Result(features, errorMap);
   }
 
-  // ---- HELLO (like FeatureNegotiatingHandler)
+  // ---- HELLO
 
   private byte[] helloKey() {
     TreeMap<String, String> result = new TreeMap<>();
@@ -296,11 +302,10 @@ final class KeyValueHandshake implements CallbackHandler {
 
   private Set<ServerFeature> readHello(int opaque) throws IOException {
     KeyValuePacket response = read(opaque);
-    Duration latency = stopTiming(FeatureNegotiatingHandler.class);
+    Duration latency = stopTiming(HELLO_STEP);
 
     if (!successful(response)) {
       eventBus.publish(new FeaturesNegotiationFailedEvent(ioContext, response.status()));
-      // Like FeatureNegotiatingHandler, which fails the connect attempt.
       throw new CouchbaseException(
         "Error while parsing negotiated server features.",
         new CouchbaseException(
@@ -334,11 +339,11 @@ final class KeyValueHandshake implements CallbackHandler {
     return negotiated;
   }
 
-  // ---- GET_ERROR_MAP (like ErrorMapLoadingHandler)
+  // ---- GET_ERROR_MAP
 
   private @Nullable ErrorMap readErrorMap(int opaque) throws IOException {
     KeyValuePacket response = read(opaque);
-    Duration latency = stopTiming(ErrorMapLoadingHandler.class);
+    Duration latency = stopTiming(ERROR_MAP_STEP);
     waitingFor = credentials != null ? "SASL Mechanism listing" : "KV Select Bucket loading";
 
     if (!successful(response)) {
@@ -364,11 +369,11 @@ final class KeyValueHandshake implements CallbackHandler {
     }
   }
 
-  // ---- SASL_LIST_MECHS (like SaslListMechanismsHandler)
+  // ---- SASL_LIST_MECHS
 
   private void readMechanisms(int opaque) throws IOException {
     KeyValuePacket response = read(opaque);
-    Duration latency = stopTiming(SaslListMechanismsHandler.class);
+    Duration latency = stopTiming(SASL_LIST_MECHS_STEP);
     waitingFor = "KV SASL Negotiation";
 
     if (!successful(response)) {
@@ -402,7 +407,7 @@ final class KeyValueHandshake implements CallbackHandler {
     return new AuthenticationFailureException(message, errorContext, null);
   }
 
-  // ---- SASL_AUTH and SASL_STEP (like SaslAuthenticationHandler)
+  // ---- SASL_AUTH and SASL_STEP
 
   /**
    * Sends the first SASL request, using one of the given mechanisms (and SELECT_BUCKET too, if that's the only request).
@@ -457,7 +462,7 @@ final class KeyValueHandshake implements CallbackHandler {
       } else if (status == STATUS_AUTH_ERROR) {
         String message = "User authentication failed; check username and password.";
         if (!requireNonNull(credentials).allowedMechanisms().equals(setOf(SaslMechanism.PLAIN))) {
-          message += " " + SaslAuthenticationHandler.LDAP_ADMONITION;
+          message += " " + LDAP_ADMONITION;
         }
         restartAuthenticationOrFail(message, response, status);
       } else {
@@ -517,14 +522,14 @@ final class KeyValueHandshake implements CallbackHandler {
       }
     }
 
-    Duration latency = stopTiming(SaslAuthenticationHandler.class);
+    Duration latency = stopTiming(SASL_AUTH_STEP);
     endpointContext.authenticationStatus(AuthenticationStatus.SUCCEEDED);
     eventBus.publish(new SaslAuthenticationCompletedEvent(latency, ioContext));
     waitingFor = "KV Select Bucket loading";
   }
 
   /**
-   * Like SaslAuthenticationHandler's maybeFailConnect: since the first SASL request is sent before the client knows
+   * Since the first SASL request is sent before the client knows
    * which mechanisms the server supports, authentication may have failed only because the client used a mechanism
    * the server doesn't support (for example, the server uses LDAP, which needs PLAIN). If so, tries again with
    * the mechanisms both support. Otherwise, fails.
@@ -541,7 +546,7 @@ final class KeyValueHandshake implements CallbackHandler {
       .collect(Collectors.toSet());
     if (mergedMechanisms.isEmpty()) {
       throw failAuthentication(
-        "Could not negotiate SASL mechanism with server. " + SaslAuthenticationHandler.LDAP_ADMONITION,
+        "Could not negotiate SASL mechanism with server. " + LDAP_ADMONITION,
         response, null, status
       );
     }
@@ -565,9 +570,9 @@ final class KeyValueHandshake implements CallbackHandler {
     @Nullable Throwable cause,
     short status
   ) {
-    Duration latency = stopTiming(SaslAuthenticationHandler.class);
+    Duration latency = stopTiming(SASL_AUTH_STEP);
 
-    // Unlike SaslAuthenticationHandler, never includes a copy of an invalid packet: packets are checked as they're read.
+    // Never includes a copy of an invalid packet: packets are checked as they're read.
     byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
     Map<String, Object> serverContext = null;
     if (lastPacket != null) {
@@ -607,11 +612,10 @@ final class KeyValueHandshake implements CallbackHandler {
     }
   }
 
-  // ---- SELECT_BUCKET (like SelectBucketHandler)
+  // ---- SELECT_BUCKET
 
   /**
-   * Like SaslAuthenticationHandler, which lets the next handler (selecting the bucket) send its request
-   * along with the last SASL request.
+   * Sends SELECT_BUCKET along with the last SASL request, to save a round trip.
    */
   private void maybeSelectBucketAfterLastSaslRequest() throws IOException {
     if (roundtripsToGo == 1) {
@@ -626,13 +630,13 @@ final class KeyValueHandshake implements CallbackHandler {
     byte[] bucket = bucketName.get().getBytes(UTF_8);
     selectBucketOpaque = write(Opcode.SELECT_BUCKET, request -> request.key(bucket));
     selectBucketSent = true;
-    startTiming(SelectBucketHandler.class);
+    startTiming(SELECT_BUCKET_STEP);
   }
 
   private void readSelectBucket() throws IOException {
     String bucket = bucketName.orElseThrow(IllegalStateException::new);
     KeyValuePacket response = read(selectBucketOpaque);
-    Duration latency = stopTiming(SelectBucketHandler.class);
+    Duration latency = stopTiming(SELECT_BUCKET_STEP);
 
     short status = response.status();
     if (status == MemcacheProtocol.Status.SUCCESS.status()) {
@@ -694,8 +698,8 @@ final class KeyValueHandshake implements CallbackHandler {
     while (true) {
       KeyValuePacket packet = io.read();
 
-      if (ServerPushHandler.isServerPush(packet)) {
-        ServerPushHandler.handleServerPush(endpointContext, packet);
+      if (KeyValueServerPush.isServerPush(packet)) {
+        KeyValueServerPush.handleServerPush(endpointContext, packet);
         continue;
       }
 
@@ -712,17 +716,17 @@ final class KeyValueHandshake implements CallbackHandler {
     }
   }
 
-  private void startTiming(Class<?> step) {
-    timingStarts.put(step.getSimpleName(), System.nanoTime());
+  private void startTiming(String step) {
+    timingStarts.put(step, System.nanoTime());
   }
 
-  private Duration stopTiming(Class<?> step) {
-    Long start = timingStarts.remove(step.getSimpleName());
+  private Duration stopTiming(String step) {
+    Long start = timingStarts.remove(step);
     if (start == null) {
       return Duration.ZERO;
     }
     Duration latency = Duration.ofNanos(System.nanoTime() - start);
-    timings.put(step.getSimpleName(), latency);
+    timings.put(step, latency);
     return latency;
   }
 }

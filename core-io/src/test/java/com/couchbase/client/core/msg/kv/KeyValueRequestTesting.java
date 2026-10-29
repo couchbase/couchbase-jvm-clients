@@ -30,12 +30,12 @@ import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.Response;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -77,7 +77,6 @@ final class KeyValueRequestTesting {
     KeyValueChannelContext ctx,
     byte[] expected
   ) throws IOException {
-    // The socket connection's writer.
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     KeyValueRequestWriter writer = newWriter(out, ctx);
     writer.makeRoomForRequest();
@@ -87,32 +86,27 @@ final class KeyValueRequestTesting {
     writer.finishRequest();
     writer.flush();
     assertArrayEquals(expected, out.toByteArray());
-
-    // The Netty implementation's encoder: a channel's, used twice (so the second time it's reused).
-    NettyKeyValueRequestEncoder channelEncoder = new NettyKeyValueRequestEncoder(ALLOC, ctx);
-    for (ByteBuf encoded : Arrays.asList(
-      channelEncoder.encode(request, OPAQUE),
-      channelEncoder.encode(request, OPAQUE)
-    )) {
-      try {
-        assertTrue(MemcacheProtocol.verifyRequest(encoded));
-        assertArrayEquals(expected, ByteBufUtil.getBytes(encoded));
-      } finally {
-        encoded.release();
-      }
-    }
+    assertTrue(MemcacheProtocol.verifyRequest(Unpooled.wrappedBuffer(expected)));
   }
 
   /**
-   * Encodes the request with a new encoder like the Netty implementation's. Throws if the request can't be encoded.
+   * Encodes the request with a new writer. Throws if the request can't be encoded.
    */
   static ByteBuf encode(KeyValueRequest<?> request, KeyValueChannelContext ctx) {
-    return new NettyKeyValueRequestEncoder(ALLOC, ctx).encode(request, OPAQUE);
+    KeyValueRequestWriter writer = newWriter(new ByteArrayOutputStream(), ctx);
+    try {
+      writer.makeRoomForRequest();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    request.encodeTo(writer);
+    writer.completeRequestHead(OPAQUE);
+    return Unpooled.wrappedBuffer(writer.requestBytes());
   }
 
   /**
-   * Decodes the response directly from a packet, and from packet views (like the Netty implementation's) of a heap
-   * buffer, of direct buffers (like Netty's), and of a composite buffer.
+   * Decodes the response directly from a packet, and from packet views of a heap
+   * buffer, of direct buffers, and of a composite buffer.
    */
   static <R extends Response> List<R> decodeEveryWay(
     KeyValueRequest<R> request,

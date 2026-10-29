@@ -41,8 +41,7 @@ import java.util.function.Supplier;
 import static java.util.Objects.requireNonNull;
 
 /**
- * An SSL socket factory that uses a new {@link SSLContext} for every connection, like the Netty
- * implementation (which built a new {@code SslContext} for every connection).
+ * An SSL socket factory that uses a new {@link SSLContext} for every connection.
  * <p>
  * Each context is created with the client certificate and trust manager the suppliers provide at that
  * moment, so every new connection presents the current client certificate, and trusts the currently
@@ -131,11 +130,11 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
     X509TrustManager trustManager;
     try {
       KeyManagerFactory factory = clientCertificates.get();
-      // Like the Netty implementation, null if there's no client certificate.
+      // Null if there's no client certificate.
       // (With the JDK's TLS provider, that means no client certificate is presented.)
       keyManagers = factory == null ? null : factory.getKeyManagers();
-      // Logs the server's certificate chain: at debug level if it's trusted, like the Netty implementation's
-      // TLS session logging, and at warning level if it isn't, so a failed handshake can be diagnosed.
+      // Logs the server's certificate chain: at debug level if it's trusted,
+      // and at warning level if it isn't, so a failed handshake can be diagnosed.
       trustManager = CertificateLoggingTrustManager.wrap(trustManagers.get(), reportedUntrustedChains);
     } catch (RuntimeException e) {
       // For example, the authenticator couldn't provide the client certificate.

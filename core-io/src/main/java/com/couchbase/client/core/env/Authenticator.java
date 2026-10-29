@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
@@ -44,21 +43,8 @@ import javax.net.ssl.KeyManagerFactory;
 public interface Authenticator {
 
   /**
-   * Allows the authenticator to add KV handlers during connection bootstrap to perform
-   * authentication.
-   *
-   * @param endpointContext the endpoint context.
-   * @param pipeline the pipeline when the endpoint is constructed.
-   */
-  @Stability.Internal
-  default void authKeyValueConnection(final EndpointContext endpointContext, final ChannelPipeline pipeline) { }
-
-  /**
-   * Like {@link #authKeyValueConnection}, for KV connections that don't use Netty: returns the credentials the
-   * connection authenticates with using SASL, or null if it doesn't use SASL (like the default
-   * {@link #authKeyValueConnection}, which adds no handlers; for example, it authenticates with a client certificate).
-   * <p>
-   * An authenticator that overrides {@link #authKeyValueConnection} should override this too.
+   * Returns the credentials a KV connection authenticates with using SASL, or null if it doesn't use SASL
+   * (for example, it authenticates with a client certificate).
    *
    * @param endpointContext the endpoint context.
    */

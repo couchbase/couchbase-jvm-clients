@@ -321,7 +321,7 @@ abstract class PooledService implements Service {
         .filter(s -> s == EndpointState.CONNECTED || s == EndpointState.DISCONNECTED)
         // Once we see the first CONNECTED or DISCONNECTED, unsubscribe
         .takeUntil(s -> s == EndpointState.CONNECTED || s == EndpointState.DISCONNECTED)
-        // We MUST move it to another scheduler, or the netty IO thread is blocked of the send below
+        // We MUST move it to another scheduler, or the endpoint's IO thread is blocked of the send below
         .publishOn(context().environment().scheduler())
         .subscribe(s -> {
           synchronized (PooledService.this) {

@@ -101,7 +101,7 @@ public final class DispatchAttempt {
     }
 
     if (!permit.tracksOutcome()) {
-      // Same as the Netty implementation, which doesn't call the callback when the circuit breaker is disabled.
+      // The callback isn't called when the circuit breaker is disabled.
       permit.release();
       return;
     }
@@ -153,8 +153,7 @@ public final class DispatchAttempt {
    * Records the outcome of an attempt that failed before the request was sent to the node:
    * while resolving the node's address, connecting, or doing the TLS handshake.
    * <p>
-   * Does not consult the completion callback. As with the Netty implementation, the callback
-   * only judges requests that reached the node. Instead:
+   * Does not consult the completion callback, which only judges requests that reached the node. Instead:
    * <ul>
    *   <li>OkHttp's connect timeout counts as a failure. The node did not accept the
    *       connection in time, and each such attempt ties up an in-flight slot while it waits,

@@ -396,7 +396,7 @@ class NodeConnectionTrackerTest {
     EndpointDiagnostics d = only(tracker.diagnostics());
     verify(requestContext).lastChannelId(d.id().orElseThrow(AssertionError::new));
     verify(requestContext).lastDispatchedFrom(new HostAndPort("127.0.0.1", 50000));
-    // The node's configured address, not the socket's resolved remote address (127.0.0.2), as with Netty.
+    // The node's configured address, not the socket's resolved remote address (127.0.0.2).
     verify(requestContext).lastDispatchedTo(new HostAndPort("node1", 8093));
   }
 
@@ -422,7 +422,7 @@ class NodeConnectionTrackerTest {
     tracker.connectFailed(call, NODE_ADDR, Proxy.NO_PROXY, null, refused);
     tracker.callFailed(call, refused);
 
-    // As with Netty, a request that never got a connection was never dispatched.
+    // A request that never got a connection was never dispatched.
     verifyNoInteractions(requestContext);
   }
 
@@ -580,7 +580,7 @@ class NodeConnectionTrackerTest {
     assertEquals(2, events.get(1).attempt());
     assertTrue(events.get(0).description().contains("Connection refused"), events.get(0).description());
 
-    // A connection resets the count, like the Netty endpoints' connect attempts.
+    // A connection resets the count.
     tracker.connectionAcquired(newCall(), newConnection(newSocket(50000)));
     failToConnect(tracker, newCall(), new ConnectException("Connection refused"));
     assertEquals(1, events(EndpointConnectionFailedEvent.class).get(2).attempt());
@@ -605,7 +605,7 @@ class NodeConnectionTrackerTest {
     IOException annotated = NodeConnectionTracker.annotateConnectException(okHttpFailure, false);
     assertEquals(ConnectException.class, annotated.getClass());
     assertEquals("Failed to connect to /127.0.0.1:8093: Connection refused" + TLS_HINT, annotated.getMessage());
-    assertNull(annotated.getCause()); // like the Netty endpoints': one line in the WARN log
+    assertNull(annotated.getCause()); // one line in the WARN log
     assertEquals(0, annotated.getStackTrace().length);
 
     assertEquals("Connection refused: connect" + TLS_HINT, // Windows

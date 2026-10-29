@@ -275,7 +275,7 @@ class NioKeyValueEndpointTest {
     startServer();
     NioKeyValueEndpoint endpoint = connectedEndpoint();
 
-    // In the order the Netty implementation sends them: SELECT_BUCKET is pipelined with SASL_AUTH, since PLAIN has one round trip.
+    // SELECT_BUCKET is pipelined with SASL_AUTH, since PLAIN has one round trip.
     List<Opcode> handshake = server.receivedSoFar().stream()
       .map(it -> Opcode.of(it.opcode()))
       .collect(Collectors.toList());
@@ -297,7 +297,7 @@ class NioKeyValueEndpointTest {
     FeaturesNegotiatedEvent negotiated = waitForEvent(FeaturesNegotiatedEvent.class);
     assertTrue(negotiated.negotiated().contains(ServerFeature.COLLECTIONS));
 
-    // (The endpoint's context is replaced once it connects, so its authentication status is unknown, like BaseEndpoint's.)
+    // (The endpoint's context is replaced once it connects, so its authentication status is unknown.)
     waitForEvent(SaslAuthenticationCompletedEvent.class);
     EndpointConnectedEvent connected = waitForEvent(EndpointConnectedEvent.class);
     assertTrue(connected.timings().containsKey("SelectBucketHandler"), connected.timings().toString());
@@ -540,7 +540,7 @@ class NioKeyValueEndpointTest {
     waitUntil(() -> endpoint.state() == EndpointState.CONNECTED
       && !endpoint.context().channelId().orElse("").equals(firstChannelId));
 
-    // Like the Netty implementation, the server closing the connection isn't reported as a failure.
+    // The server closing the connection isn't reported as a failure.
     assertTrue(events(GenericFailureDetectedEvent.class).isEmpty());
   }
 
@@ -728,7 +728,7 @@ class NioKeyValueEndpointTest {
   }
 
   /**
-   * Like a server that's restarting. Like the Netty implementation, records the handshake failure,
+   * Like a server that's restarting. Records the handshake failure,
    * but doesn't treat it as a TLS (or authentication) failure, since it might be temporary.
    */
   @Test
@@ -1028,7 +1028,6 @@ class NioKeyValueEndpointTest {
   @ParameterizedTest
   @ValueSource(longs = {0, -1000})
   void noIdleDetectionWhenIdleTimeoutIsNotPositive(long idleTimeoutMillis) throws Exception {
-    // Like the Netty implementation, where a timeout that's not positive turns off its IdleStateHandler.
     start(env -> env.ioConfig(it -> it.configIdleRedialTimeout(Duration.ofMillis(idleTimeoutMillis))));
     startServer();
     NioKeyValueEndpoint endpoint = connectedEndpoint();
@@ -1281,7 +1280,7 @@ class NioKeyValueEndpointTest {
     endpoint.send(request);
     request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
-    // Like the Netty implementation's TrafficCaptureHandler: every packet, handshake included.
+    // Every packet, handshake included.
     List<String> written = events(WriteTrafficCapturedEvent.class).stream().map(Event::description).collect(Collectors.toList());
     List<String> read = events(ReadTrafficCapturedEvent.class).stream().map(Event::description).collect(Collectors.toList());
     assertTrue(written.stream().anyMatch(it -> it.contains("(HELLO)")), String.join("", written));

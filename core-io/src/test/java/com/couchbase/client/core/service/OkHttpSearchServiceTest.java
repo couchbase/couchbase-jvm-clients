@@ -197,7 +197,7 @@ class OkHttpSearchServiceTest {
     SearchResponse response = send(newSearchRequest("my index", new CoreBucketAndScope("my-bucket", "my-scope")));
     assertTrue(rows(response).isEmpty());
 
-    // Same encoding as CoreHttpPath.formatPath, used by the Netty implementation.
+    // Same encoding as CoreHttpPath.formatPath.
     assertEquals("/api/bucket/my-bucket/scope/my-scope/index/my%20index/query", server.requests().get(0).path);
   }
 
@@ -291,7 +291,7 @@ class OkHttpSearchServiceTest {
     List<String> received = response.rows()
       .map(row -> new String(row.data(), UTF_8))
       .onErrorResume(e -> {
-        // Like the Netty implementation, the message has the raw JSON value of the error field.
+        // The message has the raw JSON value of the error field.
         assertTrue(e.getMessage().startsWith("Unknown search error: \"something went wrong\""), e.getMessage());
         return Flux.just("<error>");
       })
@@ -300,7 +300,7 @@ class OkHttpSearchServiceTest {
 
     assertEquals(asList("{\"id\":\"a\"}", "<error>"), received);
 
-    // Like the Netty implementation, the trailer still succeeds.
+    // The trailer still succeeds.
     assertNotNull(response.trailer().block(Duration.ofSeconds(30)));
   }
 

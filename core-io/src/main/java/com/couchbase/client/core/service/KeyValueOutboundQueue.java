@@ -31,10 +31,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * A {@link NioKeyValueConnection}'s requests waiting to be written.
  * <ul>
- *   <li>Writability, like Netty's channel writability: once more than the high water mark of bytes is waiting,
+ *   <li>Writability: once more than the high water mark of bytes is waiting,
  *       the connection isn't writable until less than the low water mark is. Requests are queued unencoded
- *       (the event loop encodes them), so each counts as {@value #UNENCODED_REQUEST_SIZE} bytes, like a write the
- *       Netty implementation's event loop hasn't encoded yet.
+ *       (the event loop encodes them), so each counts as {@value #UNENCODED_REQUEST_SIZE} bytes.
  *   <li>Closing: once the connection is closed, {@link #drain} returns what was never written, and from then on,
  *       {@link #add} refuses requests, so none is left behind.
  * </ul>
@@ -64,9 +63,8 @@ final class KeyValueOutboundQueue {
   }
 
   /**
-   * How many bytes a queued (not yet encoded) request counts as, for writability: like the Netty implementation,
-   * where a write submitted from outside the event loop counts as its message size estimate (8 bytes for a request)
-   * plus the write task overhead (32 bytes), until the event loop encodes it.
+   * How many bytes a queued (not yet encoded) request counts as, for writability, until the event loop encodes it:
+   * an estimate of the request's size (8 bytes) plus the overhead of the write task (32 bytes).
    */
   static final int UNENCODED_REQUEST_SIZE = 40;
 

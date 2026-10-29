@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.okhttp3.HttpUrl;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
-import com.couchbase.client.core.io.netty.query.NonChunkedQueryMessageHandler;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.util.HostAndPort;
@@ -74,6 +74,14 @@ public class OkHttpQueryService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return NonChunkedQueryMessageHandler.errorToThrowable(responseBody);
+    return errorToThrowable(responseBody);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the query service.
+   */
+  static Exception errorToThrowable(String content) {
+    // todo: this needs to be cleaned up with the management apis later
+    return new CouchbaseException("Unknown query error: " + content);
   }
 }

@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
 import com.couchbase.client.core.env.CouchbaseThreadFactory;
-import com.couchbase.client.core.node.Node;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,9 +61,7 @@ public class AppTelemetryReporterImpl implements AppTelemetryReporter {
   ) {
     this.collector = requireNonNull(collector);
 
-    AppTelemetryClient webSocketClient = Node.useNetty()
-      ? new AppTelemetryWebSocketClient(ctx, collector)
-      : new OkHttpAppTelemetryWebSocketClient(ctx, collector);
+    AppTelemetryClient webSocketClient = new OkHttpAppTelemetryWebSocketClient(ctx, collector);
 
     // The worker thread spends most of its time blocking,
     // waiting for at least one eligible host to appear,

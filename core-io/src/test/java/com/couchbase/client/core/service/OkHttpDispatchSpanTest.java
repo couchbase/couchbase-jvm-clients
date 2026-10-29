@@ -131,7 +131,7 @@ class OkHttpDispatchSpanTest {
   }
 
   @Test
-  void dispatchSpanHasTheSameAttributesAsNetty() throws Exception {
+  void dispatchSpanHasTheExpectedAttributes() throws Exception {
     server.enqueue("ok");
     CoreHttpRequest request = send(server.port());
     request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
@@ -163,7 +163,6 @@ class OkHttpDispatchSpanTest {
 
   @Test
   void requestThatCantConnectHasNoDispatchSpan() throws Exception {
-    // Like Netty, which only dispatches requests on a channel that's connected.
     CoreHttpRequest request = send(TestHttpServer.unusedPort());
     assertThrows(ExecutionException.class, () -> request.response().get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
 

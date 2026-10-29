@@ -188,7 +188,7 @@ class NodeConnectionTrackerIntegrationTest {
     assertTrue(d.id().isPresent());
 
     // Like the pool closing the connection after the keep-alive period, but at a time the test controls.
-    // An idle node with a closed circuit reports nothing, like an idle Netty pool.
+    // An idle node with a closed circuit reports nothing.
     client.connectionPool().evictAll();
     waitUntilCondition(() -> tracker.diagnostics().isEmpty(), WAIT);
   }

@@ -28,46 +28,23 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 
 import static com.couchbase.client.core.io.TrafficCaptureMasking.MASKED;
-import static com.couchbase.client.core.io.TrafficCaptureMasking.maskSecretFields;
-import static com.couchbase.client.core.io.TrafficCaptureMasking.replaceAll;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 
 /**
- * Describes captured traffic (see {@code io.servicesToCapture}) for traffic capture events: hex dumps, KV packets,
- * and outbound HTTP requests, with credentials masked. Shared by the Netty endpoints' {@code TrafficCaptureHandler},
- * the NIO KV connections, and the OkHttp services' {@code TrafficCaptureInterceptor}, so they all describe traffic
- * the same way.
+ * Describes captured traffic (see {@code io.servicesToCapture}) for traffic capture events: hex dumps and KV packets,
+ * with credentials masked. Shared by the NIO KV connections and the OkHttp services'
+ * {@code TrafficCaptureInterceptor}, so they all describe traffic the same way.
  * <p>
- * Credentials are masked: the bodies of KV SASL packets are never dumped (not even their length). In outbound HTTP
- * requests, the values of the {@code Authorization} and {@code Content-Length} headers and the values of known secret
- * fields in form-encoded and JSON request bodies are replaced with a placeholder. Document keys and KV hex dumps are
- * tagged as user data for log redaction.
+ * Credentials are masked: the bodies of KV SASL packets are never dumped (not even their length).
+ * Document keys and KV hex dumps are tagged as user data for log redaction.
  */
 @NullMarked
 @Stability.Internal
 public final class TrafficCaptureFormat {
   private TrafficCaptureFormat() {
   }
-
-  /**
-   * Matches the value of an HTTP Authorization header. Group 1 is the header name plus the
-   * auth scheme (if present), which are kept; the rest of the line (the credential) is masked.
-   */
-  private static final Pattern AUTHORIZATION_HEADER = Pattern.compile(
-    "(?im)^(authorization[ \\t]*:[ \\t]*(?:[!#$%&'*+.^_`|~0-9a-z-]+[ \\t]+)?)[^\\r\\n]*"
-  );
-
-  /**
-   * Matches the value of an HTTP Content-Length header. Masked on every outbound request because
-   * when a body field is masked, the original length would reveal the length of the secret.
-   * Nothing is lost: an unmasked body is dumped in full, and its length is visible in the dump.
-   */
-  private static final Pattern CONTENT_LENGTH_HEADER = Pattern.compile(
-    "(?im)^(content-length[ \\t]*:[ \\t]*)[^\\r\\n]*"
-  );
 
   private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 
@@ -120,25 +97,6 @@ public final class TrafficCaptureFormat {
     for (int shift = (digits - 1) * 4; shift >= 0; shift -= 4) {
       sb.append(HEX_DIGITS[(int) (value >>> shift) & 0xf]);
     }
-  }
-
-  /**
-   * Hex dumps an outbound HTTP request (or part of one), masking the credential in any Authorization header,
-   * the value of any Content-Length header, and the values of known secret fields in the request body.
-   * <p>
-   * The headers must not be split across calls, and neither must the body. (Netty's HTTP encoder writes the request
-   * line and all headers into one buffer, and the body either into that same buffer or into one buffer of its own.)
-   */
-  public static String httpRequestToString(byte[] request) {
-    // ISO-8859-1 maps each byte to exactly one char, so the masked string converts back
-    // to the original bytes everywhere except where something was masked.
-    String original = new String(request, StandardCharsets.ISO_8859_1);
-
-    String masked = replaceAll(AUTHORIZATION_HEADER, original, "$1" + MASKED);
-    masked = replaceAll(CONTENT_LENGTH_HEADER, masked, "$1" + MASKED);
-    masked = maskSecretFields(masked);
-
-    return hexDump(masked == original ? request : masked.getBytes(StandardCharsets.ISO_8859_1));
   }
 
   /**
@@ -207,7 +165,7 @@ public final class TrafficCaptureFormat {
       sb.append("CAS                | 16-23  | 0x").append(String.format("%016X\n", packet.cas()));
       sb.append("----- Payload -----+--------+-------------\n");
 
-      // Only a response's framing extras are described (as before, with the Netty implementation's helpers).
+      // Only a response's framing extras are described.
       if (magic == MemcacheProtocol.Magic.FLEXIBLE_RESPONSE) {
         MemcacheProtocol.FlexibleExtras extras = packet.flexibleExtras();
         if (extras != null) {
@@ -239,7 +197,7 @@ public final class TrafficCaptureFormat {
 
   /**
    * Appends the key, and its collection ID if it has one (as a prefix, unsigned LEB128-encoded). Assumes it has one
-   * if the key starts with a complete LEB128 value, like the Netty implementation's description did.
+   * if the key starts with a complete LEB128 value.
    */
   private static void appendKey(StringBuilder sb, byte[] key) {
     int prefixLength = 0;

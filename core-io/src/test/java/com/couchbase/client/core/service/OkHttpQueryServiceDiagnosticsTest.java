@@ -143,7 +143,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     EndpointDiagnostics endpoint = connected.get(0);
     String endpointId = endpoint.id().orElseThrow(AssertionError::new);
 
-    // The ping report's ID is "0x" + response.channelId(), like the Netty implementation.
+    // The ping report's ID is "0x" + response.channelId().
     assertEquals(endpointId, "0x" + response.channelId());
     assertEquals(endpointId, request.context().lastChannelId());
 
@@ -153,7 +153,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     assertTrue(endpoint.local().endsWith(":" + local.port()),
       "diagnostics local " + endpoint.local() + " should match dispatched-from " + local);
 
-    // The ping report's "remote" comes from lastDispatchedTo: the node's configured address, as with Netty.
+    // The ping report's "remote" comes from lastDispatchedTo: the node's configured address.
     assertEquals(new HostAndPort(TestHttpServer.HOST_NAME, server.port()), request.context().lastDispatchedTo());
   }
 
@@ -178,7 +178,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     ExecutionException e = assertThrows(ExecutionException.class, () -> request.response().get(10, TimeUnit.SECONDS));
     assertInstanceOf(RequestCanceledException.class, e.getCause());
 
-    // As with Netty, a request that never got a connection was never dispatched.
+    // A request that never got a connection was never dispatched.
     // (Error contexts fall back to lastDispatchedToNode, so the target node is still reported.)
     assertNull(request.context().lastDispatchedTo());
     assertNull(request.context().lastDispatchedFrom());

@@ -141,7 +141,7 @@ class OkHttpManagerServiceTest {
 
   @Test
   void errorStatusCompletesWithResponse() throws Exception {
-    // Like the Netty implementation: the caller checks the status.
+    // The caller checks the status.
     start();
     server.enqueue(404, "Requested resource not found.", Duration.ZERO);
 
@@ -170,7 +170,7 @@ class OkHttpManagerServiceTest {
 
   @Test
   void coreHttpRequestWhoseResponseBreaksOffIsRetried() throws Exception {
-    // Like the Netty implementation: the connection broke, so the request might work on another attempt.
+    // The connection broke, so the request might work on another attempt.
     // (A GET is idempotent; otherwise, it would fail with RequestCanceledException.)
     start();
     CoreHttpRequest request = sendToBrokenOffServer(200, newCoreHttpRequest(true));
@@ -205,7 +205,7 @@ class OkHttpManagerServiceTest {
     CoreHttpRequest request = newCoreHttpRequest(true);
     service.send(request);
     ExecutionException e = assertThrows(ExecutionException.class, () -> request.response().get(TIMEOUT.toMillis() * 2, TimeUnit.MILLISECONDS));
-    assertInstanceOf(RateLimitedException.class, e.getCause()); // translated by NonChunkedManagerMessageHandler
+    assertInstanceOf(RateLimitedException.class, e.getCause()); // translated by OkHttpManagerService.errorToThrowable
   }
 
   @Test
@@ -222,7 +222,7 @@ class OkHttpManagerServiceTest {
     assertEquals("Requested resource not found.", new String(response.content(), UTF_8));
   }
 
-  // Like the Netty implementation: an unexpected exception while handling the response fails the request as is.
+  // An unexpected exception while handling the response fails the request as is.
 
   private final RuntimeException unexpected = new IllegalStateException("unexpected");
 
@@ -275,7 +275,7 @@ class OkHttpManagerServiceTest {
   @Test
   void configStream() throws Exception {
     start();
-    // Two whole configs, then a partial one that's discarded when the stream ends (like Netty).
+    // Two whole configs, then a partial one that's discarded when the stream ends.
     server.enqueue("{\"rev\":1}\n\n\n\n  {\"rev\":2}  \n\n\n\n{\"rev\":3");
 
     BucketConfigStreamingResponse response = send(newStreamingRequest());

@@ -177,7 +177,7 @@ class ClientCertificateRotationTest {
 
   @Test
   void existingConnectionsKeepOldCertificateAfterRotation() throws Exception {
-    // Like the Netty implementation: only new connections use the new certificate.
+    // Only new connections use the new certificate.
     CouchbaseOkHttpClient http = newClient(CERT_A);
     TestHttpServer node1 = startServer();
     TestHttpServer node2 = startServer();
@@ -328,7 +328,7 @@ class ClientCertificateRotationTest {
 
   @Test
   void connectionFailsWithCauseIfCertificateCantBeObtained() throws Exception {
-    // The supplier fails. Like the Netty implementation, the connection fails.
+    // The supplier fails, so the connection fails.
     AtomicReference<KeyManagerFactory> available = new AtomicReference<>();
     CouchbaseOkHttpClient http = newClient(() -> {
       KeyManagerFactory kmf = available.get();

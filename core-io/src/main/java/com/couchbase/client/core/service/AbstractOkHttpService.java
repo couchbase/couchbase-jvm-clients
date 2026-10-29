@@ -88,7 +88,7 @@ import static java.util.Objects.requireNonNull;
  * is included only if it isn't JSON. {@link StreamingJsonResponseHandler} does that for streamed
  * results; for other responses, wrap the body with {@link HeadInterceptInputStream} to capture its start.
  * <p>
- * Unlike the Netty endpoints, the OkHttp services don't report orphaned responses (responses to requests that
+ * The OkHttp services don't report orphaned responses (responses to requests that
  * already completed, for example because they timed out). Cancelling a request cancels its OkHttp call, which
  * closes the connection, so a late response never arrives.
  */
@@ -285,7 +285,7 @@ abstract class AbstractOkHttpService implements Service {
       throw new IllegalArgumentException("Unsupported request type: " + request);
     }
 
-    // Like the Netty endpoints: don't send a request whose deadline has passed (for example, during a retry
+    // Don't send a request whose deadline has passed (for example, during a retry
     // backoff) but whose timeout hasn't fired yet. The server would do the work, and for a non-idempotent request,
     // could make a change after the caller has been told the request timed out.
     if (request.timeoutElapsed()) {
@@ -402,7 +402,7 @@ abstract class AbstractOkHttpService implements Service {
         local == null ? null : local.host(),
         local == null ? 0 : local.port(),
         requestContext.lastDispatchedToNode().canonical().host(),
-        address.port(), // Like Netty: the service's port, not the canonical (manager) port.
+        address.port(), // The service's port, not the canonical (manager) port.
         address.host(),
         address.port(),
         request.operationId()
@@ -477,7 +477,7 @@ abstract class AbstractOkHttpService implements Service {
 
   /**
    * Retries a request whose response broke off: the connection failed while reading the body, before the request
-   * completed. Like the Netty implementation, which does this when the connection closes with a request in flight.
+   * completed.
    * <p>
    * The request reached the server, which may have acted on it, so the retry strategy only retries it if it's
    * idempotent ({@link RetryReason#CHANNEL_CLOSED_WHILE_IN_FLIGHT}). Otherwise, it fails with a
@@ -548,9 +548,7 @@ abstract class AbstractOkHttpService implements Service {
    * <p>
    * Not when the call is enqueued, because OkHttp connects lazily: the time before the request is written
    * can include connecting and the TLS handshake, which aren't part of dispatching the request.
-   * Starting here also matches the Netty endpoints, which start timing when the request is written
-   * to a channel that's already connected. If the call fails before the request is written (for example,
-   * can't connect), there's no dispatch span, as with Netty.
+   * If the call fails before the request is written (for example, can't connect), there's no dispatch span.
    * <p>
    * OkHttp calls this on the thread that runs the call, which is also the thread that runs the call's callback.
    */

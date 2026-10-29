@@ -30,9 +30,8 @@ import org.jspecify.annotations.NullMarked;
  * An encoder belongs to one connection, and has its {@link #context()}: what the request needs to know about
  * the connection (for example, its collections, and the features the server negotiated).
  * <p>
- * Implementations: {@link KeyValueRequestWriter} (the NIO KV connection's writer, which encodes straight into
- * its write buffer), and {@link com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder}
- * (which encodes a request into a {@code ByteBuf}, for the Netty KV implementation).
+ * Implemented by {@link KeyValueRequestWriter} (the NIO KV connection's writer, which encodes straight into
+ * its write buffer).
  */
 @Stability.Internal
 @NullMarked

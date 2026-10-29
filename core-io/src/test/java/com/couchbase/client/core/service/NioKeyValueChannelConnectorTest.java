@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import org.junit.jupiter.api.Test;
@@ -43,7 +42,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 class NioKeyValueChannelConnectorTest {
 
   @Test
-  void connectTimeoutIsAConnectExceptionLikeNettys() {
+  void connectTimeoutIsAConnectException() {
     NioKeyValueChannelConnector connector = newConnector(SocketFactory.getDefault(), InetAddress::getByName);
 
     // 192.0.2.1 is in TEST-NET-1 (RFC 5737). Where the network drops packets to it (rather than rejecting them),
@@ -63,7 +62,7 @@ class NioKeyValueChannelConnectorTest {
     assertInstanceOf(SocketTimeoutException.class, e.getCause());
     assertEquals(
       e.getMessage() + " - Check server ports and cluster encryption setting.",
-      BaseEndpoint.annotateConnectException(e).getMessage()
+      NioKeyValueEndpoint.annotateConnectException(e).getMessage()
     );
   }
 

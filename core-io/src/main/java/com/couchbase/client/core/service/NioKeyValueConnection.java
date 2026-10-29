@@ -34,10 +34,8 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestWriter;
-import com.couchbase.client.core.io.netty.kv.AuthenticationRefreshHandler;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.ServerPushHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.io.repackaged.tlschannel.ClientTlsChannel;
 import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
@@ -45,6 +43,7 @@ import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
+import com.couchbase.client.core.msg.kv.SingleStepAuthRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
@@ -77,9 +76,8 @@ import static com.couchbase.client.core.service.NioKeyValueChannelConnector.clos
 import static java.util.Objects.requireNonNull;
 
 /**
- * One KV connection that doesn't use Netty, read and written by a shared {@link KeyValueEventLoop}: a non-blocking
+ * One KV connection, read and written by a shared {@link KeyValueEventLoop}: a non-blocking
  * {@link SocketChannel}, with TLS (if enabled) by an {@link javax.net.ssl.SSLEngine} (see {@link ClientTlsChannel}).
- * Does what the Netty pipeline's KV handlers do, with the same events, retries and errors.
  * <p>
  * Lifecycle: {@link NioKeyValueConnectionOpener} connects and does the handshake (on the connecting thread),
  * then creates the connection. {@link #start} registers it with its event loop, which from then on:
@@ -91,7 +89,7 @@ import static java.util.Objects.requireNonNull;
  *       by other threads are handed to the loop, which writes them as soon as it can.
  *   <li>When the channel can't take more, keeps what's left (see {@link ChannelOutput}), stops taking requests
  *       off the queue, and waits until the channel is writable again. Meanwhile, the queue fills, and the
- *       connection stops being writable (like Netty's channel writability).
+ *       connection stops being writable.
  *   <li>Runs the periodic check: sends a NOOP when the server has been quiet for a while (a third of the idle timeout),
  *       and closes the connection if the server stays quiet (see {@link KeyValueIdleDetector}).
  * </ul>
@@ -135,14 +133,12 @@ final class NioKeyValueConnection {
   private static final int BUFFER_SIZE = 64 * 1024;
 
   /**
-   * The most requests written before the writer's buffer is written to the channel, like the Netty
-   * implementation's {@code FlushConsolidationHandler}.
+   * The most requests written before the writer's buffer is written to the channel.
    */
   private static final int FLUSH_CONSOLIDATION_LIMIT = 256;
 
   /**
    * The most reads from the channel in one go, so one busy connection can't hold up the loop's others.
-   * Like the Netty implementation's (its channels' {@code maxMessagesPerRead}).
    */
   private static final int MAX_READS_PER_PASS = 16;
 
@@ -325,14 +321,14 @@ final class NioKeyValueConnection {
   }
 
   /**
-   * The connection's ID in short form (hex digits, without a "0x" prefix), like a Netty channel ID's short form.
+   * The connection's ID in short form (hex digits, without a "0x" prefix).
    */
   public String shortChannelId() {
     return shortChannelId;
   }
 
   /**
-   * How long each connect step took, keyed like the Netty implementation's connect timings.
+   * How long each connect step took, keyed by step name.
    */
   public SortedMap<String, Duration> timings() {
     synchronized (timings) {
@@ -353,8 +349,7 @@ final class NioKeyValueConnection {
   }
 
   /**
-   * Returns false if the connection has too many bytes waiting to be written (like Netty's channel writability,
-   * with the same high and low water marks).
+   * Returns false if the connection has too many bytes waiting to be written (see {@link KeyValueOutboundQueue}).
    */
   public boolean isWritable() {
     return queue.isWritable() && !closed.get();
@@ -616,7 +611,7 @@ final class NioKeyValueConnection {
   /**
    * Handles the packets already read, and reads more. How much more depends on the channel:
    * <ul>
-   *   <li>Plain: like the Netty implementation, until a read doesn't fill the room it had (so it's probably all
+   *   <li>Plain: until a read doesn't fill the room it had (so it's probably all
    *       the channel had), or after {@value #MAX_READS_PER_PASS} reads (so the loop's other connections get a turn).
    *       Then the loop writes the requests sent meanwhile (for example, by the responses' callbacks) before this
    *       connection reads more. (Reading until the channel is empty instead holds those requests back while
@@ -687,7 +682,7 @@ final class NioKeyValueConnection {
       handle(packet);
       if (closed.get()) {
         // Closed while handling what was read (for example, because a response said to close the connection).
-        // Like the Netty implementation, handles the rest of the responses already read (but doesn't read more),
+        // Handles the rest of the responses already read (but doesn't read more),
         // so their requests complete, instead of being retried (or canceled, if they're not idempotent).
         while (!discardUnreadResponses && (packet = packets.next()) != null) {
           handle(packet);
@@ -703,14 +698,14 @@ final class NioKeyValueConnection {
       capture.read(packet);
       handleInbound(packet);
     } catch (RuntimeException e) {
-      // Like Netty's pipeline, which reports a handler's exception, and carries on.
+      // Reports the exception, and carries on.
       eventBus.publish(new GenericFailureDetectedEvent(ioContext, e));
     }
   }
 
   private void handleInbound(KeyValuePacket packet) {
-    if (ServerPushHandler.isServerPush(packet)) {
-      ServerPushHandler.handleServerPush(endpointContext, packet);
+    if (KeyValueServerPush.isServerPush(packet)) {
+      KeyValueServerPush.handleServerPush(endpointContext, packet);
       return;
     }
     try {
@@ -758,7 +753,7 @@ final class NioKeyValueConnection {
     send(req);
   }
 
-  // ---- reauthentication (like AuthenticationRefreshHandler)
+  // ---- reauthentication
 
   private void onAuthenticationRefreshSignal() {
     if (!closed.get()) {
@@ -774,7 +769,7 @@ final class NioKeyValueConnection {
       return;
     }
 
-    AuthenticationRefreshHandler.SingleStepAuthRequest req = new AuthenticationRefreshHandler.SingleStepAuthRequest(endpointContext, params);
+    SingleStepAuthRequest req = new SingleStepAuthRequest(endpointContext, params);
     req.response()
       .thenAccept(response -> {
         if (!response.status().success()) {
@@ -790,7 +785,7 @@ final class NioKeyValueConnection {
         return null;
       });
 
-    // Like the Netty implementation, ignores writability. We're unlikely to be making these requests more than
+    // Ignores writability. We're unlikely to be making these requests more than
     // once a minute, so there's little danger of running out of memory due to too many of them piling up.
     if (!send(req)) {
       log.debug("Failed to send authentication refresh request, but that's probably okay because channel is closed. Channel: {}", this);

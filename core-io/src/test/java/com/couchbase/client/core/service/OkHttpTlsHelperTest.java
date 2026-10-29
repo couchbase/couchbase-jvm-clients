@@ -197,7 +197,7 @@ class OkHttpTlsHelperTest {
 
     SSLSocketFactory socketFactory = newTlsSocketFactory(() -> null, securityConfig, Duration.ofSeconds(1));
     assertEquals(listOf("TLS_BOGUS_WITH_NOTHING"), unsupportedCipherSuites(socketFactory, securityConfig));
-    // Only logged: the Netty implementation might support them (with OpenSSL).
+    // Only logged.
     configureTls(new OkHttpClient.Builder(), () -> null, securityConfig, Duration.ofSeconds(1));
   }
 

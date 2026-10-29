@@ -30,16 +30,15 @@ import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
 import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
-import com.couchbase.client.core.endpoint.BaseEndpoint;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
-import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.endpoint.LazyCircuitBreaker;
 import com.couchbase.client.core.endpoint.NoopCircuitBreaker;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.IoContext;
@@ -60,9 +59,11 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -77,11 +78,8 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Like {@link KeyValueEndpoint}, but without Netty: each connection is a plain socket channel (with TLS, if enabled),
+ * A KV endpoint: each connection is a plain socket channel (with TLS, if enabled),
  * read and written by a shared NIO event loop (see {@link NioKeyValueConnection}).
- * <p>
- * Does what {@link BaseEndpoint} does for a KV endpoint, with the same states, events, circuit breaker,
- * and reconnect backoff.
  */
 @NullMarked
 @Stability.Internal
@@ -97,7 +95,6 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
    */
   static final ExecutorService tasks = CbThreads.unboundedExecutorService("cb-kv-task-");
 
-  // Like BaseEndpoint's reconnect backoff.
   private static final Duration FIRST_RECONNECT_DELAY = Duration.ofMillis(32);
   private static final Duration MAX_RECONNECT_DELAY = Duration.ofMillis(4096);
 
@@ -128,7 +125,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
   private @Nullable NioKeyValueConnectionOpener connecting;
 
   /**
-   * The current connection, once connected. Like BaseEndpoint's channel, it's kept after it closes
+   * The current connection, once connected. It's kept after it closes
    * (until the next one connects), for diagnostics.
    */
   private volatile @Nullable NioKeyValueConnection connection;
@@ -159,7 +156,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
     this.bucketName = requireNonNull(bucketName);
     this.authenticator = requireNonNull(authenticator);
     this.connector = requireNonNull(connector);
-    this.features = KeyValueEndpoint.KeyValuePipelineInitializer.serverFeatures(serviceContext.environment());
+    this.features = serverFeatures(serviceContext.environment());
 
     CircuitBreakerConfig circuitBreakerConfig = serviceContext.environment().ioConfig().kvCircuitBreakerConfig();
     if (circuitBreakerConfig.enabled()) {
@@ -200,7 +197,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
   }
 
   /**
-   * Like BaseEndpoint's reconnect(): tries to connect until it succeeds or the endpoint is told to disconnect,
+   * Tries to connect until it succeeds or the endpoint is told to disconnect,
    * waiting longer after each failed attempt.
    */
   private void connectUntilConnectedOrDisconnected() {
@@ -270,7 +267,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
       ? Event.Severity.DEBUG
       : Event.Severity.WARN;
 
-    Throwable ex = BaseEndpoint.annotateConnectException(t);
+    Throwable ex = annotateConnectException(t);
     lastConnectAttemptFailure = ex;
 
     Boolean targetInTopology = maybeDisconnectIfEndpointNoLongerInTopology(ctx, attempt);
@@ -311,7 +308,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
       connecting = null;
 
       if (disconnect.get()) {
-        // Unlike the Netty implementation, doesn't publish EndpointDisconnectedEvent too (when the connection closes):
+        // Doesn't publish EndpointDisconnectedEvent too (when the connection closes):
         // the endpoint never reported it as connected.
         conn.close();
         ctx.environment().eventBus().publish(new EndpointConnectionIgnoredEvent(elapsed, ctx, conn.timings()));
@@ -357,7 +354,7 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
   }
 
   /**
-   * Like BaseEndpoint's: checks whether this endpoint's target host is still in the current cluster topology.
+   * Checks whether this endpoint's target host is still in the current cluster topology.
    * If it persistently isn't, the SDK is reconnect-looping to a node that has been removed - i.e. a stuck
    * reconfiguration upstream.
    */
@@ -443,9 +440,6 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
     RetryOrchestrator.maybeRetry(ctx, request, RetryReason.ENDPOINT_NOT_WRITABLE);
   }
 
-  /**
-   * Like BaseEndpoint's notifyChannelInactive() (and its closeChannel(), when told to disconnect).
-   */
   @Override
   public void closed(NioKeyValueConnection conn, int requestsInFlight) {
     // Under the lock, so disconnect() either happens first (and leaves the rest to us),
@@ -491,7 +485,6 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
 
     final EndpointContext ctx = endpointContext.get();
     if (!(request instanceof KeyValueRequest)) {
-      // The Netty implementation closes the connection; this one only fails the request.
       ctx.environment().eventBus().publish(new InvalidRequestDetectedEvent(new IoContext(ctx, null, null, ctx.bucket()), ServiceType.KV, request));
       request.fail(InvalidArgumentException.fromMessage("Not a KV request: " + request.getClass().getName()));
       return;
@@ -608,5 +601,90 @@ public class NioKeyValueEndpoint implements Endpoint, NioKeyValueConnection.List
   public InternalEndpointDiagnostics internalDiagnostics() {
     EndpointContext ctx = context();
     return new InternalEndpointDiagnostics(diagnostics(), ctx.authenticationStatus(), ctx.tlsHandshakeFailure());
+  }
+
+  /**
+   * Returns the server features that should be negotiated.
+   *
+   * @return the server features to negotiate.
+   */
+  static Set<ServerFeature> serverFeatures(CoreEnvironment environment) {
+    Set<ServerFeature> features = EnumSet.of(
+      ServerFeature.SELECT_BUCKET,
+      ServerFeature.XATTR,
+      ServerFeature.XERROR,
+      ServerFeature.ALT_REQUEST,
+      ServerFeature.SYNC_REPLICATION,
+      ServerFeature.COLLECTIONS,
+      ServerFeature.TRACING,
+      ServerFeature.PRESERVE_TTL,
+      ServerFeature.JSON,
+      ServerFeature.SUBDOC_READ_REPLICA,
+      ServerFeature.GET_CLUSTER_CONFIG_WITH_KNOWN_VERSION,
+      ServerFeature.DUPLEX,
+      ServerFeature.DEDUPE_NOT_MY_VBUCKET_CLUSTERMAP,
+      ServerFeature.SUBDOC_BINARY_XATTR
+    );
+
+    if (environment.ioConfig().configNotifications()) {
+      features.add(ServerFeature.CLUSTERMAP_CHANGE_NOTIFICATION_BRIEF);
+    }
+
+    if (environment.ioConfig().mutationTokensEnabled()) {
+      features.add(ServerFeature.MUTATION_SEQNO);
+    }
+
+    if (environment.compressionConfig().enabled()) {
+      features.add(ServerFeature.SNAPPY);
+      features.add(ServerFeature.SNAPPY_EVERYWHERE);
+    }
+
+    boolean unorderedExecutionEnabled = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.unorderedExecutionEnabled", "true")
+    );
+    if (unorderedExecutionEnabled) {
+      features.add(ServerFeature.UNORDERED_EXECUTION);
+    }
+
+    boolean vattrEnabled = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.vattrEnabled", "true")
+    );
+    if (vattrEnabled) {
+      features.add(ServerFeature.VATTR);
+    }
+
+    boolean createAsDeletedEnabled = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.createAsDeletedEnabled", "true")
+    );
+    if (createAsDeletedEnabled) {
+      features.add(ServerFeature.CREATE_AS_DELETED);
+    }
+
+    boolean reportUnitUsageEnabled = Boolean.parseBoolean(
+      System.getProperty("com.couchbase.reportUnitUsageEnabled", "true")
+    );
+    if (reportUnitUsageEnabled) {
+      features.add(ServerFeature.REPORT_UNIT_USAGE);
+    }
+
+    return features;
+  }
+
+  /**
+   * If the exception is a {@link ConnectException}, returns a new one with a hint added to its message
+   * (and no stack trace); otherwise returns the exception as is.
+   */
+  static Throwable annotateConnectException(Throwable ex) {
+    if (!(ex instanceof ConnectException)) {
+      return ex;
+    }
+
+    return new ConnectException(ex.getMessage() + " - Check server ports and cluster encryption setting.") {
+      @Override
+      public synchronized Throwable fillInStackTrace() {
+        // We don't want a verbose stack trace in the output.
+        return this;
+      }
+    };
   }
 }

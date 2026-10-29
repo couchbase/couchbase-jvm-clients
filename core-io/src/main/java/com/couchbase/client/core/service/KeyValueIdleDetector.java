@@ -30,7 +30,7 @@ import static java.util.Objects.requireNonNull;
  * If the server has been quiet for a third of the idle timeout (io.configIdleRedialTimeout), the connection sends
  * a NOOP, so a healthy server answers. If nothing arrives within another third, it sends a second NOOP; if nothing
  * arrives within a third after that one either, the connection closes. (So a dead connection closes when the server
- * has been quiet for the whole idle timeout, like the Netty implementation.)
+ * has been quiet for the whole idle timeout.)
  * <p>
  * Waiting for two NOOPs means one long pause (a GC pause, for example) can't close a healthy connection: the check
  * might run before the reader has read a response that arrived during the pause, but by the next check it has.
@@ -39,7 +39,7 @@ import static java.util.Objects.requireNonNull;
  * the server answers a NOOP even while it works on a slow request. And a NOOP gives an idle connection unacknowledged
  * data, which is what the TCP user timeout applies to (on Linux, where it's set).
  * <p>
- * An idle timeout that's not positive turns this off, like the Netty implementation's IdleStateHandler.
+ * An idle timeout that's not positive turns this off.
  * The connection calls {@link #check} periodically.
  */
 @NullMarked

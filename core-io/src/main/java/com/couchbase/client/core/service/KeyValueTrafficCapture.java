@@ -26,8 +26,8 @@ import org.jspecify.annotations.NullMarked;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Publishes each packet a KV connection that doesn't use Netty writes and reads, if the config asks for KV's
- * (io.servicesToCapture), like the Netty implementation's TrafficCaptureHandler (see {@link TrafficCaptureFormat}).
+ * Publishes each packet a KV connection writes and reads, if the config asks for KV's
+ * (io.servicesToCapture), described by {@link TrafficCaptureFormat}.
  */
 @NullMarked
 final class KeyValueTrafficCapture {

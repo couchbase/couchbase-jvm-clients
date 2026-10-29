@@ -65,7 +65,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * How the OkHttp-based services handle TLS failures: failures that retrying won't fix (like an untrusted
- * certificate) fail the request, and other TLS failures are retried, like the Netty implementation.
+ * certificate) fail the request, and other TLS failures are retried.
  */
 class OkHttpTlsFailureTest {
   private static final Duration TIMEOUT = Duration.ofSeconds(10);

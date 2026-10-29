@@ -20,7 +20,6 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
-import com.couchbase.client.core.io.netty.analytics.AnalyticsChunkResponseParser;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.analytics.AnalyticsRequest;
 import com.couchbase.client.core.util.HostAndPort;
@@ -74,8 +73,8 @@ public class OkHttpAnalyticsService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    // Like the Netty implementation, parses the whole body as errors (JSON or, for older servers, plain text).
-    return AnalyticsChunkResponseParser.errorsToThrowable(responseBody.getBytes(UTF_8), request.context(), HttpResponseStatus.valueOf(httpStatus));
+    // Parses the whole body as errors (JSON or, for older servers, plain text).
+    return AnalyticsResponseFormat.errorsToThrowable(responseBody.getBytes(UTF_8), request.context(), HttpResponseStatus.valueOf(httpStatus));
   }
 
   private static @Nullable RequestBody requestBody(AnalyticsRequest request) {

@@ -58,21 +58,19 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * Captures the HTTP traffic of the services in {@link IoConfig#servicesToCapture()}, like the Netty endpoints'
- * {@code TrafficCaptureHandler}: publishes a {@link WriteTrafficCapturedEvent} for each request as it's sent
+ * Captures the HTTP traffic of the services in {@link IoConfig#servicesToCapture()}: publishes a {@link WriteTrafficCapturedEvent} for each request as it's sent
  * (request line, headers, and body), and {@link ReadTrafficCapturedEvent}s for its response as it's received
  * (status line and headers, then each chunk of the body as the caller reads it).
  * <p>
  * Request and status lines and headers are captured as text. A body is captured as text if its content type is
  * textual (see {@link #isTextual}); a character split between two chunks is captured whole, with the later chunk.
- * Otherwise, it's captured as a hex dump, in the same format as the Netty endpoints'.
+ * Otherwise, it's captured as a hex dump (see {@link TrafficCaptureFormat}).
  * <p>
- * Unlike the Netty endpoints, which capture the bytes on the wire (as hex dumps), this captures the HTTP messages
- * as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included.
+ * This captures the HTTP messages as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included.
  * (Capturing the bytes inside a TLS connection would mean wrapping OkHttp's SSLSocket, which OkHttp depends on
  * the exact type of.)
  * <p>
- * Credentials in requests are masked like the Netty endpoints' (see {@link TrafficCaptureMasking}): the credential
+ * Credentials in requests are masked (see {@link TrafficCaptureMasking}): the credential
  * in the Authorization header (keeping the auth scheme), the Content-Length header's value, and the values of known
  * secret fields in form-encoded and JSON bodies.
  * <p>
@@ -195,7 +193,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
 
   /**
    * Returns the value of a request header as captured: masked if it's a credential, or if it's Content-Length
-   * (when a body field is masked, the original length would reveal the secret's length), like the Netty endpoints.
+   * (when a body field is masked, the original length would reveal the secret's length).
    */
   private static String maskRequestHeader(String name, String value) {
     if (name.equalsIgnoreCase("Authorization")) {
@@ -220,8 +218,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
   }
 
   /**
-   * Returns a request body (that isn't text) with the values of secret fields masked, like the Netty endpoints'
-   * hex dumps.
+   * Returns a request body (that isn't text) with the values of secret fields masked.
    */
   private static byte[] withSecretFieldsMasked(byte[] bytes) {
     // ISO-8859-1 maps each byte to exactly one char, so the masked string converts back

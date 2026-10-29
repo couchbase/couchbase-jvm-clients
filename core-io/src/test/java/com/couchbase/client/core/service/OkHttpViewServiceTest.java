@@ -202,7 +202,7 @@ class OkHttpViewServiceTest {
 
   @Test
   void reduceResultWithoutTotalRowsStillHasHeader() throws Exception {
-    // Reduce results have no total_rows. Like Netty, the header is complete at the end of the body if not before.
+    // Reduce results have no total_rows. The header is complete at the end of the body if not before.
     server.enqueue("{\"rows\":[]}");
 
     ViewResponse response = send(newViewRequest());
@@ -248,7 +248,7 @@ class OkHttpViewServiceTest {
     server.enqueue(400, "{\"something\":\"unexpected\"}", Duration.ZERO);
 
     Throwable cause = sendExpectingFailure(newViewRequest());
-    // A 400 the service can't otherwise explain is an invalid argument, like the Netty implementation (JVMCBC-1800).
+    // A 400 the service can't otherwise explain is an invalid argument (JVMCBC-1800).
     assertEquals(InvalidArgumentException.class, cause.getClass());
     assertTrue(cause.getMessage().contains("HTTP status code: 400 Bad Request"), cause.getMessage());
     assertTrue(cause.getMessage().contains("{\"something\":\"unexpected\"}"), cause.getMessage());
@@ -314,7 +314,7 @@ class OkHttpViewServiceTest {
 
     assertEquals(asList("{\"id\":\"a\"}", "<error>"), received);
 
-    // Like the Netty implementation, the trailer still succeeds, and describes the error.
+    // The trailer still succeeds, and describes the error.
     ViewChunkTrailer trailer = response.trailer().block(Duration.ofSeconds(30));
     assertNotNull(trailer);
     ViewError error = trailer.error().orElseThrow(AssertionError::new);

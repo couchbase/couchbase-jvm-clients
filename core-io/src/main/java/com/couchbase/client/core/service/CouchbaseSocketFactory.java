@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Creates the TCP sockets for {@link CouchbaseOkHttpClient}'s connections (OkHttp layers TLS over them), with the
- * socket options from {@link IoConfig}, like the Netty endpoints:
+ * socket options from {@link IoConfig}:
  * <ul>
  *   <li>TCP_NODELAY, always.
  *   <li>TCP keepalive, unless keepalives are disabled, with the keepalive idle time, interval, and count where the
@@ -81,7 +81,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
 
   private final boolean keepAlive;
 
-  // Like the Netty endpoints, zero means "use the OS default".
+  // Zero means "use the OS default".
   private final int keepAliveIdleSeconds;
   private final int keepAliveIntervalSeconds;
   private final int keepAliveCount;

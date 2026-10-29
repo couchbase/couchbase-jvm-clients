@@ -18,10 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.SinceCouchbase;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
-import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.OauthBearerSaslClient;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
@@ -120,17 +117,6 @@ public class JwtAuthenticator implements Authenticator {
     this.authHeaderValue = "Bearer " + this.encodedJwt;
     this.jwt = Jwt.parse(this.encodedJwt);
     this.saslAuthParameters = SingleStepSaslAuthParameters.oauthbearer(null, this.encodedJwt);
-  }
-
-  @Override
-  public void authKeyValueConnection(EndpointContext ctx, ChannelPipeline pipeline) {
-    pipeline.addLast(new SaslListMechanismsHandler(ctx));
-    pipeline.addLast(new SaslAuthenticationHandler(
-      ctx,
-      null, // username not required
-      encodedJwt,
-      supportedMechanisms
-    ));
   }
 
   @Override

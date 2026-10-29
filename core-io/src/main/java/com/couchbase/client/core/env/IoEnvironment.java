@@ -105,7 +105,7 @@ public class IoEnvironment {
   private final OwnedOrExternal<EventLoopGroupAndType> backupEventLoopGroup;
 
   /**
-   * The event loops for KV connections that use NIO instead of Netty, once the first one opens
+   * The event loops for KV connections, once the first one opens
    * (see {@link #nioKeyValueEventLoopGroup}). Guarded by "this".
    */
   private @Nullable KeyValueEventLoopGroup nioKeyValueEventLoopGroup;
@@ -578,9 +578,9 @@ public class IoEnvironment {
   }
 
   /**
-   * Returns the event loops for KV connections that use NIO instead of Netty
-   * (see {@code com.couchbase.client.core.service.NioKeyValueConnection}), with {@link #eventLoopThreadCount} threads,
-   * like the Netty KV event loop group. Created when first asked for, so it has no threads unless they're used.
+   * Returns the event loops for KV connections
+   * (see {@code com.couchbase.client.core.service.NioKeyValueConnection}), with {@link #eventLoopThreadCount} threads.
+   * Created when first asked for, so it has no threads unless they're used.
    *
    * @throws IllegalStateException if the environment is shut down.
    */

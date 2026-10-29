@@ -37,7 +37,6 @@ import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
-import com.couchbase.client.core.io.netty.kv.NettyKeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -76,11 +75,10 @@ import static org.mockito.Mockito.mock;
 /**
  * Verifies Get, Upsert and the sub-document requests:
  * <ul>
- *   <li>Both encoders (the socket connection's {@link KeyValueRequestWriter}, and the Netty implementation's
- *   {@link NettyKeyValueRequestEncoder}) write the same packet as the request's old
+ *   <li>The connection's encoder ({@link KeyValueRequestWriter}) writes the same packet as the request's old
  *   {@code ByteBuf} encoder (kept here, as the reference).
- *   <li>Decoding from a {@link KeyValuePacket} (directly, or as a view of a heap or direct {@code ByteBuf},
- *   like the Netty implementation's) gives the expected response.
+ *   <li>Decoding from a {@link KeyValuePacket} (directly, or as a view of a heap or direct {@code ByteBuf})
+ *   gives the expected response.
  * </ul>
  */
 class GetUpsertSubdocRequestTest {

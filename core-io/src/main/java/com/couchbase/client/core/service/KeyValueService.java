@@ -17,9 +17,7 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.Endpoint;
-import com.couchbase.client.core.endpoint.KeyValueEndpoint;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.service.strategy.PartitionSelectionStrategy;
 
@@ -30,21 +28,6 @@ import java.util.Optional;
 public class KeyValueService extends PooledService {
 
   private static final EndpointSelectionStrategy STRATEGY = new PartitionSelectionStrategy();
-
-  /**
-   * Whether KV endpoints use Netty ({@link KeyValueEndpoint}), or Java NIO ({@link NioKeyValueEndpoint});
-   * the {@code com.couchbase.useNettyForKv} system property (false by default).
-   * Separate from {@code com.couchbase.useNetty} (for the HTTP-based services), so each can be switched on its own.
-   */
-  private static final boolean useNettyForKv = Boolean.parseBoolean(System.getProperty("com.couchbase.useNettyForKv", "false"));
-
-  /**
-   * Returns true if KV endpoints use Netty, or false if they use Java NIO.
-   */
-  @Stability.Internal
-  public static boolean useNettyForKv() {
-    return useNettyForKv;
-  }
 
   private final String hostname;
   private final int port;
@@ -81,9 +64,7 @@ public class KeyValueService extends PooledService {
 
   @Override
   protected Endpoint createEndpoint() {
-    return useNettyForKv
-      ? new KeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator)
-      : new NioKeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator, serviceContext().core().kvChannelConnector());
+    return new NioKeyValueEndpoint(serviceContext(), hostname, port, bucketName, authenticator, serviceContext().core().kvChannelConnector());
   }
 
   @Override

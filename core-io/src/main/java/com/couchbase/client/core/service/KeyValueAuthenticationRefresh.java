@@ -28,8 +28,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * A KV connection's subscription to reauthentication signals (see {@code Core.authenticationRefreshTriggers}).
  * The opener subscribes before connecting, so a signal during the handshake isn't missed. Signals before the
- * connection starts are remembered, and acted on once it does (like the Netty implementation's
- * AuthenticationRefreshHandler, which defers them until the handshake completes).
+ * connection starts are remembered, and acted on once it does.
  */
 @NullMarked
 final class KeyValueAuthenticationRefresh {
@@ -42,8 +41,7 @@ final class KeyValueAuthenticationRefresh {
   private boolean signalled;
 
   KeyValueAuthenticationRefresh(EndpointContext endpointContext) {
-    // Handled on another thread (like the Netty implementation, which switches to the channel's event loop),
-    // so the publisher isn't held up, and closing the connection can unsubscribe.
+    // Handled on another thread, so the publisher isn't held up, and closing the connection can unsubscribe.
     this.subscription = endpointContext.core().authenticationRefreshTriggers.subscribe(
       signal -> NioKeyValueEndpoint.tasks.execute(this::signal)
     );

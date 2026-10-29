@@ -172,7 +172,7 @@ class OkHttpQueryServiceTest {
 
   @Test
   void requestWhoseDeadlineHasPassedIsNotSent() throws Exception {
-    // Like the Netty endpoints. (No timer cancels the request here; only its deadline has passed.)
+    // No timer cancels the request here; only its deadline has passed.
     QueryRequest request = newQueryRequest(Duration.ofNanos(1));
     Thread.sleep(1);
     service.send(request);
@@ -242,7 +242,7 @@ class OkHttpQueryServiceTest {
 
   @Test
   void badRequestWithoutErrorsIsAnInvalidArgument() {
-    // Like the Netty implementation (JVMCBC-1800): a 400 the service can't otherwise explain.
+    // A 400 the service can't otherwise explain (JVMCBC-1800).
     server.enqueue(400, "{\"requestID\":\"abc-123\",\"status\":\"fatal\"}", Duration.ZERO);
 
     QueryRequest request = newQueryRequest();
@@ -338,7 +338,7 @@ class OkHttpQueryServiceTest {
   /**
    * The query service sends the start of the response right away, and the first row once it has one,
    * so this can happen any time while the query executes (for example, the node fails over).
-   * Like the Netty implementation, the request is retried if it's idempotent.
+   * The request is retried if it's idempotent.
    */
   @Test
   void connectionBreakingBeforeFirstRowRetriesIdempotentRequest() throws Exception {
@@ -481,7 +481,7 @@ class OkHttpQueryServiceTest {
 
     assertEquals(asList("{\"a\":1}", "<error: ParsingFailureException>"), received);
 
-    // Like the Netty implementation, the trailer still succeeds, and describes the error.
+    // The trailer still succeeds, and describes the error.
     QueryChunkTrailer trailer = response.trailer().block(Duration.ofSeconds(30));
     assertNotNull(trailer);
     assertEquals("errors", trailer.status());

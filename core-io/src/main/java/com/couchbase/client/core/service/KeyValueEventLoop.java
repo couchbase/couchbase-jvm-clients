@@ -36,8 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A thread that reads and writes many {@link NioKeyValueConnection}s, with one {@link Selector}:
- * like one of Netty's event loops.
+ * A thread that reads and writes many {@link NioKeyValueConnection}s, with one {@link Selector}.
  * <p>
  * Each pass of the loop:
  * <ol>
@@ -47,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>Runs the tasks submitted by other threads (for example, writing a request another thread sent).
  *   <li>Writes the requests sent on this thread during the pass (for example, by a response callback that sends
  *       the next request), to whichever connection of this loop they're for: once per connection, however many
- *       requests it got. Like the Netty implementation's {@code FlushConsolidationHandler}, but across connections.
+ *       requests it got.
  *   <li>Runs each connection's periodic check when it's due (see {@link KeyValueIdleDetector}).
  * </ol>
  * The loops belong to a {@link KeyValueEventLoopGroup}, which an environment's NIO KV connections share.

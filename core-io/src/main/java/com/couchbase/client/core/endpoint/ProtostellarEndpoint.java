@@ -241,8 +241,7 @@ public class ProtostellarEndpoint {
       .sslSocketFactory(sslSocketFactory(securityConfig))
       .socketFactory(new ConnectTimeoutSocketFactory((int) env.timeoutConfig().connectTimeout().toMillis()));
 
-    // Like the HTTP services. (gRPC's OkHttp transport checks the host name itself, whatever the trust manager.
-    // With the Netty transport, the insecure trust manager skipped the check too.)
+    // Like the HTTP services. (gRPC's OkHttp transport checks the host name itself, whatever the trust manager.)
     if (securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory
       || !securityConfig.hostnameVerificationEnabled()) {
       okHttpBuilder.hostnameVerifier((hostname, session) -> true);

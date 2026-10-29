@@ -26,8 +26,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * The event loops for KV connections that use NIO (see {@link KeyValueEventLoop} and {@link NioKeyValueConnection}):
- * like a Netty event loop group. Each connection gets the next loop in turn.
+ * The event loops for KV connections (see {@link KeyValueEventLoop} and {@link NioKeyValueConnection}).
+ * Each connection gets the next loop in turn.
  * <p>
  * Owned by an environment (see {@link com.couchbase.client.core.env.IoEnvironment#nioKeyValueEventLoopGroup}),
  * which sizes it, and shuts it down.
@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @NullMarked
 public final class KeyValueEventLoopGroup {
   /**
-   * Numbers each group, for its threads' names (like Netty's pool IDs).
+   * Numbers each group, for its threads' names.
    */
   private static final AtomicInteger groupIds = new AtomicInteger();
 

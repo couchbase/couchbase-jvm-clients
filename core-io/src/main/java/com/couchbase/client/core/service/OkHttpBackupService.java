@@ -26,7 +26,7 @@ import org.jspecify.annotations.NullMarked;
 /**
  * The backup service on one node, using OkHttp.
  * <p>
- * Like the Netty implementation, handles only {@link CoreHttpRequest}s, which
+ * Handles only {@link CoreHttpRequest}s, which
  * {@link AbstractOkHttpService} takes care of, and reports every error response
  * as an {@link HttpStatusCodeException}.
  */
@@ -34,7 +34,7 @@ import org.jspecify.annotations.NullMarked;
 public class OkHttpBackupService extends AbstractOkHttpService {
 
   /**
-   * Like the Netty implementation, which has at most this many endpoints (connections) per node.
+   * The most requests in flight (so connections) per node.
    */
   private static final int MAX_IN_FLIGHT = 16;
 
@@ -61,7 +61,7 @@ public class OkHttpBackupService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    // Like the Netty implementation: no service-specific translation.
+    // No service-specific translation.
     return new HttpStatusCodeException(httpStatus, responseBody, request, null);
   }
 }

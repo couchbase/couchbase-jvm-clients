@@ -33,7 +33,7 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Reads a KV connection's packets: splits what it reads into packets (see {@link KeyValueFrameDecoder}), and checks
- * each one, like the Netty implementation's MemcacheProtocolVerificationHandler.
+ * each one.
  * <p>
  * Used by the connecting thread during the handshake, then by the connection's event loop, so anything read ahead
  * during the handshake isn't lost. Reads from a channel (non-blocking, if the channel is). Not thread-safe.

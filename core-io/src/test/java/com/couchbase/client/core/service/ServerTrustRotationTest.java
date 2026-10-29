@@ -44,7 +44,7 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Checks that {@link CouchbaseOkHttpClient} asks a user-supplied {@link TrustManagerFactory} for its
- * trust manager on each new connection, like the Netty implementation, so the trusted certificates
+ * trust manager on each new connection, so the trusted certificates
  * can change without restarting the SDK.
  */
 class ServerTrustRotationTest {

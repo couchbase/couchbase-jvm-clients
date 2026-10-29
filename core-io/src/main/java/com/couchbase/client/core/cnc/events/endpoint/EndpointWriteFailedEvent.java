@@ -22,7 +22,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import java.time.Duration;
 
 /**
- * This event is raised if the actual IO write and flush (into netty) failed.
+ * This event is raised if the actual IO write and flush failed.
  */
 public class EndpointWriteFailedEvent extends AbstractEvent {
 

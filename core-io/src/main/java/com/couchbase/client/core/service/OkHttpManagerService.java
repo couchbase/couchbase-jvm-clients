@@ -24,8 +24,14 @@ import com.couchbase.client.core.deps.okhttp3.ResponseBody;
 import com.couchbase.client.core.deps.okio.BufferedSource;
 import com.couchbase.client.core.deps.okio.ByteString;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
+import com.couchbase.client.core.error.context.ManagerErrorContext;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.netty.manager.NonChunkedManagerMessageHandler;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
@@ -54,7 +60,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * everything else (admission, dispatch, failures, {@link CoreHttpRequest}s, diagnostics)
  * is in {@link AbstractOkHttpService}.
  * <p>
- * Like the Netty implementation, manager requests always complete with a response that has
+ * Manager requests always complete with a response that has
  * the HTTP status; it's up to the caller to check it. Only {@link CoreHttpRequest}s are failed
  * for error statuses.
  */
@@ -62,7 +68,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OkHttpManagerService extends AbstractOkHttpService {
 
   /**
-   * Like the Netty implementation, which has at most this many endpoints (connections) per node.
+   * The most requests in flight (so connections) per node.
    */
   private static final int MAX_IN_FLIGHT = 16;
 
@@ -94,7 +100,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
   /**
    * Also ends any bucket config streams from this node, so the refresher redials (on a node that's still
-   * in the cluster). The Netty implementation does the same by closing its connections.
+   * in the cluster).
    */
   @Override
   public void disconnect() {
@@ -125,7 +131,49 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return NonChunkedManagerMessageHandler.errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+    return errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the cluster manager.
+   */
+  static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
+    ManagerErrorContext errorContext = new ManagerErrorContext(
+      HttpProtocol.decodeStatus(status),
+      request.context(),
+      status.code(),
+      content
+    );
+
+    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      if (content.contains("Magma is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Storage Backend: Magma");
+      }
+      if (content.contains("Compression mode is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Compression Mode");
+      }
+      if (content.contains("This http API endpoint requires enterprise edition")){
+        return FeatureNotAvailableException.communityEdition("HTTP API Feature");
+      }
+    }
+
+    if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
+      if (content.contains("num_concurrent_requests")
+        || content.contains("ingress")
+        || content.contains("egress")) {
+        return new RateLimitedException(errorContext);
+      } else if (content.contains("Maximum number of collections has been reached for scope")) {
+        return new QuotaLimitedException(errorContext);
+      }
+    }
+
+    HttpStatusCodeException httpStatusCodeException = new HttpStatusCodeException(status, content, request, errorContext);
+    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+      // Keep the HttpStatusCodeException as the cause, so higher layers can still
+      // inspect the response body and map it to a more specific exception.
+      return new InvalidArgumentException(httpStatusCodeException.getMessage(), httpStatusCodeException, errorContext);
+    }
+    return httpStatusCodeException;
   }
 
   private <R extends Response> void sendManagerRequest(
@@ -138,7 +186,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
     execute(request, requestBuilder, attempt, response -> {
       try (ResponseBody responseBody = response.body()) {
-        // Like the Netty implementation: whatever the status, the caller gets a response.
+        // Whatever the status, the caller gets a response.
         R decoded = managerRequest.decode(response.code(), responseBody.bytes());
         attempt.recordOutcome(decoded, null);
         request.succeed(decoded);
@@ -183,8 +231,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
   /**
    * Completes the request as soon as the response headers arrive, then pushes each config
    * to the response as it arrives, until the server closes the stream, the connection fails,
-   * the stream is idle for too long, or the service is disconnected. Then completes the stream
-   * (like the Netty implementation, which completes the stream when the connection closes),
+   * the stream is idle for too long, or the service is disconnected. Then completes the stream,
    * so the refresher can redial.
    * <p>
    * Runs on the thread that received the response, for as long as the stream lasts.
@@ -204,14 +251,14 @@ public class OkHttpManagerService extends AbstractOkHttpService {
     request.succeed(streamingResponse);
 
     try (ResponseBody responseBody = httpResponse.body()) {
-      // Like the Netty implementation: once the stream is open, close it if nothing arrives for a while.
+      // Once the stream is open, close it if nothing arrives for a while.
       CouchbaseOkHttpClient.setSocketReadTimeout(httpResponse.request(), configIdleTimeout);
       BufferedSource source = responseBody.source();
 
       while (true) {
         long separatorIndex = source.indexOf(CONFIG_SEPARATOR);
         if (separatorIndex == -1) {
-          break; // end of stream (any partial config is discarded, like Netty)
+          break; // end of stream (any partial config is discarded)
         }
         String config = source.readUtf8(separatorIndex);
         source.skip(CONFIG_SEPARATOR.size());
