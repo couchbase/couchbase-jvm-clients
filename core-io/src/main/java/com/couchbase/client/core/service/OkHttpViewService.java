@@ -17,7 +17,6 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.HttpStatusCodeException;
@@ -74,19 +73,19 @@ public class OkHttpViewService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+    return errorToThrowable(httpStatus, responseBody, request);
   }
 
   /**
    * Returns the exception for an error response to a non-streaming HTTP request to the view service.
    */
-  static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
+  static Exception errorToThrowable(int status, String content, Request<?> request) {
     HttpStatusCodeException cause = new HttpStatusCodeException(status, content, request, null);
 
     // SDK-46 wants HTTP status code 400 to be an InvalidArgumentException instead of CouchbaseException,
     // but that might break user code that catches ViewServiceException.
     // Views are deprecated anyway, so let's leave this one alone.
-//    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+//    if (status == CoreHttpStatus.BAD_REQUEST) {
 //      return new InvalidArgumentException("View service reported an invalid argument: " + content, cause, null);
 //    }
     return new ViewServiceException(content, cause);

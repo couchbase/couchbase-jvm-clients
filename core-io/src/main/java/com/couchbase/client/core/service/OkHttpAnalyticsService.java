@@ -17,7 +17,6 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.msg.Request;
@@ -74,7 +73,7 @@ public class OkHttpAnalyticsService extends AbstractOkHttpService {
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
     // Parses the whole body as errors (JSON or, for older servers, plain text).
-    return AnalyticsResponseFormat.errorsToThrowable(responseBody.getBytes(UTF_8), request.context(), HttpResponseStatus.valueOf(httpStatus));
+    return AnalyticsResponseFormat.errorsToThrowable(responseBody.getBytes(UTF_8), request.context(), httpStatus);
   }
 
   private static @Nullable RequestBody requestBody(AnalyticsRequest request) {

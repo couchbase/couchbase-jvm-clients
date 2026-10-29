@@ -18,8 +18,8 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -80,19 +80,19 @@ public class OkHttpEventingService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+    return errorToThrowable(httpStatus, responseBody, request);
   }
 
   /**
    * Returns the exception for an error response to an HTTP request to the eventing service.
    */
-  static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
+  static Exception errorToThrowable(int status, String content, Request<?> request) {
     final Map<String, Object> properties = extractProperties(content);
 
     EventingErrorContext errorContext = new EventingErrorContext(
       HttpProtocol.decodeStatus(status),
       request.context(),
-      status.code(),
+      status,
       properties
     );
 
@@ -121,7 +121,7 @@ public class OkHttpEventingService extends AbstractOkHttpService {
       }
     }
 
-    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+    if (status == CoreHttpStatus.BAD_REQUEST) {
       return new InvalidArgumentException("Eventing service reported an invalid argument: " + content, null, errorContext);
     }
 

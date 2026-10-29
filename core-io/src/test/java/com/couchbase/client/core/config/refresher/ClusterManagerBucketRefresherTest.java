@@ -19,7 +19,7 @@ package com.couchbase.client.core.config.refresher;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
@@ -77,7 +77,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.OK.code(), null);
+      BucketConfigStreamingResponse response = request.decode(CoreHttpStatus.OK, null);
       responseRef.set(response);
       request.succeed(response);
       return null;
@@ -102,7 +102,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.OK.code(), null);
+      BucketConfigStreamingResponse response = request.decode(CoreHttpStatus.OK, null);
       responseRef.set(response);
       request.succeed(response);
       return null;
@@ -125,7 +125,7 @@ class ClusterManagerBucketRefresherTest {
     doAnswer(i -> {
       streamingRequestAttempts.incrementAndGet();
       BucketConfigStreamingRequest request = i.getArgument(0);
-      BucketConfigStreamingResponse response = request.decode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(), null);
+      BucketConfigStreamingResponse response = request.decode(CoreHttpStatus.INTERNAL_SERVER_ERROR, null);
       request.succeed(response);
       return null;
     }).when(core).send(any(BucketConfigStreamingRequest.class));

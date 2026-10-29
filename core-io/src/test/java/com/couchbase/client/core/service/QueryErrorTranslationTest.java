@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -101,8 +101,8 @@ class QueryErrorTranslationTest {
     assertThrows(RateLimitedException.class, () -> runAndThrow("rate_limited_1193"));
     assertThrows(RateLimitedException.class, () -> runAndThrow("rate_limited_1194"));
 
-    assertExactlyCouchbaseException(() -> runAndThrow("empty_list", HttpResponseStatus.INTERNAL_SERVER_ERROR));
-    assertExactlyCouchbaseException(() -> runAndThrow("unknown", HttpResponseStatus.INTERNAL_SERVER_ERROR));
+    assertExactlyCouchbaseException(() -> runAndThrow("empty_list", CoreHttpStatus.INTERNAL_SERVER_ERROR));
+    assertExactlyCouchbaseException(() -> runAndThrow("unknown", CoreHttpStatus.INTERNAL_SERVER_ERROR));
 
     assertThrows(DocumentNotFoundException.class, () -> runAndThrow("kv_notfound"));
     assertThrows(DocumentExistsException.class, () -> runAndThrow("kv_exists"));
@@ -134,12 +134,12 @@ class QueryErrorTranslationTest {
    * @param file the relative filepath without the .json ending and the failure prefix.
    */
   private static void runAndThrow(final String file) {
-    runAndThrow(file, HttpResponseStatus.BAD_REQUEST);
+    runAndThrow(file, CoreHttpStatus.BAD_REQUEST);
   }
 
-  private static void runAndThrow(final String file, final HttpResponseStatus status) {
+  private static void runAndThrow(final String file, final int status) {
     String input = readResource("/com/couchbase/client/core/io/netty/query/failure_" + file + ".json", QueryErrorTranslationTest.class);
-    throw QueryResponseFormat.errorsToThrowable(input.getBytes(StandardCharsets.UTF_8), status.code(), null);
+    throw QueryResponseFormat.errorsToThrowable(input.getBytes(StandardCharsets.UTF_8), status, null);
   }
 
   private static void assertExactlyCouchbaseException(final Runnable r) {

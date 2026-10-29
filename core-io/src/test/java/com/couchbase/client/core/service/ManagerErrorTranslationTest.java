@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
@@ -40,7 +39,7 @@ class ManagerErrorTranslationTest {
   private Exception error(int httpStatus, String content) {
     Request<?> request = mock(Request.class);
     when(request.context()).thenReturn(mock(RequestContext.class));
-    return OkHttpManagerService.errorToThrowable(HttpResponseStatus.valueOf(httpStatus), content, request);
+    return OkHttpManagerService.errorToThrowable(httpStatus, content, request);
   }
 
   @Test

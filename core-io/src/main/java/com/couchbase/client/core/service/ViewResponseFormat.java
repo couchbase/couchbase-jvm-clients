@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.ViewNotFoundException;
@@ -81,7 +80,7 @@ final class ViewResponseFormat
 
   @Override
   public Optional<CouchbaseException> error(ViewChunkTrailer trailer, int httpStatus, RequestContext requestContext) {
-    return trailer.error().map(it -> errorToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
+    return trailer.error().map(it -> errorToThrowable(it, httpStatus, requestContext));
   }
 
   @Override
@@ -158,9 +157,8 @@ final class ViewResponseFormat
   /**
    * Returns the exception for the {@code error} and {@code reason} fields of a view query response.
    */
-  static CouchbaseException errorToThrowable(ViewError e, HttpResponseStatus status, RequestContext requestContext) {
-    int httpStatus = status.code();
-    ResponseStatus responseStatus = HttpProtocol.decodeStatus(status);
+  static CouchbaseException errorToThrowable(ViewError e, int httpStatus, RequestContext requestContext) {
+    ResponseStatus responseStatus = HttpProtocol.decodeStatus(httpStatus);
     ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext, e, httpStatus);
     if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
       return new ViewNotFoundException(errorContext);
