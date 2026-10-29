@@ -247,9 +247,9 @@ class KeyValuePacketTest {
   @Test
   void sectionReaderReadsUleb128() {
     ByteBuf buf = Unpooled.buffer();
-    UnsignedLEB128.write(buf, 0);
-    UnsignedLEB128.write(buf, 300);
-    UnsignedLEB128.write(buf, -1L); // the largest unsigned 64-bit value
+    buf.writeBytes(UnsignedLEB128.encode(0));
+    buf.writeBytes(UnsignedLEB128.encode(300));
+    buf.writeBytes(UnsignedLEB128.encode(-1L)); // the largest unsigned 64-bit value
     buf.writeByte(0x80); // starts a value that never ends
     SectionReader reader = KeyValuePacket.wrap(ByteBuffer.wrap(response((byte) 0, EXTRAS, KEY, ByteBufUtil.getBytes(buf)))).body();
 

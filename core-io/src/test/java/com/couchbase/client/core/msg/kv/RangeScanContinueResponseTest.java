@@ -94,7 +94,7 @@ class RangeScanContinueResponseTest {
   @Test
   void failsFeedIfItemIsTruncated() {
     ByteBuf items = Unpooled.buffer();
-    UnsignedLEB128.write(items, 10);
+    items.writeBytes(UnsignedLEB128.encode(10));
     items.writeBytes(new byte[3]); // a key of 10 bytes, cut short
     RangeScanContinueResponse response = response(true);
 
@@ -108,7 +108,7 @@ class RangeScanContinueResponseTest {
   }
 
   private static void writeLengthPrefixed(ByteBuf buf, byte[] bytes) {
-    UnsignedLEB128.write(buf, bytes.length);
+    buf.writeBytes(UnsignedLEB128.encode(bytes.length));
     buf.writeBytes(bytes);
   }
 
