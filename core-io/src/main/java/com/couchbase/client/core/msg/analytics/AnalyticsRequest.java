@@ -25,7 +25,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
@@ -64,7 +63,7 @@ public class AnalyticsRequest
   private final String bucket;
   private final String scope;
   private final String httpPath;
-  private final HttpMethod httpMethod;
+  private final String httpMethod;
 
 
   /**
@@ -90,7 +89,7 @@ public class AnalyticsRequest
     final String bucket,
     final String scope,
     final String httpPath,
-    final HttpMethod httpMethod,
+    final String httpMethod,
     final boolean translateExceptions
   ) {
     super(timeout, ctx, retryStrategy, span);
@@ -137,7 +136,7 @@ public class AnalyticsRequest
     final String bucket,
     final String scope,
     final String httpPath,
-    final HttpMethod httpMethod
+    final String httpMethod
   ) {
     this(
       timeout,
@@ -226,7 +225,7 @@ public class AnalyticsRequest
       bucket,
       scope,
       httpPathsByVersion.get(apiVersion),
-      HttpMethod.POST,
+      "POST",
       translateExceptions
     );
   }
@@ -277,7 +276,7 @@ public class AnalyticsRequest
     Map<String, Object> ctx = new TreeMap<>();
     ctx.put("type", serviceType().ident());
     ctx.put("httpPath", httpPath);
-    ctx.put("httpMethod", httpMethod.toString());
+    ctx.put("httpMethod", httpMethod);
     ctx.put("operationId", redactMeta(operationId()));
     ctx.put("statement", redactUser(statement()));
     ctx.put("priority", priority);
@@ -311,7 +310,7 @@ public class AnalyticsRequest
    */
   @Stability.Internal
   public String httpMethodName() {
-    return httpMethod.name();
+    return httpMethod;
   }
 
   /**
