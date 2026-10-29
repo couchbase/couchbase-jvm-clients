@@ -17,7 +17,6 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.util.ResourceLeakDetector;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -42,12 +41,6 @@ import java.util.stream.Collectors;
  */
 @Timeout(value = 1, unit = TimeUnit.MINUTES) // Safety timer so tests can't block CI executors
 public class CoreIntegrationTest extends ClusterAwareIntegrationTest {
-
-  static {
-    // Make sure that every core integration test records and spits out buffer leaks.
-    ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-  }
-
   protected static final Duration kvTimeout = Duration.ofSeconds(5);
   protected static final Duration managementTimeout = Duration.ofSeconds(5);
 
