@@ -1,2 +1,1 @@
-com.couchbase.client.core.deps.io.netty.util.internal.Hidden$NettyBlockHoundIntegration
 com.couchbase.client.core.util.CouchbaseBlockHoundIntegration
