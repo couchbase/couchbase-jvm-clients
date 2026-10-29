@@ -442,6 +442,15 @@
                             </excludes>
                         </filter>
                         <filter>
+                            <artifact>io.netty:netty-handler</artifact>
+                            <excludes>
+                                <!-- core-io has its own class by this name (in the relocated package),
+                                     so users' code that passes InsecureTrustManagerFactory.INSTANCE
+                                     to SecurityConfig keeps working without Netty's. -->
+                                <exclude>io/netty/handler/ssl/util/InsecureTrustManagerFactory*.class</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
                             <artifact>dnsjava:dnsjava</artifact>
                             <excludes>
                                 <!-- These localized messages are optional (See R.java) and aren't worth the trouble of relocating. -->
