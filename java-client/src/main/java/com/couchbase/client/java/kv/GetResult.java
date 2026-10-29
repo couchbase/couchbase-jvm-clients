@@ -17,12 +17,10 @@
 package com.couchbase.client.java.kv;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.api.kv.CoreGetResult;
 import com.couchbase.client.core.error.CasMismatchException;
 import com.couchbase.client.core.msg.kv.CodecFlags;
-import com.couchbase.client.core.api.kv.CoreGetResult;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.java.codec.Transcoder;
 import com.couchbase.client.java.codec.TypeRef;
 import com.couchbase.client.java.json.JsonArray;
@@ -204,10 +202,7 @@ public class GetResult {
     if (printable) {
       return new String(content, StandardCharsets.UTF_8);
     } else {
-      ByteBuf buf = Unpooled.wrappedBuffer(content);
-      String result = ByteBufUtil.prettyHexDump(buf);
-      buf.release();
-      return "\n" + result + "\n";
+      return "\n" + Bytes.prettyHexDump(content) + "\n";
     }
   }
 
