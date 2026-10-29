@@ -17,7 +17,7 @@
 package com.couchbase.utils;
 
 import com.couchbase.InternalPerformerFailure;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
+import com.couchbase.client.core.env.CouchbaseThreadFactory;
 import com.google.common.base.Throwables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +48,7 @@ public class UserSchedulerUtil {
   }
 
   public static ExecutorAndScheduler userExecutorAndScheduler() {
-    var executorService = Executors.newCachedThreadPool(new DefaultThreadFactory(USER_SCHEDULER_THREAD_POOL_NAME, true));
+    var executorService = Executors.newCachedThreadPool(new CouchbaseThreadFactory(USER_SCHEDULER_THREAD_POOL_NAME + "-"));
     var userScheduler = Schedulers.fromExecutor(executorService);
     return new ExecutorAndScheduler(executorService, userScheduler);
   }
