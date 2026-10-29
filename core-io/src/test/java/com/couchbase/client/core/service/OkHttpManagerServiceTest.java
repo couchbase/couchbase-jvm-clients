@@ -17,8 +17,8 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
@@ -26,8 +26,8 @@ import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
-import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.RequestTarget;
+import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.manager.BucketConfigRequest;
 import com.couchbase.client.core.msg.manager.BucketConfigResponse;
@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -140,6 +141,20 @@ class OkHttpManagerServiceTest {
   }
 
   @Test
+  void repeatedHeaderIsSentWithEachValue() throws Exception {
+    start();
+    server.enqueue("ok");
+
+    CoreHttpRequest request = CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET, CoreHttpPath.path("/pools"), RequestTarget.manager())
+      .header("X-Test", "a")
+      .header("X-Test", "b")
+      .build();
+    send(request);
+
+    assertEquals(listOf("a", "b"), server.requests().get(0).headers.get("x-test"));
+  }
+
+  @Test
   void errorStatusCompletesWithResponse() throws Exception {
     // The caller checks the status.
     start();
@@ -151,7 +166,7 @@ class OkHttpManagerServiceTest {
   }
 
   private CoreHttpRequest newCoreHttpRequest(boolean failOnErrorStatus) {
-    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET, CoreHttpPath.path("/pools?x=1"), RequestTarget.manager())
+    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET, CoreHttpPath.path("/pools?x=1"), RequestTarget.manager())
       .failOnErrorStatus(failOnErrorStatus)
       .build();
   }

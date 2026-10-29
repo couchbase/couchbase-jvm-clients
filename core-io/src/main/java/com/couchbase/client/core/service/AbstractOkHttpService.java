@@ -591,7 +591,7 @@ abstract class AbstractOkHttpService implements Service {
     com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
       .url(url(request.pathAndQueryString()))
       .method(request.method(), requestBody(request.method(), request.contentAsByteArray()));
-    request.forEachHeader(requestBuilder::header);
+    request.forEachHeader(requestBuilder::addHeader); // keeps every value of a repeated header
 
     execute(request, requestBuilder, attempt, response -> {
       try (ResponseBody responseBody = response.body()) {

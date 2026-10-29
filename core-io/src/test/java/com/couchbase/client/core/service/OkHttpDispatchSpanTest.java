@@ -24,8 +24,8 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.metrics.AbstractMeter;
 import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -111,7 +111,7 @@ class OkHttpDispatchSpanTest {
     CoreHttpRequest request = CoreHttpRequest.builder(
         CoreCommonOptions.of(TIMEOUT, FailFastRetryStrategy.INSTANCE, null),
         core.context(),
-        HttpMethod.GET,
+        CoreHttpMethod.GET,
         CoreHttpPath.path("/admin/ping"),
         RequestTarget.query()
       )

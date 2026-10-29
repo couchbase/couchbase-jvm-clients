@@ -23,27 +23,22 @@ import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultHttpHeaders;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.EmptyHttpHeaders;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaders;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.RequestTarget;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.NodeIdentifier;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.UrlQueryStringBuilder;
 import reactor.util.annotation.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.GET;
 import static com.couchbase.client.core.endpoint.http.CoreHttpTimeoutHelper.resolveTimeout;
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
@@ -62,18 +57,18 @@ import static java.util.Objects.requireNonNull;
 public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
 
   private final RequestTarget target;
-  private final HttpMethod method;
+  private final CoreHttpMethod method;
   private final CoreHttpPath path;
   private final String queryString;
-  private final ByteBuf content;
-  private final HttpHeaders headers;
+  private final byte[] content;
+  private final List<Map.Entry<String, String>> headers;
   private final boolean idempotent;
   private final AtomicBoolean executed = new AtomicBoolean();
   private final boolean bypassExceptionTranslation;
   private final boolean failOnErrorStatus;
   private final @Nullable String name;
 
-  public static Builder builder(CoreCommonOptions options, CoreContext coreContext, HttpMethod method, CoreHttpPath path, RequestTarget target) {
+  public static Builder builder(CoreCommonOptions options, CoreContext coreContext, CoreHttpMethod method, CoreHttpPath path, RequestTarget target) {
     return new Builder(options, coreContext, target, method, path);
   }
 
@@ -85,7 +80,7 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
     this.path = builder.path;
     this.queryString = builder.queryString;
     this.content = builder.content;
-    this.headers = builder.headers;
+    this.headers = new ArrayList<>(builder.headers);
     this.idempotent = defaultIfNull(builder.idempotent, method == GET);
     this.bypassExceptionTranslation = builder.bypassExceptionTranslation;
     this.failOnErrorStatus = builder.failOnErrorStatus;
@@ -116,12 +111,15 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
   }
 
   public byte[] contentAsByteArray() {
-    return ByteBufUtil.getBytes(content);
+    return content;
   }
 
+  /**
+   * Passes each header to the action, in the order they were added. A header added more than once
+   * is passed once for each value.
+   */
   public void forEachHeader(BiConsumer<String, String> action) {
-    headers.entries()
-      .forEach(entry -> action.accept(entry.getKey(), entry.getValue()));
+    headers.forEach(it -> action.accept(it.getKey(), it.getValue()));
   }
 
   @Override
@@ -207,18 +205,16 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
    */
   @Stability.Internal
   public static class Builder {
-    private static final ByteBuf EMPTY_BYTE_BUF = Unpooled.buffer(0, 0);
-
     private final CoreCommonOptions options;
     private final CoreContext coreContext;
     private final RequestTarget target;
-    private final HttpMethod method;
+    private final CoreHttpMethod method;
     private final CoreHttpPath path;
 
     private String queryString = "";
-    private ByteBuf content = EMPTY_BYTE_BUF;
+    private byte[] content = Bytes.EMPTY_BYTE_ARRAY;
 
-    private HttpHeaders headers = EmptyHttpHeaders.INSTANCE;
+    private final List<Map.Entry<String, String>> headers = new ArrayList<>();
     private String spanName; // nullable
     @Nullable private Consumer<RequestSpan> attributeSetter;
     private Map<TracingAttribute, Object> spanAttributes; // nullable
@@ -226,7 +222,7 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
     private boolean bypassExceptionTranslation;
     private boolean failOnErrorStatus = true;
 
-    public Builder(CoreCommonOptions options, CoreContext coreContext, RequestTarget target, HttpMethod method, CoreHttpPath path) {
+    public Builder(CoreCommonOptions options, CoreContext coreContext, RequestTarget target, CoreHttpMethod method, CoreHttpPath path) {
       this.options = requireNonNull(options);
       this.coreContext = requireNonNull(coreContext);
       this.target = requireNonNull(target);
@@ -278,11 +274,11 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
       return traceAttr(TracingAttribute.COLLECTION_NAME, collectionName);
     }
 
-    public Builder header(CharSequence name, Object value) {
-      if (this.headers == EmptyHttpHeaders.INSTANCE) {
-        this.headers = new DefaultHttpHeaders();
-      }
-      this.headers.add(name, value);
+    /**
+     * Adds a header. A header added more than once is sent with each value.
+     */
+    public Builder header(String name, Object value) {
+      this.headers.add(new SimpleImmutableEntry<>(requireNonNull(name), String.valueOf(value)));
       return this;
     }
 
@@ -330,18 +326,18 @@ public class CoreHttpRequest extends BaseHttpRequest<CoreHttpResponse> {
     public Builder form(UrlQueryStringBuilder formData) {
       return content(
           formData.build().getBytes(StandardCharsets.UTF_8),
-          HttpHeaderValues.APPLICATION_X_WWW_FORM_URLENCODED
+          "application/x-www-form-urlencoded"
       );
     }
 
     public Builder json(byte[] content) {
-      return content(content, HttpHeaderValues.APPLICATION_JSON);
+      return content(content, "application/json");
     }
 
-    public Builder content(byte[] content, CharSequence contentType) {
-      this.content = Unpooled.wrappedBuffer(content);
-      return header(HttpHeaderNames.CONTENT_TYPE, contentType)
-          .header(HttpHeaderNames.CONTENT_LENGTH, content.length);
+    public Builder content(byte[] content, String contentType) {
+      this.content = requireNonNull(content);
+      return header("Content-Type", contentType)
+          .header("Content-Length", content.length);
     }
 
     public CoreHttpRequest build() {

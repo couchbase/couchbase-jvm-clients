@@ -17,10 +17,10 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
 import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -103,7 +103,7 @@ class OkHttpTlsFailureTest {
 
   private CoreHttpRequest newRequest() {
     CoreCommonOptions options = CoreCommonOptions.of(TIMEOUT, null, null);
-    return CoreHttpRequest.builder(options, core.context(), HttpMethod.GET, CoreHttpPath.path("/pools"), RequestTarget.manager())
+    return CoreHttpRequest.builder(options, core.context(), CoreHttpMethod.GET, CoreHttpPath.path("/pools"), RequestTarget.manager())
       .build();
   }
 

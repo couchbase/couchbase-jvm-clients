@@ -18,7 +18,7 @@ package com.couchbase.client.java.manager.raw;
 
 import com.couchbase.client.core.Reactor;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
@@ -97,7 +97,7 @@ public class RawManager {
         CoreHttpPath.path(request.uri()), // may include a query string
         RequestTarget.manager()
       )
-      .idempotent(request.method().equals(HttpMethod.GET))
+      .idempotent(request.method().equals(CoreHttpMethod.GET))
       .failOnErrorStatus(false); // the caller checks the status
 
     for (Map.Entry<String, Object> e : opts.httpHeaders().entrySet()) {

@@ -17,8 +17,8 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
@@ -47,8 +47,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -103,7 +103,7 @@ class OkHttpBackupServiceTest {
   }
 
   private CoreHttpRequest newRequest() {
-    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET,
+    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET,
         CoreHttpPath.path("/api/v1/plan/{name}", singletonMap("name", "my-plan")), RequestTarget.backup())
       .build();
   }
