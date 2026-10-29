@@ -18,15 +18,12 @@ package com.couchbase.client.core.api.manager.search;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.api.search.util.SearchCapabilityCheck;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.util.concurrent.CompleteFuture;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -176,7 +173,7 @@ public abstract class ClassicCoreBaseSearchIndexManager implements CoreSearchInd
             .thenCompose(ignore -> searchHttpClient.put(path(indexPath(index.name())), options)
                     .trace(TracingIdentifiers.SPAN_REQUEST_MS_UPSERT_INDEX)
                     .json(index.toJson().getBytes(UTF_8))
-                    .header(HttpHeaderNames.CACHE_CONTROL, "no-cache")
+                    .header("Cache-Control", "no-cache")
                     .exec(core)
                     .thenApply(response -> null));
   }

@@ -17,8 +17,8 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
@@ -98,7 +98,7 @@ class OkHttpEventingServiceTest {
   }
 
   private CoreHttpRequest newRequest() {
-    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET,
+    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET,
         CoreHttpPath.path("/api/v1/functions/{name}", singletonMap("name", "my-function")), RequestTarget.eventing())
       .build();
   }

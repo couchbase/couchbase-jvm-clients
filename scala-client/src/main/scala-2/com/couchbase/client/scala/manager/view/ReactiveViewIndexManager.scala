@@ -19,10 +19,10 @@ import java.nio.charset.StandardCharsets.UTF_8
 import com.couchbase.client.core.{Core, CoreProtostellar}
 import com.couchbase.client.core.api.CoreCouchbaseOps
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode
-import com.couchbase.client.core.deps.io.netty.handler.codec.http._
 import com.couchbase.client.core.endpoint.http.{
   CoreCommonOptions,
   CoreHttpClient,
+  CoreHttpMethod,
   CoreHttpPath,
   CoreHttpRequest,
   CoreHttpResponse
@@ -107,7 +107,7 @@ class ReactiveViewIndexManager(private[scala] val couchbaseOps: CoreCouchbaseOps
       case core: Core =>
         // This particular request goes to port 8091 not 8092, hence use of ManagerUtil.getRequest
         ManagerUtil
-          .sendRequest(core, HttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
+          .sendRequest(core, CoreHttpMethod.GET, pathForAllDesignDocuments, timeout, retryStrategy)
           .flatMapMany(response => {
             response.status match {
               case ResponseStatus.SUCCESS =>

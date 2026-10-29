@@ -18,8 +18,8 @@ package com.couchbase.client.scala.manager.user
 
 import com.couchbase.client.core.Core
 import com.couchbase.client.core.api.CoreCouchbaseOps
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod.GET
 import com.couchbase.client.core.endpoint.http.{CoreHttpClient, CoreHttpPath, CoreHttpResponse}
 import com.couchbase.client.core.error.{
   CouchbaseException,
@@ -73,7 +73,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
     coreTry.map(core => new CoreHttpClient(core, RequestTarget.manager()))
 
   private def sendRequest(
-      method: HttpMethod,
+      method: CoreHttpMethod,
       path: String,
       timeout: Duration,
       retryStrategy: RetryStrategy
@@ -82,9 +82,9 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       core    <- coreTry
       client  <- httpClient
       builder <- method match {
-        case HttpMethod.GET =>
+        case CoreHttpMethod.GET =>
           Success(client.get(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case HttpMethod.DELETE =>
+        case CoreHttpMethod.DELETE =>
           Success(client.delete(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
         case _ =>
           Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
@@ -95,7 +95,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
   }
 
   private def sendRequest(
-      method: HttpMethod,
+      method: CoreHttpMethod,
       path: String,
       body: UrlQueryStringBuilder,
       timeout: Duration,
@@ -105,9 +105,9 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       core    <- coreTry
       client  <- httpClient
       builder <- method match {
-        case HttpMethod.PUT =>
+        case CoreHttpMethod.PUT =>
           Success(client.put(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
-        case HttpMethod.POST =>
+        case CoreHttpMethod.POST =>
           Success(client.post(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
         case _ =>
           Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
@@ -184,7 +184,13 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
     // Password is required when creating user, but optional when updating existing user.
     user.password.foreach((pwd: String) => params.add("password", pwd))
 
-    sendRequest(HttpMethod.PUT, pathForUser(domain, user.username), params, timeout, retryStrategy)
+    sendRequest(
+      CoreHttpMethod.PUT,
+      pathForUser(domain, user.username),
+      params,
+      timeout,
+      retryStrategy
+    )
       .flatMap(response => {
 
         checkStatus(response, "create user [" + redactUser(user.username) + "]") match {
@@ -200,7 +206,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    sendRequest(HttpMethod.DELETE, pathForUser(domain, username), timeout, retryStrategy)
+    sendRequest(CoreHttpMethod.DELETE, pathForUser(domain, username), timeout, retryStrategy)
       .flatMap(response => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {
@@ -221,7 +227,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
   ): Future[Unit] = {
     val params = UrlQueryStringBuilder.createForUrlSafeNames().add("password", newPassword)
 
-    sendRequest(HttpMethod.POST, pathForPassword, params, timeout, retryStrategy)
+    sendRequest(CoreHttpMethod.POST, pathForPassword, params, timeout, retryStrategy)
       .flatMap(response => {
         checkStatus(response, "change user password") match {
           case Failure(err) => Future.failed(err)
@@ -252,7 +258,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Group] = {
-    sendRequest(HttpMethod.GET, pathForGroup(groupName), timeout, retryStrategy)
+    sendRequest(CoreHttpMethod.GET, pathForGroup(groupName), timeout, retryStrategy)
       .flatMap(response => {
         if (response.status == ResponseStatus.NOT_FOUND) {
           Future.failed(new GroupNotFoundException(groupName))
@@ -293,7 +299,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
 
     group.ldapGroupReference.foreach(lgr => params.add("ldap_group_ref", lgr))
 
-    sendRequest(HttpMethod.PUT, pathForGroup(group.name), params, timeout, retryStrategy)
+    sendRequest(CoreHttpMethod.PUT, pathForGroup(group.name), params, timeout, retryStrategy)
       .flatMap(response => {
 
         checkStatus(response, "create group [" + redactSystem(group.name) + "]") match {
@@ -308,7 +314,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       timeout: Duration = defaultManagerTimeout,
       retryStrategy: RetryStrategy = defaultRetryStrategy
   ): Future[Unit] = {
-    sendRequest(HttpMethod.DELETE, pathForGroup(groupName), timeout, retryStrategy)
+    sendRequest(CoreHttpMethod.DELETE, pathForGroup(groupName), timeout, retryStrategy)
       .flatMap(response => {
 
         if (response.status == ResponseStatus.NOT_FOUND) {

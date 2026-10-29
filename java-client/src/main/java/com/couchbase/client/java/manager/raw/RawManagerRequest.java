@@ -17,7 +17,7 @@
 package com.couchbase.client.java.manager.raw;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Cluster;
 
@@ -30,9 +30,9 @@ public class RawManagerRequest {
 
   private final ServiceType serviceType;
   private final String uri;
-  private final HttpMethod method;
+  private final CoreHttpMethod method;
 
-  private RawManagerRequest(final ServiceType serviceType, final HttpMethod method, final String uri) {
+  private RawManagerRequest(final ServiceType serviceType, final CoreHttpMethod method, final String uri) {
     this.serviceType = serviceType;
     this.method = method;
     this.uri = uri;
@@ -46,7 +46,7 @@ public class RawManagerRequest {
    * @return a request that should be passed into {@link RawManager#call(Cluster, RawManagerRequest)}.
    */
   public static RawManagerRequest get(final ServiceType serviceType, final String uri) {
-    return new RawManagerRequest(serviceType, HttpMethod.GET, uri);
+    return new RawManagerRequest(serviceType, CoreHttpMethod.GET, uri);
   }
 
   ServiceType serviceType() {
@@ -57,7 +57,7 @@ public class RawManagerRequest {
     return uri;
   }
 
-  HttpMethod method() {
+  CoreHttpMethod method() {
     return method;
   }
 }

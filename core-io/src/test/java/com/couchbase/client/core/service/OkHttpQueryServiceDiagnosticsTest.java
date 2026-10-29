@@ -17,10 +17,10 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.endpoint.EndpointState;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
@@ -113,7 +113,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     return CoreHttpRequest.builder(
       CoreCommonOptions.of(Duration.ofSeconds(5), BestEffortRetryStrategy.INSTANCE, null),
       core.context(),
-      HttpMethod.GET,
+      CoreHttpMethod.GET,
       CoreHttpPath.path("/admin/ping"),
       RequestTarget.query()
     ).build();
@@ -169,7 +169,7 @@ class OkHttpQueryServiceDiagnosticsTest {
     CoreHttpRequest request = CoreHttpRequest.builder(
       CoreCommonOptions.of(Duration.ofSeconds(5), FailFastRetryStrategy.INSTANCE, null),
       core.context(),
-      HttpMethod.GET,
+      CoreHttpMethod.GET,
       CoreHttpPath.path("/admin/ping"),
       RequestTarget.query()
     ).build();

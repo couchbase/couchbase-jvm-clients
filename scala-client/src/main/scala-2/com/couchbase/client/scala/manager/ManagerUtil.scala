@@ -18,7 +18,7 @@ package com.couchbase.client.scala.manager
 import java.nio.charset.StandardCharsets.UTF_8
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod
 import com.couchbase.client.core.endpoint.http.{
   CoreCommonOptions,
   CoreHttpPath,
@@ -49,7 +49,7 @@ object ManagerUtil {
 
   def sendRequest(
       core: Core,
-      method: HttpMethod,
+      method: CoreHttpMethod,
       path: String,
       timeout: Duration,
       retryStrategy: RetryStrategy
@@ -59,7 +59,7 @@ object ManagerUtil {
 
   def sendRequest(
       core: Core,
-      method: HttpMethod,
+      method: CoreHttpMethod,
       path: String,
       body: UrlQueryStringBuilder,
       timeout: Duration,
@@ -70,7 +70,7 @@ object ManagerUtil {
 
   private def requestBuilder(
       core: Core,
-      method: HttpMethod,
+      method: CoreHttpMethod,
       path: String,
       timeout: Duration,
       retryStrategy: RetryStrategy
@@ -83,7 +83,7 @@ object ManagerUtil {
         CoreHttpPath.path(path),
         RequestTarget.manager()
       )
-      .idempotent(method == HttpMethod.GET)
+      .idempotent(method == CoreHttpMethod.GET)
       .failOnErrorStatus(false) // callers check the status
   }
 

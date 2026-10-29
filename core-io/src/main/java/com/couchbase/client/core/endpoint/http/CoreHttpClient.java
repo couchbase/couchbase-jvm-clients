@@ -18,14 +18,13 @@ package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.msg.RequestTarget;
 
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.DELETE;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.GET;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PATCH;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.POST;
-import static com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod.PUT;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.DELETE;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.GET;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.PATCH;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.POST;
+import static com.couchbase.client.core.endpoint.http.CoreHttpMethod.PUT;
 import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
@@ -58,7 +57,7 @@ public class CoreHttpClient {
     return newRequest(DELETE, path, options);
   }
 
-  public CoreHttpRequest.Builder newRequest(HttpMethod method, CoreHttpPath path, CoreCommonOptions options) {
+  public CoreHttpRequest.Builder newRequest(CoreHttpMethod method, CoreHttpPath path, CoreCommonOptions options) {
     return new CoreHttpRequest.Builder(options, core.context(), target, method, path);
   }
 }

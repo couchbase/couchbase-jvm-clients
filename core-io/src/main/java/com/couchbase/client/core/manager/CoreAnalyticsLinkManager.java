@@ -19,9 +19,9 @@ package com.couchbase.client.core.manager;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
 import com.couchbase.client.core.error.CompilationFailureException;
@@ -56,21 +56,21 @@ public class CoreAnalyticsLinkManager {
   }
 
   public CompletableFuture<Void> createLink(Map<String, String> link, CoreCommonOptions options) {
-    return sendLink(HttpMethod.POST, link, options, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_LINK);
+    return sendLink(CoreHttpMethod.POST, link, options, TracingIdentifiers.SPAN_REQUEST_MA_CREATE_LINK);
   }
 
   public CompletableFuture<Void> replaceLink(Map<String, String> link, CoreCommonOptions options) {
-    return sendLink(HttpMethod.PUT, link, options, TracingIdentifiers.SPAN_REQUEST_MA_REPLACE_LINK);
+    return sendLink(CoreHttpMethod.PUT, link, options, TracingIdentifiers.SPAN_REQUEST_MA_REPLACE_LINK);
   }
 
   public CompletableFuture<Void> dropLink(String linkName, String dataverse, CoreCommonOptions options) {
     Map<String, String> link = new HashMap<>();
     link.put("dataverse", dataverse);
     link.put("name", linkName);
-    return sendLink(HttpMethod.DELETE, link, options, TracingIdentifiers.SPAN_REQUEST_MA_DROP_LINK);
+    return sendLink(CoreHttpMethod.DELETE, link, options, TracingIdentifiers.SPAN_REQUEST_MA_DROP_LINK);
   }
 
-  private CompletableFuture<Void> sendLink(HttpMethod method, Map<String, String> link, CoreCommonOptions options, String tracingId) {
+  private CompletableFuture<Void> sendLink(CoreHttpMethod method, Map<String, String> link, CoreCommonOptions options, String tracingId) {
     link = new HashMap<>(link); // ensure mutability, and don't modify caller's map
     CoreHttpPath path = getLinkPathAndAdjustMap(link);
 

@@ -17,10 +17,10 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
 import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.env.CoreEnvironment;
@@ -105,7 +105,7 @@ class OkHttpDispatchLatencyTest {
       socket.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".getBytes(UTF_8));
     })) {
       CoreCommonOptions options = CoreCommonOptions.of(TIMEOUT, null, null);
-      CoreHttpRequest request = CoreHttpRequest.builder(options, core.context(), HttpMethod.GET, CoreHttpPath.path("/pools"), RequestTarget.manager())
+      CoreHttpRequest request = CoreHttpRequest.builder(options, core.context(), CoreHttpMethod.GET, CoreHttpPath.path("/pools"), RequestTarget.manager())
         .build();
       long requestStart = System.nanoTime();
       new OkHttpManagerService(core.context(), new HostAndPort(LOOPBACK_IP, server.getLocalPort())).send(request);

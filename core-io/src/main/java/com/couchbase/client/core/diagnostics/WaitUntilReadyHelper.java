@@ -24,8 +24,8 @@ import com.couchbase.client.core.cnc.EventBus;
 import com.couchbase.client.core.cnc.events.core.WaitUntilReadyCompletedEvent;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ArrayNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.UnambiguousTimeoutException;
@@ -195,7 +195,7 @@ public class WaitUntilReadyHelper {
             null
           ),
           core.context(),
-          HttpMethod.GET,
+          CoreHttpMethod.GET,
           CoreHttpPath.path(httpPath),
           RequestTarget.manager()
         )

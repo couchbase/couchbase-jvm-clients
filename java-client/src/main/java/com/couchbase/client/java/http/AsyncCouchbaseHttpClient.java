@@ -18,14 +18,13 @@ package com.couchbase.client.java.http;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpClient;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.java.AsyncCluster;
 import com.couchbase.client.java.Cluster;
-import com.couchbase.client.java.CommonOptions;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -82,7 +81,7 @@ public class AsyncCouchbaseHttpClient {
     notNull(options, "options");
 
     HttpGetOptions.Built builtOpts = options.build();
-    return exec(HttpMethod.GET, target, path, builtOpts, req -> {
+    return exec(CoreHttpMethod.GET, target, path, builtOpts, req -> {
       if (builtOpts.queryString() != null) {
         req.queryString(builtOpts.queryString().urlEncoded);
       }
@@ -118,7 +117,7 @@ public class AsyncCouchbaseHttpClient {
     notNull(options, "options");
 
     HttpPostOptions.Built builtOpts = options.build();
-    return exec(HttpMethod.POST, target, path, builtOpts, req -> {
+    return exec(CoreHttpMethod.POST, target, path, builtOpts, req -> {
       if (builtOpts.body() != null) {
         req.content(builtOpts.body().content, builtOpts.body().contentType);
       }
@@ -154,7 +153,7 @@ public class AsyncCouchbaseHttpClient {
     notNull(options, "options");
 
     HttpPutOptions.Built builtOpts = options.build();
-    return exec(HttpMethod.PUT, target, path, builtOpts, req -> {
+    return exec(CoreHttpMethod.PUT, target, path, builtOpts, req -> {
       if (builtOpts.body() != null) {
         req.content(builtOpts.body().content, builtOpts.body().contentType);
       }
@@ -190,7 +189,7 @@ public class AsyncCouchbaseHttpClient {
     notNull(options, "options");
 
     HttpPatchOptions.Built builtOpts = options.build();
-    return exec(HttpMethod.PATCH, target, path, builtOpts, req -> {
+    return exec(CoreHttpMethod.PATCH, target, path, builtOpts, req -> {
       if (builtOpts.body() != null) {
         req.content(builtOpts.body().content, builtOpts.body().contentType);
       }
@@ -212,12 +211,12 @@ public class AsyncCouchbaseHttpClient {
     notNull(path, "path");
     notNull(options, "options");
 
-    return exec(HttpMethod.DELETE, target, path, options.build(), req -> {
+    return exec(CoreHttpMethod.DELETE, target, path, options.build(), req -> {
     });
   }
 
   private CompletableFuture<HttpResponse> exec(
-      HttpMethod method,
+      CoreHttpMethod method,
       HttpTarget target,
       HttpPath path,
       CommonHttpOptions<?>.BuiltCommonHttpOptions options,

@@ -19,8 +19,8 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.config.PortInfo;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.ObjectMapper;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
+import com.couchbase.client.core.endpoint.http.CoreHttpMethod;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpResponse;
@@ -116,7 +116,7 @@ public class ConsistencyUtil {
 
   private static CoreHttpRequest defaultManagerRequest(Core core, CoreHttpPath path, NodeIdentifier node) {
     RequestTarget target = defaultManagerTarget(node);
-    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET, path, target).build();
+    return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET, path, target).build();
   }
 
   public static void waitUntilUserPresent(Core core, String domain, String name) {
@@ -249,7 +249,7 @@ public class ConsistencyUtil {
 //      "status views == " + requiredHttpStatus,
 //      (node) -> {
 //        RequestTarget target = new RequestTarget(ServiceType.SEARCH, node, null);
-//        return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET, path, target).build();
+//        return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET, path, target).build();
 //      });
   }
 
@@ -269,7 +269,7 @@ public class ConsistencyUtil {
       String.format("view %s == %d", path.format(), requiredHttpStatus),
       (node) -> {
         RequestTarget target = new RequestTarget(ServiceType.VIEWS, node, bucketName);
-        return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), HttpMethod.GET, path, target).build();
+        return CoreHttpRequest.builder(CoreCommonOptions.DEFAULT, core.context(), CoreHttpMethod.GET, path, target).build();
       });
   }
 
