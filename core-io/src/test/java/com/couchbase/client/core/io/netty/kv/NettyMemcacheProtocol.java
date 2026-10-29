@@ -17,11 +17,6 @@
 package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
@@ -29,12 +24,29 @@ import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.util.Bytes;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.*;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.DATATYPE_OFFSET;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.FRAMING_EXTRAS_TRACING;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.HEADER_SIZE;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.MAGIC_OFFSET;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Magic;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.OPAQUE_OFFSET;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.OPCODE_OFFSET;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.PRESERVE_TTL_FLEXIBLE_IDENT;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.SYNC_REPLICATION_FLEXIBLE_IDENT;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.TOTAL_LENGTH_OFFSET;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.syncReplicationDeadline;
+import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.tryDecompression;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**

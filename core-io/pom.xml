@@ -104,6 +104,13 @@
             <artifactId>test-utils</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <!-- Some tests build and inspect KV packets with Netty buffers (for example, as reference encoders). -->
+            <groupId>io.netty</groupId>
+            <artifactId>netty-buffer</artifactId>
+            <version>${netty.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

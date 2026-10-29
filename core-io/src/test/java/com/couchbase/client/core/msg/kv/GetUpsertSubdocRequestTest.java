@@ -16,62 +16,68 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.compression.snappy.SnappyCodec;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.CompositeByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.PooledByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
-import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.Set;
 
-import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.mutationFlexibleExtras;
-import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.*;
-import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noExtras;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ALLOC;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CORE_CONTEXT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CUSTOM_COLLECTION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.DEFAULT_COLLECTION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.OPAQUE;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.PARTITION;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.TIMEOUT;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.assertEncoding;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.bytes;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.compressingCtx;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ctx;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.decodeEveryWay;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ints;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.newWriter;
+import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.response;
 import static com.couchbase.client.test.Util.readResource;
-import static java.util.Collections.singletonList;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 /**
  * Verifies Get, Upsert and the sub-document requests:

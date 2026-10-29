@@ -19,6 +19,8 @@
         <log4j-slf4j-impl.version>2.25.3</log4j-slf4j-impl.version>
 
         <jackson.version>2.21.7</jackson.version>
+        <!-- Test only: some tests build and inspect packets with Netty buffers. The SDK itself doesn't use Netty. -->
+        <netty.version>4.2.19.Final</netty.version>
         <reactor.version>3.8.7</reactor.version>
         <reactive-streams.version>1.0.4</reactive-streams.version>
         <blockhound.version>1.0.17.RELEASE</blockhound.version>

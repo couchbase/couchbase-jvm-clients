@@ -17,7 +17,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <netty.version>4.2.19.Final</netty.version>
         <jackson.version>2.21.7</jackson.version>
         <!-- Keep these in sync with test-utils' OkHttp version and the root pom's Okio version. -->
         <okhttp.version>5.5.1</okhttp.version>
@@ -26,38 +25,10 @@
         <shaded.package.prefix>com.couchbase.client.core.deps.</shaded.package.prefix>
         <!-- Same as shaded.package.prefix, but with slashes. -->
         <shaded.path.prefix>com/couchbase/client/core/deps/</shaded.path.prefix>
-        <shaded.native.lib.prefix>com_couchbase_client_core_deps_</shaded.native.lib.prefix>
-
-        <native.folder>${project.build.directory}/native</native.folder>
-        <native.epoll-x86_64.original>libnetty_transport_native_epoll_x86_64.so</native.epoll-x86_64.original>
-        <native.epoll-x86_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_epoll_x86_64.so</native.epoll-x86_64.renamed>
-        <native.epoll-aarch_64.original>libnetty_transport_native_epoll_aarch_64.so</native.epoll-aarch_64.original>
-        <native.epoll-aarch_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_epoll_aarch_64.so</native.epoll-aarch_64.renamed>
-        <native.kqueue-x86_64.original>libnetty_transport_native_kqueue_x86_64.jnilib</native.kqueue-x86_64.original>
-        <native.kqueue-x86_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_kqueue_x86_64.jnilib</native.kqueue-x86_64.renamed>
-        <native.kqueue-aarch_64.original>libnetty_transport_native_kqueue_aarch_64.jnilib</native.kqueue-aarch_64.original>
-        <native.kqueue-aarch_64.renamed>lib${shaded.native.lib.prefix}netty_transport_native_kqueue_aarch_64.jnilib</native.kqueue-aarch_64.renamed>
-        <native.tcnative-linux-x86_64.original>libnetty_tcnative_linux_x86_64.so</native.tcnative-linux-x86_64.original>
-        <native.tcnative-linux-x86_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_linux_x86_64.so</native.tcnative-linux-x86_64.renamed>
-        <native.tcnative-linux-aarch_64.original>libnetty_tcnative_linux_aarch_64.so</native.tcnative-linux-aarch_64.original>
-        <native.tcnative-linux-aarch_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_linux_aarch_64.so</native.tcnative-linux-aarch_64.renamed>
-        <native.tcnative-osx-x86_64.original>libnetty_tcnative_osx_x86_64.jnilib</native.tcnative-osx-x86_64.original>
-        <native.tcnative-osx-x86_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_osx_x86_64.jnilib</native.tcnative-osx-x86_64.renamed>
-        <native.tcnative-osx-aarch_64.original>libnetty_tcnative_osx_aarch_64.jnilib</native.tcnative-osx-aarch_64.original>
-        <native.tcnative-osx-aarch_64.renamed>lib${shaded.native.lib.prefix}netty_tcnative_osx_aarch_64.jnilib</native.tcnative-osx-aarch_64.renamed>
-        <native.tcnative-windows-x86_64.original>netty_tcnative_windows_x86_64.dll</native.tcnative-windows-x86_64.original>
-        <native.tcnative-windows-x86_64.renamed>${shaded.native.lib.prefix}netty_tcnative_windows_x86_64.dll</native.tcnative-windows-x86_64.renamed>
     </properties>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>io.netty</groupId>
-                <artifactId>netty-bom</artifactId>
-                <version>${netty.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
                 <artifactId>jackson-bom</artifactId>
@@ -82,22 +53,6 @@
 
     <dependencies>
         <!-- Internal Dependencies -->
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-codec-http</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-classes-kqueue</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-classes-epoll</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-tcnative-classes</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp-jvm</artifactId>
@@ -225,73 +180,6 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
-                        <id>unpack</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-transport-native-kqueue</artifactId>
-                                    <classifier>osx-x86_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-transport-native-kqueue</artifactId>
-                                    <classifier>osx-aarch_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-transport-native-epoll</artifactId>
-                                    <classifier>linux-x86_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-transport-native-epoll</artifactId>
-                                    <classifier>linux-aarch_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                                    <classifier>linux-x86_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                                    <classifier>linux-aarch_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                                    <classifier>osx-x86_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                                    <classifier>osx-aarch_64</classifier>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>io.netty</groupId>
-                                    <artifactId>netty-tcnative-boringssl-static</artifactId>
-                                    <classifier>windows-x86_64</classifier>
-                                </artifactItem>
-                            </artifactItems>
-                            <includes>META-INF/native/*</includes>
-                            <outputDirectory>${native.folder}</outputDirectory>
-                            <overWriteReleases>false</overWriteReleases>
-                            <overWriteSnapshots>true</overWriteSnapshots>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.3.0</version>
                 <dependencies>
@@ -311,27 +199,6 @@
                         </excludes>
                     </artifactSet>
                     <relocations>
-                        <relocation>
-                            <pattern>io.netty</pattern>
-                            <shadedPattern>${shaded.package.prefix}io.netty</shadedPattern>
-                        </relocation>
-                        <!--
-                          Relocate resources used by Netty's `Version.identify()`.
-                          CAVEAT: A "rawString" relocation renames the resource and updates bytecode, but does not modify source code.
-                        -->
-                        <relocation>
-                            <pattern>META-INF/io\.netty\.versions\.properties</pattern>
-                            <shadedPattern>META-INF/${shaded.package.prefix}io.netty.versions.properties</shadedPattern>
-                            <rawString>true</rawString>
-                        </relocation>
-
-                        <!-- Netty native image metadata -->
-                        <relocation>
-                            <pattern>META-INF/native-image/io\.netty</pattern>
-                            <shadedPattern>META-INF/native-image/${shaded.package.prefix}io.netty</shadedPattern>
-                            <rawString>true</rawString>
-                        </relocation>
-
                         <relocation>
                             <pattern>com.fasterxml.jackson</pattern>
                             <shadedPattern>${shaded.package.prefix}com.fasterxml.jackson</shadedPattern>
@@ -385,51 +252,9 @@
                         <!-- Required for gRPC -->
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
 
-                        <!-- Each Netty JAR has its own version resource. AppendingTransformer is safe because the property names are unique. -->
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                            <resource>META-INF/${shaded.package.prefix}io.netty.versions.properties</resource>
-                        </transformer>
-
                         <!-- Native image metadata -->
                         <transformer implementation="ac.simons.maven.shade.NativeImagePropertiesTransformer"/>
                         <transformer implementation="ac.simons.maven.shade.ReflectConfigTransformer"/>
-
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.epoll-x86_64.original}</file>
-                            <resource>META-INF/native/${native.epoll-x86_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.epoll-aarch_64.original}</file>
-                            <resource>META-INF/native/${native.epoll-aarch_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.kqueue-x86_64.original}</file>
-                            <resource>META-INF/native/${native.kqueue-x86_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.kqueue-aarch_64.original}</file>
-                            <resource>META-INF/native/${native.kqueue-aarch_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-linux-x86_64.original}</file>
-                            <resource>META-INF/native/${native.tcnative-linux-x86_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-linux-aarch_64.original}</file>
-                            <resource>META-INF/native/${native.tcnative-linux-aarch_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-osx-x86_64.original}</file>
-                            <resource>META-INF/native/${native.tcnative-osx-x86_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-osx-aarch_64.original}</file>
-                            <resource>META-INF/native/${native.tcnative-osx-aarch_64.renamed}</resource>
-                        </transformer>
-                        <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
-                            <file>${native.folder}/META-INF/native/${native.tcnative-windows-x86_64.original}</file>
-                            <resource>META-INF/native/${native.tcnative-windows-x86_64.renamed}</resource>
-                        </transformer>
                     </transformers>
                     <filters>
                         <filter>
@@ -439,15 +264,6 @@
                                      doesn't relocate. The feature does nothing, and the other options aren't needed
                                      by OkHttp. (Its reflection and resource configs are kept, and relocated.) -->
                                 <exclude>META-INF/native-image/okhttp/okhttp/native-image.properties</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>io.netty:netty-handler</artifact>
-                            <excludes>
-                                <!-- core-io has its own class by this name (in the relocated package),
-                                     so users' code that passes InsecureTrustManagerFactory.INSTANCE
-                                     to SecurityConfig keeps working without Netty's. -->
-                                <exclude>io/netty/handler/ssl/util/InsecureTrustManagerFactory*.class</exclude>
                             </excludes>
                         </filter>
                         <filter>

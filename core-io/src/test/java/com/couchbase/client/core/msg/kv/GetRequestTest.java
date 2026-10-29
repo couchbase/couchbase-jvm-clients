@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
