@@ -17,8 +17,6 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 
 import java.io.ByteArrayOutputStream;
 import java.util.function.IntConsumer;
@@ -34,45 +32,6 @@ public class UnsignedLEB128 {
   }
 
   /**
-   * Reads an unsigned LEB128 value from the buffer. If this methods throws an exception
-   * the reader index remains unchanged, otherwise the index advances past the value.
-   *
-   * @return the decoded value
-   * @throws ArithmeticException       if the decoded value is longer than 64 bits.
-   * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
-   */
-  public static long read(ByteBuf buf) {
-    final int readerMark = buf.readerIndex();
-    try {
-      return read(buf::readByte);
-    } catch (Exception e) {
-      buf.readerIndex(readerMark);
-      throw e;
-    }
-  }
-
-  /**
-   * Advances the buffer's reader index past the unsigned LEB128 value at the reader index.
-   * If this method throws an exception, the reader index will be unchanged.
-   *
-   * @return the number of bytes skipped.
-   * @throws IndexOutOfBoundsException if the buffer's readable bytes do not contain a complete value.
-   */
-  public static int skip(ByteBuf buf) {
-    final int readerMark = buf.readerIndex();
-    int bytesSkipped = 0;
-    try {
-      do {
-        bytesSkipped++;
-      } while ((buf.readByte() & 0x80) != 0);
-    } catch (Exception e) {
-      buf.readerIndex(readerMark);
-      throw e;
-    }
-    return bytesSkipped;
-  }
-
-  /**
    * Returns the length of the unsigned LEB128 value at the start of the array.
    *
    * @throws IndexOutOfBoundsException if the array does not contain a complete value.
@@ -83,13 +42,6 @@ public class UnsignedLEB128 {
       // keep going until the last byte of the value (high bit clear)
     }
     return length;
-  }
-
-  /**
-   * Writes the unsigned LEB128 representation of the value to the buffer.
-   */
-  public static void write(ByteBuf buf, long value) {
-    write(value, buf::writeByte);
   }
 
   /**
@@ -109,7 +61,8 @@ public class UnsignedLEB128 {
    * @throws IndexOutOfBoundsException if the input does not contain a complete LEB128 value
    */
   public static long decode(byte[] bytes) {
-    return read(Unpooled.wrappedBuffer(bytes));
+    int[] index = {0};
+    return read(() -> bytes[index[0]++]);
   }
 
   /**

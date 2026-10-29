@@ -40,7 +40,7 @@ class TrafficCaptureFormatTest {
   @Test
   void describesHeaderFieldsAndKeyWithCollectionId() {
     ByteBuf key = Unpooled.buffer();
-    UnsignedLEB128.write(key, 0x1234);
+    key.writeBytes(UnsignedLEB128.encode(0x1234));
     key.writeBytes("doc-key".getBytes(StandardCharsets.UTF_8));
     String described = describe(NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 7, 99, 0, Unpooled.EMPTY_BUFFER, key, Unpooled.EMPTY_BUFFER));
