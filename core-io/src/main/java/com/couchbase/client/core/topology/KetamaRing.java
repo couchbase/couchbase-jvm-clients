@@ -17,10 +17,10 @@
 package com.couchbase.client.core.topology;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.node.MemcachedHashingStrategy;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -95,12 +95,12 @@ public final class KetamaRing<E> {
       for (int i = 0; i < 40; i++) {
         String valueIdentifier = hashingStrategy.apply(value, i);
         byte[] md5Hash = md5.digest(valueIdentifier.getBytes(UTF_8));
-        ByteBuf md5HashBuf = Unpooled.wrappedBuffer(md5Hash);
+        ByteBuffer md5HashBuf = ByteBuffer.wrap(md5Hash).order(ByteOrder.LITTLE_ENDIAN);
 
         // MD5 hash is 16 bytes. Split it into 4 unsigned 32-bit ints.
         // We just got 4 hashes for the price of one!
-        while (md5HashBuf.isReadable()) {
-          long ketamaPoint = md5HashBuf.readUnsignedIntLE();
+        while (md5HashBuf.hasRemaining()) {
+          long ketamaPoint = Integer.toUnsignedLong(md5HashBuf.getInt());
           map.put(ketamaPoint, value);
         }
       }
@@ -118,7 +118,7 @@ public final class KetamaRing<E> {
    */
   public E get(byte[] key) {
     // Ketama hash is the first 4 bytes of the MD5 hash, interpreted as a 32-bit little-endian unsigned int.
-    long ketamaHash = Unpooled.wrappedBuffer(md5(key)).readUnsignedIntLE();
+    long ketamaHash = Integer.toUnsignedLong(ByteBuffer.wrap(md5(key)).order(ByteOrder.LITTLE_ENDIAN).getInt());
     return get(ketamaHash);
   }
 
