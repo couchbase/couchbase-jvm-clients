@@ -20,8 +20,10 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.Deserializa
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.SerializationFeature;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.json.JsonMapper;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +31,7 @@ import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.transform;
 import static com.couchbase.client.test.Util.readResource;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class KetamaRingTest {
@@ -73,6 +76,15 @@ class KetamaRingTest {
         )
     );
     return mapper.convertValue(results, JsonNode.class);
+  }
+
+  @Test
+  public void keyHashIsFirstFourBytesOfMd5AsUnsignedLittleEndianInt() throws Exception {
+    for (String key : listOf("foo", "bar", "", "a longer key with some UTF-8: \u00e9")) {
+      byte[] keyBytes = key.getBytes(UTF_8);
+      long expectedHash = Unpooled.wrappedBuffer(MessageDigest.getInstance("MD5").digest(keyBytes)).readUnsignedIntLE();
+      assertEquals(ring.get(expectedHash), ring.get(keyBytes), key);
+    }
   }
 
   @Test
