@@ -29,6 +29,8 @@ import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
 import com.couchbase.client.core.deps.io.netty.util.concurrent.DefaultThreadFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.io.netty.EventLoopGroupAndType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -69,6 +71,8 @@ import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
  * @since 2.0.0
  */
 public class IoEnvironment {
+
+  private static final Logger log = LoggerFactory.getLogger(IoEnvironment.class);
 
   static {
     final String samplingProperty = "com.couchbase.client.core.deps.io.netty.leakDetection.samplingInterval";
@@ -698,7 +702,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder managerEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.managerEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.managerEventLoopGroup = checkEventLoopGroup("managerEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -719,7 +723,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder kvEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.kvEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.kvEventLoopGroup = checkEventLoopGroup("kvEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -740,7 +744,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder queryEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.queryEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.queryEventLoopGroup = checkEventLoopGroup("queryEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -761,7 +765,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder analyticsEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.analyticsEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.analyticsEventLoopGroup = checkEventLoopGroup("analyticsEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -782,7 +786,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder searchEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.searchEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.searchEventLoopGroup = checkEventLoopGroup("searchEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -803,7 +807,7 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder eventingEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.eventingEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.eventingEventLoopGroup = checkEventLoopGroup("eventingEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -825,7 +829,7 @@ public class IoEnvironment {
     @Deprecated
     @Stability.Volatile
     public Builder backupEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.backupEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.backupEventLoopGroup = checkEventLoopGroup("backupEventLoopGroup", eventLoopGroup);
       return this;
     }
 
@@ -846,17 +850,27 @@ public class IoEnvironment {
      */
     @Deprecated
     public Builder viewEventLoopGroup(final EventLoopGroup eventLoopGroup) {
-      this.viewEventLoopGroup = checkEventLoopGroup(eventLoopGroup);
+      this.viewEventLoopGroup = checkEventLoopGroup("viewEventLoopGroup", eventLoopGroup);
       return this;
     }
 
     /**
      * Helper method to perform validation on the event loop group passed in.
      *
+     * @param settingName the name of the client setting, for the deprecation warning.
      * @param eventLoopGroup the event loop group to check.
      * @return the created external supplier.
      */
-    private static OwnedOrExternal<EventLoopGroupAndType> checkEventLoopGroup(final EventLoopGroup eventLoopGroup) {
+    private static OwnedOrExternal<EventLoopGroupAndType> checkEventLoopGroup(
+      String settingName,
+      EventLoopGroup eventLoopGroup
+    ) {
+      log.warn(
+        "The `{}` method is deprecated, and scheduled for removal in an upcoming version of the SDK." +
+          " To change how many threads the SDK uses for I/O, please use `eventLoopThreadCount` instead.",
+        settingName
+      );
+
       if (!(eventLoopGroup instanceof IoEventLoopGroup)) {
         throw new IllegalArgumentException("Expected instance of " + IoEventLoopGroup.class.getSimpleName() + " but got " + eventLoopGroup);
       }
