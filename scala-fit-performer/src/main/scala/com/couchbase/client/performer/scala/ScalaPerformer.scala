@@ -61,7 +61,6 @@ object ScalaPerformer {
     // Force that log redaction has been enabled
     LogRedaction.setRedactionLevel(RedactionLevel.PARTIAL)
 
-    // ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     for (parameter <- args) {
       parameter.split("=")(0) match {
         case "port" =>

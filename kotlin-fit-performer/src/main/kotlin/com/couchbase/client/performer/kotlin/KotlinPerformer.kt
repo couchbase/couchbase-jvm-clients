@@ -134,7 +134,6 @@ fun main() {
     val logger = LoggerFactory.getLogger(KotlinPerformer::class.java)
     val port = 8060
 
-    // ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
     val server = ServerBuilder.forPort(port)
         .addService(KotlinPerformer())
         .build()
