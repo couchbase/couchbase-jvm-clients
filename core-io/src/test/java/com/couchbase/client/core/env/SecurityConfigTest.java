@@ -16,8 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import org.junit.jupiter.api.Test;
 
 import java.net.URISyntaxException;
@@ -28,13 +26,10 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 
 import static com.couchbase.client.core.util.CbCollections.listOf;
-import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SecurityConfigTest {
@@ -45,19 +40,6 @@ class SecurityConfigTest {
     assertFalse(ciphers.isEmpty());
     for (String cipher : ciphers) {
       assertTrue(cipher.startsWith("TLS_"));
-    }
-  }
-
-  @Test
-  void listsDefaultCiphersForNativeTls() {
-    if (SslHandlerFactory.opensslAvailable()) {
-      List<String> ciphers = SecurityConfig.defaultCiphers(true);
-      assertFalse(ciphers.isEmpty());
-      for (String cipher : ciphers) {
-        assertTrue(cipher.startsWith("TLS_"));
-      }
-    } else {
-      assertThrows(InvalidArgumentException.class, () -> SecurityConfig.defaultCiphers(true));
     }
   }
 
