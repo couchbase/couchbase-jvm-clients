@@ -70,6 +70,23 @@ class IntMapTest {
   }
 
   @Test
+  void sparseMapFindsEachKeyAndNothingElse() {
+    IntMap<String> map = IntMap.from(mapOf(
+      2_000_000, "c",
+      7, "a",
+      1_000_000, "b"
+    ));
+    assertInstanceOf(SparseIntMap.class, map);
+    assertEquals("a", map.get(7));
+    assertEquals("b", map.get(1_000_000));
+    assertEquals("c", map.get(2_000_000));
+    assertNull(map.get(0)); // before the first key
+    assertNull(map.get(8)); // between keys
+    assertNull(map.get(Integer.MAX_VALUE)); // after the last key
+    assertEquals("SparseIntMap{7=a, 1000000=b, 2000000=c}", map.toString());
+  }
+
+  @Test
   void sparsityEdgeConditions() {
     assertInstanceOf(CompactIntMap.class, IntMap.from(mapOf(MAX_WASTED_ARRAY_ELEMENTS, "a")));
     assertInstanceOf(SparseIntMap.class, IntMap.from(mapOf(MAX_WASTED_ARRAY_ELEMENTS + 1, "a")));
