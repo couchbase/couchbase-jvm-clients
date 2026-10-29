@@ -24,12 +24,10 @@ import com.couchbase.client.core.api.kv.CoreExpiry;
 import com.couchbase.client.core.api.kv.CoreStoreSemantics;
 import com.couchbase.client.core.api.kv.CoreSubdocGetCommand;
 import com.couchbase.client.core.api.kv.CoreSubdocMutateCommand;
-import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.deps.com.google.protobuf.ByteString;
 import com.couchbase.client.core.deps.com.google.protobuf.Timestamp;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
@@ -381,9 +379,9 @@ public class CoreProtostellarKeyValueRequests {
       encoded = content.get();
 
       if (compressionConfig.enabled() && encoded.encoded().length >= compressionConfig.minSize()) {
-        ByteBuf maybeCompressed = MemcacheProtocol.tryCompression(encoded.encoded(), compressionConfig.minRatio());
+        byte[] maybeCompressed = MemcacheProtocol.tryCompression(encoded.encoded(), compressionConfig.minRatio());
         if (maybeCompressed != null) {
-          out = ByteString.copyFrom(maybeCompressed.array());
+          out = ByteString.copyFrom(maybeCompressed);
           compressed = true;
         }
       }

@@ -742,8 +742,7 @@ public enum MemcacheProtocol {
     if (config != null && config.enabled() && content.length >= config.minSize()) {
       byte[] compressed = new byte[snappy.maxCompressedLength(content.length)];
       int compressedLength = builder.compressor().compress(content, 0, content.length, compressed, 0);
-      // Like tryCompression: an empty value (ratio NaN) counts as compressing well enough.
-      if (!(((double) compressedLength / content.length) > config.minRatio())) {
+      if (compressesWellEnough(compressedLength, content.length, config.minRatio())) {
         builder
           .value(compressed, compressedLength)
           .addDatatype(Datatype.SNAPPY.datatype());
@@ -1057,15 +1056,20 @@ public enum MemcacheProtocol {
    * Try to compress the input, but if it is below the min ratio then it will return null.
    *
    * @param input the input array.
-   * @param minRatio the minimum ratio to accept and return the buffer.
-   * @return a {@link ByteBuf} if compressed, or null if below the min ratio.
+   * @param minRatio the minimum ratio to accept and return the compressed bytes.
+   * @return the compressed bytes, or null if below the min ratio.
    */
-  public static ByteBuf tryCompression(byte[] input, double minRatio) {
+  public static @Nullable byte[] tryCompression(byte[] input, double minRatio) {
     byte[] compressed = snappy.compress(input);
-    if (((double) compressed.length / input.length) > minRatio) {
-      return null;
-    }
-    return Unpooled.wrappedBuffer(compressed);
+    return compressesWellEnough(compressed.length, input.length, minRatio) ? compressed : null;
+  }
+
+  /**
+   * Returns true if the compressed length is at most the given ratio of the original length.
+   * An empty value (ratio NaN) counts as compressing well enough.
+   */
+  private static boolean compressesWellEnough(int compressedLength, int originalLength, double minRatio) {
+    return !(((double) compressedLength / originalLength) > minRatio);
   }
 
   /**
