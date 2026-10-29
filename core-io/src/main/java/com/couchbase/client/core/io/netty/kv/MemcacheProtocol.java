@@ -18,14 +18,8 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.annotation.SinceCouchbase;
-import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.events.io.DurabilityTimeoutCoercedEvent;
 import com.couchbase.client.core.compression.snappy.SnappyCodec;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufAllocator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
@@ -48,18 +42,14 @@ import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
-import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.KeyValueRequestBuilder;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
-import com.couchbase.client.core.msg.kv.MutationToken;
 import com.couchbase.client.core.msg.kv.SubDocumentOpResponseStatus;
-import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.IntMap;
 import reactor.util.annotation.Nullable;
 
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,7 +60,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static com.couchbase.client.core.util.CbCollections.listCopyOf;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.unmodifiableSet;
 
 /**
@@ -162,303 +151,10 @@ public enum MemcacheProtocol {
   public static final int UNITS_NOT_PRESENT = -1;
 
   /**
-   * Create a flexible memcached protocol request with all fields necessary.
-   */
-  public static ByteBuf flexibleRequest(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
-                                        final short partition, final int opaque, final long cas,
-                                        final ByteBuf framingExtras, final ByteBuf extras, final ByteBuf key,
-                                        final ByteBuf body) {
-    if (!framingExtras.isReadable()) {
-      return request(alloc, opcode, datatype, partition, opaque, cas, extras, key, body);
-    }
-
-    int keySize = key.readableBytes();
-    int extrasSize = extras.readableBytes();
-    int framingExtrasSize = framingExtras.readableBytes();
-    int totalBodySize = framingExtrasSize + extrasSize + keySize + body.readableBytes();
-    return alloc
-      .buffer(HEADER_SIZE + totalBodySize)
-      .writeByte(Magic.FLEXIBLE_REQUEST.magic())
-      .writeByte(opcode.opcode())
-      .writeByte(framingExtrasSize)
-      .writeByte(keySize)
-      .writeByte(extrasSize)
-      .writeByte(datatype)
-      .writeShort(partition)
-      .writeInt(totalBodySize)
-      .writeInt(opaque)
-      .writeLong(cas)
-      .writeBytes(framingExtras)
-      .writeBytes(extras)
-      .writeBytes(key)
-      .writeBytes(body);
-  }
-
-  /**
-   * Create a regular, non-flexible memcached protocol request with all fields necessary.
-   */
-  public static ByteBuf request(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
-                                final short partition, final int opaque, final long cas, final ByteBuf extras,
-                                final ByteBuf key, final ByteBuf body) {
-    int keySize = key.readableBytes();
-    int extrasSize = extras.readableBytes();
-    int totalBodySize = extrasSize + keySize + body.readableBytes();
-    return alloc
-      .buffer(HEADER_SIZE + totalBodySize)
-      .writeByte(Magic.REQUEST.magic())
-      .writeByte(opcode.opcode())
-      .writeShort(keySize)
-      .writeByte(extrasSize)
-      .writeByte(datatype)
-      .writeShort(partition)
-      .writeInt(totalBodySize)
-      .writeInt(opaque)
-      .writeLong(cas)
-      .writeBytes(extras)
-      .writeBytes(key)
-      .writeBytes(body);
-  }
-
-  /**
-   * Create a regular, non-flexible memcached protocol response with all fields necessary.
-   *
-   * <p>This method is mostly used for testing purposes.</p>
-   */
-  public static ByteBuf response(final ByteBufAllocator alloc, final Opcode opcode, final byte datatype,
-                                final short status, final int opaque, final long cas, final ByteBuf extras,
-                                final ByteBuf key, final ByteBuf body) {
-    int keySize = key.readableBytes();
-    int extrasSize = extras.readableBytes();
-    int totalBodySize = extrasSize + keySize + body.readableBytes();
-    return alloc
-      .buffer(HEADER_SIZE + totalBodySize)
-      .writeByte(Magic.RESPONSE.magic())
-      .writeByte(opcode.opcode())
-      .writeShort(keySize)
-      .writeByte(extrasSize)
-      .writeByte(datatype)
-      .writeShort(status)
-      .writeInt(totalBodySize)
-      .writeInt(opaque)
-      .writeLong(cas)
-      .writeBytes(extras)
-      .writeBytes(key)
-      .writeBytes(body);
-  }
-
-  /**
-   * Returns the status of that response.
-   *
-   * @param message the memcache message to extract from.
-   * @return the status field.
-   */
-  public static short status(final ByteBuf message) {
-    return message.getShort(STATUS_OFFSET);
-  }
-
-  public static short keyLength(final ByteBuf message) {
-    return isFlexible(message) ? message.getByte(3) : message.getShort(2);
-  }
-
-  public static boolean isFlexible(final ByteBuf message) {
-    byte magic = magic(message);
-    return magic == Magic.FLEXIBLE_REQUEST.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic();
-  }
-
-  public static byte flexExtrasLength(final ByteBuf message) {
-    return isFlexible(message) ? message.getByte(2) : 0;
-  }
-
-  public static byte extrasLength(final ByteBuf message) {
-    return message.getByte(4);
-  }
-
-  public static byte magic(final ByteBuf message) {
-    return message.getByte(0);
-  }
-
-  public static boolean isRequest(final ByteBuf message) {
-    byte magic = magic(message);
-    return magic == Magic.FLEXIBLE_REQUEST.magic() || magic == Magic.REQUEST.magic();
-  }
-
-  public static int totalBodyLength(final ByteBuf message) {
-    return message.getInt(TOTAL_LENGTH_OFFSET);
-  }
-
-  /**
-   * Helper method to check if the given response has a successful status.
-   *
-   * @param message the memcache message to extract from.
-   * @return true if success.
-   */
-  public static boolean successful(final ByteBuf message) {
-    return status(message) == Status.SUCCESS.status();
-  }
-
-  /**
-   * Helper method to return the opcode for the given request or response.
-   *
-   * @param message the message to get the opcode from.
-   * @return the opcode as a byte.
-   */
-  public static byte opcode(final ByteBuf message) {
-    return message.getByte(OPCODE_OFFSET);
-  }
-
-  /**
-   * Helper method to return the datatype from a request or response.
-   *
-   * @param message the message to get the datatype from.
-   * @return the datatype as a byte.
-   */
-  public static byte datatype(final ByteBuf message) {
-    return message.getByte(DATATYPE_OFFSET);
-  }
-
-  /**
-   * Helper method to return the opaque value for the given request or response.
-   *
-   * @param message the message to get the opaque from.
-   * @return the opaque as an int.
-   */
-  public static int opaque(final ByteBuf message) {
-    return message.getInt(OPAQUE_OFFSET);
-  }
-
-  /**
-   * Helper method to extract the cas from a message.
-   *
-   * @param message the message to extract the cas from.
-   * @return the cas as a long.
-   */
-  public static long cas(final ByteBuf message) {
-    return message.getLong(CAS_OFFSET);
-  }
-
-  /**
-   * Returns the decompressed body of the message, or an empty Optional
-   * if the body length is zero.
-   */
-  public static Optional<ByteBuf> body(final ByteBuf message) {
-    return Datatype.isSnappy(datatype(message))
-      ? Optional.of(Unpooled.wrappedBuffer(bodyAsBytes(message)))
-      : rawBody(message);
-  }
-
-  /**
    * Returns the raw (possibly compressed) content of the message,
    * or an empty Optional if the raw content length is zero.
    */
   // visible for testing
-  public static Optional<ByteBuf> rawBody(final ByteBuf message) {
-    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
-
-    int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
-    int keyLength = flexible ? message.getByte(3) : message.getShort(2);
-    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
-    byte extrasLength = message.getByte(4);
-    int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
-
-    if (bodyLength > 0) {
-      return Optional.of(message.slice(
-          MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
-          bodyLength
-      ));
-    } else {
-      return Optional.empty();
-    }
-  }
-
-  public static String keyAsString(final ByteBuf message) {
-    return key(message)
-      .map(it -> it.toString(UTF_8))
-      .orElse("");
-  }
-
-  public static Optional<ByteBuf> key(final ByteBuf message) {
-    int keyLength = keyLength(message);
-    if (keyLength > 0) {
-      return Optional.of(message.slice(
-        MemcacheProtocol.HEADER_SIZE + flexExtrasLength(message) + extrasLength(message),
-        keyLength
-      ));
-    } else {
-      return Optional.empty();
-    }
-  }
-
-  /**
-   * Returns the decompressed body of this message as a byte array.
-   */
-  public static byte[] bodyAsBytes(final ByteBuf message) {
-    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
-
-    int totalBodyLength = message.getInt(TOTAL_LENGTH_OFFSET);
-    int keyLength = flexible ? message.getByte(3) : message.getShort(2);
-    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
-    byte extrasLength = message.getByte(4);
-    int bodyLength = totalBodyLength - keyLength - extrasLength - flexibleExtrasLength;
-
-    if (bodyLength > 0) {
-      byte[] bytes = ByteBufUtil.getBytes(
-        message,
-        MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + extrasLength + keyLength,
-        bodyLength
-      );
-
-      return tryDecompression(bytes, datatype(message));
-    }
-
-    return Bytes.EMPTY_BYTE_ARRAY;
-  }
-
-  /**
-   * Returns the decompressed body of this message as a UTF-8 string.
-   */
-  public static String bodyAsString(final ByteBuf message) {
-    return new String(bodyAsBytes(message), UTF_8);
-  }
-
-  public static Optional<ByteBuf> extras(final ByteBuf message) {
-    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
-    byte extrasLength = message.getByte(4);
-    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
-
-    if (extrasLength > 0) {
-      return Optional.of(message.slice(
-        MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength,
-        extrasLength
-      ));
-    } else {
-      return Optional.empty();
-    }
-  }
-
-  /**
-   * Tries to extract the extras as an integer value and if not possible returns the default value.
-   * <p>
-   * Note that while this method looks a bit too specific, in profiling it has been shown that extras extraction
-   * on the get command otherwise needs a buffer slice and has to box the integer due to the optional. So this avoids
-   * two small performance hits and it can be used on the hot code path.
-   *
-   * @param message the message to extract from.
-   * @param offset the offset in the extras from where the int should be loaded.
-   * @param defaultValue the default value to use.
-   * @return th extracted integer or the default value.
-   */
-  public static int extrasAsInt(final ByteBuf message, int offset, int defaultValue) {
-    boolean flexible = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic();
-    byte extrasLength = message.getByte(4);
-    int flexibleExtrasLength = flexible ? message.getByte(2) : 0;
-
-    if (extrasLength >= Integer.BYTES) {
-      return message.getInt(MemcacheProtocol.HEADER_SIZE + flexibleExtrasLength + offset);
-    }
-
-    return defaultValue;
-  }
-
   public static class FlexibleExtras {
     // Will be <0 if not present in the server response
     public final int readUnits;
@@ -483,132 +179,6 @@ public enum MemcacheProtocol {
         input.put("serverDuration", serverDuration);
       }
     }
-  }
-
-  /**
-   * Retrieve the flexible extras from the packet.
-   *
-   * These are AKA "framing extras" and "flexible framing extras".   These are distinct from just "extras".
-   */
-  public static @Nullable FlexibleExtras flexibleExtras(final ByteBuf message) {
-    int flexibleExtrasLength = message.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic()
-            ? message.getByte(2)
-            : 0;
-
-    if (flexibleExtrasLength > 0) {
-      int readUnits = UNITS_NOT_PRESENT;
-      int writeUnits = UNITS_NOT_PRESENT;
-      long serverDuration = UNITS_NOT_PRESENT;
-      for (int offset = 0; offset < flexibleExtrasLength; offset++) {
-        byte control = message.getByte(MemcacheProtocol.HEADER_SIZE + offset);
-        byte id = (byte) ((control & 0xF0) >> 4);
-        byte len = (byte) (control & 0x0F);
-        if (id == FRAMING_EXTRAS_TRACING) {
-          serverDuration = Math.round(
-            Math.pow(message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1), 1.74) / 2
-          );
-        }
-        if (id == FRAMING_EXTRAS_READ_UNITS_USED) {
-          readUnits = message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1);
-        }
-        else if (id == FRAMING_EXTRAS_WRITE_UNITS_USED) {
-          writeUnits = message.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1);
-        }
-        offset += len;
-      }
-
-      return new FlexibleExtras(readUnits, writeUnits, serverDuration);
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Performs simple sanity checking of a key/value request.
-   *
-   * It checks the magic byte and if the total readable bytes match
-   * up with the total length of the packet.
-   *
-   * @param request the request to check.
-   * @return true if verified, false otherwise.
-   */
-  @Stability.Internal
-  public static boolean verifyRequest(final ByteBuf request) {
-    int readableBytes = request.readableBytes();
-    if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
-      return false;
-    }
-    byte magic = request.getByte(MAGIC_OFFSET);
-    int bodyPlusHeader = request.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
-    return (magic == Magic.REQUEST.magic() || magic == Magic.FLEXIBLE_REQUEST.magic())
-      && readableBytes == bodyPlusHeader;
-  }
-
-  /**
-   * Returns a view of the packet in the buffer, from index 0 to the writer index (whatever the reader index),
-   * without copying it, to decode a response with
-   * {@link com.couchbase.client.core.msg.kv.KeyValueRequest#decode}. Uses the buffer's internal NIO buffer when it
-   * has one, so it usually allocates nothing but the packet. That's safe because the packet is used only while the
-   * response is decoded, and nothing else uses the buffer's internal NIO buffer meanwhile.
-   */
-  @Stability.Internal
-  public static KeyValuePacket packet(ByteBuf packet) {
-    int length = packet.writerIndex();
-    ByteBuffer nio = packet.nioBufferCount() == 1
-      ? packet.internalNioBuffer(0, length)
-      : packet.nioBuffer(0, length); // several components: a copy
-    return KeyValuePacket.wrap(nio);
-  }
-
-  /**
-   * Performs simple sanity checking of a key/value response.
-   *
-   * It checks the magic byte and if the total readable bytes match
-   * up with the total length of the packet.
-   *
-   * @param response the response to check.
-   * @return true if verified, false otherwise.
-   */
-  @Stability.Internal
-  public static boolean verifyResponse(final ByteBuf response) {
-    int readableBytes = response.readableBytes();
-    if (readableBytes < MemcacheProtocol.HEADER_SIZE) {
-      return false;
-    }
-    byte magic = response.getByte(MAGIC_OFFSET);
-    int bodyPlusHeader = response.getInt(TOTAL_LENGTH_OFFSET) + MemcacheProtocol.HEADER_SIZE;
-
-    return
-      (magic == Magic.RESPONSE.magic() || magic == Magic.FLEXIBLE_RESPONSE.magic() || magic == Magic.SERVER_PUSH_REQUEST.magic)
-        && readableBytes == bodyPlusHeader;
-  }
-
-  /**
-   * Helper to express no key is used for this message.
-   */
-  public static ByteBuf noKey() {
-    return Unpooled.EMPTY_BUFFER;
-  }
-
-  /**
-   * Helper to express no extras are used for this message.
-   */
-  public static ByteBuf noExtras() {
-    return Unpooled.EMPTY_BUFFER;
-  }
-
-  /**
-   * Helper to express no framing extras are used for this message.
-   */
-  public static ByteBuf noFramingExtras() {
-    return Unpooled.EMPTY_BUFFER;
-  }
-
-  /**
-   * Helper to express no body is used for this message.
-   */
-  public static ByteBuf noBody() {
-    return Unpooled.EMPTY_BUFFER;
   }
 
   /**
@@ -637,66 +207,6 @@ public enum MemcacheProtocol {
    */
   public static long noCas() {
     return 0;
-  }
-
-  /**
-   * Decodes and converts the status from a message.
-   *
-   * <p>This is a convenience method usually used in decoders.</p>
-   *
-   * @param message the message to extract from.
-   * @return the decoded status.
-   */
-  public static ResponseStatus decodeStatus(ByteBuf message) {
-    return decodeStatus(status(message));
-  }
-
-  public static ByteBuf mutationFlexibleExtras(KeyValueRequest<?> request,
-                                               KeyValueChannelContext ctx,
-                                               ByteBufAllocator alloc,
-                                               Optional<DurabilityLevel> durabilityLevel) {
-    return mutationFlexibleExtras(request, ctx, alloc, durabilityLevel, false);
-  }
-
-  public static ByteBuf mutationFlexibleExtras(KeyValueRequest<?> request,
-                                               KeyValueChannelContext ctx,
-                                               ByteBufAllocator alloc,
-                                               Optional<DurabilityLevel> durabilityLevel,
-                                               boolean preserveExpiry) {
-    // Some callers represent "no synchronous durability" as Optional.empty(),
-    // while others use Optional.of(DurabilityLevel.NONE).
-    // Tech debt: Clean up that discrepancy.
-    // Short term: Canonicalize here.
-    DurabilityLevel durability = durabilityLevel.orElse(DurabilityLevel.NONE);
-
-    if (durability == DurabilityLevel.NONE && !preserveExpiry) {
-      return Unpooled.EMPTY_BUFFER;
-    }
-
-    ByteBuf result = alloc.buffer(5);
-    try {
-      if (preserveExpiry) {
-        if (!ctx.preserveTtl()) {
-          throw new FeatureNotAvailableException(
-              "This version of Couchbase Server does not support preserving expiry when modifying documents.");
-        }
-
-        result.writeByte(PRESERVE_TTL_FLEXIBLE_IDENT);
-      }
-
-      if (durability != DurabilityLevel.NONE) {
-        if (!ctx.syncReplicationEnabled()) {
-          throw new DurabilityLevelNotAvailableException(KeyValueErrorContext.incompleteRequest(request));
-        }
-        flexibleSyncReplication(result, durability, request.timeout(), request.context());
-      }
-
-      return result;
-
-    } catch (Throwable t) {
-      ReferenceCountUtil.release(result);
-      throw t;
-    }
   }
 
   /**
@@ -753,30 +263,10 @@ public enum MemcacheProtocol {
   }
 
   /**
-   * Helper method to write the flexible extras for sync replication.
-   * <p>
-   * Note that this method writes a short value from an integer deadline. The netty method will make sure to
-   * only look at the lower 16 bits - this allows us to write an unsigned short!
-   *
-   * @param buffer the buffer to write to.
-   * @param type the type of sync replication.
-   * @param timeout the timeout to use.
-   * @param ctx the core context to use.
-   * @return the same buffer
-   */
-  static ByteBuf flexibleSyncReplication(ByteBuf buffer, DurabilityLevel type,
-                                         Duration timeout, CoreContext ctx) {
-    return buffer
-      .writeByte(SYNC_REPLICATION_FLEXIBLE_IDENT | (byte) 0x03)
-      .writeByte(type.code())
-      .writeShort(syncReplicationDeadline(timeout, ctx));
-  }
-
-  /**
    * The sync replication deadline (in milliseconds) to send for the given request timeout.
    * Publishes an event if it had to be coerced.
    */
-  private static int syncReplicationDeadline(Duration timeout, CoreContext ctx) {
+  static int syncReplicationDeadline(Duration timeout, CoreContext ctx) {
     long userTimeout = timeout.toMillis();
 
     int deadline;
@@ -794,42 +284,6 @@ public enum MemcacheProtocol {
       ctx.environment().eventBus().publish(new DurabilityTimeoutCoercedEvent(ctx, userTimeout, deadline));
     }
     return deadline;
-  }
-
-  /**
-   * Parses the server duration from the frame.
-   *
-   * It reads through the byte stream looking for the tracing frame and if
-   * found extracts the info. If a different frame is found it is just
-   * skipped.
-   *
-   * Per algorithm, the found server duration is round up/down using
-   * the {@link Math#round(float)} function and has microsecond
-   * precision.
-   *
-   * @param response the response to extract it from.
-   * @return the extracted duration, 0 if not found.
-   */
-  public static long parseServerDurationFromResponse(final ByteBuf response) {
-    int flexibleExtrasLength = response.getByte(0) == Magic.FLEXIBLE_RESPONSE.magic()
-      ? response.getByte(2)
-      : 0;
-
-    if (flexibleExtrasLength > 0) {
-      for (int offset = 0; offset < flexibleExtrasLength; offset++) {
-        byte control = response.getByte(MemcacheProtocol.HEADER_SIZE + offset);
-        byte id = (byte) (control & 0xF0);
-        byte len = (byte) (control & 0x0F);
-        if (id == FRAMING_EXTRAS_TRACING) {
-          return Math.round(
-            Math.pow(response.getUnsignedShort(MemcacheProtocol.HEADER_SIZE + offset + 1), 1.74) / 2
-          );
-        }
-        offset += len;
-      }
-    }
-
-    return 0;
   }
 
   /**
@@ -1087,62 +541,6 @@ public enum MemcacheProtocol {
       return snappy.decompress(input);
     }
     return input;
-  }
-
-  /**
-   * Helper method during development and debugging to dump the raw message as a
-   * verbose string.
-   */
-  public static String messageToString(final ByteBuf message) {
-    StringBuilder sb = new StringBuilder();
-
-    byte magic = message.getByte(MAGIC_OFFSET);
-    sb.append(String.format("Magic: 0x%x (%s)\n", magic, Magic.of(magic)));
-    sb.append(String.format("Opcode: 0x%x\n", opcode(message)));
-
-    if (Magic.of(magic).isFlexible()) {
-      sb.append(String.format("Framing Extras Length: %d\n", message.getByte(2)));
-      sb.append(String.format("Key Length: %d\n", message.getByte(3)));
-    } else {
-      sb.append(String.format("Key Length: %d\n", message.getShort(2)));
-    }
-
-    sb.append(String.format("Extras Length: %d\n", message.getByte(4)));
-    sb.append(String.format("Datatype: 0x%x\n", datatype(message)));
-
-    if (Magic.of(magic).isRequest()) {
-      sb.append(String.format("VBucket ID: 0x%x\n", status(message)));
-    } else {
-      sb.append(String.format("Status: 0x%x\n", status(message)));
-    }
-
-    sb.append(String.format("Total Body Length: %d\n", message.getByte(TOTAL_LENGTH_OFFSET)));
-    sb.append(String.format("Opaque: 0x%x\n", opaque(message)));
-    sb.append(String.format("CAS: 0x%x\n", cas(message)));
-
-    return sb.toString();
-  }
-
-  /**
-   * Tries to extract the mutation token if the surround msg and environment allows for it.
-   *
-   * @param enabled if enabled
-   * @param partition the partition id
-   * @param msg the msg to check
-   * @param bucket the bucket for this msg
-   * @return an optional with content if successful, false otherwise.
-   */
-  public static Optional<MutationToken> extractToken(final boolean enabled, final short partition, final ByteBuf msg,
-                                                     final String bucket) {
-    if (!enabled || (decodeStatus(msg) != ResponseStatus.SUCCESS)) {
-      return Optional.empty();
-    }
-    return extras(msg).map(e -> new MutationToken(
-      partition,
-      e.readLong(),
-      e.readLong(),
-      bucket
-    ));
   }
 
   public enum Magic {

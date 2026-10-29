@@ -74,8 +74,8 @@ final class KeyValuePacketReader {
   }
 
   /**
-   * Like {@link MemcacheProtocol#verifyResponse}. (The frame decoder already made sure the packet's size
-   * is the size its header gives.)
+   * Returns true if the packet is a response or a request the server pushes. (The frame decoder already made sure
+   * the packet's size is the size its header gives.)
    */
   private static boolean isResponseOrServerPush(KeyValuePacket packet) {
     byte magic = packet.magic();

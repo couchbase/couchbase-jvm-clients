@@ -25,6 +25,7 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -37,7 +38,7 @@ import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.mutationFlexibleExtras;
 import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.ALLOC;
 import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CORE_CONTEXT;
 import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.CUSTOM_COLLECTION;
@@ -390,7 +391,7 @@ class DocumentRequestTest {
     ByteBuf extrasOrNone = extras == null ? Unpooled.EMPTY_BUFFER : extras;
     ByteBuf body = value == null ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(value);
     try {
-      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, opcode, (byte) datatype, PARTITION, OPAQUE, cas,
+      return bytes(NettyMemcacheProtocol.flexibleRequest(ALLOC, opcode, (byte) datatype, PARTITION, OPAQUE, cas,
         framingExtras, extrasOrNone, key, body));
     } finally {
       framingExtras.release();

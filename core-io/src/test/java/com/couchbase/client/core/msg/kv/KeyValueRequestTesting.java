@@ -30,6 +30,7 @@ import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.Response;
 
@@ -86,7 +87,7 @@ final class KeyValueRequestTesting {
     writer.finishRequest();
     writer.flush();
     assertArrayEquals(expected, out.toByteArray());
-    assertTrue(MemcacheProtocol.verifyRequest(Unpooled.wrappedBuffer(expected)));
+    assertTrue(NettyMemcacheProtocol.verifyRequest(Unpooled.wrappedBuffer(expected)));
   }
 
   /**
@@ -117,17 +118,17 @@ final class KeyValueRequestTesting {
     System.arraycopy(packet, 0, padded, 3, packet.length);
     R fromPacket = request.decode(KeyValuePacket.wrap(padded, 3, packet.length), ctx);
 
-    R fromHeap = request.decode(MemcacheProtocol.packet(Unpooled.wrappedBuffer(packet)), ctx);
+    R fromHeap = request.decode(NettyMemcacheProtocol.packet(Unpooled.wrappedBuffer(packet)), ctx);
 
     ByteBuf direct = Unpooled.directBuffer(packet.length).writeBytes(packet);
     ByteBuf pooled = PooledByteBufAllocator.DEFAULT.directBuffer(packet.length).writeBytes(packet);
     pooled.readerIndex(5); // ignored, like MemcacheProtocol's readers
     try {
-      R fromDirect = request.decode(MemcacheProtocol.packet(direct), ctx);
-      R fromPooled = request.decode(MemcacheProtocol.packet(pooled), ctx);
+      R fromDirect = request.decode(NettyMemcacheProtocol.packet(direct), ctx);
+      R fromPooled = request.decode(NettyMemcacheProtocol.packet(pooled), ctx);
       // Several components (no single internal NIO buffer).
       int half = packet.length / 2;
-      R fromComposite = request.decode(MemcacheProtocol.packet(Unpooled.wrappedBuffer(
+      R fromComposite = request.decode(NettyMemcacheProtocol.packet(Unpooled.wrappedBuffer(
         Unpooled.wrappedBuffer(packet, 0, half), Unpooled.wrappedBuffer(packet, half, packet.length - half))), ctx);
       return Arrays.asList(fromPacket, fromHeap, fromDirect, fromPooled, fromComposite);
     } finally {
@@ -145,7 +146,7 @@ final class KeyValueRequestTesting {
 
   static byte[] response(Opcode opcode, byte datatype, short status, long cas,
                                  byte[] extras, byte[] key, byte[] body) {
-    ByteBuf packet = MemcacheProtocol.response(ALLOC, opcode, datatype, status, OPAQUE, cas,
+    ByteBuf packet = NettyMemcacheProtocol.response(ALLOC, opcode, datatype, status, OPAQUE, cas,
       Unpooled.wrappedBuffer(extras), Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(body));
     try {
       return ByteBufUtil.getBytes(packet);

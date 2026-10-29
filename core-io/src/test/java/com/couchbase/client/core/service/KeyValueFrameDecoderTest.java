@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -32,8 +33,8 @@ import java.util.List;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noKey;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -45,7 +46,7 @@ class KeyValueFrameDecoderTest {
   private static byte[] packet(int opaque, int bodySize) {
     byte[] body = new byte[bodySize];
     Arrays.fill(body, (byte) opaque);
-    ByteBuf buf = MemcacheProtocol.response(
+    ByteBuf buf = NettyMemcacheProtocol.response(
       Unpooled.buffer().alloc(), MemcacheProtocol.Opcode.GET, noDatatype(), (short) 0, opaque, noCas(),
       noExtras(), noKey(), Unpooled.wrappedBuffer(body)
     );

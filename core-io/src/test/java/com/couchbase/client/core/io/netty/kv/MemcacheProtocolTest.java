@@ -120,7 +120,7 @@ class MemcacheProtocolTest {
 
   @Test
   void flexibleSyncReplicationUserTimeout() {
-    ByteBuf result = MemcacheProtocol.flexibleSyncReplication(
+    ByteBuf result = NettyMemcacheProtocol.flexibleSyncReplication(
         ALLOC.buffer(),
         DurabilityLevel.MAJORITY_AND_PERSIST_TO_ACTIVE,
         Duration.ofSeconds(3),
@@ -141,7 +141,7 @@ class MemcacheProtocolTest {
   @Test
   void flexibleSyncReplicationTimeoutFloor() {
     Duration tooLowTimeout = Duration.ofSeconds(1);
-    ByteBuf result = MemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, tooLowTimeout, context);
+    ByteBuf result = NettyMemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, tooLowTimeout, context);
     try {
       assertEquals(4, result.readableBytes()); // 4 bytes total for these flexible extras
       assertEquals(0x13, result.getByte(0)); // sync replication id 1 and length 3
@@ -157,7 +157,7 @@ class MemcacheProtocolTest {
   @Test
   void flexibleSyncReplicationTimeoutRightAtFloor() {
     // 1667 is valid, and should not log
-    ByteBuf result = MemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, Duration.ofMillis(1667), context);
+    ByteBuf result = NettyMemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, Duration.ofMillis(1667), context);
     try {
       assertEquals(4, result.readableBytes()); // 4 bytes total for these flexible extras
       assertEquals(0x13, result.getByte(0)); // sync replication id 1 and length 3
@@ -169,7 +169,7 @@ class MemcacheProtocolTest {
     }
 
     // 1666 actually will log...
-    result = MemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, Duration.ofMillis(1666), context);
+    result = NettyMemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, Duration.ofMillis(1666), context);
     try {
       assertEquals(4, result.readableBytes()); // 4 bytes total for these flexible extras
       assertEquals(0x13, result.getByte(0)); // sync replication id 1 and length 3
@@ -184,7 +184,7 @@ class MemcacheProtocolTest {
   @Test
   void flexibleSyncReplicationTimeoutMaxValues() {
     Duration duration = Duration.ofMillis(65535);
-    ByteBuf result = MemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, duration, context);
+    ByteBuf result = NettyMemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, duration, context);
     try {
       assertEquals(65534, result.getUnsignedShort(2));
       verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));
@@ -194,7 +194,7 @@ class MemcacheProtocolTest {
     }
 
     duration = Duration.ofMillis(Long.MAX_VALUE);
-    result = MemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, duration, context);
+    result = NettyMemcacheProtocol.flexibleSyncReplication(ALLOC.buffer(), DurabilityLevel.MAJORITY, duration, context);
     try {
       assertEquals(65534, result.getUnsignedShort(2));
       verify(eventBus, times(1)).publish(any(DurabilityTimeoutCoercedEvent.class));

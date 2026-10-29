@@ -32,8 +32,8 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.Optional;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.datatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.rawBody;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.datatype;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.rawBody;
 import static com.couchbase.client.test.Util.readResource;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptySet;

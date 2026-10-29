@@ -17,8 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
-import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
@@ -49,7 +49,7 @@ class DecompressionTest {
 
     GetRequest request = new GetRequest("mydoc", Duration.ofSeconds(1),
       mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, null);
-    GetResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
+    GetResponse decoded = request.decode(NettyMemcacheProtocol.packet(response), null);
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
@@ -83,7 +83,7 @@ class DecompressionTest {
   private static GetResponse decodeGet(ByteBuf response) {
     GetRequest request = new GetRequest("mydoc", Duration.ofSeconds(1),
       mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, null);
-    return request.decode(MemcacheProtocol.packet(response), null);
+    return request.decode(NettyMemcacheProtocol.packet(response), null);
   }
 
   @Test
@@ -95,7 +95,7 @@ class DecompressionTest {
 
     ReplicaGetRequest request = new ReplicaGetRequest("mydoc", Duration.ofSeconds(1),
       mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"), BestEffortRetryStrategy.INSTANCE, (short) 1, null);
-    GetResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
+    GetResponse decoded = request.decode(NettyMemcacheProtocol.packet(response), null);
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
@@ -113,7 +113,7 @@ class DecompressionTest {
     GetAndLockRequest request = new GetAndLockRequest("mydoc",
       Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
       BestEffortRetryStrategy.INSTANCE, Duration.ofSeconds(1), null);
-    GetAndLockResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
+    GetAndLockResponse decoded = request.decode(NettyMemcacheProtocol.packet(response), null);
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),
@@ -132,7 +132,7 @@ class DecompressionTest {
     GetAndTouchRequest request = new GetAndTouchRequest("mydoc",
       Duration.ofSeconds(1), mock(CoreContext.class), CollectionIdentifier.fromDefault("bucket"),
       BestEffortRetryStrategy.INSTANCE, encodedExpiry, null);
-    GetAndTouchResponse decoded = request.decode(MemcacheProtocol.packet(response), null);
+    GetAndTouchResponse decoded = request.decode(NettyMemcacheProtocol.packet(response), null);
 
     assertEquals(
       readResource("dummy.json", DecompressionTest.class),

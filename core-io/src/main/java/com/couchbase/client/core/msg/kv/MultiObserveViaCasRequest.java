@@ -36,8 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.body;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.request;
 
 /**
  * Special observe request implementation to handle more than one key at the same time.
