@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CoreErrorCodeAndMessageException;
@@ -95,7 +94,7 @@ final class AnalyticsResponseFormat
 
   @Override
   public Optional<CouchbaseException> error(AnalyticsChunkTrailer trailer, int httpStatus, RequestContext requestContext) {
-    return trailer.errors().map(it -> errorsToThrowable(it, requestContext, HttpResponseStatus.valueOf(httpStatus)));
+    return trailer.errors().map(it -> errorsToThrowable(it, requestContext, httpStatus));
   }
 
   @Override
@@ -112,9 +111,8 @@ final class AnalyticsResponseFormat
   static CouchbaseException errorsToThrowable(
     byte[] bytes,
     RequestContext ctx,
-    @Nullable HttpResponseStatus httpStatus
+    int httpCode
   ) {
-    int httpCode = httpStatus != null ? httpStatus.code() : 0;
 
     final List<ErrorCodeAndMessage> errors = bytes.length == 0
       ? Collections.emptyList()

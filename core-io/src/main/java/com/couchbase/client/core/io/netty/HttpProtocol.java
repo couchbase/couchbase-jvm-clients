@@ -16,7 +16,7 @@
 
 package com.couchbase.client.core.io.netty;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
 import com.couchbase.client.core.msg.ResponseStatus;
 
 import java.net.InetSocketAddress;
@@ -33,30 +33,26 @@ import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 public class HttpProtocol {
 
   /**
-   * Converts the http protocol status into its generic format.
+   * Converts the HTTP status code into its generic format.
    *
-   * @param status the protocol status.
+   * @param status the HTTP status code.
    * @return the response status.
    */
-  public static ResponseStatus decodeStatus(final HttpResponseStatus status) {
-    return status == null ? ResponseStatus.UNKNOWN : decodeStatus(status.code());
-  }
-
   public static ResponseStatus decodeStatus(final int status) {
-    if (status == HttpResponseStatus.OK.code()
-      || status == HttpResponseStatus.ACCEPTED.code()
-      || status == HttpResponseStatus.CREATED.code()) {
+    if (status == CoreHttpStatus.OK
+      || status == CoreHttpStatus.ACCEPTED
+      || status == CoreHttpStatus.CREATED) {
       return ResponseStatus.SUCCESS;
-    } else if (status == HttpResponseStatus.NOT_FOUND.code()) {
+    } else if (status == CoreHttpStatus.NOT_FOUND) {
       return ResponseStatus.NOT_FOUND;
-    } else if (status == HttpResponseStatus.BAD_REQUEST.code()) {
+    } else if (status == CoreHttpStatus.BAD_REQUEST) {
       return ResponseStatus.INVALID_ARGS;
-    } else if (status == HttpResponseStatus.INTERNAL_SERVER_ERROR.code()) {
+    } else if (status == CoreHttpStatus.INTERNAL_SERVER_ERROR) {
       return ResponseStatus.INTERNAL_SERVER_ERROR;
-    } else if (status == HttpResponseStatus.UNAUTHORIZED.code()
-      || status == HttpResponseStatus.FORBIDDEN.code()) {
+    } else if (status == CoreHttpStatus.UNAUTHORIZED
+      || status == CoreHttpStatus.FORBIDDEN) {
       return ResponseStatus.NO_ACCESS;
-    } else if (status == HttpResponseStatus.TOO_MANY_REQUESTS.code()) {
+    } else if (status == CoreHttpStatus.TOO_MANY_REQUESTS) {
       return ResponseStatus.TOO_MANY_REQUESTS;
     } else {
       return ResponseStatus.UNKNOWN;

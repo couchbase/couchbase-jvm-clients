@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -49,13 +48,13 @@ class SearchErrorTranslationTest {
   private final RequestContext ctx = mock(RequestContext.class);
 
   private CouchbaseException queryError(int httpStatus, String error) {
-    return SearchResponseFormat.errorsToThrowable(error.getBytes(UTF_8), HttpResponseStatus.valueOf(httpStatus), ctx);
+    return SearchResponseFormat.errorsToThrowable(error.getBytes(UTF_8), httpStatus, ctx);
   }
 
   private CouchbaseException managementError(int httpStatus, String content) {
     Request<?> request = mock(Request.class);
     when(request.context()).thenReturn(ctx);
-    return (CouchbaseException) OkHttpSearchService.errorToThrowable(HttpResponseStatus.valueOf(httpStatus), content, request);
+    return (CouchbaseException) OkHttpSearchService.errorToThrowable(httpStatus, content, request);
   }
 
   private static <T extends CouchbaseException> T assertType(Class<T> expected, CouchbaseException actual) {
@@ -123,8 +122,8 @@ class SearchErrorTranslationTest {
 
   @Test
   void queryEmptyOrMissingError() {
-    assertType(InternalServerFailureException.class, SearchResponseFormat.errorsToThrowable(null, HttpResponseStatus.valueOf(500), ctx));
-    CouchbaseException e = assertType(InvalidArgumentException.class, SearchResponseFormat.errorsToThrowable(new byte[0], HttpResponseStatus.valueOf(400), ctx));
+    assertType(InternalServerFailureException.class, SearchResponseFormat.errorsToThrowable(null, 500, ctx));
+    CouchbaseException e = assertType(InvalidArgumentException.class, SearchResponseFormat.errorsToThrowable(new byte[0], 400, ctx));
     assertEquals("", ((SearchErrorContext) e.context()).content());
   }
 

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.IndexNotFoundException;
@@ -87,7 +86,7 @@ final class SearchResponseFormat
   @Override
   public Optional<CouchbaseException> error(Result trailer, int httpStatus, RequestContext requestContext) {
     return Optional.ofNullable(trailer.error)
-      .map(it -> errorsToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
+      .map(it -> errorsToThrowable(it, httpStatus, requestContext));
   }
 
   @Override
@@ -109,13 +108,12 @@ final class SearchResponseFormat
    */
   static CouchbaseException errorsToThrowable(
     byte @Nullable [] bytes,
-    HttpResponseStatus status,
+    int statusCode,
     RequestContext requestContext
   ) {
-    int statusCode = status.code();
     String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, StandardCharsets.UTF_8);
     SearchErrorContext errorContext = new SearchErrorContext(
-      HttpProtocol.decodeStatus(status),
+      HttpProtocol.decodeStatus(statusCode),
       requestContext,
       statusCode,
       errorDecoded

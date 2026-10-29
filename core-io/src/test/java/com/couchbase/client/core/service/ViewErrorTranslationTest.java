@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.msg.view.ViewError;
@@ -42,7 +41,7 @@ class ViewErrorTranslationTest {
   private final RequestContext ctx = mock(RequestContext.class);
 
   private CouchbaseException error(int httpStatus, String error, String reason) {
-    return ViewResponseFormat.errorToThrowable(new ViewError(error, reason), HttpResponseStatus.valueOf(httpStatus), ctx);
+    return ViewResponseFormat.errorToThrowable(new ViewError(error, reason), httpStatus, ctx);
   }
 
   private Optional<RetryReason> retry(int httpStatus, String error, String reason) {

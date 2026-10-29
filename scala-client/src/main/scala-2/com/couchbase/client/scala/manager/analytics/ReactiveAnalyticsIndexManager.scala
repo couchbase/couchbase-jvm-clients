@@ -16,7 +16,7 @@
 package com.couchbase.client.scala.manager.analytics
 
 import com.couchbase.client.core.cnc.RequestSpan
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus
 import com.couchbase.client.core.error.{FeatureNotAvailableException, HttpStatusCodeException}
 import com.couchbase.client.core.logging.RedactableArgument.redactMeta
 import com.couchbase.client.core.retry.RetryStrategy
@@ -268,7 +268,7 @@ class ReactiveAnalyticsIndexManager(
 
         val err = findCause(t, classOf[HttpStatusCodeException]).asScala match {
           case Some(httpException) =>
-            if (httpException.httpStatusCode == HttpResponseStatus.NOT_FOUND.code) {
+            if (httpException.httpStatusCode == CoreHttpStatus.NOT_FOUND) {
               Some(new FeatureNotAvailableException(t))
             } else None
           case _ => None

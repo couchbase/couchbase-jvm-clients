@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.error.CompilationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -44,7 +43,7 @@ class AnalyticsErrorTranslationTest {
   private final RequestContext ctx = mock(RequestContext.class);
 
   private CouchbaseException error(int httpStatus, String errors) {
-    return AnalyticsResponseFormat.errorsToThrowable(errors.getBytes(UTF_8), ctx, HttpResponseStatus.valueOf(httpStatus));
+    return AnalyticsResponseFormat.errorsToThrowable(errors.getBytes(UTF_8), ctx, httpStatus);
   }
 
   private static String errorWithCode(int code) {

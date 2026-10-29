@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.BucketNotFoundException;
 import com.couchbase.client.core.error.CollectionNotFoundException;
 import com.couchbase.client.core.error.CouchbaseException;
@@ -46,7 +45,7 @@ class EventingErrorTranslationTest {
   private CouchbaseException error(int httpStatus, String content) {
     Request<?> request = mock(Request.class);
     when(request.context()).thenReturn(mock(RequestContext.class));
-    return (CouchbaseException) OkHttpEventingService.errorToThrowable(HttpResponseStatus.valueOf(httpStatus), content, request);
+    return (CouchbaseException) OkHttpEventingService.errorToThrowable(httpStatus, content, request);
   }
 
   @Test

@@ -18,12 +18,12 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.events.io.IdleStreamingEndpointClosedEvent;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.okhttp3.Call;
 import com.couchbase.client.core.deps.okhttp3.ResponseBody;
 import com.couchbase.client.core.deps.okio.BufferedSource;
 import com.couchbase.client.core.deps.okio.ByteString;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.HttpStatusCodeException;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -131,21 +131,21 @@ public class OkHttpManagerService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+    return errorToThrowable(httpStatus, responseBody, request);
   }
 
   /**
    * Returns the exception for an error response to a non-streaming HTTP request to the cluster manager.
    */
-  static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
+  static Exception errorToThrowable(int status, String content, Request<?> request) {
     ManagerErrorContext errorContext = new ManagerErrorContext(
       HttpProtocol.decodeStatus(status),
       request.context(),
-      status.code(),
+      status,
       content
     );
 
-    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+    if (status == CoreHttpStatus.BAD_REQUEST) {
       if (content.contains("Magma is supported in enterprise edition only")) {
         return FeatureNotAvailableException.communityEdition("Storage Backend: Magma");
       }
@@ -157,7 +157,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
       }
     }
 
-    if (status.equals(HttpResponseStatus.TOO_MANY_REQUESTS)) {
+    if (status == CoreHttpStatus.TOO_MANY_REQUESTS) {
       if (content.contains("num_concurrent_requests")
         || content.contains("ingress")
         || content.contains("egress")) {
@@ -168,7 +168,7 @@ public class OkHttpManagerService extends AbstractOkHttpService {
     }
 
     HttpStatusCodeException httpStatusCodeException = new HttpStatusCodeException(status, content, request, errorContext);
-    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+    if (status == CoreHttpStatus.BAD_REQUEST) {
       // Keep the HttpStatusCodeException as the cause, so higher layers can still
       // inspect the response body and map it to a more specific exception.
       return new InvalidArgumentException(httpStatusCodeException.getMessage(), httpStatusCodeException, errorContext);
