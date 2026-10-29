@@ -23,14 +23,6 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.endpoint.http.CoreHttpPath;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseHttpRequest;
@@ -53,7 +45,6 @@ import static java.util.Objects.requireNonNull;
 public class ViewRequest extends BaseHttpRequest<ViewResponse>
   implements HttpRequest<ViewChunkHeader, ViewChunkRow, ViewChunkTrailer, ViewResponse>, ScopedRequest {
 
-  private final Authenticator authenticator;
   private final String bucket;
   private final boolean development;
   private final String design;
@@ -66,7 +57,6 @@ public class ViewRequest extends BaseHttpRequest<ViewResponse>
                      final String view, final String query, Optional<byte[]> keysJson,
                      final boolean development, final RequestSpan span) {
     super(timeout, ctx, retryStrategy, span);
-    this.authenticator = requireNonNull(authenticator);
     this.bucket = requireNonNull(bucket);
     this.design = requireNonNull(design);
     this.view = requireNonNull(view);
@@ -85,30 +75,6 @@ public class ViewRequest extends BaseHttpRequest<ViewResponse>
   @Override
   public ServiceType serviceType() {
     return ServiceType.VIEWS;
-  }
-
-  @Override
-  public FullHttpRequest encode() {
-
-    String path = CoreHttpPath.formatPath("/{}/_design/{}/_view/{}?"+query, bucket, development ? "dev_" + design : design, view);
-
-    ByteBuf content = keysJson.isPresent()
-      ? Unpooled.copiedBuffer(keysJson.get())
-      : Unpooled.EMPTY_BUFFER;
-    HttpMethod method = keysJson.isPresent()
-      ? HttpMethod.POST
-      : HttpMethod.GET;
-
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, method,
-      path, content);
-
-    request.headers()
-      .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-      .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes())
-      .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
-
-    authenticator.authHttpRequest(serviceType(), request);
-    return request;
   }
 
   @Override

@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.msg;
 
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.msg.chunk.ChunkDecodable;
 import com.couchbase.client.core.msg.chunk.ChunkHeader;
 import com.couchbase.client.core.msg.chunk.ChunkRow;
@@ -28,5 +27,5 @@ public interface HttpRequest<
   ROW extends ChunkRow,
   T extends ChunkTrailer,
   R extends ChunkedResponse<H, ROW, T>>
-   extends Request<R>, Encodable<FullHttpRequest>, ChunkDecodable<H, ROW, T, R> {
+   extends Request<R>, ChunkDecodable<H, ROW, T, R> {
 }

@@ -25,14 +25,6 @@ import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.json.Mapper;
 import com.couchbase.client.core.msg.BaseHttpRequest;
@@ -107,21 +99,6 @@ public class QueryRequest
    */
   public static String queryContext(final String bucket, final String scope) {
     return "`default`:`" + bucket + "`.`" + scope + "`";
-  }
-
-  @Override
-  public FullHttpRequest encode() {
-    ByteBuf content = Unpooled.wrappedBuffer(query);
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST,
-      URI, content);
-    request.headers()
-      .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-    request.headers()
-      .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-    request.headers()
-      .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
-    authenticator.authHttpRequest(serviceType(), request);
-    return request;
   }
 
   @Override

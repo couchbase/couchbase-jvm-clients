@@ -17,7 +17,6 @@
 package com.couchbase.client.java.manager.raw;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.Bucket;
@@ -30,6 +29,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.couchbase.client.test.ClusterType.MOCKED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -95,8 +97,9 @@ class RawManagerIntegrationTest extends JavaIntegrationTest {
     ArgumentCaptor<CoreHttpRequest> captor = ArgumentCaptor.forClass(CoreHttpRequest.class);
     verify(core, times(1)).send(captor.capture());
 
-    FullHttpRequest encoded = captor.getValue().encode();
-    assertEquals(encoded.headers().get("Accept"), "text/html");
+    Map<String, String> headers = new HashMap<>();
+    captor.getValue().forEachHeader(headers::put);
+    assertEquals("text/html", headers.get("Accept"));
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

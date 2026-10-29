@@ -25,14 +25,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.tracing.TracingDecorator;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.DefaultFullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.FullHttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderValues;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpMethod;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpVersion;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.msg.BaseHttpRequest;
 import com.couchbase.client.core.msg.HttpRequest;
@@ -73,7 +66,6 @@ public class AnalyticsRequest
   private final String httpPath;
   private final HttpMethod httpMethod;
 
-  private final Authenticator authenticator;
 
   /**
    * Automatically translate error codes into specific SDK3 exceptions,
@@ -112,7 +104,6 @@ public class AnalyticsRequest
     this.scope = scope;
     this.httpPath = httpPath;
     this.httpMethod = httpMethod;
-    this.authenticator = authenticator;
     this.translateExceptions = translateExceptions;
 
     if (span != null && !CbTracing.isInternalSpan(span)) {
@@ -249,26 +240,6 @@ public class AnalyticsRequest
    */
   public static String queryContext(final String bucket, final String scope) {
     return "default:`"  + bucket + "`.`" + scope +"`" ;
-  }
-
-  @Override
-  public FullHttpRequest encode() {
-    ByteBuf content = query == null || query.length == 0 ? Unpooled.EMPTY_BUFFER : Unpooled.wrappedBuffer(query);
-    FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, httpMethod,
-      httpPath, content);
-    request.headers()
-      .set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-    request.headers()
-      .set(HttpHeaderNames.CONTENT_LENGTH, content.readableBytes());
-    request.headers()
-      .set(HttpHeaderNames.USER_AGENT, context().environment().userAgent().formattedLong());
-
-    if (priority != NO_PRIORITY) {
-      request.headers().set("Analytics-Priority", priority);
-    }
-
-    authenticator.authHttpRequest(serviceType(), request);
-    return request;
   }
 
   @Override

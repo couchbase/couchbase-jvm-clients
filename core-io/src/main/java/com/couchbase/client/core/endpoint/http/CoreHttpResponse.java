@@ -17,8 +17,6 @@
 package com.couchbase.client.core.endpoint.http;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.channel.DefaultChannelId;
-import com.couchbase.client.core.io.netty.HttpChannelContext;
 import com.couchbase.client.core.msg.BaseResponse;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -30,11 +28,8 @@ import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class CoreHttpResponse extends BaseResponse {
-  private static final HttpChannelContext DUMMY_CHANNEL_CONTEXT = new HttpChannelContext(DefaultChannelId.newInstance());
-
   private final int httpStatus;
   private final byte[] content;
-  private final HttpChannelContext channelContext;
   private final String channelId;
   private final RequestContext requestContext;
 
@@ -45,19 +40,10 @@ public class CoreHttpResponse extends BaseResponse {
    * {@link #channelId()}: hex digits, without a "0x" prefix. Null if unknown.
    */
   public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, @Nullable String channelId, RequestContext requestContext) {
-    this(status, content, httpStatus, DUMMY_CHANNEL_CONTEXT, channelId == null ? "unknown" : channelId, requestContext);
-  }
-
-  public CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, HttpChannelContext channelContext, RequestContext requestContext) {
-    this(status, content, httpStatus, channelContext, channelContext.channelId().asShortText(), requestContext);
-  }
-
-  private CoreHttpResponse(ResponseStatus status, byte[] content, int httpStatus, HttpChannelContext channelContext, String channelId, RequestContext requestContext) {
     super(requireNonNull(status));
     this.httpStatus = httpStatus;
     this.content = requireNonNull(content);
-    this.channelContext = requireNonNull(channelContext);
-    this.channelId = requireNonNull(channelId);
+    this.channelId = channelId == null ? "unknown" : channelId;
     this.requestContext = requireNonNull(requestContext);
   }
 
@@ -67,10 +53,6 @@ public class CoreHttpResponse extends BaseResponse {
 
   public byte[] content() {
     return content;
-  }
-
-  public HttpChannelContext channelContext() {
-    return channelContext;
   }
 
   /**
