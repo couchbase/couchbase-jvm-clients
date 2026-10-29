@@ -6,8 +6,6 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="com.couchbase.client.core.deps.io.netty" level="warn"/>
-
         <!-- Uncomment if using the 'io.captureTraffic' client setting -->
         <!-- <Logger name="com.couchbase.io" level="trace"/> -->
 

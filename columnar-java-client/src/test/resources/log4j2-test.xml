@@ -6,8 +6,6 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="com.couchbase.client.core.deps.io.netty" level="warn"/>
-
         <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>
