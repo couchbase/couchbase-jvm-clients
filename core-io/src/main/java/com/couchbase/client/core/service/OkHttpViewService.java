@@ -20,7 +20,8 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
-import com.couchbase.client.core.io.netty.view.NonChunkedViewMessageHandler;
+import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.ViewServiceException;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.view.ViewRequest;
 import com.couchbase.client.core.util.HostAndPort;
@@ -59,7 +60,7 @@ public class OkHttpViewService extends AbstractOkHttpService {
     ViewRequest viewRequest = (ViewRequest) request;
 
     // View requests are idempotent, so OkHttp may retransmit them.
-    // Like the Netty implementation: POST if there are keys, otherwise GET.
+    // POST if there are keys, otherwise GET.
     RequestBody requestBody = viewRequest.keysJson()
       .map(keys -> RequestBody.create(keys, APPLICATION_JSON))
       .orElse(null);
@@ -73,6 +74,21 @@ public class OkHttpViewService extends AbstractOkHttpService {
 
   @Override
   protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
-    return NonChunkedViewMessageHandler.errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+    return errorToThrowable(HttpResponseStatus.valueOf(httpStatus), responseBody, request);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the view service.
+   */
+  static Exception errorToThrowable(HttpResponseStatus status, String content, Request<?> request) {
+    HttpStatusCodeException cause = new HttpStatusCodeException(status, content, request, null);
+
+    // SDK-46 wants HTTP status code 400 to be an InvalidArgumentException instead of CouchbaseException,
+    // but that might break user code that catches ViewServiceException.
+    // Views are deprecated anyway, so let's leave this one alone.
+//    if (status.equals(HttpResponseStatus.BAD_REQUEST)) {
+//      return new InvalidArgumentException("View service reported an invalid argument: " + content, cause, null);
+//    }
+    return new ViewServiceException(content, cause);
   }
 }

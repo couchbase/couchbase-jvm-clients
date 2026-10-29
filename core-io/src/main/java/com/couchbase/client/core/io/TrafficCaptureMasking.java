@@ -23,9 +23,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Masks credentials in captured HTTP traffic (see {@code io.servicesToCapture}). Shared by the Netty endpoints'
- * {@code TrafficCaptureHandler} and the OkHttp services' {@code TrafficCaptureInterceptor}, so both mask the same
- * things the same way.
+ * Masks credentials in captured HTTP traffic (see {@code io.servicesToCapture}), for the OkHttp services'
+ * {@code TrafficCaptureInterceptor}.
  */
 @NullMarked
 @Stability.Internal
@@ -98,7 +97,7 @@ public final class TrafficCaptureMasking {
   /**
    * Like {@link Matcher#replaceAll(String)}, but returns the input instance if nothing matched.
    */
-  public static String replaceAll(Pattern pattern, String input, String replacement) {
+  private static String replaceAll(Pattern pattern, String input, String replacement) {
     Matcher matcher = pattern.matcher(input);
     return matcher.find() ? matcher.replaceAll(replacement) : input;
   }

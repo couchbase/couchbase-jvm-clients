@@ -78,7 +78,7 @@ import static java.util.Objects.requireNonNull;
  * <ul>
  *   <li>One {@link EndpointState#CONNECTED} entry per open connection. Connections the pool has
  *       closed (for example, because they were idle) are dropped, so an idle node reports no
- *       entries, like an idle Netty pool whose endpoints were all removed.
+ *       entries.
  *   <li>One {@link EndpointState#CONNECTING} entry per connection attempt in progress.
  *   <li>If neither of those exist, one {@link EndpointState#DISCONNECTED} placeholder entry when
  *       there is something worth reporting: the circuit breaker is not closed, or a connection
@@ -102,11 +102,11 @@ import static java.util.Objects.requireNonNull;
  * If the OkHttp request carries a {@link RequestContext} tag, the tracker also records which
  * connection the request was dispatched on ({@link RequestContext#lastChannelId()},
  * {@link RequestContext#lastDispatchedFrom()} and {@link RequestContext#lastDispatchedTo()}).
- * Ping reports, tracing, and error contexts read these. As with the Netty endpoints, they are set
+ * Ping reports, tracing, and error contexts read these. They are set
  * only once the request has a connection, and {@code lastDispatchedTo} is the node's configured
  * address (for example, a host name), not the socket's resolved remote address.
  * <p>
- * If given a {@link CoreContext}, it also publishes the Netty endpoints' connection events:
+ * If given a {@link CoreContext}, it also publishes connection events:
  * {@link EndpointConnectedEvent} when a new connection is first used, {@link EndpointConnectionFailedEvent}
  * (at warning level) when a call fails to get a connection, {@link UnexpectedEndpointDisconnectedEvent}
  * (at warning level) when a call fails on a connection for a reason other than a timeout, and
@@ -130,8 +130,7 @@ final class NodeConnectionTracker extends EventListener {
    * the rest are published at DEBUG level.
    * <p>
    * Every request attempt that can't get a connection fails to connect, and requests are retried, so the
-   * failures are as frequent as the retries of all the requests waiting for this node. (The Netty endpoints
-   * have one connect attempt at a time, with backoff, however many requests are waiting.)
+   * failures are as frequent as the retries of all the requests waiting for this node.
    */
   static final Duration CONNECT_FAILURE_WARN_INTERVAL = Duration.ofSeconds(10);
 
@@ -165,7 +164,7 @@ final class NodeConnectionTracker extends EventListener {
   private final @Nullable CoreContext coreContext;
 
   /**
-   * Calls that failed to get a connection since the last success, like the Netty endpoints' connect attempt number.
+   * Calls that failed to get a connection since the last success (the connect attempt number in events).
    */
   private final AtomicLong consecutiveConnectFailures = new AtomicLong();
 
@@ -361,7 +360,7 @@ final class NodeConnectionTracker extends EventListener {
   }
 
   /**
-   * Publishes a {@link SecureConnectionFailedEvent} if the failure is a TLS failure, like the Netty endpoints.
+   * Publishes a {@link SecureConnectionFailedEvent} if the failure is a TLS failure.
    */
   private void publishIfTlsFailure(IOException failure) {
     SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(failure);
@@ -382,7 +381,7 @@ final class NodeConnectionTracker extends EventListener {
 
     List<InternalEndpointDiagnostics> result = new ArrayList<>();
     for (EndpointDiagnostics d : diagnostics(failure)) {
-      // Same as Netty's HTTP endpoints, which never reported authentication status.
+      // The HTTP services don't report authentication status.
       result.add(new InternalEndpointDiagnostics(d, AuthenticationStatus.UNKNOWN, tlsFailure));
     }
     return result;
@@ -456,8 +455,8 @@ final class NodeConnectionTracker extends EventListener {
   }
 
   /**
-   * Returns a connect failure with a more helpful message, like the Netty endpoints' (see
-   * {@code BaseEndpoint.annotateConnectException}), or the failure as is if it isn't a {@link ConnectException}
+   * Returns a connect failure with a more helpful message, like the KV endpoints' (see
+   * {@link NioKeyValueEndpoint#annotateConnectException}), or the failure as is if it isn't a {@link ConnectException}
    * or a TLS failure that retrying won't fix.
    * <p>
    * For a TLS failure that retrying won't fix, adds a hint (see {@link OkHttpTlsHelper#permanentTlsFailureHint}).
@@ -489,7 +488,7 @@ final class NodeConnectionTracker extends EventListener {
       : " - Check server ports.";
     // A plain ConnectException, not a subclass: the connection failed event shows the exception's class name.
     ConnectException annotated = new ConnectException(message + hint);
-    // Like the Netty endpoints', no stack trace or cause: the message says it all, and the connection failed
+    // No stack trace or cause: the message says it all, and the connection failed
     // event logs it at WARN level. AbstractOkHttpService logs the original at DEBUG level.
     annotated.setStackTrace(new StackTraceElement[0]);
     return annotated;
@@ -548,7 +547,7 @@ final class NodeConnectionTracker extends EventListener {
 
   /**
    * Returns whether the current cluster config has this service on this node, or null if unknown (no config yet),
-   * like the Netty endpoints' (see {@code BaseEndpoint.maybeDisconnectIfEndpointNoLongerInTopology}).
+   * like the KV endpoints' (see {@code NioKeyValueEndpoint.maybeDisconnectIfEndpointNoLongerInTopology}).
    * <p>
    * If a connection fails because the node is no longer in the cluster, and the SDK hasn't caught up (it still
    * sends requests there), this says whether that's because the SDK's config is out of date (true),
@@ -570,8 +569,8 @@ final class NodeConnectionTracker extends EventListener {
    * The SDK only sends requests to nodes and services it manages, so if the current config doesn't have this
    * service on this node, the SDK hasn't caught up with its own config: it should have removed the service, or
    * the node. Reconfiguring removes them, like the core's {@code InvalidStateWatchdog} does when it notices
-   * the number of nodes is off (which it doesn't if, for example, a node was replaced). Like the Netty endpoints'
-   * check (see {@code BaseEndpoint.maybeDisconnectIfEndpointNoLongerInTopology}), this is a safety net:
+   * the number of nodes is off (which it doesn't if, for example, a node was replaced). Like the KV endpoints'
+   * check (see {@code NioKeyValueEndpoint.maybeDisconnectIfEndpointNoLongerInTopology}), this is a safety net:
    * the core should have reconfigured itself when it got the config.
    * <p>
    * The config might have changed a moment ago, with the core about to reconfigure itself anyway.
@@ -594,8 +593,7 @@ final class NodeConnectionTracker extends EventListener {
   }
 
   /**
-   * Returns an endpoint context for an event about the given connection (or none: a failed connection attempt),
-   * like the Netty endpoints'.
+   * Returns an endpoint context for an event about the given connection (or none: a failed connection attempt).
    */
   private EndpointContext endpointContext(CoreContext context, @Nullable ConnectionInfo info) {
     return new EndpointContext(
@@ -676,7 +674,7 @@ final class NodeConnectionTracker extends EventListener {
   }
 
   private static final class ConnectionInfo {
-    final String id; // "0x" followed by hex digits, like Netty's channel IDs
+    final String id; // "0x" followed by hex digits
     final @Nullable HostAndPort localAddress;
     final @Nullable String local;
     final @Nullable String remote;

@@ -29,12 +29,12 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.TracingUtils;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
-import com.couchbase.client.core.io.netty.kv.KeyValueMessageHandler;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
@@ -42,22 +42,30 @@ import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueResponse;
+import com.couchbase.client.core.msg.kv.UnlockRequest;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.AUTH;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.CONN_STATE_INVALIDATED;
 import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.FETCH_CONFIG;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.ITEM_LOCKED;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_LATER;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.RETRY_NOW;
+import static com.couchbase.client.core.io.netty.kv.ErrorMap.ErrorAttribute.TEMP;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Handles a {@link NioKeyValueConnection}'s responses, like the Netty implementation's {@link KeyValueMessageHandler}:
- * completes the requests, or retries them (for example, after NOT_MY_VBUCKET, or an outdated collection),
+ * Handles a {@link NioKeyValueConnection}'s responses: completes the requests, or retries them (for example, after NOT_MY_VBUCKET, or an outdated collection),
  * and asks the connection to close when a response says to.
  * <p>
  * Used by the connection's event loop. Created once the handshake is done.
@@ -145,7 +153,7 @@ final class KeyValueResponseHandler {
         if (errorCode.attributes().contains(CONN_STATE_INVALIDATED)) {
           connection.closeProactively(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION, false);
         } else {
-          status = KeyValueMessageHandler.statusForErrorCode(errorCode);
+          status = statusForErrorCode(errorCode);
         }
       }
 
@@ -163,12 +171,11 @@ final class KeyValueResponseHandler {
       handleNotMyVbucket(request, packet);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
       handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
-    } else if (errorUnknown && KeyValueMessageHandler.errorMapIndicatesRetry(errorCode)) {
+    } else if (errorUnknown && errorMapIndicatesRetry(errorCode)) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
-    } else if (KeyValueMessageHandler.statusIndicatesInvalidChannel(status, bucketName != null)) {
+    } else if (statusIndicatesInvalidChannel(status, bucketName != null)) {
       connection.closeProactively(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_CLOSE_INDICATION, false);
-      // Unlike the Netty implementation (which has already forgotten the request when it retries
-      // the ones in flight, so it times out), retry it like the other requests in flight.
+      // Retry it like the other requests in flight.
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT);
     } else {
       retryOrComplete(written, packet, status, isRangeScanContinue);
@@ -182,7 +189,7 @@ final class KeyValueResponseHandler {
     boolean isRangeScanContinue
   ) {
     KeyValueRequest<Response> request = written.request;
-    RetryReason retryReason = KeyValueMessageHandler.statusCodeIndicatesRetry(status, request);
+    RetryReason retryReason = statusCodeIndicatesRetry(status, request);
     if (retryReason != null) {
       RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
     } else if (isRangeScanContinue) {
@@ -252,8 +259,7 @@ final class KeyValueResponseHandler {
     eventBus.publish(new UnknownResponseReceivedEvent(ioContext, response.toByteArray()));
     // We got a response with an opaque value that we know nothing about. There is clearly something weird
     // going on so to be sure we close the connection to avoid any further weird situations.
-    // Unlike the Netty implementation, doesn't handle the rest of the responses already read: they might
-    // complete the wrong requests.
+    // Doesn't handle the rest of the responses already read: they might complete the wrong requests.
     connection.closeProactively(ChannelClosedProactivelyEvent.Reason.KV_RESPONSE_CONTAINED_UNKNOWN_OPAQUE, true);
   }
 
@@ -282,10 +288,101 @@ final class KeyValueResponseHandler {
     eventBus.publish(new CollectionOutdatedHandledEvent(
       request.collectionIdentifier(),
       retryReason,
-      new KeyValueMessageHandler.OutdatedCollectionContext(ioContext, ioContext.core().configurationProvider().collectionMap())
+      new OutdatedCollectionContext(ioContext, ioContext.core().configurationProvider().collectionMap())
     ));
 
     ioContext.core().configurationProvider().refreshCollectionId(request.collectionIdentifier());
     RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
+  }
+
+  /**
+   * If certain status codes are returned from the server, there is a clear indication that the channel is
+   * invalid and needs to be closed in order to avoid any further trouble.
+   *
+   * @param status the status code to check.
+   * @param bucketSelected true if the connection selected a bucket.
+   * @return true if it indicates an invalid channel that needs to be closed.
+   */
+  static boolean statusIndicatesInvalidChannel(ResponseStatus status, boolean bucketSelected) {
+    return status == ResponseStatus.INTERNAL_SERVER_ERROR
+      || (status == ResponseStatus.NO_BUCKET && bucketSelected)
+      || status == ResponseStatus.NOT_INITIALIZED;
+  }
+
+  /**
+   * Returns the status the client uses for an error code the client doesn't know, given its attributes
+   * in the error map. (Doesn't check {@code CONN_STATE_INVALIDATED}, which means the caller closes the connection.)
+   */
+  static ResponseStatus statusForErrorCode(ErrorMap.ErrorCode errorCode) {
+    if (errorCode.attributes().contains(TEMP)) {
+      return ResponseStatus.TEMPORARY_FAILURE;
+    }
+
+    if (errorCode.attributes().contains(AUTH)) {
+      return ResponseStatus.NO_ACCESS;
+    }
+
+    if (errorCode.attributes().contains(ITEM_LOCKED)) {
+      return ResponseStatus.LOCKED;
+    }
+
+    return ResponseStatus.UNKNOWN;
+  }
+
+  /**
+   * Helper method to check if the consulted kv error map indicates a retry condition.
+   *
+   * @param errorCode the error code to handle
+   * @return true if retry is indicated.
+   */
+  static boolean errorMapIndicatesRetry(ErrorMap.@Nullable ErrorCode errorCode) {
+    return errorCode != null && (errorCode.attributes().contains(RETRY_NOW) || errorCode.attributes().contains(RETRY_LATER));
+  }
+
+  /**
+   * Certain error codes can be transparently retried in the client instead of being raised to the user.
+   * <p>
+   * Note this special case where LOCKED returned for unlock should NOT be retried, because it does not make
+   * sense (someone else unlocked the document). Usually this is turned into a CAS mismatch at the higher
+   * levels.
+   *
+   * @param status the status code to check.
+   * @return the retry reason that indicates the retry.
+   */
+  static @Nullable RetryReason statusCodeIndicatesRetry(ResponseStatus status, Request<?> request) {
+    switch (status) {
+      case LOCKED:
+        return request instanceof UnlockRequest ? null : RetryReason.KV_LOCKED;
+      case TEMPORARY_FAILURE:
+      case SERVER_BUSY:
+        return RetryReason.KV_TEMPORARY_FAILURE;
+      case SYNC_WRITE_IN_PROGRESS:
+        return RetryReason.KV_SYNC_WRITE_IN_PROGRESS;
+      case SYNC_WRITE_RE_COMMIT_IN_PROGRESS:
+        return RetryReason.KV_SYNC_WRITE_RE_COMMIT_IN_PROGRESS;
+      default:
+        return null;
+    }
+  }
+
+  static final class OutdatedCollectionContext extends IoContext {
+
+    private final CollectionMap collectionMap;
+
+    OutdatedCollectionContext(IoContext ioContext, CollectionMap collectionMap) {
+      super(ioContext, ioContext.localSocket(), ioContext.remoteSocket(), ioContext.bucket());
+      this.collectionMap = collectionMap;
+    }
+
+    @Override
+    public void injectExportableParams(final Map<String, Object> input) {
+      super.injectExportableParams(input);
+
+      input.put("open", collectionMap.inner().entrySet().stream().map(e -> {
+        Map<String, Object> converted = new HashMap<>(e.getKey().toMap());
+        converted.put("id", "0x" + Long.toHexString(UnsignedLEB128.decode(e.getValue())));
+        return converted;
+      }).collect(Collectors.toList()));
+    }
   }
 }

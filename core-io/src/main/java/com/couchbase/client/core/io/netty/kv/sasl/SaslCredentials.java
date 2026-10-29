@@ -29,8 +29,7 @@ import static java.util.Collections.unmodifiableSet;
 import static java.util.Objects.requireNonNull;
 
 /**
- * What a KV connection authenticates with, using SASL: the same values an authenticator passes to
- * {@code SaslAuthenticationHandler}, for KV connections that don't use Netty.
+ * What a KV connection authenticates with, using SASL (see {@link com.couchbase.client.core.env.Authenticator#keyValueSaslCredentials}).
  */
 @NullMarked
 @Stability.Internal

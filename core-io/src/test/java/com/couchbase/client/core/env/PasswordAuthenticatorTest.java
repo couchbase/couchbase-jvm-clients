@@ -17,10 +17,8 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.cnc.SimpleEventBus;
-import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,11 +71,7 @@ class PasswordAuthenticatorTest {
     EndpointContext ctx = mock(EndpointContext.class);
     when(ctx.environment()).thenReturn(ENV);
 
-    EmbeddedChannel channel = new EmbeddedChannel();
-    authenticator.authKeyValueConnection(ctx, channel.pipeline());
-
-    SaslAuthenticationHandler handler = channel.pipeline().get(SaslAuthenticationHandler.class);
-    assertFalse(handler.allowedMechanisms().contains(SaslMechanism.PLAIN));
+    assertFalse(authenticator.keyValueSaslCredentials(ctx).allowedMechanisms().contains(SaslMechanism.PLAIN));
   }
 
   @Test
@@ -209,11 +203,7 @@ class PasswordAuthenticatorTest {
     EndpointContext ctx = mock(EndpointContext.class);
     when(ctx.environment()).thenReturn(ENV);
 
-    EmbeddedChannel channel = new EmbeddedChannel();
-    authenticator.authKeyValueConnection(ctx, channel.pipeline());
-
-    SaslAuthenticationHandler handler = channel.pipeline().get(SaslAuthenticationHandler.class);
-    assertEquals(EnumSet.allOf(SaslMechanism.class), handler.allowedMechanisms());
+    assertEquals(EnumSet.allOf(SaslMechanism.class), authenticator.keyValueSaslCredentials(ctx).allowedMechanisms());
   }
 
   @Test
@@ -223,11 +213,7 @@ class PasswordAuthenticatorTest {
     EndpointContext ctx = mock(EndpointContext.class);
     when(ctx.environment()).thenReturn(ENV);
 
-    EmbeddedChannel channel = new EmbeddedChannel();
-    authenticator.authKeyValueConnection(ctx, channel.pipeline());
-
-    SaslAuthenticationHandler handler = channel.pipeline().get(SaslAuthenticationHandler.class);
-    assertEquals(EnumSet.of(SaslMechanism.PLAIN), handler.allowedMechanisms());
+    assertEquals(EnumSet.of(SaslMechanism.PLAIN), authenticator.keyValueSaslCredentials(ctx).allowedMechanisms());
   }
 
   @Test
@@ -259,11 +245,7 @@ class PasswordAuthenticatorTest {
       EndpointContext ctx = mock(EndpointContext.class);
       when(ctx.environment()).thenReturn(tlsEnvironment);
 
-      EmbeddedChannel channel = new EmbeddedChannel();
-      authenticator.authKeyValueConnection(ctx, channel.pipeline());
-
-      SaslAuthenticationHandler handler = channel.pipeline().get(SaslAuthenticationHandler.class);
-      assertEquals(EnumSet.of(SaslMechanism.PLAIN), handler.allowedMechanisms());
+      assertEquals(EnumSet.of(SaslMechanism.PLAIN), authenticator.keyValueSaslCredentials(ctx).allowedMechanisms());
     } finally {
       tlsEnvironment.shutdown();
     }

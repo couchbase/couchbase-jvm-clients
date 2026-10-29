@@ -102,8 +102,7 @@ class OkHttpTlsHelper {
     PerConnectionSslSocketFactory socketFactory = new PerConnectionSslSocketFactory(clientCertificates, trustManagers, handshakeTimeout);
     clientBuilder.sslSocketFactory(socketFactory, initialTrustManager);
 
-    // Here only, so it's logged once per Core: KV connections that don't use Netty (see newTlsSocketFactory)
-    // use the same cipher suites.
+    // Here only, so it's logged once per Core: KV connections (see newTlsSocketFactory) use the same cipher suites.
     List<String> unsupported = unsupportedCipherSuites(socketFactory, securityConfig);
     if (!unsupported.isEmpty()) {
       log.warn("Ignoring configured TLS cipher suites the JVM doesn't support (see SecurityConfig.ciphers): {}", unsupported);
@@ -115,7 +114,7 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Like the Netty implementation, asks a user-supplied trust manager factory for each new connection,
+   * Asks a user-supplied trust manager factory for each new connection,
    * so trusted certificates can change (for example, if the user re-initializes the factory).
    */
   private static Supplier<X509TrustManager> trustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
@@ -148,8 +147,6 @@ class OkHttpTlsHelper {
 
   /**
    * Returns the configured cipher suites the socket factory doesn't support, which connections leave out.
-   * (The Netty implementation fails every connection instead, unless its TLS provider is OpenSSL,
-   * and OpenSSL supports them.)
    */
   static List<String> unsupportedCipherSuites(SSLSocketFactory socketFactory, SecurityConfig securityConfig) {
     if (securityConfig.ciphers().isEmpty()) {
@@ -209,8 +206,8 @@ class OkHttpTlsHelper {
       params.setCipherSuites(supportedCipherSuites(cipherSuites, supportedCipherSuites).toArray(new String[0]));
     }
 
-    // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake,
-    // like the Netty implementation (so a mismatch fails with a CertificateException, which gets CERTIFICATE_HINT).
+    // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake
+    // (so a mismatch fails with a CertificateException, which gets CERTIFICATE_HINT).
     if (!certificateVerificationDisabled(securityConfig) && securityConfig.hostnameVerificationEnabled()) {
       params.setEndpointIdentificationAlgorithm("HTTPS");
     }
@@ -334,7 +331,6 @@ class OkHttpTlsHelper {
   /**
    * Returns true if the TLS failure is the connection failing (for example, the server closed it during the handshake
    * because it's restarting), or the SDK couldn't get the certificates, rather than TLS rejecting the connection.
-   * Like the Netty implementation, which doesn't count those as TLS failures, either.
    */
   static boolean connectionFailedDuringTls(Throwable t) {
     List<SSLException> failures = tlsFailures(t);

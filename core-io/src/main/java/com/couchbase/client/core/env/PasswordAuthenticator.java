@@ -16,10 +16,7 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelPipeline;
 import com.couchbase.client.core.endpoint.EndpointContext;
-import com.couchbase.client.core.io.netty.kv.SaslAuthenticationHandler;
-import com.couchbase.client.core.io.netty.kv.SaslListMechanismsHandler;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslHelper;
 import reactor.util.annotation.Nullable;
@@ -145,19 +142,6 @@ public class PasswordAuthenticator implements Authenticator {
     byte[] encodeMe = (credentials.username() + ":" + credentials.password()).getBytes(UTF_8);
     String encoded = Base64.getEncoder().encodeToString(encodeMe);
     return "Basic " + encoded;
-  }
-
-  @Override
-  public void authKeyValueConnection(final EndpointContext ctx, final ChannelPipeline pipeline) {
-    SaslCredentials credentials = keyValueSaslCredentials(ctx);
-
-    pipeline.addLast(new SaslListMechanismsHandler(ctx));
-    pipeline.addLast(new SaslAuthenticationHandler(
-      ctx,
-      credentials.username(),
-      credentials.password(),
-      credentials.allowedMechanisms()
-    ));
   }
 
   @Override

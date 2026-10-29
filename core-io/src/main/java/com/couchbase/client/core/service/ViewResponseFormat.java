@@ -18,8 +18,10 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.netty.view.ChunkedViewMessageHandler;
-import com.couchbase.client.core.io.netty.view.ViewChunkResponseParser;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.ViewNotFoundException;
+import com.couchbase.client.core.error.context.ViewErrorContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
@@ -79,19 +81,101 @@ final class ViewResponseFormat
 
   @Override
   public Optional<CouchbaseException> error(ViewChunkTrailer trailer, int httpStatus, RequestContext requestContext) {
-    return trailer.error().map(it -> ViewChunkResponseParser.errorToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
+    return trailer.error().map(it -> errorToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
   }
 
   @Override
   public Optional<RetryReason> retryReason(CouchbaseException error) {
-    return ChunkedViewMessageHandler.retryReason(error);
+    if (!(error.context() instanceof ViewErrorContext)) {
+      return Optional.empty();
+    }
+    return shouldRetry((ViewErrorContext) error.context());
+  }
+
+  /**
+   * Analyses status codes and checks if a retry needs to happen.
+   *
+   * Some status codes are ambiguous, so their contents are inspected further.
+   *
+   * @param context the error context with information.
+   * @return true if retry is needed, false otherwise.
+   */
+  private static Optional<RetryReason> shouldRetry(ViewErrorContext context) {
+    switch (context.httpStatus()) {
+      case 404:
+        return analyse404Response(context.error());
+      case 500:
+        return analyse500Response(context.error());
+      case 302:
+        return Optional.of(RetryReason.VIEWS_NO_ACTIVE_PARTITION);
+      case 300:
+      case 301:
+      case 303:
+      case 307:
+      case 401:
+      case 408:
+      case 409:
+      case 412:
+      case 416:
+      case 417:
+      case 501:
+      case 502:
+      case 503:
+      case 504:
+        return Optional.of(RetryReason.VIEWS_TEMPORARY_FAILURE);
+      default:
+        return Optional.empty();
+    }
+  }
+
+  /**
+   * Analyses the content of a 404 response to see if it is legible for retry.
+   *
+   * If the content contains ""reason":"missing"", it is a clear indication that the responding node
+   * is unprovisioned and therefore it should be retried. All other cases indicate a provisioned node,
+   * but the design document/view is not found, which should not be retried.
+   *
+   * @param error the parsed error content.
+   * @return true if it needs to be retried, false otherwise.
+   */
+  private static Optional<RetryReason> analyse404Response(ViewError error) {
+    return error.reason().equals("missing") ? Optional.of(RetryReason.VIEWS_TEMPORARY_FAILURE) : Optional.empty();
+  }
+
+  /**
+   * Analyses the content of a 500 response to see if it is legible for retry.
+   *
+   * @param error the parsed error content.
+   * @return true if it needs to be retried, false otherwise.
+   */
+  private static Optional<RetryReason> analyse500Response(ViewError error) {
+    if (error.reason().contains("{not_found, missing_named_view}") || error.reason().contains("badarg")) {
+      return Optional.empty();
+    }
+    return Optional.of(RetryReason.VIEWS_TEMPORARY_FAILURE);
+  }
+
+  /**
+   * Returns the exception for the {@code error} and {@code reason} fields of a view query response.
+   */
+  static CouchbaseException errorToThrowable(ViewError e, HttpResponseStatus status, RequestContext requestContext) {
+    int httpStatus = status.code();
+    ResponseStatus responseStatus = HttpProtocol.decodeStatus(status);
+    ViewErrorContext errorContext = new ViewErrorContext(responseStatus, requestContext, e, httpStatus);
+    if (responseStatus == ResponseStatus.NOT_FOUND || e.error().equals("not_found") || e.reason().contains("not_found")) {
+      return new ViewNotFoundException(errorContext);
+    }
+    if (httpStatus == 400) {
+      return new InvalidArgumentException("View service reported an invalid argument: " + e, null, errorContext);
+    }
+    return new CouchbaseException("Unknown view error: " + e.toString(), errorContext);
   }
 
 
   /**
    * Parses one response body. Holds the state of that parse, so each response gets a new instance.
    * <p>
-   * Like the Netty-based parser, the header is complete when the total row count, the first row,
+   * The header is complete when the total row count, the first row,
    * or an error arrives, or else at the end of the body (so a response always has a header).
    */
   private static final class Parser {

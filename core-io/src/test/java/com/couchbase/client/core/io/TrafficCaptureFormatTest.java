@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static com.couchbase.client.core.io.netty.kv.ProtocolVerifier.decodeHexDump;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,90 +91,6 @@ class TrafficCaptureFormatTest {
     return TrafficCaptureFormat.memcacheToString(KeyValuePacket.wrap(bytes, 0, bytes.length));
   }
 
-  // ---- HTTP requests
-
-  @Test
-  void masksAuthorizationHeaderWithoutScheme() {
-    String captured = decode(TrafficCaptureFormat.httpRequestToString(bytes("GET / HTTP/1.1\r\nAuthorization: opaqueToken123\r\n\r\n")));
-    assertEquals("GET / HTTP/1.1\r\nAuthorization: <masked>\r\n\r\n", captured);
-  }
-
-  @Test
-  void masksSecretFormFieldsInBodyBufferWithHeaders() {
-    String request = "POST /settings/rbac/users/local/alice HTTP/1.1\r\n"
-      + "Content-Type: application/x-www-form-urlencoded\r\n"
-      + "\r\n"
-      + "password=" + PASSWORD + "&roles=admin&secretAccessKey=AKIA%2Fxyz";
-
-    assertEquals(
-      request
-        .replace(PASSWORD, "<masked>")
-        .replace("AKIA%2Fxyz", "<masked>"),
-      decode(TrafficCaptureFormat.httpRequestToString(bytes(request)))
-    );
-  }
-
-  @Test
-  void masksSecretFormFieldsInSeparateBodyBuffer() {
-    String body = "name=myLink&clientKey=-----BEGIN%20KEY-----&password=" + PASSWORD;
-    assertEquals(
-      "name=myLink&clientKey=<masked>&password=<masked>",
-      decode(TrafficCaptureFormat.httpRequestToString(bytes(body)))
-    );
-  }
-
-  @Test
-  void doesNotMaskFormFieldsThatMerelyEndWithSecretName() {
-    String body = "notpassword=visible&password_hint=visible";
-    assertEquals(body, decode(TrafficCaptureFormat.httpRequestToString(bytes(body))));
-  }
-
-  @Test
-  void masksSecretJsonFields() {
-    String body = "{\"url\":\"https://example.com\",\"auth_type\":\"basic\",\"username\":\"bob\","
-      + "\"password\" : \"" + PASSWORD + "\",\"bearer_key\":\"tok\\\"en\",\"other\":\"visible\"}";
-    assertEquals(
-      "{\"url\":\"https://example.com\",\"auth_type\":\"basic\",\"username\":\"bob\","
-        + "\"password\" : \"<masked>\",\"bearer_key\":\"<masked>\",\"other\":\"visible\"}",
-      decode(TrafficCaptureFormat.httpRequestToString(bytes(body)))
-    );
-  }
-
-  @Test
-  void preservesNonAsciiBytesOutsideMaskedValues() {
-    String body = "{\"name\":\"café\",\"password\":\"" + PASSWORD + "\"}";
-    byte[] utf8 = body.getBytes(StandardCharsets.UTF_8);
-    String captured = decodeHexDump(TrafficCaptureFormat.httpRequestToString(utf8)).toString(StandardCharsets.UTF_8);
-    assertEquals("{\"name\":\"café\",\"password\":\"<masked>\"}", captured);
-  }
-
-  @Test
-  void masksContentLength() {
-    String body = "password=" + PASSWORD;
-    String headers = "POST /controller/changePassword HTTP/1.1\r\n"
-      + "content-length: " + body.length() + "\r\n"
-      + "Host: x\r\n"
-      + "\r\n";
-
-    // Body in the same buffer as the headers
-    assertEquals(
-      headers.replace("content-length: " + body.length(), "content-length: <masked>") + "password=<masked>",
-      decode(TrafficCaptureFormat.httpRequestToString(bytes(headers + body)))
-    );
-
-    // Headers alone (body sent in a separate buffer)
-    assertEquals(
-      headers.replace("content-length: " + body.length(), "content-length: <masked>"),
-      decode(TrafficCaptureFormat.httpRequestToString(bytes(headers)))
-    );
-  }
-
-  @Test
-  void leavesHttpRequestWithoutSecretsUnchanged() {
-    byte[] request = bytes("GET / HTTP/1.1\r\nHost: x\r\n\r\n");
-    assertEquals(TrafficCaptureFormat.hexDump(request), TrafficCaptureFormat.httpRequestToString(request));
-  }
-
   // ---- Hex dumps
 
   @Test
@@ -195,14 +110,6 @@ class TrafficCaptureFormatTest {
     assertTrue(dump.contains("|00002000| 00"), dump);
     assertTrue(dump.contains("|00002010| 00"), dump);
     assertFalse(dump.contains("|00000000|"), dump);
-  }
-
-  private static String decode(String hexDump) {
-    return decodeHexDump(hexDump).toString(StandardCharsets.ISO_8859_1);
-  }
-
-  private static byte[] bytes(String s) {
-    return s.getBytes(StandardCharsets.ISO_8859_1);
   }
 
   private static ByteBuf buf(String s) {

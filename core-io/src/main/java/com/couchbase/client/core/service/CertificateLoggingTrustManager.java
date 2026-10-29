@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.service;
 
-import com.couchbase.client.core.io.netty.SslSessionLoggingHandler;
 import com.couchbase.client.core.util.HostAndPort;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -29,19 +28,22 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.net.Socket;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
 import static java.util.Objects.requireNonNull;
 
 /**
  * Logs the server's certificate chain when the trust manager it wraps checks it: at debug level if it's trusted
- * (with the cipher suite, like the Netty implementation's TLS session logging, and under the same logger:
- * {@link SslSessionLoggingHandler}), and at warning level if it isn't, so a failed TLS handshake can be diagnosed.
+ * (with the cipher suite), and at warning level if it isn't, so a failed TLS handshake can be diagnosed.
  * (A failed handshake's chain isn't available any other way: there's no completed session to get it from.)
  * Otherwise delegates everything to the wrapped trust manager.
  * <p>
@@ -54,9 +56,6 @@ import static java.util.Objects.requireNonNull;
 @NullMarked
 final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   private static final Logger log = LoggerFactory.getLogger(CertificateLoggingTrustManager.class);
-
-  // Trusted chains are logged under the Netty implementation's TLS session logger, so one logger controls both.
-  private static final Logger sessionLog = LoggerFactory.getLogger(SslSessionLoggingHandler.class);
 
   /**
    * Bounds the set of reported chains. If it fills up, it's cleared, so a chain may be logged at warning level again.
@@ -195,12 +194,12 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   }
 
   private static void logTrusted(X509Certificate[] chain, @Nullable SSLSession session) {
-    if (sessionLog.isDebugEnabled()) {
-      sessionLog.debug(
+    if (log.isDebugEnabled()) {
+      log.debug(
         "TLS server certificate chain trusted. remote = {} ; cipher suite = {} ; certificate chain = \n{}",
         session == null ? null : remote(session),
         session == null ? null : session.getCipherSuite(),
-        SslSessionLoggingHandler.pemChain(chain)
+        pemChain(chain)
       );
     }
   }
@@ -217,7 +216,7 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
           " certificate chain (further failures with this chain are logged at debug level) = \n{}",
         remote,
         e.toString(),
-        SslSessionLoggingHandler.pemChain(chain)
+        pemChain(chain)
       );
     } else {
       log.debug(
@@ -241,5 +240,25 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
       reportedChains.clear();
     }
     return reportedChains.add(Arrays.asList(chain.clone()));
+  }
+
+  /**
+   * Returns the certificates in PEM format, or an explanation if they can't be encoded.
+   */
+  static String pemChain(Certificate[] chain) {
+    StringBuilder pemChain = new StringBuilder();
+    try {
+      for (Certificate cert : chain) {
+        String base64Encoded = Base64.getMimeEncoder().encodeToString(cert.getEncoded());
+        pemChain.append("-----BEGIN CERTIFICATE-----\n");
+        pemChain.append(base64Encoded).append("\n");
+        pemChain.append("-----END CERTIFICATE-----\n");
+      }
+    } catch (CertificateEncodingException e) {
+      pemChain.setLength(0);
+      pemChain.append("Can't display encoded certificate chain; ");
+      pemChain.append(getStackTraceAsString(e));
+    }
+    return pemChain.toString();
   }
 }

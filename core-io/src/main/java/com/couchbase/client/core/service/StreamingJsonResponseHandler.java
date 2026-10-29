@@ -176,7 +176,7 @@ final class StreamingJsonResponseHandler {
         if (readFailure != null) {
           // The connection broke after the request completed (when the header arrived), so it can't be retried.
           // Report it the way a request that can't be retried after its connection breaks is reported,
-          // since the outcome is just as unknown. (Like the Netty implementation.)
+          // since the outcome is just as unknown.
           failure = new RequestCanceledException(
             "Connection closed before the whole response arrived",
             CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT),
@@ -218,7 +218,7 @@ final class StreamingJsonResponseHandler {
         rowBridge.complete();
       }
 
-      // Like the Netty implementation, the trailer succeeds even if the response reported an error,
+      // The trailer succeeds even if the response reported an error,
       // so callers can still get the metadata (which may describe the error).
       trailerSink.tryEmitValue(trailer);
 
@@ -359,7 +359,7 @@ final class StreamingJsonResponseHandler {
   /**
    * Returns the exception for a response body that was parsed, but didn't contain what the
    * service expected (for example, an error response without any errors in it). For HTTP 400,
-   * an {@link InvalidArgumentException}, like the Netty implementation's ChunkedMessageHandler.
+   * an {@link InvalidArgumentException}.
    */
   private static CouchbaseException unexpected(com.couchbase.client.core.deps.okhttp3.Response response, HeadInterceptInputStream body) {
     String message = "Request failed. HTTP status code: " + status(response) + ". Response had unexpected structure."
@@ -370,8 +370,7 @@ final class StreamingJsonResponseHandler {
   }
 
   /**
-   * Returns the response's status code and reason phrase (for example, "503 Service Unavailable"),
-   * like the Netty implementation's messages.
+   * Returns the response's status code and reason phrase (for example, "503 Service Unavailable").
    */
   private static String status(com.couchbase.client.core.deps.okhttp3.Response response) {
     return response.code() + " " + response.message();

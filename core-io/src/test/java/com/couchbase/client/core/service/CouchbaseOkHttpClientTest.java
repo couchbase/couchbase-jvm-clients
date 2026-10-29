@@ -47,7 +47,7 @@ class CouchbaseOkHttpClientTest {
 
   @Test
   void usesHttp11Only() {
-    // Like the Netty implementation. HTTP/2 would multiplex requests over one connection,
+    // HTTP/2 would multiplex requests over one connection,
     // which the per-node in-flight limits don't account for.
     try (CouchbaseOkHttpClient client = new CouchbaseOkHttpClient(
       Duration.ofSeconds(5),
@@ -63,7 +63,7 @@ class CouchbaseOkHttpClientTest {
 
   @Test
   void leavesRetriesToTheSdk() {
-    // Like the Netty implementation: the SDK's retry orchestrator decides whether to retry a failed request.
+    // The SDK's retry orchestrator decides whether to retry a failed request.
     try (CouchbaseOkHttpClient client = newClient()) {
       assertFalse(client.getClientForTest().retryOnConnectionFailure());
     }
@@ -77,7 +77,6 @@ class CouchbaseOkHttpClientTest {
 
   @Test
   void zeroIdleConnectionTimeoutMeansNeverCloseIdleConnections() {
-    // Like the Netty endpoints, which don't check for idle connections then.
     assertEquals(KEEP_ALIVE_FOREVER, keepAlive(Duration.ZERO));
     assertEquals(KEEP_ALIVE_FOREVER, keepAlive(Duration.ofSeconds(-1)));
   }
@@ -109,7 +108,7 @@ class CouchbaseOkHttpClientTest {
 
   @Test
   void ignoresTheJvmProxySettings() throws Exception {
-    // Like the Netty implementation. A proxy that refuses connections would fail the request.
+    // A proxy that refuses connections would fail the request.
     ProxySelector original = ProxySelector.getDefault();
     try (ServerSocket closed = new ServerSocket(0, 1, InetAddress.getLoopbackAddress())) {
       Proxy unusable = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(InetAddress.getLoopbackAddress(), closed.getLocalPort()));
@@ -139,7 +138,7 @@ class CouchbaseOkHttpClientTest {
 
   @Test
   void doesNotAskForCompressedResponses() throws Exception {
-    // Like the Netty implementation. Otherwise OkHttp would send "Accept-Encoding: gzip".
+    // Otherwise OkHttp would send "Accept-Encoding: gzip".
     try (TestHttpServer server = TestHttpServer.startHttp(); CouchbaseOkHttpClient client = newClient()) {
       List<String> acceptEncodings = new ArrayList<>();
       OkHttpClient recordingClient = client.getClientForTest().newBuilder()

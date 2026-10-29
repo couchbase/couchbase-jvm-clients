@@ -17,9 +17,15 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpResponseStatus;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.error.CouchbaseException;
-import com.couchbase.client.core.io.netty.search.ChunkedSearchMessageHandler;
-import com.couchbase.client.core.io.netty.search.SearchChunkResponseParser;
+import com.couchbase.client.core.error.IndexNotFoundException;
+import com.couchbase.client.core.error.InternalServerFailureException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
+import com.couchbase.client.core.error.context.SearchErrorContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.RequestContext;
@@ -36,6 +42,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -51,6 +58,8 @@ final class SearchResponseFormat
   implements StreamingResponseFormat<SearchChunkHeader, SearchChunkRow, SearchResponseFormat.Result, SearchResponse> {
 
   static final SearchResponseFormat INSTANCE = new SearchResponseFormat();
+
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   private SearchResponseFormat() {
   }
@@ -78,12 +87,58 @@ final class SearchResponseFormat
   @Override
   public Optional<CouchbaseException> error(Result trailer, int httpStatus, RequestContext requestContext) {
     return Optional.ofNullable(trailer.error)
-      .map(it -> SearchChunkResponseParser.errorsToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
+      .map(it -> errorsToThrowable(it, HttpResponseStatus.valueOf(httpStatus), requestContext));
   }
 
   @Override
   public Optional<RetryReason> retryReason(CouchbaseException error) {
-    return ChunkedSearchMessageHandler.retryReason(error);
+    if (error instanceof RateLimitedException || error instanceof QuotaLimitedException) {
+      return Optional.empty();
+    }
+
+    if (error.context() instanceof SearchErrorContext) {
+      if (((SearchErrorContext) error.context()).httpStatus() == HTTP_TOO_MANY_REQUESTS) {
+        return Optional.of(RetryReason.SEARCH_TOO_MANY_REQUESTS);
+      }
+    }
+    return Optional.empty();
+  }
+
+  /**
+   * Returns the exception for the {@code error} field of a search query response.
+   */
+  static CouchbaseException errorsToThrowable(
+    byte @Nullable [] bytes,
+    HttpResponseStatus status,
+    RequestContext requestContext
+  ) {
+    int statusCode = status.code();
+    String errorDecoded = bytes == null || bytes.length == 0 ? "" : new String(bytes, StandardCharsets.UTF_8);
+    SearchErrorContext errorContext = new SearchErrorContext(
+      HttpProtocol.decodeStatus(status),
+      requestContext,
+      statusCode,
+      errorDecoded
+    );
+    if (statusCode == 400 && errorDecoded.contains("index not found")) {
+      return new IndexNotFoundException(errorContext);
+    } else if (statusCode == 500) {
+      return new InternalServerFailureException(errorContext);
+    } else if (statusCode == 401 || statusCode == 403) {
+      return new AuthenticationFailureException("Could not authenticate search query", errorContext, null);
+    } else if (statusCode == 400 && errorDecoded.contains("num_fts_indexes")) {
+      return new QuotaLimitedException(errorContext);
+    } else if (statusCode == 429) {
+      if (errorDecoded.contains("num_concurrent_requests")
+        || errorDecoded.contains("num_queries_per_min")
+        || errorDecoded.contains("ingress_mib_per_min")
+        || errorDecoded.contains("egress_mib_per_min")) {
+        return new RateLimitedException(errorContext);
+      }
+    } else if (statusCode == 400) {
+      return new InvalidArgumentException("Search service reported an invalid argument: " + errorDecoded, null, errorContext);
+    }
+    return new CouchbaseException("Unknown search error: " + errorDecoded, errorContext);
   }
 
 
@@ -103,7 +158,7 @@ final class SearchResponseFormat
   /**
    * Parses one response body. Holds the state of that parse, so each response gets a new instance.
    * <p>
-   * Like the Netty-based parser, the header is complete when the {@code status} field arrives.
+   * The header is complete when the {@code status} field arrives.
    * The search service sends it first, before the hits.
    */
   private static final class Parser {

@@ -546,7 +546,7 @@ public enum MemcacheProtocol {
 
   /**
    * Returns a view of the packet in the buffer, from index 0 to the writer index (whatever the reader index),
-   * without copying it, for the Netty KV implementation to decode a response with
+   * without copying it, to decode a response with
    * {@link com.couchbase.client.core.msg.kv.KeyValueRequest#decode}. Uses the buffer's internal NIO buffer when it
    * has one, so it usually allocates nothing but the packet. That's safe because the packet is used only while the
    * response is decoded, and nothing else uses the buffer's internal NIO buffer meanwhile.

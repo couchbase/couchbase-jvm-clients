@@ -110,7 +110,7 @@ public class KeyValueChannelContext {
   }
 
   /**
-   * The connection's ID, in the short form of a Netty channel ID (hex digits, without a "0x" prefix).
+   * The connection's ID, in short form (hex digits, without a "0x" prefix).
    */
   @Nullable
   public String channelId() {

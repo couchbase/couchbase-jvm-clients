@@ -22,7 +22,7 @@ import java.util.function.BiFunction;
 
 /**
  * The {@link CircuitBreaker} interface defines the external integration points between an
- * implementation and its calling {@link BaseEndpoint}.
+ * implementation and its calling {@link Endpoint}.
  *
  * <p>See the individual implementation for details on how they work. Note that they are all
  * configured through the {@link CircuitBreakerConfig} that is configured on the environment on

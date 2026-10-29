@@ -39,7 +39,7 @@ public class CoreHttpResponse extends BaseResponse {
   private final RequestContext requestContext;
 
   /**
-   * For responses that did not arrive over a Netty channel.
+   * For responses that arrive over an OkHttp connection.
    *
    * @param channelId identifies the connection the response arrived on, in the same format as
    * {@link #channelId()}: hex digits, without a "0x" prefix. Null if unknown.

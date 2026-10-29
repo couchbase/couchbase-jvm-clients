@@ -95,7 +95,6 @@ import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
 import com.couchbase.client.core.service.CouchbaseOkHttpClient;
-import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.NioKeyValueChannelConnector;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
@@ -294,9 +293,9 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   private final CouchbaseOkHttpClient okHttpClient;
 
   /**
-   * Opens the sockets for KV connections that don't use Netty, or null if they use Netty.
+   * Opens the sockets for KV connections.
    */
-  private final @Nullable NioKeyValueChannelConnector kvChannelConnector;
+  private final NioKeyValueChannelConnector kvChannelConnector;
 
   /**
    * @deprecated Please use {@link #create(CoreEnvironment, Authenticator, ConnectionString)} instead.
@@ -343,14 +342,12 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
       environment.userAgent().formattedLong()
     );
 
-    this.kvChannelConnector = KeyValueService.useNettyForKv()
-      ? null
-      : NioKeyValueChannelConnector.create(
-        okHttpClient,
-        environment.securityConfig(),
-        this.authenticator,
-        environment.timeoutConfig().connectTimeout()
-      );
+    this.kvChannelConnector = NioKeyValueChannelConnector.create(
+      okHttpClient,
+      environment.securityConfig(),
+      this.authenticator,
+      environment.timeoutConfig().connectTimeout()
+    );
 
     CoreLimiter.incrementAndVerifyNumInstances(environment.eventBus());
 
@@ -499,17 +496,11 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   }
 
   /**
-   * Opens the socket channels for KV connections that don't use Netty.
-   *
-   * @throws IllegalStateException if KV connections use Netty (see {@link KeyValueService#useNettyForKv()}).
+   * Opens the socket channels for KV connections.
    */
   @Stability.Internal
   public NioKeyValueChannelConnector kvChannelConnector() {
-    NioKeyValueChannelConnector result = kvChannelConnector;
-    if (result == null) {
-      throw new IllegalStateException("KV connections use Netty, so there's no KV channel connector.");
-    }
-    return result;
+    return kvChannelConnector;
   }
 
   /**

@@ -57,7 +57,7 @@ import java.util.function.Consumer;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Opens the socket channels for KV connections that don't use Netty (see {@link NioKeyValueConnection}): TCP, with
+ * Opens the socket channels for KV connections (see {@link NioKeyValueConnection}): TCP, with
  * the same socket options as the OkHttp-based services, and TLS (if enabled) with the same certificates and TLS
  * settings.
  * <p>
@@ -247,8 +247,8 @@ public final class NioKeyValueChannelConnector {
   /**
    * Connects the non-blocking channel, waiting with the waiter until it's connected or the deadline passes.
    *
-   * @throws ConnectException if the deadline passes. Like Netty's ConnectTimeoutException, so it gets the same
-   * hint (see {@code BaseEndpoint.annotateConnectException}).
+   * @throws ConnectException if the deadline passes, so it gets the same hint as a refused connection
+   * (see {@link NioKeyValueEndpoint#annotateConnectException}).
    */
   private static void connectTcp(SocketChannel channel, KeyValueChannelWaiter waiter, InetSocketAddress address, long deadlineNanos) throws IOException {
     long timeoutMillis = 0;
@@ -271,8 +271,8 @@ public final class NioKeyValueChannelConnector {
   }
 
   /**
-   * Resolves the host name, giving up when the deadline passes, like the Netty implementation, whose connect timeout
-   * includes resolving the host name. (A lookup can't be interrupted, so one that's still going carries on
+   * Resolves the host name, giving up when the deadline passes, so the connect timeout includes resolving
+   * the host name. (A lookup can't be interrupted, so one that's still going carries on
    * in the background, until the OS gives up. Meanwhile, connect attempts to the same host wait for it.)
    *
    * @throws UnknownHostException if the host name can't be resolved, or the deadline passes first.

@@ -97,8 +97,8 @@ final class NioKeyValueConnectionOpener {
   private final EventBus eventBus;
 
   /**
-   * The connection's ID: short (8 hex digits, like a Netty channel ID's short form), and long
-   * (the endpoint's ID and this ID, as sent in the HELLO request, like the Netty implementation's).
+   * The connection's ID: short (8 hex digits), and long
+   * (the endpoint's ID and this ID, as sent in the HELLO request).
    */
   private final String shortChannelId;
   private final String channelId;
@@ -140,7 +140,7 @@ final class NioKeyValueConnectionOpener {
   }
 
   /**
-   * How long each connect step took so far, keyed like the Netty implementation's connect timings.
+   * How long each connect step took so far, keyed by step name.
    */
   public SortedMap<String, Duration> timings() {
     synchronized (timings) {
@@ -181,7 +181,7 @@ final class NioKeyValueConnectionOpener {
   ) throws IOException, TimeoutException {
     List<String> ciphers = endpointContext.environment().securityConfig().ciphers();
     if (connector.tlsEnabled() && !ciphers.isEmpty()) {
-      eventBus.publish(new CustomTlsCiphersEnabledEvent(ciphers, endpointContext)); // like the Netty implementation's SslHandlerFactory
+      eventBus.publish(new CustomTlsCiphersEnabledEvent(ciphers, endpointContext));
     }
 
     long tcpStart = System.nanoTime();
@@ -430,8 +430,8 @@ final class NioKeyValueConnectionOpener {
   }
 
   /**
-   * Returns the exception to fail the connect attempt with, and if it's a TLS failure, records it like the
-   * Netty implementation does.
+   * Returns the exception to fail the connect attempt with, and if it's a TLS failure, records it
+   * (on the endpoint context, and with an event if retrying won't help).
    */
   private IOException connectFailure(IOException e) {
     if (!connector.tlsEnabled()) {

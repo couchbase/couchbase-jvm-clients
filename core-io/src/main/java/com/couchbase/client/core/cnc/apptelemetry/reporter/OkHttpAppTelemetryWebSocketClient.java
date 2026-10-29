@@ -37,7 +37,7 @@ import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Like {@link AppTelemetryWebSocketClient} (Netty), but using OkHttp.
+ * Sends app telemetry to the cluster over a WebSocket, using OkHttp.
  * <p>
  * OkHttp answers the server's pings, and pings the server itself.
  */
@@ -47,10 +47,9 @@ class OkHttpAppTelemetryWebSocketClient implements AppTelemetryClient {
   /**
    * Ping the server this often. If the pong hasn't arrived by the next ping, the connection is dead.
    * <p>
-   * Unlike the Netty implementation, OkHttp pings even if the connection isn't idle, and there's no way to ping
-   * only when it's idle. The same interval as the Netty implementation, to keep the load on the server low,
-   * at the cost of slower detection of a dead connection: up to two intervals after the last pong
-   * (the Netty implementation detects it after 16 minutes).
+   * OkHttp pings even if the connection isn't idle, and there's no way to ping only when it's idle.
+   * A long interval keeps the load on the server low, at the cost of slower detection of a dead connection:
+   * up to two intervals after the last pong.
    */
   private static final Duration pingInterval = Duration.ofMinutes(15);
 
@@ -174,7 +173,7 @@ class OkHttpAppTelemetryWebSocketClient implements AppTelemetryClient {
     public void onFailure(WebSocket webSocket, Throwable t, @Nullable Response response) {
       if (open && t instanceof EOFException) {
         // The server closed the connection without a close frame (for example, because the node restarted).
-        // Like the Netty implementation, that's a close, not a failure.
+        // That's a close, not a failure.
         log.debug("App telemetry WebSocket connection closed by the server without a close frame.");
         closed.complete(null);
         return;

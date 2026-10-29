@@ -23,7 +23,6 @@ import com.couchbase.client.core.cnc.events.endpoint.EndpointDisconnectResumedEv
 import com.couchbase.client.core.cnc.events.service.ServiceRemovedEvent;
 import com.couchbase.client.core.config.ProposedGlobalConfigContext;
 import com.couchbase.client.core.error.TimeoutException;
-import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.service.ServiceContext;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.java.json.JsonArray;
@@ -41,7 +40,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.java.QueryIntegrationTest.verySlowQueryStatement;
 import static com.couchbase.client.java.manager.query.QueryIndexManagerIntegrationTest.DISABLE_QUERY_TESTS_FOR_CLUSTER;
 import static com.couchbase.client.java.query.QueryOptions.queryOptions;
@@ -113,30 +111,15 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
         gracePeriod
       );
 
-      if (Node.useNetty()) {
-        log.info("Verifying network channel closure was deferred.");
-        waitUntilEvents(eventBus, gracePeriod, listOf(
-          EndpointDisconnectDelayedEvent.class
-        ));
-      }
-
       log.info("Waiting for query timeout.");
       Duration pollTimeout = queryTimeout.plus(gracePeriod);
       Throwable t = queryErrorFuture.get(pollTimeout.toMillis(), MILLISECONDS);
       assertInstanceOf(TimeoutException.class, t);
 
-      if (Node.useNetty()) {
-        log.info("Verifying network channel was closed.");
-        waitUntilEvents(eventBus, gracePeriod, listOf(
-          EndpointDisconnectDelayedEvent.class,
-          EndpointDisconnectResumedEvent.class
-        ));
-      } else {
-        // With OkHttp, removing the service doesn't touch in-flight calls (they use the shared
-        // OkHttp client), so there's no deferred channel closure. The query timing out above,
-        // rather than being canceled, shows it was allowed to complete.
-        assertEquals(emptyList(), getEventClasses(eventBus));
-      }
+      // Removing the service doesn't touch in-flight calls (they use the shared
+      // OkHttp client), so there's no deferred channel closure. The query timing out above,
+      // rather than being canceled, shows it was allowed to complete.
+      assertEquals(emptyList(), getEventClasses(eventBus));
     }
   }
 
@@ -144,13 +127,6 @@ class QueryDelayDisconnectIntegrationTest extends JavaIntegrationTest {
     return eventBus.publishedEvents().stream()
       .anyMatch(e -> e instanceof ServiceRemovedEvent
         && ((ServiceContext) e.context()).serviceType() == ServiceType.QUERY);
-  }
-
-  private static void waitUntilEvents(SimpleEventBus eventBus, Duration gracePeriod, List<Class<?>> expectedEventClasses) {
-    waitUntilCondition(
-      () -> assertEquals(expectedEventClasses, getEventClasses(eventBus)),
-      gracePeriod
-    );
   }
 
   private static List<Class<?>> getEventClasses(SimpleEventBus eventBus) {

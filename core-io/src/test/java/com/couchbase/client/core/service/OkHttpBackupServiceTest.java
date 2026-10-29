@@ -127,7 +127,7 @@ class OkHttpBackupServiceTest {
 
   @Test
   void errorIsReportedAsHttpStatusCodeException() {
-    // Like the Netty implementation: no service-specific translation.
+    // No service-specific translation.
     server.enqueue(404, "{\"status\":404,\"msg\":\"plan not found\"}", Duration.ZERO);
 
     CoreHttpRequest request = newRequest();

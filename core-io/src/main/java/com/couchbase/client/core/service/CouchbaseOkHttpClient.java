@@ -159,7 +159,7 @@ public class CouchbaseOkHttpClient implements Closeable {
 
   /**
    * The factory for the client's TCP sockets (see {@link CouchbaseSocketFactory}), so KV connections
-   * that don't use Netty get the same socket options.
+   * get the same socket options.
    */
   SocketFactory socketFactory() {
     return client.socketFactory();
@@ -173,7 +173,7 @@ public class CouchbaseOkHttpClient implements Closeable {
 
   /**
    * @param ioConfig for the idle connection timeout (how long a connection may stay idle in the pool before
-   * it's closed; zero means never, like the Netty endpoints), and the TCP keepalive settings.
+   * it's closed; zero means never), and the TCP keepalive settings.
    */
   public CouchbaseOkHttpClient(
     Duration connectTimeout,
@@ -195,18 +195,18 @@ public class CouchbaseOkHttpClient implements Closeable {
       // Applies configured socket options
       .socketFactory(new CouchbaseSocketFactory(ioConfig, nativeIoEnabled))
 
-      // Connect directly, like the Netty implementation. Otherwise OkHttp would use the JVM's default ProxySelector,
+      // Connect directly. Otherwise OkHttp would use the JVM's default ProxySelector,
       // which honors proxy system properties (http.proxyHost, socksProxyHost, and so on) that an application may set
       // for its own outbound traffic, not for Couchbase's. (And through a SOCKS proxy, TCP_USER_TIMEOUT can't be set.)
       .proxy(Proxy.NO_PROXY)
 
-      // Don't let OkHttp retry failed requests by itself; the SDK's retry orchestrator decides, like with the Netty
-      // implementation. Then every retry is visible to the SDK (retry reasons, backoff, timeouts, events, and node
+      // Don't let OkHttp retry failed requests by itself; the SDK's retry orchestrator decides.
+      // Then every retry is visible to the SDK (retry reasons, backoff, timeouts, events, and node
       // health tracking), and a non-idempotent request is never resent after it started.
       // The SDK retries connect failures (the request didn't start), and idempotent requests that failed in flight.
       .retryOnConnectionFailure(false)
 
-      // HTTP/1.1 only, like the Netty implementation. Otherwise OkHttp offers HTTP/2 during the TLS handshake,
+      // HTTP/1.1 only. Otherwise OkHttp offers HTTP/2 during the TLS handshake,
       // and a server that accepts it would multiplex requests over one connection. Then a streamed response
       // whose subscriber falls behind (so we stop reading it, for backpressure) could use up the connection's
       // flow-control window, stalling every other request on that connection. With HTTP/1.1, each request
@@ -220,7 +220,7 @@ public class CouchbaseOkHttpClient implements Closeable {
       // With HTTP/2, every request on the connection shares the socket, so one request's timeout would apply to all.
       .protocols(listOf(Protocol.HTTP_1_1))
 
-      // For parity with the Netty ViewService, return redirects to the caller instead of following them.
+      // Return redirects to the caller instead of following them.
       // For example, a view request redirected with 302 is retried (VIEWS_NO_ACTIVE_PARTITION).
       // When the view service goes away, we can consider re-enabling automatic redirect handling.
       .followRedirects(false)
@@ -233,14 +233,14 @@ public class CouchbaseOkHttpClient implements Closeable {
       // read timeout, so this is the same timeout without the extra bookkeeping.)
       //
       // The TLS handshake gets the connect timeout as its read timeout (see PerConnectionSslSocketFactory).
-      // Request writes have no timeout of their own, like the Netty implementation. The SDK's request timeout
+      // Request writes have no timeout of their own. The SDK's request timeout
       // still applies: it cancels the call, which closes the socket.
       .readTimeout(Duration.ZERO)
       .writeTimeout(Duration.ZERO)
 
       // No limit on the number of idle connections. Each service limits the requests in flight to its node
       // (one connection each), which bounds the connections to each node, however many nodes there are.
-      // Idle connections are closed after the same idle timeout as the Netty endpoints.
+      // Idle connections are closed after the configured idle timeout.
       .connectionPool(new ConnectionPool(
         Integer.MAX_VALUE,
         keepAlive(ioConfig.idleHttpConnectionTimeout()).toMillis(), TimeUnit.MILLISECONDS
@@ -249,7 +249,7 @@ public class CouchbaseOkHttpClient implements Closeable {
         com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = chain.request().newBuilder()
           .header("User-Agent", userAgent);
 
-        // Don't ask for compressed responses, like the Netty implementation. Otherwise OkHttp would ask for gzip
+        // Don't ask for compressed responses. Otherwise OkHttp would ask for gzip
         // (and decompress the response itself) for any request that doesn't say otherwise.
         if (chain.request().header("Accept-Encoding") == null) {
           requestBuilder.header("Accept-Encoding", "identity");
@@ -290,12 +290,12 @@ public class CouchbaseOkHttpClient implements Closeable {
           }
       });
 
-    // Like the Netty endpoints, capture the traffic of the HTTP services the config asks for.
+    // Capture the traffic of the HTTP services the config asks for.
     if (ioConfig.servicesToCapture().stream().anyMatch(it -> it != KV)) {
       clientBuilder.addNetworkInterceptor(new TrafficCaptureInterceptor(ioConfig.servicesToCapture()));
     }
 
-    // Asks the authenticator for the client certificate (if any) for each new connection, like the Netty implementation.
+    // Asks the authenticator for the client certificate (if any) for each new connection.
     configureTls(
       clientBuilder,
       credential::getKeyManagerFactory,
@@ -325,7 +325,7 @@ public class CouchbaseOkHttpClient implements Closeable {
 
   /**
    * Returns the connection pool keep-alive for the given idle connection timeout. Zero (or less) means
-   * never close idle connections, as with the Netty endpoints, which don't check for idle connections then.
+   * never close idle connections.
    */
   static Duration keepAlive(Duration idleConnectionTimeout) {
     return idleConnectionTimeout.isZero() || idleConnectionTimeout.isNegative()
@@ -343,8 +343,7 @@ public class CouchbaseOkHttpClient implements Closeable {
    * query rows) after the SDK has completed the request: the server stops executing at the request timeout,
    * so a longer pause means the connection is dead.
    * <p>
-   * There's no call timeout, because the Netty implementation didn't enforce one: a streamed result can take
-   * as long as it needs.
+   * There's no call timeout: a streamed result can take as long as it needs.
    */
   private static Duration socketReadTimeout(Duration requestTimeout) {
     return atLeastOneMillisecond(requestTimeout.plus(READ_TIMEOUT_GRACE_PERIOD));

@@ -37,13 +37,9 @@ import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.service.AnalyticsService;
 import com.couchbase.client.core.service.AnalyticsServiceConfig;
-import com.couchbase.client.core.service.BackupService;
-import com.couchbase.client.core.service.EventingService;
 import com.couchbase.client.core.service.KeyValueService;
 import com.couchbase.client.core.service.KeyValueServiceConfig;
-import com.couchbase.client.core.service.ManagerService;
 import com.couchbase.client.core.service.OkHttpAnalyticsService;
 import com.couchbase.client.core.service.OkHttpBackupService;
 import com.couchbase.client.core.service.OkHttpEventingService;
@@ -51,15 +47,12 @@ import com.couchbase.client.core.service.OkHttpManagerService;
 import com.couchbase.client.core.service.OkHttpQueryService;
 import com.couchbase.client.core.service.OkHttpSearchService;
 import com.couchbase.client.core.service.OkHttpViewService;
-import com.couchbase.client.core.service.QueryService;
 import com.couchbase.client.core.service.QueryServiceConfig;
-import com.couchbase.client.core.service.SearchService;
 import com.couchbase.client.core.service.SearchServiceConfig;
 import com.couchbase.client.core.service.Service;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;
-import com.couchbase.client.core.service.ViewService;
 import com.couchbase.client.core.service.ViewServiceConfig;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.AtomicEnumSet;
@@ -95,20 +88,6 @@ public class Node implements Stateful<NodeState> {
    * are not tied to an actual bucket name.</p>
    */
   private static final String BUCKET_GLOBAL_SCOPE = "_$BUCKET_GLOBAL$_";
-
-  /**
-   * Whether the HTTP-based services use Netty instead of OkHttp.
-   */
-  private static final boolean useNetty = Boolean.parseBoolean(System.getProperty("com.couchbase.useNetty", "false"));
-
-  /**
-   * Returns true if the HTTP-based services (and the app telemetry WebSocket) use Netty, or false if they use OkHttp.
-   * Also for tests whose expectations depend on the implementation.
-   */
-  @Stability.Internal
-  public static boolean useNetty() {
-    return useNetty;
-  }
 
   private final NodeIdentifier identifier;
   private final NodeContext ctx;
@@ -471,53 +450,39 @@ public class Node implements Stateful<NodeState> {
         return new KeyValueService(
           KeyValueServiceConfig.endpoints(env.ioConfig().numKvConnections()).build(), ctx, host, port, bucket, authenticator);
       case MANAGER:
-        return useNetty
-          ? new ManagerService(ctx, host, port)
-          : new OkHttpManagerService(ctx, address);
+        return new OkHttpManagerService(ctx, address);
       case QUERY: {
         QueryServiceConfig config = QueryServiceConfig.builder()
           .maxEndpoints(env.ioConfig().maxHttpConnections())
           .idleTime(env.ioConfig().idleHttpConnectionTimeout())
           .build();
-        return useNetty
-          ? new QueryService(config, ctx, host, port)
-          : new OkHttpQueryService(config, ctx, address);
+        return new OkHttpQueryService(config, ctx, address);
       }
       case VIEWS: {
         ViewServiceConfig config = ViewServiceConfig.builder()
           .maxEndpoints(env.ioConfig().maxHttpConnections())
           .idleTime(env.ioConfig().idleHttpConnectionTimeout())
           .build();
-        return useNetty
-          ? new ViewService(config, ctx, host, port)
-          : new OkHttpViewService(config, ctx, address);
+        return new OkHttpViewService(config, ctx, address);
       }
       case SEARCH: {
         SearchServiceConfig config = SearchServiceConfig.builder()
           .maxEndpoints(env.ioConfig().maxHttpConnections())
           .idleTime(env.ioConfig().idleHttpConnectionTimeout())
           .build();
-        return useNetty
-          ? new SearchService(config, ctx, host, port)
-          : new OkHttpSearchService(config, ctx, address);
+        return new OkHttpSearchService(config, ctx, address);
       }
       case ANALYTICS: {
         AnalyticsServiceConfig config = AnalyticsServiceConfig.builder()
           .maxEndpoints(env.ioConfig().maxHttpConnections())
           .idleTime(env.ioConfig().idleHttpConnectionTimeout())
           .build();
-        return useNetty
-          ? new AnalyticsService(config, ctx, host, port)
-          : new OkHttpAnalyticsService(config, ctx, address);
+        return new OkHttpAnalyticsService(config, ctx, address);
       }
       case EVENTING:
-        return useNetty
-          ? new EventingService(ctx, host, port)
-          : new OkHttpEventingService(ctx, address);
+        return new OkHttpEventingService(ctx, address);
       case BACKUP:
-        return useNetty
-          ? new BackupService(ctx, host, port)
-          : new OkHttpBackupService(ctx, address);
+        return new OkHttpBackupService(ctx, address);
       default:
         throw InvalidArgumentException.fromMessage("Unsupported ServiceType: " + serviceType);
     }

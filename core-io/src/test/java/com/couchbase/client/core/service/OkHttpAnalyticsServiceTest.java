@@ -350,7 +350,7 @@ class OkHttpAnalyticsServiceTest {
 
     assertEquals(asList("{\"a\":1}", "<error: ParsingFailureException>"), received);
 
-    // Like the Netty implementation, the trailer still succeeds, and describes the error.
+    // The trailer still succeeds, and describes the error.
     AnalyticsChunkTrailer trailer = response.trailer().block(Duration.ofSeconds(30));
     assertNotNull(trailer);
     assertEquals("errors", trailer.status());

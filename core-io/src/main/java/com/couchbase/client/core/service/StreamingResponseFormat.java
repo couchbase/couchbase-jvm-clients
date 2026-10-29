@@ -73,7 +73,7 @@ interface StreamingResponseFormat<H, ROW, T, R extends Response> {
    * For an error response, this is why the request failed (or should be retried; see {@link #retryReason}).
    * For a response whose HTTP status says it succeeded, it's an error that happened after the request
    * completed (for example, a query error that happened after some rows were sent). If present,
-   * it fails the rows. The trailer still succeeds, like in the Netty implementation.
+   * it fails the rows. The trailer still succeeds.
    */
   Optional<CouchbaseException> error(T trailer, int httpStatus, RequestContext requestContext);
 

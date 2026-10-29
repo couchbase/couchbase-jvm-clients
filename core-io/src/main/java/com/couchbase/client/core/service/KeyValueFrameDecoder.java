@@ -28,7 +28,7 @@ import java.util.Arrays;
 
 /**
  * Splits what a KV connection reads into packets (frames): reads as much as the socket has into one buffer,
- * then hands out each complete packet in it, like the Netty implementation's MemcacheProtocolDecodeHandler.
+ * then hands out each complete packet in it.
  * <p>
  * Each packet shares the buffer's bytes (it isn't a copy), so it's only valid until the next {@link #fill}.
  * Whoever handles a packet must be done with it (and anything derived from it) by then.
