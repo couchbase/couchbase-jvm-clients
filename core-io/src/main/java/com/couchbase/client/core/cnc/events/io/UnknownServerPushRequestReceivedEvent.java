@@ -17,9 +17,8 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 
 import java.time.Duration;
 
@@ -42,7 +41,7 @@ public class UnknownServerPushRequestReceivedEvent extends AbstractEvent {
   @Override
   public String description() {
     return "Received a server push request with an unsupported opcode: \n"
-      + ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(request))
+      + TrafficCaptureFormat.hexDump(request)
       + "\n";
   }
 }

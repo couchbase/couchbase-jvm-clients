@@ -17,10 +17,8 @@
 package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 
 import java.time.Duration;
@@ -38,10 +36,6 @@ import java.util.Arrays;
  */
 public class InvalidPacketDetectedEvent extends AbstractEvent {
 
-  /**
-   * This is a byte array and not a {@link ByteBuf} since it can come from
-   * many places and also we don't want to carry a potentially pooled entity around.
-   */
   private final byte[] packet;
 
   public InvalidPacketDetectedEvent(final IoContext context, final byte[] packet) {
@@ -72,7 +66,7 @@ public class InvalidPacketDetectedEvent extends AbstractEvent {
   @Override
   public String description() {
     return "Invalid Packet detected: \n"
-      + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(packet))
+      + TrafficCaptureFormat.hexDump(packet)
       + "\n";
   }
 

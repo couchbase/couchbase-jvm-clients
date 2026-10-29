@@ -17,8 +17,7 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.io.TrafficCaptureFormat;
 
 import java.time.Duration;
 
@@ -38,7 +37,7 @@ public class UnknownResponseReceivedEvent extends AbstractEvent {
   @Override
   public String description() {
     return "Received a response with no matching opaque/request: \n"
-      + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(response))
+      + TrafficCaptureFormat.hexDump(response)
       + "\n";
   }
 }
