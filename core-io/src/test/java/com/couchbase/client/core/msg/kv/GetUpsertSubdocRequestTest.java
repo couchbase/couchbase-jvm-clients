@@ -37,6 +37,7 @@ import com.couchbase.client.core.io.KeyValueRequestWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -55,12 +56,12 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.mutationFlexibleExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.mutationFlexibleExtras;
 import static com.couchbase.client.core.msg.kv.KeyValueRequestTesting.*;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noBody;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noBody;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noExtras;
 import static com.couchbase.client.test.Util.readResource;
 import static java.util.Collections.singletonList;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -116,7 +117,7 @@ class GetUpsertSubdocRequestTest {
     ReplicaGetRequest request = new ReplicaGetRequest("some-key", TIMEOUT, CORE_CONTEXT, CUSTOM_COLLECTION,
       BestEffortRetryStrategy.INSTANCE, (short) 1, null);
     ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
-    byte[] expected = bytes(MemcacheProtocol.request(ALLOC, Opcode.GET_REPLICA, noDatatype(),
+    byte[] expected = bytes(NettyMemcacheProtocol.request(ALLOC, Opcode.GET_REPLICA, noDatatype(),
       PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
     key.release();
     assertEncoding(request, ctx, expected);
@@ -560,7 +561,7 @@ class GetUpsertSubdocRequestTest {
   private static byte[] referenceGet(GetRequest request, KeyValueChannelContext ctx) {
     ByteBuf key = Unpooled.wrappedBuffer(request.collectionPrefix(ctx), request.key());
     try {
-      return bytes(MemcacheProtocol.request(ALLOC, Opcode.GET, noDatatype(),
+      return bytes(NettyMemcacheProtocol.request(ALLOC, Opcode.GET, noDatatype(),
         PARTITION, OPAQUE, noCas(), noExtras(), key, noBody()));
     } finally {
       key.release();
@@ -595,7 +596,7 @@ class GetUpsertSubdocRequestTest {
       extras.writeInt(UPSERT_FLAGS);
       extras.writeInt((int) UPSERT_EXPIRY);
 
-      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, Opcode.SET, datatype,
+      return bytes(NettyMemcacheProtocol.flexibleRequest(ALLOC, Opcode.SET, datatype,
         PARTITION, OPAQUE, noCas(), flexibleExtras, extras, key, content));
     } finally {
       ReferenceCountUtil.release(key);
@@ -626,7 +627,7 @@ class GetUpsertSubdocRequestTest {
           .writeBytes(path);
         body.addComponent(true, buffer);
       }
-      return bytes(MemcacheProtocol.request(ALLOC, Opcode.SUBDOC_MULTI_LOOKUP, noDatatype(),
+      return bytes(NettyMemcacheProtocol.request(ALLOC, Opcode.SUBDOC_MULTI_LOOKUP, noDatatype(),
         PARTITION, OPAQUE, noCas(), extras, key, body));
     } finally {
       key.release();
@@ -781,7 +782,7 @@ class GetUpsertSubdocRequestTest {
           .writeBytes(fragment));
       }
 
-      return bytes(MemcacheProtocol.flexibleRequest(ALLOC, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(),
+      return bytes(NettyMemcacheProtocol.flexibleRequest(ALLOC, Opcode.SUBDOC_MULTI_MUTATE, noDatatype(),
         PARTITION, OPAQUE, options.cas, flexibleExtras, extras, key, content));
     } finally {
       flexibleExtras.release();

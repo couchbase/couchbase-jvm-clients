@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.mock;
 class InvalidPacketDetectedEventTest {
 
   private static byte[] request(Opcode opcode, String key, String body) {
-    return ByteBufUtil.getBytes(MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, opcode, (byte) 0, (short) 0, 1, 0,
+    return ByteBufUtil.getBytes(NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, opcode, (byte) 0, (short) 0, 1, 0,
       Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer(key, UTF_8), Unpooled.copiedBuffer(body, UTF_8)));
   }
 

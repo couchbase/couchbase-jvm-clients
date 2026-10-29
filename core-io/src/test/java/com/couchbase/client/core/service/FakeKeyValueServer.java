@@ -20,6 +20,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import org.jspecify.annotations.Nullable;
 
 import javax.net.ServerSocketFactory;
@@ -41,8 +42,8 @@ import java.util.concurrent.TimeUnit;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
@@ -87,19 +88,19 @@ final class FakeKeyValueServer implements Closeable {
     }
 
     byte opcode() {
-      return MemcacheProtocol.opcode(buf());
+      return NettyMemcacheProtocol.opcode(buf());
     }
 
     int opaque() {
-      return MemcacheProtocol.opaque(buf());
+      return NettyMemcacheProtocol.opaque(buf());
     }
 
     String key() {
-      return MemcacheProtocol.keyAsString(buf());
+      return NettyMemcacheProtocol.keyAsString(buf());
     }
 
     byte[] body() {
-      return MemcacheProtocol.bodyAsBytes(buf());
+      return NettyMemcacheProtocol.bodyAsBytes(buf());
     }
 
     boolean is(MemcacheProtocol.Opcode opcode) {
@@ -151,7 +152,7 @@ final class FakeKeyValueServer implements Closeable {
     }
 
     byte[] response(byte opcode, int opaque, short status, byte[] body) {
-      ByteBuf response = MemcacheProtocol.response(
+      ByteBuf response = NettyMemcacheProtocol.response(
         UnpooledByteBufAllocator.DEFAULT,
         MemcacheProtocol.Opcode.of(opcode),
         noDatatype(),

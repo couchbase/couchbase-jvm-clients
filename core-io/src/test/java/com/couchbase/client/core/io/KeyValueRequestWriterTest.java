@@ -24,6 +24,7 @@ import com.couchbase.client.core.io.KeyValueRequestBuilder.SectionWriter;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import org.junit.jupiter.api.Test;
 
@@ -120,7 +121,7 @@ class KeyValueRequestWriterTest {
     byte[] value = "value".getBytes(UTF_8);
     writeRequest(value);
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SET, (byte) 0,
+    ByteBuf expected = NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SET, (byte) 0,
       (short) 7, 99, 0, Unpooled.buffer().writeInt(0xcafe), Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value));
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
@@ -141,7 +142,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(99);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
+    ByteBuf expected = NettyMemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
       (byte) 3, (short) 7, 99, 0x0102030405060708L, Unpooled.wrappedBuffer(framingExtras), Unpooled.buffer().writeInt(0xcafe),
       Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value, 0, 5));
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
@@ -168,7 +169,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(5);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.NOOP, (byte) 0,
+    ByteBuf expected = NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.NOOP, (byte) 0,
       (short) 0, 5, 0, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
@@ -201,7 +202,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(99);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
+    ByteBuf expected = NettyMemcacheProtocol.flexibleRequest(UnpooledByteBufAllocator.DEFAULT, Opcode.REPLACE,
       (byte) 0, (short) 7, 99, 5, Unpooled.wrappedBuffer(new byte[]{0x10, 0x01, 0x00, 0x05}),
       Unpooled.buffer().writeShort(0xca).writeShort(0xfe),
       Unpooled.wrappedBuffer(KEY), Unpooled.wrappedBuffer(value));
@@ -290,7 +291,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(123);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
+    ByteBuf expected = NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 3, 123, 0, Unpooled.buffer().writeInt(3).writeByte(3), Unpooled.wrappedBuffer("asd".getBytes(UTF_8)),
       Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
@@ -303,7 +304,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(1);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
+    ByteBuf expected = NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.buffer().writeByte(0x09).writeBytes(KEY), Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }
@@ -347,7 +348,7 @@ class KeyValueRequestWriterTest {
     writer.completeRequestHead(1);
     writer.finishRequest();
 
-    ByteBuf expected = MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
+    ByteBuf expected = NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(KEY), Unpooled.EMPTY_BUFFER);
     assertArrayEquals(ByteBufUtil.getBytes(expected), flushed());
   }

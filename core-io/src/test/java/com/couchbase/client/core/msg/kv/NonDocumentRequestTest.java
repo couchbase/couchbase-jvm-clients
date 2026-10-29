@@ -29,6 +29,7 @@ import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.ServerFeature;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
 import com.couchbase.client.core.json.Mapper;
@@ -83,7 +84,7 @@ import static org.mockito.Mockito.mock;
 
 /**
  * Verifies the requests without a document key (in the key field): each encodes, with both encoders, the same
- * packet as its old {@code ByteBuf} encoder (built here with {@link MemcacheProtocol#request}, as the reference),
+ * packet as its old {@code ByteBuf} encoder (built here with {@link NettyMemcacheProtocol#request}, as the reference),
  * and decodes its response.
  */
 class NonDocumentRequestTest {
@@ -376,14 +377,14 @@ class NonDocumentRequestTest {
   }
 
   /**
-   * Encodes the packet with {@link MemcacheProtocol#request}, like the old {@code ByteBuf} encoders.
+   * Encodes the packet with {@link NettyMemcacheProtocol#request}, like the old {@code ByteBuf} encoders.
    */
   // Reauthentication
 
   @Test
   void singleStepAuth() throws IOException {
     SingleStepAuthRequest request = new SingleStepAuthRequest(CORE_CONTEXT, SingleStepSaslAuthParameters.plain(null, "user", "pass"));
-    byte[] expected = bytes(MemcacheProtocol.request(ALLOC, Opcode.SASL_AUTH, (byte) 0, (short) 0, OPAQUE, 0,
+    byte[] expected = bytes(NettyMemcacheProtocol.request(ALLOC, Opcode.SASL_AUTH, (byte) 0, (short) 0, OPAQUE, 0,
       Unpooled.EMPTY_BUFFER, Unpooled.copiedBuffer("PLAIN", UTF_8), Unpooled.copiedBuffer("\0user\0pass", UTF_8)));
     assertEncodingAsConstructed(request, NO_FEATURES, expected);
   }
@@ -407,7 +408,7 @@ class NonDocumentRequestTest {
     byte[] extras,
     byte[] body
   ) {
-    return bytes(MemcacheProtocol.request(ALLOC, opcode, (byte) datatype, partition, OPAQUE, 0,
+    return bytes(NettyMemcacheProtocol.request(ALLOC, opcode, (byte) datatype, partition, OPAQUE, 0,
       Unpooled.wrappedBuffer(extras), Unpooled.EMPTY_BUFFER, Unpooled.wrappedBuffer(body)));
   }
 

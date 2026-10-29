@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ class TrafficCaptureFormatTest {
     ByteBuf key = Unpooled.buffer();
     UnsignedLEB128.write(key, 0x1234);
     key.writeBytes("doc-key".getBytes(StandardCharsets.UTF_8));
-    String described = describe(MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
+    String described = describe(NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, (byte) 0,
       (short) 7, 99, 0, Unpooled.EMPTY_BUFFER, key, Unpooled.EMPTY_BUFFER));
 
     assertTrue(described.contains("Opcode             | 1      | 0x00 (GET)"), described);
@@ -53,7 +54,7 @@ class TrafficCaptureFormatTest {
 
   @Test
   void omitsSaslBodyAndItsLength() {
-    String described = describe(MemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SASL_AUTH, (byte) 0,
+    String described = describe(NettyMemcacheProtocol.request(UnpooledByteBufAllocator.DEFAULT, Opcode.SASL_AUTH, (byte) 0,
       (short) 0, 1, 0, Unpooled.EMPTY_BUFFER, buf("PLAIN"), buf("\0user\0" + PASSWORD)));
 
     assertFalse(described.contains(PASSWORD), described);

@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.SectionReader;
 import com.couchbase.client.core.io.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.LastCoreRangeScanItem;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -35,8 +36,8 @@ import java.util.List;
 
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noCas;
 import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noDatatype;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noExtras;
-import static com.couchbase.client.core.io.netty.kv.MemcacheProtocol.noKey;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noExtras;
+import static com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol.noKey;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -115,7 +116,7 @@ class RangeScanContinueResponseTest {
    * Returns a reader of a response packet's body, like the KV implementations give {@link RangeScanContinueResponse#feedItems}.
    */
   private static SectionReader body(ByteBuf items) {
-    ByteBuf packet = MemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.RANGE_SCAN_CONTINUE,
+    ByteBuf packet = NettyMemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, MemcacheProtocol.Opcode.RANGE_SCAN_CONTINUE,
       noDatatype(), (short) 0, 1, noCas(), noExtras(), noKey(), items);
     return KeyValuePacket.wrap(ByteBufUtil.getBytes(packet), 0, packet.readableBytes()).body();
   }

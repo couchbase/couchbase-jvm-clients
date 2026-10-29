@@ -23,6 +23,7 @@ import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol.Opcode;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
+import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import org.junit.jupiter.api.Test;
@@ -187,7 +188,7 @@ class KeyValuePacketTest {
     assertEquals(expectedDuration, packet.serverDuration());
 
     ByteBuf asByteBuf = Unpooled.wrappedBuffer(flexibleResponse(framingExtras, EXTRAS, new byte[0], BODY));
-    assertEquals(MemcacheProtocol.parseServerDurationFromResponse(asByteBuf), packet.serverDuration());
+    assertEquals(NettyMemcacheProtocol.parseServerDurationFromResponse(asByteBuf), packet.serverDuration());
   }
 
   @Test
@@ -259,7 +260,7 @@ class KeyValuePacketTest {
   }
 
   private static byte[] response(byte datatype, byte[] extras, byte[] key, byte[] body) {
-    ByteBuf packet = MemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, datatype,
+    ByteBuf packet = NettyMemcacheProtocol.response(UnpooledByteBufAllocator.DEFAULT, Opcode.GET, datatype,
       MemcacheProtocol.Status.NOT_FOUND.status(), 99, 0x0102030405060708L,
       Unpooled.wrappedBuffer(extras), Unpooled.wrappedBuffer(key), Unpooled.wrappedBuffer(body));
     return ByteBufUtil.getBytes(packet);
