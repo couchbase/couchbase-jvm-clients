@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.channel.WriteBufferWaterMark;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.CircuitBreakerConfig;
 import com.couchbase.client.core.error.InvalidArgumentException;
@@ -66,10 +65,10 @@ public class IoConfig {
   public static final MemcachedHashingStrategy DEFAULT_MEMCACHED_HASHING_STRATEGY = StandardMemcachedHashingStrategy.INSTANCE;
 
   @Stability.Volatile
-  public static final StorageSize DEFAULT_LOW_WATER_MARK = StorageSize.ofBytes(WriteBufferWaterMark.DEFAULT.low());
+  public static final StorageSize DEFAULT_LOW_WATER_MARK = StorageSize.ofKibibytes(32);
 
   @Stability.Volatile
-  public static final StorageSize DEFAULT_HIGH_WATER_MARK = StorageSize.ofBytes(WriteBufferWaterMark.DEFAULT.high());
+  public static final StorageSize DEFAULT_HIGH_WATER_MARK = StorageSize.ofKibibytes(64);
   private static final Logger log = LoggerFactory.getLogger(IoConfig.class);
 
   private final boolean mutationTokensEnabled;
