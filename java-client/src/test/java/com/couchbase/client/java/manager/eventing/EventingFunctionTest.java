@@ -24,6 +24,7 @@ import java.util.List;
 
 import static com.couchbase.client.test.Util.readResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EventingFunctionTest {
@@ -38,6 +39,19 @@ class EventingFunctionTest {
 
     EventingFunction function = eventingFunctions.get(0);
     assertEquals("myfunc", function.name());
+  }
+
+  @Test
+  void ignoresEmptyOptionalStringSettings() {
+    String json = "{\"appname\":\"myfunc\",\"appcode\":\"function OnUpdate(doc, meta) {}\"," +
+      "\"depcfg\":{\"source_bucket\":\"b\",\"source_scope\":\"_default\",\"source_collection\":\"src\"," +
+      "\"metadata_bucket\":\"b\",\"metadata_scope\":\"_default\",\"metadata_collection\":\"meta\"}," +
+      "\"settings\":{\"app_log_dir\":\"\",\"user_prefix\":\"\"}}";
+
+    EventingFunction function = EventingFunction.fromFunction(json.getBytes(StandardCharsets.UTF_8));
+    assertEquals("myfunc", function.name());
+    assertNull(function.settings().appLogDir());
+    assertNull(function.settings().userPrefix());
   }
 
   @Test
