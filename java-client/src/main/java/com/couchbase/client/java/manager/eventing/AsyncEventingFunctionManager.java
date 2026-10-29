@@ -712,10 +712,11 @@ public class AsyncEventingFunctionManager {
     if (settings.has("lcb_timeout")) {
       settingsBuilder.lcbTimeout(Duration.ofSeconds(settings.get("lcb_timeout").asLong()));
     }
-    if (settings.has("user_prefix")) {
+    // JCBC-2237: The server can return an empty string for the next two fields.
+    if (settings.has("user_prefix") && !settings.get("user_prefix").asText().isEmpty()) {
       settingsBuilder.userPrefix(settings.get("user_prefix").asText());
     }
-    if (settings.has("app_log_dir")) {
+    if (settings.has("app_log_dir") && !settings.get("app_log_dir").asText().isEmpty()) {
       settingsBuilder.appLogDir(settings.get("app_log_dir").asText());
     }
     if (settings.has("n1ql_prepare_all")) {
