@@ -16,9 +16,9 @@
 
 package com.couchbase.client.core.config;
 
-import com.couchbase.client.core.deps.io.netty.util.internal.ObjectUtil;
-
 import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * This context keeps together a bunch of related information needed to turn a raw
@@ -48,8 +48,8 @@ public class ProposedBucketConfigContext {
 
     public ProposedBucketConfigContext(final String bucketName, final String config, final String origin,
                                        final boolean forcesOverride) {
-        ObjectUtil.checkNotNull(bucketName, "bucket name cannot be null!");
-        ObjectUtil.checkNotNull(config, "the raw config cannot be null!");
+        requireNonNull(bucketName, "bucket name cannot be null!");
+        requireNonNull(config, "the raw config cannot be null!");
         this.bucketName = bucketName;
         this.config = config.replace("$HOST", origin);
         this.origin = origin;
