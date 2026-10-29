@@ -26,11 +26,11 @@ import com.couchbase.client.core.deps.okhttp3.MediaType;
 import com.couchbase.client.core.deps.okhttp3.Request;
 import com.couchbase.client.core.deps.okhttp3.RequestBody;
 import com.couchbase.client.core.env.CoreEnvironment;
-import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryRequest;
 import com.couchbase.client.core.msg.query.QueryResponse;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -180,7 +180,7 @@ class TrafficCaptureInterceptorTest {
 
     String captured = TrafficCaptureInterceptor.describe(request);
 
-    assertTrue(captured.endsWith(TrafficCaptureFormat.hexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
+    assertTrue(captured.endsWith(Bytes.prettyHexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
   }
 
   @Test

@@ -19,6 +19,7 @@ package com.couchbase.client.core.io;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.util.Bytes;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -46,59 +47,6 @@ public final class TrafficCaptureFormat {
   private TrafficCaptureFormat() {
   }
 
-  private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
-
-  /**
-   * Returns a hex dump of the bytes, in the same format as Netty's {@code ByteBufUtil.prettyHexDump}.
-   */
-  public static String hexDump(byte[] bytes) {
-    return hexDump(bytes, 0);
-  }
-
-  /**
-   * Like {@link #hexDump(byte[])}, except that each row is labelled with its offset counting from the given offset
-   * (for example, for a chunk of a response body after the first).
-   */
-  public static String hexDump(byte[] bytes, long startOffset) {
-    if (bytes.length == 0) {
-      return "";
-    }
-    String newline = System.lineSeparator(); // like Netty's
-    StringBuilder sb = new StringBuilder()
-      .append("         +-------------------------------------------------+").append(newline)
-      .append("         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |").append(newline)
-      .append("+--------+-------------------------------------------------+----------------+");
-    for (int row = 0; row < bytes.length; row += 16) {
-      sb.append(newline).append('|');
-      appendHex(sb, startOffset + row, 8);
-      sb.append('|');
-      StringBuilder ascii = new StringBuilder();
-      for (int i = row; i < row + 16; i++) {
-        if (i < bytes.length) {
-          int b = bytes[i] & 0xff;
-          sb.append(' ');
-          appendHex(sb, b, 2);
-          ascii.append(b >= 0x20 && b < 0x7f ? (char) b : '.');
-        } else {
-          sb.append("   ");
-          ascii.append(' ');
-        }
-      }
-      sb.append(" |").append(ascii).append('|');
-    }
-    return sb.append(newline).append("+--------+-------------------------------------------------+----------------+").toString();
-  }
-
-  /**
-   * Appends the value's lowest {@code digits} hex digits, with leading zeros: like String.format("%0<digits>x")
-   * for values that fit, without its cost (hex dumps format every byte).
-   */
-  private static void appendHex(StringBuilder sb, long value, int digits) {
-    for (int shift = (digits - 1) * 4; shift >= 0; shift -= 4) {
-      sb.append(HEX_DIGITS[(int) (value >>> shift) & 0xf]);
-    }
-  }
-
   /**
    * Describes a KV packet: a hex dump (tagged as user data), then its header fields and key.
    */
@@ -116,7 +64,7 @@ public final class TrafficCaptureFormat {
     if (sasl) {
       sb.append("(Hex dump omitted for SASL packet)");
     } else {
-      sb.append(redactUser(hexDump(bytes)));
+      sb.append(redactUser(Bytes.prettyHexDump(bytes)));
     }
 
     if (magic != null) {

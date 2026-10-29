@@ -17,10 +17,7 @@
 package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.ConfigurationProvider;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.msg.ResponseStatus;
@@ -32,7 +29,6 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.BucketCapability;
 import com.couchbase.client.core.topology.ClusterTopologyBuilder;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 import java.nio.charset.StandardCharsets;
@@ -48,7 +44,6 @@ import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.util.Collections.emptySet;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class OrchestratorProxy {
@@ -98,7 +93,7 @@ class OrchestratorProxy {
       RangeScanCreateRequest req = invocation.getArgument(0);
       req.succeed(new RangeScanCreateResponse(
         ResponseStatus.SUCCESS,
-        new CoreRangeScanId(Unpooled.copiedBuffer(uuids.get(req.partition()), StandardCharsets.UTF_8))
+        new CoreRangeScanId(uuids.get(req.partition()).getBytes(StandardCharsets.UTF_8))
       ));
       return null;
     }).when(core).send(isA(RangeScanCreateRequest.class));

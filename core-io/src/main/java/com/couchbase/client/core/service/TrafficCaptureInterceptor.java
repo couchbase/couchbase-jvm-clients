@@ -35,6 +35,7 @@ import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.io.TrafficCaptureMasking;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.util.Bytes;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -122,7 +123,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
               String text = decoder.decode(bytes);
               captured = text.isEmpty() ? "" : framedText(text, textOffset, decoder.decodedBytes() - textOffset);
             } else {
-              captured = TrafficCaptureFormat.hexDump(bytes, bodyOffset);
+              captured = Bytes.prettyHexDump(bytes, bodyOffset);
             }
             bodyOffset += read;
           } else if (read == -1 && textual) {
@@ -186,7 +187,7 @@ final class TrafficCaptureInterceptor implements Interceptor {
       byte[] bytes = buffer.readByteArray();
       sb.append('\n').append(isTextual(request.header("Content-Type"))
         ? maskedText(bytes)
-        : TrafficCaptureFormat.hexDump(withSecretFieldsMasked(bytes)));
+        : Bytes.prettyHexDump(withSecretFieldsMasked(bytes)));
     }
     return sb.toString();
   }
