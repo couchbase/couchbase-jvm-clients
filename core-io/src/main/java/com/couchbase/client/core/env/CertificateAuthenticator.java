@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.error.InvalidArgumentException;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -152,11 +151,6 @@ public class CertificateAuthenticator implements Authenticator {
   @Override
   public KeyManagerFactory getKeyManagerFactory() {
     return keyManagerFactory.get();
-  }
-
-  @Override
-  public void applyTlsProperties(final SslContextBuilder context) {
-      context.keyManager(getKeyManagerFactory());
   }
 
   @Override
