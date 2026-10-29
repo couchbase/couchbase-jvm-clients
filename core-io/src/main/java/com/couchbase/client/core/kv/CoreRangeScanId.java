@@ -16,8 +16,7 @@
 
 package com.couchbase.client.core.kv;
 
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
+import com.couchbase.client.core.util.Bytes;
 
 /**
  * Encapsulates an ID returned by the server for each stream.
@@ -28,10 +27,6 @@ import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
 public class CoreRangeScanId {
 
   private final byte[] bytes = new byte[16];
-
-  public CoreRangeScanId(ByteBuf body) {
-    body.readBytes(bytes);
-  }
 
   /**
    * Takes the ID from the start of the array (copying it).
@@ -48,7 +43,7 @@ public class CoreRangeScanId {
 
   @Override
   public String toString() {
-    return "CoreRangeScanId{0x" + ByteBufUtil.hexDump(bytes) + '}';
+    return "CoreRangeScanId{0x" + Bytes.toHex(bytes) + '}';
   }
 
 }

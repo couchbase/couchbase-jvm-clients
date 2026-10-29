@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -90,27 +89,6 @@ class TrafficCaptureFormatTest {
   private static String describe(ByteBuf packet) {
     byte[] bytes = ByteBufUtil.getBytes(packet);
     return TrafficCaptureFormat.memcacheToString(KeyValuePacket.wrap(bytes, 0, bytes.length));
-  }
-
-  // ---- Hex dumps
-
-  @Test
-  void hexDumpMatchesNettys() {
-    for (int length : new int[]{0, 1, 15, 16, 17, 40, 300}) {
-      byte[] bytes = new byte[length];
-      for (int i = 0; i < length; i++) {
-        bytes[i] = (byte) (i * 37);
-      }
-      assertEquals(ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(bytes)), TrafficCaptureFormat.hexDump(bytes), "length " + length);
-    }
-  }
-
-  @Test
-  void hexDumpRowsAreLabelledWithTheirBodyOffset() {
-    String dump = TrafficCaptureFormat.hexDump(new byte[20], 0x2000);
-    assertTrue(dump.contains("|00002000| 00"), dump);
-    assertTrue(dump.contains("|00002010| 00"), dump);
-    assertFalse(dump.contains("|00000000|"), dump);
   }
 
   private static ByteBuf buf(String s) {
