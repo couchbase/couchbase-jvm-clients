@@ -17,12 +17,9 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
-import com.couchbase.client.core.service.ServiceType;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -40,18 +37,8 @@ public abstract class AuthenticatorWrapper implements Authenticator {
   }
 
   @Override
-  public void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
-    wrapped().authHttpRequest(serviceType, request);
-  }
-
-  @Override
   public @Nullable String getAuthHeaderValue() {
     return wrapped().getAuthHeaderValue();
-  }
-
-  @Override
-  public void applyTlsProperties(final SslContextBuilder sslContextBuilder) {
-    wrapped().applyTlsProperties(sslContextBuilder);
   }
 
   @Override

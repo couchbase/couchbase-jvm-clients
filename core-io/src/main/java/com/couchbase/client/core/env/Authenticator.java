@@ -17,14 +17,10 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpHeaderNames;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpRequest;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.SslContextBuilder;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.io.netty.kv.sasl.SaslCredentials;
 import com.couchbase.client.core.io.netty.kv.sasl.SingleStepSaslAuthParameters;
-import com.couchbase.client.core.service.ServiceType;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import javax.net.ssl.KeyManagerFactory;
 
@@ -54,20 +50,6 @@ public interface Authenticator {
   }
 
   /**
-   * Allows to add authentication credentials to the http request for the given service.
-   *
-   * @param serviceType the service for this request.
-   * @param request the http request.
-   */
-  @Stability.Internal
-  default void authHttpRequest(final ServiceType serviceType, final HttpRequest request) {
-    String authHeaderValue = getAuthHeaderValue();
-    if (authHeaderValue != null) {
-      request.headers().add(HttpHeaderNames.AUTHORIZATION, authHeaderValue);
-    }
-  }
-
-  /**
    * Returns the value of the Authorization header to apply to HTTP requests,
    * or null if no header should be applied.
    */
@@ -75,14 +57,6 @@ public interface Authenticator {
   default @Nullable String getAuthHeaderValue() {
     return null;
   }
-
-  /**
-   * The authenticator gets the chance to attach the client certificate to the ssl context if needed.
-   *
-   * @param sslContextBuilder the netty context builder
-   */
-  @Stability.Internal
-  default void applyTlsProperties(final SslContextBuilder sslContextBuilder) { }
 
   @Stability.Internal
   default @Nullable KeyManagerFactory getKeyManagerFactory() {
