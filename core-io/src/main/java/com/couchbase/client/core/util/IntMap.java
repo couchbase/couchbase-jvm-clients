@@ -17,8 +17,6 @@
 package com.couchbase.client.core.util;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectHashMap;
-import com.couchbase.client.core.deps.io.netty.util.collection.IntObjectMap;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Arrays;
@@ -177,25 +175,47 @@ class CompactIntMap<E> implements IntMap<E> {
   }
 }
 
+/**
+ * For keys too far apart for {@link CompactIntMap}: the keys in ascending order, and the values in the same order.
+ * A lookup is a binary search.
+ */
 class SparseIntMap<E> implements IntMap<E> {
-  private final IntObjectMap<E> indexToValue;
+  private final int[] keys;
+  private final E[] values;
 
+  @SuppressWarnings("unchecked")
   public SparseIntMap(Map<Integer, E> indexToValue) {
-    this.indexToValue = new IntObjectHashMap<>(indexToValue.size());
-    this.indexToValue.putAll(indexToValue);
+    TreeMap<Integer, E> sorted = new TreeMap<>(indexToValue);
+    this.keys = new int[sorted.size()];
+    this.values = (E[]) new Object[sorted.size()];
+
+    int i = 0;
+    for (Map.Entry<Integer, E> entry : sorted.entrySet()) {
+      keys[i] = entry.getKey();
+      values[i] = entry.getValue();
+      i++;
+    }
   }
 
   @Override
   public @Nullable E get(int key) {
-    E result = indexToValue.get(key);
-    if (result == null && key < 0) {
+    if (key < 0) {
       throw new IllegalArgumentException("key must be non-negative, but got " + key);
+    }
+    int index = Arrays.binarySearch(keys, key);
+    return index < 0 ? null : values[index];
+  }
+
+  private Map<Integer, E> toMap() {
+    Map<Integer, E> result = new LinkedHashMap<>();
+    for (int i = 0; i < keys.length; i++) {
+      result.put(keys[i], values[i]);
     }
     return result;
   }
 
   @Override
   public String toString() {
-    return "SparseIntMap" + new TreeMap<>(indexToValue);
+    return "SparseIntMap" + toMap();
   }
 }
