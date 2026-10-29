@@ -17,10 +17,9 @@
 package com.couchbase.client.kotlin.codec
 
 import com.couchbase.client.core.api.kv.CoreEncodedContent
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled
 import com.couchbase.client.core.msg.kv.CodecFlags
 import com.couchbase.client.core.msg.kv.CodecFlags.hasCommonFormat
+import com.couchbase.client.core.util.Bytes
 import com.couchbase.client.kotlin.internal.toStringUtf8
 
 /**
@@ -84,7 +83,7 @@ public class Content(public val bytes: ByteArray, public val flags: Int) {
         return if (printable) {
             bytes.toStringUtf8()
         } else {
-            val result = ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(bytes))
+            val result = Bytes.prettyHexDump(bytes)
             "\n$result\n"
         }
     }
