@@ -16,8 +16,6 @@
 
 package com.couchbase.client.java.examples;
 
-import com.couchbase.client.core.deps.io.netty.util.internal.logging.InternalLoggerFactory;
-import com.couchbase.client.core.deps.io.netty.util.internal.logging.Slf4JLoggerFactory;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SeedNode;
@@ -47,7 +45,6 @@ public class HelloOsgi implements BundleActivator {
     System.out.println("Hello world.");
 
     try {
-      InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
       String configFilename = System.getenv("HOME") + "/log4j2.xml";
       File logConfig = new File(configFilename);
       if (logConfig.exists()) {
