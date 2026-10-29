@@ -20,10 +20,10 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.io.netty.SslHandlerFactory;
 import com.couchbase.client.core.util.Bytes;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayInputStream;
@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -47,6 +48,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.util.CbCollections.isNullOrEmpty;
+import static com.couchbase.client.core.util.CbCollections.listOf;
 import static com.couchbase.client.core.util.Validators.notNull;
 import static com.couchbase.client.core.util.Validators.notNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -65,9 +67,10 @@ public class SecurityConfig {
     public static final boolean DEFAULT_TLS_ENABLED = false;
 
     /**
-     * By default, netty native tls (OpenSSL) is enabled for better performance.
+     * @deprecated The SDK no longer requires a native TLS library.
      */
-    public static final boolean DEFAULT_NATIVE_TLS_ENABLED = true;
+    @Deprecated
+    public static final boolean DEFAULT_NATIVE_TLS_ENABLED = false;
 
     /**
      * By default, hostname verification for TLS connections is enabled.
@@ -322,12 +325,13 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns whether native TLS is enabled.
+   * Always returns false.
    *
-   * @return true if enabled, false otherwise.
+   * @deprecated The SDK no longer requires a native TLS library.
    */
+  @Deprecated
   public boolean nativeTlsEnabled() {
-    return nativeTlsEnabled;
+    return false;
   }
 
   /**
@@ -427,11 +431,14 @@ public class SecurityConfig {
     }
 
     /**
-     * Enables/disables native TLS (enabled by default).
+     * Does nothing.
      *
-     * @param nativeTlsEnabled true if it should be enabled, false otherwise.
+     * @param nativeTlsEnabled ignored.
      * @return this {@link Builder} for chaining purposes.
+     *
+     * @deprecated The SDK no longer requires a native TLS library.
      */
+    @Deprecated
     public Builder enableNativeTls(boolean nativeTlsEnabled) {
       this.nativeTlsEnabled = nativeTlsEnabled;
       return this;
@@ -545,10 +552,6 @@ public class SecurityConfig {
      * or compliance reasons).
      * <p>
      * If no custom ciphers are configured, the default set will be used.
-     * <p>
-     * If you wish to add additional ciphers instead of providing an exclusive list, you can use the static
-     * {@link #defaultCiphers(boolean)} method to load the default list first, add your own ciphers and then
-     * pass it into this method.
      *
      * @param ciphers the custom list of ciphers to use.
      * @return this {@link Builder} for chaining purposes.
@@ -595,17 +598,21 @@ public class SecurityConfig {
   }
 
   /**
-   * Lists the default ciphers used for this platform.
-   * <p>
-   * Note that the list of ciphers can differ whether native TLS is enabled or not, so the parameter should reflect
-   * the actual security configuration used. Native TLS is enabled by default on the configuration, so if it is not
-   * overridden it should be set to true here as well.
+   * Returns the list of TLS ciphers enabled by default on this JVM.
    *
-   * @param nativeTlsEnabled if native TLS is enabled on the security configuration (defaults to yes there).
-   * @return the list of default ciphers.
+   * @param nativeTlsEnabled ignored: the returned list is the same either way.
+   * @return the list of ciphers supported by this JVM.
+   * @deprecated In favor of passing to {@link Builder#ciphers(List)} only the ciphers you want to allow.
    */
+  @Deprecated
   public static List<String> defaultCiphers(final boolean nativeTlsEnabled) {
-    return SslHandlerFactory.defaultCiphers(nativeTlsEnabled);
+    try {
+      SSLContext context = SSLContext.getInstance("TLS");
+      context.init(null, null, null);
+      return listOf(context.getSocketFactory().getDefaultCipherSuites());
+    } catch (NoSuchAlgorithmException | KeyManagementException e) {
+      throw new CouchbaseException("Could not get list of default ciphers", e);
+    }
   }
 
   @Stability.Internal
