@@ -18,25 +18,6 @@ package com.couchbase.client.core.cnc.apptelemetry.reporter;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
-import com.couchbase.client.core.deps.io.netty.bootstrap.ServerBootstrap;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
-import com.couchbase.client.core.deps.io.netty.channel.Channel;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
-import com.couchbase.client.core.deps.io.netty.channel.ChannelInitializer;
-import com.couchbase.client.core.deps.io.netty.channel.EventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
-import com.couchbase.client.core.deps.io.netty.channel.SimpleChannelInboundHandler;
-import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
-import com.couchbase.client.core.deps.io.netty.channel.socket.SocketChannel;
-import com.couchbase.client.core.deps.io.netty.channel.socket.nio.NioServerSocketChannel;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpObjectAggregator;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.HttpServerCodec;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
-import com.couchbase.client.core.deps.io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.service.CouchbaseOkHttpClient;
@@ -44,13 +25,10 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Duration;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,7 +49,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Connects {@link OkHttpAppTelemetryWebSocketClient} to a Netty WebSocket server,
+ * Connects {@link OkHttpAppTelemetryWebSocketClient} to a {@link TestWebSocketServer},
  * which plays the part of the app telemetry server.
  */
 class OkHttpAppTelemetryWebSocketClientTest {
@@ -82,22 +60,20 @@ class OkHttpAppTelemetryWebSocketClientTest {
 
   private @Nullable CoreEnvironment env;
   private @Nullable CouchbaseOkHttpClient okHttpClient;
-  private @Nullable EventLoopGroup eventLoopGroup;
+  private @Nullable TestWebSocketServer server;
 
   /**
-   * What the client sent to the server.
+   * The server's end of the client's connection, once the handshake is complete.
    */
-  private final AtomicReference<@Nullable String> authorizationHeader = new AtomicReference<>();
-  private final BlockingQueue<byte[]> receivedMessages = new LinkedBlockingQueue<>();
-  private final CompletableFuture<Void> serverChannelClosed = new CompletableFuture<>();
+  private final CompletableFuture<TestWebSocketServer.Connection> serverConnection = new CompletableFuture<>();
 
   @AfterEach
-  void teardown() {
+  void teardown() throws Exception {
     try {
       if (okHttpClient != null) okHttpClient.close();
     } finally {
       try {
-        if (eventLoopGroup != null) eventLoopGroup.shutdownGracefully(0, 0, TimeUnit.SECONDS).syncUninterruptibly();
+        if (server != null) server.close();
       } finally {
         if (env != null) env.shutdown();
       }
@@ -106,9 +82,9 @@ class OkHttpAppTelemetryWebSocketClientTest {
 
   @Test
   void answersRequestsUntilServerCloses() throws Exception {
-    URI uri = startServer(ch -> {
-      ch.writeAndFlush(binary(0)); // GET_TELEMETRY
-      ch.writeAndFlush(binary(42)); // unrecognized
+    URI uri = startServer(connection -> {
+      connection.sendBinary(new byte[]{0}); // GET_TELEMETRY
+      connection.sendBinary(new byte[]{42}); // unrecognized
       // The test closes the connection once both answers have arrived.
     });
     OkHttpAppTelemetryWebSocketClient client = newClient(null);
@@ -119,7 +95,7 @@ class OkHttpAppTelemetryWebSocketClientTest {
     assertEquals((char) 0 + REPORT, new String(nextMessage(), UTF_8));
     assertEquals("\u0001", new String(nextMessage(), UTF_8));
     assertTrue(connected.get());
-    assertTrue(authorizationHeader.get().startsWith("Basic "));
+    assertTrue(serverConnection().authorizationHeader().startsWith("Basic "));
 
     closeFromServer();
     result.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS); // returns normally
@@ -127,14 +103,14 @@ class OkHttpAppTelemetryWebSocketClientTest {
 
   @Test
   void sendsNoCredentialsToUserSpecifiedEndpoint() throws Exception {
-    URI uri = startServer(ch -> ch.writeAndFlush(binary(0)));
+    URI uri = startServer(connection -> connection.sendBinary(new byte[]{0}));
     OkHttpAppTelemetryWebSocketClient client = newClient(uri);
 
     CompletableFuture<Void> result = connectInBackground(client, uri, () -> {
     });
 
     assertEquals((char) 0 + REPORT, new String(nextMessage(), UTF_8));
-    assertNull(authorizationHeader.get());
+    assertNull(serverConnection().authorizationHeader());
 
     closeFromServer();
     result.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
@@ -142,20 +118,20 @@ class OkHttpAppTelemetryWebSocketClientTest {
 
   @Test
   void returnsWhenServerDropsConnectionWithoutCloseFrame() throws Exception {
-    URI uri = startServer(ch -> ch.writeAndFlush(binary(0)));
+    URI uri = startServer(connection -> connection.sendBinary(new byte[]{0}));
     OkHttpAppTelemetryWebSocketClient client = newClient(null);
 
     CompletableFuture<Void> result = connectInBackground(client, uri, () -> {
     });
     nextMessage(); // connected
 
-    serverChannel.get().close();
+    serverConnection().drop();
     result.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS); // returns normally
   }
 
   @Test
   void interruptClosesConnection() throws Exception {
-    URI uri = startServer(ch -> ch.writeAndFlush(binary(0)));
+    URI uri = startServer(connection -> connection.sendBinary(new byte[]{0}));
     OkHttpAppTelemetryWebSocketClient client = newClient(null);
 
     CompletableFuture<Void> result = connectInBackground(client, uri, () -> {
@@ -166,7 +142,7 @@ class OkHttpAppTelemetryWebSocketClientTest {
 
     Exception e = assertThrows(Exception.class, () -> result.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS));
     assertInstanceOf(InterruptedException.class, e.getCause());
-    serverChannelClosed.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+    serverConnection().closed.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   @Test
@@ -187,7 +163,6 @@ class OkHttpAppTelemetryWebSocketClientTest {
   }
 
   private final AtomicReference<Thread> workerThread = new AtomicReference<>();
-  private final AtomicReference<Channel> serverChannel = new AtomicReference<>();
 
   private CompletableFuture<Void> connectInBackground(AppTelemetryClient client, URI uri, Runnable onConnected) {
     CompletableFuture<Void> result = new CompletableFuture<>();
@@ -204,18 +179,18 @@ class OkHttpAppTelemetryWebSocketClientTest {
     return result;
   }
 
-  private byte[] nextMessage() throws InterruptedException {
-    byte[] message = receivedMessages.poll(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+  private TestWebSocketServer.Connection serverConnection() throws Exception {
+    return serverConnection.get(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+  }
+
+  private byte[] nextMessage() throws Exception {
+    byte[] message = serverConnection().receivedMessages.poll(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
     assertNotNull(message, "timed out waiting for message from client");
     return message;
   }
 
-  private void closeFromServer() {
-    serverChannel.get().writeAndFlush(new CloseWebSocketFrame(1000, "bye"));
-  }
-
-  private static BinaryWebSocketFrame binary(int opcode) {
-    return new BinaryWebSocketFrame(Unpooled.buffer(1).writeByte(opcode));
+  private void closeFromServer() throws Exception {
+    serverConnection().sendClose(1000, "bye");
   }
 
   /**
@@ -251,53 +226,11 @@ class OkHttpAppTelemetryWebSocketClientTest {
   /**
    * Starts a WebSocket server, which calls the given callback once the handshake is complete.
    */
-  private URI startServer(Consumer<Channel> onHandshakeComplete) {
-    eventLoopGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-
-    Channel listener = new ServerBootstrap()
-      .group(eventLoopGroup)
-      .channel(NioServerSocketChannel.class)
-      .childHandler(new ChannelInitializer<SocketChannel>() {
-        @Override
-        protected void initChannel(SocketChannel ch) {
-          serverChannel.set(ch);
-          ch.closeFuture().addListener(f -> serverChannelClosed.complete(null));
-          ch.pipeline().addLast(
-            new HttpServerCodec(),
-            new HttpObjectAggregator(65536),
-            new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
-              .websocketPath(PATH)
-              .allowExtensions(true)
-              .handleCloseFrames(false) // so the server can start the closing handshake
-              .sendCloseFrame(null) // so closing the channel doesn't send a close frame
-              .build()),
-            new SimpleChannelInboundHandler<WebSocketFrame>() {
-              @Override
-              public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-                  authorizationHeader.set(((WebSocketServerProtocolHandler.HandshakeComplete) evt).requestHeaders().get("Authorization"));
-                  onHandshakeComplete.accept(ctx.channel());
-                }
-                super.userEventTriggered(ctx, evt);
-              }
-
-              @Override
-              protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) {
-                if (frame instanceof BinaryWebSocketFrame) {
-                  receivedMessages.add(ByteBufUtil.getBytes(frame.content()));
-                } else if (frame instanceof CloseWebSocketFrame) {
-                  ctx.close(); // the client answered the server's close frame
-                }
-              }
-            }
-          );
-        }
-      })
-      .bind(new InetSocketAddress("127.0.0.1", 0))
-      .syncUninterruptibly()
-      .channel();
-
-    int port = ((InetSocketAddress) listener.localAddress()).getPort();
-    return URI.create("ws://127.0.0.1:" + port + PATH);
+  private URI startServer(Consumer<TestWebSocketServer.Connection> onHandshakeComplete) throws Exception {
+    server = new TestWebSocketServer(PATH, connection -> {
+      serverConnection.complete(connection);
+      onHandshakeComplete.accept(connection);
+    });
+    return server.uri();
   }
 }
