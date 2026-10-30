@@ -471,15 +471,18 @@
                         <artifactId>scala-maven-plugin</artifactId>
                         <version>${scala-maven-plugin.version}</version>
                         <executions>
+                            <!-- Has its own ID, so the skip doesn't also apply to testCompile
+                                 in the default execution. -->
                             <execution>
+                                <id>scaladoc-jar</id>
                                 <goals>
                                     <goal>doc-jar</goal>
                                 </goals>
+                                <configuration>
+                                    <skip>${maven.javadoc.skip}</skip>
+                                </configuration>
                             </execution>
                         </executions>
-                        <configuration>
-                            <skip>${maven.javadoc.skip}</skip>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>
