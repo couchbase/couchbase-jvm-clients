@@ -72,7 +72,7 @@ class TransactionsSpecScala2 extends ScalaIntegrationTest {
           .`then`(
             ctx
               .get(coll.reactive, docIdRemove)
-              .map(docRemove => ctx.remove(docRemove))
+              .flatMap(docRemove => ctx.remove(docRemove))
           )
           .`then`(
             ctx
