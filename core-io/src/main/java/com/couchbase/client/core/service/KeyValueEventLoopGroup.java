@@ -22,8 +22,12 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static java.util.Collections.unmodifiableList;
 
 /**
  * The event loops for KV connections (see {@link KeyValueEventLoop} and {@link NioKeyValueConnection}).
@@ -42,7 +46,7 @@ public final class KeyValueEventLoopGroup {
    */
   private static final AtomicInteger groupIds = new AtomicInteger();
 
-  private final KeyValueEventLoop[] loops;
+  private final List<KeyValueEventLoop> loops;
   private final AtomicInteger nextLoop = new AtomicInteger();
   private volatile boolean shutdown;
 
@@ -54,23 +58,21 @@ public final class KeyValueEventLoopGroup {
       throw new IllegalArgumentException("threadCount must be positive, but was " + threadCount);
     }
     int groupId = groupIds.incrementAndGet();
-    loops = new KeyValueEventLoop[threadCount];
+
+    List<KeyValueEventLoop> tempLoops = new ArrayList<>(threadCount);
     try {
       for (int i = 0; i < threadCount; i++) {
-        loops[i] = new KeyValueEventLoop("cb-kv-nio-" + groupId + "-" + i);
+        tempLoops.add(new KeyValueEventLoop("cb-kv-nio-" + groupId + "-" + i));
       }
-    } catch (RuntimeException | Error e) {
-      for (KeyValueEventLoop loop : loops) {
-        if (loop != null) {
-          loop.shutdown();
-        }
-      }
-      throw e;
+    } catch (Throwable t) {
+      tempLoops.forEach(KeyValueEventLoop::shutdown);
+      throw t;
     }
+    this.loops = unmodifiableList(tempLoops);
   }
 
   int threadCount() {
-    return loops.length;
+    return loops.size();
   }
 
   /**
@@ -82,7 +84,7 @@ public final class KeyValueEventLoopGroup {
     if (shutdown) {
       throw new IllegalStateException("The KV event loops are shut down");
     }
-    return loops[Math.floorMod(nextLoop.getAndIncrement(), loops.length)];
+    return loops.get(Math.floorMod(nextLoop.getAndIncrement(), loops.size()));
   }
 
   /**
@@ -93,9 +95,7 @@ public final class KeyValueEventLoopGroup {
   public Mono<Void> shutdown(Duration timeout) {
     return Mono.<Void>fromRunnable(() -> {
         shutdown = true;
-        for (KeyValueEventLoop loop : loops) {
-          loop.shutdown();
-        }
+        loops.forEach(KeyValueEventLoop::shutdown);
         long deadline = System.nanoTime() + timeout.toNanos();
         try {
           for (KeyValueEventLoop loop : loops) {
@@ -112,6 +112,6 @@ public final class KeyValueEventLoopGroup {
 
   @Override
   public String toString() {
-    return "KeyValueEventLoopGroup{loops=" + loops.length + ", shutdown=" + shutdown + "}";
+    return "KeyValueEventLoopGroup{loops=" + loops.size() + ", shutdown=" + shutdown + "}";
   }
 }
