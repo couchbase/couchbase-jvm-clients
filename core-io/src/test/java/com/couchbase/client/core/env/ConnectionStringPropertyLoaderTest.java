@@ -16,7 +16,6 @@
 
 package com.couchbase.client.core.env;
 
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

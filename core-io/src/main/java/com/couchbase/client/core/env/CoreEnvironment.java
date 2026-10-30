@@ -34,7 +34,6 @@ import com.couchbase.client.core.cnc.metrics.NoopMeter;
 import com.couchbase.client.core.cnc.tracing.NoopRequestTracer;
 import com.couchbase.client.core.cnc.tracing.ObservabilitySemanticConvention;
 import com.couchbase.client.core.cnc.tracing.ThresholdLoggingTracer;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.retry.BestEffortRetryStrategy;
@@ -241,7 +240,7 @@ public class CoreEnvironment implements ReactorOps, AutoCloseable {
   private void checkInsecureTlsConfig() {
     if (securityConfig.tlsEnabled()) {
       boolean validateHosts = securityConfig.hostnameVerificationEnabled();
-      boolean insecureTrustManager = securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory;
+      boolean insecureTrustManager = securityConfig.trustManagerFactory() == InsecureTrustManagerFactory.INSTANCE;
 
       if (!validateHosts || insecureTrustManager) {
         eventBus.get().publish(new InsecureSecurityConfigDetectedEvent(validateHosts, insecureTrustManager));

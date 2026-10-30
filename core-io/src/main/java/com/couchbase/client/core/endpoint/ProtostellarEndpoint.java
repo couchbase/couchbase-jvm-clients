@@ -36,10 +36,10 @@ import com.couchbase.client.core.deps.io.grpc.Metadata;
 import com.couchbase.client.core.deps.io.grpc.MethodDescriptor;
 import com.couchbase.client.core.deps.io.grpc.Status;
 import com.couchbase.client.core.deps.io.grpc.okhttp.OkHttpChannelBuilder;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.diagnostics.ClusterState;
 import com.couchbase.client.core.diagnostics.EndpointDiagnostics;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.env.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
@@ -242,7 +242,7 @@ public class ProtostellarEndpoint {
       .socketFactory(new ConnectTimeoutSocketFactory((int) env.timeoutConfig().connectTimeout().toMillis()));
 
     // Like the HTTP services. (gRPC's OkHttp transport checks the host name itself, whatever the trust manager.)
-    if (securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory
+    if (securityConfig.trustManagerFactory() == InsecureTrustManagerFactory.INSTANCE
       || !securityConfig.hostnameVerificationEnabled()) {
       okHttpBuilder.hostnameVerifier((hostname, session) -> true);
     }

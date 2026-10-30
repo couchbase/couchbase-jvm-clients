@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.deps.io.netty.handler.ssl.util;
+package com.couchbase.client.core.env;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +25,7 @@ import java.security.cert.X509Certificate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
 
 class InsecureTrustManagerFactoryTest {
@@ -41,5 +42,14 @@ class InsecureTrustManagerFactoryTest {
     trustManager.checkServerTrusted(chain, "RSA");
     trustManager.checkClientTrusted(chain, "RSA");
     assertEquals(0, trustManager.getAcceptedIssuers().length);
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  void deprecatedInstanceIsTheSameInstance() {
+    assertSame(
+      InsecureTrustManagerFactory.INSTANCE,
+      com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory.INSTANCE
+    );
   }
 }

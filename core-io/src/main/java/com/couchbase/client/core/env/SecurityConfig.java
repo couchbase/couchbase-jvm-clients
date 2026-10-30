@@ -17,7 +17,6 @@
 package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.util.Bytes;
@@ -409,8 +408,6 @@ public class SecurityConfig {
 
     /**
      * Pass false to bypass all TLS certificate verification checks.
-     * This is equivalent to calling {@link #trustManagerFactory(TrustManagerFactory)}
-     * with an argument of {@link InsecureTrustManagerFactory#INSTANCE}.
      * <p>
      * Certificate verification is enabled by default.
      * <p>
@@ -420,8 +417,7 @@ public class SecurityConfig {
      * <p>
      * See also {@link #enableHostnameVerification}, which can selectively disable just hostname verification.
      *
-     * @param certificateVerificationEnabled Pass false to set the trust manager factory to {@link InsecureTrustManagerFactory#INSTANCE},
-     * and bypass all TLS certificate verification checks.
+     * @param certificateVerificationEnabled Pass false to bypass all TLS certificate verification checks.
      * @return this {@link Builder} for chaining purposes.
      */
     @Stability.Volatile

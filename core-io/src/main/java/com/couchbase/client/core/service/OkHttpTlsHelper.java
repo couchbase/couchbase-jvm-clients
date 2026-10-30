@@ -17,12 +17,12 @@
 package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.annotation.Stability;
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import com.couchbase.client.core.deps.okhttp3.CipherSuite;
 import com.couchbase.client.core.deps.okhttp3.ConnectionSpec;
 import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
 import com.couchbase.client.core.deps.okhttp3.TlsVersion;
 import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
+import com.couchbase.client.core.env.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.SecurityConfig;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -386,7 +386,7 @@ class OkHttpTlsHelper {
   }
 
   private static boolean certificateVerificationDisabled(SecurityConfig securityConfig) {
-    return securityConfig.trustManagerFactory() instanceof InsecureTrustManagerFactory;
+    return securityConfig.trustManagerFactory() == InsecureTrustManagerFactory.INSTANCE;
   }
 
   /**

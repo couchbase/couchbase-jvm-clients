@@ -16,7 +16,7 @@ package com.couchbase.client.scala
  * limitations under the License.
  */
 
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory
+import com.couchbase.client.core.env.InsecureTrustManagerFactory
 import com.couchbase.client.core.util.ConnectionStringUtil
 import com.couchbase.client.scala.env.{ClusterEnvironment, SecurityConfig}
 import com.couchbase.client.scala.json.JsonObject
