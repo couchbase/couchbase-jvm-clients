@@ -41,6 +41,8 @@ import com.couchbase.client.core.error.context.QueryErrorContext;
 import com.couchbase.client.core.io.netty.chunk.BaseChunkResponseParser;
 import com.couchbase.client.core.json.stream.JsonStreamParser;
 import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.query.ConversationalQueryRequest;
+import com.couchbase.client.core.msg.query.ConversationalQueryTrailer;
 import com.couchbase.client.core.msg.query.QueryChunkHeader;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
 import com.couchbase.client.core.msg.query.QueryChunkTrailer;
@@ -79,6 +81,8 @@ public class QueryChunkResponseParser
   private byte[] errors;
   private byte[] profile;
 
+  private ConversationalQueryTrailer.Builder conversational = new ConversationalQueryTrailer.Builder();
+
   @Override
   protected void doCleanup() {
     requestId = null;
@@ -91,6 +95,7 @@ public class QueryChunkResponseParser
     warnings = null;
     errors = null;
     profile = null;
+    conversational = new ConversationalQueryTrailer.Builder();
   }
 
   private final JsonStreamParser.Builder parserBuilder = JsonStreamParser.builder()
@@ -112,7 +117,12 @@ public class QueryChunkResponseParser
       errors = v.readBytes();
       failRows(errorsToThrowable(errors, responseHeader(), requestContext()));
     })
-    .doOnValue("/warnings", v -> warnings = v.readBytes());
+    .doOnValue("/warnings", v -> warnings = v.readBytes())
+    // Expected on conversational query only
+    .doOnValue("/generated_statement", v -> conversational.generatedStatement(v.readString()))
+    .doOnValue("/requestTokens", v -> conversational.requestTokens(v.readBytes()))
+    .doOnValue("/chatTokens", v -> conversational.chatTokens(v.readBytes()))
+    .doOnValue("/chatId", v -> conversational.chatId(v.readString()));
 
   @Override
   protected JsonStreamParser.Builder parserBuilder() {
@@ -224,7 +234,10 @@ public class QueryChunkResponseParser
       Optional.ofNullable(metrics),
       Optional.ofNullable(warnings),
       Optional.ofNullable(errors),
-      Optional.ofNullable(profile)
+      Optional.ofNullable(profile),
+      requestContext() != null && requestContext().request() instanceof ConversationalQueryRequest
+        ? Optional.of(conversational.build())
+        : Optional.empty()
     ));
   }
 

@@ -28,6 +28,7 @@ import static java.util.Objects.requireNonNull;
 public enum ClusterCapability {
   N1QL_ENHANCED_PREPARED_STATEMENTS("n1ql", "enhancedPreparedStatements", "SQL++ enhanced prepared statements", "6.5"),
   N1QL_READ_FROM_REPLICA("n1ql", "readFromReplica", "SQL++ read from replica", "7.6"),
+  N1QL_CONVERSATIONAL_QUERY("n1ql", "conversationalQuery", "conversational query chats", "8.5"),
 
   SEARCH_VECTOR("search", "vectorSearch", "vector search", "7.6"),
   SEARCH_SCOPED("search", "scopedSearchIndex", "scoped search indexes", "7.6"),

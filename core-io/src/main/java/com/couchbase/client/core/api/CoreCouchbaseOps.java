@@ -25,6 +25,7 @@ import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
+import com.couchbase.client.core.api.query.CoreConversationalQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.diagnostics.ClusterState;
@@ -55,6 +56,8 @@ public interface CoreCouchbaseOps {
   CoreKvBinaryOps kvBinaryOps(CoreKeyspace keyspace);
 
   CoreQueryOps queryOps();
+
+  CoreConversationalQueryOps conversationalQueryOps();
 
   CoreSearchOps searchOps(@Nullable CoreBucketAndScope scope);
 
