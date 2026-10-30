@@ -32,10 +32,11 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.couchbase.client.core.util.CbThrowables.getStackTraceAsString;
@@ -47,9 +48,10 @@ import static java.util.Objects.requireNonNull;
  * (A failed handshake's chain isn't available any other way: there's no completed session to get it from.)
  * Otherwise delegates everything to the wrapped trust manager.
  * <p>
- * Each untrusted chain is logged at warning level only the first time it's seen (per set of reported chains,
- * which the caller keeps for the life of its client). Later failures with the same chain are logged at debug
- * level, without the chain, since retries would otherwise repeat it for every connection attempt.
+ * Each untrusted chain is logged at warning level at most once per {@link #WARNING_INTERVAL} (per map of reported
+ * chains, which the caller keeps for the life of its client). Other failures with the same chain are logged at debug
+ * level, without the chain, since retries would otherwise repeat it for every connection attempt. Repeating the
+ * warning keeps a lasting problem visible in recent logs.
  * <p>
  * Thread-safe, if the wrapped trust manager is.
  */
@@ -58,23 +60,28 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   private static final Logger log = LoggerFactory.getLogger(CertificateLoggingTrustManager.class);
 
   /**
-   * Bounds the set of reported chains. If it fills up, it's cleared, so a chain may be logged at warning level again.
+   * How often a chain that keeps failing is logged at warning level again.
+   */
+  static final Duration WARNING_INTERVAL = Duration.ofMinutes(15);
+
+  /**
+   * Bounds the reported chains. If they fill up, they're cleared, so a chain may be logged at warning level again.
    */
   static final int MAX_REPORTED_CHAINS = 100;
 
   private final X509ExtendedTrustManager delegate;
-  private final Set<List<X509Certificate>> reportedChains;
+  private final Map<List<X509Certificate>, Long> reportedChains;
 
-  private CertificateLoggingTrustManager(X509ExtendedTrustManager delegate, Set<List<X509Certificate>> reportedChains) {
+  private CertificateLoggingTrustManager(X509ExtendedTrustManager delegate, Map<List<X509Certificate>, Long> reportedChains) {
     this.delegate = requireNonNull(delegate);
     this.reportedChains = requireNonNull(reportedChains);
   }
 
   /**
-   * Returns a new set for {@link #wrap}'s reported chains (thread-safe).
+   * Returns a new map for {@link #wrap}'s reported chains: when each was last logged at warning level (thread-safe).
    */
-  static Set<List<X509Certificate>> newReportedChains() {
-    return ConcurrentHashMap.newKeySet();
+  static Map<List<X509Certificate>, Long> newReportedChains() {
+    return new ConcurrentHashMap<>();
   }
 
   /**
@@ -82,7 +89,7 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
    * one too. A plain {@link X509TrustManager} gets a plain wrapper: the JDK adds checks of its own around a plain
    * trust manager (for example, algorithm constraints), which an extended wrapper would bypass.
    */
-  static X509TrustManager wrap(X509TrustManager trustManager, Set<List<X509Certificate>> reportedChains) {
+  static X509TrustManager wrap(X509TrustManager trustManager, Map<List<X509Certificate>, Long> reportedChains) {
     return trustManager instanceof X509ExtendedTrustManager
       ? new CertificateLoggingTrustManager((X509ExtendedTrustManager) trustManager, reportedChains)
       : new Plain(trustManager, reportedChains);
@@ -147,9 +154,9 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
    */
   static final class Plain implements X509TrustManager {
     private final X509TrustManager delegate;
-    private final Set<List<X509Certificate>> reportedChains;
+    private final Map<List<X509Certificate>, Long> reportedChains;
 
-    private Plain(X509TrustManager delegate, Set<List<X509Certificate>> reportedChains) {
+    private Plain(X509TrustManager delegate, Map<List<X509Certificate>, Long> reportedChains) {
       this.delegate = requireNonNull(delegate);
       this.reportedChains = requireNonNull(reportedChains);
     }
@@ -180,7 +187,7 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
    */
   private static void checkServerTrusted(
     X509TrustManager delegate,
-    Set<List<X509Certificate>> reportedChains,
+    Map<List<X509Certificate>, Long> reportedChains,
     X509Certificate[] chain,
     String authType
   ) throws CertificateException {
@@ -205,17 +212,18 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   }
 
   private static void logUntrusted(
-    Set<List<X509Certificate>> reportedChains,
+    Map<List<X509Certificate>, Long> reportedChains,
     X509Certificate[] chain,
     CertificateException e,
     @Nullable Object remote
   ) {
-    if (firstReport(reportedChains, chain)) {
+    if (shouldWarn(reportedChains, chain, System.nanoTime())) {
       log.warn(
         "TLS handshake failed: the server's certificate chain isn't trusted. remote = {} ; reason = {} ;" +
-          " certificate chain (further failures with this chain are logged at debug level) = \n{}",
+          " certificate chain (further failures with this chain are logged at debug level for {} minutes) = \n{}",
         remote,
         e.toString(),
+        WARNING_INTERVAL.toMinutes(),
         pemChain(chain)
       );
     } else {
@@ -232,14 +240,25 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   }
 
   /**
-   * Returns true the first time the chain is seen (certificates are equal if their encoded forms are),
-   * and adds it to the reported chains.
+   * Returns true if the chain should be logged at warning level: if it wasn't, within the last
+   * {@link #WARNING_INTERVAL} (certificates are equal if their encoded forms are). If so, records that it was.
    */
-  static boolean firstReport(Set<List<X509Certificate>> reportedChains, X509Certificate[] chain) {
+  static boolean shouldWarn(
+    Map<List<X509Certificate>, Long> reportedChains,
+    X509Certificate[] chain,
+    long nowNanos
+  ) {
     if (reportedChains.size() >= MAX_REPORTED_CHAINS) {
       reportedChains.clear();
     }
-    return reportedChains.add(Arrays.asList(chain.clone()));
+    List<X509Certificate> key = Arrays.asList(chain.clone());
+    Long lastWarned = reportedChains.get(key);
+    if (lastWarned != null && nowNanos - lastWarned < WARNING_INTERVAL.toNanos()) {
+      return false;
+    }
+    // Two threads might both warn about the same chain, which does no harm.
+    reportedChains.put(key, nowNanos);
+    return true;
   }
 
   /**

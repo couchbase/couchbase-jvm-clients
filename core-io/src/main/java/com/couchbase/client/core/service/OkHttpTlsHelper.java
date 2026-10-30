@@ -134,7 +134,7 @@ class OkHttpTlsHelper {
       : () -> firstX509TrustManager(tmf);
 
     // The untrusted chains already logged at warning level, for the life of this supplier (so, of the client).
-    Set<List<X509Certificate>> reportedUntrustedChains = CertificateLoggingTrustManager.newReportedChains();
+    Map<List<X509Certificate>, Long> reportedUntrustedChains = CertificateLoggingTrustManager.newReportedChains();
 
     return () -> {
       X509TrustManager trustManager = unwrapped.get();
