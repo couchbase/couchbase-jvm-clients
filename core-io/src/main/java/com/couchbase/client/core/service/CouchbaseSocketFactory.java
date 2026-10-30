@@ -16,13 +16,13 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocket;
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocketChannel;
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocketFactory;
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.LinuxSocketOptions;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.util.StorageSize;
 import com.couchbase.client.core.util.CbDurations;
-import com.couchbase.client.socketoptions.ExtendedSocket;
-import com.couchbase.client.socketoptions.ExtendedSocketChannel;
-import com.couchbase.client.socketoptions.ExtendedSocketFactory;
-import com.couchbase.client.socketoptions.LinuxSocketOptions;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;

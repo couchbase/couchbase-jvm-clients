@@ -56,12 +56,6 @@
             <version>${slf4j.version}</version>
         </dependency>
 
-        <!-- todo shade this -->
-        <dependency>
-            <groupId>com.couchbase.client</groupId>
-            <artifactId>couchbase-socket-options</artifactId>
-            <version>0.1.0</version>
-        </dependency>
         <!-- Needed by OkHttp and Okio, which are shaded (see core-io-deps). This is the version OkHttp depends on. -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
