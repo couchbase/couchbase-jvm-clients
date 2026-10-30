@@ -46,6 +46,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.causesAndSuppressed;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -114,14 +116,33 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Asks a user-supplied trust manager factory for each new connection,
-   * so trusted certificates can change (for example, if the user re-initializes the factory).
+   * Returns the supplier of each new connection's trust manager (see {@link PerConnectionSslSocketFactory}).
+   * <p>
+   * Asks a user-supplied trust manager factory for each new connection, so trusted certificates can change
+   * (for example, if the user re-initializes the factory). Then wraps the trust manager:
+   * <ol>
+   *   <li>to reject blocked certificates (see {@link BlockedCertificateTrustManager}), unless certificate
+   *   verification is disabled;
+   *   <li>then, outermost so it also sees chains rejected for a blocked certificate, to log the server's certificate
+   *   chain (see {@link CertificateLoggingTrustManager}).
+   * </ol>
    */
   private static Supplier<X509TrustManager> trustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
     TrustManagerFactory tmf = securityConfig.trustManagerFactory();
-    return tmf == null || certificateVerificationDisabled(securityConfig)
+    Supplier<X509TrustManager> unwrapped = tmf == null || certificateVerificationDisabled(securityConfig)
       ? () -> initialTrustManager
       : () -> firstX509TrustManager(tmf);
+
+    // The untrusted chains already logged at warning level, for the life of this supplier (so, of the client).
+    Set<List<X509Certificate>> reportedUntrustedChains = CertificateLoggingTrustManager.newReportedChains();
+
+    return () -> {
+      X509TrustManager trustManager = unwrapped.get();
+      if (!certificateVerificationDisabled(securityConfig)) {
+        trustManager = BlockedCertificateTrustManager.wrap(trustManager);
+      }
+      return CertificateLoggingTrustManager.wrap(trustManager, reportedUntrustedChains);
+    };
   }
 
   /**
