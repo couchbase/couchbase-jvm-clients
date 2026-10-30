@@ -17,7 +17,7 @@
 package com.couchbase.columnar.client.java.internal;
 
 
-import com.couchbase.client.core.deps.io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import com.couchbase.client.core.env.InsecureTrustManagerFactory;
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 

@@ -16,98 +16,24 @@
 
 package com.couchbase.client.core.deps.io.netty.handler.ssl.util;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.ManagerFactoryParameters;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.TrustManagerFactorySpi;
-import javax.net.ssl.X509ExtendedTrustManager;
-import java.net.Socket;
-import java.security.KeyStore;
-import java.security.Provider;
-import java.security.cert.X509Certificate;
 
 /**
- * A {@link TrustManagerFactory} that trusts every certificate, without checking it.
+ * Holds a {@link TrustManagerFactory} that trusts every certificate, without checking it.
  * <p>
  * <strong>For testing only.</strong> A connection that trusts every certificate isn't secure.
- * <p>
- * The SDK used to include a repackaged copy of Netty's class of the same name. This class takes its place,
- * so code that passes {@code InsecureTrustManagerFactory.INSTANCE} to {@code SecurityConfig.trustManagerFactory}
- * keeps working.
+ *
+ * @deprecated Scheduled for removal. Instead, please disable certificate verification by setting
+ * {@link com.couchbase.client.core.env.SecurityConfig.Builder#enableCertificateVerification(boolean) security.enableCertificateVerification}
+ * to false.
  */
-public final class InsecureTrustManagerFactory extends TrustManagerFactory {
-  private static final Logger log = LoggerFactory.getLogger(InsecureTrustManagerFactory.class);
-
-  private static final X509Certificate[] NO_CERTIFICATES = new X509Certificate[0];
-
-  private static final TrustManager trustManager = new X509ExtendedTrustManager() {
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType) {
-      if (log.isDebugEnabled()) {
-        log.debug("Accepting a client certificate: {}", chain[0].getSubjectX500Principal());
-      }
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType) {
-      if (log.isDebugEnabled()) {
-        log.debug("Accepting a server certificate: {}", chain[0].getSubjectX500Principal());
-      }
-    }
-
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {
-      checkClientTrusted(chain, authType);
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {
-      checkServerTrusted(chain, authType);
-    }
-
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
-      checkClientTrusted(chain, authType);
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {
-      checkServerTrusted(chain, authType);
-    }
-
-    @Override
-    public X509Certificate[] getAcceptedIssuers() {
-      return NO_CERTIFICATES;
-    }
-  };
-
-  @SuppressWarnings("deprecation") // Provider(String, double, String) is deprecated in Java 9, but Java 8 lacks the replacement
-  private static final Provider PROVIDER = new Provider("", 0.0, "") {
-  };
-
-  // After the fields the constructor uses.
-  public static final TrustManagerFactory INSTANCE = new InsecureTrustManagerFactory();
+@Deprecated
+public final class InsecureTrustManagerFactory {
+  /**
+   * The same instance as {@link com.couchbase.client.core.env.InsecureTrustManagerFactory#INSTANCE}.
+   */
+  public static final TrustManagerFactory INSTANCE = com.couchbase.client.core.env.InsecureTrustManagerFactory.INSTANCE;
 
   private InsecureTrustManagerFactory() {
-    super(new Spi(), PROVIDER, "");
-  }
-
-  private static final class Spi extends TrustManagerFactorySpi {
-    @Override
-    protected void engineInit(KeyStore keyStore) {
-    }
-
-    @Override
-    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
-    }
-
-    @Override
-    protected TrustManager[] engineGetTrustManagers() {
-      return new TrustManager[]{trustManager};
-    }
   }
 }
