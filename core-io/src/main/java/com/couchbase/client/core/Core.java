@@ -24,6 +24,7 @@ import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.ClassicCoreClusterSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.ClassicCoreScopeSearchIndexManager;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
+import com.couchbase.client.core.api.query.CoreConversationalQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.ClassicCoreSearchOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
@@ -32,6 +33,7 @@ import com.couchbase.client.core.classic.kv.ClassicCoreKvBinaryOps;
 import com.couchbase.client.core.classic.kv.ClassicCoreKvOps;
 import com.couchbase.client.core.classic.manager.ClassicCoreBucketManager;
 import com.couchbase.client.core.classic.manager.ClassicCoreCollectionManagerOps;
+import com.couchbase.client.core.classic.query.conversational.ClassicCoreConversationalQueryOps;
 import com.couchbase.client.core.classic.query.ClassicCoreQueryOps;
 import com.couchbase.client.core.cnc.CbTracing;
 import com.couchbase.client.core.cnc.Event;
@@ -1009,6 +1011,12 @@ public class Core implements CoreCouchbaseOps, AutoCloseable {
   @Override
   public CoreQueryOps queryOps() {
     return new ClassicCoreQueryOps(this);
+  }
+
+  @Stability.Internal
+  @Override
+  public CoreConversationalQueryOps conversationalQueryOps() {
+    return new ClassicCoreConversationalQueryOps(this);
   }
 
   @Stability.Internal
