@@ -26,7 +26,7 @@ import java.net.Socket;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -88,22 +88,25 @@ class CertificateLoggingTrustManagerTest {
   }
 
   @Test
-  void reportsEachChainOnlyOnce() {
-    Set<List<X509Certificate>> reported = CertificateLoggingTrustManager.newReportedChains();
+  void warnsAboutEachChainOnlyOnceWithinTheInterval() {
+    Map<List<X509Certificate>, Long> reported = CertificateLoggingTrustManager.newReportedChains();
     X509Certificate[] other = {new HeldCertificate.Builder().commonName("other").build().certificate()};
+    long interval = CertificateLoggingTrustManager.WARNING_INTERVAL.toNanos();
 
-    assertTrue(CertificateLoggingTrustManager.firstReport(reported, CHAIN));
-    assertFalse(CertificateLoggingTrustManager.firstReport(reported, CHAIN.clone()), "an equal chain was already reported");
-    assertTrue(CertificateLoggingTrustManager.firstReport(reported, other), "a different chain is reported too");
+    assertTrue(CertificateLoggingTrustManager.shouldWarn(reported, CHAIN, 0));
+    assertFalse(CertificateLoggingTrustManager.shouldWarn(reported, CHAIN.clone(), interval - 1), "an equal chain was just warned about");
+    assertTrue(CertificateLoggingTrustManager.shouldWarn(reported, other, interval - 1), "a different chain is warned about too");
+    assertTrue(CertificateLoggingTrustManager.shouldWarn(reported, CHAIN, interval), "warned about again once the interval has passed");
+    assertFalse(CertificateLoggingTrustManager.shouldWarn(reported, CHAIN, interval + 1), "and the interval starts again");
   }
 
   @Test
   void reportedChainsAreBounded() {
-    Set<List<X509Certificate>> reported = CertificateLoggingTrustManager.newReportedChains();
+    Map<List<X509Certificate>, Long> reported = CertificateLoggingTrustManager.newReportedChains();
     for (int i = 0; i < CertificateLoggingTrustManager.MAX_REPORTED_CHAINS * 2; i++) {
-      CertificateLoggingTrustManager.firstReport(reported, new X509Certificate[]{
+      CertificateLoggingTrustManager.shouldWarn(reported, new X509Certificate[]{
         new HeldCertificate.Builder().commonName("server-" + i).build().certificate()
-      });
+      }, 0);
       assertTrue(reported.size() <= CertificateLoggingTrustManager.MAX_REPORTED_CHAINS);
     }
   }
