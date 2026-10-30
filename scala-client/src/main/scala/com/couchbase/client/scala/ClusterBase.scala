@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, JwtAuthenticator, PasswordAuthenticator}
-import com.couchbase.client.core.transaction.{CoreTransactions}
+import com.couchbase.client.core.transaction.CoreTransactions
 import com.couchbase.client.core.util.ConnectionString
 import com.couchbase.client.core.util.ConnectionStringUtil.asConnectionString
 import com.couchbase.client.scala.diagnostics.{
