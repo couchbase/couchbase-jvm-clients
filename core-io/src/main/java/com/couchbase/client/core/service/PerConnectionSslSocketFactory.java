@@ -32,10 +32,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.List;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
@@ -66,11 +63,6 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
   private final int handshakeTimeoutMillis;
 
   /**
-   * The untrusted server certificate chains already logged at warning level (see CertificateLoggingTrustManager).
-   */
-  private final Set<List<X509Certificate>> reportedUntrustedChains = CertificateLoggingTrustManager.newReportedChains();
-
-  /**
    * Answers questions about cipher suites, which don't depend on the certificates.
    * Created without a client certificate, so creating this factory never asks for one.
    */
@@ -79,7 +71,8 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
   /**
    * @param clientCertificates supplies the client certificate (if any), asked once per new connection.
    * Typically the authenticator's {@code getKeyManagerFactory}.
-   * @param trustManagers supplies the trust manager, asked once per new connection.
+   * @param trustManagers supplies the trust manager, asked once per new connection. It's used as is, so it should
+   * already have any checks and logging (see {@code OkHttpTlsHelper.trustManagers}).
    * @param handshakeTimeout read timeout for the TLS handshake, set on each socket that OkHttp layers TLS over.
    * <p>
    * If either supplier throws, the connection fails with a {@link CertificatesUnavailableException}
@@ -133,9 +126,7 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
       // Null if there's no client certificate.
       // (With the JDK's TLS provider, that means no client certificate is presented.)
       keyManagers = factory == null ? null : factory.getKeyManagers();
-      // Logs the server's certificate chain: at debug level if it's trusted,
-      // and at warning level if it isn't, so a failed handshake can be diagnosed.
-      trustManager = CertificateLoggingTrustManager.wrap(trustManagers.get(), reportedUntrustedChains);
+      trustManager = trustManagers.get();
     } catch (RuntimeException e) {
       // For example, the authenticator couldn't provide the client certificate.
       throw new CertificatesUnavailableException(e);
