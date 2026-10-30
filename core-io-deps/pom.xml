@@ -150,10 +150,6 @@
                     <artifactId>jsr305</artifactId>
                 </exclusion>
                 <exclusion>
-                    <groupId>org.checkerframework</groupId>
-                    <artifactId>checker-qual</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>com.google.errorprone</groupId>
                     <artifactId>error_prone_annotations</artifactId>
                 </exclusion>
@@ -164,6 +160,11 @@
                 <exclusion>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>animal-sniffer-annotations</artifactId>
+                </exclusion>
+                <!-- core-io declares JSpecify as a regular (non-shaded) dependency -->
+                <exclusion>
+                    <groupId>org.jspecify</groupId>
+                    <artifactId>jspecify</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
