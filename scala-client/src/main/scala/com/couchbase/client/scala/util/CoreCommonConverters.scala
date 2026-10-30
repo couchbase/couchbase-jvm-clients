@@ -18,11 +18,16 @@ package com.couchbase.client.scala.util
 import com.couchbase.client.core.api.kv._
 import com.couchbase.client.core.api.manager.search.CoreSearchIndex
 import com.couchbase.client.core.api.query.{
+  CoreConversationalQueryMetaData,
+  CoreConversationalQueryOutput,
+  CoreConversationalQueryResult,
+  CoreModelCredential,
   CoreQueryMetaData,
   CoreQueryMetrics,
   CoreQueryResult,
   CoreQueryStatus,
-  CoreReactiveQueryResult
+  CoreReactiveQueryResult,
+  CoreTokenUsage
 }
 import com.couchbase.client.core.api.search.result.{
   CoreDateRangeSearchFacetResult,
@@ -46,6 +51,13 @@ import com.couchbase.client.scala.query.{
   QueryResult,
   QueryStatus,
   QueryWarning
+}
+import com.couchbase.client.scala.query.conversational.{
+  ConversationalQueryMetaData,
+  ConversationalQueryOutput,
+  ConversationalQueryResult,
+  ModelCredential,
+  TokenUsage
 }
 import com.couchbase.client.scala.search.result.{SearchFacetResult, SearchRowLocations}
 import com.couchbase.client.scala.util.DurationConversions._
@@ -208,6 +220,55 @@ private[scala] object CoreCommonConverters {
       case CoreQueryStatus.FATAL     => QueryStatus.Fatal
       case CoreQueryStatus.ABORTED   => QueryStatus.Aborted
       case CoreQueryStatus.UNKNOWN   => QueryStatus.Unknown
+    }
+  }
+
+  def convert(in: CoreConversationalQueryResult): ConversationalQueryResult = {
+    ConversationalQueryResult(
+      in.rows.asScala.toSeq, // toSeq for 2.13
+      convert(in.metaData),
+      in.generatedStatement.asScala
+    )
+  }
+
+  def convert(in: CoreConversationalQueryMetaData): ConversationalQueryMetaData = {
+    ConversationalQueryMetaData(
+      in.requestId,
+      in.clientContextId,
+      convert(in.status),
+      in.warnings.asScala.map(v => QueryWarning(v.code, v.message)),
+      in.metrics.asScala.map(v => convert(v)),
+      in.requestTokens.asScala.map(v => convert(v)),
+      in.chatTokens.asScala.map(v => convert(v)),
+      in.naturalLanguageProcessingTime.asScala.map(v => javaDurationToScala(v)),
+      in.generatedStatementExecuted.asScala.map(_.booleanValue),
+      in.profile.asScala
+    )
+  }
+
+  def convert(in: CoreTokenUsage): TokenUsage = {
+    TokenUsage(
+      in.promptTokens.asScala.map(_.intValue),
+      in.completionTokens.asScala.map(_.intValue),
+      in.totalTokens.asScala.map(_.intValue)
+    )
+  }
+
+  def convert(in: ModelCredential): CoreModelCredential = {
+    in match {
+      case ModelCredential.Capella(email, password, organizationId) =>
+        new CoreModelCredential.Capella(email, password, organizationId)
+      case ModelCredential.CredentialStore(credentialName) =>
+        new CoreModelCredential.CredentialStore(credentialName)
+      case ModelCredential.ApiKey(key) => new CoreModelCredential.ApiKey(key)
+    }
+  }
+
+  def convert(in: ConversationalQueryOutput): CoreConversationalQueryOutput = {
+    in match {
+      case ConversationalQueryOutput.Sqlpp    => CoreConversationalQueryOutput.SQLPP
+      case ConversationalQueryOutput.FtsSqlpp => CoreConversationalQueryOutput.FTS_SQLPP
+      case ConversationalQueryOutput.JsUdf    => CoreConversationalQueryOutput.JS_UDF
     }
   }
 
