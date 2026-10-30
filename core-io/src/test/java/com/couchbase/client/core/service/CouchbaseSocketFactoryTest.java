@@ -18,13 +18,13 @@ package com.couchbase.client.core.service;
 
 import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
 import com.couchbase.client.core.deps.okhttp3.Response;
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocket;
+import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.LinuxSocketOptions;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.env.PasswordAuthenticator;
 import com.couchbase.client.core.env.SecurityConfig;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.StorageSize;
-import com.couchbase.client.socketoptions.ExtendedSocket;
-import com.couchbase.client.socketoptions.LinuxSocketOptions;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

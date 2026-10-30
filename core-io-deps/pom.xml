@@ -87,6 +87,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.couchbase.client</groupId>
+            <artifactId>couchbase-socket-options</artifactId>
+            <version>0.1.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.iq80.snappy</groupId>
             <artifactId>snappy</artifactId>
             <version>0.5</version>
@@ -222,6 +227,11 @@
                         <relocation>
                             <pattern>org.jctools</pattern>
                             <shadedPattern>${shaded.package.prefix}org.jctools</shadedPattern>
+                        </relocation>
+                        <!-- Also moves its native libraries, which are next to its classes. -->
+                        <relocation>
+                            <pattern>com.couchbase.client.socketoptions</pattern>
+                            <shadedPattern>${shaded.package.prefix}com.couchbase.client.socketoptions</shadedPattern>
                         </relocation>
 
                         <!-- Also relocates OkHttp's public suffix list (a resource under okhttp3/), and the path it's loaded from. -->
