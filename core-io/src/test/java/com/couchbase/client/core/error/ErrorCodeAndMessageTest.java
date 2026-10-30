@@ -173,6 +173,24 @@ class ErrorCodeAndMessageTest {
   void parsesReason() {
     ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" {\"code\":123,\"msg\":\"Something bad happened!\",\"retry\":false,\"reason\":{\"foo\":\"bar\"}}}".getBytes(UTF_8)).get(0);
     assertEquals("bar", e.reason().get("foo"));
+    assertNull(e.reasonText());
+  }
+
+  @Test
+  void parsesNestedErrorReason() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":19243,\"msg\":\"Could not resume chat\",\"reason\":{\"code\":19240,\"msg\":\"No chat slots\"}}]".getBytes(UTF_8)).get(0);
+    assertEquals(19243, e.code());
+    assertEquals(19240, e.reason().get("code"));
+    assertNull(e.reasonText());
+  }
+
+  @Test
+  void parsesStringReason() {
+    ErrorCodeAndMessage e = ErrorCodeAndMessage.from(" [{\"code\":19220,\"msg\":\"Too many requests\",\"reason\":\"queue full\"}]".getBytes(UTF_8)).get(0);
+    assertEquals(19220, e.code());
+    assertEquals("Too many requests", e.message());
+    assertNull(e.reason());
+    assertEquals("queue full", e.reasonText());
   }
 
 }
