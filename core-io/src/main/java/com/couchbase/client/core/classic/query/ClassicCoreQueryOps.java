@@ -218,11 +218,11 @@ public class ClassicCoreQueryOps implements CoreQueryOps {
 
     BlockingCaller caller = new BlockingCaller();
     caller.rowAction((QueryChunkRow row) -> {
+      callback.accept(row);
       // Like reading the rows from a stream, which stops (and says why) once it notices the thread was interrupted.
       if (Thread.currentThread().isInterrupted()) {
         throw reinterruptAndWrap(new InterruptedException());
       }
-      callback.accept(row);
     });
     QueryRequest request = queryRequest(statement, options, queryContext, target);
     request.blockingCaller(caller);
