@@ -16,7 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
-import com.couchbase.client.core.annotation.Stability
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.diagnostics.{
   DiagnosticsResult,
   EndpointDiagnostics,
@@ -49,6 +49,7 @@ import com.couchbase.client.scala.manager.query.AsyncQueryIndexManager
 import com.couchbase.client.scala.manager.search.AsyncSearchIndexManager
 import com.couchbase.client.scala.manager.user.AsyncUserManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
+import com.couchbase.client.scala.query.conversational.AsyncConversationalQuery
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -451,6 +452,13 @@ class AsyncCluster(
       )
       .map(_ => ())
   }
+
+  private lazy val conversationalQueryInstance: AsyncConversationalQuery =
+    new AsyncConversationalQuery(conversationalQueryOps)
+
+  @Stability.Volatile
+  @SinceCouchbase("8.5")
+  def conversationalQuery(): AsyncConversationalQuery = conversationalQueryInstance
 }
 
 /** Functions to allow creating an `AsyncCluster`, which represents a connection to a Couchbase cluster.
