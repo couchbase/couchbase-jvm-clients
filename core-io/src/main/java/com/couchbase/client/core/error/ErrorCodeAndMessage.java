@@ -19,10 +19,12 @@ package com.couchbase.client.core.error;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonAlias;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonCreator;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonProperty;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
+import reactor.util.annotation.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -46,6 +48,7 @@ public class ErrorCodeAndMessage {
   private final String message;
   private final boolean retry;
   private final Map<String, Object> reason;
+  private final @Nullable String reasonText;
 
   // Jackson adds unrecognized properties here. An example is the "query_from_user" field
   // that appears in some query errors.
@@ -53,14 +56,29 @@ public class ErrorCodeAndMessage {
   @JsonAnySetter
   private final Map<String, Object> context = new HashMap<>();
 
-  public ErrorCodeAndMessage(@JsonProperty("code") int code,
-                             @JsonProperty("msg") String message,
-                             @JsonProperty("retry") @JsonAlias("retriable") boolean retry, // query uses "retry", analytics uses "retriable"
-                             @JsonProperty("reason") Map<String, Object> reason) {
+  public ErrorCodeAndMessage(int code, String message, boolean retry, Map<String, Object> reason) {
+    this(code, message, retry, reason, null);
+  }
+
+  private ErrorCodeAndMessage(int code, String message, boolean retry, @Nullable Map<String, Object> reason, @Nullable String reasonText) {
     this.code = code;
     this.message = nullToEmpty(message);
     this.retry = retry;
     this.reason = reason;
+    this.reasonText = reasonText;
+  }
+
+  // The reason may be a nested error object, or a plain string.
+  @JsonCreator
+  @SuppressWarnings("unchecked")
+  private static ErrorCodeAndMessage fromJson(@JsonProperty("code") int code,
+                                              @JsonProperty("msg") String message,
+                                              @JsonProperty("retry") @JsonAlias("retriable") boolean retry, // query uses "retry", analytics uses "retriable"
+                                              @JsonProperty("reason") @Nullable Object reason) {
+    if (reason == null || reason instanceof Map) {
+      return new ErrorCodeAndMessage(code, message, retry, (Map<String, Object>) reason, null);
+    }
+    return new ErrorCodeAndMessage(code, message, retry, null, reason.toString());
   }
 
   public int code() {
@@ -75,8 +93,18 @@ public class ErrorCodeAndMessage {
     return retry;
   }
 
+  /**
+   * Null if the reason was absent, or was not an object (see {@link #reasonText()}).
+   */
   public Map<String, Object> reason() {
     return reason;
+  }
+
+  /**
+   * The reason, if it was returned as a plain string rather than an object.
+   */
+  public @Nullable String reasonText() {
+    return reasonText;
   }
 
   /**
@@ -90,6 +118,7 @@ public class ErrorCodeAndMessage {
   public String toString() {
     return code + " " + message +
       (!isNullOrEmpty(reason) ? " Reason: " + reason : "") +
+      (reasonText != null ? " Reason: " + reasonText : "") +
       (!isNullOrEmpty(context) ? " Context: " + context : "");
   }
 
