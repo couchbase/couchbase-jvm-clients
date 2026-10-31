@@ -20,7 +20,7 @@ import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.error.DurabilityLevelNotAvailableException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.context.KeyValueErrorContext;
-import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.kv.KeyValuePacket;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.util.Bytes;

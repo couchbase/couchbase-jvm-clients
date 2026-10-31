@@ -16,8 +16,8 @@
 
 package com.couchbase.client.core.msg.kv;
 
-import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.SectionReader;
+import com.couchbase.client.core.io.kv.KeyValuePacket;
+import com.couchbase.client.core.io.kv.SectionReader;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.io.netty.kv.NettyMemcacheProtocol;
 import com.couchbase.client.core.kv.CoreRangeScanItem;

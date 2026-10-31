@@ -42,7 +42,7 @@ import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException;
 import com.couchbase.client.core.error.subdoc.XattrNoAccessException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownMacroException;
 import com.couchbase.client.core.error.subdoc.XattrUnknownVirtualAttributeException;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.kv.KeyValueRequestBuilder;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.DurabilityLevel;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;

@@ -18,14 +18,14 @@ package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ConfigVersion;
-import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestBuilder;
-import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.kv.KeyValuePacket;
+import com.couchbase.client.core.io.kv.KeyValueRequestBuilder;
+import com.couchbase.client.core.io.kv.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.TargetedRequest;
 import com.couchbase.client.core.msg.UnmonitoredRequest;
-import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.topology.NodeIdentifier;
 import reactor.util.annotation.Nullable;
 
 import java.time.Duration;

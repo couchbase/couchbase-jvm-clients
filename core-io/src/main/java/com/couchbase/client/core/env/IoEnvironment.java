@@ -18,7 +18,7 @@ package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.error.InvalidArgumentException;
-import com.couchbase.client.core.service.KeyValueEventLoopGroup;
+import com.couchbase.client.core.io.kv.KeyValueEventLoopGroup;
 import org.jspecify.annotations.Nullable;
 import reactor.core.publisher.Mono;
 
@@ -141,7 +141,7 @@ public class IoEnvironment {
 
   /**
    * Returns the event loops for KV connections
-   * (see {@code com.couchbase.client.core.service.NioKeyValueConnection}), with {@link #eventLoopThreadCount} threads.
+   * (see {@code com.couchbase.client.core.io.kv.NioKeyValueConnection}), with {@link #eventLoopThreadCount} threads.
    * Created when first asked for, so it has no threads unless they're used.
    *
    * @throws IllegalStateException if the environment is shut down.

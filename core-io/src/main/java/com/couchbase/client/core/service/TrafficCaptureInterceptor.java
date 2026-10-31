@@ -32,7 +32,6 @@ import com.couchbase.client.core.deps.okio.ForwardingSource;
 import com.couchbase.client.core.deps.okio.Okio;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.io.TrafficCaptureFormat;
 import com.couchbase.client.core.io.TrafficCaptureMasking;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.Bytes;
@@ -65,7 +64,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <p>
  * Request and status lines and headers are captured as text. A body is captured as text if its content type is
  * textual (see {@link #isTextual}); a character split between two chunks is captured whole, with the later chunk.
- * Otherwise, it's captured as a hex dump (see {@link TrafficCaptureFormat}).
+ * Otherwise, it's captured as a hex dump (see {@link Bytes#prettyHexDump}).
  * <p>
  * This captures the HTTP messages as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included.
  * (Capturing the bytes inside a TLS connection would mean wrapping OkHttp's SSLSocket, which OkHttp depends on
