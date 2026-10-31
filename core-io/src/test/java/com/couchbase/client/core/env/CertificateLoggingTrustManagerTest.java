@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.service;
+package com.couchbase.client.core.env;
 
 import com.couchbase.client.core.deps.okhttp3.tls.HeldCertificate;
 import org.junit.jupiter.api.Test;

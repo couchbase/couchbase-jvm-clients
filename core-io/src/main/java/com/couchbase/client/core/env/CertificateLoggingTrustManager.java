@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.couchbase.client.core.service;
+package com.couchbase.client.core.env;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.util.HostAndPort;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -56,7 +57,8 @@ import static java.util.Objects.requireNonNull;
  * Thread-safe, if the wrapped trust manager is.
  */
 @NullMarked
-final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
+@Stability.Internal
+public final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   private static final Logger log = LoggerFactory.getLogger(CertificateLoggingTrustManager.class);
 
   /**
@@ -80,7 +82,7 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
   /**
    * Returns a new map for {@link #wrap}'s reported chains: when each was last logged at warning level (thread-safe).
    */
-  static Map<List<X509Certificate>, Long> newReportedChains() {
+  public static Map<List<X509Certificate>, Long> newReportedChains() {
     return new ConcurrentHashMap<>();
   }
 
@@ -89,7 +91,7 @@ final class CertificateLoggingTrustManager extends X509ExtendedTrustManager {
    * one too. A plain {@link X509TrustManager} gets a plain wrapper: the JDK adds checks of its own around a plain
    * trust manager (for example, algorithm constraints), which an extended wrapper would bypass.
    */
-  static X509TrustManager wrap(X509TrustManager trustManager, Map<List<X509Certificate>, Long> reportedChains) {
+  public static X509TrustManager wrap(X509TrustManager trustManager, Map<List<X509Certificate>, Long> reportedChains) {
     return trustManager instanceof X509ExtendedTrustManager
       ? new CertificateLoggingTrustManager((X509ExtendedTrustManager) trustManager, reportedChains)
       : new Plain(trustManager, reportedChains);
