@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.error;
 
+import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.service.ServiceType;
 
 /**
@@ -33,6 +34,10 @@ public class FeatureNotAvailableException extends CouchbaseException {
 
   public FeatureNotAvailableException(Throwable cause) {
     super(cause);
+  }
+
+  public FeatureNotAvailableException(String message, ErrorContext ctx) {
+    super(message, ctx);
   }
 
   public static FeatureNotAvailableException clusterLevelQuery(final ServiceType serviceType) {

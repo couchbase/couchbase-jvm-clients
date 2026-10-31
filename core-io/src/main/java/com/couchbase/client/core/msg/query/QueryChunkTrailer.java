@@ -28,14 +28,17 @@ public class QueryChunkTrailer implements ChunkTrailer {
   private final Optional<byte[]> warnings;
   private final Optional<byte[]> errors;
   private final Optional<byte[]> profile;
+  private final Optional<ConversationalQueryTrailer> conversational;
 
   public QueryChunkTrailer(String status, Optional<byte[]> metrics, Optional<byte[]> warnings,
-                           Optional<byte[]> errors, Optional<byte[]> profile) {
+                           Optional<byte[]> errors, Optional<byte[]> profile,
+                           Optional<ConversationalQueryTrailer> conversational) {
     this.status = status;
     this.metrics = metrics;
     this.warnings = warnings;
     this.errors = errors;
     this.profile = profile;
+    this.conversational = conversational;
   }
 
   public String status() {
@@ -58,6 +61,13 @@ public class QueryChunkTrailer implements ChunkTrailer {
     return profile;
   }
 
+  /**
+   * Present only for conversational query requests.
+   */
+  public Optional<ConversationalQueryTrailer> conversational() {
+    return conversational;
+  }
+
   @Override
   public String toString() {
     return "QueryChunkTrailer{" +
@@ -66,6 +76,7 @@ public class QueryChunkTrailer implements ChunkTrailer {
       ", warnings=" + warnings.map(v -> new String(v, StandardCharsets.UTF_8)) +
       ", errors=" + errors.map(v -> new String(v, StandardCharsets.UTF_8)) +
       ", profile=" + profile.map(v -> new String(v, StandardCharsets.UTF_8)) +
+      ", conversational=" + conversational +
       '}';
   }
 }
