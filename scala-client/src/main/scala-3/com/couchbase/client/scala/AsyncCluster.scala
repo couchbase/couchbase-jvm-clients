@@ -16,6 +16,7 @@
 package com.couchbase.client.scala
 
 import com.couchbase.client.core.Core
+import com.couchbase.client.core.annotation.{SinceCouchbase, Stability}
 import com.couchbase.client.core.env.Authenticator
 import com.couchbase.client.core.protostellar.CoreProtostellarUtil
 import com.couchbase.client.core.util.ConnectionString
@@ -53,6 +54,7 @@ import com.couchbase.client.scala.diagnostics.{
 }
 import com.couchbase.client.scala.env.{ClusterEnvironment, PasswordAuthenticator, SeedNode}
 import com.couchbase.client.scala.query.{QueryOptions, QueryResult}
+import com.couchbase.client.scala.query.conversational.AsyncConversationalQuery
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.result.SearchResult
 import com.couchbase.client.scala.search.vector.SearchRequest
@@ -74,7 +76,9 @@ class AsyncCluster private[scala] (
     private[scala] val initialAuthenticator: Authenticator,
     private[scala] val connectionString: ConnectionString
 ) extends AsyncClusterBase {
-  private[scala] lazy val environment = _env
+  private[scala] lazy val environment                                    = _env
+  private lazy val conversationalQueryInstance: AsyncConversationalQuery =
+    new AsyncConversationalQuery(conversationalQueryOps)
 
   /** Performs a N1QL query against the cluster.
     *
@@ -210,6 +214,10 @@ class AsyncCluster private[scala] (
       )
       .map(_ => ())
   }
+
+  @Stability.Volatile
+  @SinceCouchbase("8.5")
+  def conversationalQuery(): AsyncConversationalQuery = conversationalQueryInstance
 }
 
 object AsyncCluster {
