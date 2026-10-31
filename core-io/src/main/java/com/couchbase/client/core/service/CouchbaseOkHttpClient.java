@@ -46,8 +46,8 @@ import java.net.SocketException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.core.service.TlsHelper.configureTls;
 import static com.couchbase.client.core.service.ServiceType.KV;
+import static com.couchbase.client.core.service.TlsHelper.configureTls;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static java.util.Objects.requireNonNull;
 
@@ -161,7 +161,8 @@ public class CouchbaseOkHttpClient implements Closeable {
    * The factory for the client's TCP sockets (see {@link CouchbaseSocketFactory}), so KV connections
    * get the same socket options.
    */
-  SocketFactory socketFactory() {
+  @Stability.Internal
+  public SocketFactory socketFactory() {
     return client.socketFactory();
   }
 

@@ -35,6 +35,7 @@ import com.couchbase.client.core.diagnostics.InternalEndpointDiagnostics;
 import com.couchbase.client.core.endpoint.CircuitBreaker;
 import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.endpoint.EndpointState;
+import com.couchbase.client.core.io.kv.NioKeyValueEndpoint;
 import com.couchbase.client.core.msg.RequestContext;
 import com.couchbase.client.core.util.HostAndPort;
 import org.jspecify.annotations.NullMarked;

@@ -25,7 +25,7 @@ import com.couchbase.client.core.error.DocumentNotFoundException;
 import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.error.TimeoutException;
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.KeyValuePacket;
+import com.couchbase.client.core.io.kv.KeyValuePacket;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.kv.GetRequest;

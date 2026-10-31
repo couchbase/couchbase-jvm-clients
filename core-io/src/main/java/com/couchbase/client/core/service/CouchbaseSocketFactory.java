@@ -16,13 +16,14 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocket;
 import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocketChannel;
 import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.ExtendedSocketFactory;
 import com.couchbase.client.core.deps.com.couchbase.client.socketoptions.LinuxSocketOptions;
 import com.couchbase.client.core.env.IoConfig;
-import com.couchbase.client.core.util.StorageSize;
 import com.couchbase.client.core.util.CbDurations;
+import com.couchbase.client.core.util.StorageSize;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -67,7 +68,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Thread-safe.
  */
 @NullMarked
-final class CouchbaseSocketFactory extends SocketFactory {
+@Stability.Internal
+public final class CouchbaseSocketFactory extends SocketFactory {
   private static final Logger log = LoggerFactory.getLogger(CouchbaseSocketFactory.class);
 
   // The keepalive options from jdk.net.ExtendedSocketOptions, or null if this JDK doesn't have them. They're set with
@@ -175,7 +177,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
   /**
    * A channel from {@link #openChannel}.
    */
-  static final class OpenedChannel {
+  public static final class OpenedChannel {
     private final SocketChannel channel;
 
     /**
@@ -188,7 +190,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
       this.extended = extended;
     }
 
-    SocketChannel channel() {
+    public SocketChannel channel() {
       return channel;
     }
   }
@@ -197,7 +199,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
    * Opens an unconnected, non-blocking channel, with the configured buffer sizes (like {@link #createSocket()}).
    * Call {@link #configure(OpenedChannel)} once it's connected.
    */
-  OpenedChannel openChannel() throws IOException {
+  public OpenedChannel openChannel() throws IOException {
     ExtendedSocketChannel extended = tcpUserTimeout != null ? ExtendedSocketChannel.open() : null;
     SocketChannel channel = extended != null ? extended.channel() : SocketChannel.open();
     try {
@@ -215,7 +217,7 @@ final class CouchbaseSocketFactory extends SocketFactory {
    * Like {@link #configure(Socket)}. Call it from the thread that connected the channel, before anything is sent,
    * and not while another thread closes it (see {@link ExtendedSocketChannel}).
    */
-  void configure(OpenedChannel opened) {
+  public void configure(OpenedChannel opened) {
     SocketChannel channel = opened.channel;
     ExtendedSocketChannel extended = opened.extended;
     configure(

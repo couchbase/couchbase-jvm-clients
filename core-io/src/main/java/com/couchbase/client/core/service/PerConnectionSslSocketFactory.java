@@ -16,6 +16,7 @@
 
 package com.couchbase.client.core.service;
 
+import com.couchbase.client.core.annotation.Stability;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 
@@ -57,7 +58,8 @@ import static java.util.Objects.requireNonNull;
  * Thread-safe.
  */
 @NullMarked
-final class PerConnectionSslSocketFactory extends SSLSocketFactory {
+@Stability.Internal
+public final class PerConnectionSslSocketFactory extends SSLSocketFactory {
   private final Supplier<@Nullable KeyManagerFactory> clientCertificates;
   private final Supplier<X509TrustManager> trustManagers;
   private final int handshakeTimeoutMillis;
@@ -108,7 +110,7 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
    * @param host for SNI, and host name verification (if enabled).
    * @throws CertificatesUnavailableException if a supplier threw.
    */
-  SSLEngine newEngine(String host, int port) throws SSLException {
+  public SSLEngine newEngine(String host, int port) throws SSLException {
     SSLEngine engine = newContext().createSSLEngine(host, port);
     engine.setUseClientMode(true);
     return engine;

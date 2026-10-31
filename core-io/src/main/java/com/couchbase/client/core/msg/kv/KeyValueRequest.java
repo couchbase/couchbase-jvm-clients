@@ -17,8 +17,8 @@
 package com.couchbase.client.core.msg.kv;
 
 import com.couchbase.client.core.io.CollectionIdentifier;
-import com.couchbase.client.core.io.KeyValuePacket;
-import com.couchbase.client.core.io.KeyValueRequestEncoder;
+import com.couchbase.client.core.io.kv.KeyValuePacket;
+import com.couchbase.client.core.io.kv.KeyValueRequestEncoder;
 import com.couchbase.client.core.io.netty.kv.ErrorMap;
 import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.msg.Request;

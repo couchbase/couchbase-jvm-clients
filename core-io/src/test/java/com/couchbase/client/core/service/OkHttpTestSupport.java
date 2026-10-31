@@ -24,7 +24,7 @@ import java.time.Duration;
 /**
  * Helpers for tests of the OkHttp-based services.
  */
-final class OkHttpTestSupport {
+public final class OkHttpTestSupport {
   private OkHttpTestSupport() {
     throw new AssertionError("not instantiable");
   }
@@ -33,7 +33,7 @@ final class OkHttpTestSupport {
    * Returns an OkHttp client like the one the Core creates, with the environment's security config,
    * a password authenticator, and default connection settings.
    */
-  static CouchbaseOkHttpClient newTestOkHttpClient(CoreEnvironment env) {
+  public static CouchbaseOkHttpClient newTestOkHttpClient(CoreEnvironment env) {
     return new CouchbaseOkHttpClient(
       Duration.ofSeconds(5),
       env.ioConfig(),

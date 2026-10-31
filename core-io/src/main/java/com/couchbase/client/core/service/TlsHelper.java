@@ -67,7 +67,7 @@ import static java.util.stream.Collectors.toList;
  * and classifies TLS failures (whether retrying might help, and if not, what to check).
  */
 @Stability.Internal
-class TlsHelper {
+public class TlsHelper {
 
   private static final Logger log = LoggerFactory.getLogger(TlsHelper.class);
 
@@ -147,7 +147,7 @@ class TlsHelper {
    * Typically the authenticator's {@code getKeyManagerFactory}.
    * @throws IllegalArgumentException if TLS isn't enabled.
    */
-  static PerConnectionSslSocketFactory newEngineFactory(
+  public static PerConnectionSslSocketFactory newEngineFactory(
     Supplier<@Nullable KeyManagerFactory> clientCertificates,
     SecurityConfig securityConfig,
     Duration handshakeTimeout
@@ -205,7 +205,7 @@ class TlsHelper {
    * {@link #configureTls} configures OkHttp's sockets: the same TLS versions and cipher suites, and checks
    * the server's host name unless that's disabled. Call before the handshake starts.
    */
-  static void configureTlsEngine(SSLEngine engine, SecurityConfig securityConfig) {
+  public static void configureTlsEngine(SSLEngine engine, SecurityConfig securityConfig) {
     ConnectionSpec spec = secureConnectionSpec(securityConfig);
     SSLParameters params = engine.getSSLParameters();
 
@@ -229,15 +229,15 @@ class TlsHelper {
     engine.setSSLParameters(params);
   }
 
-  static final String CERTIFICATE_HINT =
+  public static final String CERTIFICATE_HINT =
     "Check that the SDK trusts the cluster's certificate, and that the certificate matches the host name.";
-  static final String CLIENT_CERTIFICATE_HINT =
+  public static final String CLIENT_CERTIFICATE_HINT =
     "The server rejected the SDK's client certificate. Check the certificate (for example, that it hasn't expired), and that the cluster trusts its issuer.";
-  static final String CLIENT_CERTIFICATE_REQUIRED_HINT =
+  public static final String CLIENT_CERTIFICATE_REQUIRED_HINT =
     "The server requires a client certificate, but the SDK didn't send one. Check that the SDK is configured with a client certificate (for example, with CertificateAuthenticator), and that the cluster trusts its issuer (the SDK only sends a certificate whose issuer the server accepts).";
-  static final String NOT_TLS_HINT =
+  public static final String NOT_TLS_HINT =
     "The server doesn't use TLS on this port. Check server ports, and whether the cluster uses TLS (couchbases://) or not (couchbase://).";
-  static final String NO_COMMON_PARAMETERS_HINT =
+  public static final String NO_COMMON_PARAMETERS_HINT =
     "The SDK and the server have no TLS version or cipher suite in common. Check the SDK's and the cluster's TLS settings.";
 
   /**
@@ -322,7 +322,7 @@ class TlsHelper {
    * If retrying won't fix it, returns a new exception whose message is extended with a hint saying what to check
    * (see {@link #permanentTlsFailureHint}), and whose cause is the given failure.
    */
-  static @Nullable SSLException tlsFailure(Throwable t) {
+  public static @Nullable SSLException tlsFailure(Throwable t) {
     List<SSLException> failures = tlsFailures(t);
     SSLException hinted = firstPermanentFailure(failures);
     if (hinted != null) {
@@ -351,7 +351,7 @@ class TlsHelper {
    * the server closed it during the handshake because it's restarting), or the SDK couldn't get the certificates,
    * or there's no TLS failure at all.
    */
-  static boolean tlsFailureMayBeTemporary(Throwable t) {
+  public static boolean tlsFailureMayBeTemporary(Throwable t) {
     List<SSLException> failures = tlsFailures(t);
     return certificatesUnavailable(failures)
       || failures.stream().allMatch(it -> hasCause(it, EOFException.class) || hasCause(it, SocketException.class));

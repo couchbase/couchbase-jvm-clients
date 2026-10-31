@@ -19,6 +19,7 @@ package com.couchbase.client.core.service;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.endpoint.Endpoint;
 import com.couchbase.client.core.env.Authenticator;
+import com.couchbase.client.core.io.kv.NioKeyValueEndpoint;
 import com.couchbase.client.core.service.strategy.PartitionSelectionStrategy;
 
 import java.util.Optional;
