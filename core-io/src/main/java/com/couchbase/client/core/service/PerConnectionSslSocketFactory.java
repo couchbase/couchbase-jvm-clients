@@ -72,7 +72,7 @@ final class PerConnectionSslSocketFactory extends SSLSocketFactory {
    * @param clientCertificates supplies the client certificate (if any), asked once per new connection.
    * Typically the authenticator's {@code getKeyManagerFactory}.
    * @param trustManagers supplies the trust manager, asked once per new connection. It's used as is, so it should
-   * already have any checks and logging (see {@code OkHttpTlsHelper.trustManagers}).
+   * already have any checks and logging (see {@code TlsHelper.connectionTrustManagers}).
    * @param handshakeTimeout read timeout for the TLS handshake, set on each socket that OkHttp layers TLS over.
    * <p>
    * If either supplier throws, the connection fails with a {@link CertificatesUnavailableException}

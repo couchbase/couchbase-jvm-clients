@@ -46,7 +46,7 @@ import java.net.SocketException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-import static com.couchbase.client.core.service.OkHttpTlsHelper.configureTls;
+import static com.couchbase.client.core.service.TlsHelper.configureTls;
 import static com.couchbase.client.core.service.ServiceType.KV;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static java.util.Objects.requireNonNull;
@@ -213,7 +213,7 @@ public class CouchbaseOkHttpClient implements Closeable {
       // has its own connection, so backpressure only affects that request.
       //
       // HTTP/2 would also enable connection coalescing (reusing a connection for another host the certificate
-      // covers), which OkHttp decides using the trust manager it was built with (see OkHttpTlsHelper),
+      // covers), which OkHttp decides using the trust manager it was built with (see TlsHelper),
       // not the current one, so it could be wrong after the trusted certificates change.
       //
       // And the network interceptor below sets each request's read timeout on the connection's socket (SO_TIMEOUT).

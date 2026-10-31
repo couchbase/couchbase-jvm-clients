@@ -119,9 +119,9 @@ import static com.couchbase.client.core.service.FakeKeyValueServer.STATUS_NO_BUC
 import static com.couchbase.client.core.service.FakeKeyValueServer.STATUS_SUCCESS;
 import static com.couchbase.client.core.service.FakeKeyValueServer.USERNAME;
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CLIENT_CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

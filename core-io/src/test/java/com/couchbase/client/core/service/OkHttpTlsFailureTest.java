@@ -46,10 +46,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.couchbase.client.core.service.OkHttpTestSupport.newTestOkHttpClient;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.NOT_TLS_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.NO_COMMON_PARAMETERS_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CLIENT_CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.NOT_TLS_HINT;
+import static com.couchbase.client.core.service.TlsHelper.NO_COMMON_PARAMETERS_HINT;
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
 import static java.nio.charset.StandardCharsets.UTF_8;
