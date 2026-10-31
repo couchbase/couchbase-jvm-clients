@@ -37,21 +37,17 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.EOFException;
-import java.net.Socket;
 import java.net.SocketException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -61,11 +57,9 @@ import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbThrowables.causesAndSuppressed;
 import static com.couchbase.client.core.util.CbThrowables.hasCause;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 @Stability.Internal
 class OkHttpTlsHelper {
@@ -110,7 +104,7 @@ class OkHttpTlsHelper {
       log.warn("Ignoring configured TLS cipher suites the JVM doesn't support (see SecurityConfig.ciphers): {}", unsupported);
     }
 
-    if (certificateVerificationDisabled(securityConfig) || !securityConfig.hostnameVerificationEnabled()) {
+    if (skipHostnameCheck(securityConfig)) {
       clientBuilder.hostnameVerifier(insecureHostnameVerifier);
     }
   }
@@ -121,27 +115,21 @@ class OkHttpTlsHelper {
    * Asks a user-supplied trust manager factory for each new connection, so trusted certificates can change
    * (for example, if the user re-initializes the factory). Then wraps the trust manager:
    * <ol>
-   *   <li>to reject blocked certificates (see {@link BlockedCertificateTrustManager}), unless certificate
-   *   verification is disabled;
+   *   <li>to reject blocked certificates (see {@link BlockedCertificateTrustManager}), even if certificate
+   *   verification is disabled, like OkHttp, which rejects them on its connections either way;
    *   <li>then, outermost so it also sees chains rejected for a blocked certificate, to log the server's certificate
    *   chain (see {@link CertificateLoggingTrustManager}).
    * </ol>
    */
   private static Supplier<X509TrustManager> trustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
     TrustManagerFactory tmf = securityConfig.trustManagerFactory();
-    Supplier<X509TrustManager> unwrapped = tmf == null || certificateVerificationDisabled(securityConfig)
-      ? () -> initialTrustManager
-      : () -> firstX509TrustManager(tmf);
 
     // The untrusted chains already logged at warning level, for the life of this supplier (so, of the client).
     Map<List<X509Certificate>, Long> reportedUntrustedChains = CertificateLoggingTrustManager.newReportedChains();
 
     return () -> {
-      X509TrustManager trustManager = unwrapped.get();
-      if (!certificateVerificationDisabled(securityConfig)) {
-        trustManager = BlockedCertificateTrustManager.wrap(trustManager);
-      }
-      return CertificateLoggingTrustManager.wrap(trustManager, reportedUntrustedChains);
+      X509TrustManager trustManager = tmf == null ? initialTrustManager : firstX509TrustManager(tmf);
+      return CertificateLoggingTrustManager.wrap(BlockedCertificateTrustManager.wrap(trustManager), reportedUntrustedChains);
     };
   }
 
@@ -174,28 +162,34 @@ class OkHttpTlsHelper {
       return emptyList(); // the defaults
     }
     List<CipherSuite> configured = requireNonNull(secureConnectionSpec(securityConfig).cipherSuites());
-    Set<CipherSuite> supported = Arrays.stream(socketFactory.getSupportedCipherSuites())
-      .map(CipherSuite::forJavaName) // like OkHttp, matches names that differ only in their "TLS_" or "SSL_" prefix
-      .collect(toSet());
+    Map<CipherSuite, String> supported = cipherSuiteNames(socketFactory.getSupportedCipherSuites());
     return configured.stream()
-      .filter(it -> !supported.contains(it))
+      .filter(it -> !supported.containsKey(it))
       .map(CipherSuite::javaName)
       .collect(toList());
   }
 
   /**
    * Returns the socket's names for the configured cipher suites it supports, in the configured order.
-   * Like OkHttp, matches names that differ only in their "TLS_" or "SSL_" prefix.
    */
   private static List<String> supportedCipherSuites(List<CipherSuite> configured, String[] supported) {
-    Map<CipherSuite, String> supportedNames = new HashMap<>();
-    for (String name : supported) {
-      supportedNames.putIfAbsent(CipherSuite.forJavaName(name), name);
-    }
+    Map<CipherSuite, String> supportedNames = cipherSuiteNames(supported);
     return configured.stream()
       .map(supportedNames::get)
       .filter(Objects::nonNull)
       .collect(toList());
+  }
+
+  /**
+   * Returns the cipher suites with the given names, and the names. Like OkHttp, treats names that differ only in their
+   * "TLS_" or "SSL_" prefix as the same cipher suite (and keeps the first name).
+   */
+  private static Map<CipherSuite, String> cipherSuiteNames(String[] names) {
+    Map<CipherSuite, String> result = new HashMap<>();
+    for (String name : names) {
+      result.putIfAbsent(CipherSuite.forJavaName(name), name);
+    }
+    return result;
   }
 
   /**
@@ -204,19 +198,11 @@ class OkHttpTlsHelper {
    * the server's host name unless that's disabled. Call before the handshake starts.
    */
   static void configureTlsEngine(SSLEngine engine, SecurityConfig securityConfig) {
-    engine.setSSLParameters(tlsParameters(engine.getSSLParameters(), engine.getSupportedProtocols(), engine.getSupportedCipherSuites(), securityConfig));
-  }
-
-  private static SSLParameters tlsParameters(
-    SSLParameters params,
-    String[] supportedProtocolNames,
-    String[] supportedCipherSuites,
-    SecurityConfig securityConfig
-  ) {
     ConnectionSpec spec = secureConnectionSpec(securityConfig);
+    SSLParameters params = engine.getSSLParameters();
 
-    // Only the versions and cipher suites the socket supports, like OkHttp does.
-    List<String> supportedProtocols = Arrays.asList(supportedProtocolNames);
+    // Only the versions and cipher suites the engine supports, like OkHttp does.
+    List<String> supportedProtocols = listOf(engine.getSupportedProtocols());
     params.setProtocols(requireNonNull(spec.tlsVersions()).stream()
       .map(TlsVersion::javaName)
       .filter(supportedProtocols::contains)
@@ -224,15 +210,15 @@ class OkHttpTlsHelper {
 
     List<CipherSuite> cipherSuites = spec.cipherSuites();
     if (cipherSuites != null) {
-      params.setCipherSuites(supportedCipherSuites(cipherSuites, supportedCipherSuites).toArray(new String[0]));
+      params.setCipherSuites(supportedCipherSuites(cipherSuites, engine.getSupportedCipherSuites()).toArray(new String[0]));
     }
 
     // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake
     // (so a mismatch fails with a CertificateException, which gets CERTIFICATE_HINT).
-    if (!certificateVerificationDisabled(securityConfig) && securityConfig.hostnameVerificationEnabled()) {
+    if (!skipHostnameCheck(securityConfig)) {
       params.setEndpointIdentificationAlgorithm("HTTPS");
     }
-    return params;
+    engine.setSSLParameters(params);
   }
 
   static final String CERTIFICATE_HINT =
@@ -251,9 +237,9 @@ class OkHttpTlsHelper {
    * <p>
    * When the server rejects the client's certificate, Couchbase Server's cluster manager sends "bad_certificate",
    * and its services written in Go send "unknown_ca". With TLS 1.3, a server that requires a client certificate
-   * sends "certificate_required" if the client doesn't send one (as the data service does). When there's no TLS version or cipher suite in common,
-   * the server sends the alert in reply to the ClientHello, having read everything the client sent, so the alert
-   * reaches the client. (With no cipher suite in common, the cluster manager sends "insufficient_security",
+   * sends "certificate_required" if the client doesn't send one (as the data service does). When there's no TLS
+   * version or cipher suite in common, the server sends the alert in reply to the ClientHello, having read everything
+   * the client sent, so the alert reaches the client. (With no cipher suite in common, the cluster manager sends "insufficient_security",
    * and the Go services send "handshake_failure".)
    */
   private static final Map<String, String> ALERT_HINTS = alertHints();
@@ -319,15 +305,8 @@ class OkHttpTlsHelper {
    * they're treated as temporary.
    */
   static @Nullable String permanentTlsFailureHint(Throwable t) {
-    List<SSLException> failures = tlsFailures(t);
-    if (certificatesUnavailable(failures)) {
-      return null;
-    }
-    return failures.stream()
-      .map(OkHttpTlsHelper::hint)
-      .filter(Objects::nonNull)
-      .findFirst()
-      .orElse(null);
+    SSLException hinted = firstPermanentFailure(tlsFailures(t));
+    return hinted == null ? null : hint(hinted);
   }
 
   /**
@@ -337,16 +316,26 @@ class OkHttpTlsHelper {
    */
   static @Nullable SSLException describeTlsFailure(Throwable t) {
     List<SSLException> failures = tlsFailures(t);
-    if (!certificatesUnavailable(failures)) {
-      for (SSLException e : failures) {
-        String hint = hint(e);
-        if (hint != null) {
-          // A plain SSLException, since events and log messages show the exception's class name.
-          return new SSLException(e.getMessage() + " - " + hint, t);
-        }
-      }
+    SSLException hinted = firstPermanentFailure(failures);
+    if (hinted != null) {
+      // A plain SSLException, since events and log messages show the exception's class name.
+      return new SSLException(hinted.getMessage() + " - " + hint(hinted), t);
     }
     return failures.isEmpty() ? null : failures.get(0);
+  }
+
+  /**
+   * Returns the first of the TLS failures that has a hint (see {@link #permanentTlsFailureHint}), or null if none
+   * does, or if the SDK couldn't get the certificates.
+   */
+  private static @Nullable SSLException firstPermanentFailure(List<SSLException> failures) {
+    if (certificatesUnavailable(failures)) {
+      return null;
+    }
+    return failures.stream()
+      .filter(it -> hint(it) != null)
+      .findFirst()
+      .orElse(null);
   }
 
   /**
@@ -411,6 +400,14 @@ class OkHttpTlsHelper {
   }
 
   /**
+   * Returns true if connections don't check that the server's certificate matches the host name: if host name
+   * verification is disabled, or certificate verification is (since any certificate is accepted then).
+   */
+  private static boolean skipHostnameCheck(SecurityConfig securityConfig) {
+    return certificateVerificationDisabled(securityConfig) || !securityConfig.hostnameVerificationEnabled();
+  }
+
+  /**
    * Returns the factory's first X.509 trust manager.
    */
   private static X509TrustManager firstX509TrustManager(TrustManagerFactory tmf) {
@@ -421,11 +418,11 @@ class OkHttpTlsHelper {
       .orElseThrow(() -> new IllegalArgumentException("The provided TrustManagerFactory did not return an X509TrustManager."));
   }
 
+  /**
+   * Returns the trust manager from the configured factory (which is InsecureTrustManagerFactory if certificate
+   * verification is disabled), or else one that trusts the configured certificates.
+   */
   private static X509TrustManager getTrustManager(SecurityConfig securityConfig) {
-    if (certificateVerificationDisabled(securityConfig)) {
-      return insecureTrustManager;
-    }
-
     TrustManagerFactory tmf = securityConfig.trustManagerFactory();
     if (tmf != null) {
       // Warn once, when the client is created, not for every connection.
@@ -443,52 +440,15 @@ class OkHttpTlsHelper {
     return builder.build().trustManager();
   }
 
-  private static ConnectionSpec secureConnectionSpec(SecurityConfig security) {
-    if (security.ciphers().isEmpty()) return MODERN_TLS;
-
+  private static ConnectionSpec secureConnectionSpec(SecurityConfig securityConfig) {
+    if (securityConfig.ciphers().isEmpty()) {
+      return MODERN_TLS;
+    }
     return new ConnectionSpec.Builder(true)
       .tlsVersions(requireNonNull(MODERN_TLS.tlsVersions()).toArray(new TlsVersion[0]))
-      .cipherSuites(security.ciphers().toArray(new String[0]))
+      .cipherSuites(securityConfig.ciphers().toArray(new String[0]))
       .build();
   }
-
-  private static final X509Certificate[] EMPTY_CERT_ARRAY = new X509Certificate[0];
-
-  private static final X509TrustManager insecureTrustManager = new X509ExtendedTrustManager() {
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
-    }
-
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException {
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException {
-    }
-
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType) {
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType) {
-    }
-
-    @Override
-    public X509Certificate[] getAcceptedIssuers() {
-      return EMPTY_CERT_ARRAY;
-    }
-
-    @Override
-    public String toString() {
-      return "InsecureTrustManager";
-    }
-  };
 
   private static final HostnameVerifier insecureHostnameVerifier = new HostnameVerifier() {
     @Override
