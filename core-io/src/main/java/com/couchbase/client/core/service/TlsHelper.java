@@ -22,6 +22,7 @@ import com.couchbase.client.core.deps.okhttp3.ConnectionSpec;
 import com.couchbase.client.core.deps.okhttp3.OkHttpClient;
 import com.couchbase.client.core.deps.okhttp3.TlsVersion;
 import com.couchbase.client.core.deps.okhttp3.tls.HandshakeCertificates;
+import com.couchbase.client.core.env.CertificateLoggingTrustManager;
 import com.couchbase.client.core.env.InsecureTrustManagerFactory;
 import com.couchbase.client.core.env.SecurityConfig;
 import org.jspecify.annotations.Nullable;
@@ -117,13 +118,8 @@ class TlsHelper {
    * Returns the supplier of each new connection's trust manager (see {@link PerConnectionSslSocketFactory}).
    * <p>
    * Asks a user-supplied trust manager factory for each new connection, so trusted certificates can change
-   * (for example, if the user re-initializes the factory). Then wraps the trust manager:
-   * <ol>
-   *   <li>to reject blocked certificates (see {@link BlockedCertificateTrustManager}), even if certificate
-   *   verification is disabled, like OkHttp, which rejects them on its connections either way;
-   *   <li>then, outermost so it also sees chains rejected for a blocked certificate, to log the server's certificate
-   *   chain (see {@link CertificateLoggingTrustManager}).
-   * </ol>
+   * (for example, if the user re-initializes the factory). Then wraps the trust manager to log the server's
+   * certificate chain (see {@link CertificateLoggingTrustManager}).
    *
    * @param initialTrustManager the result of {@link #initialTrustManager} for the same config, which the caller gets
    * first (so an unusable trust manager factory fails when the client is created, not on the first connection).
@@ -138,7 +134,7 @@ class TlsHelper {
 
     return () -> {
       X509TrustManager trustManager = tmf == null ? initialTrustManager : firstX509TrustManager(tmf);
-      return CertificateLoggingTrustManager.wrap(BlockedCertificateTrustManager.wrap(trustManager), reportedUntrustedChains);
+      return CertificateLoggingTrustManager.wrap(trustManager, reportedUntrustedChains);
     };
   }
 
