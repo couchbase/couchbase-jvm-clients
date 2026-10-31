@@ -29,7 +29,6 @@ import org.jspecify.annotations.Nullable;
 import javax.net.SocketFactory;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSocketFactory;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
@@ -68,7 +67,7 @@ import static java.util.Objects.requireNonNull;
 public final class NioKeyValueChannelConnector {
   private final SocketFactory socketFactory;
   private final SecurityConfig securityConfig;
-  private final @Nullable SSLSocketFactory tlsSocketFactory;
+  private final @Nullable PerConnectionSslSocketFactory tlsEngineFactory;
   private final HostResolver hostResolver;
 
   /**
@@ -114,8 +113,8 @@ public final class NioKeyValueChannelConnector {
     this.socketFactory = requireNonNull(socketFactory);
     this.hostResolver = requireNonNull(hostResolver);
     this.securityConfig = requireNonNull(securityConfig);
-    this.tlsSocketFactory = securityConfig.tlsEnabled()
-      ? OkHttpTlsHelper.newTlsSocketFactory(authenticator::getKeyManagerFactory, securityConfig, handshakeTimeout)
+    this.tlsEngineFactory = securityConfig.tlsEnabled()
+      ? TlsHelper.newEngineFactory(authenticator::getKeyManagerFactory, securityConfig, handshakeTimeout)
       : null;
   }
 
@@ -132,7 +131,7 @@ public final class NioKeyValueChannelConnector {
   }
 
   public boolean tlsEnabled() {
-    return tlsSocketFactory != null;
+    return tlsEngineFactory != null;
   }
 
   /**
@@ -197,13 +196,13 @@ public final class NioKeyValueChannelConnector {
       }
       onTcpConnected.run();
 
-      if (tlsSocketFactory == null) {
+      if (tlsEngineFactory == null) {
         return new ConnectedChannel(channel, null, waiter);
       }
 
       // Uses the host name we were given (not the resolved address) for SNI and host name verification.
-      SSLEngine engine = ((PerConnectionSslSocketFactory) tlsSocketFactory).newEngine(host, port);
-      OkHttpTlsHelper.configureTlsEngine(engine, securityConfig);
+      SSLEngine engine = tlsEngineFactory.newEngine(host, port);
+      TlsHelper.configureTlsEngine(engine, securityConfig);
       tls = ClientTlsChannel.newBuilder(channel, engine)
         .withReleaseBuffers(false) // kept for the connection's life, instead of allocated for each read and write
         .build();

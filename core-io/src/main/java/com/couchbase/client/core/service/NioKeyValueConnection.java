@@ -876,7 +876,7 @@ final class NioKeyValueConnection {
       // For example, OutOfMemoryError. So it stands out from ordinary connection failures (the event is a WARN).
       log.error("KV connection {} failed with a JVM error; {}", this, endpointContext, failure);
     }
-    if (failure instanceof SSLException && !OkHttpTlsHelper.connectionFailedDuringTls(failure)) {
+    if (failure instanceof SSLException && !TlsHelper.tlsFailureMayBeTemporary(failure)) {
       endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
       eventBus.publish(new SecureConnectionFailedEvent(ioContext, (SSLException) failure));
     } else {

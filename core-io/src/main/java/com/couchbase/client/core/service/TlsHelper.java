@@ -61,12 +61,16 @@ import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
+/**
+ * TLS for the SDK's connections: configures the HTTP services' OkHttp client and the KV connections' engines alike,
+ * and classifies TLS failures (whether retrying might help, and if not, what to check).
+ */
 @Stability.Internal
-class OkHttpTlsHelper {
+class TlsHelper {
 
-  private static final Logger log = LoggerFactory.getLogger(OkHttpTlsHelper.class);
+  private static final Logger log = LoggerFactory.getLogger(TlsHelper.class);
 
-  private OkHttpTlsHelper() {
+  private TlsHelper() {
     throw new AssertionError("not instantiable");
   }
 
@@ -88,24 +92,24 @@ class OkHttpTlsHelper {
     clientBuilder.connectionSpecs(listOf(secureConnectionSpec(securityConfig)));
 
     // Fails now if the trust manager factory is unusable (for example, has no X.509 trust manager).
-    X509TrustManager initialTrustManager = getTrustManager(securityConfig);
-    Supplier<X509TrustManager> trustManagers = trustManagers(securityConfig, initialTrustManager);
+    X509TrustManager initialTrustManager = initialTrustManager(securityConfig);
+    Supplier<X509TrustManager> connectionTrustManagers = connectionTrustManagers(securityConfig, initialTrustManager);
 
     // OkHttp never uses "initialTrustManager" to decide what to trust; each connection's own TLS context
     // (with its own trust manager) does that. OkHttp only uses it to clean up certificate chains for:
     // certificate pinning (which we don't enable), HTTP/2 connection coalescing (we use HTTP/1.1 only),
     // and the certificates reported by Response.handshake() (which the SDK doesn't read).
-    PerConnectionSslSocketFactory socketFactory = new PerConnectionSslSocketFactory(clientCertificates, trustManagers, handshakeTimeout);
+    PerConnectionSslSocketFactory socketFactory = new PerConnectionSslSocketFactory(clientCertificates, connectionTrustManagers, handshakeTimeout);
     clientBuilder.sslSocketFactory(socketFactory, initialTrustManager);
 
-    // Here only, so it's logged once per Core: KV connections (see newTlsSocketFactory) use the same cipher suites.
+    // Here only, so it's logged once per Core: KV connections (see newEngineFactory) use the same cipher suites.
     List<String> unsupported = unsupportedCipherSuites(socketFactory, securityConfig);
     if (!unsupported.isEmpty()) {
       log.warn("Ignoring configured TLS cipher suites the JVM doesn't support (see SecurityConfig.ciphers): {}", unsupported);
     }
 
-    if (skipHostnameCheck(securityConfig)) {
-      clientBuilder.hostnameVerifier(insecureHostnameVerifier);
+    if (hostnameCheckDisabled(securityConfig)) {
+      clientBuilder.hostnameVerifier(INSECURE_HOSTNAME_VERIFIER);
     }
   }
 
@@ -120,8 +124,13 @@ class OkHttpTlsHelper {
    *   <li>then, outermost so it also sees chains rejected for a blocked certificate, to log the server's certificate
    *   chain (see {@link CertificateLoggingTrustManager}).
    * </ol>
+   *
+   * @param initialTrustManager the result of {@link #initialTrustManager} for the same config, which the caller gets
+   * first (so an unusable trust manager factory fails when the client is created, not on the first connection).
+   * Without a user-supplied factory, it's the trust manager for every connection: it trusts the configured
+   * certificates, which don't change, so there's nothing to ask for again. With a factory, it's not used.
    */
-  private static Supplier<X509TrustManager> trustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
+  private static Supplier<X509TrustManager> connectionTrustManagers(SecurityConfig securityConfig, X509TrustManager initialTrustManager) {
     TrustManagerFactory tmf = securityConfig.trustManagerFactory();
 
     // The untrusted chains already logged at warning level, for the life of this supplier (so, of the client).
@@ -134,15 +143,15 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Returns a factory for TLS connections that don't go through OkHttp (KV connections), with the same certificates
-   * as {@link #configureTls}. They use its engines (see {@link PerConnectionSslSocketFactory#newEngine}); use
-   * {@link #configureTlsEngine} on each one.
+   * Returns a factory of TLS engines for connections that don't go through OkHttp (KV connections), with the same
+   * certificates as {@link #configureTls}. Get each connection's engine from
+   * {@link PerConnectionSslSocketFactory#newEngine}, then use {@link #configureTlsEngine} on it.
    *
    * @param clientCertificates supplies the client certificate (if any), asked once per new connection.
    * Typically the authenticator's {@code getKeyManagerFactory}.
    * @throws IllegalArgumentException if TLS isn't enabled.
    */
-  static SSLSocketFactory newTlsSocketFactory(
+  static PerConnectionSslSocketFactory newEngineFactory(
     Supplier<@Nullable KeyManagerFactory> clientCertificates,
     SecurityConfig securityConfig,
     Duration handshakeTimeout
@@ -150,8 +159,11 @@ class OkHttpTlsHelper {
     if (!securityConfig.tlsEnabled()) {
       throw new IllegalArgumentException("TLS is not enabled.");
     }
-    X509TrustManager initialTrustManager = getTrustManager(securityConfig);
-    return new PerConnectionSslSocketFactory(clientCertificates, trustManagers(securityConfig, initialTrustManager), handshakeTimeout);
+    X509TrustManager initialTrustManager = initialTrustManager(securityConfig);
+    return new PerConnectionSslSocketFactory(
+      clientCertificates,
+      connectionTrustManagers(securityConfig, initialTrustManager),
+      handshakeTimeout);
   }
 
   /**
@@ -162,7 +174,7 @@ class OkHttpTlsHelper {
       return emptyList(); // the defaults
     }
     List<CipherSuite> configured = requireNonNull(secureConnectionSpec(securityConfig).cipherSuites());
-    Map<CipherSuite, String> supported = cipherSuiteNames(socketFactory.getSupportedCipherSuites());
+    Map<CipherSuite, String> supported = namesByCipherSuite(socketFactory.getSupportedCipherSuites());
     return configured.stream()
       .filter(it -> !supported.containsKey(it))
       .map(CipherSuite::javaName)
@@ -172,8 +184,8 @@ class OkHttpTlsHelper {
   /**
    * Returns the socket's names for the configured cipher suites it supports, in the configured order.
    */
-  private static List<String> supportedCipherSuites(List<CipherSuite> configured, String[] supported) {
-    Map<CipherSuite, String> supportedNames = cipherSuiteNames(supported);
+  private static List<String> supportedCipherSuiteNames(List<CipherSuite> configured, String[] supported) {
+    Map<CipherSuite, String> supportedNames = namesByCipherSuite(supported);
     return configured.stream()
       .map(supportedNames::get)
       .filter(Objects::nonNull)
@@ -184,7 +196,7 @@ class OkHttpTlsHelper {
    * Returns the cipher suites with the given names, and the names. Like OkHttp, treats names that differ only in their
    * "TLS_" or "SSL_" prefix as the same cipher suite (and keeps the first name).
    */
-  private static Map<CipherSuite, String> cipherSuiteNames(String[] names) {
+  private static Map<CipherSuite, String> namesByCipherSuite(String[] names) {
     Map<CipherSuite, String> result = new HashMap<>();
     for (String name : names) {
       result.putIfAbsent(CipherSuite.forJavaName(name), name);
@@ -210,12 +222,12 @@ class OkHttpTlsHelper {
 
     List<CipherSuite> cipherSuites = spec.cipherSuites();
     if (cipherSuites != null) {
-      params.setCipherSuites(supportedCipherSuites(cipherSuites, engine.getSupportedCipherSuites()).toArray(new String[0]));
+      params.setCipherSuites(supportedCipherSuiteNames(cipherSuites, engine.getSupportedCipherSuites()).toArray(new String[0]));
     }
 
     // OkHttp checks the host name itself, after the handshake. Here, the JDK checks it during the handshake
     // (so a mismatch fails with a CertificateException, which gets CERTIFICATE_HINT).
-    if (!skipHostnameCheck(securityConfig)) {
+    if (!hostnameCheckDisabled(securityConfig)) {
       params.setEndpointIdentificationAlgorithm("HTTPS");
     }
     engine.setSSLParameters(params);
@@ -314,7 +326,7 @@ class OkHttpTlsHelper {
    * If retrying won't fix it, returns a new exception whose message is extended with a hint saying what to check
    * (see {@link #permanentTlsFailureHint}), and whose cause is the given failure.
    */
-  static @Nullable SSLException describeTlsFailure(Throwable t) {
+  static @Nullable SSLException tlsFailure(Throwable t) {
     List<SSLException> failures = tlsFailures(t);
     SSLException hinted = firstPermanentFailure(failures);
     if (hinted != null) {
@@ -339,10 +351,11 @@ class OkHttpTlsHelper {
   }
 
   /**
-   * Returns true if the TLS failure is the connection failing (for example, the server closed it during the handshake
-   * because it's restarting), or the SDK couldn't get the certificates, rather than TLS rejecting the connection.
+   * Returns true unless TLS rejected the connection: if the TLS failure is the connection failing (for example,
+   * the server closed it during the handshake because it's restarting), or the SDK couldn't get the certificates,
+   * or there's no TLS failure at all.
    */
-  static boolean connectionFailedDuringTls(Throwable t) {
+  static boolean tlsFailureMayBeTemporary(Throwable t) {
     List<SSLException> failures = tlsFailures(t);
     return certificatesUnavailable(failures)
       || failures.stream().allMatch(it -> hasCause(it, EOFException.class) || hasCause(it, SocketException.class));
@@ -403,7 +416,7 @@ class OkHttpTlsHelper {
    * Returns true if connections don't check that the server's certificate matches the host name: if host name
    * verification is disabled, or certificate verification is (since any certificate is accepted then).
    */
-  private static boolean skipHostnameCheck(SecurityConfig securityConfig) {
+  private static boolean hostnameCheckDisabled(SecurityConfig securityConfig) {
     return certificateVerificationDisabled(securityConfig) || !securityConfig.hostnameVerificationEnabled();
   }
 
@@ -422,7 +435,7 @@ class OkHttpTlsHelper {
    * Returns the trust manager from the configured factory (which is InsecureTrustManagerFactory if certificate
    * verification is disabled), or else one that trusts the configured certificates.
    */
-  private static X509TrustManager getTrustManager(SecurityConfig securityConfig) {
+  private static X509TrustManager initialTrustManager(SecurityConfig securityConfig) {
     TrustManagerFactory tmf = securityConfig.trustManagerFactory();
     if (tmf != null) {
       // Warn once, when the client is created, not for every connection.
@@ -450,7 +463,7 @@ class OkHttpTlsHelper {
       .build();
   }
 
-  private static final HostnameVerifier insecureHostnameVerifier = new HostnameVerifier() {
+  private static final HostnameVerifier INSECURE_HOSTNAME_VERIFIER = new HostnameVerifier() {
     @Override
     public boolean verify(String hostname, SSLSession session) {
       return true;

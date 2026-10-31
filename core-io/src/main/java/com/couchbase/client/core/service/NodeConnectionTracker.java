@@ -341,7 +341,7 @@ final class NodeConnectionTracker extends EventListener {
 
       // At most one per interval, like the connect failures' WARNs. For example, with TLS 1.3, a server that
       // rejects the client's certificate does so after the handshake, so every request fails on a connection.
-      SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(ioe);
+      SSLException tlsFailure = TlsHelper.tlsFailure(ioe);
       if (tlsFailure != null && shouldPublishTlsFailureOnConnection(now)) {
         publish(context -> new SecureConnectionFailedEvent(endpointContext(context, info), tlsFailure));
       }
@@ -363,7 +363,7 @@ final class NodeConnectionTracker extends EventListener {
    * Publishes a {@link SecureConnectionFailedEvent} if the failure is a TLS failure.
    */
   private void publishIfTlsFailure(IOException failure) {
-    SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(failure);
+    SSLException tlsFailure = TlsHelper.tlsFailure(failure);
     if (tlsFailure != null) {
       publish(context -> new SecureConnectionFailedEvent(endpointContext(context, null), tlsFailure));
     }
@@ -459,7 +459,7 @@ final class NodeConnectionTracker extends EventListener {
    * {@link NioKeyValueEndpoint#annotateConnectException}), or the failure as is if it isn't a {@link ConnectException}
    * or a TLS failure that retrying won't fix.
    * <p>
-   * For a TLS failure that retrying won't fix, adds a hint (see {@link OkHttpTlsHelper#permanentTlsFailureHint}).
+   * For a TLS failure that retrying won't fix, adds a hint (see {@link TlsHelper#permanentTlsFailureHint}).
    * <p>
    * For a {@link ConnectException}:
    * OkHttp's message only says which address it failed to connect to ("Failed to connect to /127.0.0.1:8093"),
@@ -470,9 +470,9 @@ final class NodeConnectionTracker extends EventListener {
    * open. And a cluster that requires TLS refuses connections; it doesn't let them time out.)
    */
   static IOException annotateConnectException(IOException e, boolean tls) {
-    if (OkHttpTlsHelper.permanentTlsFailureHint(e) != null) {
+    if (TlsHelper.permanentTlsFailureHint(e) != null) {
       // Keeps the original as the cause, so the TLS failure is still in the chain (see internalDiagnostics).
-      return requireNonNull(OkHttpTlsHelper.describeTlsFailure(e));
+      return requireNonNull(TlsHelper.tlsFailure(e));
     }
     if (!(e instanceof ConnectException)) {
       return e;

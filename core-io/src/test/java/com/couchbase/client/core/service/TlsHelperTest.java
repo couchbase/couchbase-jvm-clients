@@ -32,17 +32,17 @@ import java.net.SocketException;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.NOT_TLS_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.NO_COMMON_PARAMETERS_HINT;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.configureTls;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.connectionFailedDuringTls;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.describeTlsFailure;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.newTlsSocketFactory;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.permanentTlsFailureHint;
-import static com.couchbase.client.core.service.OkHttpTlsHelper.unsupportedCipherSuites;
+import static com.couchbase.client.core.service.TlsHelper.CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CLIENT_CERTIFICATE_HINT;
+import static com.couchbase.client.core.service.TlsHelper.CLIENT_CERTIFICATE_REQUIRED_HINT;
+import static com.couchbase.client.core.service.TlsHelper.NOT_TLS_HINT;
+import static com.couchbase.client.core.service.TlsHelper.NO_COMMON_PARAMETERS_HINT;
+import static com.couchbase.client.core.service.TlsHelper.configureTls;
+import static com.couchbase.client.core.service.TlsHelper.tlsFailureMayBeTemporary;
+import static com.couchbase.client.core.service.TlsHelper.tlsFailure;
+import static com.couchbase.client.core.service.TlsHelper.newEngineFactory;
+import static com.couchbase.client.core.service.TlsHelper.permanentTlsFailureHint;
+import static com.couchbase.client.core.service.TlsHelper.unsupportedCipherSuites;
 import static com.couchbase.client.core.util.CbCollections.listOf;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class OkHttpTlsHelperTest {
+class TlsHelperTest {
 
   @Test
   void untrustedServerCertificate() {
@@ -137,7 +137,7 @@ class OkHttpTlsHelperTest {
     SSLHandshakeException alert = new SSLHandshakeException("Received fatal alert: unknown_ca");
     SocketException failure = brokenPipeWithSuppressed(alert);
 
-    SSLException described = describeTlsFailure(failure);
+    SSLException described = tlsFailure(failure);
     assertEquals("Received fatal alert: unknown_ca - " + CLIENT_CERTIFICATE_HINT, described.getMessage());
     assertSame(failure, described.getCause());
   }
@@ -145,8 +145,8 @@ class OkHttpTlsHelperTest {
   @Test
   void describedTlsFailureThatMightBeTemporaryIsUnchanged() {
     SSLHandshakeException terminated = new SSLHandshakeException("Remote host terminated the handshake");
-    assertSame(terminated, describeTlsFailure(new IOException(terminated)));
-    assertNull(describeTlsFailure(new ConnectException("Connection refused")));
+    assertSame(terminated, tlsFailure(new IOException(terminated)));
+    assertNull(tlsFailure(new ConnectException("Connection refused")));
   }
 
   @Test
@@ -176,16 +176,16 @@ class OkHttpTlsHelperTest {
   void connectionFailingDuringTls() {
     SSLHandshakeException terminated = new SSLHandshakeException("Remote host terminated the handshake");
     terminated.initCause(new EOFException("SSL peer shut down incorrectly"));
-    assertTrue(connectionFailedDuringTls(terminated));
-    assertTrue(connectionFailedDuringTls(new SSLException("Connection reset", new SocketException("Connection reset"))));
+    assertTrue(tlsFailureMayBeTemporary(terminated));
+    assertTrue(tlsFailureMayBeTemporary(new SSLException("Connection reset", new SocketException("Connection reset"))));
     Exception cause = new RuntimeException(new CertificateException("Unable to initialize"));
-    assertTrue(connectionFailedDuringTls(new PerConnectionSslSocketFactory.CertificatesUnavailableException(cause)));
+    assertTrue(tlsFailureMayBeTemporary(new PerConnectionSslSocketFactory.CertificatesUnavailableException(cause)));
 
     // TLS rejecting the connection, even if retrying might help.
-    assertFalse(connectionFailedDuringTls(new SSLHandshakeException("Received fatal alert: internal_error")));
-    assertFalse(connectionFailedDuringTls(new SSLException("Tag mismatch", new AEADBadTagException("Tag mismatch"))));
+    assertFalse(tlsFailureMayBeTemporary(new SSLHandshakeException("Received fatal alert: internal_error")));
+    assertFalse(tlsFailureMayBeTemporary(new SSLException("Tag mismatch", new AEADBadTagException("Tag mismatch"))));
     // The connection failed because of the alert.
-    assertFalse(connectionFailedDuringTls(brokenPipeWithSuppressed(new SSLHandshakeException("Received fatal alert: unknown_ca"))));
+    assertFalse(tlsFailureMayBeTemporary(brokenPipeWithSuppressed(new SSLHandshakeException("Received fatal alert: unknown_ca"))));
   }
 
   @Test
@@ -195,7 +195,7 @@ class OkHttpTlsHelperTest {
       .ciphers(listOf("TLS_AES_128_GCM_SHA256", "TLS_BOGUS_WITH_NOTHING"))
       .build();
 
-    SSLSocketFactory socketFactory = newTlsSocketFactory(() -> null, securityConfig, Duration.ofSeconds(1));
+    SSLSocketFactory socketFactory = newEngineFactory(() -> null, securityConfig, Duration.ofSeconds(1));
     assertEquals(listOf("TLS_BOGUS_WITH_NOTHING"), unsupportedCipherSuites(socketFactory, securityConfig));
     // Only logged.
     configureTls(new OkHttpClient.Builder(), () -> null, securityConfig, Duration.ofSeconds(1));
@@ -207,7 +207,7 @@ class OkHttpTlsHelperTest {
       .enableTls(true)
       .ciphers(listOf("TLS_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"))
       .build();
-    SSLSocketFactory socketFactory = newTlsSocketFactory(() -> null, securityConfig, Duration.ofSeconds(1));
+    SSLSocketFactory socketFactory = newEngineFactory(() -> null, securityConfig, Duration.ofSeconds(1));
     assertEquals(emptyList(), unsupportedCipherSuites(socketFactory, securityConfig));
 
     // OkHttp's defaults include some that recent JVMs don't support.

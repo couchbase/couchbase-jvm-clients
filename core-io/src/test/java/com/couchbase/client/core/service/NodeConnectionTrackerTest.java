@@ -638,7 +638,7 @@ class NodeConnectionTrackerTest {
   void tlsFailureThatRetryingWontFixHasTheHint() {
     SSLException tlsFailure = new SSLException("Unsupported or unrecognized SSL message");
     IOException annotated = NodeConnectionTracker.annotateConnectException(tlsFailure, true);
-    assertEquals("Unsupported or unrecognized SSL message - " + OkHttpTlsHelper.NOT_TLS_HINT, annotated.getMessage());
+    assertEquals("Unsupported or unrecognized SSL message - " + TlsHelper.NOT_TLS_HINT, annotated.getMessage());
     assertSame(tlsFailure, annotated.getCause());
   }
 
@@ -800,7 +800,7 @@ class NodeConnectionTrackerTest {
 
     List<SecureConnectionFailedEvent> events = events(SecureConnectionFailedEvent.class);
     assertEquals(1, events.size());
-    assertEquals("Received fatal alert: unknown_ca - " + OkHttpTlsHelper.CLIENT_CERTIFICATE_HINT, events.get(0).sslException().getMessage());
+    assertEquals("Received fatal alert: unknown_ca - " + TlsHelper.CLIENT_CERTIFICATE_HINT, events.get(0).sslException().getMessage());
   }
 
   @Test

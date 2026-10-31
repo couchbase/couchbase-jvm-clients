@@ -440,7 +440,7 @@ abstract class AbstractOkHttpService implements Service {
     boolean requestStarted = CouchbaseOkHttpClient.requestStarted(call.request());
     log.debug("Sending request to {} failed; requestStarted={}", call.request().url(), requestStarted, e);
 
-    String tlsHint = OkHttpTlsHelper.permanentTlsFailureHint(e);
+    String tlsHint = TlsHelper.permanentTlsFailureHint(e);
     if (tlsHint != null) {
       // For example, an untrusted server certificate, or a port that doesn't use TLS. Retrying won't help.
       // (Other TLS failures, like the server closing the connection during the handshake, are retried below.)

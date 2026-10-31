@@ -405,7 +405,7 @@ final class NioKeyValueConnectionOpener {
     KeyValueChannelWaiter waiter,
     long deadlineNanos
   ) {
-    if (tls == null || e instanceof SocketTimeoutException || OkHttpTlsHelper.describeTlsFailure(e) != null) {
+    if (tls == null || e instanceof SocketTimeoutException || TlsHelper.tlsFailure(e) != null) {
       return e;
     }
     ByteBuffer ignored = ByteBuffer.allocate(TLS_MIN_READ);
@@ -437,7 +437,7 @@ final class NioKeyValueConnectionOpener {
     if (!connector.tlsEnabled()) {
       return e;
     }
-    SSLException tlsFailure = OkHttpTlsHelper.describeTlsFailure(e);
+    SSLException tlsFailure = TlsHelper.tlsFailure(e);
     if (tlsFailure == null) {
       return e;
     }
@@ -447,7 +447,7 @@ final class NioKeyValueConnectionOpener {
       ? new IoContext(endpointContext, null, null, endpointContext.bucket())
       : new IoContext(endpointContext, c.socket().getLocalSocketAddress(), c.socket().getRemoteSocketAddress(), endpointContext.bucket());
     endpointContext.tlsHandshakeFailure(e);
-    if (OkHttpTlsHelper.connectionFailedDuringTls(e)) {
+    if (TlsHelper.tlsFailureMayBeTemporary(e)) {
       return tlsFailure; // might be temporary
     }
     endpointContext.authenticationStatus(AuthenticationStatus.FAILED);
