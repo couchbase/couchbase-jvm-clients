@@ -47,7 +47,7 @@ import com.couchbase.client.core.msg.kv.SingleStepAuthRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
-import com.couchbase.client.core.service.TlsHelper;
+import com.couchbase.client.core.io.TlsHelper;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;

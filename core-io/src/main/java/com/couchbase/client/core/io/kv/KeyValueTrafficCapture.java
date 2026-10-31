@@ -33,7 +33,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import static com.couchbase.client.core.io.TrafficCaptureMasking.MASKED;
 import static com.couchbase.client.core.logging.RedactableArgument.redactUser;
 import static java.util.Objects.requireNonNull;
 
@@ -46,6 +45,11 @@ import static java.util.Objects.requireNonNull;
  */
 @NullMarked
 final class KeyValueTrafficCapture {
+  /**
+   * Replaces what's masked. The same placeholder as the HTTP services' traffic capture uses.
+   */
+  private static final String MASKED = "<masked>";
+
   private final IoContext ioContext;
   private final boolean enabled;
 

@@ -32,7 +32,7 @@ import com.couchbase.client.core.io.repackaged.tlschannel.NeedsReadException;
 import com.couchbase.client.core.io.repackaged.tlschannel.NeedsWriteException;
 import com.couchbase.client.core.io.repackaged.tlschannel.WouldBlockException;
 import com.couchbase.client.core.io.repackaged.tlschannel.impl.TlsChannelImpl;
-import com.couchbase.client.core.service.TlsHelper;
+import com.couchbase.client.core.io.TlsHelper;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;

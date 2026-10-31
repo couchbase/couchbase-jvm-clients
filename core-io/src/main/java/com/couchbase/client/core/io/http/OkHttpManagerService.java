@@ -1,0 +1,294 @@
+/*
+ * Copyright 2026 Couchbase, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.couchbase.client.core.io.http;
+
+import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.cnc.events.io.IdleStreamingEndpointClosedEvent;
+import com.couchbase.client.core.deps.okhttp3.Call;
+import com.couchbase.client.core.deps.okhttp3.ResponseBody;
+import com.couchbase.client.core.deps.okio.BufferedSource;
+import com.couchbase.client.core.deps.okio.ByteString;
+import com.couchbase.client.core.endpoint.http.CoreHttpRequest;
+import com.couchbase.client.core.endpoint.http.CoreHttpStatus;
+import com.couchbase.client.core.error.FeatureNotAvailableException;
+import com.couchbase.client.core.error.HttpStatusCodeException;
+import com.couchbase.client.core.error.InvalidArgumentException;
+import com.couchbase.client.core.error.QuotaLimitedException;
+import com.couchbase.client.core.error.RateLimitedException;
+import com.couchbase.client.core.error.context.ManagerErrorContext;
+import com.couchbase.client.core.io.IoContext;
+import com.couchbase.client.core.io.netty.HttpProtocol;
+import com.couchbase.client.core.msg.BaseHttpRequest;
+import com.couchbase.client.core.msg.Request;
+import com.couchbase.client.core.msg.RequestContext;
+import com.couchbase.client.core.msg.Response;
+import com.couchbase.client.core.msg.manager.BucketConfigStreamingRequest;
+import com.couchbase.client.core.msg.manager.BucketConfigStreamingResponse;
+import com.couchbase.client.core.msg.manager.ManagerRequest;
+import com.couchbase.client.core.service.ServiceState;
+import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.HostAndPort;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.time.Duration;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+
+
+/**
+ * The cluster manager service on one node, using OkHttp.
+ * <p>
+ * Handles {@link ManagerRequest}s here, including the long-lived bucket config stream;
+ * everything else (admission, dispatch, failures, {@link CoreHttpRequest}s, diagnostics)
+ * is in {@link AbstractOkHttpService}.
+ * <p>
+ * Manager requests always complete with a response that has
+ * the HTTP status; it's up to the caller to check it. Only {@link CoreHttpRequest}s are failed
+ * for error statuses.
+ */
+@NullMarked
+public class OkHttpManagerService extends AbstractOkHttpService {
+
+  /**
+   * The most requests in flight (so connections) per node.
+   */
+  private static final int MAX_IN_FLIGHT = 16;
+
+  /**
+   * Separates configs in the bucket config stream.
+   */
+  private static final ByteString CONFIG_SEPARATOR = ByteString.encodeUtf8("\n\n\n\n");
+
+  /**
+   * The bucket config stream is closed if it's idle this long, so the refresher redials (maybe a different node).
+   */
+  private final Duration configIdleTimeout;
+
+  /**
+   * The calls whose responses are bucket config streams in progress. Cancelled when the service is disconnected.
+   */
+  private final Set<Call> configStreams = ConcurrentHashMap.newKeySet();
+
+  public OkHttpManagerService(CoreContext context, HostAndPort address) {
+    super(
+      ServiceType.MANAGER,
+      context,
+      address,
+      MAX_IN_FLIGHT,
+      context.environment().ioConfig().managerCircuitBreakerConfig()
+    );
+    this.configIdleTimeout = context.environment().ioConfig().configIdleRedialTimeout();
+  }
+
+  /**
+   * Also ends any bucket config streams from this node, so the refresher redials (on a node that's still
+   * in the cluster).
+   */
+  @Override
+  public void disconnect() {
+    super.disconnect();
+    configStreams.forEach(Call::cancel);
+  }
+
+  @Override
+  protected boolean supports(Request<?> request) {
+    return request instanceof ManagerRequest;
+  }
+
+  @Override
+  protected void dispatchServiceRequest(Request<?> request, DispatchAttempt attempt) {
+    ManagerRequest<?> managerRequest = (ManagerRequest<?>) request;
+
+    // Manager requests are GET requests with no body.
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder = new com.couchbase.client.core.deps.okhttp3.Request.Builder()
+      .url(url(managerRequest.path()));
+
+    if (request instanceof BucketConfigStreamingRequest) {
+      BucketConfigStreamingRequest streamingRequest = (BucketConfigStreamingRequest) request;
+      sendConfigStreamRequest(streamingRequest, requestBuilder, attempt);
+    } else {
+      sendManagerRequest((BaseHttpRequest<?>) request, requestBuilder, attempt);
+    }
+  }
+
+  @Override
+  protected Exception translateCoreHttpError(int httpStatus, String responseBody, CoreHttpRequest request) {
+    return errorToThrowable(httpStatus, responseBody, request);
+  }
+
+  /**
+   * Returns the exception for an error response to a non-streaming HTTP request to the cluster manager.
+   */
+  static Exception errorToThrowable(int status, String content, Request<?> request) {
+    ManagerErrorContext errorContext = new ManagerErrorContext(
+      HttpProtocol.decodeStatus(status),
+      request.context(),
+      status,
+      content
+    );
+
+    if (status == CoreHttpStatus.BAD_REQUEST) {
+      if (content.contains("Magma is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Storage Backend: Magma");
+      }
+      if (content.contains("Compression mode is supported in enterprise edition only")) {
+        return FeatureNotAvailableException.communityEdition("Compression Mode");
+      }
+      if (content.contains("This http API endpoint requires enterprise edition")){
+        return FeatureNotAvailableException.communityEdition("HTTP API Feature");
+      }
+    }
+
+    if (status == CoreHttpStatus.TOO_MANY_REQUESTS) {
+      if (content.contains("num_concurrent_requests")
+        || content.contains("ingress")
+        || content.contains("egress")) {
+        return new RateLimitedException(errorContext);
+      } else if (content.contains("Maximum number of collections has been reached for scope")) {
+        return new QuotaLimitedException(errorContext);
+      }
+    }
+
+    HttpStatusCodeException httpStatusCodeException = new HttpStatusCodeException(status, content, request, errorContext);
+    if (status == CoreHttpStatus.BAD_REQUEST) {
+      // Keep the HttpStatusCodeException as the cause, so higher layers can still
+      // inspect the response body and map it to a more specific exception.
+      return new InvalidArgumentException(httpStatusCodeException.getMessage(), httpStatusCodeException, errorContext);
+    }
+    return httpStatusCodeException;
+  }
+
+  private <R extends Response> void sendManagerRequest(
+    BaseHttpRequest<R> request,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
+    DispatchAttempt attempt
+  ) {
+    @SuppressWarnings("unchecked")
+    ManagerRequest<R> managerRequest = (ManagerRequest<R>) request;
+
+    execute(request, requestBuilder, attempt, response -> {
+      try (ResponseBody responseBody = response.body()) {
+        // Whatever the status, the caller gets a response.
+        R decoded = managerRequest.decode(response.code(), responseBody.bytes());
+        attempt.recordOutcome(decoded, null);
+        request.succeed(decoded);
+      } catch (IOException e) {
+        // Reading the body failed: the connection broke, not the content.
+        attempt.recordFailure(e);
+        maybeRetryAfterBrokenResponse(context(), request, e);
+      } catch (Throwable t) {
+        attempt.recordFailure(t);
+        request.fail(t);
+      }
+    });
+  }
+
+  /**
+   * Sends the request, and tracks its call while the stream is being read, so {@link #disconnect()} can cancel it.
+   */
+  private void sendConfigStreamRequest(
+    BucketConfigStreamingRequest request,
+    com.couchbase.client.core.deps.okhttp3.Request.Builder requestBuilder,
+    DispatchAttempt attempt
+  ) {
+    // OkHttp runs the handler on another thread, possibly before execute() returns the call.
+    CompletableFuture<Call> callFuture = new CompletableFuture<>();
+
+    callFuture.complete(execute(request, requestBuilder, attempt, response -> {
+      Call call = callFuture.join(); // waits at most until execute() returns
+      // disconnect() changes the state before cancelling the calls in the set. Adding the call before
+      // checking the state means either this sees the disconnect, or the disconnect sees the call.
+      configStreams.add(call);
+      try {
+        if (state() == ServiceState.DISCONNECTED) {
+          call.cancel();
+        }
+        handleConfigStream(request, response, attempt);
+      } finally {
+        configStreams.remove(call);
+      }
+    }));
+  }
+
+  /**
+   * Completes the request as soon as the response headers arrive, then pushes each config
+   * to the response as it arrives, until the server closes the stream, the connection fails,
+   * the stream is idle for too long, or the service is disconnected. Then completes the stream,
+   * so the refresher can redial.
+   * <p>
+   * Runs on the thread that received the response, for as long as the stream lasts.
+   */
+  private void handleConfigStream(BucketConfigStreamingRequest request, com.couchbase.client.core.deps.okhttp3.Response httpResponse, DispatchAttempt attempt) {
+    BucketConfigStreamingResponse streamingResponse;
+    try {
+      streamingResponse = request.decode(httpResponse.code(), null);
+    } catch (Throwable t) {
+      httpResponse.close();
+      attempt.recordFailure(t);
+      request.fail(t);
+      return;
+    }
+
+    attempt.recordOutcome(streamingResponse, null);
+    request.succeed(streamingResponse);
+
+    try (ResponseBody responseBody = httpResponse.body()) {
+      // Once the stream is open, close it if nothing arrives for a while.
+      CouchbaseOkHttpClient.setSocketReadTimeout(httpResponse.request(), configIdleTimeout);
+      BufferedSource source = responseBody.source();
+
+      while (true) {
+        long separatorIndex = source.indexOf(CONFIG_SEPARATOR);
+        if (separatorIndex == -1) {
+          break; // end of stream (any partial config is discarded)
+        }
+        String config = source.readUtf8(separatorIndex);
+        source.skip(CONFIG_SEPARATOR.size());
+        streamingResponse.pushConfig(config.trim());
+      }
+
+    } catch (SocketTimeoutException e) {
+      context().environment().eventBus().publish(new IdleStreamingEndpointClosedEvent(ioContext(request.context())));
+
+    } catch (IOException | RuntimeException e) {
+      // For example, the connection failed or was closed, or the service was disconnected. The refresher will redial.
+      log.debug("Bucket config stream ended: {}", e.toString());
+
+    } finally {
+      streamingResponse.completeStream();
+    }
+  }
+
+  private IoContext ioContext(RequestContext requestContext) {
+    return new IoContext(
+      context(),
+      socketAddress(requestContext.lastDispatchedFrom()),
+      socketAddress(requestContext.lastDispatchedTo()),
+      Optional.empty()
+    );
+  }
+
+  private static @Nullable InetSocketAddress socketAddress(@Nullable HostAndPort address) {
+    return address == null ? null : InetSocketAddress.createUnresolved(address.host(), address.port());
+  }
+}

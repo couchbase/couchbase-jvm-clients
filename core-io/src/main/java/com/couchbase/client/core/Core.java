@@ -93,7 +93,7 @@ import com.couchbase.client.core.node.Locator;
 import com.couchbase.client.core.node.Node;
 import com.couchbase.client.core.node.RoundRobinLocator;
 import com.couchbase.client.core.node.ViewLocator;
-import com.couchbase.client.core.service.CouchbaseOkHttpClient;
+import com.couchbase.client.core.io.http.CouchbaseOkHttpClient;
 import com.couchbase.client.core.service.ServiceScope;
 import com.couchbase.client.core.service.ServiceState;
 import com.couchbase.client.core.service.ServiceType;

@@ -20,7 +20,7 @@ import com.couchbase.client.core.Core;
 import com.couchbase.client.core.cnc.apptelemetry.collector.AppTelemetryCollector;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.PasswordAuthenticator;
-import com.couchbase.client.core.service.CouchbaseOkHttpClient;
+import com.couchbase.client.core.io.http.CouchbaseOkHttpClient;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
