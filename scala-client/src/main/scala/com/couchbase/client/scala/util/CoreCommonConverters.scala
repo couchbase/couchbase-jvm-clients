@@ -227,7 +227,7 @@ private[scala] object CoreCommonConverters {
     ConversationalQueryResult(
       in.rows.asScala.toSeq, // toSeq for 2.13
       convert(in.metaData),
-      in.generatedStatement.asScala
+      Option(in.generatedStatement)
     )
   }
 
@@ -238,19 +238,19 @@ private[scala] object CoreCommonConverters {
       convert(in.status),
       in.warnings.asScala.map(v => QueryWarning(v.code, v.message)),
       in.metrics.asScala.map(v => convert(v)),
-      in.requestTokens.asScala.map(v => convert(v)),
-      in.chatTokens.asScala.map(v => convert(v)),
-      in.naturalLanguageProcessingTime.asScala.map(v => javaDurationToScala(v)),
-      in.generatedStatementExecuted.asScala.map(_.booleanValue),
+      Option(in.requestTokens).map(v => convert(v)),
+      Option(in.chatTokens).map(v => convert(v)),
+      Option(in.naturalLanguageProcessingTime).map(v => javaDurationToScala(v)),
+      Option(in.generatedStatementExecuted).map(_.booleanValue),
       in.profile.asScala
     )
   }
 
   def convert(in: CoreTokenUsage): TokenUsage = {
     TokenUsage(
-      in.promptTokens.asScala.map(_.intValue),
-      in.completionTokens.asScala.map(_.intValue),
-      in.totalTokens.asScala.map(_.intValue)
+      Option(in.promptTokens).map(_.intValue),
+      Option(in.completionTokens).map(_.intValue),
+      Option(in.totalTokens).map(_.intValue)
     )
   }
 
