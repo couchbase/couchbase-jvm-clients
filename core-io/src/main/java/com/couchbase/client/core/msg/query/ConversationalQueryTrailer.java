@@ -17,41 +17,39 @@
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-
-import static java.util.Objects.requireNonNull;
 
 @Stability.Internal
 public class ConversationalQueryTrailer {
 
-  private final Optional<String> generatedStatement;
-  private final Optional<byte[]> requestTokens;
-  private final Optional<byte[]> chatTokens;
-  private final Optional<String> chatId;
+  private final @Nullable String generatedStatement;
+  private final byte @Nullable [] requestTokens;
+  private final byte @Nullable [] chatTokens;
+  private final @Nullable String chatId;
 
-  public ConversationalQueryTrailer(Optional<String> generatedStatement, Optional<byte[]> requestTokens,
-                                    Optional<byte[]> chatTokens, Optional<String> chatId) {
-    this.generatedStatement = requireNonNull(generatedStatement);
-    this.requestTokens = requireNonNull(requestTokens);
-    this.chatTokens = requireNonNull(chatTokens);
-    this.chatId = requireNonNull(chatId);
+  public ConversationalQueryTrailer(@Nullable String generatedStatement, byte @Nullable [] requestTokens,
+                                    byte @Nullable [] chatTokens, @Nullable String chatId) {
+    this.generatedStatement = generatedStatement;
+    this.requestTokens = requestTokens;
+    this.chatTokens = chatTokens;
+    this.chatId = chatId;
   }
 
-  public Optional<String> generatedStatement() {
+  public @Nullable String generatedStatement() {
     return generatedStatement;
   }
 
-  public Optional<byte[]> requestTokens() {
+  public byte @Nullable [] requestTokens() {
     return requestTokens;
   }
 
-  public Optional<byte[]> chatTokens() {
+  public byte @Nullable [] chatTokens() {
     return chatTokens;
   }
 
-  public Optional<String> chatId() {
+  public @Nullable String chatId() {
     return chatId;
   }
 
@@ -59,17 +57,17 @@ public class ConversationalQueryTrailer {
   public String toString() {
     return "ConversationalQueryTrailer{" +
       "generatedStatement=" + generatedStatement +
-      ", requestTokens=" + requestTokens.map(v -> new String(v, StandardCharsets.UTF_8)) +
-      ", chatTokens=" + chatTokens.map(v -> new String(v, StandardCharsets.UTF_8)) +
+      ", requestTokens=" + (requestTokens == null ? null : new String(requestTokens, StandardCharsets.UTF_8)) +
+      ", chatTokens=" + (chatTokens == null ? null : new String(chatTokens, StandardCharsets.UTF_8)) +
       ", chatId=" + chatId +
       '}';
   }
 
   public static class Builder {
-    private String generatedStatement;
-    private byte[] requestTokens;
-    private byte[] chatTokens;
-    private String chatId;
+    private @Nullable String generatedStatement;
+    private byte @Nullable [] requestTokens;
+    private byte @Nullable [] chatTokens;
+    private @Nullable String chatId;
 
     public void generatedStatement(String generatedStatement) {
       this.generatedStatement = generatedStatement;
@@ -88,11 +86,7 @@ public class ConversationalQueryTrailer {
     }
 
     public ConversationalQueryTrailer build() {
-      return new ConversationalQueryTrailer(
-          Optional.ofNullable(generatedStatement),
-          Optional.ofNullable(requestTokens),
-          Optional.ofNullable(chatTokens),
-          Optional.ofNullable(chatId));
+      return new ConversationalQueryTrailer(generatedStatement, requestTokens, chatTokens, chatId);
     }
   }
 }

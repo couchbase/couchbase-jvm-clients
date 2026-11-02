@@ -20,6 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.AbstractContext;
 import com.couchbase.client.core.error.context.CancellationErrorContext;
 import com.couchbase.client.core.msg.CancellationReason;
+import org.jspecify.annotations.Nullable;
 
 public class RequestCanceledException extends CouchbaseException {
 
@@ -39,6 +40,13 @@ public class RequestCanceledException extends CouchbaseException {
   public static RequestCanceledException shuttingDown(AbstractContext context) {
     CancellationErrorContext ctx = new CancellationErrorContext(context);
     throw new RequestCanceledException("Request cancelled as in the process of shutting down", CancellationReason.SHUTDOWN, ctx);
+  }
+
+  // To be used from .doOnCancel() in reactive chains
+  @Stability.Internal
+  public static RequestCanceledException reactiveCancellation(@Nullable AbstractContext context) {
+    CancellationErrorContext ctx = context == null ? null : new CancellationErrorContext(context);
+    throw new RequestCanceledException("Request cancelled as its reactive chain was cancelled", CancellationReason.REACTIVE, ctx);
   }
 
   @Override

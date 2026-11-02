@@ -20,7 +20,7 @@ import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.api.shared.CoreMutationState;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 

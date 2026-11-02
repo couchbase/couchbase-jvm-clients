@@ -25,7 +25,7 @@ import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RateLimitedException;
 import com.couchbase.client.core.error.context.ErrorContext;
 import com.couchbase.client.core.error.context.QueryErrorContext;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public class ConversationalQueryErrors {

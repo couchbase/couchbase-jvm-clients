@@ -17,7 +17,7 @@
 package com.couchbase.client.core.error;
 
 import com.couchbase.client.core.error.context.ErrorContext;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Raised when a conversational query chat is no longer live on its query node.
@@ -27,7 +27,7 @@ import reactor.util.annotation.Nullable;
  */
 public class ChatCurrentlyUnavailableException extends CouchbaseException {
 
-  public ChatCurrentlyUnavailableException(final String message, @Nullable final ErrorContext ctx) {
+  public ChatCurrentlyUnavailableException(final String message, final @Nullable ErrorContext ctx) {
     super(message, ctx);
   }
 }

@@ -35,8 +35,10 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.Object
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.json.Mapper;
+import com.couchbase.client.core.manager.CoreCollectionQueryIndexManager;
 import com.couchbase.client.core.transaction.config.CoreSingleQueryTransactionOptions;
-import reactor.util.annotation.Nullable;
+import com.couchbase.client.core.util.CbStrings;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -68,7 +70,7 @@ class ConversationalQueryEncoding {
     if (useKnowledge != null) {
       with.put("knowledge", useKnowledge);
     }
-    if (hint != null && !hint.isEmpty()) {
+    if (!CbStrings.isNullOrEmpty(hint)) {
       with.put("hint", hint);
     }
     if (execute != null) {
@@ -143,8 +145,9 @@ class ConversationalQueryEncoding {
 
   static final String END_CHAT_STATEMENT = "END CHAT";
 
+  // Rejects names containing backticks, as elsewhere in the SDK.
   static String keyspacePath(CoreKeyspace keyspace) {
-    return "`" + keyspace.bucket() + "`.`" + keyspace.scope() + "`.`" + keyspace.collection() + "`";
+    return CoreCollectionQueryIndexManager.quote(keyspace);
   }
 
   /**

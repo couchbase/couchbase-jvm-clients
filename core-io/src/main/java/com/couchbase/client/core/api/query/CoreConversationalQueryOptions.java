@@ -17,7 +17,7 @@
 package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * A one-shot conversational query takes the same options as a chat ASK, plus Knowledge use.

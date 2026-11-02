@@ -24,7 +24,7 @@ import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
 import com.couchbase.client.core.msg.query.ConversationalQueryRequest;
 import com.couchbase.client.core.retry.RetryStrategy;
 import com.couchbase.client.core.topology.NodeIdentifier;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

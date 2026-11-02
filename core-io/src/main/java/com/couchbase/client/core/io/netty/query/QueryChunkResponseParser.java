@@ -236,8 +236,8 @@ public class QueryChunkResponseParser
       Optional.ofNullable(errors),
       Optional.ofNullable(profile),
       requestContext() != null && requestContext().request() instanceof ConversationalQueryRequest
-        ? Optional.of(conversational.build())
-        : Optional.empty()
+        ? conversational.build()
+        : null
     ));
   }
 

@@ -26,13 +26,12 @@ import com.couchbase.client.core.topology.ClusterCapability;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.HostAndServicePorts;
 import com.couchbase.client.core.util.HostAndPort;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -58,27 +57,30 @@ class ConversationalQueryRouting {
       // Deliberate RFC divergence: with no retained owner this is a usage error, not ChatCurrentlyUnavailableException.
       throw new CouchbaseException("Cannot " + operation + " chat " + chatId + " as routing information is not available.  One possible cause: if an operation other than resume is being performed on a chat that has been paused.");
     }
-    return findOwner(candidates, owner)
-        .orElseThrow(() -> new ChatCurrentlyUnavailableException(
-            "The query node for this chat is no longer in the cluster", null));
+    HostAndServicePorts found = findOwner(candidates, owner);
+    if (found == null) {
+      throw new ChatCurrentlyUnavailableException("The query node for this chat is no longer in the cluster", null);
+    }
+    return found;
   }
 
   // Used for RESUME, which per RFC goes to the retained owner if it is resolvable, else selects a node as for BEGIN.
   static HostAndServicePorts resolveOwnerOrSelectChatNode(ClusterTopology topology, @Nullable String owner) {
     List<HostAndServicePorts> candidates = chatNodes(topology);
     if (owner != null) {
-      Optional<HostAndServicePorts> found = findOwner(candidates, owner);
-      if (found.isPresent()) {
-        return found.get();
+      HostAndServicePorts found = findOwner(candidates, owner);
+      if (found != null) {
+        return found;
       }
     }
     return selectFrom(candidates);
   }
 
-  private static Optional<HostAndServicePorts> findOwner(List<HostAndServicePorts> candidates, String owner) {
+  private static @Nullable HostAndServicePorts findOwner(List<HostAndServicePorts> candidates, String owner) {
     return candidates.stream()
         .filter(node -> owner.equals(node.uuid()))
-        .findFirst();
+        .findFirst()
+        .orElse(null);
   }
 
   private static HostAndServicePorts selectFrom(List<HostAndServicePorts> candidates) {
@@ -107,7 +109,7 @@ class ConversationalQueryRouting {
       HostAndPort address = new HostAndPort(node.host(), node.port(ServiceType.QUERY).getAsInt());
       String existing = uuidsByAddress.putIfAbsent(address, node.uuid());
       if (existing != null && !existing.equals(node.uuid())) {
-        throw new FeatureNotAvailableException("Conversational query chats are not supported on cluster topologies in which multiple query nodes share the same port");
+        throw new FeatureNotAvailableException("Conversational query chats are not supported on cluster topologies in which multiple query nodes share the same host and port");
       }
       candidates.add(node);
     }

@@ -16,7 +16,7 @@
 package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 

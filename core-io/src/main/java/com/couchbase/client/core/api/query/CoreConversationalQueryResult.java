@@ -18,9 +18,9 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.msg.query.QueryChunkRow;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -28,14 +28,14 @@ import static java.util.Objects.requireNonNull;
 public final class CoreConversationalQueryResult {
   private final List<QueryChunkRow> rows;
   private final CoreConversationalQueryMetaData metaData;
-  private final Optional<String> generatedStatement;
+  private final @Nullable String generatedStatement;
 
   public CoreConversationalQueryResult(List<QueryChunkRow> rows,
                                        CoreConversationalQueryMetaData metaData,
-                                       Optional<String> generatedStatement) {
+                                       @Nullable String generatedStatement) {
     this.rows = requireNonNull(rows);
     this.metaData = requireNonNull(metaData);
-    this.generatedStatement = requireNonNull(generatedStatement);
+    this.generatedStatement = generatedStatement;
   }
 
   public List<QueryChunkRow> rows() {
@@ -46,7 +46,7 @@ public final class CoreConversationalQueryResult {
     return metaData;
   }
 
-  public Optional<String> generatedStatement() {
+  public @Nullable String generatedStatement() {
     return generatedStatement;
   }
 }

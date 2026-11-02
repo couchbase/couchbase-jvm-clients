@@ -17,6 +17,7 @@
 package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
+import org.jspecify.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.List;
@@ -27,21 +28,21 @@ import static java.util.Objects.requireNonNull;
 @Stability.Internal
 public final class CoreConversationalQueryMetaData {
   private final CoreQueryMetaData base;
-  private final Optional<CoreTokenUsage> requestTokens;
-  private final Optional<CoreTokenUsage> chatTokens;
-  private final Optional<Duration> naturalLanguageProcessingTime;
-  private final Optional<Boolean> generatedStatementExecuted;
+  private final @Nullable CoreTokenUsage requestTokens;
+  private final @Nullable CoreTokenUsage chatTokens;
+  private final @Nullable Duration naturalLanguageProcessingTime;
+  private final @Nullable Boolean generatedStatementExecuted;
 
   public CoreConversationalQueryMetaData(CoreQueryMetaData base,
-                                         Optional<CoreTokenUsage> requestTokens,
-                                         Optional<CoreTokenUsage> chatTokens,
-                                         Optional<Duration> naturalLanguageProcessingTime,
-                                         Optional<Boolean> generatedStatementExecuted) {
+                                         @Nullable CoreTokenUsage requestTokens,
+                                         @Nullable CoreTokenUsage chatTokens,
+                                         @Nullable Duration naturalLanguageProcessingTime,
+                                         @Nullable Boolean generatedStatementExecuted) {
     this.base = requireNonNull(base);
-    this.requestTokens = requireNonNull(requestTokens);
-    this.chatTokens = requireNonNull(chatTokens);
-    this.naturalLanguageProcessingTime = requireNonNull(naturalLanguageProcessingTime);
-    this.generatedStatementExecuted = requireNonNull(generatedStatementExecuted);
+    this.requestTokens = requestTokens;
+    this.chatTokens = chatTokens;
+    this.naturalLanguageProcessingTime = naturalLanguageProcessingTime;
+    this.generatedStatementExecuted = generatedStatementExecuted;
   }
 
   public String requestId() {
@@ -68,19 +69,19 @@ public final class CoreConversationalQueryMetaData {
     return base.profile();
   }
 
-  public Optional<CoreTokenUsage> requestTokens() {
+  public @Nullable CoreTokenUsage requestTokens() {
     return requestTokens;
   }
 
-  public Optional<CoreTokenUsage> chatTokens() {
+  public @Nullable CoreTokenUsage chatTokens() {
     return chatTokens;
   }
 
-  public Optional<Duration> naturalLanguageProcessingTime() {
+  public @Nullable Duration naturalLanguageProcessingTime() {
     return naturalLanguageProcessingTime;
   }
 
-  public Optional<Boolean> generatedStatementExecuted() {
+  public @Nullable Boolean generatedStatementExecuted() {
     return generatedStatementExecuted;
   }
 

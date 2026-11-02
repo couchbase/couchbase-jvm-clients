@@ -19,9 +19,7 @@ package com.couchbase.client.core.api.query;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
-import reactor.util.annotation.Nullable;
-
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public final class CoreTokenUsage {
@@ -41,20 +39,20 @@ public final class CoreTokenUsage {
   }
 
   private static @Nullable Integer intOrNull(JsonNode node, String field) {
-    JsonNode value = node.get(field);
-    return value != null && value.isNumber() ? value.intValue() : null;
+    JsonNode value = node.path(field);
+    return value.isNumber() ? value.intValue() : null;
   }
 
-  public Optional<Integer> promptTokens() {
-    return Optional.ofNullable(promptTokens);
+  public @Nullable Integer promptTokens() {
+    return promptTokens;
   }
 
-  public Optional<Integer> completionTokens() {
-    return Optional.ofNullable(completionTokens);
+  public @Nullable Integer completionTokens() {
+    return completionTokens;
   }
 
-  public Optional<Integer> totalTokens() {
-    return Optional.ofNullable(totalTokens);
+  public @Nullable Integer totalTokens() {
+    return totalTokens;
   }
 
   @Override

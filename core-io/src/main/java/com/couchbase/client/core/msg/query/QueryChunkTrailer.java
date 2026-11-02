@@ -17,6 +17,7 @@
 package com.couchbase.client.core.msg.query;
 
 import com.couchbase.client.core.msg.chunk.ChunkTrailer;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -28,11 +29,11 @@ public class QueryChunkTrailer implements ChunkTrailer {
   private final Optional<byte[]> warnings;
   private final Optional<byte[]> errors;
   private final Optional<byte[]> profile;
-  private final Optional<ConversationalQueryTrailer> conversational;
+  private final @Nullable ConversationalQueryTrailer conversational;
 
   public QueryChunkTrailer(String status, Optional<byte[]> metrics, Optional<byte[]> warnings,
                            Optional<byte[]> errors, Optional<byte[]> profile,
-                           Optional<ConversationalQueryTrailer> conversational) {
+                           @Nullable ConversationalQueryTrailer conversational) {
     this.status = status;
     this.metrics = metrics;
     this.warnings = warnings;
@@ -64,7 +65,7 @@ public class QueryChunkTrailer implements ChunkTrailer {
   /**
    * Present only for conversational query requests.
    */
-  public Optional<ConversationalQueryTrailer> conversational() {
+  public @Nullable ConversationalQueryTrailer conversational() {
     return conversational;
   }
 

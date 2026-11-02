@@ -51,7 +51,6 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 import static com.couchbase.client.core.classic.query.conversational.ConversationalQueryRequests.request;
@@ -116,9 +115,11 @@ public class ClassicCoreConversationalQueryOps implements CoreConversationalQuer
                   options.commonOptions(), TracingIdentifiers.SPAN_REQUEST_CONVERSATIONAL_QUERY_BEGIN_CHAT, false, null, node.id()))
               .flatMap(response -> response.rows().then(response.trailer()))
               .map(trailer -> {
-                String chatId = trailer.conversational()
-                    .flatMap(ConversationalQueryTrailer::chatId)
-                    .orElseThrow(() -> new CouchbaseException("The query service did not return a chat id from BEGIN CHAT"));
+                ConversationalQueryTrailer conversational = trailer.conversational();
+                String chatId = conversational == null ? null : conversational.chatId();
+                if (chatId == null) {
+                  throw new CouchbaseException("The query service did not return a chat id from BEGIN CHAT");
+                }
                 return new CoreBeginChatResult(chatId, requireNonNull(node.uuid()));
               }));
     }));
@@ -220,7 +221,8 @@ public class ClassicCoreConversationalQueryOps implements CoreConversationalQuer
       return Reactor
           .wrap(request, request.response(), true)
           .doOnNext(ignored -> request.context().logicallyComplete())
-          .doOnError(err -> request.context().logicallyComplete(err));
+          .doOnError(err -> request.context().logicallyComplete(err))
+          .doOnCancel(() -> request.context().logicallyCompleteOnCancel(request));
     });
   }
 
@@ -237,8 +239,9 @@ public class ClassicCoreConversationalQueryOps implements CoreConversationalQuer
   private static CoreConversationalQueryResult conversationalQueryResult(QueryChunkHeader header,
                                                                          List<QueryChunkRow> rows,
                                                                          QueryChunkTrailer trailer) {
+    ConversationalQueryTrailer conversational = trailer.conversational();
     return new CoreConversationalQueryResult(rows, conversationalMetaData(header, trailer),
-        trailer.conversational().flatMap(ConversationalQueryTrailer::generatedStatement));
+        conversational == null ? null : conversational.generatedStatement());
   }
 
   // For the chat lifecycle operations, which return only metadata.
@@ -251,30 +254,32 @@ public class ClassicCoreConversationalQueryOps implements CoreConversationalQuer
 
   private static CoreConversationalQueryMetaData conversationalMetaData(QueryChunkHeader header,
                                                                         QueryChunkTrailer trailer) {
-    Optional<Duration> naturalLanguageProcessingTime = Optional.empty();
-    Optional<Boolean> generatedStatementExecuted = Optional.empty();
+    Duration naturalLanguageProcessingTime = null;
+    Boolean generatedStatementExecuted = null;
     if (trailer.metrics().isPresent()) {
       JsonNode metrics = Mapper.decodeIntoTree(trailer.metrics().get());
-      JsonNode nlpTime = metrics.get("naturalLanguageProcessingTime");
-      if (nlpTime != null && nlpTime.isTextual()) {
+      JsonNode nlpTime = metrics.path("naturalLanguageProcessingTime");
+      if (nlpTime.isTextual()) {
         try {
-          naturalLanguageProcessingTime = Optional.of(Golang.parseDuration(nlpTime.asText()));
+          naturalLanguageProcessingTime = Golang.parseDuration(nlpTime.asText());
         } catch (InvalidArgumentException e) {
           // Skipped rather than failing an operation whose statement may already have executed.
         }
       }
-      JsonNode executed = metrics.get("generatedStatementExecuted");
-      if (executed != null && executed.isBoolean()) {
-        generatedStatementExecuted = Optional.of(executed.booleanValue());
+      JsonNode executed = metrics.path("generatedStatementExecuted");
+      if (executed.isBoolean()) {
+        generatedStatementExecuted = executed.booleanValue();
       }
     }
 
-    Optional<ConversationalQueryTrailer> conversational = trailer.conversational();
+    ConversationalQueryTrailer conversational = trailer.conversational();
+    byte[] requestTokens = conversational == null ? null : conversational.requestTokens();
+    byte[] chatTokens = conversational == null ? null : conversational.chatTokens();
 
     return new CoreConversationalQueryMetaData(
         ClassicCoreQueryMetaData.from(header, trailer),
-        conversational.flatMap(ConversationalQueryTrailer::requestTokens).map(CoreTokenUsage::fromJson),
-        conversational.flatMap(ConversationalQueryTrailer::chatTokens).map(CoreTokenUsage::fromJson),
+        requestTokens == null ? null : CoreTokenUsage.fromJson(requestTokens),
+        chatTokens == null ? null : CoreTokenUsage.fromJson(chatTokens),
         naturalLanguageProcessingTime,
         generatedStatementExecuted
     );

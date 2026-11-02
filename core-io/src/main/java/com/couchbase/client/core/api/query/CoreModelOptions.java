@@ -18,7 +18,7 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.node.ObjectNode;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Empty strings, zero and empty maps are treated as unset.

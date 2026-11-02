@@ -17,7 +17,7 @@ package com.couchbase.client.core.api.query;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 @Stability.Internal
 public interface CorePauseOptions {
