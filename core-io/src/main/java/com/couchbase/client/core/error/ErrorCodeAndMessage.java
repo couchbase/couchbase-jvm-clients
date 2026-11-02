@@ -24,7 +24,7 @@ import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonPrope
 import com.couchbase.client.core.deps.com.fasterxml.jackson.core.type.TypeReference;
 import com.couchbase.client.core.deps.com.fasterxml.jackson.databind.JsonNode;
 import com.couchbase.client.core.json.Mapper;
-import reactor.util.annotation.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
