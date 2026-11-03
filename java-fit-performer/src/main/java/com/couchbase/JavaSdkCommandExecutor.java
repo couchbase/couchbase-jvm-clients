@@ -318,16 +318,20 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAndTouch()) {
       var request = clc.getGetAndTouch();
       var docId = getDocId(request.getLocation());
-      Duration expiry;
-      if (request.getExpiry().hasAbsoluteEpochSecs()) {
-        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-      } else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      var expiry = request.getExpiry();
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       GetResult gr;
-      if (options == null) gr = collection.getAndTouch(docId, expiry);
-      else gr = collection.getAndTouch(docId, expiry, options);
+      if (expiry.hasAbsoluteEpochSecs()) {
+        var absolute = Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs());
+        if (options == null) gr = collection.getAndTouch(docId, absolute);
+        else gr = collection.getAndTouch(docId, absolute, options);
+      } else {
+        var relative = Duration.ofSeconds(expiry.getRelativeSecs());
+        if (options == null) gr = collection.getAndTouch(docId, relative);
+        else gr = collection.getAndTouch(docId, relative, options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) populateResult(request.getContentAs(), result, gr);
       else setSuccess(result);
@@ -337,15 +341,19 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
       var request = clc.getTouch();
       var docId = getDocId(request.getLocation());
       var options = createOptions(request, spans);
-      Duration expiry;
-      if (request.getExpiry().hasAbsoluteEpochSecs()) {
-        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-      } else expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
+      var expiry = request.getExpiry();
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       MutationResult mr;
-      if (options == null) mr = collection.touch(docId, expiry);
-      else mr = collection.touch(docId, expiry, options);
+      if (expiry.hasAbsoluteEpochSecs()) {
+        var absolute = Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs());
+        if (options == null) mr = collection.touch(docId, absolute);
+        else mr = collection.touch(docId, absolute, options);
+      } else {
+        var relative = Duration.ofSeconds(expiry.getRelativeSecs());
+        if (options == null) mr = collection.touch(docId, relative);
+        else mr = collection.touch(docId, relative, options);
+      }
       result.setElapsedNanos(System.nanoTime() - start);
       if (op.getReturnResult()) populateResult(result, mr);
       else setSuccess(result);
@@ -1335,7 +1343,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasInitial()) out.initial(opts.getInitial());
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
+                else out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
             }
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
@@ -1354,7 +1362,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasInitial()) out.initial(opts.getInitial());
             if (opts.hasExpiry()) {
                 if (opts.getExpiry().hasRelativeSecs()) out.expiry(Duration.ofSeconds(opts.getExpiry().getRelativeSecs()));
-                else out.expiry(Duration.between(Instant.now(), Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs())));
+                else out.expiry(Instant.ofEpochSecond(opts.getExpiry().getAbsoluteEpochSecs()));
             }
             if (opts.hasDurability()) convertDurability(opts.getDurability(), out);
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));

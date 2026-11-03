@@ -316,20 +316,25 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     if (clc.hasGetAndTouch()) {
       var request = clc.getGetAndTouch();
       var docId = getDocId(request.getLocation());
-      Duration expiry;
-      if (request.getExpiry().hasAbsoluteEpochSecs()) {
-        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-      } else {
-        expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-      }
+      var expiry = request.getExpiry();
       var options = createOptions(request, spans);
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Mono<GetResult> gr;
-      if (options == null) {
-        gr = collection.getAndTouch(docId, expiry);
+      if (expiry.hasAbsoluteEpochSecs()) {
+        var absolute = Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs());
+        if (options == null) {
+          gr = collection.getAndTouch(docId, absolute);
+        } else {
+          gr = collection.getAndTouch(docId, absolute, options);
+        }
       } else {
-        gr = collection.getAndTouch(docId, expiry, options);
+        var relative = Duration.ofSeconds(expiry.getRelativeSecs());
+        if (options == null) {
+          gr = collection.getAndTouch(docId, relative);
+        } else {
+          gr = collection.getAndTouch(docId, relative, options);
+        }
       }
       return withSchedulerCheck(gr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
@@ -346,19 +351,24 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
       var request = clc.getTouch();
       var docId = getDocId(request.getLocation());
       var options = createOptions(request, spans);
-      Duration expiry;
-      if (request.getExpiry().hasAbsoluteEpochSecs()) {
-        expiry = Duration.between(Instant.now(), Instant.ofEpochSecond(request.getExpiry().getAbsoluteEpochSecs()));
-      } else {
-        expiry = Duration.ofSeconds(request.getExpiry().getRelativeSecs());
-      }
+      var expiry = request.getExpiry();
       result.setInitiated(getTimeNow());
       long start = System.nanoTime();
       Mono<MutationResult> mr;
-      if (options == null) {
-        mr = collection.touch(docId, expiry);
+      if (expiry.hasAbsoluteEpochSecs()) {
+        var absolute = Instant.ofEpochSecond(expiry.getAbsoluteEpochSecs());
+        if (options == null) {
+          mr = collection.touch(docId, absolute);
+        } else {
+          mr = collection.touch(docId, absolute, options);
+        }
       } else {
-        mr = collection.touch(docId, expiry, options);
+        var relative = Duration.ofSeconds(expiry.getRelativeSecs());
+        if (options == null) {
+          mr = collection.touch(docId, relative);
+        } else {
+          mr = collection.touch(docId, relative, options);
+        }
       }
       return withSchedulerCheck(mr).map(r -> {
         result.setElapsedNanos(System.nanoTime() - start);
