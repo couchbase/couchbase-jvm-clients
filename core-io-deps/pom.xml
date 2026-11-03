@@ -71,6 +71,11 @@
             <artifactId>netty-codec-http</artifactId>
         </dependency>
         <dependency>
+            <!-- Required by gRPC. Declared here because this project replaces one of its classes. -->
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http2</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-classes-kqueue</artifactId>
         </dependency>
@@ -168,10 +173,22 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.3.0</version>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
@@ -390,6 +407,15 @@
                         </transformer>
                     </transformers>
                     <filters>
+                        <filter>
+                            <artifact>io.netty:netty-codec-http2</artifact>
+                            <excludes>
+                                <!-- Replaced by a version that never logs, since gRPC's frame logs include
+                                     credentials and message bodies. See this project's Http2FrameLogger. -->
+                                <exclude>io/netty/handler/codec/http2/Http2FrameLogger.*</exclude>
+                                <exclude>io/netty/handler/codec/http2/Http2FrameLogger$*</exclude>
+                            </excludes>
+                        </filter>
                         <filter>
                             <artifact>dnsjava:dnsjava</artifact>
                             <excludes>
