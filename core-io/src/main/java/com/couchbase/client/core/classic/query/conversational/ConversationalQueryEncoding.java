@@ -94,7 +94,8 @@ class ConversationalQueryEncoding {
     // The RFC requires always sending knowledge on BEGIN, defaulting to false.
     with.put("knowledge", Boolean.TRUE.equals(useKnowledge));
     if (inactivityTimeout != null) {
-      with.put("timeout", inactivityTimeout.getSeconds());
+      // Whole seconds, rounded up per the RFC, so a sub-second timeout is not sent as 0.
+      with.put("timeout", inactivityTimeout.getSeconds() + (inactivityTimeout.getNano() > 0 ? 1 : 0));
     }
     return "BEGIN CHAT WITH " + with;
   }
