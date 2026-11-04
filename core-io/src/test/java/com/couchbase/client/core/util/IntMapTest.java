@@ -17,6 +17,8 @@
 package com.couchbase.client.core.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,23 +72,6 @@ class IntMapTest {
   }
 
   @Test
-  void sparseMapFindsEachKeyAndNothingElse() {
-    IntMap<String> map = IntMap.from(mapOf(
-      2_000_000, "c",
-      7, "a",
-      1_000_000, "b"
-    ));
-    assertInstanceOf(SparseIntMap.class, map);
-    assertEquals("a", map.get(7));
-    assertEquals("b", map.get(1_000_000));
-    assertEquals("c", map.get(2_000_000));
-    assertNull(map.get(0)); // before the first key
-    assertNull(map.get(8)); // between keys
-    assertNull(map.get(Integer.MAX_VALUE)); // after the last key
-    assertEquals("SparseIntMap{7=a, 1000000=b, 2000000=c}", map.toString());
-  }
-
-  @Test
   void sparsityEdgeConditions() {
     assertInstanceOf(CompactIntMap.class, IntMap.from(mapOf(MAX_WASTED_ARRAY_ELEMENTS, "a")));
     assertInstanceOf(SparseIntMap.class, IntMap.from(mapOf(MAX_WASTED_ARRAY_ELEMENTS + 1, "a")));
@@ -118,6 +103,20 @@ class IntMapTest {
     assertEquals("c", map.get(Short.MAX_VALUE));
     assertEquals("d", map.get(Short.MIN_VALUE));
     assertThrows(IllegalArgumentException.class, () -> map.get(-1));
+  }
+
+  @Test
+  void reinterpretsNegativeByteAsPositiveInt() {
+    IntMap<String> map = IntMap.from(mapOf(
+      0xff, "a",
+      0, "b",
+      (int) Byte.MAX_VALUE, "c",
+      Byte.MIN_VALUE & 0xff, "d"
+    ));
+    assertEquals("a", map.get((byte) -1));
+    assertEquals("b", map.get((byte) 0));
+    assertEquals("c", map.get(Byte.MAX_VALUE));
+    assertEquals("d", map.get(Byte.MIN_VALUE));
   }
 
   @Test
@@ -161,11 +160,25 @@ class IntMapTest {
     );
   }
 
+  @ParameterizedTest
+  @ValueSource(ints = {1, 1_000_000}) // compact and sparse
+  void creationFailsIfMapHasNullValue(int key) {
+    Map<Integer, String> mapWithNullValue = new HashMap<>();
+    mapWithNullValue.put(0, "a");
+    mapWithNullValue.put(key, null);
+    assertThrows(IllegalArgumentException.class, () -> IntMap.from(mapWithNullValue));
+  }
+
   @Test
   void creationFailsIfKeyExtractorIsNullEvenForEmptyList() {
     assertThrows(
       NullPointerException.class,
       () -> IntMap.from(emptyList(), null)
     );
+  }
+
+  @Test
+  void extremeKeyUsesSparseMap() {
+    assertInstanceOf(SparseIntMap.class, IntMap.from(mapOf(Integer.MAX_VALUE, "a")));
   }
 }

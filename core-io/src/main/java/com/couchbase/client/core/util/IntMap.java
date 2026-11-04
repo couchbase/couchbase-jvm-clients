@@ -104,19 +104,24 @@ public interface IntMap<E> {
   /**
    * Returns a new instance from the entries of the given map.
    *
-   * @throws IllegalArgumentException if the map contains a key that is null or negative.
+   * @throws IllegalArgumentException if the map contains a key that is null or negative,
+   * or a value that is null.
    */
   static <E> IntMap<E> from(Map<Integer, E> map) {
     if (map.isEmpty()) {
       return CompactIntMap.empty();
     }
 
-    for (Integer key : map.keySet()) {
+    // A null value would be indistinguishable from a missing key, since get() returns null for both.
+    map.forEach((key, value) -> {
       //noinspection ConstantValue
       if (key == null || key < 0) {
         throw new IllegalArgumentException("IntMap key must be non-null and non-negative, but got: " + key);
       }
-    }
+      if (value == null) {
+        throw new IllegalArgumentException("IntMap values must be non-null, but key " + key + " has a null value.");
+      }
+    });
 
     int maxIndex = map.keySet().stream().max(Integer::compareTo).get();
     int wastedArrayElements = (maxIndex + 1) - map.size();
@@ -162,8 +167,9 @@ class CompactIntMap<E> implements IntMap<E> {
   private Map<Integer, E> toMap() {
     Map<Integer, E> result = new LinkedHashMap<>();
     for (int i = 0; i < indexToValue.length; i++) {
-      if (get(i) != null) {
-        result.put(i, get(i));
+      E value = get(i);
+      if (value != null) {
+        result.put(i, value);
       }
     }
     return result;
@@ -176,40 +182,111 @@ class CompactIntMap<E> implements IntMap<E> {
 }
 
 /**
- * For keys too far apart for {@link CompactIntMap}: the keys in ascending order, and the values in the same order.
- * A lookup is a binary search.
+ * For keys too far apart for {@link CompactIntMap}: a read-only hash table with open addressing and linear probing.
+ * <p>
+ * The table size is a power of two at least twice the number of entries, so the table is never more than half full,
+ * and a lookup usually checks only one or two slots. A key's first slot comes from Fibonacci hashing
+ * (multiply by a constant and keep the top bits), which spreads out patterned keys like multiples of a power of two.
+ * <p>
+ * An empty slot holds the key {@value #EMPTY}. That can't clash with a real key, because keys are non-negative.
  */
 class SparseIntMap<E> implements IntMap<E> {
+  private static final int EMPTY = -1;
+
+  /**
+   * 2^32 divided by the golden ratio, rounded to the nearest integer.
+   * It's odd, so multiplying by it (mod 2^32) never maps two different keys to the same product.
+   */
+  private static final int FIBONACCI_MULTIPLIER = 0x9E3779B9;
+
   private final int[] keys;
   private final E[] values;
 
-  @SuppressWarnings("unchecked")
-  public SparseIntMap(Map<Integer, E> indexToValue) {
-    TreeMap<Integer, E> sorted = new TreeMap<>(indexToValue);
-    this.keys = new int[sorted.size()];
-    this.values = (E[]) new Object[sorted.size()];
+  /**
+   * How far to shift a key's hash right to get a slot index in {@code [0, keys.length)}.
+   */
+  private final int shift;
 
-    int i = 0;
-    for (Map.Entry<Integer, E> entry : sorted.entrySet()) {
-      keys[i] = entry.getKey();
-      values[i] = entry.getValue();
-      i++;
+  @SuppressWarnings("unchecked")
+  SparseIntMap(Map<Integer, E> indexToValue) {
+    int capacity = capacityFor(indexToValue.size());
+    this.keys = new int[capacity];
+    this.values = (E[]) new Object[capacity];
+    this.shift = Integer.SIZE - Integer.numberOfTrailingZeros(capacity);
+    Arrays.fill(keys, EMPTY);
+
+    int mask = capacity - 1;
+    indexToValue.forEach((key, value) -> {
+      //noinspection ConstantValue
+      if (key == null || key < 0) {
+        // A key of -1 would be indistinguishable from an empty slot, and other negative keys could never be looked up.
+        throw new IllegalArgumentException("SparseIntMap key must be non-null and non-negative, but got: " + key);
+      }
+      if (value == null) {
+        throw new IllegalArgumentException("SparseIntMap values must be non-null, but key " + key + " has a null value.");
+      }
+      int i = slot(key);
+      while (keys[i] != EMPTY) {
+        i = (i + 1) & mask;
+      }
+      keys[i] = key;
+      values[i] = value;
+    });
+  }
+
+  /**
+   * Returns the smallest power of two that is at least twice the given size (and at least 2),
+   * so the table is never more than half full and always has an empty slot.
+   * <p>
+   * @implNote The minimum of 2 matters: a capacity of 1 would make {@link #shift} 32, and Java uses only
+   * the low 5 bits of a shift count, so {@code >>> 32} wouldn't shift at all and {@link #slot} would
+   * return an index far outside the table.
+   */
+  static int capacityFor(int size) {
+    if (size < 0 || size > (1 << 29)) {
+      throw new IllegalArgumentException("Unsupported size: " + size);
     }
+    return Math.max(2, Integer.highestOneBit(size * 2 - 1) << 1);
+  }
+
+  /**
+   * Returns the slot where a search for the given key starts.
+   */
+  int slot(int key) {
+    return (key * FIBONACCI_MULTIPLIER) >>> shift;
+  }
+
+  /**
+   * Returns the number of slots in the table.
+   */
+  int capacity() {
+    return keys.length;
   }
 
   @Override
   public @Nullable E get(int key) {
+    // Without this check, get(-1) would match an empty slot (EMPTY is -1) and return null instead of throwing.
     if (key < 0) {
       throw new IllegalArgumentException("key must be non-negative, but got " + key);
     }
-    int index = Arrays.binarySearch(keys, key);
-    return index < 0 ? null : values[index];
+    int mask = keys.length - 1;
+    for (int i = slot(key); ; i = (i + 1) & mask) {
+      int k = keys[i];
+      if (k == key) {
+        return values[i];
+      }
+      if (k == EMPTY) {
+        return null; // The loop always ends, because the table is never full.
+      }
+    }
   }
 
   private Map<Integer, E> toMap() {
-    Map<Integer, E> result = new LinkedHashMap<>();
+    Map<Integer, E> result = new TreeMap<>();
     for (int i = 0; i < keys.length; i++) {
-      result.put(keys[i], values[i]);
+      if (keys[i] != EMPTY) {
+        result.put(keys[i], values[i]);
+      }
     }
     return result;
   }
