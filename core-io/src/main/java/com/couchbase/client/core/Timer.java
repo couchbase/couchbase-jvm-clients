@@ -186,6 +186,10 @@ public class Timer {
   }
 
   private TimerWheel timer() {
+    if (wheelTimers.size() == 1) {
+      // The default. Skip the counter, which every thread that schedules a task would otherwise update.
+      return wheelTimers.get(0);
+    }
     // Using a long for currentTimer permits 100,000 timeouts/retries per second for 9.223372e+13 seconds, or
     // nearly 3 million years.
     return wheelTimers.get((int) (currentTimer.getAndIncrement() % wheelTimers.size()));
