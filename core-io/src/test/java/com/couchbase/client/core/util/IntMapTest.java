@@ -17,6 +17,8 @@
 package com.couchbase.client.core.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -104,6 +106,20 @@ class IntMapTest {
   }
 
   @Test
+  void reinterpretsNegativeByteAsPositiveInt() {
+    IntMap<String> map = IntMap.from(mapOf(
+      0xff, "a",
+      0, "b",
+      (int) Byte.MAX_VALUE, "c",
+      Byte.MIN_VALUE & 0xff, "d"
+    ));
+    assertEquals("a", map.get((byte) -1));
+    assertEquals("b", map.get((byte) 0));
+    assertEquals("c", map.get(Byte.MAX_VALUE));
+    assertEquals("d", map.get(Byte.MIN_VALUE));
+  }
+
+  @Test
   void canCreateEmpty() {
     IntMap<String> map = IntMap.from(emptyList(), String::length);
     assertInstanceOf(CompactIntMap.class, map);
@@ -144,11 +160,25 @@ class IntMapTest {
     );
   }
 
+  @ParameterizedTest
+  @ValueSource(ints = {1, 1_000_000}) // compact and sparse
+  void creationFailsIfMapHasNullValue(int key) {
+    Map<Integer, String> mapWithNullValue = new HashMap<>();
+    mapWithNullValue.put(0, "a");
+    mapWithNullValue.put(key, null);
+    assertThrows(IllegalArgumentException.class, () -> IntMap.from(mapWithNullValue));
+  }
+
   @Test
   void creationFailsIfKeyExtractorIsNullEvenForEmptyList() {
     assertThrows(
       NullPointerException.class,
       () -> IntMap.from(emptyList(), null)
     );
+  }
+
+  @Test
+  void extremeKeyUsesSparseMap() {
+    assertInstanceOf(SparseIntMap.class, IntMap.from(mapOf(Integer.MAX_VALUE, "a")));
   }
 }
