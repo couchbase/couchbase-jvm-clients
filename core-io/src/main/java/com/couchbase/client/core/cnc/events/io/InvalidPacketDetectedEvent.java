@@ -19,8 +19,7 @@ package com.couchbase.client.core.cnc.events.io;
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 
@@ -50,7 +49,7 @@ public class InvalidPacketDetectedEvent extends AbstractEvent {
   @Override
   public String description() {
     return "Invalid Packet detected: \n"
-      + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(packet))
+      + Bytes.prettyHexDump(packet)
       + "\n";
   }
 
