@@ -16,16 +16,12 @@
 
 package com.couchbase.client.core.util;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BytesTest {
 
@@ -36,35 +32,74 @@ class BytesTest {
   }
 
   @Test
-  void toHexMatchesNettysHexDump() {
+  void toHexHandlesEveryByteValue() {
     byte[] everyByte = new byte[256];
+    StringBuilder expected = new StringBuilder();
     for (int i = 0; i < everyByte.length; i++) {
       everyByte[i] = (byte) i;
+      expected.append(String.format("%02x", i));
     }
-    assertEquals(ByteBufUtil.hexDump(everyByte), Bytes.toHex(everyByte));
+    assertEquals(expected.toString(), Bytes.toHex(everyByte));
   }
 
+  @Test
+  void hexDumpOfNothingIsEmpty() {
+    assertEquals("", Bytes.prettyHexDump(Bytes.EMPTY_BYTE_ARRAY));
+  }
 
   @Test
-  void hexDumpMatchesNettys() {
-    for (int length : new int[]{0, 1, 15, 16, 17, 40, 300}) {
-      byte[] bytes = new byte[length];
-      for (int i = 0; i < length; i++) {
-        bytes[i] = (byte) (i * 37);
-      }
-      assertEquals(ByteBufUtil.prettyHexDump(Unpooled.wrappedBuffer(bytes)), Bytes.prettyHexDump(bytes), "length " + length);
-    }
+  void hexDumpOfOneFullRow() {
+    byte[] bytes = "Hello, Couchbase".getBytes(StandardCharsets.UTF_8);
+    assertEquals(
+      lines(
+        "         +-------------------------------------------------+",
+        "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |",
+        "+--------+-------------------------------------------------+----------------+",
+        "|00000000| 48 65 6c 6c 6f 2c 20 43 6f 75 63 68 62 61 73 65 |Hello, Couchbase|",
+        "+--------+-------------------------------------------------+----------------+"
+      ),
+      Bytes.prettyHexDump(bytes)
+    );
+  }
+
+  @Test
+  void hexDumpPadsTheLastRowAndShowsUnprintableBytesAsDots() {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    byte[] text = "Hello, Couchbase!".getBytes(StandardCharsets.UTF_8);
+    bytes.write(text, 0, text.length);
+    bytes.write(0x00);
+    bytes.write(0x7f);
+    bytes.write(0xff);
+
+    assertEquals(
+      lines(
+        "         +-------------------------------------------------+",
+        "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |",
+        "+--------+-------------------------------------------------+----------------+",
+        "|00000000| 48 65 6c 6c 6f 2c 20 43 6f 75 63 68 62 61 73 65 |Hello, Couchbase|",
+        "|00000010| 21 00 7f ff                                     |!...            |",
+        "+--------+-------------------------------------------------+----------------+"
+      ),
+      Bytes.prettyHexDump(bytes.toByteArray())
+    );
   }
 
   @Test
   void hexDumpRowsAreLabelledWithTheirBodyOffset() {
-    String dump = Bytes.prettyHexDump(new byte[20], 0x2000);
-    assertTrue(dump.contains("|00002000| 00"), dump);
-    assertTrue(dump.contains("|00002010| 00"), dump);
-    assertFalse(dump.contains("|00000000|"), dump);
+    assertEquals(
+      lines(
+        "         +-------------------------------------------------+",
+        "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |",
+        "+--------+-------------------------------------------------+----------------+",
+        "|00002000| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|",
+        "|00002010| 00 00 00 00                                     |....            |",
+        "+--------+-------------------------------------------------+----------------+"
+      ),
+      Bytes.prettyHexDump(new byte[20], 0x2000)
+    );
   }
 
-  private static ByteBuf buf(String s) {
-    return Unpooled.copiedBuffer(s, StandardCharsets.UTF_8);
+  private static String lines(String... lines) {
+    return String.join(System.lineSeparator(), lines);
   }
 }
