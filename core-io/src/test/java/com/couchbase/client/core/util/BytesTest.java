@@ -84,21 +84,6 @@ class BytesTest {
     );
   }
 
-  @Test
-  void hexDumpRowsAreLabelledWithTheirBodyOffset() {
-    assertEquals(
-      lines(
-        "         +-------------------------------------------------+",
-        "         |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |",
-        "+--------+-------------------------------------------------+----------------+",
-        "|00002000| 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|",
-        "|00002010| 00 00 00 00                                     |....            |",
-        "+--------+-------------------------------------------------+----------------+"
-      ),
-      Bytes.prettyHexDump(new byte[20], 0x2000)
-    );
-  }
-
   private static String lines(String... lines) {
     return String.join(System.lineSeparator(), lines);
   }

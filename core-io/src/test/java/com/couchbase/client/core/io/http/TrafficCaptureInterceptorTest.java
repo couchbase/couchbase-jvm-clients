@@ -182,7 +182,7 @@ class TrafficCaptureInterceptorTest {
 
     String captured = TrafficCaptureInterceptor.describe(request);
 
-    assertTrue(captured.endsWith(Bytes.prettyHexDump("password=<masked>&name=Alice".getBytes(UTF_8), 0)), captured);
+    assertTrue(captured.endsWith(Bytes.prettyHexDump("password=<masked>&name=Alice".getBytes(UTF_8))), captured);
   }
 
   @Test

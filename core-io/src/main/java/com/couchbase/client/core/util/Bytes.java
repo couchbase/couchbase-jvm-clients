@@ -71,15 +71,6 @@ public class Bytes {
    */
   @Stability.Internal
   public static String prettyHexDump(byte[] bytes) {
-    return prettyHexDump(bytes, 0);
-  }
-
-  /**
-   * Like {@link #prettyHexDump(byte[])}, except that each row is labelled with its offset counting from the given offset
-   * (for example, for a chunk of a response body after the first).
-   */
-  @Stability.Internal
-  public static String prettyHexDump(byte[] bytes, long startOffset) {
     if (bytes.length == 0) {
       return "";
     }
@@ -90,7 +81,7 @@ public class Bytes {
       .append("+--------+-------------------------------------------------+----------------+");
     for (int row = 0; row < bytes.length; row += 16) {
       sb.append(newline).append('|');
-      appendHex(sb, startOffset + row, 8);
+      appendHex(sb, row, 8);
       sb.append('|');
       StringBuilder ascii = new StringBuilder();
       for (int i = row; i < row + 16; i++) {

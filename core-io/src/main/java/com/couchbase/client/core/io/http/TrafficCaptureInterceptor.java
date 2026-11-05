@@ -64,7 +64,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * <p>
  * Request and status lines and headers are captured as text. A body is captured as text if its content type is
  * textual (see {@link #isTextual}); a character split between two chunks is captured whole, with the later chunk.
- * Otherwise, it's captured as a hex dump (see {@link Bytes#prettyHexDump}).
+ * Otherwise, each chunk is captured as a hex dump (see {@link Bytes#prettyHexDump}), with rows labelled from zero.
  * <p>
  * This captures the HTTP messages as OkHttp sends and receives them, mostly as text: OkHttp's own framing (like chunked encoding) isn't included.
  * (Capturing the bytes inside a TLS connection would mean wrapping OkHttp's SSLSocket, which OkHttp depends on
@@ -107,8 +107,6 @@ final class TrafficCaptureInterceptor implements Interceptor {
     Utf8ChunkDecoder decoder = new Utf8ChunkDecoder();
     ResponseBody captured = ResponseBody.create(
       Okio.buffer(new ForwardingSource(body.source()) {
-        private long bodyOffset; // of the next chunk, for the hex dumps
-
         @Override
         public long read(Buffer sink, long byteCount) throws IOException {
           long read = super.read(sink, byteCount);
@@ -122,9 +120,8 @@ final class TrafficCaptureInterceptor implements Interceptor {
               String text = decoder.decode(bytes);
               captured = text.isEmpty() ? "" : framedText(text, textOffset, decoder.decodedBytes() - textOffset);
             } else {
-              captured = Bytes.prettyHexDump(bytes, bodyOffset);
+              captured = Bytes.prettyHexDump(bytes);
             }
-            bodyOffset += read;
           } else if (read == -1 && textual) {
             long textOffset = decoder.decodedBytes();
             String text = decoder.flush();
