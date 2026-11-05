@@ -33,6 +33,7 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.BucketCapability;
 import com.couchbase.client.core.topology.ClusterTopology;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
+import com.couchbase.client.core.topology.CouchbaseBucketTopology;
 import com.couchbase.client.core.topology.HostAndServicePorts;
 import com.couchbase.client.core.util.CbThrowables;
 import reactor.core.publisher.Flux;
@@ -53,6 +54,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static com.couchbase.client.core.endpoint.http.CoreHttpPath.path;
+import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
 import static com.couchbase.client.core.logging.RedactableArgument.redactSystem;
 import static com.couchbase.client.core.service.ServiceType.ANALYTICS;
 import static com.couchbase.client.core.service.ServiceType.KV;
@@ -182,6 +184,13 @@ public class HealthPinger {
         for (HostAndServicePorts node : nodes) {
           for (ServiceType advertisedService : advertisedServices(node)) {
             if (serviceTypeFilter.contains(advertisedService)) {
+              if (advertisedService == VIEWS && bucket != null && !hasActivePartitions(topology, node)) {
+                // ViewLocator only dispatches to nodes hosting active partitions, so a ping
+                // to this node could never succeed. This happens during a rebalance,
+                // when a node hosts the bucket but no active partitions.
+                log.message("extractPingTargets: skipping " + VIEWS + " on node " + redactSystem(node.id()) + " because it hosts no active partitions for bucket " + redactMeta(bucket));
+                continue;
+              }
               boolean serviceRequiresBucket = servicesThatRequireBucket.contains(advertisedService);
               String targetBucketOrNull = serviceRequiresBucket ? bucket : null;
               RequestTarget target = new RequestTarget(advertisedService, node.id(), targetBucketOrNull);
@@ -195,6 +204,14 @@ public class HealthPinger {
 
     log.message("extractPingTargets: Finished. Returning filtered targets (grouped by node): " + formatGroupedByNode(result));
     return result;
+  }
+
+  private static boolean hasActivePartitions(
+    ClusterTopology topology,
+    HostAndServicePorts node
+  ) {
+    return topology.requireBucket().bucket() instanceof CouchbaseBucketTopology
+      && ((CouchbaseBucketTopology) topology.requireBucket().bucket()).hasPrimaryPartitionsOnNode(node.id());
   }
 
   private static String describe(ClusterTopology topology, List<HostAndServicePorts> nodes) {
