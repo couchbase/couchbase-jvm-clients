@@ -50,7 +50,6 @@ class TimerWheelTest {
   private TimerWheel newWheel(Duration tick, int buckets) {
     TimerWheel wheel = new TimerWheel(tick, buckets, "test-timer-wheel");
     wheels.add(wheel);
-    wheel.start();
     return wheel;
   }
 
@@ -225,7 +224,6 @@ class TimerWheelTest {
     TimerWheel wheel = newWheel(Duration.ofMillis(5), 8);
     wheel.stop();
     assertThrows(IllegalStateException.class, () -> wheel.newTimeout(() -> { }, 1, TimeUnit.MILLISECONDS));
-    assertThrows(IllegalStateException.class, wheel::start);
     assertTrue(wheel.stop().isEmpty(), "stopping again has no effect");
   }
 
@@ -247,15 +245,6 @@ class TimerWheelTest {
   }
 
   @Test
-  void newTimeoutStartsTheWheel() throws Exception {
-    TimerWheel wheel = new TimerWheel(Duration.ofMillis(5), 8, "test-timer-wheel");
-    wheels.add(wheel);
-    CountDownLatch ran = new CountDownLatch(1);
-    wheel.newTimeout(ran::countDown, 5, TimeUnit.MILLISECONDS);
-    assertTrue(ran.await(5, TimeUnit.SECONDS));
-  }
-
-  @Test
   void rejectsInvalidSettings() {
     assertThrows(IllegalArgumentException.class, () -> new TimerWheel(Duration.ZERO, 8, "x"));
     assertThrows(IllegalArgumentException.class, () -> new TimerWheel(Duration.ofMillis(-1), 8, "x"));
@@ -264,7 +253,7 @@ class TimerWheelTest {
 
   @Test
   void roundsBucketsUpToAPowerOfTwoAndTickUpToAMillisecond() {
-    String description = new TimerWheel(Duration.ofNanos(10), 5, "x").toString();
+    String description = newWheel(Duration.ofNanos(10), 5).toString();
     assertTrue(description.contains("buckets=8"), description);
     assertTrue(description.contains("tickNanos=1000000"), description);
   }

@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -60,11 +60,11 @@ import static java.util.Objects.requireNonNull;
  * sooner. Each entry counts the turns left before it's due ({@code remainingRounds}).
  *
  * <h2>Threads</h2>
- * Only the wheel's thread touches the buckets, and the fields of entries that place them in buckets. Other threads
+ * The wheel's thread starts when the wheel is created. Only it touches the buckets, and the fields of entries that place them in buckets. Other threads
  * hand it work through two queues ({@link LinkedQueue}): {@code pending} for new tasks, and {@code cancelled}
  * for cancelled ones.
  * <ul>
- * <li>{@link #newTimeout} starts the thread if needed, computes the deadline, and adds a new entry to
+ * <li>{@link #newTimeout} computes the deadline, and adds a new entry to
  * {@code pending}. The entry is the only allocation.
  * <li>{@link Entry#cancel()} changes the entry's state from {@code INIT} to {@code CANCELLED}, drops its task,
  * and adds the entry to {@code cancelled}, so the thread removes it from its bucket at the next tick, instead of
@@ -100,7 +100,7 @@ import static java.util.Objects.requireNonNull;
  * timer.
  *
  * <h2>Stopping</h2>
- * {@link #stop()} changes the state, wakes the thread, and waits for it to exit. Before exiting, the thread
+ * {@link #stop()} sets {@code stopped}, wakes the thread, and waits for it to exit. Before exiting, the thread
  * collects the tasks that didn't run and weren't cancelled, from the buckets and from {@code pending}, for
  * {@code stop()} to return. A task scheduled just as the timer stops might be missed, so {@link Timer} checks for
  * that itself.
@@ -124,11 +124,7 @@ final class TimerWheel {
   private static final long MIN_TICK_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
   private static final int MAX_BUCKETS = 1 << 30;
 
-  private static final int INIT = 0;
-  private static final int STARTED = 1;
-  private static final int STOPPED = 2;
-
-  private final AtomicInteger state = new AtomicInteger(INIT);
+  private final AtomicBoolean stopped = new AtomicBoolean();
   private final Thread worker;
 
   /**
@@ -149,7 +145,7 @@ final class TimerWheel {
   /**
    * @param tickDuration how often the tasks due are run (at least 1 millisecond)
    * @param numBuckets how many buckets the wheel has (rounded up to a power of two)
-   * @param threadName the name of the thread that runs the tasks (a daemon thread)
+   * @param threadName the name of the thread that runs the tasks (a daemon thread, started here)
    */
   TimerWheel(Duration tickDuration, int numBuckets, String threadName) {
     if (tickDuration.isNegative() || tickDuration.isZero()) {
@@ -178,24 +174,13 @@ final class TimerWheel {
 
     this.worker = new Thread(this::run, requireNonNull(threadName));
     worker.setDaemon(true);
+    // Last, once every field is set (Thread.start() makes them visible to the thread). Starting here means the
+    // thread is already running when anyone can schedule a task or stop the wheel.
+    worker.start();
   }
 
   /**
-   * Starts the thread, unless it's already started.
-   *
-   * @throws IllegalStateException if this was stopped
-   */
-  void start() {
-    int s = state.get();
-    if (s == INIT && state.compareAndSet(INIT, STARTED)) {
-      worker.start();
-    } else if (s == STOPPED || state.get() == STOPPED) {
-      throw new IllegalStateException("Can't start a timer once it's stopped");
-    }
-  }
-
-  /**
-   * Schedules the task to run after the delay (on this timer's thread), starting the timer if needed.
+   * Schedules the task to run after the delay (on this timer's thread).
    * <p>
    * A task scheduled as the timer stops might never run, and not be returned by {@link #stop}.
    *
@@ -203,7 +188,9 @@ final class TimerWheel {
    */
   Timer.Registration newTimeout(Runnable task, long delay, TimeUnit unit) {
     requireNonNull(task);
-    start();
+    if (stopped.get()) {
+      throw new IllegalStateException("Can't schedule a task once the timer is stopped");
+    }
 
     long delayNanos = unit.toNanos(delay); // saturates at Long.MAX_VALUE
     long elapsed = System.nanoTime() - startTime; // the wheel's age, never negative
@@ -227,9 +214,8 @@ final class TimerWheel {
       throw new IllegalStateException("Can't stop a timer from one of its tasks");
     }
 
-    int previous = state.getAndSet(STOPPED);
-    if (previous != STARTED) {
-      return Collections.emptySet(); // never started (so nothing was scheduled), or already stopped
+    if (stopped.getAndSet(true)) {
+      return Collections.emptySet(); // already stopped
     }
 
     boolean interrupted = false;
@@ -283,7 +269,7 @@ final class TimerWheel {
   private long waitForNextTick() {
     long tickEnd = tickNanos * (tick + 1);
     while (true) {
-      if (state.get() != STARTED) {
+      if (stopped.get()) {
         return -1;
       }
       long now = System.nanoTime() - startTime;
@@ -387,7 +373,7 @@ final class TimerWheel {
         return false;
       }
       task = null; // won't run now
-      if (timer.state.get() == STARTED) {
+      if (!timer.stopped.get()) {
         timer.cancelled.add(this); // so the thread removes it from its bucket
       }
       return true;
@@ -568,7 +554,7 @@ final class TimerWheel {
         "thread=" + worker.getName() +
         ", tickNanos=" + tickNanos +
         ", buckets=" + wheel.length +
-        ", state=" + state.get() +
+        ", stopped=" + stopped.get() +
         '}';
   }
 }

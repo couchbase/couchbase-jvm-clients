@@ -77,31 +77,24 @@ public class Timer {
   private final long maxNumRequestsInRetry;
 
   /**
-   * Creates a new {@link Timer} with default values.
-   *
-   * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
-   * @return the created timer.
-   */
-  public static Timer create(final long maxNumRequestsInRetry, TimerConfig timerConfig) {
-    return new Timer(maxNumRequestsInRetry, timerConfig);
-  }
-
-  /**
    * Creates and starts a timer with default values.
    *
    * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
    * @return the created and started timer.
    */
   public static Timer createAndStart(final long maxNumRequestsInRetry) {
-    Timer timer = create(maxNumRequestsInRetry, TimerConfig.create());
-    timer.start();
-    return timer;
+    return createAndStart(maxNumRequestsInRetry, TimerConfig.create());
   }
 
+  /**
+   * Creates and starts a timer.
+   *
+   * @param maxNumRequestsInRetry the maximum number of requests in retry allowed before backpressure hits.
+   * @param timerConfig the number of timers, and their tick duration and number of buckets.
+   * @return the created and started timer.
+   */
   public static Timer createAndStart(final long maxNumRequestsInRetry, TimerConfig timerConfig) {
-    Timer timer = create(maxNumRequestsInRetry, timerConfig);
-    timer.start();
-    return timer;
+    return new Timer(maxNumRequestsInRetry, timerConfig);
   }
 
   /**
@@ -237,13 +230,6 @@ public class Timer {
       task.request().cancel(CancellationReason.SHUTDOWN);
     }
     return timeout;
-  }
-
-  /**
-   * Starts this timer.
-   */
-  public void start() {
-    wheelTimers.forEach(TimerWheel::start);
   }
 
   /**
