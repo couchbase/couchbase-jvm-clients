@@ -17,7 +17,7 @@
 package com.couchbase.client.java;
 
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
-import com.couchbase.client.core.deps.org.LatencyUtils.LatencyStats;
+import com.couchbase.client.core.deps.org.HdrHistogram.Recorder;
 import com.couchbase.client.core.endpoint.ProtostellarEndpoint;
 import com.couchbase.client.core.env.CouchbaseForkPoolThreadFactory;
 import com.couchbase.client.core.error.TimeoutException;
@@ -211,7 +211,7 @@ class BenchmarkIntegrationTest extends JavaIntegrationTest {
 
       AtomicInteger opsActuallyInFlight = new AtomicInteger();
       Set<Integer> concurrentlyOutgoingMessagesSeen = new ConcurrentSkipListSet<>();
-      LatencyStats stats = new LatencyStats();
+      Recorder stats = new Recorder(2);
       AtomicInteger errorCount = new AtomicInteger();
       AtomicInteger errorCountTimeouts = new AtomicInteger();
 
@@ -245,7 +245,7 @@ class BenchmarkIntegrationTest extends JavaIntegrationTest {
             })
             .doOnNext(v -> {
               opsActuallyInFlight.decrementAndGet();
-              stats.recordLatency(System.nanoTime() - start);
+              stats.recordValue(System.nanoTime() - start);
               opsSent.incrementAndGet();
             });
         })

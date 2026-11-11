@@ -118,12 +118,6 @@
             <version>0.5</version>
         </dependency>
         <dependency>
-            <groupId>org.latencyutils</groupId>
-            <artifactId>LatencyUtils</artifactId>
-            <version>2.0.3</version>
-        </dependency>
-        <dependency>
-            <!-- Transitive dependency of LatencyUtils. Force latest version. -->
             <groupId>org.hdrhistogram</groupId>
             <artifactId>HdrHistogram</artifactId>
             <version>2.2.2</version>
@@ -328,10 +322,6 @@
                         <relocation>
                             <pattern>org.iq80.snappy</pattern>
                             <shadedPattern>${shaded.package.prefix}org.iq80.snappy</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>org.LatencyUtils</pattern>
-                            <shadedPattern>${shaded.package.prefix}org.LatencyUtils</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.HdrHistogram</pattern>
