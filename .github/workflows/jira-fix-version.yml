@@ -1,0 +1,73 @@
+name: Jira Fix Version
+
+# Fails if the PR title mentions a JVMCBC, JCBC, SCBC or KCBC issue that has no fix version.
+#
+# Uses Jira's anonymous REST API access, so it needs no secrets and works for PRs from forks.
+#
+# Setting the fix version in Jira does not re-trigger this check.
+# After fixing the issue, re-run the failed job (or edit the PR title).
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check fix version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check Jira issues in PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          JIRA_URL: https://couchbasecloud.atlassian.net
+        run: |
+          set -euo pipefail
+
+          keys=$(grep -oE '\b(JVMCBC|JCBC|SCBC|KCBC)-[0-9]+\b' <<<"$PR_TITLE" | sort -u || true)
+          if [[ -z "$keys" ]]; then
+            echo "PR title mentions no JVM SDK Jira issue; nothing to check."
+            exit 0
+          fi
+
+          failed=0
+          response=$(mktemp)
+          for key in $keys; do
+            url="$JIRA_URL/browse/$key"
+            status=$(curl --silent --show-error --retry 3 --max-time 30 \
+              --output "$response" --write-out '%{http_code}' \
+              "$JIRA_URL/rest/api/3/issue/$key?fields=fixVersions")
+
+            case "$status" in
+              200)
+                versions=$(jq -r '[.fields.fixVersions[].name] | join(", ")' "$response")
+                if [[ -n "$versions" ]]; then
+                  echo "✅ $key: $versions"
+                  echo "- ✅ [$key]($url): $versions" >>"$GITHUB_STEP_SUMMARY"
+                else
+                  echo "::error title=$key has no fix version::Set the Fix Version of $url, then re-run this job."
+                  echo "- ❌ [$key]($url): no fix version" >>"$GITHUB_STEP_SUMMARY"
+                  failed=1
+                fi
+                ;;
+              404)
+                # Jira answers 404 both for issues that don't exist and for issues
+                # hidden from anonymous users (for example, security issues).
+                echo "::warning title=$key not visible::$url does not exist or is not public; fix version not checked."
+                echo "- ⚠️ [$key]($url): not found or not public; not checked" >>"$GITHUB_STEP_SUMMARY"
+                ;;
+              *)
+                echo "::error title=Jira request failed::HTTP $status for $key. If this is 401 or 403, anonymous access to Jira may have been disabled."
+                cat "$response"
+                failed=1
+                ;;
+            esac
+          done
+
+          exit "$failed"
