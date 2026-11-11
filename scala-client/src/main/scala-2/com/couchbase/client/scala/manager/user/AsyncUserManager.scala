@@ -89,7 +89,7 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
         case _ =>
           Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
       }
-    } yield FutureConversions.javaCFToScalaFuture(builder.exec(core))
+    } yield FutureConversions.javaCFToScalaFutureMappingExceptions(builder.exec(core))
 
     attempt.fold(Future.failed, identity)
   }
@@ -106,13 +106,21 @@ class AsyncUserManager(private val couchbaseOps: CoreCouchbaseOps)(
       client  <- httpClient
       builder <- method match {
         case HttpMethod.PUT =>
-          Success(client.put(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+          Success(
+            client
+              .put(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy))
+              .form(body)
+          )
         case HttpMethod.POST =>
-          Success(client.post(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy)))
+          Success(
+            client
+              .post(CoreHttpPath.path(path), makeCommonOptions(timeout, retryStrategy))
+              .form(body)
+          )
         case _ =>
           Failure(new CouchbaseException("Internal bug, please report: unknown method " + method))
       }
-    } yield FutureConversions.javaCFToScalaFuture(builder.exec(core))
+    } yield FutureConversions.javaCFToScalaFutureMappingExceptions(builder.exec(core))
 
     attempt.fold(Future.failed, identity)
   }
