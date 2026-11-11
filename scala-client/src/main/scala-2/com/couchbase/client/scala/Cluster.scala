@@ -17,6 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.transaction.CoreTransactionsReactive
@@ -36,6 +37,7 @@ import com.couchbase.client.scala.manager.query.QueryIndexManager
 import com.couchbase.client.scala.manager.search.SearchIndexManager
 import com.couchbase.client.scala.manager.user.UserManager
 import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
+import com.couchbase.client.scala.query.conversational.ConversationalQuery
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -59,7 +61,9 @@ class Cluster private[scala] (
     private[scala] val authenticator: Authenticator,
     private[scala] val connectionString: ConnectionString
 ) extends ClusterBase {
-  private[scala] lazy val environment = _env
+  private[scala] lazy val environment                               = _env
+  private lazy val conversationalQueryInstance: ConversationalQuery =
+    new ConversationalQuery(async.conversationalQueryOps)
 
   lazy val queryIndexes = new QueryIndexManager(async.queryIndexes)
 
@@ -361,6 +365,10 @@ class Cluster private[scala] (
   def waitUntilReady(timeout: Duration, options: WaitUntilReadyOptions): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, options))
   }
+
+  @Stability.Volatile
+  @SinceCouchbase("8.5")
+  def conversationalQuery(): ConversationalQuery = conversationalQueryInstance
 }
 
 /** Functions to allow creating a `Cluster`, which represents a connection to a Couchbase cluster.
