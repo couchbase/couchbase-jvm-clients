@@ -70,7 +70,8 @@ case class User(
 case class UserAndMetadata(
     @upickle.implicits.key("domain") domain: AuthDomain,
     @upickle.implicits.key("id") username: String,
-    @upickle.implicits.key("name") displayName: String,
+    // The server omits the name for a user created without one, e.g. an external user created with the REST API.
+    @upickle.implicits.key("name") displayName: String = "",
     @upickle.implicits.key("roles") private[scala] val _effectiveRoles: Seq[RoleAndOrigins],
     @upickle.implicits.key("password_change_date") _passwordChanged: Option[String] = None,
     @upickle.implicits.key("groups") groups: Seq[String] = Seq(),
