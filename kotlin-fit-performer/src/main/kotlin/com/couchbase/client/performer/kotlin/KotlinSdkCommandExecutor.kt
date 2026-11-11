@@ -42,6 +42,7 @@ import com.couchbase.client.performer.kotlin.manager.ClusterOrScope
 import com.couchbase.client.performer.kotlin.manager.handleBucketManager
 import com.couchbase.client.performer.kotlin.manager.handleCollectionManager
 import com.couchbase.client.performer.kotlin.manager.handleSearchIndexManager
+import com.couchbase.client.performer.kotlin.manager.handleUserManager
 import com.couchbase.client.performer.kotlin.query.QueryHelper
 import com.couchbase.client.performer.kotlin.search.SearchHelper
 import com.couchbase.client.performer.kotlin.util.ClusterConnection
@@ -324,6 +325,8 @@ class KotlinSdkCommandExecutor(
 
                 } else if (clc.hasBucketManager()) {
                     handleBucketManager(connection.cluster, op, result)
+                } else if (clc.hasUserManager()) {
+                    handleUserManager(connection.cluster, op, result)
                 } else if (clc.hasQuery()) {
                     result = QueryHelper.handleClusterQuery(connection, op, clc)
                 } else if (clc.hasSearch() || clc.hasSearchV2()) {

@@ -34,7 +34,8 @@ import com.couchbase.client.performer.scala.kv.{GetReplicaHelper, LookupInHelper
 import com.couchbase.client.performer.scala.manager.{
   BucketManagerHelper,
   CollectionManagerHelper,
-  EventingFunctionManagerHelper
+  EventingFunctionManagerHelper,
+  UserManagerHelper
 }
 import com.couchbase.client.performer.scala.query.{QueryHelper, QueryIndexManagerHelper}
 import com.couchbase.client.performer.scala.search.SearchHelper
@@ -260,6 +261,8 @@ class ScalaSdkCommandExecutor(val connection: ClusterConnection, val counters: C
         result = EventingFunctionManagerHelper
           .handleClusterEventingFunctionManager(connection.cluster, op)
           .toBuilder
+      } else if (clc.hasUserManager) {
+        result = UserManagerHelper.handleUserManager(connection.cluster, op).toBuilder
       } else if (clc.hasQuery) {
         result = QueryHelper.handleClusterQuery(connection, op, clc)
       } else if (clc.hasSearchV2) {
