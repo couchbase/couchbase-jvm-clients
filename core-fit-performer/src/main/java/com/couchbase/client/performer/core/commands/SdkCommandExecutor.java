@@ -48,7 +48,9 @@ public abstract class SdkCommandExecutor extends Executor {
 
         try {
             performOperation(command, perRun);
-        } catch (RuntimeException err) {
+        } catch (Exception err) {
+            // Exception rather than RuntimeException, as SDKs in languages without checked exceptions (e.g. Scala) can
+            // throw checked exceptions, and one escaping here would kill the performer.
             if (err instanceof UnsupportedOperationException) {
                 // The perf test can easily create hundreds of thousands of these errors per second, creating gigabytes of logging very quickly.
                 // So only log the first example of each error.

@@ -93,6 +93,7 @@ import com.couchbase.client.protocol.shared.ExceptionOther;
 import com.couchbase.client.protocol.shared.ScanConsistency;
 import com.couchbase.eventing.EventingHelper;
 import com.couchbase.manager.BucketManagerHelper;
+import com.couchbase.manager.UserManagerHelper;
 import com.couchbase.manager.CollectionManagerHelper;
 import com.couchbase.query.QueryIndexManagerHelper;
 import com.couchbase.search.SearchHelper;
@@ -573,6 +574,9 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
     }
     else if (clc.hasEventingFunctionManager()) {
       EventingHelper.handleEventingFunctionManager(connection.cluster(), spans, op, result);
+    }
+    else if (clc.hasUserManager()) {
+      UserManagerHelper.handleUserManager(connection.cluster(), spans, op, result);
     }
 
     if (clc.hasQueryIndexManager()) {
