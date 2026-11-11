@@ -60,7 +60,9 @@ public class Capabilities {
             Caps.SDK_SEARCH_SCORE_FUSION,
             Caps.SDK_GET_REPLICA,
             Caps.SDK_SEARCH_CUSTOM_SCRIPT_QUERIES,
-            Caps.SDK_HTTP_400_INVALID_ARGUMENT
+            Caps.SDK_HTTP_400_INVALID_ARGUMENT,
+            Caps.SDK_USER_MANAGER,
+            Caps.SDK_USER_MANAGER_GET_ALL_USERS_RETURNS_ALL_DOMAINS
         );
     }
 }

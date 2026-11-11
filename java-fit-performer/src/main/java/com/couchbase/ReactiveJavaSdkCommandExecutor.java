@@ -32,6 +32,7 @@ import com.couchbase.client.protocol.sdk.Command;
 import com.couchbase.client.protocol.shared.Exception;
 import com.couchbase.eventing.EventingHelper;
 import com.couchbase.manager.BucketManagerHelper;
+import com.couchbase.manager.UserManagerHelper;
 import com.couchbase.manager.CollectionManagerHelper;
 import com.couchbase.query.QueryIndexManagerHelper;
 import com.couchbase.search.SearchHelper;
@@ -669,6 +670,9 @@ public class ReactiveJavaSdkCommandExecutor extends SdkCommandExecutor {
     }
     else if (clc.hasEventingFunctionManager()) {
       return EventingHelper.handleEventingFunctionManagerReactive(cluster, spans, op, result);
+    }
+    else if (clc.hasUserManager()) {
+      return UserManagerHelper.handleUserManagerReactive(cluster, spans, op, result);
     }
 
     if (clc.hasQueryIndexManager()) {

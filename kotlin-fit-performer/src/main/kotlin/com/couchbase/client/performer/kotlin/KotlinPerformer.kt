@@ -65,6 +65,10 @@ class KotlinPerformer : CorePerformer() {
             .addSdkImplementationCaps(Caps.SDK_BUCKET_SETTINGS_NUM_VBUCKETS)
             .addSdkImplementationCaps(Caps.SDK_QUERY_2120)
             .addSdkImplementationCaps(Caps.SDK_HTTP_400_INVALID_ARGUMENT)
+            .addSdkImplementationCaps(Caps.SDK_USER_MANAGER)
+            .addSdkImplementationCaps(Caps.SDK_USER_MANAGER_GET_ALL_USERS_RETURNS_ALL_DOMAINS)
+            .addSdkImplementationCaps(Caps.SDK_USER_MANAGER_NON_STANDARD_ERROR_HANDLING)
+            .addSdkImplementationCaps(Caps.SDK_USER_MANAGER_ROLE_WILDCARDS_NOT_RESET)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_CERT)
             .addPerformerCaps(PerformerCaps.CLUSTER_CONFIG_INSECURE)
     }

@@ -21,7 +21,7 @@ import com.couchbase.client.performer.core.util.TimeUtil.getTimeNow
 import com.couchbase.client.performer.scala.Content.{ContentJson, ContentString}
 import com.couchbase.client.performer.scala.ScalaSdkCommandExecutor._
 import com.couchbase.client.performer.scala.kv.LookupInHelper
-import com.couchbase.client.performer.scala.manager.BucketManagerHelper
+import com.couchbase.client.performer.scala.manager.{BucketManagerHelper, UserManagerHelper}
 import com.couchbase.client.performer.scala.util.{ClusterConnection, ScalaFluxStreamer}
 import com.couchbase.client.protocol.run.Result
 import com.couchbase.client.scala.kv._
@@ -193,6 +193,8 @@ class ReactiveScalaSdkCommandExecutor(val connection: ClusterConnection, val cou
           .block()
       } else if (clc.hasBucketManager) {
         return BucketManagerHelper.handleBucketManagerReactive(cluster, op).block()
+      } else if (clc.hasUserManager) {
+        return UserManagerHelper.handleUserManagerReactive(cluster, op)
       }
     } else if (op.hasBucketCommand) {
       val blc    = op.getBucketCommand
