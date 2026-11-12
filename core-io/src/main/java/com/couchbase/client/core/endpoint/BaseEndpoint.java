@@ -72,6 +72,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.SignalType;
+import reactor.util.context.Context;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -86,6 +87,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.logging.RedactableArgument.redactMeta;
@@ -104,6 +106,12 @@ import static com.couchbase.client.core.util.CbThrowables.filterStackTrace;
  */
 public abstract class BaseEndpoint implements Endpoint {
   private static final Logger log = LoggerFactory.getLogger(BaseEndpoint.class);
+
+  /**
+   * The context key of a subscription's own onErrorDropped hook, which Reactor uses instead of the global one.
+   * The same as Reactor's {@code Hooks.KEY_ON_ERROR_DROPPED}, which isn't public.
+   */
+  private static final String REACTOR_LOCAL_ON_ERROR_DROPPED_HOOK = "reactor.onErrorDropped.local";
 
   private static final String ALLOCATOR_SYSTEM_PROPERTY_NAME = "com.couchbase.client.core.deps.io.netty.allocator.type";
   private static final Duration TARGET_ABSENT_BEFORE_DISCONNECT = Duration.ofSeconds(
@@ -465,7 +473,14 @@ public abstract class BaseEndpoint implements Endpoint {
           ));
         })
         .toReactorRetry()
-      ).subscribe(
+      )
+      // A connect attempt can fail just as the connect timeout fires (Netty's connect timeout, and the KV handshake
+      // timeouts, have the same deadline). Reactor then drops the late failure; log it quietly, instead of letting
+      // Reactor's global onErrorDropped hook log it as an error.
+      .contextWrite(Context.of(REACTOR_LOCAL_ON_ERROR_DROPPED_HOOK, (Consumer<Throwable>) e ->
+        log.debug("Ignoring a connect failure that arrived after the connect attempt ended; {}", endpointContext, e)
+      ))
+      .subscribe(
         // Called once the endpoint connects.
         channel -> {
           long now = System.nanoTime();
