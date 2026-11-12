@@ -33,6 +33,7 @@ import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelOutboundHandlerAdapter;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelPromise;
+import com.couchbase.client.core.deps.io.netty.channel.ConnectTimeoutException;
 import com.couchbase.client.core.deps.io.netty.channel.MultiThreadIoEventLoopGroup;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.deps.io.netty.channel.nio.NioIoHandler;
@@ -47,18 +48,22 @@ import com.couchbase.client.core.service.ServiceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static com.couchbase.client.test.Util.waitUntilCondition;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -170,6 +175,47 @@ class BaseEndpointTest {
       assertTrue(failedFound);
       assertTrue(successFound);
     } finally {
+      env.shutdown();
+    }
+  }
+
+  /**
+   * A connect attempt can fail just after the endpoint's connect timeout fires (Netty's connect timeout has
+   * the same deadline). Reactor drops the late failure, which must not reach the global onErrorDropped hook:
+   * by default, it logs an error.
+   */
+  @Test
+  void connectFailureAfterTimeoutIsNotReportedToGlobalErrorDroppedHook() {
+    SimpleEventBus eventBus = new SimpleEventBus(true);
+    CoreEnvironment env = CoreEnvironment.builder()
+      .eventBus(eventBus)
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(10)))
+      .build();
+
+    CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
+    ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, 1234,
+      ServiceType.KV, Optional.empty());
+
+    List<Throwable> dropped = new CopyOnWriteArrayList<>();
+    Hooks.onErrorDropped(dropped::add);
+    try {
+      // Like a Netty connect future, this isn't cancelled when the attempt times out, so it can fail afterwards.
+      CompletableFuture<Channel> connectResult = new CompletableFuture<>();
+      InstrumentedEndpoint endpoint = InstrumentedEndpoint.create(
+        eventLoopGroup,
+        ctx,
+        () -> Mono.fromFuture(connectResult, true)
+      );
+
+      endpoint.connect();
+      waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(e -> e instanceof EndpointConnectionFailedEvent));
+
+      connectResult.completeExceptionally(new ConnectTimeoutException("connection timed out"));
+      endpoint.disconnect();
+
+      assertEquals(emptyList(), dropped);
+    } finally {
+      Hooks.resetOnErrorDropped();
       env.shutdown();
     }
   }
