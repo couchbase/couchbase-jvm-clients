@@ -409,14 +409,18 @@ public abstract class BaseEndpoint implements Endpoint {
 
         state.transition(EndpointState.CONNECTING);
         attemptStart.set(System.nanoTime());
-        return channelFutureIntoMono(channelBootstrap.connect())
+        ChannelFuture connectFuture = channelBootstrap.connect();
+        return channelFutureIntoMono(connectFuture)
           // Netty completes this "connect" future immediately _prior_ to calling channelActive.
           // Publishing on a different scheduler ensures any writes triggered by "connect"
           // happen _after_ Netty calls channelActive. This is important because some requests
           // encode themselves differently depending on values initialized in channelActive.
-          .publishOn(endpointContext.environment().scheduler());
+          .publishOn(endpointContext.environment().scheduler())
+          .timeout(endpointContext.environment().timeoutConfig().connectTimeout())
+          // If the attempt times out, close its channel. This also fails the connect (or KV handshake) if it's still
+          // in progress. Otherwise a connection that completes after the timeout would be left open, unused.
+          .doOnError(TimeoutException.class, e -> connectFuture.channel().close());
       })
-      .timeout(endpointContext.environment().timeoutConfig().connectTimeout())
       .onErrorResume(throwable -> {
         state.transition(EndpointState.DISCONNECTED);
         if (disconnect.get()) {
