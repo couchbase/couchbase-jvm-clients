@@ -49,10 +49,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -372,6 +376,42 @@ class BaseEndpointTest {
   }
 
   /**
+   * If a connect attempt times out (here, because the connect future never completes, as if the KV handshake
+   * stalled), the endpoint closes the attempt's channel, so a connection that completed is not left open.
+   */
+  @Test
+  void closesChannelOfConnectAttemptThatTimedOut() throws Exception {
+    SimpleEventBus eventBus = new SimpleEventBus(true);
+    CoreEnvironment env = CoreEnvironment.builder()
+      .eventBus(eventBus)
+      .timeoutConfig(timeout -> timeout.connectTimeout(Duration.ofMillis(200)))
+      .build();
+
+    try (ServerSocket server = new ServerSocket(0, 50, InetAddress.getByName(LOCALHOST))) {
+      CoreContext coreContext = new CoreContext(mock(Core.class), 1, env, authenticator);
+      ServiceContext ctx = new ServiceContext(coreContext, LOCALHOST, server.getLocalPort(),
+        ServiceType.KV, Optional.empty());
+
+      InstrumentedEndpoint endpoint = new InstrumentedEndpoint(
+        LOCALHOST,
+        server.getLocalPort(),
+        eventLoopGroup,
+        ctx,
+        Mono::never
+      );
+      endpoint.connect();
+
+      waitUntilCondition(() -> eventBus.publishedEvents().stream().anyMatch(e -> e instanceof EndpointConnectionFailedEvent));
+      Channel firstAttempt = endpoint.connectFutures.get(0).channel();
+      waitUntilCondition(() -> !firstAttempt.isOpen(), Duration.ofSeconds(10));
+
+      endpoint.disconnect();
+    } finally {
+      env.shutdown();
+    }
+  }
+
+  /**
    * Helper method to DRY up the case where we just need to connect properly.
    *
    * @param channel the channel into which it should connect.
@@ -399,6 +439,7 @@ class BaseEndpointTest {
   static class InstrumentedEndpoint extends BaseEndpoint {
 
     private final Supplier<Mono<Channel>> channelSupplier;
+    final List<ChannelFuture> connectFutures = new CopyOnWriteArrayList<>();
 
     static InstrumentedEndpoint create(EventLoopGroupAndType eventLoopGroup, ServiceContext ctx,
                                        Supplier<Mono<Channel>> channelSupplier) {
@@ -418,6 +459,7 @@ class BaseEndpointTest {
 
     @Override
     protected Mono<Channel> channelFutureIntoMono(ChannelFuture channelFuture) {
+      connectFutures.add(channelFuture);
       if (channelSupplier == null) {
         return super.channelFutureIntoMono(channelFuture);
       } else {
