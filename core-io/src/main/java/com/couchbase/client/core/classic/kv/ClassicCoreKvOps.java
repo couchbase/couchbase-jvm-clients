@@ -221,7 +221,6 @@ public final class ClassicCoreKvOps implements CoreKvOps {
       boolean withExpiry
   ) {
     validateGetParams(common, key, projections, withExpiry);
-    checkProjectionLimits(projections, withExpiry);
 
     Duration timeout = timeout(common);
     RetryStrategy retryStrategy = retryStrategy(common);
@@ -852,8 +851,6 @@ public final class ClassicCoreKvOps implements CoreKvOps {
 
     if (encodedCommands.isEmpty()) {
       throw SubdocMutateRequest.errIfNoCommands(ReducedKeyValueErrorContext.create(key, collectionIdentifier));
-    } else if (encodedCommands.size() > SubdocMutateRequest.SUBDOC_MAX_FIELDS) {
-      throw SubdocMutateRequest.errIfTooManyCommands(ReducedKeyValueErrorContext.create(key, collectionIdentifier));
     }
 
     // Do a pre-flight check to ensure the server supports these features.

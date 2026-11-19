@@ -40,10 +40,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static com.couchbase.client.java.kv.GetAndLockOptions.getAndLockOptions;
 import static com.couchbase.client.java.kv.GetAndTouchOptions.getAndTouchOptions;
@@ -76,7 +73,6 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     cluster.disconnect();
   }
 
-  @IgnoreWhen(isProtostellarWillWorkLater = true) // Fails with DocumentNotFound rather than InvalidArgument when sending 17 projections.  Needs raising but very low priority.
   @Test
   void verifyGetExceptions() {
     DocumentNotFoundException thrown = assertThrows(
@@ -89,9 +85,6 @@ class KeyValueErrorIntegrationTest extends JavaIntegrationTest {
     assertThrows(InvalidArgumentException.class, () -> collection.get(""));
     assertThrows(InvalidArgumentException.class, () -> collection.get(null));
     assertThrows(InvalidArgumentException.class, () -> collection.get("", getOptions().withExpiry(true)));
-
-    List<String> tooManyFields = IntStream.rangeClosed(1, 17).boxed().map(Object::toString).collect(Collectors.toList());
-    assertThrows(InvalidArgumentException.class, () -> collection.get("foo", getOptions().project(tooManyFields)));
   }
 
   @Test

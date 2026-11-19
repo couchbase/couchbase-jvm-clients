@@ -18,7 +18,6 @@ package com.couchbase.client.core.api.kv;
 
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.endpoint.http.CoreCommonOptions;
-import com.couchbase.client.core.error.InvalidArgumentException;
 import com.couchbase.client.core.kv.CoreRangeScanItem;
 import com.couchbase.client.core.kv.CoreScanOptions;
 import com.couchbase.client.core.kv.CoreScanType;
@@ -71,21 +70,6 @@ public interface CoreKvOps {
       boolean withExpiry
   ) {
     return Mono.defer(() -> getAsync(common, key, projections, withExpiry, AbsentDocumentStrategy.RETURN_NULL).toMono());
-  }
-
-  default void checkProjectionLimits(
-      List<String> projections,
-      boolean withExpiry
-  ) {
-    if (withExpiry) {
-      if (projections.size() > 15) {
-        throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
-            + "projected per request due to a server limitation (includes the expiration macro as one field).");
-      }
-    } else if (projections.size() > 16) {
-      throw InvalidArgumentException.fromMessage("Only a maximum of 16 fields can be "
-          + "projected per request due to a server limitation.");
-    }
   }
 
   CoreAsyncResponse<CoreGetResult> getAndLockAsync(

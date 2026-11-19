@@ -320,7 +320,7 @@ public class ClientRecord {
                 throw new EncodingFailureException(e);
             }
 
-            // Subdoc supports a max of 16 fields, fill up the rest with removing expired clients
+            // Stay within the server's default subdoc limit of 16 fields; fill up the rest with removing expired clients
             // Any remaining expired clients will be handled on another run or by another client
             cr.expiredClientIds().stream()
                     .limit(SubdocMutateRequest.SUBDOC_MAX_FIELDS - specs.size() - 1)

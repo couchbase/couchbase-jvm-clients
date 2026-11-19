@@ -20,7 +20,6 @@ import com.couchbase.client.core.error.DocumentNotFoundException
 import com.couchbase.client.core.error.subdoc.PathExistsException
 import com.couchbase.client.core.error.subdoc.PathNotFoundException
 import com.couchbase.client.core.error.subdoc.XattrInvalidKeyComboException
-import com.couchbase.client.core.msg.kv.SubdocMutateRequest.SUBDOC_MAX_FIELDS
 import com.couchbase.client.kotlin.kv.Expiry
 import com.couchbase.client.kotlin.kv.LookupInSpec
 import com.couchbase.client.kotlin.kv.MutateInMacro
@@ -68,17 +67,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
     @Test
     fun `no commands`(): Unit = runBlocking {
         assertThrows<IllegalArgumentException> { collection.mutateIn(nextId(), MutateInSpec()) }
-    }
-
-    @Test
-    fun `too many commands`(): Unit = runBlocking {
-        assertThrows<IllegalArgumentException> {
-            collection.mutateIn(nextId()) {
-                repeat(SUBDOC_MAX_FIELDS + 1) {
-                    upsert("foo", "bar")
-                }
-            }
-        }
     }
 
     @Test
@@ -451,16 +439,6 @@ internal class SubdocMutateIntegrationTest : KotlinIntegrationTest() {
         val expiry = Expiry.of(Instant.now().plus(3, DAYS).truncatedTo(SECONDS))
         collection.mutateIn(docId, expiry = expiry) { upsert("foo", "bar") }
         assertEquals(expiry, collection.get(docId, withExpiry = true).expiry)
-    }
-
-    @Test
-    fun `more than 16`(): Unit = runBlocking {
-        val docId = prepare(mapOf())
-        assertThrows<IllegalArgumentException> {
-            collection.mutateIn(docId) {
-                for (i in 0..16) insert("foo-$i", "bar")
-            }
-        }
     }
 
     @Test

@@ -803,39 +803,6 @@ class SubdocMutateSpec extends ScalaIntegrationTest {
   }
 
   @Test
-  def moreThan16(): Unit = {
-    val content      = ujson.Obj("hello" -> "world")
-    val (docId, cas) = prepare(content)
-
-    coll.mutateIn(
-      docId,
-      Array(
-        insert("foo0", "bar0"),
-        insert("foo1", "bar1"),
-        insert("foo2", "bar2"),
-        insert("foo3", "bar3"),
-        insert("foo4", "bar4"),
-        insert("foo5", "bar5"),
-        insert("foo6", "bar6"),
-        insert("foo7", "bar7"),
-        insert("foo8", "bar8"),
-        insert("foo9", "bar9"),
-        insert("foo10", "bar10"),
-        insert("foo11", "bar11"),
-        insert("foo12", "bar12"),
-        insert("foo13", "bar13"),
-        insert("foo14", "bar14"),
-        insert("foo15", "bar15"),
-        insert("foo16", "bar16")
-      )
-    ) match {
-      case Success(result)                        => assert(false, "should not succeed")
-      case Failure(err: InvalidArgumentException) =>
-      case Failure(err)                           => assert(false, s"unexpected error $err")
-    }
-  }
-
-  @Test
   def two_commands_succeed(): Unit = {
     val content      = ujson.Obj("hello" -> "world")
     val (docId, cas) = prepare(content)

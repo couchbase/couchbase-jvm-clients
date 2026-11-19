@@ -138,7 +138,8 @@ public class Collection internal constructor(
      * @param project Prunes the returned JSON content, retaining only the elements
      * rooted at the specified sub-document paths, as well as any intermediate
      * parent elements required to preserve the document structure.
-     * A maximum of 16 paths can be projected at a time (15 if `withExpiry` is true).
+     * The server limits how many paths can be projected at a time
+     * (16 by default, including one for expiry if `withExpiry` is true).
      * To work around this limitation, consider specifying shallower paths or
      * fetching the whole document.
      *

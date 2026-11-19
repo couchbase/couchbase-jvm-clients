@@ -81,6 +81,12 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
   public static final byte SUBDOC_DOC_FLAG_CREATE_AS_DELETED = (byte) 0x08;
   private static final byte SUBDOC_DOC_FLAG_REVIVE = (byte) 0x10;
 
+  /**
+   * The server's default limit on the number of operations in a single sub-document request.
+   * <p>
+   * The limit is configurable on newer servers, so the SDK does not enforce it.
+   * Internal code that builds its own sub-document requests can use this value to stay within the default limit.
+   */
   public static final int SUBDOC_MAX_FIELDS = 16;
 
   private static final Comparator<Command> xattrsFirst = comparing(it -> !it.xattr());
@@ -370,10 +376,6 @@ public class SubdocMutateRequest extends BaseKeyValueRequest<SubdocMutateRespons
 
   public static InvalidArgumentException errIfNoCommands(ErrorContext errorContext) {
     return new InvalidArgumentException("At least one sub-document operation must be provided.", null, errorContext);
-  }
-
-  public static InvalidArgumentException errIfTooManyCommands(ErrorContext errorContext) {
-    return new InvalidArgumentException("A maximum of " + SubdocMutateRequest.SUBDOC_MAX_FIELDS + " sub-document operations can be provided.", null, errorContext);
   }
 
   public boolean insertDocument() {
