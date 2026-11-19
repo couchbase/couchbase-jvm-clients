@@ -48,6 +48,14 @@ public interface CoreScanOptions {
 
   int batchByteLimit();
 
+  /**
+   * Maximum number of partitions to scan at the same time.
+   * A value of 1 means partitions are scanned one after another.
+   */
+  default int concurrency() {
+    return RangeScanOrchestrator.RANGE_SCAN_DEFAULT_CONCURRENCY;
+  }
+
   default Map<Short, MutationToken> consistencyMap(){
     return consistentWith() == null ? new HashMap<>() : consistentWith().toMap();
   }

@@ -35,8 +35,10 @@ import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -211,6 +213,34 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
   }
 
   @Test
+  void concurrentRangeScanReturnsSameIdsAsSerialScan() {
+    Set<String> serial = collection.scan(ScanType.rangeScan(null, null), scanOptions().idsOnly(true).timeout(TIMEOUT))
+      .map(ScanResult::id)
+      .collect(Collectors.toSet());
+
+    List<String> concurrent = collection.scan(ScanType.rangeScan(null, null), scanOptions().idsOnly(true).timeout(TIMEOUT).concurrency(8))
+      .map(ScanResult::id)
+      .collect(Collectors.toList());
+
+    assertTrue(serial.containsAll(DOC_IDS));
+    assertEquals(serial.size(), concurrent.size()); // no duplicates
+    assertEquals(serial, new HashSet<>(concurrent));
+  }
+
+  /**
+   * Like {@link #samplingWithLimitIdsOnlyNeedsCancels()}, but with concurrent partition scans,
+   * so the SDK must cancel several open scans each time.
+   */
+  @Test
+  void concurrentSamplingWithLimitNeedsCancels() {
+    for (int i = 0; i < 200; i++) {
+      long limit = 3;
+      long count = collection.scan(ScanType.samplingScan(limit), scanOptions().idsOnly(true).batchItemLimit(2).concurrency(8)).count();
+      assertEquals(limit, count);
+    }
+  }
+
+  @Test
   void checkSamplingLimitMustBeGreaterThan0() {
     assertThrows(InvalidArgumentException.class, () -> collection.scan(ScanType.samplingScan(-1)));
   }
@@ -226,6 +256,8 @@ class KeyValueRangeScanIntegrationTest extends JavaIntegrationTest  {
       () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchByteLimit(-1)));
     assertThrows(InvalidArgumentException.class,
       () -> collection.scan(ScanType.samplingScan(1), scanOptions().batchItemLimit(-1)));
+    assertThrows(InvalidArgumentException.class,
+      () -> collection.scan(ScanType.samplingScan(1), scanOptions().concurrency(0)));
   }
 
   @Test

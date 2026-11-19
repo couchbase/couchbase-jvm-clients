@@ -18,6 +18,7 @@ package com.couchbase.client.java.kv;
 
 import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT;
 import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT;
+import static com.couchbase.client.core.kv.RangeScanOrchestrator.RANGE_SCAN_DEFAULT_CONCURRENCY;
 import static com.couchbase.client.core.util.Validators.notNull;
 
 import java.time.Duration;
@@ -55,6 +56,8 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
    * The default batch byte limit is 15k.
    */
   private int batchByteLimit = RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT;
+
+  private int concurrency = RANGE_SCAN_DEFAULT_CONCURRENCY;
 
   private Optional<MutationState> consistentWith = Optional.empty();
 
@@ -151,6 +154,28 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
     return this;
   }
 
+  /**
+   * Sets the maximum number of partitions to scan at the same time.
+   * <p>
+   * A higher value can lower the latency of a single scan, but
+   * each concurrent partition scan uses additional server resources,
+   * and the server limits how many scans can be open at once across all clients.
+   * If your application runs many scans at once, a higher value
+   * might not help, and could slow down every scan, including this one.
+   *
+   * @param concurrency the maximum number of partitions to scan at the same time. Must be at least 1, which is the default.
+   * @return the {@link ScanOptions} to allow method chaining.
+   * @throws InvalidArgumentException if concurrency is less than 1.
+   */
+  @Stability.Volatile
+  public ScanOptions concurrency(int concurrency) {
+    if (concurrency < 1) {
+      throw InvalidArgumentException.fromMessage("The concurrency must be greater than 0, but got " + concurrency);
+    }
+    this.concurrency = concurrency;
+    return this;
+  }
+
   @Stability.Internal
   public Built build() {
     return new Built();
@@ -186,6 +211,11 @@ public class ScanOptions extends CommonOptions<ScanOptions> {
     @Override
     public int batchByteLimit() {
       return batchByteLimit;
+    }
+
+    @Override
+    public int concurrency() {
+      return concurrency;
     }
 
   }

@@ -1161,6 +1161,7 @@ public class JavaSdkCommandExecutor extends SdkCommandExecutor {
             if (opts.hasParentSpanId()) out.parentSpan(spans.get(opts.getParentSpanId()));
             if (opts.hasBatchByteLimit()) out.batchByteLimit(opts.getBatchByteLimit());
             if (opts.hasBatchItemLimit()) out.batchItemLimit(opts.getBatchItemLimit());
+            if (opts.hasConcurrency()) out.concurrency(opts.getConcurrency());
             // Presumably will be added soon, but not currently in Java SDK
             if (opts.hasBatchTimeLimit()) throw new UnsupportedOperationException();
             return out;

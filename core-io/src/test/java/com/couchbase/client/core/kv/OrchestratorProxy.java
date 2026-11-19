@@ -17,9 +17,7 @@
 package com.couchbase.client.core.kv;
 
 import com.couchbase.client.core.Core;
-import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.config.ClusterConfig;
-import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.io.CollectionIdentifier;
@@ -32,15 +30,18 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.topology.BucketCapability;
 import com.couchbase.client.core.topology.ClusterTopologyBuilder;
 import com.couchbase.client.core.topology.ClusterTopologyWithBucket;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.couchbase.client.core.util.CbCollections.mapOf;
 import static com.couchbase.client.core.util.CbCollections.setOf;
@@ -48,7 +49,6 @@ import static com.couchbase.client.core.util.MockUtil.mockCore;
 import static java.util.Collections.emptySet;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class OrchestratorProxy {
@@ -56,6 +56,12 @@ class OrchestratorProxy {
   private final Core core;
 
   private final RangeScanOrchestrator rangeScanOrchestrator;
+
+  private final Duration createResponseDelay;
+
+  private final AtomicInteger openScans = new AtomicInteger();
+
+  private final AtomicInteger maxOpenScans = new AtomicInteger();
 
   private ClusterTopologyWithBucket newTopologyWithPartitionCount(int partitions, Set<BucketCapability> bucketCapabilities) {
     return new ClusterTopologyBuilder()
@@ -67,6 +73,21 @@ class OrchestratorProxy {
   }
 
   public OrchestratorProxy(final CoreEnvironment environment, boolean capabilityEnabled, Map<Short, List<CoreRangeScanItem>> data) {
+    this(environment, capabilityEnabled, data, Duration.ZERO);
+  }
+
+  /**
+   * @param createResponseDelay How long to wait before responding to a range scan create request.
+   * A non-zero delay lets concurrent partition scans overlap.
+   */
+  public OrchestratorProxy(
+    CoreEnvironment environment,
+    boolean capabilityEnabled,
+    Map<Short, List<CoreRangeScanItem>> data,
+    Duration createResponseDelay
+  ) {
+    this.createResponseDelay = createResponseDelay;
+
     // Set up Bucket Config
     Set<BucketCapability> bucketCapabilities = capabilityEnabled
       ? setOf(BucketCapability.RANGE_SCAN)
@@ -96,10 +117,16 @@ class OrchestratorProxy {
 
     doAnswer(invocation -> {
       RangeScanCreateRequest req = invocation.getArgument(0);
-      req.succeed(new RangeScanCreateResponse(
+      maxOpenScans.accumulateAndGet(openScans.incrementAndGet(), Math::max);
+      Runnable respond = () -> req.succeed(new RangeScanCreateResponse(
         ResponseStatus.SUCCESS,
         new CoreRangeScanId(Unpooled.copiedBuffer(uuids.get(req.partition()), StandardCharsets.UTF_8))
       ));
+      if (createResponseDelay.isZero()) {
+        respond.run();
+      } else {
+        Schedulers.parallel().schedule(respond, createResponseDelay.toNanos(), TimeUnit.NANOSECONDS);
+      }
       return null;
     }).when(core).send(isA(RangeScanCreateRequest.class));
 
@@ -115,6 +142,7 @@ class OrchestratorProxy {
       RangeScanContinueResponse res;
       try {
         res = req.response().get();
+        openScans.decrementAndGet();
         res.feedItems(data.get(partition), true, true);
       } catch (Exception ex) {
         throw new RuntimeException(ex);
@@ -126,6 +154,13 @@ class OrchestratorProxy {
   List<CoreRangeScanItem> runRangeScan(final CoreRangeScan rangeScan, final CoreScanOptions scanOptions) {
     return rangeScanOrchestrator.rangeScan(rangeScan, scanOptions)
       .collectList().block();
+  }
+
+  /**
+   * Returns the highest number of partition scans that were open at the same time.
+   */
+  int maxOpenScans() {
+    return maxOpenScans.get();
   }
 
   List<CoreRangeScanItem> runSamplingScan(final CoreSamplingScan sampleScan, final CoreScanOptions scanOptions) {
