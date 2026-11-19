@@ -1,5 +1,6 @@
 package com.couchbase.client.scala.kv
 
+import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.cnc.RequestSpan
 import com.couchbase.client.core.kv.{CoreRangeScanItem, CoreScanTerm}
 import com.couchbase.client.core.retry.RetryStrategy
@@ -71,7 +72,8 @@ case class ScanOptions(
     private[scala] val idsOnly: Option[Boolean] = None,
     private[scala] val consistentWith: Option[MutationState] = None,
     private[scala] val batchByteLimit: Option[Int] = None,
-    private[scala] val batchItemLimit: Option[Int] = None
+    private[scala] val batchItemLimit: Option[Int] = None,
+    private[scala] val concurrency: Option[Int] = None
 ) {
 
   /** Changes the timeout setting used for this operation.
@@ -165,6 +167,23 @@ case class ScanOptions(
     */
   def batchItemLimit(value: Int): ScanOptions = {
     copy(batchItemLimit = Some(value))
+  }
+
+  /** Sets the maximum number of partitions to scan at the same time.
+    *
+    * A higher value can lower the latency of a single scan, but
+    * each concurrent partition scan uses additional server resources,
+    * and the server limits how many scans can be open at once across all clients.
+    * If your application runs many scans at once, a higher value
+    * might not help, and could slow down every scan, including this one.
+    *
+    * @param value the maximum number of partitions to scan at the same time. Must be at least 1, which is the default.
+    *
+    * @return a copy of this with the change applied, for chaining.
+    */
+  @Stability.Volatile
+  def concurrency(value: Int): ScanOptions = {
+    copy(concurrency = Some(value))
   }
 }
 

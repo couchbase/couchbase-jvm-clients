@@ -190,6 +190,10 @@ trait AsyncCollectionBase { this: AsyncCollection =>
       override def batchByteLimit(): Int =
         opts.batchByteLimit
           .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT)
+
+      override def concurrency(): Int =
+        opts.concurrency
+          .getOrElse(RangeScanOrchestrator.RANGE_SCAN_DEFAULT_CONCURRENCY)
     }
 
     val rangeScan = scanType match {

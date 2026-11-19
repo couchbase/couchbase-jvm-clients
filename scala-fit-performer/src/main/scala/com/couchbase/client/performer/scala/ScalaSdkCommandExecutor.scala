@@ -730,6 +730,7 @@ object ScalaSdkCommandExecutor {
         out = out.timeout(Duration.create(opts.getTimeoutMsecs, TimeUnit.MILLISECONDS))
       if (opts.hasBatchByteLimit) out = out.batchByteLimit(opts.getBatchByteLimit)
       if (opts.hasBatchItemLimit) out = out.batchItemLimit(opts.getBatchItemLimit)
+      if (opts.hasConcurrency) out = out.concurrency(opts.getConcurrency)
       if (opts.hasBatchTimeLimit)
         throw new UnsupportedOperationException("Cannot support batch time limit");
       // Will add when adding support for Caps.OBSERVABILITY_1.

@@ -264,6 +264,8 @@ class KotlinSdkCommandExecutor(
 
                 fun ScanOptions.ktBatchSizeLimit() = if (hasBatchByteLimit()) batchByteLimit.bytes else DEFAULT_SCAN_BATCH_SIZE_LIMIT
 
+                fun ScanOptions.ktConcurrency() = if (hasConcurrency()) concurrency else 1
+
                 val start = System.nanoTime()
                 val flow =
                     if (idsOnly) collection.scanIds(
@@ -272,6 +274,7 @@ class KotlinSdkCommandExecutor(
                         consistency = options.ktConsistency(),
                         batchItemLimit = options.ktBatchItemLimit(),
                         batchSizeLimit = options.ktBatchSizeLimit(),
+                        concurrency = options.ktConcurrency(),
                     )
                     else collection.scanDocuments(
                         type = request.scanType.toKotlin(),
@@ -279,6 +282,7 @@ class KotlinSdkCommandExecutor(
                         consistency = options.ktConsistency(),
                         batchItemLimit = options.ktBatchItemLimit(),
                         batchSizeLimit = options.ktBatchSizeLimit(),
+                        concurrency = options.ktConcurrency(),
                     )
                 result.elapsedNanos = System.nanoTime() - start
 
