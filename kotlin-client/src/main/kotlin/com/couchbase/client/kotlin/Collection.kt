@@ -220,12 +220,20 @@ public class Collection internal constructor(
      * certain mutations, pass [KvScanConsistency.consistentWith].
      *
      * @param batchItemLimit Tunes how many documents the server may send in a single round trip.
-     * The value is per partition (vbucket), so multiply by 1024 when calculating memory requirements.
+     * The value is per partition (vbucket), so multiply by [concurrency] when calculating memory requirements.
      * Might affect performance, but does not change the results of this method.
      *
      * @param batchSizeLimit Tunes how many bytes the server may send in a single round trip.
-     * The value is per partition (vbucket), so multiply by 1024 when calculating memory requirements.
+     * The value is per partition (vbucket), so multiply by [concurrency] when calculating memory requirements.
      * Might affect performance, but does not change the results of this method.
+     *
+     * @param concurrency The maximum number of partitions (vbuckets) to scan at the same time.
+     * Must be at least 1, which is the default.
+     * A higher value can lower the latency of a single scan, but
+     * each concurrent partition scan uses additional server resources,
+     * and the server limits how many scans can be open at once across all clients.
+     * If your application runs many scans at once, a higher value
+     * might not help, and could slow down every scan, including this one.
      */
     @SinceCouchbase("7.6")
     public fun scanDocuments(
@@ -234,8 +242,9 @@ public class Collection internal constructor(
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
         batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
         batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+        @VolatileCouchbaseApi concurrency: Int = 1,
     ): Flow<GetResult> {
-        return scan(type, common, idsOnly = false, consistency, batchItemLimit, batchSizeLimit)
+        return scan(type, common, idsOnly = false, consistency, batchItemLimit, batchSizeLimit, concurrency)
             .map {
                 GetResult(
                     id = it.keyBytes().toStringUtf8(),
@@ -246,6 +255,16 @@ public class Collection internal constructor(
                 )
             }.asFlow()
     }
+
+    @SinceCouchbase("7.6")
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public fun scanDocuments(
+        type: ScanType = ScanType.range(),
+        common: CommonOptions = CommonOptions.Default,
+        consistency: KvScanConsistency = KvScanConsistency.notBounded(),
+        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+    ): Flow<GetResult> = scanDocuments(type, common, consistency, batchItemLimit, batchSizeLimit, concurrency = 1)
 
     /**
      * Like [scanDocuments], but returns only document IDs instead of full documents.
@@ -262,11 +281,22 @@ public class Collection internal constructor(
         consistency: KvScanConsistency = KvScanConsistency.notBounded(),
         batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
         batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+        @VolatileCouchbaseApi concurrency: Int = 1,
     ): Flow<String> {
-        return scan(type, common, idsOnly = true, consistency, batchItemLimit, batchSizeLimit)
+        return scan(type, common, idsOnly = true, consistency, batchItemLimit, batchSizeLimit, concurrency)
             .map { it.keyBytes().toStringUtf8() }
             .asFlow()
     }
+
+    @SinceCouchbase("7.6")
+    @Deprecated("Retained for binary compatibility", level = DeprecationLevel.HIDDEN)
+    public fun scanIds(
+        type: ScanType = ScanType.range(),
+        common: CommonOptions = CommonOptions.Default,
+        consistency: KvScanConsistency = KvScanConsistency.notBounded(),
+        batchItemLimit: Int = DEFAULT_SCAN_BATCH_ITEM_LIMIT,
+        batchSizeLimit: StorageSize = DEFAULT_SCAN_BATCH_SIZE_LIMIT,
+    ): Flow<String> = scanIds(type, common, consistency, batchItemLimit, batchSizeLimit, concurrency = 1)
 
     /**
      * If in the future kv range scan must return metadata or something other than
@@ -286,7 +316,8 @@ public class Collection internal constructor(
         batchSizeLimit: StorageSize = StorageSize(
             RangeScanOrchestrator.RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT.toLong(),
             StorageSizeUnit.BYTES
-        )
+        ),
+        concurrency: Int = RangeScanOrchestrator.RANGE_SCAN_DEFAULT_CONCURRENCY,
     ): Flux<CoreRangeScanItem> {
 
         val options = object : CoreScanOptions {
@@ -295,6 +326,7 @@ public class Collection internal constructor(
             override fun consistentWith(): CoreMutationState? = consistency.mutationState?.let { CoreMutationState(consistency.mutationState) }
             override fun batchItemLimit(): Int = batchItemLimit
             override fun batchByteLimit(): Int = batchSizeLimit.inBytes.toSaturatedInt()
+            override fun concurrency(): Int = concurrency
         }
 
         return when (type) {
