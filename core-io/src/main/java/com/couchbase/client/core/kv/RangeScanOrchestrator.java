@@ -49,12 +49,17 @@ import reactor.core.publisher.Sinks;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.IntUnaryOperator;
 
 import static com.couchbase.client.core.util.BucketConfigUtil.waitForBucketTopology;
 import static com.couchbase.client.core.util.Validators.notNull;
@@ -71,6 +76,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class RangeScanOrchestrator {
   public static final int RANGE_SCAN_DEFAULT_BATCH_BYTE_LIMIT = 15000;
   public static final int RANGE_SCAN_DEFAULT_BATCH_ITEM_LIMIT = 50;
+  public static final int RANGE_SCAN_DEFAULT_CONCURRENCY = 1;
 
   private final Core core;
   private final CollectionIdentifier collectionIdentifier;
@@ -160,19 +166,66 @@ public class RangeScanOrchestrator {
     final AtomicLong itemsStreamed = new AtomicLong();
 
     int numPartitions = topology.numberOfPartitions();
+    int concurrency = options.concurrency();
+
+    // When scanning partitions concurrently, interleave them by node.
+    // Otherwise, since a node's partitions are often numbered consecutively,
+    // all the concurrent scans could land on the same node.
+    List<Short> partitions = concurrency == 1
+      ? inNumericOrder(numPartitions)
+      : interleavedByNode(numPartitions, partition -> topology.partitions().get(partition).nodeIndexForActive().orElse(-1));
 
     List<Flux<CoreRangeScanItem>> partitionStreams = new ArrayList<>(numPartitions);
-    for (short i = 0; i < numPartitions; i++) {
-      partitionStreams.add(streamForPartition(i, createSupplier, options));
+    for (short partition : partitions) {
+      partitionStreams.add(streamForPartition(partition, createSupplier, options));
     }
 
-    Flux<CoreRangeScanItem> stream = Flux.concat(partitionStreams);
+    Flux<CoreRangeScanItem> stream = concurrency == 1
+      ? Flux.concat(partitionStreams)
+      : Flux.merge(Flux.fromIterable(partitionStreams), concurrency);
 
     return stream
       .doOnNext(item -> itemsStreamed.incrementAndGet())
       .timeout(options.commonOptions().timeout().orElse(core.context().environment().timeoutConfig().kvScanTimeout()), Mono.defer(() -> Mono.error(
         new UnambiguousTimeoutException("RangeScan timed out", new CancellationErrorContext(new RangeScanContext(itemsStreamed.get())))
       )));
+  }
+
+  private static List<Short> inNumericOrder(int numPartitions) {
+    List<Short> result = new ArrayList<>(numPartitions);
+    for (short i = 0; i < numPartitions; i++) {
+      result.add(i);
+    }
+    return result;
+  }
+
+  /**
+   * Returns all partition IDs, ordered so consecutive partitions are on different nodes
+   * (as far as possible). Takes one partition from each node in turn, until no partitions remain.
+   * Partitions are in numeric order within each node.
+   *
+   * @param nodeIndexForPartition Returns the index of the node hosting the given partition's active copy,
+   * or -1 if no node is hosting it.
+   */
+  static List<Short> interleavedByNode(
+    int numPartitions,
+    IntUnaryOperator nodeIndexForPartition
+  ) {
+    Map<Integer, Deque<Short>> nodeIndexToPartitions = new TreeMap<>();
+    for (short i = 0; i < numPartitions; i++) {
+      nodeIndexToPartitions.computeIfAbsent(nodeIndexForPartition.applyAsInt(i), k -> new ArrayDeque<>()).add(i);
+    }
+
+    List<Short> result = new ArrayList<>(numPartitions);
+    while (result.size() < numPartitions) {
+      for (Deque<Short> partitions : nodeIndexToPartitions.values()) {
+        Short partition = partitions.poll();
+        if (partition != null) {
+          result.add(partition);
+        }
+      }
+    }
+    return result;
   }
 
   private Flux<CoreRangeScanItem> streamForPartition(final short partition,

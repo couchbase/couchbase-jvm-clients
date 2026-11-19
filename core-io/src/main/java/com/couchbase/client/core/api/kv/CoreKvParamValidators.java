@@ -144,6 +144,9 @@ public class CoreKvParamValidators {
     if (options.batchItemLimit() < 0) {
       throw InvalidArgumentException.fromMessage("The batchItemLimit must not be smaller than 0");
     }
+    if (options.concurrency() < 1) {
+      throw InvalidArgumentException.fromMessage("The concurrency must be greater than 0, but got " + options.concurrency());
+    }
   }
 
   private static void validateCommonOptions(CoreCommonOptions common, String key) {
