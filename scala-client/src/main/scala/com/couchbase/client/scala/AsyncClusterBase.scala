@@ -23,10 +23,15 @@ import com.couchbase.client.core.transaction.CoreTransactionsReactive
 import com.couchbase.client.scala.env.ClusterEnvironment
 import com.couchbase.client.scala.transactions.AsyncTransactions
 import com.couchbase.client.scala.transactions.config.TransactionsConfig
-import com.couchbase.client.scala.util.DurationConversions.javaDurationToScala
+import com.couchbase.client.scala.util.DurationConversions.{
+  javaDurationToScala,
+  scalaDurationToJava
+}
+import com.couchbase.client.scala.util.FutureConversions
 
 import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.Duration
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -98,6 +103,27 @@ trait AsyncClusterBase { this: AsyncCluster =>
   /** @see [[ClusterBase.authenticator]] */
   def authenticator(authenticator: Authenticator): Try[Unit] = {
     Try(couchbaseOps.authenticator(authenticator))
+  }
+
+  /** Shutdown all cluster resources.
+    *
+    * This should be called before application exit.
+    *
+    * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
+    */
+  def disconnect(
+      timeout: Duration = javaDurationToScala(env.timeoutConfig.disconnectTimeout())
+  ): Future[Unit] = {
+    FutureConversions
+      .javaMonoToScalaFuture(couchbaseOps.shutdown(scalaDurationToJava(timeout)))
+      .flatMap(_ =>
+        if (env.owned) {
+          // Explicitly put this on the global threadpool, otherwise it will execute on the
+          // threadpool we are shutting down due to the implicit `ec` in scope.
+          Future(env.shutdown(timeout))(ExecutionContext.global)
+        } else
+          Future.successful(())
+      )
   }
 
   private[scala] def performGlobalConnect(): Unit = {

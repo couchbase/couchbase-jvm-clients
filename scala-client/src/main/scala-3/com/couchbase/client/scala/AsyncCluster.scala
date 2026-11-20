@@ -116,18 +116,6 @@ class AsyncCluster private[scala] (
     }
   }
 
-  /** Shutdown all cluster resources.
-    *
-    * This should be called before application exit.
-    *
-    * @param timeout how long the disconnect is allowed to take; defaults to `disconnectTimeout` on the environment
-    */
-  def disconnect(timeout: Duration = env.timeoutConfig.disconnectTimeout()): Future[Unit] = {
-    FutureConversions
-      .javaMonoToScalaFuture(couchbaseOps.shutdown(timeout))
-      .map(_ => if (env.owned) env.shutdown(timeout))
-  }
-
   /** Returns a `DiagnosticsResult`, reflecting the SDK's current view of all its existing connections to the
     * cluster.
     *
