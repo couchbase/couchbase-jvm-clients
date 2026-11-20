@@ -84,6 +84,15 @@ public class CancellationReason {
   public static final CancellationReason SERVER_CANCELLED =
     new CancellationReason("SERVER_CANCELLED", null);
 
+  /**
+   * The reactive chain implementation this operation was cancelled.
+   * <p>
+   * One potential reason is that the operation was being executed concurrently with other operations, one
+   * of which failed.
+   */
+  public static final CancellationReason REACTIVE =
+    new CancellationReason("REACTIVE", null);
+
   private final String identifier;
   private final Object innerReason;
 

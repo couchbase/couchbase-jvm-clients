@@ -22,6 +22,7 @@ import com.couchbase.client.core.api.kv.CoreKvBinaryOps;
 import com.couchbase.client.core.api.kv.CoreKvOps;
 import com.couchbase.client.core.api.manager.CoreBucketAndScope;
 import com.couchbase.client.core.api.manager.search.CoreSearchIndexManager;
+import com.couchbase.client.core.api.query.CoreConversationalQueryOps;
 import com.couchbase.client.core.api.query.CoreQueryOps;
 import com.couchbase.client.core.api.search.CoreSearchOps;
 import com.couchbase.client.core.cnc.Context;
@@ -49,6 +50,7 @@ import com.couchbase.client.core.protostellar.kv.ProtostellarCoreKvOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreBucketManager;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreCollectionManagerOps;
 import com.couchbase.client.core.protostellar.manager.ProtostellarCoreSearchIndexManager;
+import com.couchbase.client.core.protostellar.query.ProtostellarCoreConversationalQueryOps;
 import com.couchbase.client.core.protostellar.query.ProtostellarCoreQueryOps;
 import com.couchbase.client.core.protostellar.search.ProtostellarCoreSearchOps;
 import com.couchbase.client.core.service.ServiceType;
@@ -180,6 +182,14 @@ public class CoreProtostellar implements CoreCouchbaseOps {
   @Override
   public CoreQueryOps queryOps() {
     return new ProtostellarCoreQueryOps(this);
+  }
+
+  @Override
+  public CoreConversationalQueryOps conversationalQueryOps() {
+    // This is not supported by couchbase2:// today, but we create a ProtostellarCoreConversationalQueryOps anyway.
+    // Both to be forward-looking for when it is, and because it makes it much easier to create the
+    // CoreConversationalQueryOps in Scala.
+    return new ProtostellarCoreConversationalQueryOps();
   }
 
   @Override

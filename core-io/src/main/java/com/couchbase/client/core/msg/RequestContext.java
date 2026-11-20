@@ -24,6 +24,7 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
+import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.topology.NodeIdentifier;
 import com.couchbase.client.core.util.HostAndPort;
@@ -245,6 +246,11 @@ public class RequestContext extends CoreContext {
   @Stability.Internal
   public RequestContext logicallyComplete() {
     return logicallyComplete(null);
+  }
+
+  @Stability.Internal
+  public void logicallyCompleteOnCancel(@org.jspecify.annotations.Nullable BaseRequest<?> request) {
+    logicallyComplete(RequestCanceledException.reactiveCancellation(request == null ? null : request.context()));
   }
 
   /**

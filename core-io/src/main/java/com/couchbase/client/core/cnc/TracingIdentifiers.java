@@ -91,6 +91,18 @@ public class TracingIdentifiers {
 
   public static final String SPAN_REQUEST_QUERY = "query";
 
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY = "conversational_query";
+
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY_BEGIN_CHAT = "conversational_query_begin_chat";
+
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY_ASK = "conversational_query_ask";
+
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY_PAUSE = "conversational_query_pause";
+
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY_RESUME = "conversational_query_resume";
+
+  public static final String SPAN_REQUEST_CONVERSATIONAL_QUERY_END = "conversational_query_end";
+
   public static final String SPAN_REQUEST_ANALYTICS = "analytics";
 
   public static final String SPAN_REQUEST_SEARCH = "search";
