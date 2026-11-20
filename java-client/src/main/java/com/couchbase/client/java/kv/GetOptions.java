@@ -83,8 +83,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Allows to specify a custom list paths to fetch from the document instead of the whole.
    * <p>
-   * Note that a maximum of 16 individual paths can be projected at a time due to a server limitation. If you need
-   * more than that, think about fetching less-generic paths or the full document straight away.
+   * Note that the server limits how many paths can be projected at a time (16 by default).
+   * If you need more than that, think about fetching less-generic paths or the full document straight away.
    *
    * @param path a path that should be loaded if present.
    * @param morePaths additional paths that should be loaded if present.
@@ -98,8 +98,8 @@ public class GetOptions extends CommonOptions<GetOptions> {
   /**
    * Allows to specify a custom list paths to fetch from the document instead of the whole.
    * <p>
-   * Note that a maximum of 16 individual paths can be projected at a time due to a server limitation. If you need
-   * more than that, think about fetching less-generic paths or the full document straight away.
+   * Note that the server limits how many paths can be projected at a time (16 by default).
+   * If you need more than that, think about fetching less-generic paths or the full document straight away.
    *
    * @param paths each individual path that should be loaded if present.
    * @return the {@link GetOptions} to allow method chaining.

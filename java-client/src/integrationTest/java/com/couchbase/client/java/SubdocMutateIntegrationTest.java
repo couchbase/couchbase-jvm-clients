@@ -748,33 +748,6 @@ class SubdocMutateIntegrationTest extends JavaIntegrationTest {
     }
 
 
-    @IgnoreWhen(isProtostellarWillWorkLater = true) // Needs ING-372
-    @Test
-    void moreThan16() {
-        JsonObject content = JsonObject.create().put("hello", "world");
-        String docId = prepare(content);
-
-        assertThrows(InvalidArgumentException.class, () ->
-                coll.mutateIn(docId,
-                        Arrays.asList(MutateInSpec.insert("foo0", "bar0"),
-                                MutateInSpec.insert("foo1", "bar1"),
-                                MutateInSpec.insert("foo2", "bar2"),
-                                MutateInSpec.insert("foo3", "bar3"),
-                                MutateInSpec.insert("foo4", "bar4"),
-                                MutateInSpec.insert("foo5", "bar5"),
-                                MutateInSpec.insert("foo6", "bar6"),
-                                MutateInSpec.insert("foo7", "bar7"),
-                                MutateInSpec.insert("foo8", "bar8"),
-                                MutateInSpec.insert("foo9", "bar9"),
-                                MutateInSpec.insert("foo10", "bar10"),
-                                MutateInSpec.insert("foo11", "bar11"),
-                                MutateInSpec.insert("foo12", "bar12"),
-                                MutateInSpec.insert("foo13", "bar13"),
-                                MutateInSpec.insert("foo14", "bar14"),
-                                MutateInSpec.insert("foo15", "bar15"),
-                                MutateInSpec.insert("foo16", "bar16"))));
-    }
-
     @Test
     void twoCommandsSucceed() {
         JsonObject content = JsonObject.create().put("hello", "world");
