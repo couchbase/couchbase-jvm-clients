@@ -19,10 +19,11 @@ package com.couchbase.client.core.cnc.metrics;
 import com.couchbase.client.core.annotation.Stability;
 import com.couchbase.client.core.cnc.ValueRecorder;
 import com.couchbase.client.core.deps.org.HdrHistogram.Histogram;
-import com.couchbase.client.core.deps.org.LatencyUtils.LatencyStats;
+import com.couchbase.client.core.deps.org.HdrHistogram.Recorder;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Aggregates value information in a histogram.
@@ -34,7 +35,17 @@ public class AggregatingValueRecorder implements ValueRecorder {
 
   private final Map<String, String> tags;
 
-  private final LatencyStats recorderStats = new LatencyStats();
+  /**
+   * Same range and precision as the LatencyStats this replaced (1us to 1h, 2 significant digits).
+   * <p>
+   * LatencyStats is deliberately not used, as its coordinated-omission correction adds phantom
+   * values to the histogram whenever it detects a JVM pause.
+   */
+  private final Recorder recorder = new Recorder(
+    TimeUnit.MICROSECONDS.toNanos(1),
+    TimeUnit.HOURS.toNanos(1),
+    2
+  );
 
   public AggregatingValueRecorder(final String name, final Map<String, String> tags) {
     this.name = name;
@@ -43,11 +54,11 @@ public class AggregatingValueRecorder implements ValueRecorder {
 
   @Override
   public void recordValue(long value) {
-    recorderStats.recordLatency(value);
+    recorder.recordValue(value);
   }
 
   Histogram clearStats() {
-    return recorderStats.getIntervalHistogram();
+    return recorder.getIntervalHistogram();
   }
 
   Map<String, String> tags() {
