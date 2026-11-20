@@ -67,6 +67,7 @@ trait AsyncClusterBase { this: AsyncCluster =>
   private[scala] val retryStrategy    = env.retryStrategy
   private[scala] val searchOps        = couchbaseOps.searchOps(null)
   private[scala] val queryOps         = couchbaseOps.queryOps()
+  private[scala] val conversationalQueryOps = couchbaseOps.conversationalQueryOps()
 
   lazy val transactions = new AsyncTransactions(
     new CoreTransactionsReactive(

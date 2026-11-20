@@ -17,6 +17,7 @@ package com.couchbase.client.scala
 
 import com.couchbase.client.core.annotation.Stability
 import com.couchbase.client.core.annotation.Stability.Uncommitted
+import com.couchbase.client.core.annotation.SinceCouchbase
 import com.couchbase.client.core.diagnostics._
 import com.couchbase.client.core.env.{Authenticator, PasswordAuthenticator}
 import com.couchbase.client.core.transaction.CoreTransactionsReactive
@@ -29,6 +30,7 @@ import com.couchbase.client.scala.diagnostics.{
 }
 import com.couchbase.client.scala.env.{ClusterEnvironment, SeedNode}
 import com.couchbase.client.scala.query.{QueryOptions, QueryParameters, QueryResult}
+import com.couchbase.client.scala.query.conversational.ConversationalQuery
 import com.couchbase.client.scala.search.SearchOptions
 import com.couchbase.client.scala.search.queries.SearchQuery
 import com.couchbase.client.scala.search.result.SearchResult
@@ -54,7 +56,9 @@ class Cluster private[scala] (
     private[scala] val authenticator: Authenticator,
     private[scala] val connectionString: ConnectionString
 ) extends ClusterBase {
-  private[scala] lazy val environment = _env
+  private[scala] lazy val environment                               = _env
+  private lazy val conversationalQueryInstance: ConversationalQuery =
+    new ConversationalQuery(async.conversationalQueryOps)
 
   /** Performs a SQL++ query against the cluster.
     *
@@ -143,6 +147,10 @@ class Cluster private[scala] (
   ): Try[Unit] = {
     AsyncUtils.block(async.waitUntilReady(timeout, options))
   }
+
+  @Stability.Volatile
+  @SinceCouchbase("8.5")
+  def conversationalQuery(): ConversationalQuery = conversationalQueryInstance
 }
 
 /** Functions to allow creating a `Cluster`, which represents a connection to a Couchbase cluster.
