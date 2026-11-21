@@ -74,7 +74,6 @@ import com.couchbase.client.core.util.ConnectionString;
 import com.couchbase.client.core.util.ConnectionStringUtil;
 import com.couchbase.client.core.util.HostAndPort;
 import com.couchbase.client.core.util.NanoTimestamp;
-import com.couchbase.client.core.util.UnsignedLEB128;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.Disposable;
@@ -91,6 +90,7 @@ import javax.naming.NamingException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -170,7 +170,20 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   private final Disposable seedNodeResolver; // async task that gets the initial seed nodes from the connection string
 
   private final AtomicBoolean shutdown = new AtomicBoolean(false);
-  private final CollectionMap collectionMap = new CollectionMap();
+
+  /**
+   * The collection IDs for the latest incarnation of each bucket, keyed by bucket name. See {@link #collectionMap}.
+   */
+  private final Map<String, BucketIncarnation> collectionMaps = new ConcurrentHashMap<>();
+
+  private static final class BucketIncarnation {
+    final String bucketUuid;
+    final CollectionMap collectionMap = new CollectionMap();
+
+    BucketIncarnation(String bucketUuid) {
+      this.bucketUuid = bucketUuid;
+    }
+  }
 
   private volatile boolean globalConfigLoadInProgress = false;
   private final AtomicInteger bucketConfigLoadInProgress = new AtomicInteger();
@@ -285,8 +298,19 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
   }
 
   @Override
-  public CollectionMap collectionMap() {
-    return collectionMap;
+  public CollectionMap collectionMap(String bucketName, String bucketUuid) {
+    BucketIncarnation incarnation = collectionMaps.compute(bucketName, (name, current) -> {
+      if (current != null && current.bucketUuid.equals(bucketUuid)) {
+        return current;
+      }
+      if (current != null) {
+        // Connections to the old bucket keep their map, which is still right for them; it goes away with them.
+        log.info("Bucket {} was recreated (UUID changed from {} to {}); new connections won't use the old bucket's"
+          + " cached collection IDs", redactMeta(name), current.bucketUuid, bucketUuid);
+      }
+      return new BucketIncarnation(bucketUuid);
+    });
+    return incarnation.collectionMap;
   }
 
   @Override
@@ -615,7 +639,7 @@ public class DefaultConfigurationProvider implements ConfigurationProvider {
         if (response.status().success()) {
           if (response.collectionId().isPresent()) {
             long cid = response.collectionId().get();
-            collectionMap.put(identifier, UnsignedLEB128.encode(cid));
+            // The connection that answered already stored the ID in its own collection map.
             eventBus.publish(new CollectionMapRefreshSucceededEvent(duration, core.context(), identifier, cid));
           } else {
             eventBus.publish(new CollectionMapRefreshFailedEvent(

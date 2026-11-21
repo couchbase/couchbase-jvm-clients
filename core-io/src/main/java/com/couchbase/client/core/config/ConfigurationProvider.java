@@ -120,9 +120,20 @@ public interface ConfigurationProvider {
   Mono<Void> loadAndRefreshGlobalConfig();
 
   /**
-   * Returns the attached collection map.
+   * Returns the collection map for one incarnation of a bucket.
+   * <p>
+   * Collection IDs are only meaningful within one incarnation of a bucket. If a bucket is dropped and recreated
+   * with the same name, the new bucket has a different UUID and its collection IDs start again from the beginning,
+   * so a cached ID can belong to a different collection in the new bucket.
+   * <p>
+   * Asking with a UUID the bucket hasn't had before returns a new, empty map, and later requests for the
+   * same UUID return that one. A connection that doesn't know the UUID of its bucket doesn't share a map;
+   * it keeps its own.
+   *
+   * @param bucketName the name of the bucket.
+   * @param bucketUuid the UUID the connection learned during its handshake.
    */
-  CollectionMap collectionMap();
+  CollectionMap collectionMap(String bucketName, String bucketUuid);
 
   /**
    * Helper method to refresh the collection map for the given collection.

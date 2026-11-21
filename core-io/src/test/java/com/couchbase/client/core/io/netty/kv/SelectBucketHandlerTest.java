@@ -19,6 +19,9 @@ package com.couchbase.client.core.io.netty.kv;
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
+import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.deps.io.netty.buffer.UnpooledByteBufAllocator;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelDuplexHandler;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelFuture;
 import com.couchbase.client.core.deps.io.netty.channel.ChannelHandlerContext;
@@ -29,6 +32,7 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.Authenticator;
 import com.couchbase.client.core.env.CoreEnvironment;
 import com.couchbase.client.core.env.TimeoutConfig;
+import com.couchbase.client.core.error.AuthenticationFailureException;
 import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.util.HostAndPort;
 import org.junit.jupiter.api.AfterEach;
@@ -43,8 +47,12 @@ import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -134,20 +142,55 @@ class SelectBucketHandlerTest {
   }
 
   /**
-   * Check if the properly formatted select bucket request is sent over the wire.
+   * The select bucket request and the bucket config request are sent together, in that order.
    */
   @Test
   void encodeAndSendSelectBucketRequest() {
+    activate();
 
+    ByteBuf selectBucket = channel.readOutbound();
+    ByteBuf getConfig = channel.readOutbound();
+    try {
+      assertEquals(MemcacheProtocol.Opcode.SELECT_BUCKET.opcode(), MemcacheProtocol.opcode(selectBucket));
+      assertEquals("bucket", MemcacheProtocol.keyAsString(selectBucket));
+      assertEquals(MemcacheProtocol.Opcode.GET_CONFIG.opcode(), MemcacheProtocol.opcode(getConfig));
+      assertNotEquals(MemcacheProtocol.opaque(selectBucket), MemcacheProtocol.opaque(getConfig));
+    } finally {
+      selectBucket.release();
+      getConfig.release();
+    }
   }
 
   /**
-   * Obviously we need to make sure that if a good response arrives we keep
-   * moving on through the connect pipeline.
+   * The connect completes only once both responses arrived, and the bucket UUID is stored on the channel.
    */
   @Test
   void completeAfterSuccessfulResponse() {
+    ChannelFuture connect = activate();
+    int[] opaques = readOpaques();
 
+    channel.writeInbound(response(MemcacheProtocol.Opcode.SELECT_BUCKET, SUCCESS, opaques[0], ""));
+    assertFalse(connect.isDone(), "Should wait for the bucket config before completing");
+
+    channel.writeInbound(response(MemcacheProtocol.Opcode.GET_CONFIG, SUCCESS, opaques[1],
+      "{\"rev\":1,\"name\":\"bucket\",\"uuid\":\"abc123\"}"));
+    assertTrue(connect.isSuccess());
+    assertEquals("abc123", channel.attr(ChannelAttributes.BUCKET_UUID_KEY).get());
+  }
+
+  /**
+   * If the server can't provide the config, the connection still works, without a known bucket UUID.
+   */
+  @Test
+  void completeWithoutUuidIfConfigUnavailable() {
+    ChannelFuture connect = activate();
+    int[] opaques = readOpaques();
+
+    channel.writeInbound(response(MemcacheProtocol.Opcode.GET_CONFIG, MemcacheProtocol.Status.NOT_FOUND.status(), opaques[1], ""));
+    channel.writeInbound(response(MemcacheProtocol.Opcode.SELECT_BUCKET, SUCCESS, opaques[0], ""));
+
+    assertTrue(connect.isSuccess());
+    assertNull(channel.attr(ChannelAttributes.BUCKET_UUID_KEY).get());
   }
 
   /**
@@ -156,7 +199,51 @@ class SelectBucketHandlerTest {
    */
   @Test
   void failConnectForEveryOtherResponse() {
+    ChannelFuture connect = activate();
+    int[] opaques = readOpaques();
 
+    channel.writeInbound(response(MemcacheProtocol.Opcode.SELECT_BUCKET, MemcacheProtocol.Status.ACCESS_ERROR.status(), opaques[0], ""));
+    channel.writeInbound(response(MemcacheProtocol.Opcode.GET_CONFIG, SUCCESS, opaques[1], "{\"uuid\":\"abc123\"}"));
+
+    assertTrue(connect.isDone());
+    assertInstanceOf(AuthenticationFailureException.class, connect.cause());
+  }
+
+  private static final short SUCCESS = MemcacheProtocol.Status.SUCCESS.status();
+
+  private ChannelFuture activate() {
+    channel.pipeline().addLast(new SelectBucketHandler(endpointContext, "bucket"));
+    ChannelFuture connect = channel.connect(new InetSocketAddress("1.2.3.4", 1234));
+    channel.pipeline().fireChannelActive();
+    return connect;
+  }
+
+  /**
+   * Reads the two handshake requests, and returns their opaques: select bucket first, then get config.
+   */
+  private int[] readOpaques() {
+    ByteBuf selectBucket = channel.readOutbound();
+    ByteBuf getConfig = channel.readOutbound();
+    try {
+      return new int[]{MemcacheProtocol.opaque(selectBucket), MemcacheProtocol.opaque(getConfig)};
+    } finally {
+      selectBucket.release();
+      getConfig.release();
+    }
+  }
+
+  private static ByteBuf response(MemcacheProtocol.Opcode opcode, short status, int opaque, String body) {
+    return MemcacheProtocol.response(
+      UnpooledByteBufAllocator.DEFAULT,
+      opcode,
+      (byte) 0,
+      status,
+      opaque,
+      0,
+      Unpooled.EMPTY_BUFFER,
+      Unpooled.EMPTY_BUFFER,
+      Unpooled.copiedBuffer(body, UTF_8)
+    );
   }
 
 }

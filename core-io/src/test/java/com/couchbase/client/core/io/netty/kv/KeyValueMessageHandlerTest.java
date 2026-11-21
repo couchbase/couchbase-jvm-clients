@@ -18,6 +18,7 @@ package com.couchbase.client.core.io.netty.kv;
 
 import com.couchbase.client.core.Core;
 import com.couchbase.client.core.CoreContext;
+import com.couchbase.client.core.config.ClusterConfig;
 import com.couchbase.client.core.config.ConfigurationProvider;
 import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
 import com.couchbase.client.core.deps.io.netty.util.ReferenceCountUtil;
@@ -29,6 +30,7 @@ import com.couchbase.client.core.error.RequestCanceledException;
 import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.msg.CancellationReason;
+import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.GetRequest;
 import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryReason;
@@ -36,7 +38,9 @@ import com.couchbase.client.core.service.ServiceType;
 import com.couchbase.client.core.deps.io.netty.buffer.ByteBuf;
 import com.couchbase.client.core.deps.io.netty.channel.embedded.EmbeddedChannel;
 import com.couchbase.client.core.util.HostAndPort;
+import com.couchbase.client.core.util.UnsignedLEB128;
 import com.couchbase.client.core.cnc.SimpleEventBus;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -53,9 +57,12 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import static com.couchbase.client.core.util.MockUtil.mockCore;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -72,6 +79,7 @@ class KeyValueMessageHandlerTest {
 
   private static CoreEnvironment ENV;
   private static EndpointContext CTX;
+  private static ConfigurationProvider CONFIG_PROVIDER;
   private static final String BUCKET = "bucket";
   private static final CollectionIdentifier CID = CollectionIdentifier.fromDefault(BUCKET);
 
@@ -80,9 +88,9 @@ class KeyValueMessageHandlerTest {
     ENV = CoreEnvironment.builder().eventBus(new SimpleEventBus(true)).build();
     Core core = mockCore();
     CoreContext coreContext = new CoreContext(core, 1, ENV, PasswordAuthenticator.create("foo", "bar"));
-    ConfigurationProvider configurationProvider = mock(ConfigurationProvider.class);
-    when(configurationProvider.collectionMap()).thenReturn(new CollectionMap());
-    when(core.configurationProvider()).thenReturn(configurationProvider);
+    CONFIG_PROVIDER = mock(ConfigurationProvider.class);
+    when(CONFIG_PROVIDER.config()).thenReturn(new ClusterConfig());
+    when(core.configurationProvider()).thenReturn(CONFIG_PROVIDER);
     CTX = new EndpointContext(coreContext, new HostAndPort("127.0.0.1", 1234),
       null, ServiceType.KV, Optional.empty(), Optional.empty(), Optional.empty());
   }
@@ -280,6 +288,168 @@ class KeyValueMessageHandlerTest {
       assertEquals(1, request.rejectedWithNotMyVbucket());
     } finally {
       channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * A channel that doesn't know which incarnation of the bucket it's on looks up collection IDs on itself,
+   * and keeps them to itself.
+   */
+  @Test
+  void channelWithoutBucketUuidKeepsCollectionIdsToItself() {
+    CollectionIdentifier collection = namedCollection("private");
+    EmbeddedChannel channel = collectionsChannel(null);
+    try {
+      GetRequest first = new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null);
+      channel.writeOutbound(first);
+      assertEquals(CancellationReason.noMoreRetries(RetryReason.COLLECTION_NOT_FOUND), first.cancellationReason());
+
+      channel.writeInbound(collectionIdResponse(channel, MemcacheProtocol.Status.SUCCESS, readLookupOpaque(channel), 9));
+
+      GetRequest second = new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null);
+      channel.writeOutbound(second);
+      ByteBuf get = channel.readOutbound();
+      try {
+        assertEquals(MemcacheProtocol.Opcode.GET.opcode(), MemcacheProtocol.opcode(get));
+      } finally {
+        ReferenceCountUtil.release(get);
+      }
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * A channel that knows the UUID of its bucket stores the IDs it looks up in that bucket's shared map.
+   */
+  @Test
+  void channelWithBucketUuidStoresCollectionIdsInSharedMap() {
+    CollectionIdentifier collection = namedCollection("shared");
+    CollectionMap shared = new CollectionMap();
+    when(CONFIG_PROVIDER.collectionMap(BUCKET, "some-uuid")).thenReturn(shared);
+
+    EmbeddedChannel channel = collectionsChannel("some-uuid");
+    try {
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null));
+      channel.writeInbound(collectionIdResponse(channel, MemcacheProtocol.Status.SUCCESS, readLookupOpaque(channel), 9));
+
+      assertNotNull(shared.get(collection));
+      assertFalse(shared.lookupInProgress(collection));
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * A lookup the channel didn't start itself, like the config provider's, is still stored in the map of the
+   * channel that answered it.
+   */
+  @Test
+  void storesAnswerToLookupStartedElsewhere() {
+    CollectionIdentifier collection = namedCollection("elsewhere");
+    CollectionMap shared = new CollectionMap();
+    when(CONFIG_PROVIDER.collectionMap(BUCKET, "elsewhere-uuid")).thenReturn(shared);
+
+    EmbeddedChannel channel = collectionsChannel("elsewhere-uuid");
+    try {
+      GetCollectionIdRequest lookup = new GetCollectionIdRequest(Duration.ofSeconds(1), CTX, FailFastRetryStrategy.INSTANCE, collection);
+      channel.writeOutbound(lookup);
+      channel.writeInbound(collectionIdResponse(channel, MemcacheProtocol.Status.SUCCESS, readLookupOpaque(channel), 9));
+
+      assertTrue(lookup.response().isDone());
+      assertArrayEquals(UnsignedLEB128.encode(9), shared.get(collection));
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * Requests that miss while a lookup is in progress wait for it instead of starting another.
+   */
+  @Test
+  void onlyOneLookupInProgressPerCollection() {
+    CollectionIdentifier collection = namedCollection("dedupe");
+    EmbeddedChannel channel = collectionsChannel(null);
+    try {
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null));
+      GetRequest waiting = new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null);
+      channel.writeOutbound(waiting);
+
+      assertEquals(CancellationReason.noMoreRetries(RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS), waiting.cancellationReason());
+      readLookupOpaque(channel);
+      assertNull(channel.readOutbound());
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  /**
+   * If the server doesn't know the collection, the lookup is sent again on the same channel, and requests that
+   * need the ID wait for it instead of each starting their own.
+   */
+  @Test
+  void lookupOfUnknownCollectionIsSentAgainOnSameChannel() throws Exception {
+    CollectionIdentifier collection = namedCollection("missing");
+    EmbeddedChannel channel = collectionsChannel(null);
+    try {
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null));
+      channel.writeInbound(collectionIdResponse(channel, MemcacheProtocol.Status.UNKNOWN_COLLECTION, readLookupOpaque(channel), 0));
+
+      GetRequest waiting = new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null);
+      channel.writeOutbound(waiting);
+      assertEquals(CancellationReason.noMoreRetries(RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS), waiting.cancellationReason());
+      assertNull(channel.readOutbound());
+
+      Thread.sleep(20); // longer than the first backoff
+      channel.runScheduledPendingTasks();
+      channel.writeInbound(collectionIdResponse(channel, MemcacheProtocol.Status.SUCCESS, readLookupOpaque(channel), 9));
+
+      channel.writeOutbound(new GetRequest("key", Duration.ofSeconds(1), CTX, collection, FailFastRetryStrategy.INSTANCE, null));
+      ByteBuf get = channel.readOutbound();
+      try {
+        assertEquals(MemcacheProtocol.Opcode.GET.opcode(), MemcacheProtocol.opcode(get));
+      } finally {
+        ReferenceCountUtil.release(get);
+      }
+    } finally {
+      channel.finishAndReleaseAll();
+    }
+  }
+
+  private static CollectionIdentifier namedCollection(String name) {
+    return new CollectionIdentifier(BUCKET, Optional.of("scope"), Optional.of(name));
+  }
+
+  private static EmbeddedChannel collectionsChannel(@Nullable String bucketUuid) {
+    EmbeddedChannel channel = new EmbeddedChannel(new KeyValueMessageHandler(null, CTX, Optional.of(BUCKET)));
+    channel.attr(ChannelAttributes.SERVER_FEATURE_KEY).set(EnumSet.of(ServerFeature.COLLECTIONS));
+    channel.attr(ChannelAttributes.BUCKET_UUID_KEY).set(bucketUuid);
+    channel.pipeline().fireChannelActive();
+    return channel;
+  }
+
+  /**
+   * Reads the collection ID lookup the handler sent on the channel, and returns its opaque.
+   */
+  private static int readLookupOpaque(EmbeddedChannel channel) {
+    ByteBuf lookup = channel.readOutbound();
+    try {
+      assertEquals(MemcacheProtocol.Opcode.COLLECTIONS_GET_CID.opcode(), MemcacheProtocol.opcode(lookup));
+      return MemcacheProtocol.opaque(lookup);
+    } finally {
+      ReferenceCountUtil.release(lookup);
+    }
+  }
+
+  private static ByteBuf collectionIdResponse(EmbeddedChannel channel, MemcacheProtocol.Status status, int opaque, int collectionId) {
+    ByteBuf extras = status == MemcacheProtocol.Status.SUCCESS
+      ? Unpooled.buffer(12).writeLong(0).writeInt(collectionId) // manifest UID, then collection ID
+      : Unpooled.EMPTY_BUFFER;
+    try {
+      return MemcacheProtocol.response(channel.alloc(), MemcacheProtocol.Opcode.COLLECTIONS_GET_CID, (byte) 0,
+        status.status(), opaque, 0, extras, Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+    } finally {
+      ReferenceCountUtil.release(extras);
     }
   }
 

@@ -30,6 +30,7 @@ import com.couchbase.client.core.error.AlreadyShutdownException;
 import com.couchbase.client.core.error.ConfigException;
 import com.couchbase.client.core.error.SeedNodeOutdatedException;
 import com.couchbase.client.core.io.CollectionIdentifier;
+import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
@@ -68,6 +69,8 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -621,5 +624,27 @@ class DefaultConfigurationProviderTest {
 
   private static Set<SeedNode> getSeedNodesFromConfig(ConfigurationProvider provider) {
     return provider.seedNodes().blockFirst(Duration.ZERO);
+  }
+
+  /**
+   * JVMCBC-1825: collection IDs from one incarnation of a bucket must never be used for another one.
+   */
+  @Test
+  void newBucketIncarnationGetsNewCollectionMap() {
+    provider = newDefaultConfigurationProvider(mockCore(ENVIRONMENT));
+
+    CollectionMap first = provider.collectionMap("bucket", "first-uuid");
+    assertSame(first, provider.collectionMap("bucket", "first-uuid"));
+
+    CollectionMap second = provider.collectionMap("bucket", "second-uuid");
+    assertNotSame(first, second);
+    assertSame(second, provider.collectionMap("bucket", "second-uuid"));
+  }
+
+  @Test
+  void bucketsHaveSeparateCollectionMaps() {
+    provider = newDefaultConfigurationProvider(mockCore(ENVIRONMENT));
+
+    assertNotSame(provider.collectionMap("first", "uuid"), provider.collectionMap("second", "uuid"));
   }
 }
