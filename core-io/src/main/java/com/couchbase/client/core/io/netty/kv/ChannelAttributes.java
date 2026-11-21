@@ -62,4 +62,29 @@ public class ChannelAttributes {
   public static final AttributeKey<Set<SaslMechanism>> SASL_MECHS_KEY =
     AttributeKey.newInstance("SaslMechs");
 
+  /**
+   * Holds the UUID of the bucket selected on this channel, if it could be fetched during the handshake.
+   * <p>
+   * The UUID comes from the bucket config that {@link SelectBucketHandler} requests right after selecting
+   * the bucket. It's absent when the server has no config to return, or the config can't be used:
+   * <ul>
+   *   <li>Memcached buckets. The cluster manager never gives KV a config for them.</li>
+   *   <li>A bucket that was just created. KV can let clients select the bucket before the cluster manager
+   *   gives it the bucket's config. Since Couchbase Server 7.6.2, the cluster manager waits until the bucket
+   *   has a vbucket map, which can take a fraction of a second (MB-60405).</li>
+   *   <li>Servers that don't return a bucket config this way, or return one without a UUID, such as
+   *   some mock servers.</li>
+   *   <li>A config the client can't parse.</li>
+   * </ul>
+   * A channel without a UUID doesn't know which incarnation of the bucket it's talking to, so it can't share
+   * cached collection IDs with other channels. It keeps its own instead, for as long as it's open.
+   * <p>
+   * If the SDK drops memcached bucket support, a {@code KEY_ENOENT} (or a config without a {@code uuid}) from
+   * the handshake's {@code GET_CONFIG} would only mean "not ready yet". {@link SelectBucketHandler} could then
+   * fail the connect with a retryable error, so every bucket connection knows its incarnation and the private
+   * collection ID cache could go.
+   */
+  static final AttributeKey<String> BUCKET_UUID_KEY =
+    AttributeKey.newInstance("BucketUuid");
+
 }

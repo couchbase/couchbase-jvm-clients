@@ -27,6 +27,7 @@ import com.couchbase.client.core.io.netty.kv.KeyValueChannelContext;
 import com.couchbase.client.core.io.netty.kv.MemcacheProtocol;
 import com.couchbase.client.core.msg.ResponseStatus;
 import com.couchbase.client.core.retry.RetryStrategy;
+import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -69,12 +70,22 @@ public class GetCollectionIdRequest extends BaseKeyValueRequest<GetCollectionIdR
     }
   }
 
+  /**
+   * Also stores the collection ID in the collection map of the channel that answered, whoever sent the lookup.
+   * That map is the one for the bucket incarnation the ID belongs to.
+   * <p>
+   * This is done here for the prefetch in {@code ConfigurationProvider.refreshCollectionId}: it goes through the
+   * locator, so the code that sent it doesn't know which channel answered.
+   */
   @Override
   public GetCollectionIdResponse decode(ByteBuf response, KeyValueChannelContext ctx) {
     ResponseStatus status = MemcacheProtocol.decodeStatus(response);
     Optional<Long> cid = Optional.empty();
     if (status.success()) {
       cid = Optional.of(extras(response).get().getUnsignedInt(8));
+      if (ctx != null) {
+        ctx.collectionMap().put(collectionIdentifier(), UnsignedLEB128.encode(cid.get()));
+      }
     }
     return new GetCollectionIdResponse(status, cid);
   }

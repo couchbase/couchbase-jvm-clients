@@ -107,8 +107,8 @@ public class ProposedBucketConfigInspectingProvider implements ConfigurationProv
   }
 
   @Override
-  public CollectionMap collectionMap() {
-    return delegate.collectionMap();
+  public CollectionMap collectionMap(String bucketName, String bucketUuid) {
+    return delegate.collectionMap(bucketName, bucketUuid);
   }
 
   @Override

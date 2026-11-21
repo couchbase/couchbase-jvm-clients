@@ -20,6 +20,7 @@ import com.couchbase.client.core.util.UnsignedLEB128;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,6 +37,11 @@ public class CollectionMap {
    * Holds the identifier for the default collection.
    */
   private static final byte[] DEFAULT_ID = UnsignedLEB128.encode(0);
+
+  /**
+   * Identifiers whose collection ID is currently being looked up for this map.
+   */
+  private final Set<CollectionIdentifier> lookupsInProgress = ConcurrentHashMap.newKeySet();
 
   /**
    * Retrieves the collection id for the given identifier.
@@ -60,6 +66,26 @@ public class CollectionMap {
    */
   public void put(final CollectionIdentifier key, byte[] value) {
     inner.put(key, value);
+  }
+
+  /**
+   * Marks a lookup of the given identifier as started.
+   *
+   * @return true if the caller should do the lookup, or false if one is already in progress.
+   */
+  public boolean startLookup(CollectionIdentifier key) {
+    return lookupsInProgress.add(key);
+  }
+
+  /**
+   * Marks a lookup started by {@link #startLookup} as finished, whether it succeeded or not.
+   */
+  public void finishLookup(CollectionIdentifier key) {
+    lookupsInProgress.remove(key);
+  }
+
+  public boolean lookupInProgress(CollectionIdentifier key) {
+    return lookupsInProgress.contains(key);
   }
 
   /**

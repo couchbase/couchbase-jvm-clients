@@ -23,6 +23,8 @@ import com.couchbase.client.core.cnc.RequestSpan;
 import com.couchbase.client.core.cnc.RequestTracer;
 import com.couchbase.client.core.cnc.tracing.TracingAttribute;
 import com.couchbase.client.core.cnc.TracingIdentifiers;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshFailedEvent;
+import com.couchbase.client.core.cnc.events.config.CollectionMapRefreshSucceededEvent;
 import com.couchbase.client.core.cnc.events.io.ChannelClosedProactivelyEvent;
 import com.couchbase.client.core.cnc.events.io.CollectionOutdatedHandledEvent;
 import com.couchbase.client.core.cnc.events.io.InvalidRequestDetectedEvent;
@@ -50,16 +52,20 @@ import com.couchbase.client.core.endpoint.EndpointContext;
 import com.couchbase.client.core.env.CompressionConfig;
 import com.couchbase.client.core.env.IoConfig;
 import com.couchbase.client.core.error.CollectionNotFoundException;
+import com.couchbase.client.core.error.CouchbaseException;
 import com.couchbase.client.core.error.DecodingFailureException;
 import com.couchbase.client.core.error.FeatureNotAvailableException;
 import com.couchbase.client.core.error.RangeScanPartitionFailedException;
 import com.couchbase.client.core.error.context.GenericRequestErrorContext;
+import com.couchbase.client.core.io.CollectionIdentifier;
 import com.couchbase.client.core.io.CollectionMap;
 import com.couchbase.client.core.io.IoContext;
 import com.couchbase.client.core.io.netty.TracingUtils;
+import com.couchbase.client.core.msg.CancellationReason;
 import com.couchbase.client.core.msg.Request;
 import com.couchbase.client.core.msg.Response;
 import com.couchbase.client.core.msg.ResponseStatus;
+import com.couchbase.client.core.msg.kv.GetCollectionIdRequest;
 import com.couchbase.client.core.msg.kv.KeyValueRequest;
 import com.couchbase.client.core.msg.kv.NoopRequest;
 import com.couchbase.client.core.msg.kv.RangeScanContinueRequest;
@@ -69,10 +75,12 @@ import com.couchbase.client.core.retry.FailFastRetryStrategy;
 import com.couchbase.client.core.retry.RetryOrchestrator;
 import com.couchbase.client.core.retry.RetryReason;
 import com.couchbase.client.core.service.ServiceType;
+import com.couchbase.client.core.util.NanoTimestamp;
 import com.couchbase.client.core.util.UnsignedLEB128;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -280,10 +288,18 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
 
     boolean compression = features.contains(ServerFeature.SNAPPY);
 
+    // Use the collection IDs for the bucket incarnation this channel selected, never another one.
+    // If we don't know which incarnation that is (see BUCKET_UUID_KEY for why), keep a map of our own.
+    // A channel can't outlive its bucket, so the IDs it looks up for itself are always valid for it.
+    String bucketUuid = ctx.channel().attr(ChannelAttributes.BUCKET_UUID_KEY).get();
+    CollectionMap collectionMap = bucketUuid == null || !bucketName.isPresent()
+      ? new CollectionMap()
+      : ioContext.core().configurationProvider().collectionMap(bucketName.get(), bucketUuid);
+
     channelContext = new KeyValueChannelContext(
       compression ? compressionConfig : null,
       bucketName,
-      ioContext.core().configurationProvider().collectionMap(),
+      collectionMap,
       ctx.channel().id(),
       features
     );
@@ -331,12 +347,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
         if (err instanceof CollectionNotFoundException) {
           if (channelContext.collectionsEnabled()) {
             ConfigurationProvider cp = ioContext.core().configurationProvider();
-            if (cp.collectionRefreshInProgress(request.collectionIdentifier())) {
+            if (channelContext.collectionMap().lookupInProgress(request.collectionIdentifier())) {
               RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.COLLECTION_MAP_REFRESH_IN_PROGRESS);
             } else if (cp.config().bucketConfig(request.bucket()) instanceof MemcachedBucketConfig) {
               request.fail(FeatureNotAvailableException.collectionsForMemcached());
             } else {
-              handleOutdatedCollection(request, RetryReason.COLLECTION_NOT_FOUND);
+              handleOutdatedCollection(ctx, request, RetryReason.COLLECTION_NOT_FOUND);
             }
             return;
           }
@@ -426,7 +442,12 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     if (status == ResponseStatus.NOT_MY_VBUCKET && !isRangeScanContinue) {
       handleNotMyVbucket(request, response);
     } else if (status == ResponseStatus.UNKNOWN_COLLECTION) {
-      handleOutdatedCollection(request, RetryReason.KV_COLLECTION_OUTDATED);
+      if ((Request<?>) request instanceof GetCollectionIdRequest) {
+        // The collection doesn't exist (yet), so this isn't a stale ID that needs another lookup.
+        resendCollectionIdLookup(ctx, request);
+      } else {
+        handleOutdatedCollection(ctx, request, RetryReason.KV_COLLECTION_OUTDATED);
+      }
     } else if (errorUnknown && errorMapIndicatesRetry(errorCode)) {
       RetryOrchestrator.maybeRetry(ioContext, request, RetryReason.KV_ERROR_MAP_INDICATED);
     } else if (statusIndicatesInvalidChannel(status)) {
@@ -504,6 +525,29 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
     } catch (Throwable t) {
       request.fail(new DecodingFailureException(t.getMessage(), t, new GenericRequestErrorContext(request)));
     }
+  }
+
+  /**
+   * Sends a collection ID lookup again on this channel, after a backoff, because the server doesn't know the
+   * collection. It may be about to appear. Meanwhile, requests that need the ID wait for the lookup (retrying
+   * with {@link RetryReason#COLLECTION_MAP_REFRESH_IN_PROGRESS}) instead of each starting their own.
+   * <p>
+   * It must stay on this channel, so the answer is stored in the map for this channel's bucket incarnation.
+   * The lookup's own timeout still applies.
+   */
+  private void resendCollectionIdLookup(ChannelHandlerContext ctx, KeyValueRequest<Response> request) {
+    Duration delay = RetryOrchestrator.controlledBackoff(request.context().retryAttempts());
+    request.context().incrementRetryAttempts(delay, RetryReason.KV_COLLECTION_OUTDATED);
+    ctx.executor().schedule(() -> {
+      if (request.completed()) {
+        return;
+      }
+      if (ctx.channel().isActive()) {
+        ctx.channel().writeAndFlush(request);
+      } else {
+        request.cancel(CancellationReason.noMoreRetries(RetryReason.CHANNEL_CLOSED_WHILE_IN_FLIGHT));
+      }
+    }, delay.toNanos(), TimeUnit.NANOSECONDS);
   }
 
   private void decodeAndCompleteRangeScanContinue(final KeyValueRequest<Response> request, final ByteBuf response,
@@ -672,15 +716,69 @@ public class KeyValueMessageHandler extends ChannelDuplexHandler {
    *
    * @param request the request to retry.
    */
-  private void handleOutdatedCollection(final KeyValueRequest<? extends Response> request, final RetryReason retryReason) {
+  private void handleOutdatedCollection(
+    ChannelHandlerContext ctx,
+    KeyValueRequest<? extends Response> request,
+    RetryReason retryReason
+  ) {
     eventBus.publish(new CollectionOutdatedHandledEvent(
       request.collectionIdentifier(),
       retryReason,
-      new OutdatedCollectionContext(ioContext, ioContext.core().configurationProvider().collectionMap())
+      new OutdatedCollectionContext(ioContext, channelContext.collectionMap())
     ));
 
-    ioContext.core().configurationProvider().refreshCollectionId(request.collectionIdentifier());
+    lookUpCollectionId(ctx, request.collectionIdentifier());
     RetryOrchestrator.maybeRetry(ioContext, request, retryReason);
+  }
+
+  /**
+   * Looks up a collection ID on this channel, and stores it in this channel's collection map.
+   * <p>
+   * The lookup must happen on this channel, not one chosen by the locator. Only this channel knows that
+   * the ID belongs to the bucket incarnation its map is for. Other channels that share the map
+   * (because they know their bucket has the same UUID) wait for the lookup instead of starting their own.
+   */
+  @SuppressWarnings("unchecked")
+  private void lookUpCollectionId(ChannelHandlerContext ctx, CollectionIdentifier identifier) {
+    CollectionMap collectionMap = channelContext.collectionMap();
+    if (!collectionMap.startLookup(identifier)) {
+      return;
+    }
+
+    CoreContext coreContext = endpointContext;
+    GetCollectionIdRequest lookup = new GetCollectionIdRequest(
+      coreContext.environment().timeoutConfig().kvTimeout(),
+      coreContext,
+      // If this channel closes, don't send the lookup to a different one. The next request that needs
+      // the ID starts a new lookup on whichever channel it ends up on.
+      FailFastRetryStrategy.INSTANCE,
+      identifier
+    );
+
+    NanoTimestamp start = NanoTimestamp.now();
+    lookup.response().whenComplete((response, throwable) -> {
+      try {
+        Duration duration = start.elapsed();
+        // The ID itself was stored when the response was decoded; see GetCollectionIdRequest.decode.
+        if (throwable == null && response.status().success() && response.collectionId().isPresent()) {
+          long cid = response.collectionId().get();
+          eventBus.publish(new CollectionMapRefreshSucceededEvent(duration, coreContext, identifier, cid));
+        } else {
+          eventBus.publish(new CollectionMapRefreshFailedEvent(
+            duration,
+            coreContext,
+            identifier,
+            throwable != null ? throwable : new CouchbaseException(response.toString()),
+            CollectionMapRefreshFailedEvent.Reason.FAILED
+          ));
+        }
+      } finally {
+        collectionMap.finishLookup(identifier);
+      }
+    });
+
+    coreContext.environment().timer().register((Request<Response>) (Request<?>) lookup);
+    ctx.channel().writeAndFlush(lookup);
   }
 
   static class OutdatedCollectionContext extends IoContext {
