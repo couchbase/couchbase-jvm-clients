@@ -25,6 +25,7 @@ import com.couchbase.client.protocol.transactions.{
   TransactionStreamDriverToPerformer,
   TransactionStreamPerformerToDriver
 }
+import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 
@@ -62,30 +63,40 @@ class TransactionMarshaller(
           val req = next.getCreate
           val bp  = req.getName + ": "
           val t   = new Thread(() => {
-            if (req.getApi eq API.DEFAULT) twoWay = new TransactionBlocking(null)
-            else throw new UnsupportedOperationException("Only default API currently supported")
-            twoWay.create(req)
-            toTest.onNext(
-              TransactionStreamPerformerToDriver.newBuilder
-                .setCreated(TransactionCreated.newBuilder.build)
-                .build
-            )
-            logger.info("{}Created, waiting until told to start", bp)
-            while (!readyToStart)
-              try Thread.sleep(50)
-              catch {
-                case e: InterruptedException =>
-                  e.printStackTrace()
-              }
-            logger.info("{}Starting", bp)
-            val cc     = clusterConnections(req.getClusterConnectionId)
-            val result = twoWay.run(cc, req, Some(toTest), false, spans)
-            logger.info("Transaction has finished, completing stream and ending thread")
-            toTest.onNext(
-              TransactionStreamPerformerToDriver.newBuilder.setFinalResult(result).build
-            )
-            toTest.onCompleted()
-
+            try {
+              if (req.getApi eq API.DEFAULT) twoWay = new TransactionBlocking(null)
+              else throw new UnsupportedOperationException("Only default API currently supported")
+              twoWay.create(req)
+              toTest.onNext(
+                TransactionStreamPerformerToDriver.newBuilder
+                  .setCreated(TransactionCreated.newBuilder.build)
+                  .build
+              )
+              logger.info("{}Created, waiting until told to start", bp)
+              while (!readyToStart)
+                try Thread.sleep(50)
+                catch {
+                  case e: InterruptedException =>
+                    e.printStackTrace()
+                }
+              logger.info("{}Starting", bp)
+              val cc     = clusterConnections(req.getClusterConnectionId)
+              val result = twoWay.run(cc, req, Some(toTest), false, spans)
+              logger.info("Transaction has finished, completing stream and ending thread")
+              toTest.onNext(
+                TransactionStreamPerformerToDriver.newBuilder.setFinalResult(result).build
+              )
+              toTest.onCompleted()
+            } catch {
+              // Without this the thread dies silently and the driver waits forever for a result
+              case err: Throwable =>
+                logger.error(s"${bp}Transaction thread failed unexpectedly: ${err}", err)
+                try toTest.onError(Status.ABORTED.withDescription(err.toString).asException())
+                catch {
+                  case onErrorFailure: RuntimeException =>
+                    logger.error(s"${bp}Failed to notify driver of error", onErrorFailure)
+                }
+            }
           })
           t.start()
           thread.set(t)
