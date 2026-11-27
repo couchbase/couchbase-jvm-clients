@@ -18,9 +18,7 @@ package com.couchbase.client.core.cnc.events.io;
 
 import com.couchbase.client.core.cnc.AbstractEvent;
 import com.couchbase.client.core.error.context.KeyValueIoErrorContext;
-import com.couchbase.client.core.io.IoContext;
-import com.couchbase.client.core.deps.io.netty.buffer.ByteBufUtil;
-import com.couchbase.client.core.deps.io.netty.buffer.Unpooled;
+import com.couchbase.client.core.util.Bytes;
 
 import java.time.Duration;
 
@@ -38,26 +36,35 @@ import java.time.Duration;
 public class SaslAuthenticationFailedEvent extends AbstractEvent {
 
   private final String description;
-  private final byte[] lastPacket;
 
   public SaslAuthenticationFailedEvent(final Duration duration, final KeyValueIoErrorContext context,
-                                       final String description, final byte[] lastPacket) {
+                                       final String description) {
     super(Severity.ERROR, Category.IO, duration, context);
     this.description = description;
-    this.lastPacket = lastPacket;
+  }
+
+  /**
+   * @deprecated The raw packet is no longer recorded, so {@code lastPacket} is ignored.
+   * Please use {@link #SaslAuthenticationFailedEvent(Duration, KeyValueIoErrorContext, String)} instead.
+   */
+  @Deprecated
+  public SaslAuthenticationFailedEvent(final Duration duration, final KeyValueIoErrorContext context,
+                                       final String description, final byte[] lastPacket) {
+    this(duration, context, description);
   }
 
   @Override
   public String description() {
-    if (lastPacket != null && lastPacket.length > 0) {
-      return description + "; Last Packet: \n"
-        + ByteBufUtil.prettyHexDump(Unpooled.copiedBuffer(lastPacket))
-        + "\n";
-    }
     return description;
   }
 
+  /**
+   * @deprecated Raw SASL packets are no longer recorded, so that they can never be logged.
+   * Any server-supplied error details are available in the {@link KeyValueIoErrorContext}.
+   * This always returns an empty array.
+   */
+  @Deprecated
   public byte[] lastPacket() {
-    return lastPacket;
+    return Bytes.EMPTY_BYTE_ARRAY;
   }
 }
