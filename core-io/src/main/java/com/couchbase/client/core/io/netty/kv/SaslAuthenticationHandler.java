@@ -467,27 +467,17 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
                            final ByteBuf lastPacket, final Throwable cause, final short status) {
     Optional<Duration> latency = ConnectTimings.stop(ctx.channel(), this.getClass(), false);
 
-    byte[] packetCopy = Bytes.EMPTY_BYTE_ARRAY;
     Map<String, Object> serverContext = null;
 
-    if (lastPacket != null) {
-      if (MemcacheProtocol.verifyResponse(lastPacket)) {
-        // This is a proper response, try to extract server context
-        byte[] content = bodyAsBytes(lastPacket);
-        if (content.length != 0) {
-          try {
-            serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
-          } catch (Exception ex) {
-            // Ignore, no displayable content
-          }
+    if (lastPacket != null && MemcacheProtocol.verifyResponse(lastPacket)) {
+      // This is a proper response, try to extract server context
+      byte[] content = bodyAsBytes(lastPacket);
+      if (content.length != 0) {
+        try {
+          serverContext = Mapper.decodeInto(content, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception ex) {
+          // Ignore, no displayable content
         }
-      } else {
-        // This is not a proper memcache response, store the raw packet for debugging purposes
-        int ridx = lastPacket.readerIndex();
-        lastPacket.readerIndex(lastPacket.writerIndex());
-        packetCopy = new byte[lastPacket.readableBytes()];
-        lastPacket.readBytes(packetCopy);
-        lastPacket.readerIndex(ridx);
       }
     }
 
@@ -499,8 +489,7 @@ public class SaslAuthenticationHandler extends ChannelDuplexHandler implements C
     endpointContext.environment().eventBus().publish(new SaslAuthenticationFailedEvent(
       latency.orElse(Duration.ZERO),
       errorContext,
-      message,
-      packetCopy
+      message
     ));
     interceptedConnectPromise.tryFailure(new AuthenticationFailureException(
       message,
